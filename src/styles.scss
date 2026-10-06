@@ -1,1 +1,10 @@
-/* Global styles. Lane 1A loads tokens.css and the design-system bundle here. */
+/*
+ * Global styles (lane 1A), in this order:
+ *   tokens.css      generated from docs/design/design-system/tokens.json (npm run tokens); light by default,
+ *                   dark under [data-theme="dark"] on <html>;
+ *   ahoy-bundle.css copy of the design system's components/bundle.css (its @import of Google Fonts stays);
+ *   ahoy-angular    the few rules the bundle can't know about: Angular host elements and gaps in its markup.
+ */
+@use "styles/tokens";
+@use "styles/ahoy-bundle";
+@use "styles/ahoy-angular";
