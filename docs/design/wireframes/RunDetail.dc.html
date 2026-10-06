@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ahoy · Run r-04</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
+a{color:#1A64D6}a:hover{color:#1747A6}
+.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
+.logo:hover{color:#1B2733}
+.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
+.tab:hover{background:#F1F4F7;color:#1B2733}
+.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
+.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
+.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
+.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
+.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
+.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn:hover{background:#F1F4F7;color:#1B2733}
+.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
+.btn.primary:hover{background:#1755B8;color:#fff}
+.btn.sm{height:28px;padding:0 11px;font-size:12px;border-radius:9px}
+.page{padding:18px 24px 36px;display:flex;flex-direction:column;gap:14px;max-width:1360px;width:100%;margin:0 auto;box-sizing:border-box}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.25}
+h2{font-size:15px;font-weight:700;margin:0}
+.sub{color:#5B6B7A}
+.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
+.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
+.pb{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-done{background:#DDF3E6;color:#1C6337}
+.o-pass{background:#DDF3E6;color:#1C6337}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:#fff;border:1px solid #E3E8EE;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#5B6B7A;font-weight:600}
+.stat b{font-size:24px;font-weight:700;line-height:1.1}
+.stat small{color:#5B6B7A;font-size:12px}
+.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
+.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
+.dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 18px;margin:0}
+.dl dt{color:#5B6B7A}
+.dl dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.verdict{display:flex;gap:12px;align-items:flex-start;background:#F2FAF5;border:1px solid #CBEBD7;border-radius:12px;padding:12px 14px}
+.st{display:grid;grid-template-columns:62px 90px minmax(0,1fr);gap:8px;padding:5px 16px;border-bottom:1px solid #F1F4F7}
+.st:last-child{border-bottom:0}
+.st time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#5B6B7A}
+.st .tool{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;color:#1747A6}
+.st .txt{min-width:0;overflow-wrap:anywhere}
+.gap{padding:6px 16px;font-size:12px;color:#5B6B7A;background:#FAFBFC;border-bottom:1px solid #F1F4F7;text-align:center}
+.hint{font-size:12px;color:#5B6B7A}
+.pager{display:flex;gap:8px;align-items:center}
+</style>
+</helmet>
+<header class="top">
+  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
+  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
+    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
+    <a class="tab on" href="Voyages.dc.html">Voyages</a>
+    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
+  </nav>
+  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
+  <input id="q" class="search" type="search" placeholder="Search by key or title">
+  <span class="live"><i></i>Live</span>
+  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
+  <span class="av" title="alex@example.com (SSO)">AL</span>
+</header>
+<main class="page">
+  <div class="sub" style="font-size:12px"><a href="Voyages.dc.html" style="text-decoration:none">Voyages</a> / <a href="PlanReview.dc.html" style="text-decoration:none">PROJ-123</a> / Runs / r-04</div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+    <div style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="badge b-done"><i></i>succeeded</span><span class="mono sub">planning · revision round 2</span></div>
+      <h1>Run r-04 · Cartographer</h1>
+      <div class="sub">PROJ-123 · Show invoice due date on the billing page</div>
+    </div>
+    <div class="pager">
+      <a class="btn sm" href="RunDetail.dc.html">← r-03</a>
+      <a class="btn sm" href="Records.dc.html">All runs</a>
+      <button class="btn sm" type="button" disabled style="color:#8494A2">r-05 →</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>AIU spent</span><b>3.84</b><div class="meter"><i style="width:18%"></i></div><small>of this run's 21.44 AIU cap</small></div>
+    <div class="stat"><span>Requests</span><b>11</b><small>model requests</small></div>
+    <div class="stat"><span>Tokens</span><b>182k</b><small>164k in · 18k out</small></div>
+    <div class="stat"><span>Duration</span><b>16 m 12 s</b><small>Tue 09:31 → 09:47</small></div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+    <section class="panel" style="flex:1 1 380px">
+      <div class="ph"><h2>Details</h2></div>
+      <div class="pb">
+        <dl class="dl">
+          <dt>Agent</dt><dd>Cartographer</dd>
+          <dt>Model</dt><dd class="mono" style="font-size:12px">claude-sonnet-5</dd>
+          <dt>Reasoning effort</dt><dd>high <span class="hint" style="font-weight:500">· chosen for this voyage</span></dd>
+          <dt>Status</dt><dd>succeeded</dd>
+          <dt>Exit reason</dt><dd>completed</dd>
+          <dt>Started by</dt><dd>Ahoy, after jordan@example.com sent the plan back</dd>
+          <dt>Queued</dt><dd>Tue 09:30:58</dd>
+          <dt>Started</dt><dd>Tue 09:31:04</dd>
+          <dt>Ended</dt><dd>Tue 09:47:16</dd>
+          <dt>Runtime</dt><dd class="mono" style="font-size:12px">k8s</dd>
+          <dt>Agent config</dt><dd class="mono" style="font-size:11px;color:#5B6B7A">a41f9c2e7d0b5a1c93f6e28d4b7a0c51e9f3d2a6</dd>
+        </dl>
+      </div>
+    </section>
+
+    <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:14px">
+      <section class="panel">
+        <div class="ph"><h2>Automated gate</h2></div>
+        <div class="pb">
+          <div class="verdict">
+            <span class="badge o-pass">pass</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <b>plan · Plan revision 2 passes all checks.</b>
+              <span class="hint">5 acceptance criteria, 2 work packages, one per repository (billing-api, billing-web). The plan now waits for a person at plan_accepted.</span>
+            </div>
+          </div>
+          <div class="hint">Output: <a href="Records.dc.html" class="mono">implementation-plan.md</a>, <a href="Records.dc.html" class="mono">plan-sources.md</a> · artifact revision 5</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h2>Steps</h2><span class="sub">The live steps, kept as history</span></div>
+        <div>
+          <div class="st"><time>09:31:12</time><span class="tool">view</span><span class="txt mono" style="font-weight:400">.ahoy/plan/plan-round-1.md</span></div>
+          <div class="st"><time>09:31:20</time><span class="tool">message</span><span class="txt">The send-back asks for the customer's timezone and an overdue state. Checking how the API stores customer timezones…</span></div>
+          <div class="st"><time>09:32:02</time><span class="tool">grep</span><span class="txt mono" style="font-weight:400">"timezone" in billing-api/src/customers</span></div>
+          <div class="gap">29 steps not shown</div>
+          <div class="st"><time>09:46:40</time><span class="tool">edit</span><span class="txt mono" style="font-weight:400">.ahoy/plan/implementation-plan.md</span></div>
+          <div class="st"><time>09:47:05</time><span class="tool">message</span><span class="txt">Plan revision 2 is ready: AC4 and AC5 added, WP1 computes isOverdue in the customer's timezone, WP2 adds the badge.</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

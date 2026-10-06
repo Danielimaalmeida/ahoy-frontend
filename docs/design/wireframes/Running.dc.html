@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ahoy · PROJ-140 under way</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
+a{color:#1A64D6}a:hover{color:#1747A6}
+.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
+.logo:hover{color:#1B2733}
+.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
+.tab:hover{background:#F1F4F7;color:#1B2733}
+.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
+.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
+.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
+.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
+.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
+.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn:hover{background:#F1F4F7;color:#1B2733}
+.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
+.btn.primary:hover{background:#1755B8;color:#fff}
+.btn.danger{color:#A11F1F;border-color:#F1C4C4}
+.page{padding:18px 24px 36px;display:flex;flex-direction:column;gap:14px;max-width:1240px;width:100%;margin:0 auto;box-sizing:border-box}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.25}
+h2{font-size:15px;font-weight:700;margin:0}
+.sub{color:#5B6B7A}
+.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
+.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
+.pb{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
+.key{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#1747A6}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-run{background:#DDF3F7;color:#0B5C6B}
+.b-done{background:#DDF3E6;color:#1C6337}
+.g-pass{background:#DDF3E6;color:#1C6337}
+.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
+.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
+.stepper{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.step{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 4px;border-radius:999px;background:#F1F4F7;color:#5B6B7A;font-size:12px;font-weight:500}
+.step b{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#fff;font-size:10.5px;border:1px solid #D5DCE3;color:#5B6B7A}
+.step.done{background:#E7EFFC;color:#1747A6}
+.step.done b{background:#1A64D6;color:#fff;border-color:#1A64D6}
+.step.now{background:#1A64D6;color:#fff;font-weight:600}
+.step.now b{background:#fff;color:#1A64D6;border-color:#fff}
+.sep{width:10px;height:2px;background:#D5DCE3;border-radius:2px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center}
+.meta div{display:flex;flex-direction:column;gap:2px}
+.meta span{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#5B6B7A;font-weight:600}
+.dtabs{display:flex;gap:4px;overflow-x:auto;padding:4px;background:#EEF2F5;border-radius:12px;align-self:flex-start;max-width:100%;box-sizing:border-box}
+.dt{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;border-radius:9px;color:#455562;font-weight:600;text-decoration:none;white-space:nowrap}
+.dt:hover{color:#1B2733;background:#E3E8EE}
+.dt.on{background:#fff;color:#1747A6;box-shadow:0 1px 2px rgba(20,40,60,.12)}
+.dt em{font-style:normal;font-weight:500;color:#5B6B7A;font-size:11.5px}
+.steps{max-height:430px;overflow-y:auto}
+.st{display:grid;grid-template-columns:62px 22px 90px minmax(0,1fr);gap:8px;align-items:start;padding:5px 16px;border-bottom:1px solid #F1F4F7}
+.st:last-child{border-bottom:0}
+.st time{font-family:'JetBrains Mono',monospace;font-size:11px;color:#5B6B7A;padding-top:1px}
+.st .tool{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;color:#1747A6}
+.st .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st.msg .txt{white-space:normal;color:#1B2733}
+.ic{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:#EEF2F5;color:#455562}
+.st.msg .ic{background:#E7EFFC;color:#1747A6}
+.gap{padding:6px 16px;font-size:12px;color:#5B6B7A;background:#FAFBFC;border-bottom:1px solid #F1F4F7;display:flex;align-items:center;gap:8px}
+.gap::before,.gap::after{content:"";flex:1;height:1px;background:#E3E8EE}
+.red{font-family:'JetBrains Mono',monospace;font-size:11px;background:#FDE3E3;color:#962020;border-radius:4px;padding:0 4px}
+.pulse{width:8px;height:8px;border-radius:50%;background:#0B8FA6;box-shadow:0 0 0 4px #D5F0F5}
+table.t{width:100%;border-collapse:collapse}
+.t th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#5B6B7A;font-weight:600;padding:8px 14px;border-bottom:1px solid #E3E8EE;background:#FAFBFC;white-space:nowrap}
+.t td{padding:7px 14px;border-bottom:1px solid #EEF2F5;white-space:nowrap;vertical-align:middle;height:22px}
+.t tr:last-child td{border-bottom:0}
+.hint{font-size:12px;color:#5B6B7A}
+.dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
+.dl dt{color:#5B6B7A}
+.dl dd{margin:0;font-weight:600}
+</style>
+</helmet>
+<header class="top">
+  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
+  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
+    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
+    <a class="tab on" href="Voyages.dc.html">Voyages</a>
+    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
+  </nav>
+  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
+  <input id="q" class="search" type="search" placeholder="Search by key or title">
+  <span class="live"><i></i>Live</span>
+  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
+  <span class="av" title="alex@example.com (SSO)">AL</span>
+</header>
+<main class="page">
+  <div class="sub" style="font-size:12px"><a href="Voyages.dc.html" style="text-decoration:none">Voyages</a> / PROJ-140</div>
+
+  <section class="panel">
+    <div class="pb" style="gap:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
+        <div style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="key">PROJ-140</span><span class="badge b-run"><i></i>Under way</span><span class="mono" style="color:#5B6B7A">running</span></div>
+          <h1>Add audit trail to admin role changes</h1>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn danger" href="Dialogs.dc.html">Stop voyage</a>
+          <a class="btn" href="Dialogs.dc.html">Budget</a>
+          <a class="btn" href="Halted.dc.html">Models</a>
+        </div>
+      </div>
+      <div class="stepper" aria-label="Phases">
+        <span class="step done"><b>✓</b>intake</span><span class="sep"></span>
+        <span class="step now"><b>2</b>planning</span><span class="sep"></span>
+        <span class="step"><b>3</b>plan_review</span><span class="sep"></span>
+        <span class="step"><b>4</b>implementation</span><span class="sep"></span>
+        <span class="step"><b>5</b>pr_review</span><span class="sep"></span>
+        <span class="step"><b>6</b>delivery_gate</span><span class="sep"></span>
+        <span class="step"><b>7</b>done</span>
+      </div>
+      <div class="meta">
+        <div><span>Owner · billed</span>jordan@example.com</div>
+        <div style="min-width:220px"><span>Budget</span><div style="display:flex;align-items:center;gap:8px;flex-direction:row"><div class="meter" style="width:120px"><i style="width:11%"></i></div><b>3.2</b> / 30 AIU</div></div>
+        <div><span>Current run</span><a href="RunDetail.dc.html" class="mono">r-02</a> · Cartographer</div>
+        <div><span>Agent config</span><span class="mono" style="font-size:11px;text-transform:none;letter-spacing:0;color:#5B6B7A">a41f9c2</span></div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="dtabs" aria-label="Voyage sections">
+    <a class="dt" href="PlanReview.dc.html">Plan</a>
+    <a class="dt" href="Questions.dc.html">Questions <em>0</em></a>
+    <a class="dt on" href="Running.dc.html">Runs <em>2</em></a>
+    <a class="dt" href="Records.dc.html">Gates <em>1</em></a>
+    <a class="dt" href="Records.dc.html">Artifacts</a>
+    <a class="dt" href="Records.dc.html">Ship's log</a>
+    <a class="dt" href="Halted.dc.html">Models</a>
+  </nav>
+
+  <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+    <section class="panel" style="flex:999 1 620px">
+      <div class="ph">
+        <span class="pulse" aria-hidden="true"></span>
+        <h2>Cartographer is at work</h2>
+        <span class="mono sub">r-02 · claude-sonnet-5 · high</span>
+        <span style="flex:1"></span>
+        <span class="hint">Live, a few seconds behind the agent</span>
+      </div>
+      <div class="pb" style="padding-bottom:10px;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="hint" style="font-weight:600">Run spend</span>
+          <div class="meter" style="flex:1 1 200px;height:9px"><i style="width:7%"></i></div>
+          <span><b class="mono" style="font-size:12.5px">1.84</b> <span class="hint">of this run's 28.6 AIU cap</span></span>
+        </div>
+      </div>
+      <div class="steps" role="log" aria-label="Live steps">
+        <div class="st"><time>10:41:02</time><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"></path></svg></span><span class="tool">view</span><span class="txt mono" style="font-weight:400">services/admin/roles/RoleService.ts</span></div>
+        <div class="st"><time>10:41:05</time><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"></path></svg></span><span class="tool">grep</span><span class="txt mono" style="font-weight:400">"assignRole|revokeRole" in services/</span></div>
+        <div class="st msg"><time>10:41:19</time><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"></path></svg></span><span class="tool">message</span><span class="txt">Role changes go through RoleService.assignRole and revokeRole only. An audit event can be written in the same transaction, so no change is lost if the request fails half way…</span></div>
+        <div class="gap">38 steps not shown</div>
+        <div class="st"><time>10:43:40</time><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"></path></svg></span><span class="tool">bash</span><span class="txt mono" style="font-weight:400">psql -h db.internal -U audit -c '\d audit_events' PGPASSWORD=<span class="red">[REDACTED]</span></span></div>
+        <div class="st"><time>10:43:52</time><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"></path></svg></span><span class="tool">view</span><span class="txt mono" style="font-weight:400">migrations/2026_08_audit_events.sql</span></div>
+        <div class="st msg"><time>10:44:10</time><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"></path></svg></span><span class="tool">message</span><span class="txt">The audit_events table already exists with actor, action and target columns. Plan: WP1 writes role events from RoleService; WP2 adds a read-only audit view to the admin UI…</span></div>
+        <div class="st"><time>10:44:21</time><span class="ic"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"></path></svg></span><span class="tool">create</span><span class="txt mono" style="font-weight:400">.ahoy/plan/implementation-plan.md</span></div>
+      </div>
+      <div class="pb" style="border-top:1px solid #EEF2F5;padding-top:10px;padding-bottom:12px">
+        <span class="hint">Newest at the bottom. Some steps are left out on purpose (at most 10 every few seconds, 200 per run), so this list is never complete. This is a view, not a control: there's no chat with the agent.</span>
+      </div>
+    </section>
+
+    <aside style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:14px">
+      <section class="panel">
+        <div class="ph"><h2>This run</h2><span class="badge b-run"><i></i>running</span></div>
+        <div class="pb">
+          <dl class="dl">
+            <dt>Agent</dt><dd>Cartographer</dd>
+            <dt>Model</dt><dd class="mono" style="font-size:12px">claude-sonnet-5</dd>
+            <dt>Effort</dt><dd>high</dd>
+            <dt>Started</dt><dd>10:40:51 · 3 m ago</dd>
+            <dt>Started by</dt><dd>Ahoy (after intake passed)</dd>
+            <dt>Requests</dt><dd>14</dd>
+          </dl>
+          <a href="RunDetail.dc.html" style="font-size:12px">Open run detail</a>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel">
+    <div class="ph"><h2>Runs</h2><span class="sub">oldest first</span></div>
+    <div style="overflow-x:auto">
+      <table class="t">
+        <thead><tr><th>Run</th><th>Phase</th><th>Agent</th><th>Model · effort</th><th>Status</th><th>Started</th><th>Ended</th><th>AIU</th><th>Gate</th><th>Started by</th></tr></thead>
+        <tbody>
+          <tr><td><a class="mono" href="RunDetail.dc.html">r-01</a></td><td class="mono">intake</td><td>Navigator</td><td class="mono">gpt-5.6-terra · medium</td><td><span class="badge b-done"><i></i>succeeded</span></td><td>10:35</td><td>10:40</td><td class="mono">1.36</td><td><span class="badge g-pass">pass</span></td><td>jordan@example.com</td></tr>
+          <tr><td><a class="mono" href="RunDetail.dc.html">r-02</a></td><td class="mono">planning</td><td>Cartographer</td><td class="mono">claude-sonnet-5 · high</td><td><span class="badge b-run"><i></i>running</span></td><td>10:40</td><td>—</td><td class="mono">1.84 live</td><td>—</td><td>Ahoy</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1250}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

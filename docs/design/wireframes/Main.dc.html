@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ahoy · All hands</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
+a{color:#1A64D6}a:hover{color:#1747A6}
+.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
+.logo:hover{color:#1B2733}
+.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
+.tab:hover{background:#F1F4F7;color:#1B2733}
+.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
+.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
+.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
+.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
+.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
+.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn:hover{background:#F1F4F7;color:#1B2733}
+.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
+.btn.primary:hover{background:#1755B8;color:#fff}
+.btn.sm{height:28px;padding:0 11px;font-size:12px;border-radius:9px}
+.page{padding:22px 24px 36px;display:flex;flex-direction:column;gap:16px;max-width:1360px;width:100%;margin:0 auto;box-sizing:border-box}
+h1{font-size:24px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.2}
+h2{font-size:15px;font-weight:700;margin:0}
+.sub{color:#5B6B7A}
+.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
+.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
+.scroll{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse}
+.t th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#5B6B7A;font-weight:600;padding:8px 14px;border-bottom:1px solid #E3E8EE;background:#FAFBFC;white-space:nowrap}
+.t td{padding:7px 14px;border-bottom:1px solid #EEF2F5;vertical-align:middle;height:24px}
+.t tr:last-child td{border-bottom:0}
+.t tbody tr:hover td{background:#F7FAFE}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
+.key{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:#1747A6;text-decoration:none;margin-right:6px}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-queued{background:#EDF1F5;color:#3D4B59}
+.b-run{background:#DDF3F7;color:#0B5C6B}
+.b-input{background:#FFF1D6;color:#7A4B00}
+.b-decide{background:#EEE8FB;color:#4E3290}
+.b-halt{background:#FDE3E3;color:#962020}
+.b-done{background:#DDF3E6;color:#1C6337}
+.b-blocked{background:#2B3A47;color:#fff}
+.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
+.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tile{background:#fff;border:1px solid #E3E8EE;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;text-decoration:none;color:#1B2733}
+.tile:hover{border-color:#1A64D6;color:#1B2733}
+.tile b{font-size:30px;line-height:1;font-weight:700}
+.need{white-space:normal;min-width:240px}
+.need small{display:block;color:#5B6B7A;font-size:12px}
+.bud{display:flex;align-items:center;gap:8px}
+</style>
+</helmet>
+<header class="top">
+  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
+  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
+    <a class="tab on" href="Main.dc.html">All hands <span class="cnt">4</span></a>
+    <a class="tab" href="Voyages.dc.html">Voyages</a>
+    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
+  </nav>
+  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
+  <input id="q" class="search" type="search" placeholder="Search by key or title">
+  <span class="live"><i></i>Live</span>
+  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
+  <span class="av" title="alex@example.com (SSO)">AL</span>
+</header>
+<main class="page">
+  <div>
+    <h1>All hands on deck</h1>
+    <div class="sub">Voyages waiting on a person. Anyone on the crew may answer, approve, send back or stop. Only the owner is billed.</div>
+  </div>
+
+  <div class="tiles">
+    <a class="tile" href="Questions.dc.html"><b>1</b><div><span class="badge b-input"><i></i>Crew asks</span><div class="sub" style="margin-top:4px">Agent questions to answer</div></div></a>
+    <a class="tile" href="PlanReview.dc.html"><b>1</b><div><span class="badge b-decide"><i></i>Your orders</span><div class="sub" style="margin-top:4px">Human gates waiting on a decision</div></div></a>
+    <a class="tile" href="Halted.dc.html"><b>2</b><div><span class="badge b-halt"><i></i>Anchored</span><div class="sub" style="margin-top:4px">Halted until someone resumes</div></div></a>
+  </div>
+
+  <section class="panel" aria-labelledby="needs">
+    <div class="ph"><h2 id="needs">Needs you</h2><span class="sub">4 voyages · longest wait first</span></div>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>Status</th><th>Voyage</th><th>Phase</th><th>What's needed</th><th>Owner</th><th>Waiting</th><th>Budget (AIU)</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-halt"><i></i>Anchored</span></td>
+            <td><a class="key" href="Halted.dc.html">PROJ-118</a>Rate-limit the public search endpoint</td>
+            <td class="mono">planning</td>
+            <td class="need">The run failed before any prompt<small>run_failed · the worker refused model gpt-5.6-terra (0 AIU)</small></td>
+            <td>sam@example.com</td><td>2 h 10 m</td>
+            <td><div class="bud"><div class="meter" style="width:70px"><i style="width:49%"></i></div><span class="mono">9.8 / 20</span></div></td>
+            <td><a class="btn sm" href="Halted.dc.html">Review &amp; resume</a></td>
+          </tr>
+          <tr>
+            <td><span class="badge b-input"><i></i>Crew asks</span></td>
+            <td><a class="key" href="Questions.dc.html">PROJ-131</a>Let customers download receipts as PDF</td>
+            <td class="mono">planning</td>
+            <td class="need">Cartographer asked 3 questions<small>Round 1 · 1 of 3 answered</small></td>
+            <td>sam@example.com</td><td>48 m</td>
+            <td><div class="bud"><div class="meter" style="width:70px"><i style="width:24%"></i></div><span class="mono">6.1 / 25</span></div></td>
+            <td><a class="btn sm primary" href="Questions.dc.html">Answer</a></td>
+          </tr>
+          <tr>
+            <td><span class="badge b-decide"><i></i>Your orders</span></td>
+            <td><a class="key" href="PlanReview.dc.html">PROJ-123</a>Show invoice due date on the billing page</td>
+            <td class="mono">plan_review</td>
+            <td class="need">The plan is ready for review<small>Gate plan_accepted · revision round 2 of 4</small></td>
+            <td>alex@example.com</td><td>22 m</td>
+            <td><div class="bud"><div class="meter" style="width:70px"><i style="width:41%"></i></div><span class="mono">12.4 / 30</span></div></td>
+            <td><a class="btn sm primary" href="PlanReview.dc.html">Review plan</a></td>
+          </tr>
+          <tr>
+            <td><span class="badge b-halt"><i></i>Anchored</span></td>
+            <td><a class="key" href="Halted.dc.html">PROJ-126</a>Search orders by customer email</td>
+            <td class="mono">intake</td>
+            <td class="need">Stopped by a person<small>stopped_by_user · "Waiting for the Jira ticket to be split"</small></td>
+            <td>priya@example.com</td><td>9 m</td>
+            <td><div class="bud"><div class="meter" style="width:70px"><i style="width:4%"></i></div><span class="mono">0.6 / 15</span></div></td>
+            <td><a class="btn sm" href="Halted.dc.html">Review &amp; resume</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="atsea">
+    <div class="ph"><h2 id="atsea">At sea</h2><span class="sub">The crew is working; nothing needed from you</span><span style="flex:1"></span><a href="Voyages.dc.html">All voyages</a></div>
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>Status</th><th>Voyage</th><th>Phase</th><th>Crew member</th><th>Owner</th><th>Updated</th><th>Budget (AIU)</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-run"><i></i>Under way</span></td>
+            <td><a class="key" href="Running.dc.html">PROJ-140</a>Add audit trail to admin role changes</td>
+            <td class="mono">planning</td><td>Cartographer · <span class="mono">claude-sonnet-5 · high</span></td><td>jordan@example.com</td><td>just now</td>
+            <td><div class="bud"><div class="meter" style="width:70px"><i style="width:11%"></i></div><span class="mono">3.2 / 30</span></div></td>
+          </tr>
+          <tr>
+            <td><span class="badge b-queued"><i></i>Queued</span></td>
+            <td><a class="key" href="Voyages.dc.html">PROJ-109</a>Migrate email templates to the new sender</td>
+            <td class="mono">intake</td><td>Navigator goes next</td><td>alex@example.com</td><td>1 m ago</td>
+            <td><div class="bud"><div class="meter" style="width:70px"><i style="width:0%"></i></div><span class="mono">0.0 / 20</span></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

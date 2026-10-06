@@ -1,0 +1,16 @@
+<!-- @dsCard group="Forms" height=230 subtitle="Label, input, hint and error" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Field preview</title></head>
+<body>
+<div class="ah" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+  <div class="ah-field"><label class="ah-label" for="k">Jira key <span class="ah-req">*</span></label><input id="k" class="ah-input ah-input--mono" value="PROJ-145"><span class="ah-hint">Like PROJ-123. One voyage per key.</span></div>
+  <div class="ah-field"><label class="ah-label" for="b">Total budget <span class="ah-req">*</span></label><div class="ah-suffix"><input id="b" class="ah-input" value="25" inputmode="decimal"><span class="ah-suffix__unit">AIU</span></div><span class="ah-hint">You can raise it later.</span></div>
+  <div class="ah-field"><label class="ah-label" for="c">New total cap <span class="ah-req">*</span></label><div class="ah-suffix"><input id="c" class="ah-input" value="10" aria-invalid="true"><span class="ah-suffix__unit">AIU</span></div><span class="ah-field__error">At least 12.4 AIU, what's already spent.</span></div>
+  <div class="ah-field"><label class="ah-label" for="e">Reasoning effort</label><select id="e" class="ah-input"><option>Default (medium)</option><option>low</option><option>high</option></select></div>
+</div>
+<div class="ah-field"><label class="ah-label" for="r">Reason <span class="ah-hint" style="font-weight:500">(optional)</span></label><textarea id="r" class="ah-input" style="min-height:60px">Switched planning to a model the account can use.</textarea></div>
+</div>
+</body>
+</html>
