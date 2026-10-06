@@ -6,7 +6,8 @@ docs desse repositório (`README.md`, `docs/ui-design-brief.md`, `docs/strategy.
 
 **Como usar este plano**
 
-1. Ler este ficheiro e responder às perguntas do [§12](#12-perguntas-antes-de-lançar-a-onda-0).
+1. Ler este ficheiro. As perguntas do [§12](#12-perguntas-antes-de-lançar-a-onda-0-respondidas-em-2026-10-06) já foram
+   respondidas pelo utilizador e as decisões estão registadas ali.
 2. Lançar a **Onda 0** ([fase 0](phase-0-foundation.md)): um agente, bloqueia tudo o resto.
 3. Lançar as lanes de cada onda em paralelo ([§8](#8-fases-lanes-e-ondas)). Cada fase tem o seu ficheiro, com lanes
    autónomas e um **prompt pronto a colar** num agente.
@@ -282,7 +283,7 @@ opcional e serve para o utilizador decidir.
 3. Pesquisa da top bar: filtro **no cliente** sobre a lista (a API não tem pesquisa); leva a `/voyages?q=`.
 4. Realce de "changed since last revision" no plano: ao nível do **bloco** (parágrafo/item), não da palavra.
 5. _Approve_ sem diálogo de confirmação, como no wireframe (só _Send back_ e _Reject_ têm diálogo).
-6. Fontes: o `bundle.css` importa Google Fonts. Para o TEST (rede privada) deve passar a self-host (pergunta 4).
+6. Fontes: o `bundle.css` importa Google Fonts. **Mantém-se** (aceite pelo utilizador, pergunta 4); só se passa a self-host se o TEST as bloquear.
 7. Sem botão de tema (o DS tem tema escuro, os wireframes não têm controlo para ele).
 
 ## 8. Fases, lanes e ondas
@@ -386,8 +387,9 @@ Regras para qualquer modelo:
 
 ## 10. Dependências a aprovar
 
-Versões consultadas hoje no npm. Confirmar antes de instalar; fixar o exato que o `npm view` devolver. Runtime em versão
-exata, dev com `^`.
+**Aprovada pelo utilizador em 2026-10-06** (pergunta 3 do [§12](#12-perguntas-antes-de-lançar-a-onda-0-respondidas-em-2026-10-06)),
+com `@fontsource/*` retirado. Versões consultadas no npm nesse dia: confirmar antes de instalar e fixar o exato que o
+`npm view` devolver. Runtime em versão exata, dev com `^`. **Qualquer pacote fora desta lista pede nova aprovação.**
 
 | Pacote                                                                                          | Tipo        | Para quê                                                      | Lane   |
 | ----------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------- | ------ |
@@ -401,7 +403,6 @@ exata, dev com `^`.
 | `openapi-typescript` 7.13.0                                                                     | dev         | Tipos a partir do `ahoy-v1.yaml`                              | 2A     |
 | `ajv`, `yaml`                                                                                   | dev         | Testes de contrato: fixtures e mock contra o OpenAPI          | 2A, 2D |
 | `@playwright/test` 1.63.0, `@axe-core/playwright`                                               | dev         | e2e e acessibilidade                                          | 6B, 6C |
-| `@fontsource/plus-jakarta-sans`, `@fontsource/jetbrains-mono` (opcional)                        | runtime     | Self-host das fontes (pergunta 4)                             | 6D     |
 
 Sem alternativa razoável para markdown e diff sem dependência própria; se recusares, a 1C e a 5C precisam de um renderer e
 de um diff escritos à mão (mais código, mais superfície de segurança).
@@ -418,18 +419,21 @@ de um diff escritos à mão (mais código, mais superfície de segurança).
 | R6  | Volume de `run.progress` num stream global.                                                                      | Buffer limitado; contado em `omitted`; se pesar, stream por story.                                               |
 | R7  | Merge conflicts entre 6 agentes em paralelo.                                                                     | Posse de diretórios, rotas pré-criadas na fase 0, tipos partilhados só pelo dono.                                |
 | R8  | Angular 22 é recente: APIs (zoneless por omissão, runner de testes, `httpResource`) podem diferir do esperado.   | Fase 0 confirma com `ng new --help` e regista as decisões em `docs/architecture.md`.                             |
-| R9  | Fontes via Google Fonts em rede privada.                                                                         | Pergunta 4; self-host na 6D.                                                                                     |
+| R9  | Fontes via Google Fonts: o TEST pode estar em rede privada que as bloqueie.                                      | Aceite pelo utilizador (pergunta 4). Se falhar no TEST, reabrir e passar a self-host (`@fontsource/*`).          |
 | R10 | Os wireframes e o brief podem deriver da API (a lista de eventos, estados e motivos de halt cresce).             | Eventos e estados desconhecidos têm sempre reserva; `docs/ui-design-brief.md` do hosted manda atualizar o brief. |
 
-## 12. Perguntas antes de lançar a Onda 0
+## 12. Perguntas antes de lançar a Onda 0 (respondidas em 2026-10-06)
 
-1. **Os artefactos certos são "Ahoy UI wireframes" e "Ahoy" (design system)?** (Ignorei "Ahoy UI" de ontem.)
-2. **Vitest em vez de `node:test`**, e `bundler` em vez de `NodeNext` nos imports? São os padrões do Angular CLI. Implica
-   adaptar o `CLAUDE.md` do frontend (a fase 0 propõe o texto; não o altero sem a tua aprovação).
-3. **Aprovas as dependências do §10?** Em especial `@angular/cdk`, `marked` e `diff`.
-4. **Fontes:** manter o Google Fonts do `bundle.css` por agora e passar a self-host na 6D antes do TEST?
-5. **URL base do Jira** (para "Open in Jira"): qual é, ou deixamos o botão escondido?
-6. **Política de commits:** uma branch por lane com PR para o `main` quando aprovares, ou tudo numa só branch?
-7. **Node 24 está disponível** nas sessões onde vão correr os agentes? Se não, a fase 0 pára no pré-voo.
-8. **Pedes já ao backend** algum dos itens opcionais do §7 (`GET /me`, `GET /config/models`, filtros de eventos)? Nenhum é
-   necessário para a v1.
+| #   | Pergunta                                                                    | Resposta do utilizador                                                                                                                                                                                                                                                                                    |
+| --- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Os artefactos certos são "Ahoy UI wireframes" e "Ahoy" (design system)?     | **Sim.**                                                                                                                                                                                                                                                                                                  |
+| 2   | Vitest em vez de `node:test`, e `bundler` em vez de `NodeNext` nos imports? | **Sim, Vitest.** O "sim" respondeu à pergunta inteira, por isso vale também para os imports `bundler` sem `.js` (a confirmar se não era essa a intenção). A fase 0 propõe o texto adaptado do `CLAUDE.md`; só se aplica com aprovação.                                                                    |
+| 3   | Aprovas as dependências do §10?                                             | **Aprovadas**, incluindo `@angular/cdk`, `marked`, `diff` e `openapi-typescript`, com a explicação do que cada uma faz. O aprovado é **a lista do §10**: qualquer pacote fora dela pede nova aprovação. Fixar a versão exata que `npm view` devolver no momento de instalar.                              |
+| 4   | Fontes: manter o Google Fonts do `bundle.css` e passar a self-host na 6D?   | **Google Fonts é aceitável. Sem self-host.** `@fontsource/*` saiu do §10. Se o TEST vier a bloquear o Google, reabrir esta decisão (R9).                                                                                                                                                                  |
+| 5   | URL base do Jira para "Open in Jira".                                       | **Mais tarde.** Até lá, o botão fica escondido (`jiraBaseUrl` vazio, G13).                                                                                                                                                                                                                                |
+| 6   | Política de commits: uma branch por lane, ou tudo numa só?                  | **Uma branch por lane** (`lane/<id>-<slug>`), com PR para `main` quando o utilizador aprovar. Commit e push continuam a pedir aprovação de cada vez.                                                                                                                                                      |
+| 7   | Node 24 está disponível nas sessões dos agentes?                            | **Ok.** O utilizador não sabia; verificou-se que `npx node@24` devolve v24.21.0 numa sessão cloud. Fixá-lo em todas as sessões é pelo _setup script_ do ambiente (a configurar pelo utilizador; `npm install -g node@24` está **por testar**). O passo 0.1 da fase 0 confirma `node -v` e pára se falhar. |
+| 8   | Pedes já ao backend algum dos itens opcionais do §7?                        | **Sim.** Pedido feito em [`ahoy-hosted#23`](https://github.com/Danielimaalmeida/ahoy-hosted/issues/23) (7 itens, nenhum bloqueia a v1). Os workarounds do §7 mantêm-se até serem feitos.                                                                                                                  |
+
+> A numeração acima é a deste ficheiro. A lista que foi mostrada no chat tinha outra ordem (Node, commits, fontes, Jira nas
+> posições 4 a 7); as respostas foram registadas **por assunto**, não por número.

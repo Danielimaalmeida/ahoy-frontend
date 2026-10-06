@@ -8,9 +8,11 @@ real.
 
 ## Pré-requisitos
 
-- Perguntas 2, 3, 6 e 7 do [§12](00-overview.md#12-perguntas-antes-de-lançar-a-onda-0) respondidas.
-- **Node `^22.22.3`, `^24.15.0` ou `>=26`.** O ambiente cloud de hoje tem 22.22.0, que o Angular 22 recusa. Se não houver
-  Node 24 disponível, parar e dizê-lo.
+- Perguntas do [§12](00-overview.md#12-perguntas-antes-de-lançar-a-onda-0-respondidas-em-2026-10-06) **respondidas**: Vitest, imports
+  `bundler`, dependências do §10 aprovadas, uma branch por lane.
+- **Node `^22.22.3`, `^24.15.0` ou `>=26`.** O ambiente cloud de hoje tem 22.22.0, que o Angular 22 recusa. O Node 24 obtém-se
+  com `npx node@24` (verificado: v24.21.0); se a sessão ainda não o tiver como `node`, usá-lo por esse caminho e dizer no
+  relatório que o _setup script_ do ambiente precisa de o instalar. Se não for possível de nenhuma forma, parar e dizê-lo.
 
 ## Possui
 

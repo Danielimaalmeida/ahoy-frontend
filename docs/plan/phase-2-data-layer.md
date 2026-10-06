@@ -57,7 +57,7 @@ como veredicto de domínio** (`invalid_response` ≠ `gate_rejected`).
 - `NoAuthStrategy` provado: nenhum pedido leva `Authorization`.
 
 **Prompt:** "Lê `CLAUDE.md`, `docs/progress.md`, `docs/plan/00-overview.md` e `docs/plan/phase-2-data-layer.md`. Implementa **só a
-lane 2A**. Pede aprovação para `openapi-typescript`, `ajv` e `yaml` antes de os instalar. Não escrevas `Authorization` em lado
+lane 2A**. `openapi-typescript`, `ajv` e `yaml` já estão aprovados (§10): fixa a versão exata de `npm view`. Não escrevas `Authorization` em lado
 nenhum. Não corras `smoke-api.mjs` nem `capture-fixtures.mjs` (precisam de uma API local). Sem commit nem push. Relatório em
 `docs/progress.md`, incluindo o que **não** correu."
 
@@ -155,7 +155,7 @@ lane 2B**, sobre a 2A e o `@domain` da 2C. Não uses `EventSource`. Sem commit n
 
 **Prompt:** "Lê `CLAUDE.md`, `docs/progress.md`, `docs/plan/00-overview.md` e `docs/plan/phase-2-data-layer.md`. Implementa **só a
 lane 2C**: TypeScript puro, sem Angular, sem I/O, sem relógio. Copia os textos de `docs/design/design-system/vocabulary.md`
-sem os reescrever. Pede aprovação para `diff` antes de o instalar. Sem commit nem push. Relatório em `docs/progress.md`."
+sem os reescrever. `diff` já está aprovado (§10): fixa a versão exata de `npm view`. Sem commit nem push. Relatório em `docs/progress.md`."
 
 ---
 

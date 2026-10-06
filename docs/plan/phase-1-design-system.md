@@ -43,8 +43,8 @@ Fonte: `docs/design/design-system/` (README, vocabulary, tokens, 22 previews, `b
    - `tokens:check` verifica também que **toda** a `var(--x)` usada em `ahoy-bundle.css` está definida (o `bundle.css`
      usa `--avatar` e `--badge-height`, que têm de existir).
 2. **`src/styles.scss`** importa `tokens.css` e `ahoy-bundle.css` (cópia de `docs/design/.../components/bundle.css`, com
-   cabeçalho a dizer a origem). `body` e `.ah` já vêm do bundle. O `@import` do Google Fonts do bundle mantém-se por agora
-   (pergunta 4 do [§12](00-overview.md#12-perguntas-antes-de-lançar-a-onda-0)).
+   cabeçalho a dizer a origem). `body` e `.ah` já vêm do bundle. O `@import` do Google Fonts do bundle **mantém-se**
+   (aceite pelo utilizador, pergunta 4 do [§12](00-overview.md#12-perguntas-antes-de-lançar-a-onda-0-respondidas-em-2026-10-06)).
 3. **`ThemeService`**: lê/escreve `data-theme` no `<html>` (claro por omissão), `localStorage` com `try/catch`. Sem botão
    na app; só a galeria o usa.
 4. **`ah-icon`** com os **16** ícones da tabela de `assets/Icons/README.md` (wheel, bell, compass, anchor, sail, aground,
@@ -162,6 +162,6 @@ commit nem push. Relatório em `docs/progress.md`."
   ShipsLog e ArtifactDiff.
 
 **Prompt:** "Lê `CLAUDE.md`, `docs/progress.md`, `docs/plan/00-overview.md` e `docs/plan/phase-1-design-system.md`. Implementa **só
-a lane 1C**. Pede aprovação para `@angular/cdk` e `marked` antes de os instalar (estão no §10). O markdown vem de agentes: é
+a lane 1C**. `@angular/cdk` e `marked` já estão aprovados (§10): fixa a versão exata de `npm view`. O markdown vem de agentes: é
 não fiável, e os testes de XSS são parte da lane. Só editas os teus diretórios. Sem commit nem push. Relatório em
 `docs/progress.md`."

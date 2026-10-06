@@ -75,7 +75,7 @@ e regista o que tocaste. Começa pela tabela de auditoria. Sem commit nem push. 
 - Um relatório honesto do que **não** foi coberto (por exemplo, leitores de ecrã reais).
 
 **Prompt:** "Lê `CLAUDE.md`, `docs/progress.md`, `docs/plan/00-overview.md` e `docs/plan/phase-6-hardening-release.md`. Implementa **só a
-lane 6B**. Pede aprovação para `@axe-core/playwright` e `@playwright/test`; o Chromium já está no sistema (usa o
+lane 6B**. `@axe-core/playwright` e `@playwright/test` já estão aprovados (§10); o Chromium já está no sistema (usa o
 `executablePath` do ambiente, não corras `playwright install`). Mede antes de fixar orçamentos. Sem commit nem push. Relatório
 em `docs/progress.md`."
 
@@ -142,10 +142,12 @@ hosted, `deploy-plan.md`). **Esta lane entrega a imagem e a documentação; o ch
 - **Configuração em runtime** (`/config.json`: `apiBase`, `actor`, `jiraBaseUrl`) montável por ConfigMap, para a mesma imagem
   servir vários ambientes. Documentar que `actor` é **só** para `AHOY_AUTH=dev` e que, com auth real, deixa de existir.
 - **CSP** e cabeçalhos de segurança no nginx (`default-src 'self'`, `connect-src 'self'`, `frame-ancestors 'none'`,
-  `object-src 'none'`, `base-uri 'self'`), com as origens de fontes só se as fontes continuarem no Google (pergunta 4). Testar com
-  a app carregada: sem violações na consola.
-- **Fontes:** se a pergunta 4 for "self-host", trocar o `@import` do Google no `ahoy-bundle.css` por `@font-face` locais
-  (`@fontsource/*` ou ficheiros `woff2`) numa camada à parte, **sem editar** o `ahoy-bundle.css` copiado.
+  `object-src 'none'`, `base-uri 'self'`), **incluindo** `https://fonts.googleapis.com` em `style-src` e
+  `https://fonts.gstatic.com` em `font-src`, porque o Google Fonts foi aceite (pergunta 4). O Angular pode inserir estilos inline
+  no `index.html`: se o CSP os bloquear, resolver com `ngCspNonce`, não com `'unsafe-inline'` sem o registar. Testar com a app
+  carregada: sem violações na consola.
+- **Fontes:** **sem self-host** (decisão do utilizador). Se o TEST bloquear o Google, parar e reabrir a decisão em vez de
+  acrescentar `@fontsource/*` por iniciativa própria (pediria nova aprovação).
 - **Build de produção:** sem `_kit`, sem `mock-backend`, sem source maps públicos; verificado com um script que procura os
   nomes em `dist/`.
 - **CI:** job que constrói a imagem (sem publicar).
