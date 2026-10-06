@@ -4,6 +4,11 @@ src/app/core/api/schema.d.ts
 src/styles/tokens.css
 package-lock.json
 
+# Agent skill copies (three mirrors of the same files); user-approved on 2026-10-06.
+.agents/
+.opencode/
+.github/skills/
+
 # Build output and caches.
 dist/
 out-tsc/

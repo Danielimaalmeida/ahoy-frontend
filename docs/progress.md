@@ -20,8 +20,8 @@ design-system component and no API call exists yet.
 **Lane 2C (domínio puro)** is done, committed on branch `lane/2c-domain` (PR open, not merged): `src/app/domain/` now has the vocabulary
 mappings (`statusPresentation`, `outcomePresentation`, `explainHalt`), the AIU and time helpers, `CREW` and the only
 diff implementation of the project (`diff` 9.0.0), with **218 new tests** (233 in the suite). The API types are
-provisional until lane 2A lands `schema.d.ts`. `npm run format:check` fails on `main` on 24 skill files added by
-commit 132728f, not on this lane's files.
+provisional until lane 2A lands `schema.d.ts`. `npm run format:check` is green: the 24 skill files added by commit
+132728f are ignored in `.prettierignore` (decided by the user on 2026-10-06).
 
 ## Start here next
 
@@ -32,9 +32,7 @@ commit 132728f, not on this lane's files.
 3. **Wave 1**, in parallel, one branch per lane from `main`: **1A** (kit foundation) and **2A** (API client) still to
    do; **2C** (pure domain) is done on `lane/2c-domain`, awaiting review and merge. Prompts are in
    `docs/plan/phase-1-design-system.md` and `docs/plan/phase-2-data-layer.md`.
-4. **User:** decide what to do with the 24 skill files under `.agents/`, `.opencode/` and `.github/skills/` that make
-   `npm run format:check` red on `main` since commit 132728f: run Prettier on them or add them to `.prettierignore`.
-5. Optional, whenever a session has Docker: verify the proxy against `ahoy-hosted` `npm run dev -- --simulate`
+4. Optional, whenever a session has Docker: verify the proxy against `ahoy-hosted` `npm run dev -- --simulate`
    (`curl -s localhost:4200/api/v1/health` and `curl -N localhost:4200/api/v1/events/stream`).
 
 ## Prompt for a new session
@@ -215,6 +213,7 @@ Branch `lane/2c-domain`, a partir de `main` (fase 0 já fundida). Commit e push 
 | `identifiers.ts`          | `STORY_KEY_PATTERN`/`isStoryKey`, `shortSha`, `actorLabel`, `formatTokens`.                                                                                                                                                                                           |
 | `text-diff.ts`            | `diffLines`, `hunks`, `changedBlocks` e `markdownBlocks` sobre `diff` 9.0.0 (jsdiff). Única implementação de diff do projeto.                                                                                                                                         |
 | `package.json`            | `diff` `9.0.0` (runtime, exato; aprovado no §10). O `package-lock.json` só ganhou essa entrada.                                                                                                                                                                       |
+| `.prettierignore`         | As cópias de skills (`.agents/`, `.opencode/`, `.github/skills/`) ficam fora do Prettier (decidido pelo utilizador a 2026-10-06), para o `format:check` do CI ficar verde.                                                                                            |
 
 Decisões que convém rever:
 
@@ -229,7 +228,8 @@ Decisões que convém rever:
 
 ### Provas (offline, 0 AIU, Node 24.21.0)
 
-- `npm run build` exit 0; `npm run typecheck` exit 0 (`check-boundaries: ok`); `npm run lint` exit 0.
+- `npm run build` exit 0; `npm run typecheck` exit 0 (`check-boundaries: ok`); `npm run lint` exit 0;
+  `npm run format:check` exit 0 (depois de ignorar as cópias de skills no `.prettierignore`).
 - `npm test`: **10 ficheiros, 233 testes, 0 falhas** — 218 novos: `aiu` 53, `time` 32, `identifiers` 27, `text-diff`
   26, `halt` 24, `outcome` 21, `models` 15, `phases` 11, `status` 9.
 - `parseAiu`/`formatAiu`: ida e volta exata em `0.1`, `12.4`, `24.06`, `30`, `0.000000001`; recusa `1e3`, `-1`, `+1`,
@@ -243,9 +243,9 @@ Decisões que convém rever:
 
 ### Não correu / saltado, e porquê
 
-- **`npm run format:check` (repo inteiro): vermelho antes desta lane.** São 24 ficheiros `.md` em `.agents/`,
-  `.opencode/` e `.github/skills/` (commit 132728f "Added skills") que o Prettier quer reformatar; não são desta lane
-  e não os toquei. Os ficheiros da 2C passam. Fica para o utilizador decidir (formatar ou juntar ao `.prettierignore`).
+- **`npm run format:check` (repo inteiro): estava vermelho antes desta lane**, por 24 ficheiros `.md` em `.agents/`,
+  `.opencode/` e `.github/skills/` (commit 132728f "Added skills"). Resolvido neste PR com a decisão do utilizador:
+  essas cópias passam a estar no `.prettierignore`, como `docs/design/`. Agora verde.
 - **Nada contra a API, o mock ou `--simulate`:** a lane é TypeScript puro, sem I/O; não havia nada para correr.
 
 ### Needs from lane 2A
