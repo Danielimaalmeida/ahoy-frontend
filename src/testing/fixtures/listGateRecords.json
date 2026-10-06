@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "id": "1",
+      "source": "gate",
+      "gate": "intake",
+      "phase": "intake",
+      "outcome": "pass",
+      "message": "Jira snapshot is complete.",
+      "actor": "ahoy-reconciler",
+      "runId": "r-01",
+      "createdAt": "2026-10-05T10:06:03.000Z"
+    },
+    {
+      "id": "2",
+      "source": "gate",
+      "gate": "plan",
+      "phase": "planning",
+      "outcome": "branch",
+      "message": "2 questions need a human (Q1, Q2).",
+      "actor": "ahoy-reconciler",
+      "runId": "r-02",
+      "createdAt": "2026-10-05T10:31:20.000Z"
+    },
+    {
+      "id": "3",
+      "source": "gate",
+      "gate": "plan",
+      "phase": "planning",
+      "outcome": "pass",
+      "message": "Plan has acceptance criteria and work packages for every repository.",
+      "actor": "ahoy-reconciler",
+      "runId": "r-03",
+      "createdAt": "2026-10-05T14:12:08.000Z"
+    },
+    {
+      "id": "4",
+      "source": "human",
+      "gate": "plan_accepted",
+      "phase": "plan_review",
+      "outcome": "send_back",
+      "message": "Due date must use the customer's timezone; add an AC for the overdue state.",
+      "actor": "jordan@example.com",
+      "runId": null,
+      "createdAt": "2026-10-05T16:40:12.000Z"
+    },
+    {
+      "id": "5",
+      "source": "gate",
+      "gate": "plan",
+      "phase": "planning",
+      "outcome": "pass",
+      "message": "Plan revision 2 passes all checks.",
+      "actor": "ahoy-reconciler",
+      "runId": "r-04",
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    }
+  ]
+}

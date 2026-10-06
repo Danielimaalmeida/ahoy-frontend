@@ -1,0 +1,132 @@
+{
+  "items": [
+    {
+      "id": "201",
+      "storyKey": "PROJ-123",
+      "type": "run.queued",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "runId": "r-04",
+        "phase": "planning",
+        "agent": "cartographer",
+        "model": "claude-sonnet-5",
+        "reasoningEffort": "high",
+        "modelSource": "story",
+        "effortSource": "story",
+        "budgetNanoAiu": 8000000000,
+        "runtime": "k8s",
+        "attempt": 1
+      },
+      "createdAt": "2026-10-06T09:10:00.000Z"
+    },
+    {
+      "id": "202",
+      "storyKey": "PROJ-123",
+      "type": "run.dispatched",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "runId": "r-04",
+        "runtime": "k8s"
+      },
+      "createdAt": "2026-10-06T09:10:29.000Z"
+    },
+    {
+      "id": "203",
+      "storyKey": "PROJ-123",
+      "type": "run.progress",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "runId": "r-04",
+        "kind": "message",
+        "line": 2,
+        "at": "2026-10-06T09:11:02.000Z",
+        "text": "Reading the Jira snapshot and the billing code."
+      },
+      "createdAt": "2026-10-06T09:11:04.000Z"
+    },
+    {
+      "id": "204",
+      "storyKey": "PROJ-123",
+      "type": "run.progress",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "runId": "r-04",
+        "kind": "tool",
+        "line": 3,
+        "at": "2026-10-06T09:11:09.000Z",
+        "tool": "view",
+        "summary": "specs/PROJ-123/jira-snapshot.md"
+      },
+      "createdAt": "2026-10-06T09:11:11.000Z"
+    },
+    {
+      "id": "205",
+      "storyKey": "PROJ-123",
+      "type": "run.progress",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "runId": "r-04",
+        "kind": "spend",
+        "line": 3,
+        "offset": 1840,
+        "nanoAiu": 350000000,
+        "requests": 2,
+        "steps": 2,
+        "omitted": 0,
+        "skipped": 0,
+        "events": 3
+      },
+      "createdAt": "2026-10-06T09:11:11.000Z"
+    },
+    {
+      "id": "206",
+      "storyKey": "PROJ-123",
+      "type": "run.finished",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "runId": "r-04",
+        "status": "succeeded",
+        "nanoAiu": 3600000000,
+        "requests": 26
+      },
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    },
+    {
+      "id": "207",
+      "storyKey": "PROJ-123",
+      "type": "gate.evaluated",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "runId": "r-04",
+        "gate": "plan",
+        "code": 0,
+        "result": "pass",
+        "message": "Plan revision 2 passes all checks."
+      },
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    },
+    {
+      "id": "208",
+      "storyKey": "PROJ-123",
+      "type": "artifacts.updated",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "revision": 5,
+        "runId": "r-04"
+      },
+      "createdAt": "2026-10-06T09:48:13.000Z"
+    },
+    {
+      "id": "209",
+      "storyKey": "PROJ-123",
+      "type": "story.awaiting_decision",
+      "actor": "ahoy-reconciler",
+      "payload": {
+        "phase": "plan_review",
+        "gate": "plan_accepted"
+      },
+      "createdAt": "2026-10-06T09:48:30.000Z"
+    }
+  ],
+  "lastEventId": "209"
+}
