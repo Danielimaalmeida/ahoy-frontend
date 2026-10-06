@@ -13,16 +13,17 @@ docs desse repositório (`README.md`, `docs/ui-design-brief.md`, `docs/strategy.
    autónomas e um **prompt pronto a colar** num agente.
 4. Cada lane regista o que fez e o que provou em `docs/progress.md` (criado na fase 0).
 
-| Ficheiro                                                     | Conteúdo                                                         |
-| ------------------------------------------------------------ | ---------------------------------------------------------------- |
-| [phase-0-foundation.md](phase-0-foundation.md)               | Scaffold Angular 22, tooling, proxy, esqueleto, docs, design     |
-| [phase-1-design-system.md](phase-1-design-system.md)         | Tokens, estilos, ícones e os 22 componentes do design system     |
-| [phase-2-data-layer.md](phase-2-data-layer.md)               | Cliente da API, tempo real, stores, domínio puro, backend falso  |
-| [phase-3-harbour.md](phase-3-harbour.md)                     | Shell, All hands, Voyages, Set sail, The Docks                   |
-| [phase-4-voyage-core.md](phase-4-voyage-core.md)             | Página da viagem, diálogos, Plan review, Questions, Models       |
-| [phase-5-records-and-runs.md](phase-5-records-and-runs.md)   | Runs, run detail, passos em direto, Gates, Ship's log, Artifacts |
-| [phase-6-hardening-release.md](phase-6-hardening-release.md) | Estados, a11y, e2e, imagem e configuração de release             |
-| [phase-7-delivery-phases.md](phase-7-delivery-phases.md)     | Fases após `plan_review` (sem wireframes ainda): esboço          |
+| Ficheiro                                                     | Conteúdo                                                                                            |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| [runbook.md](runbook.md)                                     | **Mapa de ondas e modelos; as sessões executam-se por `docs/paralelos1.md` a `docs/paralelos5.md`** |
+| [phase-0-foundation.md](phase-0-foundation.md)               | Scaffold Angular 22, tooling, proxy, esqueleto, docs, design                                        |
+| [phase-1-design-system.md](phase-1-design-system.md)         | Tokens, estilos, ícones e os 22 componentes do design system                                        |
+| [phase-2-data-layer.md](phase-2-data-layer.md)               | Cliente da API, tempo real, stores, domínio puro, backend falso                                     |
+| [phase-3-harbour.md](phase-3-harbour.md)                     | Shell, All hands, Voyages, Set sail, The Docks                                                      |
+| [phase-4-voyage-core.md](phase-4-voyage-core.md)             | Página da viagem, diálogos, Plan review, Questions, Models                                          |
+| [phase-5-records-and-runs.md](phase-5-records-and-runs.md)   | Runs, run detail, passos em direto, Gates, Ship's log, Artifacts                                    |
+| [phase-6-hardening-release.md](phase-6-hardening-release.md) | Estados, a11y, e2e, imagem e configuração de release                                                |
+| [phase-7-delivery-phases.md](phase-7-delivery-phases.md)     | Fases após `plan_review` (sem wireframes ainda): esboço                                             |
 
 ---
 
