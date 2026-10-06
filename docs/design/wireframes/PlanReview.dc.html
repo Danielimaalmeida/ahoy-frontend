@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ahoy · PROJ-123 plan review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
+a{color:#1A64D6}a:hover{color:#1747A6}
+.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
+.logo:hover{color:#1B2733}
+.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
+.tab:hover{background:#F1F4F7;color:#1B2733}
+.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
+.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
+.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
+.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
+.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
+.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn:hover{background:#F1F4F7;color:#1B2733}
+.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
+.btn.primary:hover{background:#1755B8;color:#fff}
+.btn.danger{color:#A11F1F;border-color:#F1C4C4}
+.btn.sm{height:28px;padding:0 11px;font-size:12px;border-radius:9px}
+.btn.ghost{border-color:transparent;background:transparent;color:#455562}
+.page{padding:18px 24px 36px;display:flex;flex-direction:column;gap:14px;max-width:1240px;width:100%;margin:0 auto;box-sizing:border-box}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.25}
+h2{font-size:15px;font-weight:700;margin:0}
+h3{font-size:13px;font-weight:700;margin:0}
+.sub{color:#5B6B7A}
+.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
+.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
+.pb{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
+.key{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#1747A6}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-decide{background:#EEE8FB;color:#4E3290}
+.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
+.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
+.stepper{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.step{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 4px;border-radius:999px;background:#F1F4F7;color:#5B6B7A;font-size:12px;font-weight:500}
+.step b{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#fff;font-size:10.5px;border:1px solid #D5DCE3;color:#5B6B7A}
+.step.done{background:#E7EFFC;color:#1747A6}
+.step.done b{background:#1A64D6;color:#fff;border-color:#1A64D6}
+.step.now{background:#1A64D6;color:#fff;font-weight:600}
+.step.now b{background:#fff;color:#1A64D6;border-color:#fff}
+.sep{width:10px;height:2px;background:#D5DCE3;border-radius:2px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center}
+.meta div{display:flex;flex-direction:column;gap:2px}
+.meta span{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#5B6B7A;font-weight:600}
+.dtabs{display:flex;gap:4px;overflow-x:auto;padding:4px;background:#EEF2F5;border-radius:12px;align-self:flex-start;max-width:100%;box-sizing:border-box}
+.dt{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;border-radius:9px;color:#455562;font-weight:600;text-decoration:none;white-space:nowrap}
+.dt:hover{color:#1B2733;background:#E3E8EE}
+.dt.on{background:#fff;color:#1747A6;box-shadow:0 1px 2px rgba(20,40,60,.12)}
+.dt em{font-style:normal;font-weight:500;color:#5B6B7A;font-size:11.5px}
+.md{font-size:13.5px;line-height:1.6}
+.md h4{font-size:14px;margin:16px 0 6px}
+.md p{margin:0 0 8px}
+.md ul,.md ol{margin:0 0 8px;padding-left:20px}
+.md li{margin:2px 0}
+.md code{font-family:'JetBrains Mono',monospace;font-size:12px;background:#F1F4F7;border-radius:5px;padding:1px 5px}
+.new{background:#FFF6D9;border-radius:4px;padding:0 3px}
+.wp{border:1px solid #E3E8EE;border-radius:12px;padding:10px 12px;margin:8px 0}
+.wp header{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;background:#EEF2F5;color:#3D4B59;font-size:11px;font-weight:600}
+.ac{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #EEF2F5}
+.ac:last-child{border-bottom:0}
+.ac b{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#1747A6;flex:none;width:34px}
+.choice{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #E3E8EE;border-radius:12px;cursor:pointer}
+.choice.on{border-color:#1A64D6;background:#F5F9FF;box-shadow:0 0 0 1px #1A64D6}
+.choice input{margin-top:3px}
+.choice small{display:block;color:#5B6B7A;font-size:12px}
+.input{border:1px solid #D5DCE3;border-radius:10px;padding:9px 12px;font:inherit;width:100%;box-sizing:border-box;background:#fff;color:#1B2733;min-height:88px;resize:vertical}
+.lbl{font-weight:600;font-size:12.5px}
+.hint{font-size:12px;color:#5B6B7A}
+.quote{background:#F6F8FA;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+</style>
+</helmet>
+<header class="top">
+  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
+  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
+    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
+    <a class="tab on" href="Voyages.dc.html">Voyages</a>
+    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
+  </nav>
+  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
+  <input id="q" class="search" type="search" placeholder="Search by key or title">
+  <span class="live"><i></i>Live</span>
+  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
+  <span class="av" title="alex@example.com (SSO)">AL</span>
+</header>
+<main class="page">
+  <div class="sub" style="font-size:12px"><a href="Voyages.dc.html" style="text-decoration:none">Voyages</a> / PROJ-123</div>
+
+  <section class="panel">
+    <div class="pb" style="gap:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
+        <div style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="key">PROJ-123</span><span class="badge b-decide"><i></i>Your orders</span><span class="mono" style="color:#5B6B7A">awaiting_decision · plan_accepted</span></div>
+          <h1>Show invoice due date on the billing page</h1>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn primary" href="#decide">Decide on the plan</a>
+          <a class="btn" href="Dialogs.dc.html">Budget</a>
+          <a class="btn" href="Halted.dc.html">Models</a>
+          <a class="btn danger" href="Dialogs.dc.html">Stop</a>
+        </div>
+      </div>
+      <div class="stepper" aria-label="Phases">
+        <span class="step done"><b>✓</b>intake</span><span class="sep"></span>
+        <span class="step done"><b>✓</b>planning</span><span class="sep"></span>
+        <span class="step now"><b>3</b>plan_review</span><span class="sep"></span>
+        <span class="step"><b>4</b>implementation</span><span class="sep"></span>
+        <span class="step"><b>5</b>pr_review</span><span class="sep"></span>
+        <span class="step"><b>6</b>delivery_gate</span><span class="sep"></span>
+        <span class="step"><b>7</b>done</span>
+      </div>
+      <div class="meta">
+        <div><span>Owner · billed</span>alex@example.com</div>
+        <div style="min-width:220px"><span>Budget</span><div style="display:flex;align-items:center;gap:8px;flex-direction:row"><div class="meter" style="width:120px"><i style="width:41%"></i></div><b>12.4</b> / 30 AIU</div></div>
+        <div><span>Current run</span>none · last <a href="RunDetail.dc.html" class="mono">r-04</a></div>
+        <div><span>Revision round</span>2 of 4</div>
+        <div><span>Agent config</span><span class="mono" style="font-size:11px;text-transform:none;letter-spacing:0;color:#5B6B7A">a41f9c2</span></div>
+      </div>
+    </div>
+  </section>
+
+  <nav class="dtabs" aria-label="Voyage sections">
+    <a class="dt on" href="PlanReview.dc.html">Plan</a>
+    <a class="dt" href="Questions.dc.html">Questions <em>2</em></a>
+    <a class="dt" href="RunDetail.dc.html">Runs <em>4</em></a>
+    <a class="dt" href="Records.dc.html">Gates <em>5</em></a>
+    <a class="dt" href="Records.dc.html">Artifacts</a>
+    <a class="dt" href="Records.dc.html">Ship's log</a>
+    <a class="dt" href="Halted.dc.html">Models</a>
+  </nav>
+
+  <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+    <article class="panel" style="flex:999 1 600px">
+      <div class="ph"><h2>Implementation plan</h2><span class="tag">revision 2</span><span class="sub">by Cartographer · run r-04 · 22 m ago</span><span style="flex:1"></span><a href="Records.dc.html" style="font-size:12px">Compare with revision 1</a></div>
+      <div class="pb md">
+        <p>Show each invoice's due date on the billing page and in the invoice list, in the customer's timezone, with a clear overdue state. <span class="new">Changed after the send-back: dates now use the customer's timezone, and overdue invoices get their own state (AC4, AC5).</span></p>
+        <h4>Work packages</h4>
+        <div class="wp">
+          <header><b class="mono" style="color:#1747A6">WP1</b><b>Due date in the invoice API</b><span class="tag">billing-api</span></header>
+          <ul>
+            <li>Add <code>dueDate</code> and <code>isOverdue</code> to the invoice response.</li>
+            <li><span class="new">Compute <code>isOverdue</code> against the customer's timezone, not the server's.</span></li>
+            <li>Contract test for invoices with and without a due date.</li>
+          </ul>
+        </div>
+        <div class="wp">
+          <header><b class="mono" style="color:#1747A6">WP2</b><b>Billing page and invoice list</b><span class="tag">billing-web</span></header>
+          <ul>
+            <li>New "Due" column in the invoice list (Q1: both list and detail).</li>
+            <li>Due date on the invoice detail header, in the locale date format (Q2).</li>
+            <li><span class="new">An "Overdue" badge and sort order for overdue invoices.</span></li>
+            <li>Component tests for the column, the badge and an empty due date.</li>
+          </ul>
+        </div>
+        <h4>Out of scope</h4>
+        <p>Payment reminders, and changing how due dates are set.</p>
+        <h4>Risks</h4>
+        <p>Older invoices have no due date; they show "—" and never count as overdue.</p>
+      </div>
+    </article>
+
+    <aside style="flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:14px">
+      <section class="panel" id="decide">
+        <div class="ph"><h2>Your decision</h2><span class="mono sub">plan_accepted</span></div>
+        <div class="pb">
+          <label class="choice"><input type="radio" name="d"><div><b>Approve</b><small>The voyage moves on to implementation.</small></div></label>
+          <label class="choice on"><input type="radio" name="d" checked><div><b>Send back</b><small>Cartographer revises the plan. This would be round 3 of 4.</small></div></label>
+          <label class="choice"><input type="radio" name="d"><div><b>Reject</b><small>The voyage runs aground (blocked). This can't be undone here.</small></div></label>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <label class="lbl" for="why">Reason for Cartographer <span style="color:#A11F1F">*</span></label>
+            <textarea id="why" class="input">Keep the overdue badge, but don't change the default sort; product wants due-date sorting as an option only.</textarea>
+            <span class="hint">Required for send back and reject. Recorded as alex@example.com.</span>
+          </div>
+          <div class="quote">
+            <span class="hint">The revision runs on</span>
+            <span><b class="mono" style="font-size:12px">claude-sonnet-5 · high</b> <span class="hint">· your choice for planning</span> <a href="Dialogs.dc.html" style="font-size:12px">Change</a></span>
+            <span class="hint">Spends from the remaining 17.6 AIU, billed to alex@example.com.</span>
+          </div>
+          <div style="display:flex;gap:8px"><button class="btn primary" type="button" style="flex:1">Send back to Cartographer</button></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h2>Acceptance criteria</h2><span class="sub">5</span></div>
+        <div class="pb" style="gap:0;padding-top:4px;padding-bottom:4px">
+          <div class="ac"><b>AC1</b><span>The invoice list shows a Due column for every invoice.</span></div>
+          <div class="ac"><b>AC2</b><span>The invoice detail shows the due date under the total.</span></div>
+          <div class="ac"><b>AC3</b><span>Dates use the viewer's locale format; exports use ISO 8601.</span></div>
+          <div class="ac"><b>AC4</b><span class="new">Due dates and overdue checks use the customer's timezone.</span></div>
+          <div class="ac"><b>AC5</b><span class="new">Overdue invoices show an "Overdue" badge.</span></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><h2>Earlier round</h2></div>
+        <div class="pb">
+          <div class="quote">
+            <span><b>Sent back</b> by jordan@example.com · yesterday 16:40</span>
+            <span>"Due date must use the customer's timezone; add an AC for the overdue state."</span>
+          </div>
+          <a href="Questions.dc.html" style="font-size:12px">2 questions answered before this plan</a>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

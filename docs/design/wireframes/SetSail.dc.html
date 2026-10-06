@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ahoy · Set sail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
+a{color:#1A64D6}a:hover{color:#1747A6}
+.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
+.logo:hover{color:#1B2733}
+.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
+.tab:hover{background:#F1F4F7;color:#1B2733}
+.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
+.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
+.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
+.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
+.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
+.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn:hover{background:#F1F4F7;color:#1B2733}
+.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
+.btn.primary:hover{background:#1755B8;color:#fff}
+.btn.lg{height:40px;padding:0 18px;font-size:14px}
+.page{padding:22px 24px 36px;display:flex;flex-direction:column;gap:16px;max-width:1240px;width:100%;margin:0 auto;box-sizing:border-box}
+h1{font-size:24px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.2}
+h2{font-size:15px;font-weight:700;margin:0}
+.sub{color:#5B6B7A}
+.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
+.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid #EEF2F5}
+.pb{padding:16px 18px;display:flex;flex-direction:column;gap:16px}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label,.lbl{font-weight:600;font-size:12.5px}
+.req{color:#A11F1F}
+.input{height:36px;border:1px solid #D5DCE3;border-radius:10px;padding:0 12px;font:inherit;width:100%;box-sizing:border-box;background:#fff;color:#1B2733}
+.input:focus{outline:2px solid #9DBDF1;outline-offset:1px;border-color:#1A64D6}
+.hint{font-size:12px;color:#5B6B7A}
+.suffix{position:relative}
+.suffix span{position:absolute;right:12px;top:9px;color:#5B6B7A;font-weight:600}
+table.t{width:100%;border-collapse:collapse}
+.t th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#5B6B7A;font-weight:600;padding:8px 12px;border-bottom:1px solid #E3E8EE;background:#FAFBFC;white-space:nowrap}
+.t td{padding:7px 12px;border-bottom:1px solid #EEF2F5;vertical-align:middle}
+.t tr:last-child td{border-bottom:0}
+.t .input{height:32px;border-radius:9px}
+.src{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;background:#EEF2F5;color:#3D4B59;font-size:11px;font-weight:600;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:#E7EFFC;color:#1747A6;font-size:12px;font-weight:600}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.check{display:flex;gap:10px;align-items:flex-start}
+.check svg{flex:none;margin-top:2px}
+.dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px}
+.dl dt{color:#5B6B7A}
+.dl dd{margin:0;font-weight:600}
+</style>
+</helmet>
+<header class="top">
+  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
+  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
+    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
+    <a class="tab" href="Voyages.dc.html">Voyages</a>
+    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
+  </nav>
+  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
+  <input id="q" class="search" type="search" placeholder="Search by key or title">
+  <span class="live"><i></i>Live</span>
+  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
+  <span class="av" title="alex@example.com (SSO)">AL</span>
+</header>
+<main class="page">
+  <div>
+    <a href="Docks.dc.html" style="font-size:12px;text-decoration:none">← Back to The Docks</a>
+    <h1 style="margin-top:6px">Set sail on a new voyage</h1>
+    <div class="sub">Start a Jira story in Ahoy. You become its owner, and its runs bill your personal Copilot account.</div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+    <form style="flex:999 1 620px;min-width:0;display:flex;flex-direction:column;gap:16px">
+      <section class="panel">
+        <div class="ph"><h2>The story</h2><span class="pill">Filled in from The Docks</span></div>
+        <div class="pb">
+          <div class="row">
+            <div class="field">
+              <label for="key">Jira key <span class="req">*</span></label>
+              <input id="key" class="input mono" style="font-size:13px" value="PROJ-145">
+              <span class="hint">Like PROJ-123. One voyage per key.</span>
+            </div>
+            <div class="field">
+              <label for="bud">Total budget <span class="req">*</span></label>
+              <div class="suffix"><input id="bud" class="input" value="25" inputmode="decimal"><span>AIU</span></div>
+              <span class="hint">A hard cap for every run of this voyage together. You can raise it later.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph">
+          <h2>Crew and models</h2>
+          <span class="sub">Optional. Leave a field blank to use the default shown.</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="t">
+            <thead><tr><th>Phase</th><th>Crew member</th><th style="width:34%">Model</th><th style="width:20%">Reasoning effort</th><th>Default from</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="mono">intake</td><td>Navigator</td>
+                <td><label for="m1" style="position:absolute;left:-9999px">Intake model</label><input id="m1" class="input mono" placeholder="Default: gpt-5.6-terra"></td>
+                <td><label for="e1" style="position:absolute;left:-9999px">Intake effort</label><select id="e1" class="input"><option>Default (medium)</option><option>low</option><option>medium</option><option>high</option><option>xhigh</option><option>max</option></select></td>
+                <td><span class="src">Server default</span></td>
+              </tr>
+              <tr>
+                <td class="mono">planning</td><td>Cartographer</td>
+                <td><label for="m2" style="position:absolute;left:-9999px">Planning model</label><input id="m2" class="input mono" value="claude-sonnet-5"></td>
+                <td><label for="e2" style="position:absolute;left:-9999px">Planning effort</label><select id="e2" class="input"><option>Default (model's own)</option><option>low</option><option>medium</option><option selected>high</option><option>xhigh</option><option>max</option></select></td>
+                <td><span class="src" style="background:#E7EFFC;color:#1747A6">Your choice</span></td>
+              </tr>
+              <tr>
+                <td class="mono">implementation</td><td>Implementer</td>
+                <td><label for="m3" style="position:absolute;left:-9999px">Implementation model</label><input id="m3" class="input mono" placeholder="Default: claude-sonnet-5"></td>
+                <td><label for="e3" style="position:absolute;left:-9999px">Implementation effort</label><select id="e3" class="input"><option>Default (model's own)</option><option>low</option><option>medium</option><option>high</option><option>xhigh</option><option>max</option></select></td>
+                <td><span class="src">Agent config</span></td>
+              </tr>
+              <tr>
+                <td class="mono">pr_review</td><td>Lookout · design</td>
+                <td><label for="m4" style="position:absolute;left:-9999px">Design reviewer model</label><input id="m4" class="input mono" placeholder="Default: gpt-5.6-terra"></td>
+                <td><label for="e4" style="position:absolute;left:-9999px">Design reviewer effort</label><select id="e4" class="input"><option>Default (high)</option><option>low</option><option>medium</option><option>high</option><option>xhigh</option><option>max</option></select></td>
+                <td><span class="src">Server default</span></td>
+              </tr>
+              <tr>
+                <td class="mono">pr_review</td><td>Lookout · defects</td>
+                <td><label for="m5" style="position:absolute;left:-9999px">Defect reviewer model</label><input id="m5" class="input mono" placeholder="Default: claude-sonnet-5"></td>
+                <td><label for="e5" style="position:absolute;left:-9999px">Defect reviewer effort</label><select id="e5" class="input"><option>Default (xhigh)</option><option>low</option><option>medium</option><option>high</option><option>xhigh</option><option>max</option></select></td>
+                <td><span class="src">Server default</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pb" style="gap:6px;border-top:1px solid #EEF2F5;padding-top:12px">
+          <div class="hint">Type a Copilot model id. Ahoy can't list the models your account may use; the worker checks the model and effort before the first prompt (0 AIU) and anchors the voyage if they're refused.</div>
+          <div class="hint">A model chosen without an effort runs at that model's own default. The two Lookouts must use different models.</div>
+        </div>
+      </section>
+    </form>
+
+    <aside style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:16px">
+      <section class="panel">
+        <div class="ph"><h2>Before you sail</h2></div>
+        <div class="pb">
+          <dl class="dl">
+            <dt>Voyage</dt><dd class="mono" style="font-size:12.5px">PROJ-145</dd>
+            <dt>Owner</dt><dd>alex@example.com (you)</dd>
+            <dt>Budget cap</dt><dd>25 AIU</dd>
+            <dt>First crew</dt><dd>Navigator reads the Jira issue</dd>
+          </dl>
+          <div class="check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4 10-10"></path></svg><span>Runs bill <b>your</b> Copilot account, up to 25 AIU. Nothing beyond the cap is spent.</span></div>
+          <div class="check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4 10-10"></path></svg><span>The crew stops for questions and at every human gate. Nothing is approved automatically.</span></div>
+          <div class="check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4 10-10"></path></svg><span>Anyone on the crew can stop the voyage at any time.</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn primary lg" href="Running.dc.html" style="flex:1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail · up to 25 AIU</a>
+            <a class="btn lg" href="Docks.dc.html">Cancel</a>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="pb" style="gap:8px">
+          <h2 style="font-size:13px">How a voyage goes</h2>
+          <div class="hint">intake → planning → plan_review → implementation → pr_review → delivery_gate → done. Today intake, planning and plan review run end to end; the rest follow.</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

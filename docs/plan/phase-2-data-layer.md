@@ -162,7 +162,8 @@ sem os reescrever. `diff` já está aprovado (§10): fixa a versão exata de `np
 ## Lane 2D · Backend falso e fixtures (L, Onda 2)
 
 **Depende de:** 2A, 2C. **Possui:** `src/testing/mock-backend/**`, `src/app/core/mock/**` (providers só de dev),
-`src/environments/environment.mock.ts`, e a configuração `mock` do `angular.json` (só acrescentar).
+`src/environments/environment.mock.ts`, a configuração `mock` do `angular.json` (só acrescentar), e o servidor
+`mock:api` (`scripts/mock-api.*`, o seu `tsconfig` se precisar, e a linha `mock:api` do `package.json`).
 
 Serve para desenvolver e testar **sem API nem Docker**. É um duplo do contrato, não a fonte de verdade.
 
@@ -187,6 +188,13 @@ Serve para desenvolver e testar **sem API nem Docker**. É um duplo do contrato,
 7. **Testes de conformidade:** cada resposta do mock validada contra o YAML com Ajv (como a 2A).
 8. **Fora do build de produção:** `fileReplacements`/`environment`; um teste ou script confirma que `dist/` não contém
    `mock-backend`.
+9. **O mesmo mock como servidor HTTP** (decidido pelo utilizador a 2026-10-06, em vez do `json-server`): o `MockAhoyServer`
+   não depende de Angular, e um adaptador `node:http` **sem dependências novas** serve-o em `127.0.0.1:8080`
+   (`npm run mock:api`, porta por `MOCK_API_PORT`). Assim `npm run mock:api` + `npm start` passa pelo proxy real
+   (`X-Ahoy-Actor` lido como o ator, como em `AHOY_AUTH=dev`), responde a `curl` e serve o e2e da 6C. O SSE sai com
+   `text/event-stream` sem buffering. É o mesmo código do modo no browser: nunca dois mocks. A forma de o executar
+   (por exemplo `tsc` para `out-tsc/` com um `tsconfig` próprio, ou o _type stripping_ do Node 24) fica documentada em
+   `docs/progress.md`.
 
 **Aceitação**
 
@@ -194,6 +202,8 @@ Serve para desenvolver e testar **sem API nem Docker**. É um duplo do contrato,
   plano → send-back → aprovação → done) num teste de integração sem browser.
 - Conformidade com o OpenAPI verde; um desvio **intencional** do contrato fica documentado em `docs/progress.md`.
 - `dist/` de produção sem rasto do mock.
+- `npm run mock:api` arranca sem API, Docker nem Postgres; com `npm start` ao lado, `curl -s localhost:4200/api/v1/health`
+  responde e `curl -N localhost:4200/api/v1/events/stream` entrega eventos um a um.
 
 **Prompt:** "Lê `CLAUDE.md`, `docs/progress.md`, `docs/plan/00-overview.md` e `docs/plan/phase-2-data-layer.md`. Implementa **só a
 lane 2D**. O mock não é a API: valida sempre as respostas contra `openapi/ahoy-v1.yaml`. Não entra no build de produção.

@@ -1,0 +1,170 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Dialogs.dc.html": {
+      "h": 1400,
+      "radius": 12,
+      "title": "Dialogs · stop, resume, budget, models, send back, reject",
+      "w": 1440,
+      "x": 1520,
+      "y": 3880
+    },
+    "Docks.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "The Docks · Jira backlog (planned)",
+      "w": 1440,
+      "x": 3040,
+      "y": 300
+    },
+    "Halted.dc.html": {
+      "expand": "fill",
+      "h": 1350,
+      "is_interactive": true,
+      "title": "Voyage · anchored, models (halted)",
+      "w": 1440,
+      "x": 4560,
+      "y": 1940
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Home · All hands (Needs you)",
+      "w": 1440,
+      "x": 0,
+      "y": 300
+    },
+    "PlanReview.dc.html": {
+      "expand": "fill",
+      "h": 1500,
+      "is_interactive": true,
+      "title": "Voyage · plan review (awaiting_decision)",
+      "w": 1440,
+      "x": 0,
+      "y": 1940
+    },
+    "Questions.dc.html": {
+      "expand": "fill",
+      "h": 1250,
+      "is_interactive": true,
+      "title": "Voyage · crew questions (awaiting_input)",
+      "w": 1440,
+      "x": 1520,
+      "y": 1940
+    },
+    "Records.dc.html": {
+      "expand": "fill",
+      "h": 1550,
+      "is_interactive": true,
+      "title": "Voyage · gates, artifacts, ship's log",
+      "w": 1440,
+      "x": 6080,
+      "y": 1940
+    },
+    "RunDetail.dc.html": {
+      "expand": "fill",
+      "h": 1150,
+      "is_interactive": true,
+      "title": "Run detail",
+      "w": 1440,
+      "x": 0,
+      "y": 3880
+    },
+    "Running.dc.html": {
+      "expand": "fill",
+      "h": 1250,
+      "is_interactive": true,
+      "title": "Voyage · under way, live steps (running)",
+      "w": 1440,
+      "x": 3040,
+      "y": 1940
+    },
+    "SetSail.dc.html": {
+      "expand": "fill",
+      "h": 1300,
+      "is_interactive": true,
+      "title": "Set sail · start-story form",
+      "w": 1440,
+      "x": 4560,
+      "y": 300
+    },
+    "States.dc.html": {
+      "h": 1150,
+      "radius": 12,
+      "title": "Empty, loading, error and conflict states",
+      "w": 1440,
+      "x": 3040,
+      "y": 3880
+    },
+    "Voyages.dc.html": {
+      "expand": "fill",
+      "h": 960,
+      "is_interactive": true,
+      "title": "Voyages · story list with status filters",
+      "w": 1440,
+      "x": 1520,
+      "y": 300
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-06T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "glossary": {
+      "fill": "blue",
+      "maxH": 560,
+      "text": "Glossary (nautical label → API term)\n\nVoyage = story · Crew = agents (Navigator, Cartographer, Lookout)\nSet sail = start a story\nAll hands = the Needs-you inbox\nThe Docks = Jira backlog (planned, not in the API yet)\nShip's log = activity timeline\n\nStatus badges\nQueued = ready\nUnder way = running\nCrew asks = awaiting_input\nYour orders = awaiting_decision\nAnchored = halted (always with a reason)\nDocked = terminal · done\nAground = terminal · blocked\n\nThe API word is always shown next to the badge on the voyage header, so nothing is hidden behind the theme.",
+      "w": 420,
+      "x": 6080,
+      "y": 300
+    },
+    "row1": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Ahoy · the harbour: inbox, voyages, backlog, set sail",
+      "w": 240,
+      "x": 0,
+      "y": 0
+    },
+    "row2": {
+      "kind": "title1",
+      "maxW": 7520,
+      "text": "A voyage, up close: PROJ-123 and friends",
+      "w": 240,
+      "x": 0,
+      "y": 1660
+    },
+    "row3": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "Runs, dialogs and states",
+      "w": 240,
+      "x": 0,
+      "y": 3600
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Voyages.dc.html",
+    "Docks.dc.html",
+    "SetSail.dc.html",
+    "PlanReview.dc.html",
+    "Questions.dc.html",
+    "Running.dc.html",
+    "Halted.dc.html",
+    "Records.dc.html",
+    "RunDetail.dc.html",
+    "Dialogs.dc.html",
+    "States.dc.html"
+  ],
+  "pages": [],
+  "title": "Ahoy UI wireframes"
+}

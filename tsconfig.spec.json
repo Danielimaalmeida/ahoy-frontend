@@ -1,0 +1,9 @@
+/* Specs (Vitest through @angular/build:unit-test) and the src/testing/ helpers they use. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec",
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "src/testing/**/*.ts"]
+}

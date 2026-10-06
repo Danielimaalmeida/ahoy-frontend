@@ -1,0 +1,15 @@
+<!-- @dsCard group="Forms" height=190 subtitle="Model and reasoning effort per phase" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ModelChoice preview</title></head>
+<body>
+<div class="ah" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;flex-direction:column;gap:8px">
+  <div class="ah-model"><span class="ah-model__phase">intake<span class="ah-model__crew">Navigator</span></span><input class="ah-input ah-input--mono" placeholder="Default: gpt-5.6-terra" aria-label="Intake model"><select class="ah-input" aria-label="Intake effort"><option>Default (medium)</option></select><span class="ah-source">Server default</span></div>
+  <div class="ah-model"><span class="ah-model__phase">planning<span class="ah-model__crew">Cartographer</span></span><input class="ah-input ah-input--mono" value="claude-sonnet-5" aria-label="Planning model"><select class="ah-input" aria-label="Planning effort"><option>high</option></select><span style="display:flex;gap:6px;align-items:center"><span class="ah-source ah-source--chosen">Chosen for this voyage</span><button class="ah-btn ah-btn--sm ah-btn--ghost" type="button" aria-label="Reset planning to default" title="Reset to default"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg></button></span></div>
+  <div class="ah-model"><span class="ah-model__phase">pr_review<span class="ah-model__crew">Lookout · design</span></span><input class="ah-input ah-input--mono" value="claude-sonnet-5" aria-invalid="true" aria-label="Design reviewer model"><select class="ah-input" aria-label="Design reviewer effort"><option>Default (high)</option></select><span class="ah-source">Server default</span></div>
+  <span class="ah-field__error">The two Lookouts must use different models: both would run on claude-sonnet-5.</span>
+</div>
+</div>
+</body>
+</html>

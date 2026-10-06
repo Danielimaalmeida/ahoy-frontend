@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ahoy · Voyages</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
+a{color:#1A64D6}a:hover{color:#1747A6}
+.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
+.logo:hover{color:#1B2733}
+.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
+.tab:hover{background:#F1F4F7;color:#1B2733}
+.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
+.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
+.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
+.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
+.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
+.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
+.btn:hover{background:#F1F4F7;color:#1B2733}
+.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
+.btn.primary:hover{background:#1755B8;color:#fff}
+.btn.sm{height:28px;padding:0 11px;font-size:12px;border-radius:9px}
+.btn[disabled]{color:#8494A2;cursor:default}
+.page{padding:22px 24px 36px;display:flex;flex-direction:column;gap:14px;max-width:1360px;width:100%;margin:0 auto;box-sizing:border-box}
+h1{font-size:24px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.2}
+h2{font-size:15px;font-weight:700;margin:0}
+.sub{color:#5B6B7A}
+.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
+.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
+.scroll{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse}
+.t th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#5B6B7A;font-weight:600;padding:8px 14px;border-bottom:1px solid #E3E8EE;background:#FAFBFC;white-space:nowrap}
+.t td{padding:7px 14px;border-bottom:1px solid #EEF2F5;vertical-align:middle;height:24px}
+.t tr:last-child td{border-bottom:0}
+.t tbody tr:hover td{background:#F7FAFE}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
+.key{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:#1747A6;text-decoration:none;margin-right:6px}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-queued{background:#EDF1F5;color:#3D4B59}
+.b-run{background:#DDF3F7;color:#0B5C6B}
+.b-input{background:#FFF1D6;color:#7A4B00}
+.b-decide{background:#EEE8FB;color:#4E3290}
+.b-halt{background:#FDE3E3;color:#962020}
+.b-done{background:#DDF3E6;color:#1C6337}
+.b-blocked{background:#2B3A47;color:#fff}
+.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
+.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
+.bud{display:flex;align-items:center;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border:1px solid #E3E8EE;border-radius:999px;background:#fff;font:inherit;font-weight:600;color:#1B2733;cursor:pointer}
+.chip:hover{border-color:#1A64D6}
+.chip.on{background:#1A64D6;border-color:#1A64D6;color:#fff}
+.chip em{font-style:normal;font-weight:500;color:#5B6B7A;font-size:12px}
+.chip.on em{color:#DCE8FB}
+.chip code{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:#5B6B7A}
+.dots{display:flex;gap:3px;align-items:center}
+.dots span{width:14px;height:5px;border-radius:999px;background:#E3E8EE}
+.dots .d{background:#1A64D6}
+.dots .c{background:#7FA9EC}
+.dots .x{background:#C43D3D}
+.why{color:#5B6B7A;white-space:normal;max-width:260px}
+</style>
+</helmet>
+<header class="top">
+  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
+  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
+    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
+    <a class="tab on" href="Voyages.dc.html">Voyages</a>
+    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
+  </nav>
+  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
+  <input id="q" class="search" type="search" placeholder="Search by key or title">
+  <span class="live"><i></i>Live</span>
+  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
+  <span class="av" title="alex@example.com (SSO)">AL</span>
+</header>
+<main class="page">
+  <div>
+    <h1>Voyages</h1>
+    <div class="sub">Every story in Ahoy, most recently updated first.</div>
+  </div>
+
+  <div class="chips" role="group" aria-label="Filter by status">
+    <button class="chip on" type="button">All <em>8</em></button>
+    <button class="chip" type="button"><span class="badge b-queued" style="height:18px;padding:0 7px"><i></i>Queued</span><code>ready</code><em>1</em></button>
+    <button class="chip" type="button"><span class="badge b-run" style="height:18px;padding:0 7px"><i></i>Under way</span><code>running</code><em>1</em></button>
+    <button class="chip" type="button"><span class="badge b-input" style="height:18px;padding:0 7px"><i></i>Crew asks</span><code>awaiting_input</code><em>1</em></button>
+    <button class="chip" type="button"><span class="badge b-decide" style="height:18px;padding:0 7px"><i></i>Your orders</span><code>awaiting_decision</code><em>1</em></button>
+    <button class="chip" type="button"><span class="badge b-halt" style="height:18px;padding:0 7px"><i></i>Anchored</span><code>halted</code><em>2</em></button>
+    <button class="chip" type="button"><span class="badge b-done" style="height:18px;padding:0 7px"><i></i>In port</span><code>terminal</code><em>2</em></button>
+  </div>
+
+  <section class="panel" aria-label="Voyages">
+    <div class="scroll">
+      <table class="t">
+        <thead><tr><th>Status</th><th>Voyage</th><th>Phase</th><th>Progress</th><th>Note</th><th>Owner</th><th>Budget (AIU)</th><th>Updated ↓</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-run"><i></i>Under way</span></td>
+            <td><a class="key" href="Running.dc.html">PROJ-140</a>Add audit trail to admin role changes</td>
+            <td class="mono">planning</td>
+            <td><div class="dots" aria-label="Phase 2 of 7"><span class="d"></span><span class="c"></span><span></span><span></span><span></span><span></span><span></span></div></td>
+            <td class="why">Cartographer at work</td>
+            <td>jordan@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:11%"></i></div><span class="mono">3.2 / 30</span></div></td>
+            <td>just now</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-queued"><i></i>Queued</span></td>
+            <td><a class="key" href="Voyages.dc.html">PROJ-109</a>Migrate email templates to the new sender</td>
+            <td class="mono">intake</td>
+            <td><div class="dots" aria-label="Phase 1 of 7"><span class="c"></span><span></span><span></span><span></span><span></span><span></span><span></span></div></td>
+            <td class="why">Navigator goes next</td>
+            <td>alex@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:0%"></i></div><span class="mono">0.0 / 20</span></div></td>
+            <td>1 m ago</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-halt"><i></i>Anchored</span></td>
+            <td><a class="key" href="Halted.dc.html">PROJ-126</a>Search orders by customer email</td>
+            <td class="mono">intake</td>
+            <td><div class="dots" aria-label="Phase 1 of 7"><span class="x"></span><span></span><span></span><span></span><span></span><span></span><span></span></div></td>
+            <td class="why">Stopped by priya@example.com</td>
+            <td>priya@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:4%"></i></div><span class="mono">0.6 / 15</span></div></td>
+            <td>9 m ago</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-decide"><i></i>Your orders</span></td>
+            <td><a class="key" href="PlanReview.dc.html">PROJ-123</a>Show invoice due date on the billing page</td>
+            <td class="mono">plan_review</td>
+            <td><div class="dots" aria-label="Phase 3 of 7"><span class="d"></span><span class="d"></span><span class="c"></span><span></span><span></span><span></span><span></span></div></td>
+            <td class="why">Plan waiting for approval · round 2 of 4</td>
+            <td>alex@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:41%"></i></div><span class="mono">12.4 / 30</span></div></td>
+            <td>22 m ago</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-input"><i></i>Crew asks</span></td>
+            <td><a class="key" href="Questions.dc.html">PROJ-131</a>Let customers download receipts as PDF</td>
+            <td class="mono">planning</td>
+            <td><div class="dots" aria-label="Phase 2 of 7"><span class="d"></span><span class="c"></span><span></span><span></span><span></span><span></span><span></span></div></td>
+            <td class="why">2 open questions</td>
+            <td>sam@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:24%"></i></div><span class="mono">6.1 / 25</span></div></td>
+            <td>48 m ago</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-halt"><i></i>Anchored</span></td>
+            <td><a class="key" href="Halted.dc.html">PROJ-118</a>Rate-limit the public search endpoint</td>
+            <td class="mono">planning</td>
+            <td><div class="dots" aria-label="Phase 2 of 7"><span class="d"></span><span class="x"></span><span></span><span></span><span></span><span></span><span></span></div></td>
+            <td class="why">Run failed: model refused before any prompt</td>
+            <td>sam@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:49%"></i></div><span class="mono">9.8 / 20</span></div></td>
+            <td>2 h ago</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-done"><i></i>Docked</span></td>
+            <td><a class="key" href="Voyages.dc.html">PROJ-097</a>Fix the timezone in the weekly report</td>
+            <td class="mono">done</td>
+            <td><div class="dots" aria-label="Done"><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span></div></td>
+            <td class="why">Delivered</td>
+            <td>alex@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:68%"></i></div><span class="mono">27.1 / 40</span></div></td>
+            <td>yesterday</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-blocked"><i></i>Aground</span></td>
+            <td><a class="key" href="Voyages.dc.html">PROJ-102</a>Remove the legacy coupon flow</td>
+            <td class="mono">blocked</td>
+            <td><div class="dots" aria-label="Blocked at phase 3"><span class="d"></span><span class="d"></span><span class="x"></span><span></span><span></span><span></span><span></span></div></td>
+            <td class="why">Plan rejected by jordan@example.com</td>
+            <td>jordan@example.com</td>
+            <td><div class="bud"><div class="meter" style="width:64px"><i style="width:42%"></i></div><span class="mono">8.3 / 20</span></div></td>
+            <td>3 d ago</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ph" style="border-top:1px solid #EEF2F5;border-bottom:0;justify-content:space-between"><span class="sub">Showing 8 of 8</span><button class="btn sm" type="button" disabled>Load more</button></div>
+  </section>
+  <div class="sub" style="font-size:12px">Progress runs intake · planning · plan_review · implementation · pr_review · delivery_gate · done. Dark blue = passed, light blue = current, red = where it stopped.</div>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
