@@ -1,31 +1,38 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-06 by lane P0 (phase 0, foundation). State: phase 0 done and committed (approved by the user) on branch `ccr-be69922d-w5i04m`; the new
-`CLAUDE.md` text is approved and applied. Not merged into `main` yet.**
+**Updated 2026-10-06 by lane 1A (wave 1, kit foundation). State: phase 0 is merged into `main`. Lane 1A is done in the
+working tree of branch `claude/brave-keller-c1j5st`, not committed: commit and push wait for the user's approval. Lanes
+2A and 2C (wave 1) run in other sessions; their state is in their own sections once they report.**
 
-- **Ran (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, `npm run build`, `npm run typecheck`,
-  `npm run lint`, `npm test` (15 tests, 1 file), `npm run format:check`, all green; `npm start` with every §5.3 route
-  rendered in headless Chromium; the proxy against a **local stub** on port 8080.
-- **Did not run:** the proxy against the `ahoy-hosted` API (no Docker daemon and no Postgres server in this session);
-  the CI workflow on GitHub (nothing pushed); the wireframes opened in a browser.
-- **`CLAUDE.md`:** the adapted text was shown to the user as a diff, approved on 2026-10-06 and applied.
+- **Ran for 1A (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, `npm run build`, `npm run typecheck`,
+  `npm run lint` (now also `tokens:check`), `npm test` (98 tests, 11 files), `npm run format:check`, all green;
+  `/_kit` served by `ng serve` and screenshotted in headless Chromium in light and dark at 1100 px and 390 px, next to
+  the design system's Button, Panel, Field, Banner and DataTable previews.
+- **Did not run for 1A:** `npm run start:mock` against a mock backend (lane 2D has not built one; 1A calls no API);
+  the wireframe boards in a browser; any API.
+- **Phase 0:** see "Lane P0" below.
 
 ## Where we are
 
-Wave 0 (phase 0) is complete on branch `ccr-be69922d-w5i04m`: an Angular 22 app that builds, tests
-and serves, with the CLAUDE.md conventions enforced by `tsc`, ESLint, Prettier and `scripts/check-boundaries.mjs`, the
-dev proxy, every route as a lazy placeholder, the design references in `docs/design/`, and the docs. No screen, no
-design-system component and no API call exists yet.
+Wave 0 (phase 0) is merged into `main`: an Angular 22 app that builds, tests and serves, with the CLAUDE.md conventions
+enforced by `tsc`, ESLint, Prettier and `scripts/check-boundaries.mjs`, the dev proxy, every route as a lazy
+placeholder, the design references in `docs/design/`, and the docs.
+
+Wave 1, lane 1A (kit foundation) is done, uncommitted: generated `tokens.css`, the design-system bundle loaded
+globally (every page, placeholders included, now has the DS font, colours and ground), `ThemeService`, `ah-icon` (16
+icons), `ah-logo`, the favicon, the primitives (`ahButton`, `ah-panel`, `ah-field` + `ahInput`, `ah-banner`, table
+helpers, `ah-source`) and the dev-only `/_kit` gallery with a light/dark switch. No screen and no API call exists yet.
 
 ## Start here next
 
-1. **User:** merge phase 0 into `main` (a PR from `ccr-be69922d-w5i04m` when you approve it), so wave 1 branches from it.
+1. **User:** review lane 1A (section "Lane 1A" below, and `/_kit` with `npm start`), then approve its commit and push
+   to `claude/brave-keller-c1j5st` and a PR into `main`. Decide the two points it raises: the `.prettierignore` entries
+   for the copied agent skills, and reporting the two `bundle.css` defects to the design system.
 2. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
    Angular 22 rejects). Until then each agent must put `npx node@24` first on its `PATH` (see "Prompt for a new
    session").
-3. **Wave 1**, in parallel, one branch per lane from `main` once phase 0 is merged: **1A** (kit foundation), **2A**
-   (API client), **2C** (pure domain). Prompts are in `docs/plan/phase-1-design-system.md` and
-   `docs/plan/phase-2-data-layer.md`.
+3. **Wave 1:** finish and merge **2A** (API client) and **2C** (pure domain). With 1A and 2C in `main`, wave 2 lanes
+   **1B** and **1C** can start (`docs/paralelos2.md`).
 4. Optional, whenever a session has Docker: verify the proxy against `ahoy-hosted` `npm run dev -- --simulate`
    (`curl -s localhost:4200/api/v1/health` and `curl -N localhost:4200/api/v1/events/stream`).
 
@@ -35,6 +42,183 @@ design-system component and no API call exists yet.
 > `<id>`; follow the protocol in §9 of the overview. First run `node -v`: if it is below 22.22.3, run `npx -y node@24 -v`
 > and put that binary first on your `PATH` for every command (see "Node in cloud sessions" below). Don't commit or push.
 > Finish with your lane's report in `docs/progress.md`.
+
+Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+---
+
+## Lane 1A · Kit foundation (2026-10-06)
+
+Launched from `docs/paralelos1.md`, section A. **Not committed:** every change is in the working tree of
+`claude/brave-keller-c1j5st` (the branch this session was given; plan §9 would call it `lane/1a-kit-foundation`),
+waiting for the user's approval to commit and push. Phase 0 was already in `main` (pre-flight checked with
+`git fetch origin` and `git log origin/main`).
+
+### Node
+
+`node -v` was v22.22.0. `npx -y node@24 -v` gave v24.21.0; that binary was copied into the session scratchpad and put
+first on `PATH`. Every command below ran on Node 24.21.0 with npm 10.9.4.
+
+### What changed
+
+| Area          | Files                                                                                                                                 | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tokens        | `scripts/build-tokens.mjs`, `src/styles/tokens.css` (generated), `package.json` scripts `tokens`, `tokens:check`                      | Every colour, spacing, radius, shadow and size token becomes `--<name>`; `.` is escaped (`--space-1\.5`); `type.families` → `--font-sans`, `--font-mono`. Light in `:root, [data-theme="light"]` (83 properties), dark in `[data-theme="dark"]` (59: the 56 colours and 3 shadows; the rest inherit light). Each block also sets `color-scheme`, so native controls follow the theme. Values are checked to be plain CSS (no `;`, `{`, `}`, `\`, comments). `--check` writes nothing and fails when `tokens.css` is missing or differs from what `tokens.json` produces, or when any `var(--x)` in `src/styles/` or `src/app/` names a property nothing defines. |
+| Styles        | `src/styles/ahoy-bundle.css`, `src/styles/_ahoy-angular.scss`, `src/styles.scss`                                                      | The bundle is a byte-for-byte copy of `components/bundle.css` under a header naming its source and version; its Google Fonts `@import` stays. `_ahoy-angular.scss` holds only what the bundle can't: `body { margin: 0 }`, `display: contents` for wrapper hosts, the link-button colour fix (below), `ah-panel__actions`, `ah-field__optional`, `ah-banner__body`; each rule says why.                                                                                                                                                                                                                                                                          |
+| Theme         | `src/app/ui/theme/theme.service.ts`                                                                                                   | `ThemeService` (`theme` signal, `set`, `toggle`): `data-theme` on `<html>`, light by default, remembered under `ahoy.theme` in `localStorage`. Every storage access is in `try/catch`; a stored value that is not a theme is ignored. `THEME_STORAGE` token so tests use a fake. No button in the app (F16).                                                                                                                                                                                                                                                                                                                                                     |
+| Icons         | `src/app/ui/icon/icons.ts`, `icon.ts`                                                                                                 | `ICON_NAMES` (16, in the README's order), closed `IconName`, `ICONS: Record<IconName, IconShape[]>` (exhaustive by type), `isIconName`. `<ah-icon name size label>`: inline SVG, `stroke="currentColor"`, 1.8 stroke, sizes 16 (default), 12, 18; `aria-hidden` unless `label` is set, then `role="img"` + `aria-label`. Shapes are data rendered with `@switch`: no `innerHTML`.                                                                                                                                                                                                                                                                                |
+| Logo, favicon | `src/app/ui/logo/logo.ts`, `public/favicon.svg`, `src/index.html`, `public/favicon.ico` (deleted)                                     | `<ah-logo [link]>`: the wheel mark and "Ahoy" in `ah-logo`, a `routerLink` to `/` by default, plain text with `link = null`. The favicon is a copy of `ahoy-app-icon.svg`; the Angular default `favicon.ico` is gone.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Button        | `src/app/ui/button/button.ts`                                                                                                         | `button[ahButton], a[ahButton]` directive: `ahButton="default                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | primary | soft | ghost | danger | danger-outline"`(bare = default),`size="sm | md  | lg"`; adds the bundle classes and leaves the element's own type, disabled state and classes alone. `buttonClasses(variant, size)` is exported. |
+| Panel         | `src/app/ui/panel/panel.ts`                                                                                                           | `ah-panel` (the `<section class="ah-panel">`), `ah-panel-head` (`heading`, `subtitle`, `level` 2 or 3, free content, actions marked `ahPanelActions` pushed right), `ah-panel-body`, `ah-panel-foot`. With a heading, the section gets `aria-labelledby` to a unique id.                                                                                                                                                                                                                                                                                                                                                                                         |
+| Field         | `src/app/ui/field/field.ts`                                                                                                           | `ah-field` (`label`, `required`, `optional`, `hint`, `unit`, `errorText`, `errorMessages`) around one `input/select/textarea[ahInput]` (`mono` for keys and model ids). Label `for`, `aria-required`, `aria-invalid` and `aria-describedby` (error, unit, hint ids, only those shown) go on the control; the asterisk is `aria-hidden`. Shows the first error of the `NgControl` once it is touched or changed, kept current through `control.events`; message = `errorMessages[key]`, else the validator's own string, else a default. `errorText` (a server error) shows whatever the state. Ids are unique; a control's own `id` is kept.                     |
+| Banner        | `src/app/ui/banner/banner.ts`                                                                                                         | `<ah-banner variant heading tech icon announce>`: `notice` (refresh icon), `error` (anchor icon), `info` (info icon) and `cost` (the `ah-cost` box: bold amount, projected "who is billed" as a hint). Icons at 18px; `tech` adds `ah-tech` last. `announce` defaults follow the preview (`notice` → `role="alert"`, `error` → `role="status"`, others none) and can be overridden.                                                                                                                                                                                                                                                                              |
+| Table, tags   | `src/app/ui/table/table.ts`, `src/app/ui/tags/source.ts`                                                                              | Directives `table[ahTable]`, `td/th[ahNowrap]`, `[ahKey]`, `[ahApi]`, `[ahCellSub]` (they add the bundle class); `<ah-source [chosen]>` (`ah-source`, `ah-source--chosen`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Gallery       | `src/app/ui/_kit/kit.routes.ts`, `kit.ts`, `kit-section.ts`, `sections/1a-*.ts`, `sections/1b-sections.ts`, `sections/1c-sections.ts` | `/_kit` (dev builds only, as in phase 0) shows the logo, a Light/Dark switch (`aria-pressed` buttons, through `ThemeService`) and one labelled section per component: Logo and icons, Button, Panel, Field (a typed reactive form; the cap starts touched so its error shows, as in the preview), Banner, DataTable and tags. Each lane lists its sections in its own `sections/<lane>-sections.ts`; the 1B and 1C files exist and are empty, so those lanes never edit `kit.ts`.                                                                                                                                                                                |
+| Tooling       | `package.json`, `.prettierignore`                                                                                                     | `npm run lint` = `eslint . && npm run tokens:check`, so CI (which runs `lint`) enforces fresh tokens without touching `ci.yml`. `.prettierignore` also skips the bundle copy and the agent-skill copies (below).                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+**Using the kit (for 1B, 1C and the feature lanes):**
+
+```html
+<button ahButton="primary" size="sm" type="button"><ah-icon name="sail" />Set sail</button>
+<ah-panel>
+  <ah-panel-head heading="Needs you" subtitle="4 voyages"
+    ><a ahButton size="sm" ahPanelActions routerLink="…">All</a></ah-panel-head
+  >
+  <ah-panel-body>…</ah-panel-body>
+</ah-panel>
+<ah-field
+  label="Total budget"
+  required
+  unit="AIU"
+  hint="…"
+  [errorMessages]="{ min: 'At least 12.4 AIU, what’s already spent.' }"
+>
+  <input ahInput formControlName="budget" inputmode="decimal" />
+</ah-field>
+<ah-banner variant="error" heading="Anchored: …" tech="run_failed · r-03">Plain words first.</ah-banner>
+```
+
+### Proof
+
+All on Node 24.21.0, offline, 0 AIU. No API, mock or real, was involved: lane 1A has no data.
+
+- **`tokens:check`**, run on a scratch copy of `tokens.json`, `tokens.css` and the bundle (`node scripts/build-tokens.mjs
+--check <root>`), so `docs/design/` was never edited:
+  1. as generated: `ok`, exit 0;
+  2. `bg` changed in `tokens.json`, not regenerated: "tokens.css is out of date", exit 1;
+  3. regenerated: `ok`, exit 0;
+  4. `avatar` and `badge-height` removed from `tokens.json` and regenerated: "undefined custom property
+     src/styles/ahoy-bundle.css: --avatar" and "--badge-height", exit 1;
+  5. `space-1.5` renamed: "--space-1.5" undefined (the bundle's escaped `var(--space-1\.5)` is matched), exit 1;
+  6. `tokens.css` deleted: "is missing", exit 1;
+  7. a value of `red; } body { x: y`: "token bg has an unexpected value", exit 1, nothing written.
+- **Icons against the sources:** a throw-away script (session scratchpad, not in the repo) parsed the 16 files in
+  `assets/Icons/` and compared every `path`, `circle` and `rect` with `ICONS`: 16 files, 16 names, 0 mismatches.
+- **Tests: 11 files, 98 tests** (83 new; P0's 15 unchanged): `icon` 21 (the 16 icons render on the 24px grid in the
+  SVG namespace, geometry copied, sizes, `aria-hidden` vs label; `ICON_NAMES` equals the README table, which is typed
+  `satisfies Record<IconName, string>`, so a missing or extra name fails to compile), `button` 21 (the 18
+  variant × size cases, native button and link kept, input changes), `field` 17 (label `for`, asterisk hidden,
+  `aria-required`, `aria-describedby` ids exist, no error until touched, first error with a valid
+  `aria-describedby`, validator text, cleared when valid, `markAllAsTouched`, server error, own id, textarea, unique
+  ids, and 7 `firstErrorMessage` cases), `theme.service` 7 (default light, stored dark, invalid value, set/toggle and
+  storage, refused storage, no storage), `panel` 5, `banner` 4, `kit` 4 (every section labelled, the theme switch
+  changes `<html>` and `aria-pressed`, the preview's field error, 16 icons), `logo` 2, `table` 1, `source` 1.
+- **The a11y tests catch regressions:** removing the Field's `aria-invalid` binding and the Panel's `aria-labelledby`
+  made 4 tests fail (restored afterwards).
+- **Visual check, `/_kit` against the previews:** `ng serve` (development configuration) and headless Chromium 1194
+  driven over the DevTools protocol by a throw-away script. `/_kit` at 1100 px in light and dark, and at 390 px in
+  light and dark; the Button, Panel, Field, Banner and DataTable `preview.html` files, wrapped with the generated
+  `tokens.css` and the bundle, at 900 px in light and dark. Compared by eye: Button, Panel, Field and Banner match in
+  both themes, except the deliberate differences below. Google Fonts loaded in the browser (`document.fonts`:
+  Plus Jakarta Sans 600 loaded). At 390 px the page has no sideways scroll (`scrollWidth` 375 with the scrollbar); the
+  table scrolls inside its own box, as the DataTable README allows.
+- **Every page uses the DS:** on `/voyages` (a P0 placeholder) the body's computed `font-family` is the DS sans stack
+  and its background is `bg` (`rgb(246, 248, 250)`).
+- **Production build:** `npm run build` has no `kit-routes` chunk and `grep` finds no `_kit`, `Kit · Ahoy`, `ah-kit` or
+  `kit__` in `dist/ahoy-frontend/`; `styles.css` holds the tokens (`--space-1\.5: 6px`) and the bundle;
+  `index.html` links `favicon.svg`.
+
+### Deliberate differences from the previews, and two bundle defects
+
+- **Bundle defect 1, links styled as buttons.** `bundle.css` has `.ah a { color: var(--accent-text) }`, which is more
+  specific than `.ah-btn--primary`, so `<a class="ah-btn ah-btn--primary">` shows blue text on blue: the DataTable
+  preview's own "Answer" and "Review plan" are unreadable. `_ahoy-angular.scss` restores each variant's text colour on
+  `.ah a.ah-btn`. The bundle copy itself is untouched. **For the design system:** fix it in `bundle.css`, then delete
+  these rules here.
+- **Bundle defect 2, `.ah-sr` escapes scroll boxes.** It is `position: absolute` with no positioned ancestor, so inside
+  a table wrapped in an `overflow-x: auto` box it widened the page at 390 px. The gallery's scroll box has
+  `position: relative`; every lane that wraps a table should do the same.
+- Icons follow the Icons README (1.8 stroke, 16/12/18 px); the Button preview draws its icon at 15 px with a 2 stroke
+  and the Banner preview at 18 px with a 2 stroke.
+- The Field preview's textarea has an inline `min-height: 60px`; `ah-field` keeps the bundle's 84 px.
+- The gallery adds an `info` banner (not in the preview) and shows the table without budget meters (lane 1B's
+  `ah-budget-meter`); its badges are the bundle's raw classes until lane 1B's `ah-status-badge`.
+
+### Decisions
+
+- **Wrapper hosts add no box.** `ah-icon`, `ah-logo`, `ah-panel*`, `ah-field` and `ah-banner` render the README markup
+  inside a `display: contents` host, so flex and grid layouts see the README element (the banner's icon is the
+  flex item, a field is the grid cell). ARIA attributes are always on the inner element. `ah-source` puts the class on
+  its host instead, because `.ah-source` is already `inline-flex`.
+- **Table helpers are attribute directives** (`ahKey`, `ahApi`, `ahCellSub`), not elements, so a key can be an
+  `<a routerLink>` and keep link semantics.
+- **`ThemeService` lives in `src/app/ui/theme/`**, a folder the lane list does not name: `ui/` is the only layer `_kit`
+  may import, and the service is not specific to the gallery. It applies the stored theme only once something
+  injects it (today only `/_kit`); see "Needs from lane 3A".
+- **Gallery layout CSS** (`kit-*`) sits in the `Kit` component with `ViewEncapsulation.None`, not in `src/styles/`, so
+  it only loads with the lazy, dev-only page and never reaches production CSS.
+- **`lint` runs `tokens:check`**, so a stale `tokens.css` fails CI without editing `.github/workflows/ci.yml` (lane 6D
+  appends to it).
+
+### Files outside the lane's list, and why
+
+- `package.json`: the `tokens` and `tokens:check` scripts the plan asks for, and `lint` running `tokens:check`.
+- `src/index.html`, `public/favicon.svg`, `public/favicon.ico` (deleted): the favicon deliverable.
+- `src/app/ui/theme/`: see Decisions.
+- `src/app/ui/_kit/sections/1b-sections.ts` and `1c-sections.ts`: empty lists, the seam that keeps 1B and 1C out of
+  `kit.ts`; they now belong to those lanes.
+- `.prettierignore`: the bundle copy (a re-synced copy, like `docs/design/`), and **`.agents/`, `.github/skills/`,
+  `.opencode/`**. The "Added skills" commit on `main` brought 24 Markdown files there that Prettier would rewrite, so
+  `npm run format:check` (and CI) already failed on `main` before this lane. They are copied agent skills, so they are
+  ignored rather than reformatted. **The user decides:** keep the ignore, or reformat them at the source.
+
+### Did not run, skipped, and why
+
+- **`npm run start:mock`:** the definition of done asks UI lanes to check on the mock backend; lane 2D has not built it
+  (until then `mock` equals `development`), and lane 1A shows no data. `/_kit` was checked with `ng serve`
+  (development) instead.
+- **Wireframe boards:** not opened; this lane was compared with the design system's previews only.
+- **Not checked:** other browsers than Chromium, real phones (390 px was viewport emulation), and a pixel diff (the
+  comparison was by eye).
+- **`build-tokens.mjs` has no automated test:** it is a Node script outside `ng test`; the 7 runs above are its proof.
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **From the user / the design system:** fix the two `bundle.css` defects above, then re-sync `docs/design/` and
+  `src/styles/ahoy-bundle.css` (lane 1A's copy) and remove the matching rules from `_ahoy-angular.scss`.
+- **For lane 3A:** inject `ThemeService` once at start-up (in `App` or an app initializer) if a theme chosen in `/_kit`
+  should apply on every page after a reload; without it, pages are light until `/_kit` is opened.
+- **For lanes 1B and 1C:** add gallery sections to `src/app/ui/_kit/sections/<lane>-sections.ts` only. A wrapper
+  component whose host must not add a box needs a `display: contents` rule in `src/styles/` (ask 1A, or add your own
+  partial and one `@use` line in `src/styles.scss`). Use `ah-icon` for icons and `ahButton` for buttons.
+- **For lanes that wrap a table in a scroll box (3A, 3C, 5A, 5B):** give the box `position: relative` (bundle defect 2).
+- **For lane 6D:** the production build **inlines the Google Fonts CSS** (Angular's font inlining), so `ng build` needs
+  network access to `fonts.googleapis.com`, and at run time the page loads font files from `fonts.gstatic.com` only.
+  The favicon is now `favicon.svg`.
+
+### Final check
+
+Run at the end of the lane, on Node 24.21.0:
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0 (production bundle, no kit-routes chunk)
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (no problems; build-tokens: ok)
+$ npm test                    exit 0 (Test Files 11 passed (11); Tests 98 passed (98))
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
 
 ---
 

@@ -69,7 +69,11 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
 
 ## Status
 
-- **Phase 0 (foundation): done** (branch `ccr-be69922d-w5i04m`, not merged into `main` yet). Angular 22.2.1 scaffold, strict TypeScript, ESLint, Prettier, Husky,
-  CI, proxy, every route as a placeholder, design references copied. The proxy was checked against a local stub, not
-  the hosted API. Details in [docs/progress.md](docs/progress.md).
-- Next: wave 1 (lanes 1A, 2A, 2C).
+- **Phase 0 (foundation): done and merged into `main`.** Angular 22.2.1 scaffold, strict TypeScript, ESLint, Prettier,
+  Husky, CI, proxy, every route as a placeholder, design references copied. The proxy was checked against a local stub,
+  not the hosted API.
+- **Wave 1, lane 1A (kit foundation): done, not committed yet** (branch `claude/brave-keller-c1j5st`). Generated
+  `tokens.css` (`npm run tokens`, `npm run tokens:check`), the design-system bundle on every page, `ThemeService`,
+  `ah-icon`, `ah-logo`, `ahButton`, `ah-panel`, `ah-field`, `ah-banner`, table helpers, `ah-source`, and the dev-only
+  `/_kit` gallery with a light/dark switch. Unit-tested and checked in headless Chromium; no API involved.
+- Next: lanes 2A and 2C (wave 1), then wave 2. Details in [docs/progress.md](docs/progress.md).

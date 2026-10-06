@@ -1,5 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { Kit } from "./kit";
 
-/** Component gallery, development builds only (lane 1A builds it). */
-export const KIT_ROUTES: Routes = [{ path: "", component: Placeholder, data: { heading: "Kit", lane: "1A" } }];
+/** Component gallery, development builds only (`environment.devRoutes`); the title comes from the parent route. */
+export const KIT_ROUTES: Routes = [{ path: "", component: Kit }];
