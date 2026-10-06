@@ -72,4 +72,7 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
 - **Phase 0 (foundation): done** (branch `ccr-be69922d-w5i04m`, not merged into `main` yet). Angular 22.2.1 scaffold, strict TypeScript, ESLint, Prettier, Husky,
   CI, proxy, every route as a placeholder, design references copied. The proxy was checked against a local stub, not
   the hosted API. Details in [docs/progress.md](docs/progress.md).
-- Next: wave 1 (lanes 1A, 2A, 2C).
+- **Lane 2C (pure domain): done** on branch `lane/2c-domain` (PR open, not merged). `src/app/domain/` holds the vocabulary
+  mappings, the AIU and time helpers and the project's only diff implementation, with 218 new tests; the API types are
+  provisional until lane 2A lands. Details in [docs/progress.md](docs/progress.md).
+- Next: wave 1 (lanes 1A and 2A; 2C awaiting review and merge).
