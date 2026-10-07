@@ -99,10 +99,15 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`, `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` and
   `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds `@angular/cdk` 22.2.1 and `marked` 18.1.0.
   Unit-tested and checked in headless Chromium; no API involved.
-- **Wave 2, lane 2D (mock backend): done, in review** (branch `claude/blissful-wozniak-qr2816`, pull request into `main`).
+- **Wave 2, lane 2D (mock backend): done and merged into `main`** (PR #11).
   `MockAhoyServer` (`src/testing/mock-backend/`): the 19 operations with the contract's checks, versions and errors, a simulated
   reconciler, `/events/stream` with `Last-Event-ID`, switches (`latencyMs`, `failNext`, `conflictNext`, `dropStream`) and the
   eight voyages of the wireframes, checked against the YAML with Ajv; `npm run start:mock` serves it in the browser and
   `npm run mock:api` over HTTP on `127.0.0.1:8080` behind the real dev proxy, with no new dependency;
   `node scripts/mock-api.dist-check.mjs` proves the production build is free of it. 80 new tests; never run against a real API.
-- Next: review and merge lane 2D, then wave 3 (`docs/paralelos3.md`). Details in [docs/progress.md](docs/progress.md).
+- **Wave 3, lane 3B (Set sail): done on the mock backend, not committed yet** (branch `claude/focused-maxwell-wcaacl`).
+  `/voyages/new?key=&title=` is a typed Reactive Form on `ah-field` and `ah-model-choice-table`: the budget is read by `parseAiu`
+  (never a float), only the models the user filled in are sent, a double click sends one request, and `story_exists`, `400` and
+  the other refusals show beside the fields or in a banner without losing what was typed. 114 new tests (three agreed seams, 26 mutation checks, a two-axis review whose findings were fixed); driven in headless Chromium on `npm run start:mock`; never run against a real API.
+- Next: review lane 3B, then the other lanes of wave 3 (3A, 3C and 4A, `docs/paralelos3.md`). Details in
+  [docs/progress.md](docs/progress.md).

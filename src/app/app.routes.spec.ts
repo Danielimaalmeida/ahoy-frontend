@@ -8,7 +8,6 @@ const CASES = [
   { url: "/", text: "All hands", lane: "3A", title: "All hands · Ahoy" },
   { url: "/voyages", text: "Voyages", lane: "3A", title: "Voyages · Ahoy" },
   { url: "/voyages?status=halted&q=PROJ", text: "Voyages", lane: "3A", title: "Voyages · Ahoy" },
-  { url: "/voyages/new?key=PROJ-123&title=Due%20date", text: "Set sail", lane: "3B", title: "Set sail · Ahoy" },
   { url: "/docks", text: "The Docks", lane: "3C", title: "The Docks · Ahoy" },
   { url: "/voyages/PROJ-123/plan", text: "Plan", lane: "4B", title: "Plan · Ahoy" },
   { url: "/voyages/PROJ-123/questions", text: "Questions", lane: "4C", title: "Questions · Ahoy" },
