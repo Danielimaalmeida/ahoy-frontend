@@ -2,7 +2,7 @@
 
 **Updated 2026-10-07 by lane 2D (mock backend and `mock:api`), launched from `docs/paralelos2.md` section D on branch
 `claude/blissful-wozniak-qr2816`, from `main` at a99a7a2 (which holds every other lane of waves 1 and 2, lane 1C included as
-PR #10). Lane 2D is built and tested in the working tree; nothing is committed or pushed, waiting for the user.**
+PR #10). Lane 2D is committed (0997aba) and pushed with the user's approval; its pull request into `main` waits for review.**
 
 - **Ran for 2D (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (77 files, **1482 tests**, 80 new)
@@ -111,16 +111,16 @@ review: `ah-dialog` on the CDK `Dialog` with `DialogService`, `ah-choice-card-gr
 them yet.
 Lane 1C has been merged since (PR #10).
 
-**Wave 2, lane 2D (mock backend)** is built and tested in the working tree of `claude/blissful-wozniak-qr2816`, **not
-committed**: `MockAhoyServer` in `src/testing/mock-backend/` (the 19 operations with the contract's checks and errors, a
+**Wave 2, lane 2D (mock backend)** is committed and pushed on `claude/blissful-wozniak-qr2816`, **in
+review** (pull request into `main`): `MockAhoyServer` in `src/testing/mock-backend/` (the 19 operations with the contract's checks and errors, a
 simulated reconciler, `/events/stream` with `Last-Event-ID`, the switches and the eight seeded voyages), checked against the
 YAML with Ajv; `npm run start:mock` serves it in the browser and `npm run mock:api` over HTTP behind the real dev proxy. With it
 in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.md`).
 
 ## Start here next
 
-1. **User:** review lane 2D (section "Lane 2D" below, in particular its "Decisions and deviations") and approve the commit and
-   push of the working tree of `claude/blissful-wozniak-qr2816`, then its pull request into `main`. It changes nothing outside
+1. **User:** review and merge the lane 2D pull request (`claude/blissful-wozniak-qr2816` into `main`; section "Lane 2D"
+   below, in particular its "Decisions and deviations"). It changes nothing outside
    its own list (one line of `angular.json`, one script line of `package.json`), plus this file and the README "Status".
    **Done since earlier versions of this item:** lanes 1B (PR #9), 2B (PR #8) and 1C (PR #10) are merged into `main`.
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
@@ -165,7 +165,8 @@ Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one sec
 
 Launched from `docs/paralelos2.md`, section D, on `claude/blissful-wozniak-qr2816` (the branch this session was given; plan §9
 would call it `lane/2d-mock-backend`), from `main` at a99a7a2 (phase 0, 1A, 1B, 1C, 2A with its finishing pass, 2B and 2C).
-**Nothing is committed or pushed** (CLAUDE.md and paralelos2 rule 7): the work is in the working tree, waiting for the user.
+Committed (0997aba) and pushed with the user's explicit approval in this session (CLAUDE.md and paralelos2 rule 7), with a
+pull request into `main`.
 
 **Pre-flight.** `git fetch origin`: `main` has `openapi/ahoy-v1.yaml`, the `ApiClient` (2A), `src/app/core/api/schema.d.ts`,
 `npm run api:types` and `npm run api:check`, `core/api/contract.spec.ts` with its Ajv helper `src/testing/fixtures/contract.ts`,
@@ -297,7 +298,7 @@ and the README "Status", as every lane does.
 
 ### Needs from other lanes
 
-- **User:** review; approval to commit and push (nothing is committed). The decisions above, in particular 2 (run ids), 3
+- **User:** review and merge the pull request. The decisions above, in particular 2 (run ids), 3
   (delivery gate) and 4 (`fetch` wrapped in the browser).
 - **6D (CI):** add `npm run build && node scripts/mock-api.dist-check.mjs` to `ci.yml` (the build step can be shared), so a
   production bundle with the mock fails CI.

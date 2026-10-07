@@ -99,7 +99,7 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`, `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` and
   `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds `@angular/cdk` 22.2.1 and `marked` 18.1.0.
   Unit-tested and checked in headless Chromium; no API involved.
-- **Wave 2, lane 2D (mock backend): done, not committed** (working tree of `claude/blissful-wozniak-qr2816`, waiting for review).
+- **Wave 2, lane 2D (mock backend): done, in review** (branch `claude/blissful-wozniak-qr2816`, pull request into `main`).
   `MockAhoyServer` (`src/testing/mock-backend/`): the 19 operations with the contract's checks, versions and errors, a simulated
   reconciler, `/events/stream` with `Last-Event-ID`, switches (`latencyMs`, `failNext`, `conflictNext`, `dropStream`) and the
   eight voyages of the wireframes, checked against the YAML with Ajv; `npm run start:mock` serves it in the browser and
