@@ -11,7 +11,7 @@ import { Markdown } from "@ui/markdown/markdown";
 import { Panel, PanelBody, PanelHead } from "@ui/panel/panel";
 import { SectionTabs, type SectionTab } from "@ui/section-tabs/section-tabs";
 import { Skeleton } from "@ui/skeleton/skeleton";
-import { fileKind, formatSize, kindLabel, PREVIEW_LIMIT_BYTES } from "./artifact-files";
+import { formatSize, kindLabel, PREVIEW_LIMIT_BYTES } from "./artifact-files";
 import { ArtifactsView } from "./artifacts-view";
 import { statusLabel } from "./file-compare";
 
@@ -238,7 +238,7 @@ export class ArtifactsTab {
   protected readonly baseControl = new FormControl(1, { nonNullable: true });
   /** The revision shown (View) or compared (Compare), as the URL has it. */
   protected readonly targetControl = new FormControl(1, { nonNullable: true });
-  protected readonly kind = (path: string): string => kindLabel(fileKind(path));
+  protected readonly kind = (path: string): string => kindLabel(this.view.kindOf(path));
   protected readonly size = formatSize;
   protected readonly limit = formatSize(PREVIEW_LIMIT_BYTES);
 
@@ -298,11 +298,12 @@ export class ArtifactsTab {
       .filter((path) => !compare || changes.get(path)?.kind !== "missing")
       .map((path) => {
         const item = items.get(path);
-        const type = kindLabel(fileKind(path, item?.mediaType ?? null));
+        const kind = this.view.kindOf(path);
+        const type = kindLabel(kind);
         return {
           path,
           meta: item !== undefined && sizesKnown ? `${type} · ${formatSize(item.sizeBytes)}` : type,
-          status: compare ? statusLabel(changes.get(path), path) : "",
+          status: compare ? statusLabel(changes.get(path), kind) : "",
           open: path === selection.path,
           link: this.view.queryFor({ path }),
           view: this.view.queryFor({ path, mode: "view" }),

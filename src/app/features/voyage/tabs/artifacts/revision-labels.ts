@@ -23,16 +23,20 @@ function revisionOf(event: AhoyEvent): number | null {
 }
 
 /**
- * What made the revision an `artifacts.updated` announces, read from **the event immediately before it** (the plan's
- * rule): a `run.finished` gives its run id, a `decision.recorded` with `send_back` gives "send-back". Anything else
- * (a `gate.evaluated`, a `story.phase_changed`, an approval) is no match, and neither is a `runId` on the update's own
- * payload: the contract does not fix one there.
+ * What made the revision an `artifacts.updated` announces, read from **the nearest producer before it**, back to the
+ * previous update: a `run.finished` gives its run id, a `decision.recorded` with `send_back` gives "send-back", and any
+ * other decision (an approval, a rejection) gives no note. What a producer leaves behind on its way to the update (a
+ * `gate.evaluated`, a `story.phase_changed`) is stepped over: the API sends the run's gate verdict before its files, so
+ * reading only the event just before would never find the run. A `runId` on the update's own payload is not read: the
+ * contract does not fix one there.
  */
 function noteFor(events: readonly AhoyEvent[], index: number): string | null {
-  const previous = index > 0 ? events[index - 1] : undefined;
-  if (previous === undefined) return null;
-  if (previous.type === "run.finished") return field(previous, "runId");
-  if (previous.type === "decision.recorded" && field(previous, "decision") === "send_back") return "send-back";
+  for (let at = index - 1; at >= 0; at--) {
+    const previous = events[at];
+    if (previous === undefined || previous.type === "artifacts.updated") return null;
+    if (previous.type === "run.finished") return field(previous, "runId");
+    if (previous.type === "decision.recorded") return field(previous, "decision") === "send_back" ? "send-back" : null;
+  }
   return null;
 }
 

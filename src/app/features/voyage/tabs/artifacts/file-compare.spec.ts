@@ -82,7 +82,7 @@ describe("compareFile against the current set (ETags known)", () => {
     );
     const change = await compareFile(reader, KEY, "state.json", 4, 5);
     expect(change).toMatchObject({ kind: "changed", added: 1, removed: 1 });
-    expect(statusLabel(change, "state.json")).toBe("changed");
+    expect(statusLabel(change, "json")).toBe("changed");
     expect(change.kind === "changed" && change.next).toBe('{\n  "phase": "plan_review",\n  "round": 1\n}');
   });
 
@@ -159,18 +159,18 @@ describe("statusLabel", () => {
     ({ kind: "changed", added, removed, previous: "", next: "" }) as const;
 
   it("writes +9 −3 with the real minus sign, and only the side that has lines", () => {
-    expect(statusLabel(changed(9, 3), "implementation-plan.md")).toBe("+9 \u22123");
-    expect(statusLabel(changed(2, 0), "plan-sources.md")).toBe("+2");
-    expect(statusLabel(changed(0, 4), "plan-sources.md")).toBe("\u22124");
+    expect(statusLabel(changed(9, 3), "markdown")).toBe("+9 \u22123");
+    expect(statusLabel(changed(2, 0), "markdown")).toBe("+2");
+    expect(statusLabel(changed(0, 4), "markdown")).toBe("\u22124");
   });
 
   it("writes the other states as the board does", () => {
-    expect(statusLabel({ kind: "same" }, "a.md")).toBe("same");
-    expect(statusLabel({ kind: "new" }, "a.md")).toBe("new");
-    expect(statusLabel({ kind: "removed" }, "a.md")).toBe("removed");
-    expect(statusLabel({ kind: "too_large" }, "a.md")).toBe("too large");
-    expect(statusLabel({ kind: "error", error: { kind: "network" } }, "a.md")).toBe("error");
-    expect(statusLabel({ kind: "loading" }, "a.md")).toBe("…");
-    expect(statusLabel(undefined, "a.md")).toBe("…");
+    expect(statusLabel({ kind: "same" }, "markdown")).toBe("same");
+    expect(statusLabel({ kind: "new" }, "markdown")).toBe("new");
+    expect(statusLabel({ kind: "removed" }, "markdown")).toBe("removed");
+    expect(statusLabel({ kind: "too_large" }, "markdown")).toBe("too large");
+    expect(statusLabel({ kind: "error", error: { kind: "network" } }, "markdown")).toBe("error");
+    expect(statusLabel({ kind: "loading" }, "markdown")).toBe("…");
+    expect(statusLabel(undefined, "markdown")).toBe("…");
   });
 });

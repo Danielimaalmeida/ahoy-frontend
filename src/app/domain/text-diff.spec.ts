@@ -87,6 +87,23 @@ describe("hunks", () => {
     expect(hunks(diffLines(before, after))[0]!.header).toBe("@@ WP1 Due date in the invoice API @@");
   });
 
+  it("keeps a hunk inside its section: changes in two close sections are two hunks, with no heading as context", () => {
+    const before = "## Summary\n\nalpha\nbeta\n\n## Acceptance criteria\n\n- AC1\n- AC2\n";
+    const after = before.replace("beta", "BETA").replace("- AC2\n", "- AC2\n- AC3\n");
+    const result = hunks(diffLines(before, after));
+    expect(result.map((hunk) => hunk.header)).toEqual(["@@ Summary @@", "@@ Acceptance criteria @@"]);
+    expect(result[0]!.lines.map(line)).toEqual([" ", " alpha", "-beta", "+BETA", " "]);
+    expect(result[1]!.lines.map(line)).toEqual([" ", " - AC1", " - AC2", "+- AC3"]);
+  });
+
+  it("merges across a heading that itself changed, and names the section of the first change", () => {
+    const before = "## Summary\n\nalpha\n\n## WP1 Old name\n\n- one\n";
+    const after = "## Summary\n\nALPHA\n\n## WP1 New name\n\n- one\n";
+    const result = hunks(diffLines(before, after));
+    expect(result).toHaveLength(1);
+    expect(result[0]!.header).toBe("@@ Summary @@");
+  });
+
   it("uses @@ @@ when there is no heading above", () => {
     expect(hunks(diffLines(BEFORE, AFTER))[0]!.header).toBe("@@ @@");
   });

@@ -202,6 +202,14 @@ export class ArtifactsView {
     });
   }
 
+  /**
+   * How the viewer, the diff and the row status treat `path`: by its extension, then by the media type the current
+   * listing gives it. One answer everywhere, so a JSON file the listing types is re-indented in Compare as in View.
+   */
+  kindOf(path: string): FileKind {
+    return fileKind(path, this.items().find((item) => item.path === path)?.mediaType ?? null);
+  }
+
   /** Reads the list, or the files, again after a failure. */
   retry(): void {
     if (this.status() === "error") void this.context.handle()?.artifacts.refresh();
@@ -251,7 +259,7 @@ export class ArtifactsView {
     if (item !== undefined && target === revision && isTooLarge(item.sizeBytes)) {
       return Promise.resolve({ kind: "too_large" });
     }
-    return compareFile(this.reader, key, path, base, target);
+    return compareFile(this.reader, key, path, base, target, fileKind(path, item?.mediaType ?? null));
   }
 
   private async openFile(job: FileJob | null): Promise<void> {
@@ -282,7 +290,7 @@ export class ArtifactsView {
           : { kind: "text", fileKind: kind, text: displayText(kind, read.text) },
       );
     }
-    const change = await compareFile(this.reader, job.key, path, job.base, job.target);
+    const change = await compareFile(this.reader, job.key, path, job.base, job.target, kind);
     switch (change.kind) {
       case "changed":
         return show({ kind: "diff", change: "changed", previous: change.previous, next: change.next });

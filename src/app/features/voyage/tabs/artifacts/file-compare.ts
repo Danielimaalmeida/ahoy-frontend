@@ -1,6 +1,6 @@
 import type { ApiError } from "@core/api/api-error";
 import { diffLines } from "@domain/text-diff";
-import { displayText, fileKind, isTooLarge, textBytes } from "./artifact-files";
+import { displayText, fileKind, isTooLarge, textBytes, type FileKind } from "./artifact-files";
 import type { ArtifactReader } from "./artifact-reader";
 
 /** How one file differs between two revisions of the artifact set. */
@@ -29,7 +29,7 @@ export type FileState = { readonly kind: "loading" } | FileChange;
 const MINUS = "\u2212";
 
 /** The status a row shows: `same`, `+9 −3`, `+2`, `new`, `removed`, `changed` (JSON), "too large". */
-export function statusLabel(state: FileState | undefined, path: string): string {
+export function statusLabel(state: FileState | undefined, kind: FileKind): string {
   if (state === undefined || state.kind === "loading") return "…";
   switch (state.kind) {
     case "same":
@@ -45,7 +45,7 @@ export function statusLabel(state: FileState | undefined, path: string): string 
     case "error":
       return "error";
     case "changed": {
-      if (fileKind(path) === "json") return "changed";
+      if (kind === "json") return "changed";
       const parts = [state.added > 0 ? `+${state.added}` : "", state.removed > 0 ? `${MINUS}${state.removed}` : ""];
       return parts.filter((part) => part !== "").join(" ");
     }
@@ -68,7 +68,7 @@ function countLines(previous: string, next: string): { added: number; removed: n
  * the target's ETag is known (the current set lists them all) it asks the base revision with that ETag as
  * `If-None-Match`, so an unchanged file answers `304` with no text and a file that was not there answers `404`. Only a
  * file that did change is read in full, from both revisions. Everything goes through the reader, so asking again, or
- * asking for the file's text afterwards, repeats nothing.
+ * asking for the file's text afterwards, repeats nothing. `kind` is the file's, as the viewer shows it (JSON re-indented).
  */
 export async function compareFile(
   reader: ArtifactReader,
@@ -76,6 +76,7 @@ export async function compareFile(
   path: string,
   base: number,
   target: number,
+  kind: FileKind = fileKind(path),
 ): Promise<FileChange> {
   let etag = reader.etag(key, path, target);
   if (etag === null) {
@@ -100,7 +101,6 @@ export async function compareFile(
   if (after.kind === "absent") return before.kind === "absent" ? { kind: "missing" } : { kind: "removed" };
   if (before.kind === "absent") return { kind: "new" };
   if (isTooLarge(textBytes(before.text)) || isTooLarge(textBytes(after.text))) return { kind: "too_large" };
-  const kind = fileKind(path);
   const previous = displayText(kind, before.text);
   const next = displayText(kind, after.text);
   const { added, removed } = countLines(previous, next);

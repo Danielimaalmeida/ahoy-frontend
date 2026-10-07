@@ -78,6 +78,20 @@ describe("ArtifactReader.text", () => {
     expect(content.requests).toHaveLength(before + 1);
   });
 
+  it("forgets the least recently used answer, not the oldest: reading again keeps a file", async () => {
+    const files: Record<string, string> = {};
+    for (let i = 0; i <= CACHE_LIMIT; i++) files[`f${i}.md`] = `text ${i}`;
+    const { content, reader } = setup({ 1: files });
+    for (let i = 0; i < CACHE_LIMIT; i++) await reader.text(KEY, `f${i}.md`, 1);
+    await reader.text(KEY, "f0.md", 1);
+    await reader.text(KEY, `f${CACHE_LIMIT}.md`, 1);
+    const before = content.requests.length;
+    await reader.text(KEY, "f0.md", 1);
+    expect(content.requests).toHaveLength(before);
+    await reader.text(KEY, "f1.md", 1);
+    expect(content.requests).toHaveLength(before + 1);
+  });
+
   it("remembers the paths it has seen for a voyage, once each, in the order they appeared", async () => {
     const { reader } = setup();
     reader.learn(KEY, "b.md", 2, etagFor("x"));
@@ -123,6 +137,22 @@ describe("ArtifactReader.sameness", () => {
     await reader.sameness(KEY, "a.md", 4, etag);
     expect(content.requests).toHaveLength(1);
     expect(reader.etag(KEY, "a.md", 4)).toBe(etag);
+  });
+
+  it("keeps the text it holds without an ETag when a probe answers 304, so reading it again is free", async () => {
+    const requests: unknown[] = [];
+    const answers = [
+      ok({ kind: "content" as const, text: "t", etag: null, mediaType: null }),
+      ok({ kind: "not_modified" as const }),
+    ];
+    const reader = new ArtifactReader((key, query) => {
+      requests.push(query);
+      return Promise.resolve(answers[requests.length - 1]!);
+    });
+    await reader.text(KEY, "a.md", 4);
+    expect(await reader.sameness(KEY, "a.md", 4, etagFor("t"))).toEqual({ kind: "same" });
+    expect(await reader.text(KEY, "a.md", 4)).toEqual({ kind: "text", text: "t", etag: etagFor("t") });
+    expect(requests).toHaveLength(2);
   });
 
   it("answers from an ETag the listing taught it (learn), without asking", async () => {

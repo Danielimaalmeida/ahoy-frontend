@@ -24,7 +24,7 @@ type Entry =
   | { readonly kind: "digest"; readonly etag: string }
   | { readonly kind: "absent" };
 
-/** How many `(path, revision)` answers the reader keeps; the oldest go first. */
+/** How many `(path, revision)` answers the reader keeps; the least recently used go first. */
 export const CACHE_LIMIT = 200;
 
 /** The ETag the API sends for a file: its `sha256`, quoted. */
@@ -34,7 +34,8 @@ export function etagFor(sha256: string): string {
 
 /**
  * Reads files of a voyage at any revision of its artifact set, and remembers what it was told (plan, lane 5C, G9). A
- * revision never changes, so an answer for `(path, revision)` is kept as long as it fits: asking again makes no request.
+ * revision never changes, so an answer for `(path, revision)` is kept as long as it fits (the least recently used goes
+ * first): asking again makes no request.
  * `404` is an answer too ("it was not in that revision"); a failure is not, so it is asked again. The ETag is for
  * comparing: asking a file of one revision with the ETag of another (`If-None-Match`) answers `304` with no text when
  * they are the same, so an unchanged file costs no download. Reads that are in flight are shared.
@@ -70,8 +71,10 @@ export class ArtifactReader {
     this.note(key, path);
     const id = slot(key, path, revision);
     const entry = this.entries.get(id);
-    if (entry?.kind === "text") return Promise.resolve(entry);
-    if (entry?.kind === "absent") return Promise.resolve(entry);
+    if (entry?.kind === "text" || entry?.kind === "absent") {
+      this.put(id, entry);
+      return Promise.resolve(entry);
+    }
     return share(this.textFlights, id, async () => this.settle(id, await this.read(key, { path, revision })));
   }
 
@@ -83,14 +86,20 @@ export class ArtifactReader {
     this.note(key, path);
     const id = slot(key, path, revision);
     const entry = this.entries.get(id);
-    if (entry?.kind === "absent") return Promise.resolve({ kind: "absent" });
+    if (entry?.kind === "absent") {
+      this.put(id, entry);
+      return Promise.resolve({ kind: "absent" });
+    }
     if (entry !== undefined && entry.etag !== null) {
+      this.put(id, entry);
       return Promise.resolve({ kind: entry.etag === etag ? "same" : "different" });
     }
     return share(this.samenessFlights, `${id}|${etag}`, async (): Promise<Sameness> => {
       const result = await this.read(key, { path, revision, ifNoneMatch: etag });
       if (result.ok && result.value.kind === "not_modified") {
-        this.put(id, { kind: "digest", etag });
+        // A text held without an ETag keeps its text and learns the ETag; otherwise only the ETag is known.
+        const held = this.entries.get(id);
+        this.put(id, held?.kind === "text" ? { kind: "text", text: held.text, etag } : { kind: "digest", etag });
         return { kind: "same" };
       }
       const fetched = this.settle(id, result);

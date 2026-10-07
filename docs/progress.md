@@ -2,7 +2,8 @@
 
 **Updated 2026-10-07 by lane 5C (Artifacts: view and compare), launched from `docs/paralelos4.md` section F on branch
 `lane/5c-artifacts`, from `main` at 4aae11b (which holds every earlier lane, 4A to 5B included). Lane 5C is built, tested on
-the mock backend and checked in a browser. It is not committed: the changes are in the working tree (see "Lane 5C" below).**
+the mock backend and checked in a browser. It is in PR #21; a second review then fixed the wireframe gaps (Artifacts data,
+labels, one hunk per section) and three small bugs, see "Lane 5C" → "Second review and wireframe fixes".**
 
 - **Ran for 5C (offline, 0 AIU, Node 24.21.0):** `npm run build`, `npm run typecheck` (`check-boundaries: ok`),
   `npm test` (125 files, **2237 tests**: the 2156 of `main`, 82 new, one placeholder row removed from `app.routes.spec.ts`)
@@ -346,7 +347,7 @@ working tree.
 | `artifacts-view.ts`                         | `ArtifactsView`: the current set, the revisions, the URL selection and the comparison of every file. The URL is the state (`?compare=`, `?to=`, `?file=`, `?mode=`) and defaults are left out, so the tab follows the current revision as it moves. It keeps the union of the paths seen at any revision (listings and reads), so a file a later revision drops stays listed and compares as `removed`. |
 | `artifact-reader.ts`                        | `ArtifactReader` (G9): one file at one revision, with `If-None-Match` (the ETag of a copy already held); answers for `(key, path, revision)` kept in a bounded cache (text, digest or `404`); in-flight reads shared; failures never kept; the paths ever seen per voyage remembered.                                                                                                                   |
 | `file-compare.ts`                           | `compareFile`: asks as little as possible (the current set teaches the reader its ETags, so an unchanged file is one `304` and no download); counts lines with `@domain/text-diff`; returns `same`/`new`/`removed`/`changed`/`missing`/`too_large`/`error`. `statusLabel` words the row ("same", "+9 −3", "new", "changed" for JSON).                                                                   |
-| `revision-labels.ts`                        | `revisionOptions`: revisions `1..current` newest first, each labelled from **the event immediately before** its `artifacts.updated` (a `run.finished` → its id; a `decision.recorded` with `send_back` → "send-back"; anything else → plain "Revision N"): "Revision 5 · current (r-04)", "Revision 4 (send-back)", "Revision 3".                                                                       |
+| `revision-labels.ts`                        | `revisionOptions`: revisions `1..current` newest first, each labelled from **the nearest producer before** its `artifacts.updated` (second review; it was "the event immediately before") (a `run.finished` → its id; a `decision.recorded` with `send_back` → "send-back"; anything else → plain "Revision N"): "Revision 5 · current (r-04)", "Revision 4 (send-back)", "Revision 3".                 |
 | `selection.ts`                              | `readSelection`/`selectionParams`/`adjust`: the untrusted query string → a selection held to what exists (a revision that does not fit or an unknown file is ignored), and back.                                                                                                                                                                                                                        |
 | `artifact-files.ts`                         | `fileKind`, `kindLabel`, `textBytes`, `isTooLarge` (1 MiB), `prettyJson` (2-space indent), `displayText`, `formatSize`.                                                                                                                                                                                                                                                                                 |
 | `testing/fake-content.ts`                   | A fake `getArtifactContent` for the unit specs: ETag, `304`, `404`, failures, by `path@revision`.                                                                                                                                                                                                                                                                                                       |
@@ -381,7 +382,8 @@ working tree.
 
 ### Acceptance, as demonstrated
 
-- **The mock's PROJ-123 does not have the wireframe's data.** It is at revision **4** with three files
+- **Superseded by the second review below**, which gives PROJ-123 the wireframe's data. As first built: **the mock's PROJ-123
+  did not have the wireframe's data.** It is at revision **4** with three files
   (`jira-snapshot.md`, `implementation-plan.md`, `implementation-plan.round1.md`), not revision 5 with six
   (`plan-sources.md`, `plan-round-1.md`, `questions.json`, `state.json`). Demonstrated with what exists: **4 against 3** shows
   `implementation-plan.md +7 −2`, `jira-snapshot.md same`, `implementation-plan.round1.md same`; **4 against 2** shows
@@ -428,7 +430,7 @@ with the `Records` board (the wireframe's exact six files and four hunks cannot 
 
 ### Needs from lane X
 
-- **Lane 2D (mock backend):** the wireframe's Artifacts data for PROJ-123 — revision 5 (not 4) with `plan-sources.md`,
+- **Lane 2D (mock backend):** done in the second review (see below). Was: the wireframe's Artifacts data for PROJ-123 — revision 5 (not 4) with `plan-sources.md`,
   `plan-round-1.md`, `questions.json` and `state.json` (not `implementation-plan.round1.md`) — so the acceptance's exact
   `+9 −3`/`+2`/`same`/`changed` show. **Unproven:** with that seed the plan's four hunks may still merge into one, because
   `@domain/text-diff` keeps 3 context lines and the sections are close; if the wireframe's four hunks are required, the
@@ -481,6 +483,41 @@ builds new readers and covers `paths()` instead.
 Left as they are, with reasons: the reader cache still treats a `(path, revision)` as immutable (the API's revisions are);
 `ArtifactsView` is recreated per tab visit, but the union of paths lives in the route-level reader, so it survives too; the
 hunk context is lane 2C's.
+
+### Second review and wireframe fixes (2026-10-07)
+
+A two-axis review (standards and spec) of PR #21 found no major bug. Asked to fix what it found and anything that does not
+match the wireframes (`Records`), this pass changed:
+
+1. **PROJ-123 has the wireframe's Artifacts data** (`src/testing/mock-backend/seeds.ts`, lane 2D's file, changed on the user's
+   instruction). Five revisions, one per producer: r-01 `jira-snapshot.md`; r-02 `questions.json`; r-03
+   `implementation-plan.md`, `plan-sources.md`, `state.json`; jordan's send-back `state.json`; r-04 the new plan,
+   `plan-sources.md` (+2), `plan-round-1.md` (round 1 archived) and `state.json`. Revision 5 against 4 (the default) and
+   against 3 (the wireframe's pick) both show `same`, `+9 −3`, `+2`, `new`, `same`, `changed`. The current plan is unchanged (it
+   is the `getArtifactContent.json` fixture, same sha256); round 1 now has AC1 and AC2 as one line, which makes the `+9 −3`.
+   `implementation-plan.round1.md` is gone from PROJ-123 (the simulator's DEMO-1 send-back still writes it).
+2. **One hunk per section** (`@domain/text-diff` `hunks`, lane 2C's file): an unchanged heading ends a hunk's context and is
+   never merged across, so the plan's diff has the wireframe's four hunks (`Summary`, `Acceptance criteria`, `WP1…`, `WP2…`)
+   with three context lines, and a header always names the section its changes are in. A changed heading does not split a
+   hunk. 1C's `artifact-diff.spec.ts` expectation follows: no heading lines as context, as in the design's preview.
+3. **Revision labels from the nearest producer**, back to the previous `artifacts.updated`: a `run.finished` → its id, a
+   `send_back` → "send-back", another decision → plain. Gate verdicts and phase changes in between are stepped over (the
+   mock, like the API, sends the gate verdict before the files). The mock now shows the wireframe's labels:
+   "Revision 5 · current (r-04)", "Revision 4 (send-back)", "Revision 3 (r-03)"… (with the mock's run ids).
+4. **The file kind is decided once** (`ArtifactsView.kindOf`: extension, then the listing's media type) and used by the row,
+   the header tag, the status and the diff: a file the listing types as JSON without a `.json` name is re-indented in Compare
+   and reads `changed`, as in View.
+5. **Reader:** a `304` keeps a text held without an ETag (it was replaced by a digest and read again); the cache evicts the
+   least recently used entry, not the oldest.
+
+Tests: 2244 (125 files), +7: text-diff (2), reader (2), labels (net +1), tab (+2: revision 3 against 5, a JSON file by
+media type); the tab and server specs now assert the wireframe's data. Ran on Node 24.21.0: `npm run build`,
+`npm run typecheck` (`check-boundaries: ok`), `npm run lint`, `npm test`, `npm run format:check`, all green. **Not run:** the
+browser check against `npm run start:mock`, anything against a real API, `--simulate` or TEST.
+
+Left as they are: an older revision's file over 1 MiB is still downloaded before "Too large to preview" (the API gives no
+size for past revisions); sizes show only at the current revision; a deep link to a removed file falls back on a fresh load
+(no listing of past revisions).
 
 ### Next
 

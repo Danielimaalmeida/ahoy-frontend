@@ -32,12 +32,12 @@ describe("revisionOptions", () => {
     expect(labels([], 2)).toEqual(["Revision 2 · current", "Revision 1"]);
   });
 
-  it("labels the revision a run made with the run's id, from the run.finished just before it", () => {
+  it("labels the revision a run made with the run's id, from its run.finished", () => {
     const events = [event("run.finished", { runId: "r-04" }), event("artifacts.updated", { revision: 5 })];
     expect(labels(events, 5)[0]).toBe("Revision 5 · current (r-04)");
   });
 
-  it("labels a revision made by a send-back from the decision.recorded just before it", () => {
+  it("labels a revision made by a send-back from its decision.recorded", () => {
     const events = [
       event("decision.recorded", { gate: "plan_accepted", decision: "send_back", round: 1 }),
       event("artifacts.updated", { revision: 4 }),
@@ -45,28 +45,38 @@ describe("revisionOptions", () => {
     expect(labels(events, 5)[1]).toBe("Revision 4 (send-back)");
   });
 
-  it("leaves no note when a gate.evaluated sits between the run and the update (the mock's order)", () => {
+  it("steps over the gate.evaluated between the run and its update (the API's order)", () => {
     const events = [
       event("run.finished", { runId: "r-01" }),
       event("gate.evaluated", { runId: "r-01", gate: "intake", result: "pass" }),
       event("artifacts.updated", { revision: 1 }),
     ];
-    expect(labels(events, 1)).toEqual(["Revision 1 · current"]);
+    expect(labels(events, 1)).toEqual(["Revision 1 · current (r-01)"]);
   });
 
-  it("leaves no note when a story.phase_changed sits between the send-back and the update", () => {
+  it("steps over the story.phase_changed between the send-back and its update", () => {
     const events = [
       event("decision.recorded", { decision: "send_back" }),
       event("story.phase_changed", { from: "plan_review", to: "planning" }),
       event("artifacts.updated", { revision: 3 }),
     ];
-    expect(labels(events, 3)[0]).toBe("Revision 3 · current");
+    expect(labels(events, 3)[0]).toBe("Revision 3 · current (send-back)");
   });
 
-  it("does not take a label from an event further back, nor from an approval", () => {
-    const furtherBack = [
+  it("takes the nearest producer: a send-back after a run labels the update as the send-back's", () => {
+    const events = [
+      event("run.finished", { runId: "r-03" }),
+      event("decision.recorded", { decision: "send_back" }),
+      event("artifacts.updated", { revision: 4 }),
+    ];
+    expect(labels(events, 4)[0]).toBe("Revision 4 · current (send-back)");
+  });
+
+  it("does not look past the previous update, and an approval or rejection leaves no note", () => {
+    const pastUpdate = [
       event("run.finished", { runId: "r-01" }),
-      event("gate.evaluated", { gate: "plan", result: "pass" }),
+      event("artifacts.updated", { revision: 1 }),
+      event("story.phase_changed", { from: "intake", to: "planning" }),
       event("artifacts.updated", { revision: 2 }),
     ];
     const approval = [
@@ -74,7 +84,7 @@ describe("revisionOptions", () => {
       event("decision.recorded", { decision: "approve" }),
       event("artifacts.updated", { revision: 2 }),
     ];
-    expect(labels(furtherBack, 2)[0]).toBe("Revision 2 · current");
+    expect(labels(pastUpdate, 2)).toEqual(["Revision 2 · current", "Revision 1 (r-01)"]);
     expect(labels(approval, 2)[0]).toBe("Revision 2 · current");
   });
 
