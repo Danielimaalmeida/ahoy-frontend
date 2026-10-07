@@ -5,13 +5,18 @@ import { filter } from "rxjs";
 import { CurrentUser } from "@core/auth/current-user";
 import { CLOCK as CORE_CLOCK, type Timer } from "@core/realtime/clock";
 import { EventBus } from "@core/realtime/event-bus";
+import type { StreamStatus } from "@core/realtime/event-stream-client";
 import { StoriesStore } from "@core/stores/stories-store";
 import { CLOCK as UI_CLOCK, type Clock } from "@ui/pipes/clock";
+import { ThemeService } from "@ui/theme/theme.service";
 import { ToastHost } from "@ui/toast/toast";
 import { TopBar, type LiveState, type TopBarUser } from "@ui/top-bar/top-bar";
 
 /** How often the relative times ("22 m ago", "Waiting 48 m") are read again. */
-export const CLOCK_TICK_MS = 30_000;
+const CLOCK_TICK_MS = 30_000;
+
+/** How long the search box waits for the next key before it leads to the voyages that match. */
+export const SEARCH_DEBOUNCE_MS = 250;
 
 /**
  * The clock the pipes read: the data layer's clock, moved on every {@link CLOCK_TICK_MS}. The pipes call it while the
@@ -21,7 +26,7 @@ export const CLOCK_TICK_MS = 30_000;
 function tickingClock(): Clock {
   const clock = inject(CORE_CLOCK);
   const now = signal(clock.now());
-  let timer: Timer | null = null;
+  let timer: Timer | undefined;
   const tick = (): void => {
     now.set(clock.now());
     timer = clock.schedule(CLOCK_TICK_MS, tick);
@@ -31,16 +36,20 @@ function tickingClock(): Clock {
   return () => now();
 }
 
-/** Where the top bar's Live indicator stands for a stream status: connecting is not live yet. */
-function liveStateOf(status: "connecting" | "live" | "reconnecting" | "offline"): LiveState {
+/**
+ * Where the top bar's Live indicator stands for a stream status. The first connection shows as Live, so that the amber
+ * "Reconnecting" pill (and what a screen reader says about it) is only for a stream that dropped, not for every
+ * start-up; if the first attempt fails, the status becomes `reconnecting` within a second.
+ */
+function liveStateOf(status: StreamStatus): LiveState {
   switch (status) {
+    case "connecting":
     case "live":
       return "live";
-    case "offline":
-      return "offline";
-    case "connecting":
     case "reconnecting":
       return "reconnecting";
+    case "offline":
+      return "offline";
   }
 }
 
@@ -102,6 +111,8 @@ export class App {
   private readonly bus = inject(EventBus);
   private readonly router = inject(Router);
   private readonly me = inject(CurrentUser);
+  private readonly clock = inject(CORE_CLOCK);
+  private pendingSearch: Timer | undefined;
 
   /** The text in the search box: that of the `?q=` of the page, if it has one. */
   protected readonly query = signal("");
@@ -110,21 +121,35 @@ export class App {
   protected readonly user = computed((): TopBarUser => ({ email: this.me.id(), initials: this.me.initials() }));
 
   constructor() {
-    this.stories.use(inject(DestroyRef));
+    // The theme chosen in the kit gallery applies from the first page, not only once the gallery is opened.
+    inject(ThemeService);
+    const destroyRef = inject(DestroyRef);
+    this.stories.use(destroyRef);
+    destroyRef.onDestroy(() => this.pendingSearch?.cancel());
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe((event) => this.query.set(textParam(this.router.parseUrl(event.urlAfterRedirects), "q") ?? ""));
+      .subscribe((event) => {
+        // A person who went somewhere else must not be taken back to the list by a search they stopped typing.
+        this.pendingSearch?.cancel();
+        this.query.set(textParam(this.router.parseUrl(event.urlAfterRedirects), "q") ?? "");
+      });
   }
 
   /**
-   * Goes to the voyages that match what was typed (deviation 3). On the list it keeps the status and replaces the
-   * address, so typing leaves one step in the history; from any other page it opens the list.
+   * Leads to the voyages that match what was typed (deviation 3), once the person pauses for {@link SEARCH_DEBOUNCE_MS}.
+   * On the list it keeps the status and replaces the address; from any other page it opens the list, as one step in the
+   * history.
    */
   protected search(text: string): void {
     this.query.set(text);
+    this.pendingSearch?.cancel();
+    this.pendingSearch = this.clock.schedule(SEARCH_DEBOUNCE_MS, () => this.goToVoyages(text));
+  }
+
+  private goToVoyages(text: string): void {
     const current = this.router.parseUrl(this.router.url);
     const onList = isVoyagesList(current);
     const status = onList ? textParam(current, "status") : undefined;

@@ -1,6 +1,7 @@
 import { TestBed, type ComponentFixture } from "@angular/core/testing";
-import { Router, provideRouter, withComponentInputBinding } from "@angular/router";
+import { NavigationEnd, Router, provideRouter, withComponentInputBinding } from "@angular/router";
 import { ok } from "@core/api/api-error";
+import { parseAiu } from "@domain/aiu";
 import type { Story } from "@core/api/types";
 import { DEFAULT_APP_CONFIG } from "@core/config/app-config";
 import { aStory, anEvent } from "@core/realtime/testing/events";
@@ -8,12 +9,14 @@ import { FakeApi } from "@core/realtime/testing/fake-api";
 import { FakeClock, settle } from "@core/realtime/testing/fake-clock";
 import { FakeFetch, type SseBody } from "@core/realtime/testing/fake-fetch";
 import { provideFakes } from "@core/realtime/testing/providers";
+import { THEME_STORAGE } from "@ui/theme/theme.service";
 import { ToastService } from "@ui/toast/toast";
-import { App } from "./app";
+import { App, SEARCH_DEBOUNCE_MS } from "./app";
 import { routes } from "./app.routes";
 
 const NOW = "2026-10-06T10:10:00.000Z";
-const AIU = 1_000_000_000;
+/** An AIU amount in integer nano-AIU, read as text so that no float is involved (CLAUDE.md "Numbers"). */
+const aiu = (text: string): number => parseAiu(text)!;
 
 const STORIES: readonly Story[] = [
   aStory("PROJ-140", { status: "running", phase: "planning", updatedAt: "2026-10-06T10:09:00.000Z" }),
@@ -22,7 +25,7 @@ const STORIES: readonly Story[] = [
   aStory("PROJ-118", { status: "halted", haltReason: "run_failed", updatedAt: "2026-10-06T08:00:00.000Z" }),
   aStory("PROJ-126", { status: "halted", haltReason: "stopped_by_user", updatedAt: "2026-10-06T10:01:00.000Z" }),
   aStory("PROJ-097", { status: "terminal", phase: "done", updatedAt: "2026-10-05T10:00:00.000Z" }),
-].map((story) => ({ ...story, budgetNanoAiu: 30 * AIU, spentNanoAiu: 3 * AIU }));
+].map((story) => ({ ...story, budgetNanoAiu: aiu("30"), spentNanoAiu: aiu("3") }));
 
 const text = (node: Node | null | undefined): string => (node?.textContent ?? "").replace(/\s+/g, " ").trim();
 
@@ -35,14 +38,24 @@ interface Shell {
   readonly stream: SseBody;
   go(url: string): Promise<void>;
   flush(): Promise<void>;
-  /** Types into the search box the way a person does. */
+  /** Types into the search box, then pauses long enough for the search to go. */
   type(value: string): Promise<void>;
+  /** Types into the search box and does not wait. */
+  typeAndGo(value: string): Promise<void>;
+}
+
+/** How the shell starts: the theme the person chose before, and a stream that never answers. */
+interface ShellOptions {
+  readonly storedTheme?: string | null;
+  readonly hang?: boolean;
 }
 
 /** Renders the shell over fakes at `url`, with the real routes. */
-async function shell(url = "/"): Promise<Shell> {
+async function shell(url = "/", options: ShellOptions = {}): Promise<Shell> {
   const clock = new FakeClock(NOW);
   const net = new FakeFetch();
+  // The first request is the event stream: a hang leaves it connecting for the first time.
+  if (options.hang === true) net.answer(() => new Promise<Response>(() => undefined));
   const stream = net.stream();
   const api = new FakeApi();
   api.on("listStories", () => Promise.resolve(ok({ items: STORIES, nextCursor: null })));
@@ -50,8 +63,13 @@ async function shell(url = "/"): Promise<Shell> {
   api.on("getStoryState", (key) => Promise.resolve(ok({ key, version: 1, state: {} })));
   api.on("listStoryEvents", () => Promise.resolve(ok({ items: [], lastEventId: null })));
   api.on("listStoryRuns", () => Promise.resolve(ok([])));
+  const storedTheme = options.storedTheme ?? null;
   TestBed.configureTestingModule({
-    providers: [...provideFakes({ api, clock, net }), provideRouter(routes, withComponentInputBinding())],
+    providers: [
+      ...provideFakes({ api, clock, net }),
+      provideRouter(routes, withComponentInputBinding()),
+      { provide: THEME_STORAGE, useValue: { getItem: () => storedTheme, setItem: () => undefined } },
+    ],
   });
   const fixture = TestBed.createComponent(App);
   const router = TestBed.inject(Router);
@@ -67,19 +85,26 @@ async function shell(url = "/"): Promise<Shell> {
     await flush();
   };
   const root = fixture.nativeElement as HTMLElement;
-  const type = async (value: string): Promise<void> => {
+  const typeAndGo = async (value: string): Promise<void> => {
     const input = root.querySelector<HTMLInputElement>("input[type=search]");
     if (input === null) throw new Error("no search box");
     input.value = value;
     input.dispatchEvent(new Event("input"));
     await flush();
   };
+  const type = async (value: string): Promise<void> => {
+    await typeAndGo(value);
+    await clock.advance(SEARCH_DEBOUNCE_MS);
+    await flush();
+  };
   fixture.detectChanges();
   await go(url);
-  return { fixture, root, router, api, clock, stream, go, flush, type };
+  return { fixture, root, router, api, clock, stream, go, flush, type, typeAndGo };
 }
 
 describe("App shell", () => {
+  beforeEach(() => document.documentElement.removeAttribute("data-theme"));
+
   it("puts the top bar, the page and the toasts in that order, with the page in one main landmark", async () => {
     const { root } = await shell();
     expect(Array.from(root.children).map((child) => child.tagName.toLowerCase())).toEqual([
@@ -100,6 +125,12 @@ describe("App shell", () => {
     it("shows Live while the stream is open", async () => {
       const { root } = await shell();
       expect(text(root.querySelector(".ah-live"))).toBe("Live");
+    });
+
+    it("does not say the stream dropped while it connects for the first time", async () => {
+      const { root } = await shell("/", { hang: true });
+      expect(text(root.querySelector(".ah-live"))).toBe("Live");
+      expect(text(root)).not.toContain("Reconnecting");
     });
 
     it("says it is reconnecting when the stream drops, and keeps the page on screen", async () => {
@@ -134,6 +165,24 @@ describe("App shell", () => {
       const { router, type } = await shell("/");
       await type("invoice");
       expect(router.url).toBe("/voyages?q=invoice");
+    });
+
+    it("waits until the person pauses, then goes once with the text typed last", async () => {
+      const { router, clock, flush, typeAndGo } = await shell("/");
+      const arrivals: string[] = [];
+      router.events.subscribe((event) => {
+        if (event instanceof NavigationEnd) arrivals.push(event.urlAfterRedirects);
+      });
+      await typeAndGo("i");
+      await clock.advance(SEARCH_DEBOUNCE_MS - 50);
+      await typeAndGo("in");
+      await clock.advance(SEARCH_DEBOUNCE_MS - 50);
+      await typeAndGo("inv");
+      expect(arrivals).toEqual([]);
+      expect(router.url).toBe("/");
+      await clock.advance(SEARCH_DEBOUNCE_MS);
+      await flush();
+      expect(arrivals).toEqual(["/voyages?q=inv"]);
     });
 
     it("does not carry the query of the page it leaves", async () => {
@@ -172,6 +221,18 @@ describe("App shell", () => {
       await type("PROJ-13");
       expect(root.querySelectorAll("tbody tr")).toHaveLength(1);
       expect(text(root.querySelector("tbody a.ah-key"))).toBe("PROJ-131");
+    });
+  });
+
+  describe("theme", () => {
+    it("applies the theme the person chose before, on the first page and not only in the kit gallery", async () => {
+      await shell("/", { storedTheme: "dark" });
+      expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    });
+
+    it("is light when none was chosen", async () => {
+      await shell("/");
+      expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     });
   });
 

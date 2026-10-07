@@ -293,8 +293,8 @@ function describeFailure(error: ApiError): Failure {
                     </td>
                     <td class="ah-mono">{{ row.story.phase }}</td>
                     <td>
-                      {{ row.crew.crew }}
-                      @if (row.crew.runtime; as runtime) {
+                      {{ row.sea.member }}
+                      @if (row.sea.runtime; as runtime) {
                         · <span class="ah-mono">{{ runtime }}</span>
                       }
                     </td>
@@ -319,7 +319,7 @@ function describeFailure(error: ApiError): Failure {
     }
   `,
 })
-export class AllHands {
+export class AllHandsPage {
   private readonly store = inject(StoriesStore);
   private readonly details = inject(RowDetails);
 
@@ -348,7 +348,7 @@ export class AllHands {
 
   /** The rows of "At sea", each with its crew member and, once known, the model and effort of its run. */
   protected readonly seaRows = computed(() =>
-    this.atSea().map((story) => ({ story, crew: atSeaCrew(story, this.details.runOf(story)) })),
+    this.atSea().map((story) => ({ story, sea: atSeaCrew(story, this.details.runOf(story)) })),
   );
 
   protected readonly needsSubtitle = computed(() => {

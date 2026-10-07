@@ -240,19 +240,19 @@ describe("atSeaCrew", () => {
 
   it("names the crew member and, once the run is known, its model and effort", () => {
     expect(atSeaCrew(running, { model: "claude-sonnet-5", reasoningEffort: "high" })).toEqual({
-      crew: "Cartographer",
+      member: "Cartographer",
       runtime: "claude-sonnet-5 · high",
     });
   });
 
   it("shows only the model when the run has no effort, and nothing before the run is known", () => {
     expect(atSeaCrew(running, { model: "claude-sonnet-5", reasoningEffort: null }).runtime).toBe("claude-sonnet-5");
-    expect(atSeaCrew(running, null)).toEqual({ crew: "Cartographer", runtime: null });
+    expect(atSeaCrew(running, null)).toEqual({ member: "Cartographer", runtime: null });
     expect(atSeaCrew(running, { model: null, reasoningEffort: "high" }).runtime).toBeNull();
   });
 
   it("says who goes next for a queued voyage", () => {
     const queued = aStory("PROJ-109", { status: "ready", phase: "intake" });
-    expect(atSeaCrew(queued, null)).toEqual({ crew: "Navigator goes next", runtime: null });
+    expect(atSeaCrew(queued, null)).toEqual({ member: "Navigator goes next", runtime: null });
   });
 });

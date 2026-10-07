@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { Router, provideRouter, withComponentInputBinding } from "@angular/router";
 import { RouterTestingHarness } from "@angular/router/testing";
 import { fail, ok } from "@core/api/api-error";
+import { parseAiu } from "@domain/aiu";
 import type { AhoyEvent, Question, Story } from "@core/api/types";
 import { aStory, anEvent } from "@core/realtime/testing/events";
 import { FakeApi } from "@core/realtime/testing/fake-api";
@@ -12,7 +13,8 @@ import { CLOCK as UI_CLOCK } from "@ui/pipes/clock";
 import { VoyagesPage } from "./voyages";
 
 const NOW = "2026-10-06T10:10:00.000Z";
-const AIU = 1_000_000_000;
+/** An AIU amount in integer nano-AIU, read as text so that no float is involved (CLAUDE.md "Numbers"). */
+const aiu = (text: string): number => parseAiu(text)!;
 
 /** The eight voyages of the wireframes (fictional), most recently updated first, as the `Voyages` board shows them. */
 const EIGHT: readonly Story[] = [
@@ -21,8 +23,8 @@ const EIGHT: readonly Story[] = [
     owner: "jordan@example.com",
     phase: "planning",
     status: "running",
-    budgetNanoAiu: 30 * AIU,
-    spentNanoAiu: 3.2 * AIU,
+    budgetNanoAiu: aiu("30"),
+    spentNanoAiu: aiu("3.2"),
     updatedAt: "2026-10-06T10:10:00.000Z",
   }),
   aStory("PROJ-109", {
@@ -30,7 +32,7 @@ const EIGHT: readonly Story[] = [
     owner: "alex@example.com",
     phase: "intake",
     status: "ready",
-    budgetNanoAiu: 20 * AIU,
+    budgetNanoAiu: aiu("20"),
     spentNanoAiu: 0,
     updatedAt: "2026-10-06T10:09:00.000Z",
   }),
@@ -40,8 +42,8 @@ const EIGHT: readonly Story[] = [
     phase: "intake",
     status: "halted",
     haltReason: "stopped_by_user",
-    budgetNanoAiu: 15 * AIU,
-    spentNanoAiu: 0.6 * AIU,
+    budgetNanoAiu: aiu("15"),
+    spentNanoAiu: aiu("0.6"),
     updatedAt: "2026-10-06T10:01:00.000Z",
   }),
   aStory("PROJ-123", {
@@ -49,8 +51,8 @@ const EIGHT: readonly Story[] = [
     owner: "alex@example.com",
     phase: "plan_review",
     status: "awaiting_decision",
-    budgetNanoAiu: 30 * AIU,
-    spentNanoAiu: 12.4 * AIU,
+    budgetNanoAiu: aiu("30"),
+    spentNanoAiu: aiu("12.4"),
     updatedAt: "2026-10-06T09:48:00.000Z",
   }),
   aStory("PROJ-131", {
@@ -58,8 +60,8 @@ const EIGHT: readonly Story[] = [
     owner: "sam@example.com",
     phase: "planning",
     status: "awaiting_input",
-    budgetNanoAiu: 25 * AIU,
-    spentNanoAiu: 6.1 * AIU,
+    budgetNanoAiu: aiu("25"),
+    spentNanoAiu: aiu("6.1"),
     updatedAt: "2026-10-06T09:22:00.000Z",
   }),
   aStory("PROJ-118", {
@@ -68,8 +70,8 @@ const EIGHT: readonly Story[] = [
     phase: "planning",
     status: "halted",
     haltReason: "run_failed",
-    budgetNanoAiu: 20 * AIU,
-    spentNanoAiu: 9.8 * AIU,
+    budgetNanoAiu: aiu("20"),
+    spentNanoAiu: aiu("9.8"),
     updatedAt: "2026-10-06T08:00:00.000Z",
   }),
   aStory("PROJ-097", {
@@ -77,8 +79,8 @@ const EIGHT: readonly Story[] = [
     owner: "alex@example.com",
     phase: "done",
     status: "terminal",
-    budgetNanoAiu: 40 * AIU,
-    spentNanoAiu: 27.1 * AIU,
+    budgetNanoAiu: aiu("40"),
+    spentNanoAiu: aiu("27.1"),
     updatedAt: "2026-10-05T09:00:00.000Z",
   }),
   aStory("PROJ-102", {
@@ -86,8 +88,8 @@ const EIGHT: readonly Story[] = [
     owner: "jordan@example.com",
     phase: "blocked",
     status: "terminal",
-    budgetNanoAiu: 20 * AIU,
-    spentNanoAiu: 8.3 * AIU,
+    budgetNanoAiu: aiu("20"),
+    spentNanoAiu: aiu("8.3"),
     updatedAt: "2026-10-03T10:00:00.000Z",
   }),
 ];
@@ -360,6 +362,7 @@ describe("Voyages", () => {
         "12.4 / 30",
         "22 m ago",
       ]);
+      expect(byKey["PROJ-102"]?.[6]).toBe("8.3 / 20");
       expect(byKey["PROJ-140"]?.[7]).toBe("just now");
       expect(byKey["PROJ-109"]?.[7]).toBe("1 m ago");
       expect(byKey["PROJ-097"]?.[7]).toBe("1 d ago");

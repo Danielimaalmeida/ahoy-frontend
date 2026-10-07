@@ -1,9 +1,9 @@
 import { DestroyRef, Injectable, inject, signal, untracked, type WritableSignal } from "@angular/core";
 import { readStoryState } from "@core/api/story-state";
-import type { Run, Story } from "@core/api/types";
+import type { Story } from "@core/api/types";
 import type { StoryEventsHandle } from "@core/stores/story-events-feed";
-import { StoryStore, type StoryHandle, type StoryResourceName } from "@core/stores/story-store";
-import { gateOpen, haltOf, type RowDetail } from "./needs";
+import { StoryStore, type StoryHandle } from "@core/stores/story-store";
+import { gateOpen, haltOf, type RowDetail, type RunModel } from "./needs";
 
 /** What a row must read beyond its story: the questions, the state, the event history, or the runs. */
 type Need = "questions" | "state" | "events" | "runs";
@@ -29,7 +29,8 @@ function needsOf(story: Story): readonly Need[] {
 interface Held {
   readonly handle: StoryHandle;
   readonly feed: WritableSignal<StoryEventsHandle | null>;
-  readonly watching: Set<StoryResourceName>;
+  /** What this hold has asked to read. A hold cannot stop watching, so a row that needs less gets a new one. */
+  readonly needs: Set<Need>;
 }
 
 /**
@@ -64,11 +65,23 @@ export class RowDetails {
         next.delete(key);
       }
       for (const [key, needs] of wanted) {
-        const held = next.get(key) ?? { handle: this.stories.for(key), feed: signal(null), watching: new Set() };
+        let held = next.get(key);
+        // The stores let go of a resource only when the last hold on the voyage does. So a voyage that stops needing
+        // something it read (its questions, once answered) gets a new hold, opened before the old one is let go: the
+        // stream stays open and what was read stays in the store.
+        if (held !== undefined && [...held.needs].some((need) => !needs.includes(need))) {
+          const old = held;
+          held = this.open(key);
+          next.set(key, held);
+          for (const need of needs) this.read(held, need);
+          old.handle.release();
+          continue;
+        }
+        held ??= this.open(key);
         next.set(key, held);
         for (const need of needs) this.read(held, need);
       }
-      if (next.size !== current.size || [...next.keys()].some((key) => !current.has(key))) this.held.set(next);
+      if (next.size !== current.size || [...next].some(([key, held]) => current.get(key) !== held)) this.held.set(next);
     });
   }
 
@@ -87,17 +100,19 @@ export class RowDetails {
   }
 
   /** The run a voyage at sea is on, once its runs are read; reactive. */
-  runOf(story: Story): Pick<Run, "model" | "reasoningEffort"> | null {
+  runOf(story: Story): RunModel | null {
     const runs = this.held().get(story.key)?.handle.runs.value();
     return runs?.find((run) => run.id === story.currentRunId) ?? null;
   }
 
+  private open(key: string): Held {
+    return { handle: this.stories.for(key), feed: signal(null), needs: new Set() };
+  }
+
   private read(held: Held, need: Need): void {
-    if (need === "events") {
-      if (held.feed() === null) held.feed.set(held.handle.events());
-    } else if (!held.watching.has(need)) {
-      held.watching.add(need);
-      held.handle.watch(need);
-    }
+    if (held.needs.has(need)) return;
+    held.needs.add(need);
+    if (need === "events") held.feed.set(held.handle.events());
+    else held.handle.watch(need);
   }
 }

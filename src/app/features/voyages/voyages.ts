@@ -6,6 +6,7 @@ import { Banner } from "@ui/banner/banner";
 import { BudgetMeter } from "@ui/budget-meter/budget-meter";
 import { Button } from "@ui/button/button";
 import { EmptyState } from "@ui/empty-state/empty-state";
+import { PHASES } from "@domain/phases";
 import { FilterChips, type StatusFilter } from "@ui/filter-chips/filter-chips";
 import { Panel, PanelBody, PanelFoot } from "@ui/panel/panel";
 import { PhaseStepper } from "@ui/phase-stepper/phase-stepper";
@@ -13,11 +14,12 @@ import { RelativePipe } from "@ui/pipes/relative.pipe";
 import { SkeletonRows, type SkeletonColumn } from "@ui/skeleton/skeleton";
 import { StatusBadge } from "@ui/status-badge/status-badge";
 import { Key, Nowrap, Table } from "@ui/table/table";
-import { chipCounts, filterOf, matchesQuery, noteFor } from "./notes";
+import { chipCounts, filterOf, matchesQuery } from "./filters";
+import { noteFor } from "./notes";
 import { RowDetails } from "./row-details";
 
 /** How many rows the table shows at first, and how many more each "Load more" adds. */
-export const PAGE_SIZE = 50;
+const PAGE_SIZE = 50;
 
 /** The columns of the table, for its placeholder rows. */
 const COLUMNS: readonly SkeletonColumn[] = [
@@ -191,7 +193,7 @@ function describeFailure(error: ApiError): Failure {
                   <th>Note</th>
                   <th>Owner</th>
                   <th>Budget (AIU)</th>
-                  <th aria-sort="descending">Updated ↓</th>
+                  <th aria-sort="descending">Updated <span aria-hidden="true">↓</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -244,8 +246,7 @@ function describeFailure(error: ApiError): Failure {
       </ah-panel>
 
       <p class="ah-hint">
-        Progress runs intake · planning · plan_review · implementation · pr_review · delivery_gate · done. Dark blue =
-        passed, light blue = current, red = where it stopped.
+        Progress runs {{ phases }}. Dark blue = passed, light blue = current, red = where it stopped.
       </p>
     }
   `,
@@ -261,6 +262,7 @@ export class VoyagesPage {
   private readonly details = inject(RowDetails);
 
   protected readonly columns = COLUMNS;
+  protected readonly phases = PHASES.join(" · ");
   protected readonly filter = computed(() => filterOf(this.status()));
   protected readonly query = computed(() => {
     const q = this.q();

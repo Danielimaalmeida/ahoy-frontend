@@ -1,15 +1,12 @@
 import type { StoryStateView } from "@core/api/story-state";
-import { STORY_STATUSES, type AhoyEvent, type Question, type Story } from "@core/api/types";
+import type { AhoyEvent, Question, Story } from "@core/api/types";
 import { explainHalt } from "@domain/halt";
 import { crewLabel } from "@domain/models";
 import { GATE_FOR_PHASE } from "@domain/phases";
 import { actorLabel } from "@domain/identifiers";
-import type { StatusCounts, StatusFilter } from "@ui/filter-chips/filter-chips";
 
-/** Who anchored a voyage and what they said, from the last `story.halted` event (G7). */
+/** Who anchored a voyage, from the last `story.halted` event (G7). */
 export interface HaltNote {
-  readonly reason: string | null;
-  readonly detail: string | null;
   readonly actor: string;
 }
 
@@ -102,47 +99,8 @@ export function rejectionOf(events: readonly AhoyEvent[]): Rejection | null {
   return { actor: last.actor, gate: typeof gate === "string" && gate !== "" ? gate : null };
 }
 
-/** Reads the last `story.halted` event; `null` when there is none. */
+/** Reads who anchored the voyage from the last `story.halted` event; `null` when there is none. */
 export function haltOf(events: readonly AhoyEvent[]): HaltNote | null {
   const last = lastOf(events, "story.halted");
-  if (last === undefined) return null;
-  const reason = last.payload["reason"];
-  const detail = last.payload["detail"];
-  const trimmed = typeof detail === "string" ? detail.trim() : "";
-  return {
-    reason: typeof reason === "string" ? reason : null,
-    detail: trimmed !== "" ? trimmed : null,
-    actor: last.actor,
-  };
-}
-
-/** Reads the `?status=` of the address bar, which is untrusted: one of the six statuses, or All. */
-export function filterOf(raw: unknown): StatusFilter {
-  return STORY_STATUSES.find((status) => status === raw) ?? "all";
-}
-
-/** Whether a voyage's key or title holds the text typed in the search, as plain text and ignoring case. */
-export function matchesQuery(story: Story, query: string): boolean {
-  const needle = query.trim().toLowerCase();
-  if (needle === "") return true;
-  return story.key.toLowerCase().includes(needle) || (story.title ?? "").toLowerCase().includes(needle);
-}
-
-/** How many voyages each chip holds once the search is applied: All, and one count per status. */
-export function chipCounts(stories: readonly Story[], query: string): StatusCounts {
-  const counts: Record<StatusFilter, number> = {
-    all: 0,
-    ready: 0,
-    running: 0,
-    awaiting_input: 0,
-    awaiting_decision: 0,
-    halted: 0,
-    terminal: 0,
-  };
-  for (const story of stories) {
-    if (!matchesQuery(story, query)) continue;
-    counts.all++;
-    counts[story.status]++;
-  }
-  return counts;
+  return last === undefined ? null : { actor: last.actor };
 }

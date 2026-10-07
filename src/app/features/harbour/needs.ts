@@ -35,6 +35,20 @@ export interface NeedsAction {
   readonly link: readonly string[];
 }
 
+/** The model and effort a run works on: what "At sea" shows once the run is known. */
+export type RunModel = Pick<Run, "model" | "reasoningEffort">;
+
+/** The "Crew member" cell of a voyage at sea: who is working, and on what model and effort when the run is known. */
+export interface AtSeaCrew {
+  readonly member: string;
+  readonly runtime: string | null;
+}
+
+/** The last event of a type, or `undefined`. */
+function lastOf(events: readonly AhoyEvent[], type: string): AhoyEvent | undefined {
+  return events.filter((event) => event.type === type).at(-1);
+}
+
 /** The crew member of a phase, in the crew's words (G14); both Lookouts share `pr_review`. */
 export function crewOfPhase(phase: string): string {
   return phase === "pr_review" ? "Lookouts" : crewLabel(phase);
@@ -49,7 +63,7 @@ function gateOf(story: Story, known: string | null): string | null {
 
 /** Reads the reason and the detail of the last `story.halted` event; `null` when there is none. */
 export function haltOf(events: readonly AhoyEvent[]): HaltInfo | null {
-  const last = events.filter((event) => event.type === "story.halted").at(-1);
+  const last = lastOf(events, "story.halted");
   if (last === undefined) return null;
   const reason = last.payload["reason"];
   const detail = last.payload["detail"];
@@ -62,8 +76,7 @@ export function haltOf(events: readonly AhoyEvent[]): HaltInfo | null {
 
 /** The gate of the last `story.awaiting_decision` event (G11); `null` when there is none. */
 export function gateOpen(events: readonly AhoyEvent[]): string | null {
-  const last = events.filter((event) => event.type === "story.awaiting_decision").at(-1);
-  const gate = last?.payload["gate"];
+  const gate = lastOf(events, "story.awaiting_decision")?.payload["gate"];
   return typeof gate === "string" && gate !== "" ? gate : null;
 }
 
@@ -137,12 +150,9 @@ export function needsAction(story: Story, gate: string | null): NeedsAction {
  * The "Crew member" cell of a voyage at sea: who is working, and on which model and effort once the run is known.
  * A queued voyage says who goes next.
  */
-export function atSeaCrew(
-  story: Story,
-  run: Pick<Run, "model" | "reasoningEffort"> | null,
-): { readonly crew: string; readonly runtime: string | null } {
-  const crew = crewOfPhase(story.phase);
-  if (story.status === "ready") return { crew: `${crew} goes next`, runtime: null };
-  if (run === null || run.model === null) return { crew, runtime: null };
-  return { crew, runtime: run.reasoningEffort === null ? run.model : `${run.model} · ${run.reasoningEffort}` };
+export function atSeaCrew(story: Story, run: RunModel | null): AtSeaCrew {
+  const member = crewOfPhase(story.phase);
+  if (story.status === "ready") return { member: `${member} goes next`, runtime: null };
+  if (run === null || run.model === null) return { member, runtime: null };
+  return { member, runtime: run.reasoningEffort === null ? run.model : `${run.model} · ${run.reasoningEffort}` };
 }

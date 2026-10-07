@@ -1,6 +1,7 @@
 import { TestBed, type ComponentFixture } from "@angular/core/testing";
 import { provideRouter } from "@angular/router";
 import { fail, ok } from "@core/api/api-error";
+import { parseAiu } from "@domain/aiu";
 import type { AhoyEvent, Question, Run, Story } from "@core/api/types";
 import { StoriesStore } from "@core/stores/stories-store";
 import { aStory, anEvent } from "@core/realtime/testing/events";
@@ -9,10 +10,11 @@ import { FakeClock, settle } from "@core/realtime/testing/fake-clock";
 import { FakeFetch, type SseBody } from "@core/realtime/testing/fake-fetch";
 import { provideFakes } from "@core/realtime/testing/providers";
 import { CLOCK as UI_CLOCK } from "@ui/pipes/clock";
-import { AllHands } from "./all-hands";
+import { AllHandsPage } from "./all-hands";
 
 const NOW = "2026-10-06T10:10:00.000Z";
-const AIU = 1_000_000_000;
+/** An AIU amount in integer nano-AIU, read as text so that no float is involved (CLAUDE.md "Numbers"). */
+const aiu = (text: string): number => parseAiu(text)!;
 
 /** The eight voyages of the wireframes (fictional), with the times of the `Main` board relative to `NOW`. */
 const EIGHT: readonly Story[] = [
@@ -22,8 +24,8 @@ const EIGHT: readonly Story[] = [
     phase: "planning",
     status: "running",
     currentRunId: "proj-140-planning-001-5c54",
-    budgetNanoAiu: 30 * AIU,
-    spentNanoAiu: 3.2 * AIU,
+    budgetNanoAiu: aiu("30"),
+    spentNanoAiu: aiu("3.2"),
     updatedAt: "2026-10-06T10:10:00.000Z",
   }),
   aStory("PROJ-109", {
@@ -31,7 +33,7 @@ const EIGHT: readonly Story[] = [
     owner: "alex@example.com",
     phase: "intake",
     status: "ready",
-    budgetNanoAiu: 20 * AIU,
+    budgetNanoAiu: aiu("20"),
     spentNanoAiu: 0,
     updatedAt: "2026-10-06T10:09:00.000Z",
   }),
@@ -41,8 +43,8 @@ const EIGHT: readonly Story[] = [
     phase: "intake",
     status: "halted",
     haltReason: "stopped_by_user",
-    budgetNanoAiu: 15 * AIU,
-    spentNanoAiu: 0.6 * AIU,
+    budgetNanoAiu: aiu("15"),
+    spentNanoAiu: aiu("0.6"),
     updatedAt: "2026-10-06T10:01:00.000Z",
   }),
   aStory("PROJ-123", {
@@ -50,8 +52,8 @@ const EIGHT: readonly Story[] = [
     owner: "alex@example.com",
     phase: "plan_review",
     status: "awaiting_decision",
-    budgetNanoAiu: 30 * AIU,
-    spentNanoAiu: 12.4 * AIU,
+    budgetNanoAiu: aiu("30"),
+    spentNanoAiu: aiu("12.4"),
     updatedAt: "2026-10-06T09:48:00.000Z",
   }),
   aStory("PROJ-131", {
@@ -59,8 +61,8 @@ const EIGHT: readonly Story[] = [
     owner: "sam@example.com",
     phase: "planning",
     status: "awaiting_input",
-    budgetNanoAiu: 25 * AIU,
-    spentNanoAiu: 6.1 * AIU,
+    budgetNanoAiu: aiu("25"),
+    spentNanoAiu: aiu("6.1"),
     updatedAt: "2026-10-06T09:22:00.000Z",
   }),
   aStory("PROJ-118", {
@@ -69,8 +71,8 @@ const EIGHT: readonly Story[] = [
     phase: "planning",
     status: "halted",
     haltReason: "run_failed",
-    budgetNanoAiu: 20 * AIU,
-    spentNanoAiu: 9.8 * AIU,
+    budgetNanoAiu: aiu("20"),
+    spentNanoAiu: aiu("9.8"),
     updatedAt: "2026-10-06T08:00:00.000Z",
   }),
   aStory("PROJ-097", {
@@ -78,8 +80,8 @@ const EIGHT: readonly Story[] = [
     owner: "alex@example.com",
     phase: "done",
     status: "terminal",
-    budgetNanoAiu: 40 * AIU,
-    spentNanoAiu: 27.1 * AIU,
+    budgetNanoAiu: aiu("40"),
+    spentNanoAiu: aiu("27.1"),
     updatedAt: "2026-10-05T10:00:00.000Z",
   }),
   aStory("PROJ-102", {
@@ -87,8 +89,8 @@ const EIGHT: readonly Story[] = [
     owner: "jordan@example.com",
     phase: "blocked",
     status: "terminal",
-    budgetNanoAiu: 20 * AIU,
-    spentNanoAiu: 8.3 * AIU,
+    budgetNanoAiu: aiu("20"),
+    spentNanoAiu: aiu("8.3"),
     updatedAt: "2026-10-03T10:00:00.000Z",
   }),
 ];
@@ -137,8 +139,8 @@ const RUN: Run = {
   status: "running",
   runtime: "fake",
   controlSha: "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
-  budgetNanoAiu: 8 * AIU,
-  usage: { requests: 9, nanoAiu: 0.6 * AIU, inputTokens: 0, outputTokens: 0 },
+  budgetNanoAiu: aiu("8"),
+  usage: { requests: 9, nanoAiu: aiu("0.6"), inputTokens: 0, outputTokens: 0 },
   replayOf: null,
   exitReason: null,
   gate: null,
@@ -149,7 +151,7 @@ const RUN: Run = {
 };
 
 interface Rig {
-  readonly fixture: ComponentFixture<AllHands>;
+  readonly fixture: ComponentFixture<AllHandsPage>;
   readonly root: HTMLElement;
   readonly api: FakeApi;
   readonly clock: FakeClock;
@@ -183,7 +185,7 @@ async function render(stories: readonly Story[] = EIGHT, wire: (api: FakeApi) =>
       { provide: UI_CLOCK, useValue: () => clock.now() },
     ],
   });
-  const fixture = TestBed.createComponent(AllHands);
+  const fixture = TestBed.createComponent(AllHandsPage);
   const flush = async (): Promise<void> => {
     await settle();
     fixture.detectChanges();
@@ -485,8 +487,8 @@ describe("All hands", () => {
               phase: "planning",
               status: "running",
               version: 2,
-              budgetNanoAiu: 25 * AIU,
-              spentNanoAiu: 6.1 * AIU,
+              budgetNanoAiu: aiu("25"),
+              spentNanoAiu: aiu("6.1"),
               updatedAt: "2026-10-06T10:10:30.000Z",
             }),
           ),
