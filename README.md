@@ -86,10 +86,14 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   and time helpers and the project's only diff implementation. Its `types.ts` did not match the contract; the 2A finishing pass
   corrected it (the contract is sovereign) and `core/api/domain-types.spec.ts` keeps it identical (see
   [docs/progress.md](docs/progress.md)).
-- **Wave 2, lane 2B (realtime and stores): done, in review** (branch `claude/ecstatic-allen-vkmfqi`, pull request into
-  `main`). `FETCH`, `CLOCK`, `parseSseStream`, `EventStreamClient` (fetch, `Last-Event-ID`, back-off, terminal 4xx),
+- **Wave 2, lane 2B (realtime and stores): done and merged into `main`** (PR #8). `FETCH`, `CLOCK`, `parseSseStream`, `EventStreamClient` (fetch, `Last-Event-ID`, back-off, terminal 4xx),
   `EventBus` (one global connection) with the polling fallback, `StoriesStore`, `StoryStore`, `RunProgressBuffer` and
   `StoryEventsFeed`, with 146 new tests on a fake `fetch`, a fake clock and a fake API. No screen uses them yet; never run
   against an API or the mock backend.
-- Next: review and merge lane 2B, and the rest of wave 2 (1B, 1C, 2D). Details in
+- **Wave 2, lane 1B (kit: state, progress and navigation): built and tested, not committed** (branch
+  `claude/paralelos2-section-a-h4ef52`). `ah-status-badge`, `ah-phase-stepper`, `ah-budget-meter`, `ah-outcome-pill`, `ah-filter-chips`,
+  `ah-section-tabs`, `ah-top-bar` (with the Live indicator), `ah-empty-state`, `ah-skeleton`, the toast and the pipes `ahAiu`,
+  `ahRelative`, `ahDateTime`, `ahActor`, with 11 more sections in `/_kit`. Unit-tested and compared with the design-system previews in
+  headless Chromium; no data, mock or API involved. Details in [docs/progress.md](docs/progress.md).
+- Next: review lane 1B (it is not committed yet), and run the rest of wave 2 (1C, 2D). Details in
   [docs/progress.md](docs/progress.md).

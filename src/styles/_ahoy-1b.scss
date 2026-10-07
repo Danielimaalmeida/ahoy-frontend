@@ -1,0 +1,74 @@
+// The few rules the design-system bundle can't cover for the state, progress and navigation components (lane 1B).
+// Values come from tokens.css; each rule says why it exists. Don't restyle bundle classes here: ahoy-bundle.css is a
+// copy that gets re-synced.
+
+// Wrapper components render the README markup inside their host. The host adds no box of its own, so flex and grid
+// layouts see the README element (the stepper, the meter's row, the whole top bar). Accessibility attributes always
+// sit on the inner element. Single-element components (ah-outcome-pill, ah-skeleton) carry the bundle class on the
+// host instead, like ah-source does.
+ah-phase-stepper,
+ah-budget-meter,
+ah-filter-chips,
+ah-section-tabs,
+ah-top-bar,
+ah-empty-state,
+ah-skeleton-rows,
+ah-toast-host {
+  display: contents;
+}
+
+// A status badge with its API word: the StatusBadge preview lays them out in a flex row with an 8px gap, and the
+// bundle has no class for that row.
+ah-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+// Badges inside a filter chip are smaller than in a table: the FilterChips preview sets 18px / 0 7px inline.
+.ah-chip .ah-badge {
+  height: 18px;
+  padding: 0 7px;
+}
+
+// The pill variant of the section tabs is a group of toggle buttons. The bundle styles `aria-selected`, which is not
+// a valid attribute on a button, so the buttons carry `aria-pressed` (as the filter chips do) and get the same look.
+.ah-tabs__item[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent-text);
+  box-shadow: var(--shadow-selected);
+}
+
+// The Icon component stops at 18px; the EmptyState preview draws its icon at 40px with a 1.6 stroke.
+.ah-empty svg {
+  width: 40px;
+  height: 40px;
+  stroke-width: 1.6;
+}
+
+// Placeholder rows: the Skeleton preview lays each row out as a grid with a 14px gap, with the track widths inline.
+.ah-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3\.5);
+}
+.ah-skeleton-row {
+  display: grid;
+  gap: var(--space-3\.5);
+  align-items: center;
+}
+
+// Where toasts appear (the bundle styles the toast but not its place): bottom centre, above the dialogs' overlay
+// (the CDK's is 1000), and never in the way of a click, since a toast holds nothing to press.
+.ah-toast-host {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-6);
+  left: var(--space-4);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
