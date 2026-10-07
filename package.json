@@ -10,6 +10,7 @@
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.mjs",
     "start:mock": "ng serve --configuration mock",
+    "mock:api": "node scripts/mock-api.mjs",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",

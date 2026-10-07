@@ -1,8 +1,21 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 1C (kit: interaction and content), launched from `docs/paralelos2.md` section B on branch
-`claude/secao-b-paralelos2-1l7xpu`. Lane 1C is committed on that branch with the user's approval, with `main` merged in
-(at c2562e9: lanes 2A finishing pass, 2B and 1B, PRs #7, #8 and #9), pushed, and its pull request into `main` waits for review.**
+**Updated 2026-10-07 by lane 2D (mock backend and `mock:api`), launched from `docs/paralelos2.md` section D on branch
+`claude/blissful-wozniak-qr2816`, from `main` at a99a7a2 (which holds every other lane of waves 1 and 2, lane 1C included as
+PR #10). Lane 2D is built and tested in the working tree; nothing is committed or pushed, waiting for the user.**
+
+- **Ran for 2D (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (77 files, **1482 tests**, 80 new)
+  and `npm run format:check`, all green; ten mutation checks; `npm run start:mock` in headless Chromium (the API, the event
+  stream and the switches served in the page); `npm run mock:api` beside `npm start`, with `curl` and a stream reader through
+  the real dev proxy (events arrive one by one); `scripts/mock-api.dist-check.mjs` on the production `dist/` (clean) and on a
+  mock build (caught).
+- **Did not run for 2D:** anything against a real API, `--simulate` or TEST; the mock under real screens (none reads data yet);
+  the dist check in CI (lane 6D's `ci.yml`).
+
+Earlier, **lane 1C (kit: interaction and content)**, launched from `docs/paralelos2.md` section B on branch
+`claude/secao-b-paralelos2-1l7xpu`: committed with the user's approval, with `main` merged in (at c2562e9), pushed, and merged
+into `main` since (PR #10).
 
 - **Ran for 1C (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, the approved install of `@angular/cdk@22.2.1`
   and `marked@18.1.0`, `npm run build`, `npm run typecheck` (`check-boundaries: ok`), `npm run lint`, `npm test` and
@@ -10,8 +23,8 @@
   `main` (see "Final check" in the lane 1C section); `/_kit` served by `ng serve` and screenshotted in headless Chromium,
   light and dark, at 1100 px and 390 px; the live CDK dialog driven in that browser (focus, Esc, focus return); nine
   mutation checks of the tests.
-- **Did not run for 1C:** `npm run start:mock` (lane 2D's mock is not in `main`; 1C shows no API data); anything against an
-  API; other browsers than Chromium; a pixel diff (compared by eye).
+- **Did not run for 1C:** `npm run start:mock` (lane 2D's mock was not in `main` then; 1C shows no API data); anything against
+  an API; other browsers than Chromium; a pixel diff (compared by eye).
 
 Earlier: **lane 1B (kit: state, progress and navigation), launched from `docs/paralelos2.md` section A on branch
 `claude/paralelos2-section-a-h4ef52`, built on `main` at 56e815a, with `main` at 9b4e16f (lane 2A's finishing pass, PR #7, and lane 2B,
@@ -96,14 +109,20 @@ review: `ah-dialog` on the CDK `Dialog` with `DialogService`, `ah-choice-card-gr
 `ah-model-choice-table`/`-row`, `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` with `ahMark`, and `ah-markdown` with the pure
 `renderMarkdown`, each in the `/_kit` gallery. New runtime dependencies `@angular/cdk` 22.2.1 and `marked` 18.1.0. No screen uses
 them yet.
+Lane 1C has been merged since (PR #10).
+
+**Wave 2, lane 2D (mock backend)** is built and tested in the working tree of `claude/blissful-wozniak-qr2816`, **not
+committed**: `MockAhoyServer` in `src/testing/mock-backend/` (the 19 operations with the contract's checks and errors, a
+simulated reconciler, `/events/stream` with `Last-Event-ID`, the switches and the eight seeded voyages), checked against the
+YAML with Ajv; `npm run start:mock` serves it in the browser and `npm run mock:api` over HTTP behind the real dev proxy. With it
+in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.md`).
 
 ## Start here next
 
-1. **User:** review and merge the lane 1C pull request (`claude/secao-b-paralelos2-1l7xpu` into `main`; section "Lane 1C"
-   below). Outside its directories it adds the two dependencies, keeps the unique-ids check in `kit.spec.ts` and updates this
-   file and the README "Status".
-   **Done since this was written:** lane 1B is merged (PR #9), and the lane 2B pull request is merged into `main` (PR #8, 9b4e16f; section "Lane 2B" below).
-   Nothing outside `core/realtime/` and `core/stores/` changed, except this file and the README "Status" bullets.
+1. **User:** review lane 2D (section "Lane 2D" below, in particular its "Decisions and deviations") and approve the commit and
+   push of the working tree of `claude/blissful-wozniak-qr2816`, then its pull request into `main`. It changes nothing outside
+   its own list (one line of `angular.json`, one script line of `package.json`), plus this file and the README "Status".
+   **Done since earlier versions of this item:** lanes 1B (PR #9), 2B (PR #8) and 1C (PR #10) are merged into `main`.
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
@@ -121,17 +140,16 @@ them yet.
    `src/styles/_ahoy-angular.scss`.
 5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 2:** lane **1B** is merged (PR #9) and lane **1C** is in review (item 1). Earlier text: lane 1B was built and tested and awaited the user's review and approval to commit (section "Lane 1B": "Decisions to
-   review" and "Integration with `main`", which says what the merge of `main` conflicted on and how it was resolved); lane 2B is merged;
-   1C and 2D run in parallel sessions (`docs/paralelos2.md`); 2D reuses the Ajv helper `src/testing/fixtures/contract.ts`. With 1B,
-   2B and 2D in `main`, wave 3 can start (`docs/paralelos3.md`). 2B's note that 1B cannot import `CLOCK` from `core` is handled: the pipes
-   have their own token in `ui/pipes/clock.ts`. **6D** is optional (`docs/paralelos1.md`).
+6. **Wave 2:** 1B, 1C and 2B are merged; **2D** is item 1. With 2D in `main` the whole wave is there: open every section of
+   `docs/paralelos3.md` (3A, 3B, 3C and 4A). Screens develop on `npm run start:mock`; e2e (6C) can use `npm run mock:api`
+   behind the real proxy. **6D** is optional (`docs/paralelos1.md`); when it runs, add the mock dist check to CI (lane 2D,
+   "Needs from other lanes").
 7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
    confirm the `state.json` field names `readStoryState` reads. Also `curl -s localhost:4200/api/v1/health` and
-   `curl -N localhost:4200/api/v1/events/stream` for the proxy (phase 0's open item), which is also the first real test of
-   lane 2B's SSE parser and reconnection.
+   `curl -N localhost:4200/api/v1/events/stream` for the proxy against the real API (lane 2D already checked the proxy's SSE
+   path against `npm run mock:api`), which is also the first test of lane 2B's SSE parser against the real server.
 
 ## Prompt for a new session
 
@@ -142,6 +160,173 @@ them yet.
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 2D · Mock backend and `mock:api` (2026-10-07)
+
+Launched from `docs/paralelos2.md`, section D, on `claude/blissful-wozniak-qr2816` (the branch this session was given; plan §9
+would call it `lane/2d-mock-backend`), from `main` at a99a7a2 (phase 0, 1A, 1B, 1C, 2A with its finishing pass, 2B and 2C).
+**Nothing is committed or pushed** (CLAUDE.md and paralelos2 rule 7): the work is in the working tree, waiting for the user.
+
+**Pre-flight.** `git fetch origin`: `main` has `openapi/ahoy-v1.yaml`, the `ApiClient` (2A), `src/app/core/api/schema.d.ts`,
+`npm run api:types` and `npm run api:check`, `core/api/contract.spec.ts` with its Ajv helper `src/testing/fixtures/contract.ts`,
+and the lane 2A section says "Done, offline" (2A finished); `src/app/domain/` has the vocabulary (2C). Node was v22.22.0, so
+every command ran on **Node 24.21.0** from `npx -y node@24`, copied into the session scratchpad and put first on `PATH`; `npm ci`
+installed the locked tree. **No dependency was added or changed.** Baseline on `main`: 68 files, 1402 tests, all green.
+
+**Source read, not loaded:** to make the mock behave like the real API, `Danielimaalmeida/ahoy-hosted` was attached read-only
+and cloned at 1890d5a (the commit the vendored contract records) to `/home/user/ahoy-hosted`, outside this repository; its
+`CLAUDE.md` was not loaded (as lane 2A's decision 12). Read: `apps/api/src/server.ts` (routing, contract checks, problem
+bodies, cursors, the event stream), `packages/core/src/service/commands.ts` (each command's checks, in order, and its
+events), `packages/core/src/domain/story-state.ts` (send-back, ceiling, decisions), `apps/reconciler/src/reconciler.ts`
+(run ids, `run.queued`/`run.finished`/`story.halted` payloads) and the phase table in `packages/core/src/testing/support.ts`.
+
+### What changed
+
+| Area                 | Files                                                                                  | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server               | `src/testing/mock-backend/server.ts`                                                   | `MockAhoyServer.handle(request)`, which never throws. Routes built from the contract's `paths` as the real server builds them; `404` for no route, `400 bad_request` with `Allow` for a wrong method, `401` without `X-Ahoy-Actor` (`/health` is anonymous), `400 validation_failed` with every difference. The 19 operations of phases 3 to 6 with the hosted commands' checks in their order; the four of phase 7 answer `500 internal_error` (any operation may). `reset()`, `close()`, `dropStreams()`. |
+| Contract checks      | `schema.ts`                                                                            | `SchemaChecker`: the JSON Schema keywords the contract's request schemas use, run against the contract document itself (the JSON mirror), with Ajv's wording and the real API's paths (`body/budgetNanoAiu`, `query.limit`, `path.key`). Text Postgres cannot store (NUL, lone surrogate) is refused as the real API does.                                                                                                                                                                                  |
+| State                | `voyage.ts`, `world.ts`                                                                | Per voyage: story, runs, questions, gate records, artifact revisions (complete sets, sha256, size), model choices, human gates, revision rounds, decision log; renders `ModelPlan` (sources as the hosted `readModelPlan`) and the state document (`readStoryState`'s fields). One global event log with increasing ids.                                                                                                                                                                                    |
+| Reconciler           | `simulator.ts`, `content.ts`                                                           | The lifecycle on the mock's clock (see the README of the directory): runs queued, dispatched, `run.progress` batches (steps then one `spend`), finished and judged; questions on the first planning run; plan revisions; `send_back` archives the plan as `implementation-plan.round<N>.md`; ceiling 4; approve → implementation → pr_review (two lens runs) → delivery_gate; reject → blocked; stop cancels the run 0.5 s later (resume refuses until then); budget exhaustion halts.                      |
+| Event stream         | `event-stream.ts`                                                                      | `GET /events/stream` as a `ReadableStream`: `: connected`, replay after `Last-Event-ID` (else `after`), live events with greater ids, `: keepalive` after 15 s idle, `story=` filter, broken by `dropStreams` or by an aborted request.                                                                                                                                                                                                                                                                     |
+| Seeds                | `seeds.ts`                                                                             | The eight voyages of plan deliverable 6, times relative to the start. PROJ-123's plan revision 2 is the fixture's text (same sha256 and ETag as `listArtifacts.json`).                                                                                                                                                                                                                                                                                                                                      |
+| Switches             | `switches.ts`                                                                          | `latencyMs`, `failNext=<status>` (problem; 502/504 an HTML page), `conflictNext=<409 code>`, `dropStream`; from the query string or `localStorage` (`ahoy.mock.*`, one-shots removed) in the browser, from `/__mock/switches` on `mock:api`.                                                                                                                                                                                                                                                                |
+| Adapters             | `fetch-adapter.ts`, `src/app/core/mock/mock-backend.ts`                                | `createMockFetch(server)` (API URLs from the mock, others to a fallback; streams; latency; abort). `MOCK_SERVER`, `createMockServer()`, `provideMockBackend(server)` (`MOCK_SERVER` and a `FETCH` sending the current user as the actor) and `mockBackendInterceptor` for `HttpClient` (errors as `HttpErrorResponse`, 304 too, latency on the mock's clock).                                                                                                                                               |
+| `npm run start:mock` | `src/app/core/mock/install.ts`, `src/environments/environment.mock.ts`, `angular.json` | `installMockBackend()` wraps the page's `fetch`: `HttpClient` (`withFetch`) and `FETCH` call `fetch` per request, so the whole API, stream included, is served in the browser and `app.config.ts` is untouched. The actor is `ahoy.mock.actor` or `dev@example.com` (the proxy's default). `globalThis.ahoyMock` is the server. Only the `mock` configuration's `fileReplacements` now points at `environment.mock.ts` (that one line changed).                                                             |
+| `npm run mock:api`   | `scripts/mock-api.mjs`, the `mock:api` line of `package.json`                          | The same server over `node:http` on `127.0.0.1:8080` (`MOCK_API_PORT`, `MOCK_API_HOST`), **run by Node 24's type stripping** with a `module.registerHooks` resolver for extensionless imports and the `@core`/`@testing` aliases: no build step, no `tsconfig`, no dependency. SSE written chunk by chunk (`flushHeaders`, `X-Accel-Buffering: no`); `dropStream` destroys the socket. Control routes `/__mock/switches`, `/__mock/reset`, `/__mock/health`.                                                |
+| Production check     | `scripts/mock-api.dist-check.mjs`                                                      | After `npm run build`: fails (exit 1) when `dist/` holds any of six markers of the mock (its switch names, banner, server name, directory, problem text, the contract mirror).                                                                                                                                                                                                                                                                                                                              |
+| Docs                 | `src/testing/mock-backend/README.md`, this section, README "Status"                    | How to run it, switches, rules for the directory.                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+
+`src/testing/mock-backend/.gitkeep` was removed.
+
+### Proof
+
+All offline, 0 AIU, Node 24.21.0. **No real API was involved** (not the hosted API, not `--simulate`, not the TEST environment).
+
+- **Chain:** `npm run build` (no warning), `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (ESLint, `tokens:check`,
+  `api:check`), `npm test` (**77 files, 1482 tests**: the 1402 of `main` and **80 new**, 0 failed, 0 skipped) and
+  `npm run format:check`, all exit 0 (outputs under "Final check").
+- **New tests:**
+
+  | File                                | Tests | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+  | ----------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `mock-backend/conformance.spec.ts`  | 7     | **Every answer of a broad session** (every read of every seed, a whole voyage with every command, 20 error cases, the switches) checked with the 2A Ajv helper: successes against their operation's schema and declared status (201, 202...), errors are `Problem`s with the real `type`/`title` and a declared status (or 500); artifact ETags match the listing; **every event** against `Event`, **every `run.progress` payload** against `RunProgressPayload`; ids increase by one in time order. Statuses 200, 201, 202, 400, 401, 404, 409, 422, 500 and 503 all occur.                                                                                                                                                                                                                                                                                                                                               |
+  | `mock-backend/server.spec.ts`       | 25    | Actor and `/health`; 404 and `Allow`; parameter and body errors word for word; invalid JSON; phase 7 → 500; the eight seeds and their details (PROJ-123 round 2, PROJ-131 1 of 3, PROJ-140's gap of 38 and `[REDACTED]`, PROJ-118's `workerLog`, PROJ-102 rejected by jordan); determinism; cursor paging and a foreign cursor; status filter; event paging and `lastEventId`; artifacts, 304, older revisions, 404s; model sources; stale version; `story_exists` with `Location`; reviewers on one model; model choices set and cleared; budget rules; stop/resume rules; answers; decision rules.                                                                                                                                                                                                                                                                                                                        |
+  | `mock-backend/simulator.spec.ts`    | 8     | **The whole voyage on the server** (set sail → questions → plan → send-back → plan rev. 2 → approve → reviews → delivery → done, with spend summed); the event order of a run and its batches; reject → blocked; **the fifth send-back answers `revision_ceiling_reached`**; stop, cancellation 0.5 s later, resume refused meanwhile; PROJ-140's run finishing from the seeded line 43; `budget_exhausted` and budget-then-resume; versions only increase; `reset`.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+  | `mock-backend/event-stream.spec.ts` | 9     | Stream framing, replay and live order; **`Last-Event-ID` wins over `after` with no repeat**; `story=`; keepalive at exactly 15 s; `dropStreams` and abort break the body; 401 without actor; `createMockFetch` (actor, fallback, invalid JSON, artifact text and 304, latency and abort on the clock).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+  | `mock-backend/switches.spec.ts`     | 7     | `failNext` once (503 problem, 500, 502 HTML), `conflictNext` after validation and only for commands (with `currentVersion`), `dropStream`, refused values, `localStorage` one-shots removed and a blocked storage, the query string.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+  | `mock-backend/schema.spec.ts`       | 10    | **The mock's checker and Ajv agree** on 53 request bodies of 7 operations and 10 parameter values; Ajv's wording; unstorable text.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+  | `mock-backend/sha256.spec.ts`       | 6     | FIPS vectors, block boundaries (55/56/64 bytes), UTF-8; the fixture's sha256, ETag and size; `ManualClock`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+  | `core/mock/mock-backend.spec.ts`    | 6     | **The acceptance test: the whole voyage through `ApiClient` calls** over `mockBackendInterceptor` (no browser): `startStory`, `listQuestions`, `answerQuestion` ×2, `getArtifactContent` and its `not_modified`, `decideHumanGate` send_back, `getStoryState` + `readStoryState` (round 1, ceiling 4), approve, delivery approve → `done`, gate records, runs, `getRun`, `listStoryEvents` paged by `lastEventId`. Also: errors through the client's predicates (`isStale` with `currentVersion`, `isNotFound`, `isValidationFailed`, `isUnreachable` for 503, `{kind:"network",status:502}` for the HTML page, `conflictNext`); latency; **`StoriesStore.loadAll()`** on the seeds (counts, `needsYou` oldest first); **lane 2B's `EventStreamClient` on the mock `FETCH`: live, dropped, reconnected after 1 s with `Last-Event-ID`, no duplicate, ids in order, nothing open after `stop()`**; non-API requests pass on. |
+  | `core/mock/install.spec.ts`         | 2     | `installMockBackend` on a fake page: API from the mock as `dev@example.com`, `/config.json` to the real `fetch`, `ahoyMock`; actor from `localStorage`; query and per-request `localStorage` switches.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+- **Mutation checks** (each made the suite fail, then was reverted; `git diff` clean after): version check skipped (2 tests
+  failed), `Last-Event-ID` ignored (2), `additionalProperties` ignored (3), plan archived under another name (1), reviewers
+  allowed on one model (1), abort not breaking a stream (2), a seeded progress line 0 (1, the conformance spec), interceptor
+  passing errors as successes (2), `failNext` not one-shot (5), keepalive never sent (1).
+- **`npm run start:mock` in a browser:** `ng serve --configuration mock`, then headless Chromium 1194 (the session's
+  Playwright 1.56.1, not a project dependency) on `/voyages?ahoy.mock.latencyMs=50`: the console shows the mock's banner with
+  `latencyMs=50`; in the page, `fetch("/api/v1/stories?limit=500")` gave the eight voyages, `/api/v1/health` ok,
+  `/api/v1/events/stream` `text/event-stream` with `: connected` and the replay, `globalThis.ahoyMock` is set, and
+  `/config.json` still went to the dev server (404, as before). No screen shows API data yet (wave 3).
+- **`npm run mock:api` with `npm start`, through the real dev proxy** (no API, Docker or Postgres): `curl -s
+localhost:4200/api/v1/health` → `{"status":"ok","database":"ok"}`; `GET /stories?status=halted` → PROJ-126 and PROJ-118;
+  `GET /stories/PROJ-404` → `404 application/problem+json`; `POST /stories` → `201` with `owner` `dev@example.com` (the proxy's
+  `X-Ahoy-Actor`); without the proxy, no actor → `401`; `/__mock/switches?failNext=503` → the next request `503 unavailable`.
+  **The stream through the proxy delivers events one by one:** timestamps on arrival read 0.98 s, 2.48 s, 3.48 s, 5.48 s...
+  as the simulated run ticked, so neither the proxy nor the mock buffers (this also settles, against the mock, phase 0's open
+  item "`curl -N` through the proxy").
+- **Production build without the mock:** `node scripts/mock-api.dist-check.mjs` → `ok (18 files in dist/ahoy-frontend, no
+trace of the mock)`; the same script on an `ng build --configuration mock` output exits 1 and names all six markers in
+  `main.js`, so it does detect the mock.
+
+### Decisions and deviations (to review)
+
+1. **Intentional deviations from the contract or the real API**, all in the mock only:
+   - the phase 7 operations (`resolveConsensus`, `decideWorkPackage`, `reopenWork`, `unblockStory`) answer `500
+internal_error` "The mock backend does not simulate …" (the contract lets any operation answer 500);
+   - `failNext`, `conflictNext` and `dropStream` produce answers the real API would give only in those situations;
+   - `decision_already_recorded` happens only through `conflictNext`: after a decision the real API, like the mock, has moved
+     the story on, so a second decision meets `stale_version` or `invalid_state` first;
+   - runs report `runtime: "fake"`, and their spend, tokens and timings are invented;
+   - the state document carries the fields the UI reads (`human_gates`, `revisions`, `revision_ceiling`, `models`,
+     `acceptance_criteria`, `work_packages`, `child_repos`, `gate_results`, `decision_log`...), not every field of a real
+     `state.json`;
+   - the mock also writes `story.terminal` (as the real reconciler does; not among the contract's example types, so clients
+     ignore it).
+2. **Run ids follow the real API**, `<key>-<phase>-<attempt>-<4 hex>` (`proj-140-planning-001-5c54`), not the wireframes'
+   `r-02`: `getRun` is global, so ids must be unique across stories, and the UI should meet the real shape. The suffix is
+   derived from the key, phase and attempt, so it is the same on every run.
+3. **delivery_gate is a human gate, as in the phase table:** after the plan is approved the mock runs implementation and the
+   two reviews quickly, then waits for a `delivery_accepted` decision before `done` (the plan's "approve → … until done"
+   would skip a gate the real API has). The acceptance test approves both gates.
+4. **The browser mock wraps the page's `fetch`** instead of registering an interceptor in `app.config.ts`, which this lane does
+   not own and which reads no environment providers. `HttpClient` (`withFetch`) and `FETCH` both look `fetch` up per call, so
+   one adapter serves both; `mockBackendInterceptor` exists for `TestBed` (and for a composition root that wants it later).
+5. **The mock checks requests itself** (`SchemaChecker`) against the contract document rather than with Ajv, so Ajv (a dev
+   dependency) is not in the mock's browser bundle nor needed by `mock:api`; `schema.spec.ts` keeps both in agreement. The
+   2A helper `contract.ts` is used, unchanged, for the conformance tests.
+6. **`mock:api` runs TypeScript directly** with Node 24 (type stripping and `module.registerHooks`, both without flags in
+   24.21.0, no warning printed): no `tsconfig` of its own, no `out-tsc` build. The mock's files therefore avoid `enum`,
+   `namespace` and parameter properties. It refuses Node below 23.
+7. **Actor:** in the browser the mock acts as `dev@example.com` (the dev proxy's default `AHOY_ACTOR`, and `AppConfig`'s
+   default `actor`) unless `localStorage["ahoy.mock.actor"]` says otherwise; `provideMockBackend` and the interceptor use
+   `CurrentUser`. The seeds keep the wireframes' owners (alex, sam, priya, jordan), so "(you)" shows only on voyages the
+   current actor starts.
+8. **Determinism:** in specs the clock is a `ManualClock` at `SEED_AT` (2026-10-06 10:10 UTC) and two servers answer byte
+   for byte alike; in the browser and `mock:api` the seeds lead up to the moment the mock starts, so relative times read
+   naturally ("22 m ago"), and PROJ-109 and PROJ-140 move on their own.
+9. **`src/testing/mock-backend/spec-helpers.ts`** (`testServer`, `call`, `StreamTap`, `settle`) is for specs; `core/mock`'s
+   specs use it too.
+
+### Files outside the lane's list, and why
+
+None. The lane's list was followed: `src/testing/mock-backend/**`, `src/app/core/mock/**`,
+`src/environments/environment.mock.ts`, the `mock` configuration of `angular.json` (its `fileReplacements` target, one line),
+`scripts/mock-api.*` (`mock-api.mjs` and `mock-api.dist-check.mjs`) and the `mock:api` line of `package.json`; plus this file
+and the README "Status", as every lane does.
+
+### Did not run, skipped, and why
+
+- **Nothing against a real API, `--simulate` or TEST**, by design: the lane exists to avoid them.
+- **The mock under the screens:** no screen reads API data yet (wave 3); `start:mock` was checked by calling the API from the
+  page, not by looking at a screen.
+- **`mock-api.dist-check.mjs` in CI:** not wired (`ci.yml` belongs to lane 6D); it ran by hand. See "Needs from other lanes".
+- **Browsers other than Chromium; Windows line endings; Node 22** (`mock:api` needs Node 24, like Angular 22).
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **User:** review; approval to commit and push (nothing is committed). The decisions above, in particular 2 (run ids), 3
+  (delivery gate) and 4 (`fetch` wrapped in the browser).
+- **6D (CI):** add `npm run build && node scripts/mock-api.dist-check.mjs` to `ci.yml` (the build step can be shared), so a
+  production bundle with the mock fails CI.
+- **6C (e2e):** `npm run mock:api` + `npm start` gives the real proxy path; `/__mock/reset` between tests and
+  `/__mock/switches?...` for failures. Or `npm run start:mock` with `?ahoy.mock.*`.
+- **3A, 3B, 4A–4D, 5A–5C (screens):** develop on `npm run start:mock`; the seeds match the wireframe boards; set
+  `localStorage["ahoy.mock.actor"] = "alex@example.com"` to be the wireframes' "you"; `ahoyMock.dropStreams()` in the console
+  rehearses Reconnecting. In `TestBed`: `provideHttpClient(withInterceptors([mockBackendInterceptor]))`,
+  `provideMockBackend(testServer().server)` and the spec helpers.
+- **2B:** nothing to change: `EventStreamClient` reconnected against the mock as designed. For your list of known event
+  types: the real reconciler also writes `story.terminal` and `run.cancel_requested`, which the contract's examples omit.
+- **P0 / 6A (README "Commands"):** add rows for `npm run mock:api` and `node scripts/mock-api.dist-check.mjs` (this lane may only
+  touch "Status").
+
+### Final check
+
+On Node 24.21.0, the working tree of `claude/blissful-wozniak-qr2816` (from `main` at a99a7a2):
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0 (production bundle; no warning)
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint; build-tokens: ok; openapi-typescript --check and openapi-mirror: ok)
+$ npm test                    exit 0 (Test Files 77 passed (77); Tests 1482 passed (1482): 1402 of main + 80 new)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+$ node scripts/mock-api.dist-check.mjs   exit 0 (18 files in dist/ahoy-frontend, no trace of the mock)
+```
+
+---
 
 ## Lane 1C · Kit: interaction and content (2026-10-07)
 
