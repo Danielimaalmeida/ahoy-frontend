@@ -1,6 +1,18 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 4D (Models tab and Change models dialog), launched from `docs/paralelos4.md` section C through
+**Updated 2026-10-07 by lane 5A (Runs, run detail and live steps), launched from `docs/paralelos4.md` section D through
+`/implement` on branch `claude/epic-albattani-81fip3`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 5A is built,
+tested on the mock backend and checked in a browser. It is committed and pushed with the user's approval, and `main` is merged
+into the branch afterwards (see "Lane 5A" → "Git").**
+
+- **Ran for 5A (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` and `npm run format:check`, all
+  green (106 files, **1955 tests**: 57 new, 2 placeholder rows removed from `app.routes.spec.ts`; the same chain green again after merging `main`: 115 files, **2098 tests**); `npm run start:mock` in headless
+  Chromium at `/voyages/PROJ-140/runs` and the run detail of PROJ-123, light, dark and 390 px.
+- **Did not run for 5A:** anything against a real API, `--simulate` or TEST; browsers other than Chromium; a screen reader; a
+  pixel diff (compared by eye); mutation checks of the new tests; the formal two-axis `/code-review` (the diff was re-read by hand).
+
+Earlier: **lane 4D (Models tab and Change models dialog), launched from `docs/paralelos4.md` section C through
 `/implement` on branch `claude/gifted-einstein-2wo0ou`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 4D is built,
 tested and checked in a browser on the mock backend. It is committed and pushed with the user's approval (PR #18), and `main` at f795359 (lanes 4B and
 4C, PR #16 and #17) is merged in.**
@@ -250,42 +262,47 @@ banners for the rest). Only the slots the user filled in are sent. It runs on th
 and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The backlog comes from a `BacklogPort`, today a
 `StubBacklogAdapter` with the wireframe's nine fictional stories. Lane 3C has been merged since (PR #14).
 
+**Wave 4, lane 5A (Runs, run detail and live steps)** is committed on `claude/epic-albattani-81fip3`: the Runs tab and
+`/voyages/:key/runs/:runId` replace their placeholders. See "Lane 5A" below.
+
 ## Start here next
 
-0. **User, lane 4D:** review and merge PR #18 (`src/app/features/voyage/tabs/models/**`, section "Lane 4D" below). It also
+0. **User, lane 5A:** review and merge the lane 5A branch (`claude/epic-albattani-81fip3`; section "Lane 5A" below). It edits
+   one line outside the lane, `src/app/app.routes.spec.ts` (the two 5A placeholder rows). Lane 4A is merged (PR #15).
+1. **User, lane 4D:** review and merge PR #18 (`src/app/features/voyage/tabs/models/**`, section "Lane 4D" below). It also
    edits one line outside the lane, `src/app/app.routes.spec.ts` (the `/models` placeholder row, as that file's comment says a
    lane must do). Lanes 4B, 4C, 5A, 5B and 5C of `docs/paralelos4.md` run in other sessions.
-1. **User:** review lanes 4B and 4C (sections "Lane 4B" and "Lane 4C" below, in particular their "Decisions and deviations" and
+2. **User:** review lanes 4B and 4C (sections "Lane 4B" and "Lane 4C" below, in particular their "Decisions and deviations" and
    the edits outside their directories, in `src/app/app.routes.spec.ts`), and merge them. Lane 4B is in `main` (PR #16), lane
    4C is PR #17; lane 4A (PR #15) and every earlier lane are merged. The other lanes of wave 4 (4D, 5A, 5B, 5C) run in their
    own sessions; **when sections A to F of `docs/paralelos4.md` are all in `main`, open `docs/paralelos5.md`.**
-2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
+3. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
-3. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
+4. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
    Angular 22 rejects), and run `npm ci` (the lane 2B session started without `node_modules`). Until then each agent must put
    `npx node@24` first on its `PATH` (see "Prompt for a new session"). Proposed setup script, **untested**:
    `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
    `ln -sf /opt/node24/node_modules/node/bin/node /root/.local/bin/node` (`/root/.local/bin` comes before
    `/opt/node22/bin` in the sessions' `PATH`; `npm install -g node@24` is not an option, because npm's global bin is
    Node 22's own directory). Check with `node -v` in a new session.
-4. **User, decided 2026-10-07:** keep the `.prettierignore` entries for the copied agent skills (they stay in `main`, and
+5. **User, decided 2026-10-07:** keep the `.prettierignore` entries for the copied agent skills (they stay in `main`, and
    they make `npm run format:check` green), and report the two `bundle.css` defects to the design system (section
    "Lane 1A"). The report text was handed to the user; whether it was sent is not recorded here. When the design system
    has fixed them, re-sync `docs/design/` and `src/styles/ahoy-bundle.css` and delete the matching rules in
    `src/styles/_ahoy-angular.scss`.
-5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
+6. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 3:** 3A, 3B and 3C are merged (PR #12, #13 and #14); 4A is item 1. Screens develop on `npm run start:mock`; e2e
+7. **Wave 3:** 3A, 3B and 3C are merged (PR #12, #13 and #14); 4A is item 1. Screens develop on `npm run start:mock`; e2e
    (6C) can use `npm run mock:api` behind the real proxy. **6D** is optional (`docs/paralelos1.md`); when it runs, add the mock
    dist check to CI (lane 2D, "Needs from other lanes").
-7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
+8. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
    confirm the `state.json` field names `readStoryState` reads. Also `curl -s localhost:4200/api/v1/health` and
    `curl -N localhost:4200/api/v1/events/stream` for the proxy against the real API (lane 2D already checked the proxy's SSE
    path against `npm run mock:api`), which is also the first test of lane 2B's SSE parser against the real server.
-8. **For lanes 2B, 6A and 4A** (details under "Needs from other lanes" of lane 3A): the row details that All hands and Voyages
+9. **For lanes 2B, 6A and 4A** (details under "Needs from other lanes" of lane 3A): the row details that All hands and Voyages
    both read are written twice, because features may not import each other; `StoryHandle` cannot stop watching a resource; the
    local error banners wait for `ah-error-state`.
 
@@ -298,6 +315,70 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 5A · Runs, run detail and live steps (2026-10-07)
+
+Launched from `docs/paralelos4.md`, section D, with `/implement`, on `claude/epic-albattani-81fip3`, from `main` at 959a7b4.
+
+**Pre-flight.** `main` holds the prerequisites: **4A** (`VoyageContext`, shell, tab routes), **1C** (`ah-live-steps`) and **2B**
+(`RunProgressBuffer`, `StoryEventsFeed`). Node was v22.22.0, so every command ran on Node 24.21.0 (`npx -y node@24`, copied
+into the scratchpad and put first on `PATH`). **No dependency was added.**
+
+### What changed
+
+| Area           | Files                                                                                    | What                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runs tab       | `features/voyage/tabs/runs/runs-tab.ts`, `.scss`, `run-rows.ts`, `runs.routes.ts`        | Live panel (pulse that respects `prefers-reduced-motion`, "{Crew} is at work", run spend against `run.budgetNanoAiu`, `ah-live-steps`, "This run" with Open run detail); the Runs table oldest first (Run link, Phase, Agent, Model · effort, status pill, Started, Ended, AIU with "live", Gate pill or "—", Started by); "No runs yet", a skeleton and an error banner. The panel stays after the run ends (see below). |
+| Run detail     | `features/run-detail/run-detail-page.ts`, `.scss`, `run-view.ts`, `run-detail.routes.ts` | Breadcrumb, status pill, "planning · revision round N", H1 "Run {id} · {Crew}", pager (disabled button at the ends), four tiles (AIU with two decimals, Requests, Tokens, Duration), Details, Automated gate ("—" without one), Steps as history, replay note, "This run doesn't exist", error banner with Try again.                                                                                                     |
+| Steps          | `RunProgressBuffer` (2B), untouched                                                      | Both pages read `buffer.run(runId)`: `omitted` is the **difference** between consecutive `spend` (2B's own three-batch test), a gap row goes **before** its batch, and nothing says "N steps not shown" when `omitted` did not rise. Events of another run never reach the list: the buffer is keyed by `runId`.                                                                                                          |
+| Existing specs | `src/app/app.routes.spec.ts`                                                             | The two `5A` placeholder rows were taken out of `CASES`, as that file asks (the one edit outside the lane, as 4A did).                                                                                                                                                                                                                                                                                                    |
+
+### Decisions and deviations
+
+- **The live panel outlives the run.** The plan says the panel shows "only when the story is `running`", and also that when
+  `run.finished` arrives the final `getRun` result replaces the live `spend` and the steps stay. Both hold: the panel is about
+  the run that was current, and after it ends it stays (heading "{Crew}'s run has ended", no pulse, final spend, steps kept) until
+  the page is left. A page loaded when nothing is running shows no panel; the steps of old runs are in run detail.
+- **Nothing is polled or followed by the tab.** `VoyageContext` holds the voyage's `StoryEventsFeed`, which reads the history and
+  follows the stream and feeds the `RunProgressBuffer`; the tab only reads the buffer. Run detail holds its own `StoryStore`
+  handle (`story`, `runs`, `gates`) and feed, since it lives outside the voyage shell.
+- **Run detail reads the run with `getRun`** (once), and again when the voyage's run list shows it changed (status, end, charge
+  or gate). A run whose `storyKey` is not the URL's key is "doesn't exist". A key that is not a Jira key is never sent.
+- **Run ids show as the API sends them** (`proj-140-planning-001-5c54`), as the 4A header does, not as the wireframe's `r-02`.
+- **"Revision round N"** is one more than the human `send_back` records before the run was queued, at the gate that revises its
+  phase (`plan_review` for `planning`, `pr_review`/`delivery_gate` for `implementation`); nothing for the first round and for
+  other phases, where the records cannot say.
+- **Not in v1, as the plan says:** the "Output: … artifact revision" line (the API does not link a run to artifacts), and the
+  "after jordan sent the plan back" note on Started by.
+- **Run spend uses its own markup** (`ah-meter` with `role="meter"`), not `ah-budget-meter`, because the wireframe's text is "1.84 of
+  this run's 28.6 AIU cap", not "1.84 / 28.6 AIU".
+
+### Tests
+
+57 new: `run-rows.spec.ts` (9), `runs-tab.spec.ts` (11, on the mock backend: PROJ-140 live panel, the 38-step gap, `[REDACTED]`, spend
+rising, the run ending with the final spend and the steps kept, scroll not hijacked, no controls; PROJ-123 and PROJ-109 tables),
+`run-view.spec.ts` (20) and `run-detail-page.spec.ts` (17, on the mock backend: tiles, details, gate, pager limits, replay note,
+no gate, 404, another voyage's run, a key that is not a Jira key, a `503` with Try again, PROJ-140 ending).
+
+### Did not run
+
+Anything against a real API, `--simulate` or TEST; other browsers than Chromium; a screen reader; mutation checks; a formal
+`/code-review`. The mock never starts a run as `ahoy-reconciler`, so "Ahoy" in Started by is covered by the `ahActor` pipe's own
+spec only; the mock has no `replay` run, so the replay note is tested by rewriting one answer.
+
+### Needs from lane X
+
+- **Lane 2B or 1C:** `isRunActive`, `oldestFirst`, `runModelLabel` and the `ProgressEntry` → `LiveStep` mapper are written twice
+  (`tabs/runs/run-rows.ts` and `features/run-detail/run-view.ts`), because features may not import each other. They belong in
+  `core/stores` (the mapper, returning `ui`'s `LiveStep` structurally) or `domain`.
+- **Lane 2B:** `FakeApi` has no `getRun`; run detail's specs use the mock backend instead.
+- **Lane 6A (shell):** the page `<title>` of run detail is the static "Run · Ahoy".
+
+### Git
+
+Committed (b213150) and pushed to `claude/epic-albattani-81fip3` with the user's approval; then `main` at ad6a66a (lanes 4B, 4C
+and 4D, PR #16, #17 and #18) was merged in by a merge commit. Conflicts, all in files several lanes edit: `README.md` and this file (every
+lane's entry kept) and `src/app/app.routes.spec.ts` (the table now holds only the Gates, Artifacts, Ship's log and not-found rows).
 
 ## Lane 4C · Questions (2026-10-07)
 
