@@ -1,0 +1,28 @@
+{
+  "story": {
+    "key": "PROJ-131",
+    "title": "Let customers download receipts as PDF",
+    "owner": "sam@example.com",
+    "phase": "planning",
+    "status": "awaiting_input",
+    "haltReason": null,
+    "budgetNanoAiu": 25000000000,
+    "spentNanoAiu": 6100000000,
+    "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+    "currentRunId": null,
+    "version": 5,
+    "createdAt": "2026-10-06T08:40:02.000Z",
+    "updatedAt": "2026-10-06T09:20:31.000Z"
+  },
+  "question": {
+    "id": "Q2",
+    "round": 1,
+    "runId": "r-02",
+    "text": "Where should the download be offered: on the receipt page only, or also as a bulk download from the order history?",
+    "recommendation": "Receipt page only for now; bulk download needs a background job and is better as its own story.",
+    "answer": "Receipt page only for now; bulk download needs a background job and is better as its own story. Also add the button to the order confirmation email link target.",
+    "answeredBy": "alex@example.com",
+    "answeredAt": "2026-10-06T09:20:31.000Z",
+    "consumed": false
+  }
+}

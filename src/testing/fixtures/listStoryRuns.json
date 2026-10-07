@@ -1,0 +1,124 @@
+{
+  "items": [
+    {
+      "id": "r-01",
+      "storyKey": "PROJ-123",
+      "phase": "intake",
+      "agent": "navigator",
+      "model": "claude-haiku-4.5",
+      "reasoningEffort": null,
+      "status": "succeeded",
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 8000000000,
+      "usage": {
+        "requests": 14,
+        "nanoAiu": 2100000000,
+        "inputTokens": 182000,
+        "outputTokens": 9400
+      },
+      "replayOf": null,
+      "exitReason": "ok",
+      "gate": {
+        "gate": "intake",
+        "code": 0,
+        "result": "pass",
+        "message": "Jira snapshot is complete."
+      },
+      "startedBy": "alex@example.com",
+      "createdAt": "2026-10-05T10:02:12.000Z",
+      "startedAt": "2026-10-05T10:02:40.000Z",
+      "endedAt": "2026-10-05T10:06:03.000Z"
+    },
+    {
+      "id": "r-02",
+      "storyKey": "PROJ-123",
+      "phase": "planning",
+      "agent": "cartographer",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": "high",
+      "status": "awaiting_input",
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 8000000000,
+      "usage": {
+        "requests": 22,
+        "nanoAiu": 3200000000,
+        "inputTokens": 411000,
+        "outputTokens": 21300
+      },
+      "replayOf": null,
+      "exitReason": "asked_questions",
+      "gate": {
+        "gate": "plan",
+        "code": 2,
+        "result": "branch",
+        "message": "2 questions need a human (Q1, Q2)."
+      },
+      "startedBy": "alex@example.com",
+      "createdAt": "2026-10-05T10:06:30.000Z",
+      "startedAt": "2026-10-05T10:07:01.000Z",
+      "endedAt": "2026-10-05T10:31:20.000Z"
+    },
+    {
+      "id": "r-03",
+      "storyKey": "PROJ-123",
+      "phase": "planning",
+      "agent": "cartographer",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": "high",
+      "status": "succeeded",
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 8000000000,
+      "usage": {
+        "requests": 25,
+        "nanoAiu": 3500000000,
+        "inputTokens": 468000,
+        "outputTokens": 24900
+      },
+      "replayOf": null,
+      "exitReason": "ok",
+      "gate": {
+        "gate": "plan",
+        "code": 0,
+        "result": "pass",
+        "message": "Plan has acceptance criteria and work packages for every repository."
+      },
+      "startedBy": "alex@example.com",
+      "createdAt": "2026-10-05T13:40:00.000Z",
+      "startedAt": "2026-10-05T13:40:31.000Z",
+      "endedAt": "2026-10-05T14:12:08.000Z"
+    },
+    {
+      "id": "r-04",
+      "storyKey": "PROJ-123",
+      "phase": "planning",
+      "agent": "cartographer",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": "high",
+      "status": "succeeded",
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 8000000000,
+      "usage": {
+        "requests": 26,
+        "nanoAiu": 3600000000,
+        "inputTokens": 480500,
+        "outputTokens": 25800
+      },
+      "replayOf": null,
+      "exitReason": "ok",
+      "gate": {
+        "gate": "plan",
+        "code": 0,
+        "result": "pass",
+        "message": "Plan revision 2 passes all checks."
+      },
+      "startedBy": "alex@example.com",
+      "createdAt": "2026-10-06T09:10:00.000Z",
+      "startedAt": "2026-10-06T09:10:29.000Z",
+      "endedAt": "2026-10-06T09:48:12.000Z"
+    }
+  ]
+}

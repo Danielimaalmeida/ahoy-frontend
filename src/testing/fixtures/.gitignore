@@ -1,0 +1,3 @@
+# Answers captured from a real local API by scripts/capture-fixtures.mjs. They may hold real names, e-mails and story
+# text, so they stay out of git until someone has reviewed them: then `git add -f` the ones worth keeping.
+/captured/

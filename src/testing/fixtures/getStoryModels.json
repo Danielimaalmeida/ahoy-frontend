@@ -1,0 +1,61 @@
+{
+  "storyKey": "PROJ-123",
+  "version": 9,
+  "slots": [
+    {
+      "slot": "intake",
+      "phase": "intake",
+      "lens": null,
+      "chosen": null,
+      "model": "claude-haiku-4.5",
+      "reasoningEffort": null,
+      "modelSource": "configuration",
+      "effortSource": "model_default"
+    },
+    {
+      "slot": "planning",
+      "phase": "planning",
+      "lens": null,
+      "chosen": {
+        "model": "claude-sonnet-5",
+        "reasoningEffort": "high"
+      },
+      "model": "claude-sonnet-5",
+      "reasoningEffort": "high",
+      "modelSource": "story",
+      "effortSource": "story"
+    },
+    {
+      "slot": "implementation",
+      "phase": "implementation",
+      "lens": null,
+      "chosen": null,
+      "model": "gpt-5.6-terra",
+      "reasoningEffort": "medium",
+      "modelSource": "phase_table",
+      "effortSource": "phase_table"
+    },
+    {
+      "slot": "review-design",
+      "phase": "pr_review",
+      "lens": "design-fit",
+      "chosen": null,
+      "model": "claude-sonnet-5",
+      "reasoningEffort": "high",
+      "modelSource": "configuration",
+      "effortSource": "configuration"
+    },
+    {
+      "slot": "review-defect",
+      "phase": "pr_review",
+      "lens": "defect-failure",
+      "chosen": {
+        "reasoningEffort": "xhigh"
+      },
+      "model": "gpt-5.6-terra",
+      "reasoningEffort": "xhigh",
+      "modelSource": "configuration",
+      "effortSource": "story"
+    }
+  ]
+}

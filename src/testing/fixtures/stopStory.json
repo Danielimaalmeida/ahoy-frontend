@@ -1,0 +1,15 @@
+{
+  "key": "PROJ-126",
+  "title": "Search orders by customer email",
+  "owner": "priya@example.com",
+  "phase": "intake",
+  "status": "halted",
+  "haltReason": "stopped_by_user",
+  "budgetNanoAiu": 15000000000,
+  "spentNanoAiu": 800000000,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "currentRunId": null,
+  "version": 4,
+  "createdAt": "2026-10-05T14:20:00.000Z",
+  "updatedAt": "2026-10-06T08:15:09.000Z"
+}

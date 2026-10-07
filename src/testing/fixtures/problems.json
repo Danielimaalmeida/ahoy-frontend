@@ -1,0 +1,119 @@
+[
+  {
+    "type": "urn:ahoy:problem:bad_request",
+    "title": "bad request",
+    "status": 400,
+    "code": "bad_request",
+    "detail": "Request body is not valid JSON"
+  },
+  {
+    "type": "urn:ahoy:problem:validation_failed",
+    "title": "validation failed",
+    "status": 400,
+    "code": "validation_failed",
+    "detail": "The request does not match the API contract",
+    "errors": [
+      {
+        "path": "body/budgetNanoAiu",
+        "message": "must be >= 1"
+      },
+      {
+        "path": "/reason",
+        "message": "required"
+      }
+    ]
+  },
+  {
+    "type": "urn:ahoy:problem:unauthenticated",
+    "title": "unauthenticated",
+    "status": 401,
+    "code": "unauthenticated",
+    "detail": "A token is required"
+  },
+  {
+    "type": "urn:ahoy:problem:forbidden",
+    "title": "forbidden",
+    "status": 403,
+    "code": "forbidden",
+    "detail": "Only the owner may do that"
+  },
+  {
+    "type": "urn:ahoy:problem:not_found",
+    "title": "not found",
+    "status": 404,
+    "code": "not_found",
+    "detail": "Story PROJ-999 does not exist"
+  },
+  {
+    "type": "urn:ahoy:problem:story_exists",
+    "title": "story exists",
+    "status": 409,
+    "code": "story_exists",
+    "detail": "Story PROJ-123 already exists"
+  },
+  {
+    "type": "urn:ahoy:problem:stale_version",
+    "title": "stale version",
+    "status": 409,
+    "code": "stale_version",
+    "detail": "Story PROJ-123 is at version 9, not 8",
+    "currentVersion": 9
+  },
+  {
+    "type": "urn:ahoy:problem:invalid_state",
+    "title": "invalid state",
+    "status": 409,
+    "code": "invalid_state",
+    "detail": "Story PROJ-123 is running; it cannot be resumed"
+  },
+  {
+    "type": "urn:ahoy:problem:already_answered",
+    "title": "already answered",
+    "status": 409,
+    "code": "already_answered",
+    "detail": "Q2 is already answered"
+  },
+  {
+    "type": "urn:ahoy:problem:decision_already_recorded",
+    "title": "decision already recorded",
+    "status": 409,
+    "code": "decision_already_recorded",
+    "detail": "human_gates.plan_accepted is already decided"
+  },
+  {
+    "type": "urn:ahoy:problem:revision_ceiling_reached",
+    "title": "revision ceiling reached",
+    "status": 409,
+    "code": "revision_ceiling_reached",
+    "detail": "plan_accepted has already been revised 4 time(s), at the ceiling of 4"
+  },
+  {
+    "type": "urn:ahoy:problem:unsupported_gate",
+    "title": "unsupported gate",
+    "status": 422,
+    "code": "unsupported_gate",
+    "detail": "Phase planning has no human gate plan_accepted"
+  },
+  {
+    "type": "urn:ahoy:problem:legacy_story",
+    "title": "legacy story",
+    "status": 409,
+    "code": "legacy_story",
+    "detail": "Story PROJ-050 predates the relational state model (migration 0002)"
+  },
+  {
+    "type": "urn:ahoy:problem:internal_error",
+    "title": "internal error",
+    "status": 500,
+    "code": "internal_error",
+    "detail": "Internal error",
+    "instance": "req-7c1e5a90"
+  },
+  {
+    "type": "urn:ahoy:problem:unavailable",
+    "title": "unavailable",
+    "status": 503,
+    "code": "unavailable",
+    "detail": "The database is not reachable"
+  }
+]

@@ -1,0 +1,99 @@
+{
+  "key": "PROJ-123",
+  "version": 9,
+  "state": {
+    "story_id": "PROJ-123",
+    "phase": "plan_review",
+    "plan_path": "specs/PROJ-123/implementation-plan.md",
+    "branch_prefix": "feature",
+    "human_gates": {},
+    "revisions": {
+      "plan_accepted": 1
+    },
+    "models": {
+      "planning": {
+        "model": "claude-sonnet-5",
+        "effort": "high"
+      }
+    },
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "The billing page shows the due date of each invoice.",
+        "repo": "billing-web",
+        "test_ids": ["shows-due-date-on-billing-page"],
+        "verification_mode": "test"
+      },
+      {
+        "id": "AC2",
+        "text": "The invoice list has a due date column.",
+        "repo": "billing-web",
+        "test_ids": ["invoice-list-due-date-column"],
+        "verification_mode": "test"
+      },
+      {
+        "id": "AC3",
+        "text": "Dates use the viewer's locale format; exports use ISO 8601.",
+        "repo": "billing-web",
+        "test_ids": ["locale-date-format"],
+        "verification_mode": "test"
+      },
+      {
+        "id": "AC4",
+        "text": "Due dates and overdue checks use the customer's timezone.",
+        "repo": "billing-api",
+        "test_ids": ["overdue-uses-customer-timezone"],
+        "verification_mode": "test"
+      },
+      {
+        "id": "AC5",
+        "text": "Overdue invoices show an \"Overdue\" badge.",
+        "repo": "billing-web",
+        "test_ids": ["overdue-badge"],
+        "verification_mode": "test"
+      }
+    ],
+    "work_packages": [
+      {
+        "id": "WP1",
+        "repo": "billing-api",
+        "agent": "implementer",
+        "open_pr": true
+      },
+      {
+        "id": "WP2",
+        "repo": "billing-web",
+        "agent": "implementer",
+        "open_pr": true,
+        "depends_on": ["WP1"]
+      }
+    ],
+    "child_repos": [
+      {
+        "repo": "billing-api"
+      },
+      {
+        "repo": "billing-web"
+      }
+    ],
+    "lookout_reviews": [],
+    "gate_results": [
+      {
+        "gate": "plan",
+        "story_id": "PROJ-123",
+        "result": "pass",
+        "message": "Plan revision 2 passes all checks.",
+        "timestamp": "2026-10-06T09:48:12Z",
+        "recorded_by": "gate"
+      }
+    ],
+    "decision_log": [
+      {
+        "timestamp": "2026-10-05T16:40:12Z",
+        "actor": "jordan@example.com",
+        "type": "revision",
+        "summary": "plan_accepted sent back to planning for revision, round 1 by jordan@example.com: Due date must use the customer's timezone; add an AC for the overdue state."
+      }
+    ]
+  }
+}

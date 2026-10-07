@@ -16,6 +16,7 @@
     "lint": "eslint . && npm run tokens:check",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && node scripts/check-boundaries.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "api:sync": "node scripts/sync-openapi.mjs",
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check",
     "format": "prettier --write .",

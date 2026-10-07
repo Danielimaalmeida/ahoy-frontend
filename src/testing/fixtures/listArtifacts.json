@@ -1,0 +1,59 @@
+{
+  "revision": 5,
+  "items": [
+    {
+      "path": "jira-snapshot.md",
+      "sha256": "5005c6b8bc158c7cc55af55345030d9d783ba85f254c1b025c0a7bcfb17cdab8",
+      "sizeBytes": 1820,
+      "mediaType": "text/markdown",
+      "revision": 5,
+      "runId": "r-01",
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    },
+    {
+      "path": "implementation-plan.md",
+      "sha256": "c2debe2a81f6da5198e2f6df010cfbbb81d561b1c7a17a8b8e9b509ae42e135d",
+      "sizeBytes": 866,
+      "mediaType": "text/markdown",
+      "revision": 5,
+      "runId": "r-04",
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    },
+    {
+      "path": "plan-sources.md",
+      "sha256": "4cee9503f5ee2027abc5ae2882f873b9e964db6762ed59b9e7b24cd829de94ab",
+      "sizeBytes": 2410,
+      "mediaType": "text/markdown",
+      "revision": 5,
+      "runId": "r-04",
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    },
+    {
+      "path": "plan-round-1.md",
+      "sha256": "c6f476772854b9061bd7ecc81d3fe36e83f21f6256807bc83c223dc9d294c089",
+      "sizeBytes": 3050,
+      "mediaType": "text/markdown",
+      "revision": 5,
+      "runId": "r-03",
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    },
+    {
+      "path": "questions.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "sizeBytes": 640,
+      "mediaType": "application/json",
+      "revision": 5,
+      "runId": "r-02",
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    },
+    {
+      "path": "state.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "sizeBytes": 4380,
+      "mediaType": "application/json",
+      "revision": 5,
+      "runId": "r-04",
+      "createdAt": "2026-10-06T09:48:12.000Z"
+    }
+  ]
+}
