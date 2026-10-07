@@ -31,7 +31,8 @@ A sessão que receber isto **faz só essa secção**. As outras secções são d
    e vê os ficheiros indicados). **Se faltar algum, pára e diz-me qual. Não inventes, não copies nem refaças o trabalho de
    outra lane.**
 5. **Dependências:** só as aprovadas no §10 de `docs/plan/00-overview.md`, com a versão exata que `npm view` devolver.
-   Qualquer outra pede-me aprovação.
+   Qualquer outra pede-me aprovação. Se o sistema de permissões bloquear o `npm install` de uma dependência aprovada, pára e
+   diz-me o comando exato: aprovo-o aqui, nesta sessão (a aprovação do plano não chega para o sistema de permissões).
 6. **Nunca** contra `--live` nem contra o TEST. Qualquer resposta de teste a uma pergunta de agente leva "POC test answer,
    not a product decision".
 7. **Git:** trabalha na branch que a sessão designar. Antes de abrir PR, traz `main` para a tua branch e resolve os
@@ -157,8 +158,8 @@ fallback de SPA. Critérios completos na lane 6D do ficheiro da fase.
 
 Funde cada lane em `main` quando a tiveres revisto e aprovado. O que desbloqueias:
 
-| Já está em `main` | Podes abrir em [paralelos2.md](paralelos2.md) |
-| ----------------- | --------------------------------------------- |
-| A (1A) e C (2C)   | secções A e B (lanes 1B e 1C)                 |
-| B (2A) e C (2C)   | secções C e D (lanes 2B e 2D)                 |
-| A, B e C          | as quatro                                     |
+| Já está em `main` | Podes abrir em [paralelos2.md](paralelos2.md)                                       |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| A (1A) e C (2C)   | secções A e B (lanes 1B e 1C)                                                       |
+| B (2A) e C (2C)   | secção C (lane 2B); a secção D (lane 2D) só com a 2A **terminada** (ver paralelos2) |
+| A, B e C          | as quatro                                                                           |

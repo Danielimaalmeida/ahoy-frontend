@@ -52,10 +52,15 @@ provisional until lane 2A lands `schema.d.ts`. `npm run format:check` is green: 
    directories is `src/app/app.config.ts` (see "Decisions and deviations", 2).
 3. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
    Angular 22 rejects). Until then each agent must put `npx node@24` first on its `PATH` (see "Prompt for a new
-   session").
-4. **User:** decide the two points lane 1A raised: keep the `.prettierignore` entries for the copied agent skills (they are in
-   `main`, and they make `npm run format:check` green again), and report the two `bundle.css` defects to the design system (section
-   "Lane 1A").
+   session"). Proposed setup script, **untested**: `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
+   `ln -sf /opt/node24/node_modules/node/bin/node /root/.local/bin/node` (`/root/.local/bin` comes before
+   `/opt/node22/bin` in the sessions' `PATH`; `npm install -g node@24` is not an option, because npm's global bin is
+   Node 22's own directory). Check with `node -v` in a new session.
+4. **User, decided 2026-10-07:** keep the `.prettierignore` entries for the copied agent skills (they stay in `main`, and
+   they make `npm run format:check` green), and report the two `bundle.css` defects to the design system (section
+   "Lane 1A"). The report text was handed to the user; whether it was sent is not recorded here. When the design system
+   has fixed them, re-sync `docs/design/` and `src/styles/ahoy-bundle.css` and delete the matching rules in
+   `src/styles/_ahoy-angular.scss`.
 5. **Wave 1:** **2C** (pure domain) is done on `lane/2c-domain`, awaiting review and merge; **6D** is optional (`docs/paralelos1.md`). With 1A and 2C in `main`, wave 2
    lanes **1B** and **1C** can start (`docs/paralelos2.md`). Lanes **2B** and **2D** need 2A _and_ 2C in `main`, and 2D reuses the
    Ajv helper that comes with `contract.spec.ts`, so finish 2A first.
