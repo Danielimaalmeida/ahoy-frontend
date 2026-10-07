@@ -95,9 +95,14 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   indicator), `ah-empty-state`, `ah-skeleton`, the toast and the pipes `ahAiu`, `ahRelative`, `ahDateTime`, `ahActor`, with 11
   more sections in `/_kit`. Unit-tested and compared with the design-system previews in headless Chromium; no data, mock or API
   involved.
-- **Wave 2, lane 1C (kit: interaction and content): done, in review** (branch `claude/secao-b-paralelos2-1l7xpu`, pull
-  request into `main`). `ah-dialog` on the CDK `Dialog`, `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`,
-  `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` and `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds
-  `@angular/cdk` 22.2.1 and `marked` 18.1.0. Unit-tested and checked in headless Chromium; no API involved.
-- Next: review and merge lane 1C, and run lane 2D, the rest of wave 2. Details in
-  [docs/progress.md](docs/progress.md).
+- **Wave 2, lane 1C (kit: interaction and content): done and merged into `main`** (PR #10). `ah-dialog` on the CDK `Dialog`,
+  `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`, `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` and
+  `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds `@angular/cdk` 22.2.1 and `marked` 18.1.0.
+  Unit-tested and checked in headless Chromium; no API involved.
+- **Wave 2, lane 2D (mock backend): done, in review** (branch `claude/blissful-wozniak-qr2816`, pull request into `main`).
+  `MockAhoyServer` (`src/testing/mock-backend/`): the 19 operations with the contract's checks, versions and errors, a simulated
+  reconciler, `/events/stream` with `Last-Event-ID`, switches (`latencyMs`, `failNext`, `conflictNext`, `dropStream`) and the
+  eight voyages of the wireframes, checked against the YAML with Ajv; `npm run start:mock` serves it in the browser and
+  `npm run mock:api` over HTTP on `127.0.0.1:8080` behind the real dev proxy, with no new dependency;
+  `node scripts/mock-api.dist-check.mjs` proves the production build is free of it. 80 new tests; never run against a real API.
+- Next: review and merge lane 2D, then wave 3 (`docs/paralelos3.md`). Details in [docs/progress.md](docs/progress.md).
