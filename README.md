@@ -76,12 +76,15 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `npm run tokens:check`), the design-system bundle on every page, `ThemeService`, `ah-icon`, `ah-logo`, `ahButton`,
   `ah-panel`, `ah-field`, `ah-banner`, table helpers, `ah-source`, and the dev-only `/_kit` gallery with a light/dark
   switch. Unit-tested and checked in headless Chromium; no API involved.
-- **Wave 1, lane 2A (API client): built and tested, not finished** (branch `claude/charming-clarke-tlb24e`, pushed).
-  `ApiClient` with the 19 operations of phases 3 to 6, `ApiError`, guards, `AuthStrategy`, `CurrentUser`, the runtime
-  `AppConfig`, fixtures and the vendored contract. Missing until `openapi-typescript`, `ajv` and `yaml` are approved and
-  installed: the generated types, `api:types`/`api:check` and `contract.spec.ts`. Never run against a real API.
-- **Lane 2C (pure domain): done** on branch `lane/2c-domain` (PR open, not merged). `src/app/domain/` holds the vocabulary
-  mappings, the AIU and time helpers and the project's only diff implementation, with 218 new tests; the API types are
-  provisional until lane 2A lands. Details in [docs/progress.md](docs/progress.md).
-- Next: finish lane 2A (needs that approval) and merge lane 2C, then wave 2. Details in
-  [docs/progress.md](docs/progress.md).
+- **Wave 1, lane 2A (API client): merged into `main` (PR #5), not finished.** `ApiClient` with the 19 operations of
+  phases 3 to 6, `ApiError`, guards, `AuthStrategy`, `CurrentUser`, the runtime `AppConfig`, fixtures and the vendored
+  contract. Missing until `openapi-typescript`, `ajv` and `yaml` are approved and installed: the generated types,
+  `api:types`/`api:check` and `contract.spec.ts`. Never run against a real API.
+- **Wave 1, lane 2C (pure domain): merged into `main`** (PR #3). `src/app/domain/` holds the vocabulary mappings, the
+  AIU and time helpers and the project's only diff implementation.
+- **Wave 2, lane 1C (kit: interaction and content): done, not committed** (branch `claude/secao-b-paralelos2-1l7xpu`).
+  `ah-dialog` on the CDK `Dialog`, `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`, `ah-live-steps`,
+  `ah-ships-log`, `ah-artifact-diff` and `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds
+  `@angular/cdk` 22.2.1 and `marked` 18.1.0. Unit-tested and checked in headless Chromium; no API involved.
+- Next: review and commit lane 1C; lanes 1B, 2B and 2D run in parallel; finish lane 2A (needs that approval). Details
+  in [docs/progress.md](docs/progress.md).
