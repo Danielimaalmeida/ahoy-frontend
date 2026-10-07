@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { GatesTab } from "./gates-tab";
 
-/** Gates (lane 5B replaces the placeholder). */
-export const GATES_ROUTES: Routes = [
-  { path: "", title: "Gates · Ahoy", component: Placeholder, data: { heading: "Gates", lane: "5B" } },
-];
+/** Gates: the voyage's automated checks and human decisions, oldest first (lane 5B). */
+export const GATES_ROUTES: Routes = [{ path: "", title: "Gates · Ahoy", component: GatesTab }];
