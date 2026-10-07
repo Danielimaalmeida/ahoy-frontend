@@ -1,6 +1,16 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by the lane 2A finishing session (branch `claude/eager-cray-4c3z42`, started from `main` at 56e815a, which already holds phase 0 and lanes 1A, 2A and 2C). Lane 2A is now complete offline: the three dev dependencies are installed, `schema.d.ts` is generated, `api:types` and `api:check` exist (and `lint` runs `api:check`), `core/api/types.ts` is made of aliases of the generated types and `contract.spec.ts` is green. At the user's request (the contract is sovereign) the session also corrected `src/app/domain/types.ts`, which did not match the contract, and the domain code that read the wrong shapes, and fixed `sync-openapi.mjs`. Nothing is committed or pushed.**
+**Updated 2026-10-07 by lane 2B (realtime and stores), launched from `docs/paralelos2.md` section C on branch
+`claude/ecstatic-allen-vkmfqi`. Lane 2B is done and committed on that branch, with `main` merged in (lane 2A's finishing pass,
+PR #7, so `schema.d.ts` and `contract.spec.ts` are in `main` now); its pull request into `main` waits for review.**
+
+- **Ran for 2B (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check`), `npm test` and `npm run format:check`, all green, on the lane's
+  own tree (41 files, 946 tests, 146 of them new) and again after merging `main` (see "Final check" in the lane 2B section);
+  nine mutation checks of the new tests.
+- **Did not run for 2B:** anything against an API, `--simulate` or the mock backend (2D has not built it); the app in a browser
+  (no screen uses the new services yet).
+  **Lane 2A finishing session (branch `claude/eager-cray-4c3z42`, started from `main` at 56e815a, which already holds phase 0 and lanes 1A, 2A and 2C). Lane 2A is now complete offline: the three dev dependencies are installed, `schema.d.ts` is generated, `api:types` and `api:check` exist (and `lint` runs `api:check`), `core/api/types.ts` is made of aliases of the generated types and `contract.spec.ts` is green. At the user's request (the contract is sovereign) the session also corrected `src/app/domain/types.ts`, which did not match the contract, and the domain code that read the wrong shapes, and fixed `sync-openapi.mjs`. It was merged into `main` as PR #7.**
 
 - **Ran for the 2A finishing pass (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`, copied into the session scratchpad and
   put first on `PATH`; the system Node was 22.22.0):** `npm ci`, the approved `npm install`, `npm run build`,
@@ -25,16 +35,15 @@
 
 ## Where we are
 
-Phase 0 and lane 1A are merged into `main` (PR #1 and PR #4): an Angular 22 app that builds, tests and serves, with the CLAUDE.md
-conventions enforced by `tsc`, ESLint, Prettier and `scripts/check-boundaries.mjs`, the dev proxy, every route as a lazy placeholder,
-the design references in `docs/design/`, the generated tokens and the design-system bundle on every page, `ThemeService`, `ah-icon`,
-`ah-logo` and the primitives (`ahButton`, `ah-panel`, `ah-field`, `ah-banner`, table helpers, `ah-source`) with the dev-only `/_kit`
-gallery.
+Phase 0, lane 1A (PR #4), lane 2A (PR #5 and PR #7) and lane 2C (PR #3) are merged into `main`: an
+Angular 22 app that builds, tests and serves, with the CLAUDE.md conventions enforced by `tsc`, ESLint, Prettier and
+`scripts/check-boundaries.mjs`, the design kit foundation and `/_kit`, the `ApiClient` with its guards, the auth seam and the runtime
+`AppConfig`, and the pure domain (`statusPresentation`, `explainHalt`, AIU, time, diff).
 
 Wave 1 is merged: lane 2A (API client, PR #5) and lane 2C (pure domain, PR #3). Lane 2A's first pass has `ApiClient` with the 19
 operations of phases 3 to 6, `ApiError` and its predicates, the manual guards, `parseRunProgress`, `readStoryState`, the
 `AuthStrategy` seam, `CurrentUser`, the runtime `AppConfig` (and `API_BASE` taken from it), the fixtures and the vendored contract.
-**Its finishing pass is in the working tree of `claude/eager-cray-4c3z42`, not committed:** `openapi-typescript`, `ajv` and `yaml`
+**Its finishing pass is merged too (PR #7):** `openapi-typescript`, `ajv` and `yaml`
 are installed (with an `overrides` entry, see the lane 2A section), `schema.d.ts` is generated, `api:types` and `api:check` exist,
 `core/api/types.ts` is made of aliases of the generated types, and `contract.spec.ts` validates the fixtures, the problems and the
 request bodies against the YAML with Ajv. No screen shows data yet and no call has ever reached a real API (risk R1 is still open).
@@ -42,25 +51,26 @@ request bodies against the YAML with Ajv. No screen shows data yet and no call h
 **Lane 2C (domínio puro)** is merged: `src/app/domain/` has the vocabulary mappings (`statusPresentation`, `outcomePresentation`,
 `explainHalt`), the AIU and time helpers, `CREW` and the only diff implementation of the project (`diff` 9.0.0), with 218 tests.
 Its `types.ts` was still provisional and did not match the contract. **The 2A finishing pass corrected it, at the user's request
-(the contract is sovereign), in the same working tree, not committed:** the types now have the contract's fields and enums,
+(the contract is sovereign), in PR #7:** the types now have the contract's fields and enums,
 `reviewersConflict` reads the plan as the API sends it, and `core/api/domain-types.spec.ts` fails when the two drift apart.
 What changed, and the two presentation choices that need a review, are under "Needs from lane 2C" in the lane 2A section.
 
+**Wave 2, lane 2B (realtime and stores)** is committed on `claude/ecstatic-allen-vkmfqi`, with `main` merged in, in review:
+`core/realtime/` (`FETCH`, `CLOCK`, `parseSseStream`, `EventStreamClient`, `EventBus`, the polling fallback) and `core/stores/`
+(`StoriesStore`, `StoryStore`, `RunProgressBuffer`, `StoryEventsFeed`). No screen uses them yet. Lanes 1B, 1C and 2D of wave 2 run
+in other sessions.
+
 ## Start here next
 
-1. **User:** approve the commit and push of this working tree (branch `claude/eager-cray-4c3z42`, started from `main` at 56e815a, so
-   there is nothing to merge in first). **Not approved yet.** It
-   changes `package.json` and `package-lock.json` (three dev dependencies, an `overrides` entry, two scripts, `lint`), adds
-   `schema.d.ts`, `src/testing/fixtures/openapi.json` and `contract.ts`, `scripts/openapi-mirror.mjs`, `core/api/contract.spec.ts`
-   and `core/api/domain-types.spec.ts`, and edits `core/api/types.ts`, `api-client.spec.ts`, `scripts/sync-openapi.mjs`,
-   `.prettierignore`, two READMEs and, in `src/app/domain/` (lane 2C's), `types.ts`, `models.ts`, `outcome.ts` and their specs.
-   Two commits would be natural: the lane 2A finishing pass, and the domain types.
+1. **User:** review and merge the lane 2B pull request (`claude/ecstatic-allen-vkmfqi` into `main`; section "Lane 2B" below).
+   Nothing outside `core/realtime/` and `core/stores/` changed, except this file and the README "Status" bullets.
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
 3. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
-   Angular 22 rejects). Until then each agent must put `npx node@24` first on its `PATH` (see "Prompt for a new
-   session"). Proposed setup script, **untested**: `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
+   Angular 22 rejects), and run `npm ci` (the lane 2B session started without `node_modules`). Until then each agent must put
+   `npx node@24` first on its `PATH` (see "Prompt for a new session"). Proposed setup script, **untested**:
+   `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
    `ln -sf /opt/node24/node_modules/node/bin/node /root/.local/bin/node` (`/root/.local/bin` comes before
    `/opt/node22/bin` in the sessions' `PATH`; `npm install -g node@24` is not an option, because npm's global bin is
    Node 22's own directory). Check with `node -v` in a new session.
@@ -69,26 +79,195 @@ What changed, and the two presentation choices that need a review, are under "Ne
    "Lane 1A"). The report text was handed to the user; whether it was sent is not recorded here. When the design system
    has fixed them, re-sync `docs/design/` and `src/styles/ahoy-bundle.css` and delete the matching rules in
    `src/styles/_ahoy-angular.scss`.
-5. **Done, for the user to know:** CI now runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
+5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 2:** **1B** and **1C** can start (`docs/paralelos2.md`). Lanes **2B** and **2D** have 2A and 2C in `main`; 2D reuses
-   the Ajv helper `src/testing/fixtures/contract.ts` that this pass added. The domain types now match the contract, but the other
-   lanes only see them once this pull request (#7) is merged. 2D needs the 2A finished in `main`, which this pull request does
-   (`docs/paralelos2.md`). **6D** is optional (`docs/paralelos1.md`).
+6. **Wave 2:** 1B, 1C and 2D run in parallel sessions (`docs/paralelos2.md`); 2D reuses the Ajv helper
+   `src/testing/fixtures/contract.ts`. With 1B, 2B and 2D in `main`, wave 3 can start (`docs/paralelos3.md`). Read "Needs from
+   other lanes" in the lane 2B section first: 1B cannot import `CLOCK` from `core`. **6D** is optional (`docs/paralelos1.md`).
 7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
    confirm the `state.json` field names `readStoryState` reads. Also `curl -s localhost:4200/api/v1/health` and
-   `curl -N localhost:4200/api/v1/events/stream` for the proxy (phase 0's open item).
+   `curl -N localhost:4200/api/v1/events/stream` for the proxy (phase 0's open item), which is also the first real test of
+   lane 2B's SSE parser and reconnection.
 
 ## Prompt for a new session
 
 > Read `CLAUDE.md`, `docs/progress.md`, `docs/plan/00-overview.md` and `docs/plan/<phase>.md`. Implement **only** lane
 > `<id>`; follow the protocol in §9 of the overview. First run `node -v`: if it is below 22.22.3, run `npx -y node@24 -v`
-> and put that binary first on your `PATH` for every command (see "Node in cloud sessions" below). Don't commit or push.
+> and put that binary first on your `PATH` for every command (see "Node in cloud sessions" below); run `npm ci` if there is no
+> `node_modules`. Don't commit or push.
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+---
+
+## Lane 2B · Realtime and stores (2026-10-07)
+
+Launched from `docs/paralelos2.md`, section C, on branch `claude/ecstatic-allen-vkmfqi` (the branch this session was given; plan
+§9 would call it `lane/2b-realtime-stores`), from `main` at 56e815a. Committed and pushed with the user's approval on
+2026-10-07, after merging `main` at a0cefc4 (lane 2A's finishing pass, PR #7); pull request into `main` open.
+
+**Pre-flight.** In `main`: `openapi/ahoy-v1.yaml`, the `ApiClient` in `src/app/core/api/` (2A) and `src/app/domain/` with the
+vocabulary and its types (2C). `src/app/core/api/schema.d.ts` is **missing** (2A is waiting for its dependencies); the user
+decided that the hand-written `src/app/core/api/types.ts` counts as the prerequisite, since only that file changes when the
+generator arrives. Node was v22.22.0, so every command ran on Node 24.21.0 from `npx -y node@24`, copied into the session
+scratchpad and put first on `PATH`. The session started without `node_modules`; `npm ci` installed the locked tree (no
+dependency added or changed).
+
+### What changed
+
+All in `src/app/core/realtime/` and `src/app/core/stores/`, the two directories the lane owns, plus this file and the README
+"Status" bullets. `src/app/core/stores/.gitkeep` was removed.
+
+| File                                        | What it is                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `realtime/fetch.ts`                         | `FETCH` now has a root default, `globalThis.fetch` (it had none). `app.config.ts` still provides the same value; harmless, left alone (not this lane's file).                                                                                                                                                                                                                                                                            |
+| `realtime/clock.ts`                         | `Clock` (`now()`, `schedule(ms, fn)` giving a cancellable `Timer`), `systemClock`, the `CLOCK` token, and `RANDOM` for the jitter. Every wait of the data layer goes through it.                                                                                                                                                                                                                                                         |
+| `realtime/sse.ts`                           | `SseDecoder` (text in pieces, messages out) and `parseSseStream(body)`: WHATWG event-stream rules (LF, CRLF and CR; a CR at the end of a chunk is held until the next one; comments; multi-line `data`; `id` carried over and refused with a NUL; `retry` and unknown fields ignored; a message cut off by the end is dropped). UTF-8 decoded with `TextDecoder` in stream mode, BOM dropped.                                            |
+| `realtime/event-stream-client.ts`           | `EventStreamClient`: `fetch` of `/events/stream[?story=&after=]` with `Accept: text/event-stream`, the `AuthStrategy` headers and `cache: "no-store"`; `Last-Event-ID` on reconnection. `reconnectDelay`: 1 s doubling to 30 s, ±20 % jitter, reset after 30 s stable. 4xx is terminal (`offline`, `refusedWith`); 5xx, network, a non-SSE 200, a failing `AuthStrategy` and an ended stream reconnect. 3 failures in 60 s → `degraded`. |
+| `realtime/event-bus.ts`                     | `EventBus`: one global stream (no `story=`), opened by the first subscriber of `events()`/`eventsFor(key)` and closed by the last. `status`, `degraded`, `lastEventId`, `refusedWith`, `subscribers`; `watchStory(key)` for the polling; `resync` (every 10 s while degraded). Delivers each event once per story, in order, whatever its source.                                                                                        |
+| `realtime/polling.ts`                       | `PollingFallback`, run by the bus while degraded and subscribed: `listStoryEvents?after=` of every watched story every 3 s (up to 10 pages of 500 per round, rounds never overlap, a failure waits for the next round), and the 10 s `resync` tick.                                                                                                                                                                                      |
+| `realtime/event-id.ts`                      | `isEventId`, `compareEventIds` (numeric order without `Number`, ids may pass 2^53), `laterEventId`.                                                                                                                                                                                                                                                                                                                                      |
+| `realtime/event-types.ts`                   | `KNOWN_EVENT_TYPES` (the 24 examples of the contract's `EventType`), `isKnownEventType`, `RUN_PROGRESS`.                                                                                                                                                                                                                                                                                                                                 |
+| `stores/resource.ts`                        | `StoreResource<T>`: `status` (`idle`, `loading`, `ready`, `error`), `value`, `error`, `busy`, `refresh()` (single flight; a refresh asked for meanwhile runs once more after it), `accept(value)`, `dispose()`. `newestVersion` keeps the greater `version`.                                                                                                                                                                             |
+| `stores/stories-store.ts`                   | `StoriesStore`: `loadAll()` (`limit=500` until `nextCursor` is null, shared while in flight, list kept on error), `stories`, `counts`, `inPort`, `needsYou` (oldest `updatedAt` first), `atSea`, `find(key)`, `upsert(story)`, `use(destroyRef?)`. While used: a known event other than `run.progress` → one `getStory` per story per 300 ms; `404` removes it; `resync` reloads.                                                        |
+| `stores/story-store.ts`                     | `StoryStore.for(key, { watch, destroyRef })` → a handle with `story`, `state`, `runs`, `questions`, `gates`, `models`, `artifacts` (`StoreResource`s), `watch(...)`, `events()` (the feed) and `release()`. `STALE_AFTER` maps each known event type to the resources it touches; observed ones are refetched once per 300 ms, the others only marked stale. `accept(story)`, `acceptModels(plan)`.                                      |
+| `stores/run-progress-buffer.ts`             | `RunProgressBuffer`: `ingest`, `run(runId)` → `{ entries, spend, omitted, steps }`, `follow(key, destroyRef?)`, `hydrate(key)`. Entries are steps (one per `line`) and gap rows; a gap of the rise in `omitted` goes before its batch. 1000 events per run, 50 runs.                                                                                                                                                                     |
+| `stores/story-events-feed.ts`               | `StoryEventsFeed.for(key, destroyRef?)` → `status`, `error`, `events`, `newestFirst`, `truncated`, `refresh()`, `release()`. History read from the start (G8), then merged with the stream; `run.progress` goes to the buffer, not into the feed. At most 2000 events.                                                                                                                                                                   |
+| `stores/leases.ts`, `stores/event-pages.ts` | `LeaseMap` (shared entries, disposed by the last release), `releaseOnDestroy`; `readStoryEvents` (pages of 500 from a cursor, at most 200 pages).                                                                                                                                                                                                                                                                                        |
+| `realtime/testing/*`                        | Spec helpers, plain TypeScript, never imported by production code and absent from `dist/`: `FakeClock` and `settle`, `FakeFetch` and `SseBody`, `FakeApi`, `anEvent`/`aStory`, `provideFakes`.                                                                                                                                                                                                                                           |
+
+How the features use it (for 3A, 4A, 5A, 5B, 6A):
+
+```ts
+inject(StoriesStore).use(inject(DestroyRef)); // list, counts, inbox; holds the stream open
+const voyage = inject(StoryStore).for(key, { watch: ["story", "runs"], destroyRef: inject(DestroyRef) });
+voyage.story.value();
+voyage.runs.status();
+voyage.watch("questions");
+voyage.events().newestFirst();
+inject(StoryStore).accept(result.value); // after a 202/201 (4A's CommandRunner)
+inject(RunProgressBuffer).follow(key, inject(DestroyRef));
+inject(RunProgressBuffer).run(runId)(); // live steps (5A)
+await inject(RunProgressBuffer).hydrate(key); // steps of runs that ended (run detail)
+inject(EventBus).status(); // the top bar's Live indicator
+```
+
+### Decisions and deviations (to review)
+
+1. **`ResourceStatus` has a fourth value, `idle`**, for a resource nobody has asked for yet (the plan lists `loading | ready |
+error`). A refresh with a value in hand keeps `ready` (with `busy` true) instead of going back to `loading`, so screens do not
+   flash a skeleton on every event; `error` keeps the last value.
+2. **`CLOCK` holds the timers too** (`schedule`), not only `now()`, so that back-off, polling and debounce run on a fake in tests
+   without `vi.useFakeTimers`. **It cannot be shared with 1B as the plan says:** `ui/` may not import `core/` (plan §5.2), so the
+   pipes of 1B need their own token in `ui/` (or an input). See "Needs from other lanes".
+3. **Jitter is ±20 %** around 1, 2, 4, 8, 16 s, capped at 30 s. **Every 4xx is terminal**, as the plan says, `429` and `408`
+   included.
+4. **What counts as a failure** for back-off and `degraded`: a refused connection (5xx, network, a 200 that is not
+   `text/event-stream`, such as the dev server's `index.html` when the proxy is missing), a failing `AuthStrategy`, and a stream
+   that drops or ends. Being live again clears `degraded`; 30 s live also forgets the failures. `stop()` and the last
+   unsubscription leave the status `offline`.
+5. **`Last-Event-ID`** comes from the SSE `id:` field when it is a decimal event id, else from the event's own `id`; anything
+   else is never sent back (a bad value would make the API answer 400, which is terminal). `after` is sent only on the first
+   connection.
+6. **De-duplication is per story** in the bus (the last id delivered per story, for at most 1000 stories), because the stream's
+   replay after a reconnection and the polling overlap. Ids are compared as decimal strings.
+7. **The polling cursor** of a story is the last id the bus delivered for it; a story never seen on the stream is read from the
+   start on its first round (consumers de-duplicate). The global stream id is not used as a story cursor, because the contract
+   does not say ids are global.
+8. **`story.started` causes a `getStory`** like any other event, instead of reading the story from the payload, whose shape the
+   contract does not give. The 300 ms window starts with the first event and does not restart with later ones, so a busy story
+   cannot postpone its refresh for ever. Event types the app does not know never cause a read (contract: ignore them).
+9. **`STALE_AFTER`** (event type → resources) is this lane's reading of the contract and the wireframes; review it.
+   `artifacts.updated` does not touch `story`, `run.progress` touches nothing.
+10. **`RunProgressBuffer` keeps events, not rows**, sorted by id, and derives the rows; so a late or replayed event lands in its
+    place. Past 1000 events per run the oldest go, and a gap row at the top counts the steps let go; later gaps count from the
+    last `spend` let go. A batch with no step whose `omitted` rose gives a gap at the end.
+11. **`StoryEventsFeed` does not keep `run.progress`** (hundreds per run, G8, R6) and hands it to the buffer, so reading a story's
+    history also gives the run detail its archived steps. It keeps the newest 2000 other events (`truncated` says so).
+12. **Stores live while held.** `StoriesStore.use`, `StoryStore.for`, `StoryEventsFeed.for` and `RunProgressBuffer.follow` count
+    holders (a `DestroyRef` releases them) and stop their subscriptions, timers and late answers with the last one. The list
+    keeps its data after the last release and reloads on the next `use`.
+13. **Test helpers live in `core/realtime/testing/`**, because the lane may only edit its own directories. They are type-checked
+    with the app, never imported by production code, and absent from `dist/` (checked). Moving them to `src/testing/` is a
+    one-line import change per spec if 2D wants to share `FakeFetch`/`SseBody`.
+
+### Proof
+
+All offline, 0 AIU, Node 24.21.0.
+
+- **Chain:** `npm run build` (exit 0, no warning), `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (with
+  `tokens:check`), `npm test` (41 files, **946 tests**, 0 failed, 0 skipped) and `npm run format:check`, all green.
+- **New tests (146), all on a fake `fetch`, a fake clock and a fake API; no network, no real waiting:**
+
+  | File                                   | Tests | What it proves                                                                                                                                                                                                                                                                                                                                                                                              |
+  | -------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `realtime/sse.spec.ts`                 | 27    | Every rule above; the same messages for a frame with 2-, 3- and 4-byte characters and CRLF **cut at every character, at every byte, at every pair of bytes** of its first message, and one byte per chunk; BOM (cut too); bad UTF-8; a read error rejects; stopping early cancels the body.                                                                                                                 |
+  | `realtime/event-stream-client.spec.ts` | 28    | Headers (only `Accept` with `NoAuthStrategy`; the strategy's headers asked for on each connection); URL with `story`/`after`; events in order, garbage skipped; **reconnects with `Last-Event-ID`**; **401/403/400/404/429 end offline and never retry**; 5xx back-off 1 → 2 → 4 s; 3 failures in 60 s → degraded, live → not; the 60 s window; reset after 30 s stable; `stop` aborts and leaves no timer. |
+  | `realtime/event-bus.spec.ts`           | 13    | One connection for all subscribers, closed with the last; `eventsFor`; once per story; a refusal; **polling every 3 s after degradation, with `after`, only for watched stories, `resync` every 10 s, stopped when the stream recovers (its replay not delivered twice)** and when the last subscriber leaves; nothing left after destroy.                                                                  |
+  | `realtime/event-id.spec.ts`            | 3     | Id shape, numeric order past 2^53, `laterEventId`.                                                                                                                                                                                                                                                                                                                                                          |
+  | `stores/stories-store.spec.ts`         | 21    | Paging (1203 stories, 3 calls of 500); counts and In port; **`needsYou` oldest first**, ties by key; error keeps the list; a failed later page; shared load; upserts during a load; **three events in 300 ms give one `getStory`** (fake clock); insert, 404 remove, other errors; `run.progress` and unknown types ignored; release cancels everything; `DestroyRef`; resync while degraded.               |
+  | `stores/story-store.spec.ts`           | 17    | Only observed resources are read; one refetch per 300 ms; stale when unobserved, read when observed again; shared handles; list kept in step; **a 202 answer shows at once and a slow read cannot undo it**; models; errors keep values; the feed through `events()`; **nothing subscribed, scheduled or applied after the last release**; `DestroyRef`; app destroy.                                       |
+  | `stores/run-progress-buffer.spec.ts`   | 19    | **Dedupe by `line`** and by id; **gaps from the difference of consecutive `spend`s over three batches, placed before the batch**; no gap at 0; trailing steps; `at` fallback; unreadable payloads; **the 1000 limit** and its gap; 50 runs; `follow`; `hydrate` from the start (fixture), shared and retried.                                                                                               |
+  | `stores/story-events-feed.spec.ts`     | 9     | History in pages of 500 from the start; newest first without `run.progress`, which reaches the buffer; stream merge, also during the read; refresh from the cursor; error; **the 2000 cap**; shared feed and release; a late answer after release is dropped.                                                                                                                                               |
+  | `stores/resource.spec.ts`              | 9     | `StoreResource` states, single flight, `accept`, `newestVersion`, `dispose`; `LeaseMap`.                                                                                                                                                                                                                                                                                                                    |
+
+- **Mutation checks:** nine deliberate breaks of the production code, each caught, then restored: 4xx retried (5 tests failed),
+  no `Last-Event-ID` (3), CR not held across chunks (5), UTF-8 not decoded in stream mode (4), gap after its batch (2), no debounce
+  (3), voyage keeps its subscription after release (3), no de-duplication in the bus (2), no 60 s window (1).
+- **Bundle:** `dist/` holds none of the spec helpers.
+
+### Did not run, skipped, and why
+
+- **Nothing ran against an API:** not the hosted API, not `--simulate` (no Docker daemon or Postgres in this session), not the mock
+  backend (lane 2D is being built in another session). So the parser and the reconnection have only met the fake `fetch`; the
+  real stream through the dev proxy is still untested (phase 0's open item, "Start here next" 6).
+- **No browser run:** no component injects the new services yet, so the app is unchanged at start-up.
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **1B:** `CLOCK` is in `core/realtime/clock.ts`, which `ui/` may not import. Give the pipes a `now` of their own (a token in `ui/`
+  or an input); the composition root can provide both from one clock. For the top bar: `EventBus.status()` is
+  `connecting | live | reconnecting | offline`; the shell (not `ui/`) maps it to the indicator's `live | reconnecting | offline`
+  (`connecting` shows as `reconnecting`, or as `live` if you prefer no flash on start-up).
+- **2D:** the mock backend can provide `FETCH` with a `fetch` that serves `/events/stream` (`Content-Type: text/event-stream`,
+  frames `id:`/`event:`/`data:`, honour `Last-Event-ID` and `after`); `SseBody`/`FakeFetch` in `core/realtime/testing/` show the
+  shape. `dropStream` should end or break the body, which makes the client reconnect with `Last-Event-ID`.
+- **2A:** nothing. When `types.ts` aliases `schema.d.ts`, nothing here changes.
+- **P0 / composition root:** `app.config.ts` can drop its `FETCH` provider (the token has the same default now).
+- **3A / 6A (shell):** something must hold the stream for the Live indicator on every screen: `StoriesStore.use(destroyRef)` in
+  the shell does it, or `EventBus.events().pipe(takeUntilDestroyed())`.
+- **4A:** after a command's `202`/`201`, call `StoryStore.accept(story)` (and `acceptModels(plan)` for `setStoryModels`).
+- **5A / 5B:** `RunProgressBuffer.run(runId)` gives the rows of `ah-live-steps` (gap rows already placed; "N steps not shown"
+  never appears for 0); `StoryEventsFeed.newestFirst()` is the ship's log.
+
+### Final check
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, then build-tokens: ok)
+$ npm test                    exit 0 (Test Files 41 passed (41); Tests 946 passed (946))
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
+
+After merging `main` at a0cefc4 (lane 2A's finishing pass, PR #7: generated types, `contract.spec.ts`, the domain types fix), on the
+merged tree, Node 24.21.0, after `npm ci` from the new lockfile. Nothing in `core/realtime/` or `core/stores/` had to change:
+
+```
+$ npm run build               exit 0
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, tokens:check, api:check)
+$ npm test                    exit 0 (Test Files 43 passed (43); Tests 1056 passed (1056): 910 of main + 146 of lane 2B)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
+
+The merge had two text conflicts, both in the handoff text (`README.md` "Status" and the header, "Where we are" and "Start here
+next" of this file); both sides were kept and brought up to date.
 
 ---
 
