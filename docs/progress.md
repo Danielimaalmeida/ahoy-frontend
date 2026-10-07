@@ -60,15 +60,21 @@ What changed, and the two presentation choices that need a review, are under "Ne
    from lane 2C" in the lane 2A section.
 3. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
    Angular 22 rejects). Until then each agent must put `npx node@24` first on its `PATH` (see "Prompt for a new
-   session").
-4. **User:** decide the two points lane 1A raised: keep the `.prettierignore` entries for the copied agent skills (they are in
-   `main`, and they make `npm run format:check` green again), and report the two `bundle.css` defects to the design system (section
-   "Lane 1A").
+   session"). Proposed setup script, **untested**: `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
+   `ln -sf /opt/node24/node_modules/node/bin/node /root/.local/bin/node` (`/root/.local/bin` comes before
+   `/opt/node22/bin` in the sessions' `PATH`; `npm install -g node@24` is not an option, because npm's global bin is
+   Node 22's own directory). Check with `node -v` in a new session.
+4. **User, decided 2026-10-07:** keep the `.prettierignore` entries for the copied agent skills (they stay in `main`, and
+   they make `npm run format:check` green), and report the two `bundle.css` defects to the design system (section
+   "Lane 1A"). The report text was handed to the user; whether it was sent is not recorded here. When the design system
+   has fixed them, re-sync `docs/design/` and `src/styles/ahoy-bundle.css` and delete the matching rules in
+   `src/styles/_ahoy-angular.scss`.
 5. **Done, for the user to know:** CI now runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
 6. **Wave 2:** **1B** and **1C** can start (`docs/paralelos2.md`). Lanes **2B** and **2D** have 2A and 2C in `main`; 2D reuses
-   the Ajv helper `src/testing/fixtures/contract.ts` that this pass added. The domain types now match the contract, but only once
-   this working tree is committed and merged do the other lanes see it. **6D** is optional (`docs/paralelos1.md`).
+   the Ajv helper `src/testing/fixtures/contract.ts` that this pass added. The domain types now match the contract, but the other
+   lanes only see them once this pull request (#7) is merged. 2D needs the 2A finished in `main`, which this pull request does
+   (`docs/paralelos2.md`). **6D** is optional (`docs/paralelos1.md`).
 7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
