@@ -119,7 +119,11 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   joined to the real voyages in the `StoriesStore`. The backlog comes from a `BacklogPort`, today a `StubBacklogAdapter` with the
   wireframe's nine fictional stories (the API has no backlog yet); "Jira ↗" shows only with `jiraBaseUrl`. 40 new tests; checked on
   `npm run start:mock` in headless Chromium; never run against a real API.
-- **Wave 3, lane 4A (voyage base): done on the mock backend, committed and pushed, in review** (branch
+- **Wave 4, lane 4B (Plan tab and decision): built on the mock backend, not committed yet** (branch
+  `claude/pensive-ritchie-9ja01b`). `src/app/features/voyage/tabs/plan/`: the plan with changed blocks marked, acceptance criteria,
+  "Your decision" (Approve; Send back and Reject in dialogs) and the conflict panels. 54 new tests; never run against a real API.
+  Details in [docs/progress.md](docs/progress.md).
+- **Wave 3, lane 4A (voyage base): done on the mock backend, merged into `main`** (PR #15) (branch
   `claude/quirky-gates-t6b390`, with `main` and lanes 3A, 3B and 3C merged in; pull request into `main`). `/voyages/:key`
   shows the real voyage page:
   - header, primary action, Anchored banner, tabs with counts and the default tab;
@@ -129,5 +133,5 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
   run against a real API.
 
-- Next: review and merge lane 4A; then wave 4 (`docs/paralelos4.md`). Details in
+- Next: review and merge lane 4B; then the rest of wave 4 (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).

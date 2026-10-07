@@ -1,10 +1,23 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 4A (voyage base: context, commands, header, tabs and dialogs), launched from
+**Updated 2026-10-07 by lane 4B (Plan tab and decision), launched from `docs/paralelos4.md` section A through `/implement` on branch
+`claude/pensive-ritchie-9ja01b`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 4B is built, tested and checked in a
+browser on the mock backend. It is NOT committed or pushed: CLAUDE.md and paralelos4 rule 8 wait for the user's approval.**
+
+- **Ran for 4B (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (106 files, **1953 tests**: `main` has
+  102 files and 1900; 54 new in 4 files, one placeholder row removed from `app.routes.spec.ts`) and `npm run format:check`, all
+  green; `npm run start:mock` in headless Chromium (PROJ-123: light, dark and 390 px, the Send back dialog, a forced
+  `decision_already_recorded`); a two-axis `/code-review` (standards and spec), whose real findings were fixed.
+- **Did not run for 4B:** anything against a real API, `--simulate` or TEST; a mutation check of the new tests; other browsers
+  than Chromium; a screen reader; a pixel diff (compared by eye with `PlanReview`); the `States` and `Dialogs` boards only by eye
+  and only for the states the mock can force (`stale_version` and `revision_ceiling_reached` are unit-tested, not seen in the browser).
+
+Earlier: **lane 4A (voyage base: context, commands, header, tabs and dialogs), launched from
 `docs/paralelos3.md` section D on branch `claude/quirky-gates-t6b390`, from `main` at a2a49fe (all of waves 1 and 2, lane 2D
 included as PR #11). Lane 4A is committed and pushed with the user's approval, and `main` at 470c1e5 (lanes 3A, 3B and 3C,
 PR #12, #13 and #14) is merged in, with its conflicts resolved (`README.md`, this file and `src/app/app.routes.spec.ts`). Its
-pull request into `main` waits for review.**
+pull request is merged into `main` (PR #15).**
 
 - **Ran for 4A (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (88 files, **1607 tests**, 120 new)
@@ -121,6 +134,10 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+**Wave 4 has begun.** Lane 4B (Plan tab and decision) is built on the mock backend and waits for the user's review and approval to
+commit (section "Lane 4B"). Lane 4A is merged (PR #15), so lanes 4C, 4D, 5A, 5B and 5C (`docs/paralelos4.md` sections B to F)
+can run beside it.
+
 Phase 0, lane 1A (PR #4), lane 2A (PR #5 and PR #7) and lane 2C (PR #3) are merged into `main`: an
 Angular 22 app that builds, tests and serves, with the CLAUDE.md conventions enforced by `tsc`, ESLint, Prettier and
 `scripts/check-boundaries.mjs`, the design kit foundation and `/_kit`, the `ApiClient` with its guards, the auth seam and the runtime
@@ -197,10 +214,9 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-1. **User:** review and merge the lane 4A pull request (`claude/quirky-gates-t6b390` into `main`; section "Lane 4A" below, in
-   particular "Decisions and deviations" and the one edit outside the lane, `src/app/app.routes.spec.ts`). **When 4A is in
-   `main`, open `docs/paralelos4.md`** (wave 4 builds on `VoyageContext` and `CommandRunner`). Lanes 3A, 3B and 3C (PR #12, #13
-   and #14) and every earlier lane are already merged.
+1. **User:** review lane 4B (section "Lane 4B" below, in particular "Decisions and deviations" and the two spec edits outside the
+   lane's directory), approve its commit and push, and merge it. Lane 4A (PR #15) and every earlier lane are already merged.
+   **When sections A to F of `docs/paralelos4.md` are all in `main`, open `docs/paralelos5.md`.**
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
@@ -240,6 +256,112 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 4B · Plan tab and decision (2026-10-07)
+
+Launched from `docs/paralelos4.md`, section A, through `/implement`, on `claude/pensive-ritchie-9ja01b`, from `main` at 959a7b4.
+**Not committed and not pushed** (CLAUDE.md, paralelos4 rule 8). **Pre-flight** after `git fetch origin`: 4A (`VoyageContext`,
+`CommandRunner`, the shell, PR #15), 1C (`ah-markdown`, `ah-choice-card-group`, `ah-dialog`) and 2C (`@domain/text-diff`) are in
+`main`. Node was v22.22.0: every command ran on Node 24.21.0 from `npx -y node@24`; `npm ci` installed the tree. **No dependency
+was added.** Baseline on `main`: 102 files, 1900 tests.
+
+### What changed (all in `src/app/features/voyage/tabs/plan/`)
+
+- `plan-tab.ts`: the Plan tab. "Implementation plan" in `ah-markdown` with the tag `revision {n}` (n = `revisions[plan_accepted] + 1`),
+  "by {crew} · run {id} · {ago}", "Compare with revision {n−1}" (to the Artifacts tab, no query), the legend, "No plan yet", a skeleton
+  and an error with Try again; "Acceptance criteria"; "Earlier round" (last human send-back, and "{n} questions answered before this
+  plan").
+- `plan-document.ts` + `plan-comparison.ts`: reads `implementation-plan.md` at the artifact set's current revision and looks for the
+  earlier plan to mark changes against: `findComparison` probes at most 5 revisions back with `getArtifactContent?revision=`, skips
+  a `404` and a revision whose plan did not change, stops at any other error (nothing is marked rather than everything) and stops
+  when the plan was replaced meanwhile. The plan shows as soon as it is read; the marks follow.
+- `plan-decision.ts` + `decision-view.ts`: one `PlanDecision` per tab, shared by the panel and the dialogs: the picked card (none at
+  first), the reason (one `FormControl`, so the panel's text reaches the dialog and survives any conflict), the last outcome, the
+  conflict. Pure texts and body in `decision-view.ts`. The reason is also kept in memory per voyage (`PlanReasonDrafts`), because
+  the "Change" link leaves for the Models tab.
+- `decision-panel.ts`: "Your decision". Approve is sent from the panel, with no dialog and no reason. Send back and Reject need the
+  reason first (the field shows its error, nothing opens) and then open their dialog. When no decision is open it gives way to
+  "No decision needed now" or "Approved/Rejected by {who} · {when}". A gate other than `plan_accepted` gets the same three choices
+  and a note that its summary arrives later.
+- `plan-dialogs.ts`: `SendBackDialog` ("Send the plan back to Cartographer": round, model, cost, "What should change \*") and
+  `RejectDialog` (`danger`, "Reject the plan?"). On `stale_version` the dialog stays open with the notice and the text, and the
+  button reads "Send back again" / "Reject again"; on any other error (`revision_ceiling_reached` included) it stays open with the
+  banner; it closes on success and on `decision_already_recorded`.
+- `decision-conflict.ts`: "{actor} already {approved|sent back|rejected} this plan", "Your {send-back} wasn't recorded. The voyage
+  moved on to {phase}. Your text is kept below…", **Copy my text** (Clipboard API in `try/catch`, says if it was refused) and **See
+  the decision** (to Gates). The actor comes from the newest human record the user had not seen before sending; without one the
+  panel says "Someone".
+- `plan-criteria.ts`: the criteria come from the state; when it gives none with text, from the plan's own "Acceptance criteria" list.
+- `plan.routes.ts` now routes to `PlanTab`.
+
+### Tests (54 new, 4 files)
+
+`plan-comparison.spec.ts` (9: the probe, 5-revision limit, no earlier revision, `404`, other errors, `304`, cancel),
+`decision-view.spec.ts` (19), `plan-criteria.spec.ts` (5) and `plan-tab.spec.ts` (21, on the mock backend through the real routes:
+the plan with marks and the 5 AC, the earlier round, the exact request bodies, no send without a reason, a stale version, the ceiling,
+a double click, `decision_already_recorded` with Copy my text, read-only views, and Approve after a long leftover reason).
+
+### Verified in the browser (`npm run start:mock`, headless Chromium)
+
+PROJ-123 at 1280 px light and dark and at 390 px: the plan rev. 2 with marked blocks, 5 AC, "Earlier round" with jordan's send-back,
+the Send back dialog (with the panel's text), a forced `decision_already_recorded` at 390 px. Compared by eye with `PlanReview`.
+The 404s in the browser console are the probes of revisions that had no plan.
+
+### Decisions and deviations (to review)
+
+1. **Nothing is picked at first** (the wireframe shows Send back picked): a stray click must not approve. The button reads "Choose a
+   decision" until a card is picked.
+2. **The panel validates the reason before a dialog opens**, and the dialog validates it again.
+3. **Past the ceiling the texts differ from the spec's template.** The API refuses a send-back when `revisions >= ceiling` (the mock
+   does; the hosted code was not read), so at round 4 of 4 a send-back would be "round 5". The panel and dialog then say it may be
+   refused and what follows, and the UI never disables the button: the API's `revision_ceiling_reached` is shown as the banner. **The
+   exact rule at the ceiling is unconfirmed against the real API.**
+4. **"Compare with revision {n−1}" names the gate revision**, while the comparison made for the marks is against an artifact-set
+   revision (they can differ: every revision is a whole set). The link carries no query, because the Artifacts tab's parameters are not
+   agreed.
+5. **The criteria fall back to the plan's own list.** The mock's PROJ-123 state has `acceptance_criteria` without `text`, which
+   `readStoryState` drops, so the panel would be empty. See "Needs from other lanes".
+6. **"{n} questions answered before this plan"** counts every answered question of the voyage and is hidden at 0.
+7. **Send back and Reject at a gate other than the plan's** use "the crew" and "work" in their texts; Approve takes no reason (a reason
+   typed before switching to Approve is not sent, and does not block it).
+8. The panel shows the model and cost box only for Send back.
+
+### Review (`/code-review`, two axes, on the working tree against HEAD)
+
+- **Standards:** no documented-standard violation. Judgement-call smells: duplicated `model`/`remaining`/`owner` computeds (fixed:
+  moved onto `PlanDecision`), a shadowed `read` variable in `PlanDocument` (fixed). **Left as is:** `PlanDecision` mixes the form,
+  the drafts and the command; the `(round, ceiling)` pair travels through four functions; one `switch` per decision in
+  `decision-view.ts`.
+- **Spec, fixed:** an Approve with more than 5000 characters left in the hidden reason field did nothing and said nothing (now an
+  approval skips the reason check; test added); a non-content answer for the plan would have left the skeleton up for good. **Left
+  as is, by decision above:** items 4, 5 and 6, and the 4B-only extras (`PlanReasonDrafts`, "…again" labels, the criteria fallback).
+- **Not in the spec's list but done:** the handoff text in this file and the README (it was missing at review time).
+
+### Files outside the lane's list, and why
+
+`src/app/app.routes.spec.ts` (the 4B row of the placeholder table removed, as its comment tells a lane to do, and the default-tab test
+now looks for `ah-plan-tab`) and `src/app/features/voyage/shell/voyage-shell.spec.ts` (one test looked for the Plan placeholder).
+Other lanes remove their own rows from the same table, so expect trivial conflicts there.
+
+### Did not run, skipped, and why
+
+Nothing against a real API, `--simulate` or TEST; no mutation checks; `stale_version` and the ceiling banner not seen in a browser;
+no screen reader, other browsers or pixel diff; the 390 px layout only by eye.
+
+### Needs from other lanes
+
+- **Lane 2D (mock backend) / 2A (`readStoryState`):** the seeded PROJ-123 `acceptance_criteria` has `id`, `repo` and
+  `verification_mode` but no `text`, and `readStoryState` drops an entry without `text`. If the real `state.json` has the text, add it
+  to the seed; if not, the reader should keep the id. 4B works either way through `plan-criteria.ts`.
+- **Lane 5C (Artifacts):** "Compare with revision {n−1}" links to `/voyages/:key/artifacts` with no parameters. If the tab takes the
+  revision to compare from the URL (for example `?compare=<artifact-set revision>`), say so here and 4B will pass it.
+- **Lane 4D (Models):** the panel's "Change" opens `/voyages/:key/models?change=planning`.
+- **Lane 5B (Gates):** "See the decision" opens `/voyages/:key/gates`.
+
+### Next
+
+Review and approve the commit; merge `main` into the branch before the pull request (other wave 4 lanes edit `app.routes.spec.ts`
+too). Then the rest of wave 4.
 
 ## Lane 4A · Voyage base: context, commands, header, tabs and dialogs (2026-10-07)
 
