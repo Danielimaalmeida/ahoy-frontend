@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { QuestionsTab } from "./questions-tab";
 
-/** Questions (lane 4C replaces the placeholder). */
-export const QUESTIONS_ROUTES: Routes = [
-  { path: "", title: "Questions · Ahoy", component: Placeholder, data: { heading: "Questions", lane: "4C" } },
-];
+/** Questions (lane 4C): the rounds of questions, their answer forms and "What happens next". */
+export const QUESTIONS_ROUTES: Routes = [{ path: "", title: "Questions · Ahoy", component: QuestionsTab }];
