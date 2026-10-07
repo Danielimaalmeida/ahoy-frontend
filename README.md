@@ -116,5 +116,10 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `/voyages/new?key=&title=` is a typed Reactive Form on `ah-field` and `ah-model-choice-table`: the budget is read by `parseAiu`
   (never a float), only the models the user filled in are sent, a double click sends one request, and `story_exists`, `400` and
   the other refusals show beside the fields or in a banner without losing what was typed. 114 new tests (three agreed seams, 26 mutation checks, a two-axis review whose findings were fixed); driven in headless Chromium on `npm run start:mock`; never run against a real API.
-- Next: review lanes 3A and 3B and open their pull requests; lanes 3C and 4A (`docs/paralelos3.md`, sections C and D) run in other sessions. Details in
-  [docs/progress.md](docs/progress.md).
+- **Wave 3, lane 3C (The Docks, planned): done offline, committed and pushed** (branch `claude/dazzling-fermat-4tvzii`, with `main` and
+  lanes 3A and 3B merged in). `/docks` has the "Planned screen" banner, the filters and the backlog table, with the **Ahoy** column
+  joined to the real voyages in the `StoriesStore`. The backlog comes from a `BacklogPort`, today a `StubBacklogAdapter` with the
+  wireframe's nine fictional stories (the API has no backlog yet); "Jira ↗" shows only with `jiraBaseUrl`. 40 new tests; checked on
+  `npm run start:mock` in headless Chromium; never run against a real API.
+- Next: review lanes 3A, 3B and 3C and open their pull requests; lane 4A (`docs/paralelos3.md`, section D) runs in another session. Details
+  in [docs/progress.md](docs/progress.md).
