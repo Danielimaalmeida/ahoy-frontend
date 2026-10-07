@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting, type TestRequest } fro
 import { TestBed } from "@angular/core/testing";
 import { throwError } from "rxjs";
 import answerQuestion from "@testing/fixtures/answerQuestion.json";
+import { operationNamed, requestViolations } from "@testing/fixtures/contract";
 import decideHumanGate from "@testing/fixtures/decideHumanGate.json";
 import getArtifactContent from "@testing/fixtures/getArtifactContent.json";
 import getHealth from "@testing/fixtures/getHealth.json";
@@ -273,6 +274,16 @@ function reply(
 
 const problemFor = (code: string) => problems.find((p) => p.code === code)!;
 
+/** Whether `path` is an instance of a path template of the contract, such as `/stories/{key}/stop`. */
+function matchesTemplate(template: string, path: string): boolean {
+  const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = template
+    .split(/\{[^}]+\}/)
+    .map(escape)
+    .join("[^/]+");
+  return new RegExp(`^${pattern}$`).test(path);
+}
+
 describe("ApiClient", () => {
   let api: ApiClient;
   let http: HttpTestingController;
@@ -296,9 +307,19 @@ describe("ApiClient", () => {
     it(`calls ${c.method} ${c.url} and gives the value of the ${c.status} answer`, async () => {
       const result = c.call(api);
       const request = http.expectOne({ method: c.method, url: c.url });
-      if (c.method === "POST") expect(request.request.body).toEqual(c.body);
+      if (c.method === "POST") {
+        expect(request.request.body).toEqual(c.body);
+        expect(requestViolations(c.op, request.request.body)).toEqual([]);
+      }
       reply(request, c.reply, c.status);
       expect(await result).toEqual({ ok: true, value: c.value });
+    });
+
+    it("is tested with the method and path the contract gives this operation", () => {
+      const op = operationNamed(c.op);
+      const path = c.url.replace(/^\/api\/v1/, "").replace(/\?.*$/, "");
+      expect(c.method).toBe(op.method);
+      expect(matchesTemplate(op.path, path)).toBe(true);
     });
 
     it("sends no Authorization header and sets a timeout, so a hung request becomes a network failure", async () => {
