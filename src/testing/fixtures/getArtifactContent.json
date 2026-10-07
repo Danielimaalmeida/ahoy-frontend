@@ -1,0 +1,6 @@
+{
+  "path": "implementation-plan.md",
+  "mediaType": "text/markdown",
+  "etag": "\"c2debe2a81f6da5198e2f6df010cfbbb81d561b1c7a17a8b8e9b509ae42e135d\"",
+  "text": "# Implementation plan: PROJ-123 Show invoice due date on the billing page\n\n## Summary\n\nShow each invoice's due date on the billing page and in the invoice list,\nin the customer's timezone, with a clear overdue state.\n\n## Acceptance criteria\n\n- AC1 The billing page shows the due date of each invoice.\n- AC2 The invoice list has a due date column.\n- AC3 Dates use the viewer's locale format; exports use ISO 8601.\n- AC4 Due dates and overdue checks use the customer's timezone.\n- AC5 Overdue invoices show an \"Overdue\" badge.\n\n## WP1 Due date in the invoice API\n\n- Add `dueDate` and `isOverdue` to the invoice response.\n- Compute `isOverdue` against the customer's timezone, not the server's.\n\n## WP2 Billing page and invoice list\n\n- Show the due date on the billing page and as a column in the invoice list.\n- An \"Overdue\" badge and sort order for overdue invoices.\n"
+}

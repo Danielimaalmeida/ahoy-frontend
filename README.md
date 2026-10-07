@@ -69,10 +69,19 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
 
 ## Status
 
-- **Phase 0 (foundation): done** (branch `ccr-be69922d-w5i04m`, not merged into `main` yet). Angular 22.2.1 scaffold, strict TypeScript, ESLint, Prettier, Husky,
-  CI, proxy, every route as a placeholder, design references copied. The proxy was checked against a local stub, not
-  the hosted API. Details in [docs/progress.md](docs/progress.md).
+- **Phase 0 (foundation): done and merged into `main`.** Angular 22.2.1 scaffold, strict TypeScript, ESLint, Prettier,
+  Husky, CI, proxy, every route as a placeholder, design references copied. The proxy was checked against a local stub,
+  not the hosted API.
+- **Wave 1, lane 1A (kit foundation): done and merged into `main`** (PR #4). Generated `tokens.css` (`npm run tokens`,
+  `npm run tokens:check`), the design-system bundle on every page, `ThemeService`, `ah-icon`, `ah-logo`, `ahButton`,
+  `ah-panel`, `ah-field`, `ah-banner`, table helpers, `ah-source`, and the dev-only `/_kit` gallery with a light/dark
+  switch. Unit-tested and checked in headless Chromium; no API involved.
+- **Wave 1, lane 2A (API client): built and tested, not finished** (branch `claude/charming-clarke-tlb24e`, pushed).
+  `ApiClient` with the 19 operations of phases 3 to 6, `ApiError`, guards, `AuthStrategy`, `CurrentUser`, the runtime
+  `AppConfig`, fixtures and the vendored contract. Missing until `openapi-typescript`, `ajv` and `yaml` are approved and
+  installed: the generated types, `api:types`/`api:check` and `contract.spec.ts`. Never run against a real API.
 - **Lane 2C (pure domain): done** on branch `lane/2c-domain` (PR open, not merged). `src/app/domain/` holds the vocabulary
   mappings, the AIU and time helpers and the project's only diff implementation, with 218 new tests; the API types are
   provisional until lane 2A lands. Details in [docs/progress.md](docs/progress.md).
-- Next: wave 1 (lanes 1A and 2A; 2C awaiting review and merge).
+- Next: finish lane 2A (needs that approval) and merge lane 2C, then wave 2. Details in
+  [docs/progress.md](docs/progress.md).

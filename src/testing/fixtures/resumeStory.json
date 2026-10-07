@@ -1,0 +1,15 @@
+{
+  "key": "PROJ-118",
+  "title": "Rate-limit the public search endpoint",
+  "owner": "jordan@example.com",
+  "phase": "planning",
+  "status": "ready",
+  "haltReason": null,
+  "budgetNanoAiu": 20000000000,
+  "spentNanoAiu": 1700000000,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "currentRunId": null,
+  "version": 7,
+  "createdAt": "2026-10-05T11:00:00.000Z",
+  "updatedAt": "2026-10-06T10:01:00.000Z"
+}

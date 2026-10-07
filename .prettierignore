@@ -2,12 +2,13 @@
 docs/design/
 src/app/core/api/schema.d.ts
 src/styles/tokens.css
+src/styles/ahoy-bundle.css
 package-lock.json
 
-# Agent skill copies (three mirrors of the same files); user-approved on 2026-10-06.
+# Agent skills copied in from elsewhere (main, "Added skills"): never reformat them.
 .agents/
-.opencode/
 .github/skills/
+.opencode/
 
 # Build output and caches.
 dist/

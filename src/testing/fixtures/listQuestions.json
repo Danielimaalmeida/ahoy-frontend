@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "id": "Q1",
+      "round": 1,
+      "runId": "r-02",
+      "text": "Should the PDF include the company's VAT number and address block, or only the line items and totals?",
+      "recommendation": null,
+      "answer": "Include the VAT number and the full address block, same as the emailed receipt.",
+      "answeredBy": "sam@example.com",
+      "answeredAt": "2026-10-06T09:12:00.000Z",
+      "consumed": false
+    },
+    {
+      "id": "Q2",
+      "round": 1,
+      "runId": "r-02",
+      "text": "Where should the download be offered: on the receipt page only, or also as a bulk download from the order history?",
+      "recommendation": "Receipt page only for now; bulk download needs a background job and is better as its own story.",
+      "answer": null,
+      "answeredBy": null,
+      "answeredAt": null,
+      "consumed": false
+    },
+    {
+      "id": "Q3",
+      "round": 1,
+      "runId": "r-02",
+      "text": "The receipts service stores amounts in cents. Should the PDF round tax per line or on the total?",
+      "recommendation": "On the total, to match the amount charged.",
+      "answer": null,
+      "answeredBy": null,
+      "answeredAt": null,
+      "consumed": false
+    }
+  ]
+}
