@@ -254,14 +254,14 @@ describe("VoyageShell on the mock backend", () => {
       }
     });
 
-    it("shows the seven section tabs with the counts and the placeholder in the outlet", async () => {
+    it("shows the seven section tabs with the counts and the Plan tab (lane 4B) in the outlet", async () => {
       const page = await open("/voyages/PROJ-123/plan");
       const tabs = [...page.root.querySelectorAll("nav[aria-label='Voyage sections'] a")].map((a) => text(a));
       expect(tabs).toEqual(["Plan", "Questions 2", "Runs 4", "Gates 5", "Artifacts", "Ship's log", "Models"]);
       expect(
         page.root.querySelector("nav[aria-label='Voyage sections'] a[aria-current='page']")?.textContent,
       ).toContain("Plan");
-      expect(text(page.root.querySelector("ah-placeholder h1"))).toBe("Plan");
+      expect(page.root.querySelector("router-outlet + ah-plan-tab")).not.toBeNull();
       expect(text(page.root.querySelector("nav[aria-label='Breadcrumb']"))).toBe("Voyages / PROJ-123");
     });
 
