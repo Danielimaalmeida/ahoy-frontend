@@ -17,7 +17,6 @@ import { routes } from "./app.routes";
  */
 const CASES = [
   { url: "/voyages/PROJ-123/plan", text: "Plan", lane: "4B", title: "Plan · Ahoy" },
-  { url: "/voyages/PROJ-123/questions", text: "Questions", lane: "4C", title: "Questions · Ahoy" },
   { url: "/voyages/PROJ-123/runs", text: "Runs", lane: "5A", title: "Runs · Ahoy" },
   { url: "/voyages/PROJ-123/gates", text: "Gates", lane: "5B", title: "Gates · Ahoy" },
   { url: "/voyages/PROJ-123/artifacts", text: "Artifacts", lane: "5C", title: "Artifacts · Ahoy" },

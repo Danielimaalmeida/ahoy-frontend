@@ -129,5 +129,12 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
   run against a real API.
 
-- Next: review and merge lane 4A; then wave 4 (`docs/paralelos4.md`). Details in
+- **Wave 4, lane 4C (Questions): done on the mock backend, uncommitted, in review** (branch `claude/jolly-pascal-ngq59j`,
+  from `main` at 959a7b4, which holds lane 4A as PR #15). `/voyages/:key/questions` lists the questions by round (the newest
+  open, earlier ones folded) with "{k} of {n} answered" and a meter, an `ah-question-card` each, and "What happens next".
+  Answers are final: nothing is sent without a click on "Send answer", and "Use recommendation" only fills the field.
+  Unsent answers are drafts in memory and `sessionStorage` (`ahoy.draft.{key}.{Qn}`) that survive a conflict, a refresh of the
+  store and a page reload. 47 new tests; checked on `npm run start:mock` in headless Chromium; never run against a real API.
+
+- Next: review and merge lane 4C; the other lanes of wave 4 (`docs/paralelos4.md`) run in their own sessions. Details in
   [docs/progress.md](docs/progress.md).

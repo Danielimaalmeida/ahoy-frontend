@@ -1,10 +1,23 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 4A (voyage base: context, commands, header, tabs and dialogs), launched from
-`docs/paralelos3.md` section D on branch `claude/quirky-gates-t6b390`, from `main` at a2a49fe (all of waves 1 and 2, lane 2D
-included as PR #11). Lane 4A is committed and pushed with the user's approval, and `main` at 470c1e5 (lanes 3A, 3B and 3C,
-PR #12, #13 and #14) is merged in, with its conflicts resolved (`README.md`, this file and `src/app/app.routes.spec.ts`). Its
-pull request into `main` waits for review.**
+**Updated 2026-10-07 by lane 4C (Questions), launched from `docs/paralelos4.md` section B on branch
+`claude/jolly-pascal-ngq59j` through `/implement`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 4C is built, tested
+on the mock backend and checked in a browser. Nothing is committed: the user has not approved a commit yet (CLAUDE.md and
+paralelos4 rule 8).**
+
+- **Ran for 4C (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (105 files, **1946 tests**: the 1900
+  of `main`, 47 new, one placeholder row removed from `app.routes.spec.ts`) and `npm run format:check`, all green; 6 mutation
+  checks of the new tests (all caught); `npm run start:mock` in headless Chromium (light, dark, 390 px; PROJ-131 answered
+  through Q2 and Q3, and a draft kept through a page reload).
+- **Did not run for 4C:** anything against a real API, `--simulate` or TEST; browsers other than Chromium; a screen reader; a
+  pixel diff (compared by eye with `Questions`); the folded earlier round and the "not waiting for answers" form in a browser
+  (the mock has only one round; both are tested on the mock with a rewritten answer); `/code-review` findings are listed in
+  "Lane 4C" below.
+
+Earlier: **lane 4A (voyage base: context, commands, header, tabs and dialogs)**, launched from `docs/paralelos3.md` section D on
+branch `claude/quirky-gates-t6b390`, committed and pushed with the user's approval, with lanes 3A, 3B and 3C merged in; merged
+into `main` since (PR #15).
 
 - **Ran for 4A (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (88 files, **1607 tests**, 120 new)
@@ -168,6 +181,12 @@ YAML with Ajv; `npm run start:mock` serves it in the browser and `npm run mock:a
 in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.md`).
 Lane 2D has been merged since (PR #11).
 
+**Wave 4, lane 4C (Questions)** is built and tested on the mock backend, **uncommitted** (branch `claude/jolly-pascal-ngq59j`).
+`/voyages/:key/questions` lists `listQuestions` by round (the newest open, earlier rounds folded in `<details>`), each with
+"Round {r} · {Crew} asks", "{k} of {n} answered" and a meter, an `ah-question-card` per question and the "What happens next"
+panel. Answers are final: only a click on "Send answer" sends, "Use recommendation" fills and stops. What is typed is a draft
+in memory and in `sessionStorage` (`ahoy.draft.{key}.{Qn}`) until it is sent. Conflicts keep the text. See "Lane 4C" below.
+
 **Wave 3, lane 4A (voyage base)** is committed and pushed on `claude/quirky-gates-t6b390`, with `main` merged in, **in review**
 (pull request into `main`). `/voyages/:key` now
 shows the real voyage page on the `StoryStore`: breadcrumb, header (key, badge with the API words, title, the primary action for
@@ -197,10 +216,10 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-1. **User:** review and merge the lane 4A pull request (`claude/quirky-gates-t6b390` into `main`; section "Lane 4A" below, in
-   particular "Decisions and deviations" and the one edit outside the lane, `src/app/app.routes.spec.ts`). **When 4A is in
-   `main`, open `docs/paralelos4.md`** (wave 4 builds on `VoyageContext` and `CommandRunner`). Lanes 3A, 3B and 3C (PR #12, #13
-   and #14) and every earlier lane are already merged.
+1. **User:** review lane 4C (section "Lane 4C" below, in particular "Decisions and deviations" and the one edit outside the
+   lane, `src/app/app.routes.spec.ts`), then approve a commit; merge it into `main`. Lane 4A is merged (PR #15), and so are
+   3A, 3B, 3C and every earlier lane. The other lanes of wave 4 (4B, 4D, 5A, 5B, 5C) run in their own sessions from
+   `docs/paralelos4.md`; **when A to F are in `main`, open `docs/paralelos5.md`.**
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
@@ -240,6 +259,132 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 4C · Questions (2026-10-07)
+
+Launched from `docs/paralelos4.md`, section B, on `claude/jolly-pascal-ngq59j` (the branch this session was given; plan §9 would
+call it `lane/4c-questions`) through `/implement`, from `main` at 959a7b4. **Not committed:** CLAUDE.md and paralelos4 rule 8 ask
+for the user's approval first.
+
+**Pre-flight.** After `git fetch origin`, `main` at 959a7b4 holds the prerequisites: lane 4A (`VoyageContext`, `CommandRunner`,
+the shell and the `questions` route in `src/app/features/voyage/`) and lane 1C (`ah-question-card`). Node was v22.22.0, so every
+command ran on **Node 24.21.0** from `npx -y node@24`; `npm ci` installed the locked tree. **No dependency was added or
+changed.** Baseline on `main`: 104 files, 1900 tests.
+
+### What changed
+
+All under `src/app/features/voyage/tabs/questions/` (the lane's own directory) unless marked.
+
+| File                                        | What                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `questions.routes.ts`                       | The placeholder is replaced by `QuestionsTab` (title "Questions · Ahoy").                                                                                                                                                                                                              |
+| `questions-tab.ts`, `questions-tab.scss`    | The tab. Reads the questions from `VoyageContext.handle()`, groups them by round, draws one `ah-question-card` per question and the "What happens next" panel; sends through `context.commands`. Loading skeleton, "No questions", and "Lost contact with the harbour" with Try again. |
+| `question-rounds.ts`                        | Pure: `groupRounds` (newest first, "k of n", percent), `unanswered`, `answerProblem` (1 to 20 000 characters, after trim, counted as the contract counts them), `tooLongMessage`, `answerSentToast`.                                                                                   |
+| `question-drafts.ts`                        | `QuestionDrafts`: memory plus `sessionStorage` under `ahoy.draft.{key}.{Qn}`, every access in `try/catch`, read back only as a string; `DRAFT_STORAGE` token (the tab's `sessionStorage`, or `null` where the browser denies it).                                                      |
+| `app.routes.spec.ts` (**outside the lane**) | One placeholder row removed (`/voyages/PROJ-123/questions`), which asserted the 4C placeholder.                                                                                                                                                                                        |
+
+How it behaves:
+
+- **Rounds.** The newest round is a section with the heading "Round {r} · {Crew} asks" (the crew member comes from the run of
+  the question, else from the voyage's phase), "{k} of {n} answered" and a meter; earlier rounds are `<details>` folded under it.
+- **Cards.** Q1 answered is final (lock, who, when). Open questions show the recommendation with "Use recommendation" (it fills
+  the field and sends nothing), "Your answer" and "Send answer". An open question of a voyage that is not `awaiting_input` has no
+  form and says "This voyage isn't waiting for answers right now."
+- **Sending.** Only a click on "Send answer" sends `answerQuestion(key, Qn, {answer, expectedVersion})` with the trimmed text,
+  through `CommandRunner` (one request per double click). On `ok` the `202` story goes to the `StoryStore`, the answered
+  question replaces its row in the list, the field and the draft are cleared, and the toast says "Answer to Q2 sent. 1 question
+  left." or "Answer to Q3 sent. All questions answered: Cartographer is queued.".
+- **Drafts.** Each field starts from its draft and writes on every change. The fields live as long as the voyage is open, so a
+  conflict, a refresh of the story or of the list never touches them; a reload reads `sessionStorage`. Only a recorded answer (or
+  "Discard my text") clears one.
+- **Conflicts.** `stale_version`: the runner re-reads the story, the banner "This voyage changed since you opened it" shows under
+  the card, the text stays and a resend carries the new version. `already_answered`: the list is re-read, the card shows the
+  answer of whoever was first, the banner "Someone already answered" shows under it and the user's text stays in a "Your text, not
+  sent" block with "Discard my text". Any other failure is a banner under the card, with the text kept.
+- **Limits.** More than 20 000 characters (trimmed) shows a message under the card and sends nothing.
+
+### Tests (47 new, 3 files, plus one row removed)
+
+- **`question-rounds.spec.ts` (11):** grouping and order, "k of n", fully answered, empty, `unanswered`, 1 to 20 000 characters
+  after trim, characters counted not UTF-16 units, the length message, the two toasts.
+- **`question-drafts.spec.ts` (8):** the key, a reload (new instance), per-voyage isolation, only `clear` forgets, an emptied
+  text, storage that throws, no storage, the injected default.
+- **`questions-tab.spec.ts` (28, on the mock backend):**
+  - the list: PROJ-131 round header, "1 of 3 answered", Q1 final and Q2/Q3 open, the recommendations, "What happens next" with
+    18.9 AIU and the owner, PROJ-123 all answered, PROJ-109 "No questions", a rewritten answer for two rounds (newest open, the
+    other folded), a voyage not waiting for answers;
+  - final answers: "Use recommendation" sends nothing, "Send answer" disabled for blank text and sending nothing, the "Recorded as"
+    hint, 20 001 characters refused with no request, 20 000 accepted;
+  - sending: the exact body `{answer, expectedVersion}` and the toast "1 question left", then Q3 and "All questions answered:
+    Cartographer is queued" with the badge moving to Queued and no reload, the double click;
+  - drafts: written under `ahoy.draft.PROJ-131.Q3`, "Use recommendation" is a draft, back after a reload, kept through an answer
+    and through a forced conflict, deleted once sent, kept when the request fails (`503`), isolated between voyages;
+  - conflicts: `stale_version` (notice, text, resend with the new version), `already_answered` raced for real on the mock (the
+    other person's answer and the user's text), discarding a kept text, a failed send as a banner under its own card;
+  - loading: `503` on the list shows Try again.
+
+**Mutation checks (6, all caught):** no length guard before sending; the draft kept after a recorded answer; no banner for a
+failed send; the toast counting the answered question as left; drafts not written to `sessionStorage`; rounds oldest first.
+
+### Verified in the browser
+
+`npm run start:mock` (port 4300) in headless Chromium 1194, driven by the session's global Playwright (not a dependency of the
+repo; the script was in the session scratchpad). PROJ-131 against the `Questions` board: round heading, "1 of 3 answered" with
+the meter, Q1 final, Q2 and Q3 with their recommendations and the side panel; a draft typed in Q3 was in `sessionStorage` and
+came back after `page.reload()`; "Use recommendation" filled Q2 and sent nothing; Q2 and Q3 sent as "POC test answer, not a
+product decision." (mock backend only) gave the two toasts and the badge went to Queued without a reload. Dark theme
+(`data-theme="dark"`) and 390 px: no horizontal scroll, the side panel drops below. Console: only the known `/config.json` 404.
+
+### Review (`/code-review`, standards and spec, two sub-agents)
+
+Fixed after it:
+
+- the round templates (`let-view`) were typed `any` under `strictTemplates`: a `RoundContext` directive with
+  `ngTemplateContextGuard` types them;
+- dead code removed: `QuestionRound.open` and `QuestionDrafts.has()` were read only by specs;
+- "What happens next" promised "the voyage is queued" even when the voyage was not `awaiting_input`, and showed an invented model
+  ("its own model · default") before the model plan was read: now it says the voyage isn't waiting for answers, and leaves the
+  model sentence out until `getStoryModels` has answered.
+
+Kept as they are, as judgement calls (none breaks a CLAUDE.md rule):
+
+- the in-memory drafts live in the tab, so with `sessionStorage` denied a draft is lost when the user leaves the tab (the
+  context belongs to 4A);
+- the "Your text, not sent" block, the locked form and the loading and error states, which the spec does not list;
+- an error banner stays under its card until the next send;
+- `viewOf` and `QuestionsTab` hold more logic than they might (a split into pure helpers would be cleaner, not needed now).
+
+### Decisions and deviations
+
+1. **No `answer` method on `VoyageContext`.** The context belongs to lane 4A. The tab sends through `context.commands.run(...)`
+   with `ApiClient.answerQuestion` and puts the `202` story in the `StoryStore` itself, as 4A's note for wave 4 says.
+2. **The 20 000-character limit is checked by the tab, not by the card.** `ah-question-card` only disables "Send answer" for blank
+   text. The tab refuses a longer answer, with a message under the card; the button stays enabled but sends nothing.
+3. **The folded rounds and the open round are different elements** (`<details>` and `<section>`) around one shared template, so
+   the newest round's heading is a real `h2` and not a summary.
+4. **"Your text, not sent"** (with "Discard my text") is an addition: the phase file asks only that the user's text "stays
+   visible" under the answer of whoever was first. The discard button stops a stale draft from showing on every visit.
+5. **"What happens next" with nothing open** says "Every question is answered. Nothing on this voyage is waiting for an answer."
+   instead of promising a run.
+6. **The card's note** ("used the recommendation, edited") from the wireframe is not shown: the API does not say how an answer was
+   written, so the tab does not guess.
+7. **The toast counts every unanswered question of the voyage, in every round**, because the API makes the voyage ready only
+   when the last pending question is answered.
+8. **`already_answered` is tested by a race on the mock** (the other answer lands first and the request is replayed with the new
+   version), because the mock's `conflictNext = "already_answered"` answers 409 without recording anyone's answer.
+9. **One edit outside the lane:** `app.routes.spec.ts` (one row), as 3B and 4A did for their routes.
+
+### Needs from other lanes
+
+- **Lane 1C (`ah-question-card`):** a `maxLength` input (20 000) so the card itself disables "Send answer" and says why, instead of
+  the tab doing it (decision 2). The card also has no place for a message under the textarea, so the tab puts it below the card.
+- **Lane 4A (`VoyageContext`):** optionally an `answerQuestion(id, text)` method beside `stop`, `resume` and `setBudget`, so no
+  tab needs the `ApiClient` for a command (decision 1). It is not needed for 4C to work.
+- **Lane 2A / `core/api`:** nothing new.
+
+### Next
+
+User review and approval to commit. Then the other lanes of wave 4 and, when A to F are in `main`, `docs/paralelos5.md`.
 
 ## Lane 4A · Voyage base: context, commands, header, tabs and dialogs (2026-10-07)
 
