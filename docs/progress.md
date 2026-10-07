@@ -1,15 +1,20 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 2C (pure domain), which merged `main` (phase 0, lane 1A and the lane 2A branch) into `lane/2c-domain`. Lane 2C is done and awaits review and merge. Lane 2A is built and tested but NOT finished: the three dev dependencies it is approved to add (`openapi-typescript`, `ajv`, `yaml`, plan §10) could not be installed, so the generated types, `api:types`, `api:check` and `contract.spec.ts` are missing.**
+**Updated 2026-10-07 by the lane 2A finishing session (branch `claude/eager-cray-4c3z42`, started from `main` at 56e815a, which already holds phase 0 and lanes 1A, 2A and 2C). Lane 2A is now complete offline: the three dev dependencies are installed, `schema.d.ts` is generated, `api:types` and `api:check` exist (and `lint` runs `api:check`), `core/api/types.ts` is made of aliases of the generated types and `contract.spec.ts` is green. At the user's request (the contract is sovereign) the session also corrected `src/app/domain/types.ts`, which did not match the contract, and the domain code that read the wrong shapes, and fixed `sync-openapi.mjs`. Nothing is committed or pushed.**
 
-- **Ran for 2A, on the merged tree (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm run build`, `npm run typecheck`
-  (`check-boundaries: ok`), `npm run lint` (with `tokens:check`), `npm test` (23 files, **582 tests**: 15 of phase 0, 83 of lane 1A
-  and 484 of lane 2A) and `npm run format:check`, all green. On the lane's own tree before the merge: 499 tests; `npm start` in
-  headless Chromium (the app boots with the new initializer and interceptor); the client over Angular's real `fetch` backend with a
-  fake `fetch`; five mutation checks of the tests.
+- **Ran for the 2A finishing pass (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`, copied into the session scratchpad and
+  put first on `PATH`; the system Node was 22.22.0):** `npm ci`, the approved `npm install`, `npm run build`,
+  `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and now `api:check`), `npm test` (34 files,
+  **910 tests**: the 800 of `main`, 82 in the new `contract.spec.ts`, 18 new in `api-client.spec.ts` and 10 for the domain
+  types: 6 in the new `domain-types.spec.ts`, 3 in `models.spec.ts`, 1 in `outcome.spec.ts`), `npm run format:check`,
+  `npm run api:check`, and `npm ci` again from the new lockfile, all green. Also eleven mutation checks of the new tests and
+  scripts, and nine runs of `sync-openapi.mjs` (section "Lane 2A").
 - **Did not run for 2A:** `scripts/smoke-api.mjs` and `scripts/capture-fixtures.mjs` (written, only syntax-checked: they need a
-  local API, as the lane says); anything against the `ahoy-hosted` API (no Docker daemon, no Postgres server); `api:types`,
-  `api:check`, `contract.spec.ts` (not delivered); the CI workflow (a pull request runs it).
+  local API, as the lane says); anything against the `ahoy-hosted` API (no Docker daemon, no Postgres server); the CI workflow
+  (a pull request runs it, and it does not run `api:check` yet); `sync-openapi.mjs` with an https URL.
+- **Earlier, for the 2A first pass (2026-10-06):** 499 tests on the lane's own tree, `npm start` in headless Chromium (the app
+  boots with the new initializer and interceptor), the client over Angular's real `fetch` backend with a fake `fetch`, and
+  five mutation checks of the tests.
 - **Ran for 1A (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, `npm run build`, `npm run typecheck`,
   `npm run lint` (now also `tokens:check`), `npm test` (98 tests, 11 files), `npm run format:check`, all green;
   `/_kit` served by `ng serve` and screenshotted in headless Chromium in light and dark at 1100 px and 390 px, next to
@@ -26,30 +31,33 @@ the design references in `docs/design/`, the generated tokens and the design-sys
 `ah-logo` and the primitives (`ahButton`, `ah-panel`, `ah-field`, `ah-banner`, table helpers, `ah-source`) with the dev-only `/_kit`
 gallery.
 
-Wave 1, lane 2A (API client) is on branch `claude/charming-clarke-tlb24e`: `ApiClient` with the 19 operations of phases 3 to 6,
-`ApiError` and its predicates, the manual guards, `parseRunProgress`, `readStoryState`, the `AuthStrategy` seam, `CurrentUser`, the
-runtime `AppConfig` (and `API_BASE` taken from it), the fixtures and the vendored contract. It is waiting on one approval to be
-complete (see "Start here next"). Lane 2C of wave 1 is independent of it. No screen shows data yet and no call has ever reached a
-real API (risk R1 is still open).
+Wave 1 is merged: lane 2A (API client, PR #5) and lane 2C (pure domain, PR #3). Lane 2A's first pass has `ApiClient` with the 19
+operations of phases 3 to 6, `ApiError` and its predicates, the manual guards, `parseRunProgress`, `readStoryState`, the
+`AuthStrategy` seam, `CurrentUser`, the runtime `AppConfig` (and `API_BASE` taken from it), the fixtures and the vendored contract.
+**Its finishing pass is in the working tree of `claude/eager-cray-4c3z42`, not committed:** `openapi-typescript`, `ajv` and `yaml`
+are installed (with an `overrides` entry, see the lane 2A section), `schema.d.ts` is generated, `api:types` and `api:check` exist,
+`core/api/types.ts` is made of aliases of the generated types, and `contract.spec.ts` validates the fixtures, the problems and the
+request bodies against the YAML with Ajv. No screen shows data yet and no call has ever reached a real API (risk R1 is still open).
 
-**Lane 2C (domínio puro)** is done, committed on branch `lane/2c-domain` (PR open, not merged): `src/app/domain/` now has the vocabulary
-mappings (`statusPresentation`, `outcomePresentation`, `explainHalt`), the AIU and time helpers, `CREW` and the only
-diff implementation of the project (`diff` 9.0.0), with **218 new tests** (233 in the suite). The API types are
-provisional until lane 2A lands `schema.d.ts`. `npm run format:check` is green: the 24 skill files added by commit
-132728f are ignored in `.prettierignore` (decided by the user on 2026-10-06).
+**Lane 2C (domínio puro)** is merged: `src/app/domain/` has the vocabulary mappings (`statusPresentation`, `outcomePresentation`,
+`explainHalt`), the AIU and time helpers, `CREW` and the only diff implementation of the project (`diff` 9.0.0), with 218 tests.
+Its `types.ts` was still provisional and did not match the contract. **The 2A finishing pass corrected it, at the user's request
+(the contract is sovereign), in the same working tree, not committed:** the types now have the contract's fields and enums,
+`reviewersConflict` reads the plan as the API sends it, and `core/api/domain-types.spec.ts` fails when the two drift apart.
+What changed, and the two presentation choices that need a review, are under "Needs from lane 2C" in the lane 2A section.
 
 ## Start here next
 
-1. **User, to finish lane 2A:** approve installing `openapi-typescript@7.13.0`, `ajv@8.20.0` and `yaml@2.9.1` as dev
-   dependencies (all three are on the approved list in plan §10; versions from `npm view` on 2026-10-06). A permission
-   classifier blocked `npm install` in the session that did lane 2A, so give the approval in a session that is allowed to
-   run it (or allow `npm install` for it), or run
-   `npm install --save-dev openapi-typescript@7.13.0 ajv@8.20.0 yaml@2.9.1` yourself. Expect npm to refuse, because
-   `openapi-typescript@7.13.0` declares the peer `typescript ^5.x` and the project is on `~6.0.3`; the fix is an `overrides`
-   entry in `package.json` (`"openapi-typescript": { "typescript": "$typescript" }`), and whether the generator works on
-   TypeScript 6 is not yet known. The steps that follow are under "Not done" in the lane 2A section.
-2. **User:** review the lane 2A pull request (`claude/charming-clarke-tlb24e` into `main`). The one edit outside the lane's
-   directories is `src/app/app.config.ts` (see "Decisions and deviations", 2).
+1. **User:** approve the commit and push of this working tree (branch `claude/eager-cray-4c3z42`, started from `main` at 56e815a, so
+   there is nothing to merge in first). **Not approved yet.** It
+   changes `package.json` and `package-lock.json` (three dev dependencies, an `overrides` entry, two scripts, `lint`), adds
+   `schema.d.ts`, `src/testing/fixtures/openapi.json` and `contract.ts`, `scripts/openapi-mirror.mjs`, `core/api/contract.spec.ts`
+   and `core/api/domain-types.spec.ts`, and edits `core/api/types.ts`, `api-client.spec.ts`, `scripts/sync-openapi.mjs`,
+   `.prettierignore`, two READMEs and, in `src/app/domain/` (lane 2C's), `types.ts`, `models.ts`, `outcome.ts` and their specs.
+   Two commits would be natural: the lane 2A finishing pass, and the domain types.
+2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
+   cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
+   from lane 2C" in the lane 2A section.
 3. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
    Angular 22 rejects). Until then each agent must put `npx node@24` first on its `PATH` (see "Prompt for a new
    session"). Proposed setup script, **untested**: `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
@@ -61,10 +69,13 @@ provisional until lane 2A lands `schema.d.ts`. `npm run format:check` is green: 
    "Lane 1A"). The report text was handed to the user; whether it was sent is not recorded here. When the design system
    has fixed them, re-sync `docs/design/` and `src/styles/ahoy-bundle.css` and delete the matching rules in
    `src/styles/_ahoy-angular.scss`.
-5. **Wave 1:** **2C** (pure domain) is done on `lane/2c-domain`, awaiting review and merge; **6D** is optional (`docs/paralelos1.md`). With 1A and 2C in `main`, wave 2
-   lanes **1B** and **1C** can start (`docs/paralelos2.md`). Lanes **2B** and **2D** need 2A _and_ 2C in `main`, and 2D reuses the
-   Ajv helper that comes with `contract.spec.ts`, so finish 2A first.
-6. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
+5. **Done, for the user to know:** CI now runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
+   is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
+6. **Wave 2:** **1B** and **1C** can start (`docs/paralelos2.md`). Lanes **2B** and **2D** have 2A and 2C in `main`; 2D reuses
+   the Ajv helper `src/testing/fixtures/contract.ts` that this pass added. The domain types now match the contract, but the other
+   lanes only see them once this pull request (#7) is merged. 2D needs the 2A finished in `main`, which this pull request does
+   (`docs/paralelos2.md`). **6D** is optional (`docs/paralelos1.md`).
+7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
    confirm the `state.json` field names `readStoryState` reads. Also `curl -s localhost:4200/api/v1/health` and
@@ -76,13 +87,6 @@ provisional until lane 2A lands `schema.d.ts`. `npm run format:check` is green: 
 > `<id>`; follow the protocol in §9 of the overview. First run `node -v`: if it is below 22.22.3, run `npx -y node@24 -v`
 > and put that binary first on your `PATH` for every command (see "Node in cloud sessions" below). Don't commit or push.
 > Finish with your lane's report in `docs/progress.md`.
-
-To finish lane 2A after the dependencies are approved:
-
-> Read `CLAUDE.md`, `docs/progress.md` (the lane 2A section, "Not done") and `docs/plan/phase-2-data-layer.md`. Finish
-> **only** lane 2A: install the three approved dev dependencies at the versions in the report, generate `schema.d.ts`, add
-> `api:types` and `api:check`, switch `core/api/types.ts` to the generated types, add `contract.spec.ts` with the mirror of
-> the contract as the report describes it, and update the lane section. Don't commit or push.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
 
@@ -444,6 +448,8 @@ Decisões que convém rever:
 - Os índices de `changedBlocks` referem-se a `markdownBlocks(next)`; `markdownBlocks` fica exportada para a 1C/4B
   partirem o markdown da mesma maneira.
 - `types.ts` é provisório: não há `schema.d.ts` em `main` (a 2A ainda não correu).
+  - **Corrigido a 2026-10-07 pela sessão que terminou a 2A**, a pedido do utilizador (o contrato é soberano): os tipos têm agora os
+    campos e os enums do contrato, e `reviewersConflict` lê `slots` como lista. Ver "Needs from lane 2C" na secção da lane 2A.
 
 ### Provas (offline, 0 AIU, Node 24.21.0)
 
@@ -487,14 +493,17 @@ Decisões que convém rever:
 
 ---
 
-## Lane 2A · API client (2026-10-06)
+## Lane 2A · API client (2026-10-06, finished 2026-10-07)
 
-**Built and tested, not finished.** The lane may add `openapi-typescript`, `ajv` and `yaml` (plan §10). The session's
-permission classifier denied the `npm install` of them ("Untrusted Code Integration") and the lane did not try another way
-round it: no `npx`, no hand-edited `package.json`, no use of the copies of `ajv` and `yaml` that other packages bring in
-`node_modules`. Everything that does not need them is done and verified; what is left is under "Not done".
+**Done, offline.** The first pass (2026-10-06) built everything that needed no new dependency; the session's permission classifier
+had denied the `npm install` of `openapi-typescript`, `ajv` and `yaml` ("Untrusted Code Integration"), and that lane did not try
+another way round it. The finishing pass (2026-10-07, "Finishing pass" below) ran the install the user approved, generated
+`schema.d.ts`, added `api:types` and `api:check`, moved `core/api/types.ts` onto the generated types and added `contract.spec.ts`.
+It is in the working tree of `claude/eager-cray-4c3z42`, started from `main` at 56e815a (which already had this lane's first pass as
+PR #5, lane 1A and lane 2C), so there was nothing to merge in. **Nothing is committed or pushed** (CLAUDE.md). Still true: the client
+has never met a real API.
 
-Two commits on branch `claude/charming-clarke-tlb24e`: the lane's own commit (from `main` at 132728f), pushed after the user
+First pass: two commits on branch `claude/charming-clarke-tlb24e`: the lane's own commit (from `main` at 132728f), pushed after the user
 approved it in the session (CLAUDE.md requires that approval; the environment's stop hook had only asked for a push), and a merge
 of `main` at d29002b (lane 1A, PR #4), made when the user asked for a pull request into `main`, ready for review. The merge had
 three text conflicts, all places where both lanes added lines (`package.json` scripts, the README Status bullets,
@@ -503,48 +512,80 @@ three text conflicts, all places where both lanes added lines (`package.json` sc
 
 ### What changed
 
-| #   | Deliverable                             | State                | Where                                                                                                                                                                                                                                                                  |
-| --- | --------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Vendored contract                       | **partly**           | `openapi/ahoy-v1.yaml` (the hosted file, byte for byte, under a 3-line header with the source and the commit), `scripts/sync-openapi.mjs`, `npm run api:sync`. **Missing:** `api:types`, `api:check`, `schema.d.ts`.                                                   |
-| 2   | `ApiClient`                             | done                 | `core/api/api-client.ts`: the 19 operations of phases 3 to 6, each `Promise<ApiResult<T>>`, never rejecting.                                                                                                                                                           |
-| 3   | `ApiError`                              | done                 | `core/api/api-error.ts`: `ApiError` (`problem`, `network`, `invalid_response`), `ApiResult`, 12 predicates plus `isUnreachable`, `formControlPath`, `fieldErrors`.                                                                                                     |
-| 4   | Guards                                  | done                 | `core/api/guard-kit.ts`, `guards.ts`, `run-progress.ts` (`parseRunProgress`), `story-state.ts` (`readStoryState`), `types.ts` (wire types, hand-written for now).                                                                                                      |
-| 5   | Auth seam and `CurrentUser`             | done                 | `core/auth/auth-strategy.ts` (`AuthStrategy`, `NoAuthStrategy`, `AUTH_STRATEGY`), `auth.interceptor.ts`, `current-user.ts`. No request carries `Authorization`.                                                                                                        |
-| 6   | `AppConfig`                             | done                 | `core/config/app-config.ts` (`parseAppConfig`, `loadAppConfig`, `AppConfigStore`, `initAppConfig`), `core/api/api-base.ts` (`API_BASE` from the config).                                                                                                               |
-| 7   | Fixtures and `contract.spec.ts`         | **partly**           | `src/testing/fixtures/`: one JSON per operation (19) and `problems.json` (one per problem code, 15). **Missing:** `contract.spec.ts`.                                                                                                                                  |
-| 8   | `smoke-api.mjs`, `capture-fixtures.mjs` | written, **not run** | `scripts/`. Both refuse any host but this machine, need `--confirm-simulate`, never send `Authorization`, and `capture-fixtures` only does GETs. Output of the capture goes to `src/testing/fixtures/captured/`, which a `.gitignore` keeps out of git until reviewed. |
+| #   | Deliverable                             | State                | Where                                                                                                                                                                                                                                                                                                                                          |
+| --- | --------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Vendored contract                       | done                 | `openapi/ahoy-v1.yaml` (the hosted file, byte for byte, under a 3-line header with the source and the commit), `scripts/sync-openapi.mjs`, `npm run api:sync`; finishing pass: `npm run api:types` (writes `core/api/schema.d.ts` and the JSON mirror `src/testing/fixtures/openapi.json`), `npm run api:check`, `scripts/openapi-mirror.mjs`. |
+| 2   | `ApiClient`                             | done                 | `core/api/api-client.ts`: the 19 operations of phases 3 to 6, each `Promise<ApiResult<T>>`, never rejecting.                                                                                                                                                                                                                                   |
+| 3   | `ApiError`                              | done                 | `core/api/api-error.ts`: `ApiError` (`problem`, `network`, `invalid_response`), `ApiResult`, 12 predicates plus `isUnreachable`, `formControlPath`, `fieldErrors`.                                                                                                                                                                             |
+| 4   | Guards                                  | done                 | `core/api/guard-kit.ts`, `guards.ts`, `run-progress.ts` (`parseRunProgress`), `story-state.ts` (`readStoryState`), `types.ts` (aliases of the generated types since the finishing pass).                                                                                                                                                       |
+| 5   | Auth seam and `CurrentUser`             | done                 | `core/auth/auth-strategy.ts` (`AuthStrategy`, `NoAuthStrategy`, `AUTH_STRATEGY`), `auth.interceptor.ts`, `current-user.ts`. No request carries `Authorization`.                                                                                                                                                                                |
+| 6   | `AppConfig`                             | done                 | `core/config/app-config.ts` (`parseAppConfig`, `loadAppConfig`, `AppConfigStore`, `initAppConfig`), `core/api/api-base.ts` (`API_BASE` from the config).                                                                                                                                                                                       |
+| 7   | Fixtures and `contract.spec.ts`         | done                 | `src/testing/fixtures/`: one JSON per operation (19), `problems.json` (15), the mirror `openapi.json`, the Ajv helper `contract.ts` (lane 2D reuses it); `core/api/contract.spec.ts` (82 tests).                                                                                                                                               |
+| 8   | `smoke-api.mjs`, `capture-fixtures.mjs` | written, **not run** | `scripts/`. Both refuse any host but this machine, need `--confirm-simulate`, never send `Authorization`, and `capture-fixtures` only does GETs. Output of the capture goes to `src/testing/fixtures/captured/`, which a `.gitignore` keeps out of git until reviewed.                                                                         |
 
 The 19 methods: `getHealth`, `listStories`, `startStory`, `getStory`, `stopStory`, `resumeStory`, `setStoryBudget`,
 `getStoryModels`, `setStoryModels`, `listStoryRuns`, `getRun`, `listQuestions`, `answerQuestion`, `listGateRecords`,
 `decideHumanGate`, `getStoryState`, `listArtifacts`, `getArtifactContent`, `listStoryEvents`. The phase 7 operations and the
 stream (2B) are not there, as the plan says.
 
-### Not done (all of it needs the install)
+### Finishing pass (2026-10-07)
 
-1. `npm install --save-dev openapi-typescript@7.13.0 ajv@8.20.0 yaml@2.9.1` (exact versions from `npm view`, 2026-10-06; npm
-   writes them with `^`, as CLAUDE.md wants for dev dependencies). `openapi-typescript@7.13.0` declares the peer
-   `typescript ^5.x` and the project is on `~6.0.3`, so add `"overrides": { "openapi-typescript": { "typescript": "$typescript" } }`
-   to `package.json`. **Not tested:** whether the generator works on TypeScript 6 (it uses the compiler API). If it does not, stop and ask.
-2. Scripts `api:types` (`openapi-typescript openapi/ahoy-v1.yaml -o src/app/core/api/schema.d.ts --immutable`) and `api:check`
-   (the same with `--check`; confirm the flag in 7.13.0, else regenerate to a temporary file and compare). `schema.d.ts` is already
-   ignored by ESLint and Prettier.
-3. In `core/api/types.ts`, turn each type into an alias of `components["schemas"][...]` and add type-level equality checks for
-   the enum arrays (`STORY_STATUSES` and the others stay as runtime arrays). It is the only file that mentions the shape of the API.
-4. `contract.spec.ts`. **How it has to read the YAML, from throw-away probes that were run and then removed:** a spec cannot
-   read `openapi/ahoy-v1.yaml` itself. `node:fs` in a spec fails `tsc` and `ng test` (TS2591: `@types/node` is not installed, and
-   is not on the approved list); a TypeScript import of a file outside `src/` fails `check-boundaries` ("imports from outside
-   src/"); a `?raw` import fails too (TS2307, and the Angular build). A JSON import works (the fixtures prove it). Untested: a
-   `loader` entry for `.yaml` in `angular.json`, which this lane does not own. So: let `sync-openapi.mjs` also write
-   `src/testing/fixtures/openapi.json` (the YAML parsed with `yaml`), make `api:check` verify that this mirror still equals the YAML, and let
-   the spec import the JSON and validate with `Ajv2020` from `ajv/dist/2020`, `{ strict: false, allErrors: true }`,
-   `ajv.addSchema({ $id: "ahoy", components })` and the `#/components/` to `ahoy#/components/` rewrite that the hosted server's own
-   `loadContract` and `wrap` use. `ajv-formats` is not on the approved list, so register `date-time` by hand with
-   `ajv.addFormat`. What it must check: every fixture against the success response of its operation, every entry of
-   `problems.json` against `Problem`, the request bodies of the `ApiClient` spec against the request schemas, and that the enum arrays of
-   `types.ts` equal the YAML's. Put the Ajv helper in `src/testing/fixtures/` so that lane 2D can reuse it ("as 2A does").
-5. Update this section and the README line, and run the whole chain again.
+All on Node 24.21.0 (`npx -y node@24`; the system Node was 22.22.0), offline, 0 AIU. The user's explicit approval covered exactly
+`npm install --save-dev openapi-typescript@7.13.0 ajv@8.20.0 yaml@2.9.1`, the `overrides` entry if npm refused, and nothing else.
 
-### Proof
+1. **Install.** `npm ci` first (384 packages) to get a baseline. The approved command was then refused by npm with `ERESOLVE`:
+   `openapi-typescript@7.13.0` declares the peer `typescript ^5.x`, the project is on `~6.0.3`. The `overrides` entry the report
+   described was added (`"openapi-typescript": { "typescript": "$typescript" }`) and the same command ran again: 26 packages added
+   (the three, plus `openapi-typescript`'s own dependencies such as `@redocly/openapi-core`), `0 vulnerabilities`. `npm ls`: one
+   `typescript@6.0.3`, `ajv@8.20.0`, `yaml@2.9.1`, `openapi-typescript@7.13.0 overridden`. The lockfile diff is only additions: no
+   package that was already there changed version (`ajv` 8.20.0 and `yaml` 2.9.1 were already in `node_modules` through other
+   packages, so they became direct dependencies without a second copy; ESLint keeps its own `ajv@6`). `npm ci` from the new lockfile
+   works, which is what CI runs. `package.json` has them as `^8.20.0`, `^7.13.0`, `^2.9.1` (CLAUDE.md: dev dependencies use `^`).
+   **Does the generator work with TypeScript 6? Yes**, on 6.0.3: it generated 1619 lines in about 100 ms, a second run gave
+   a byte-identical file, `tsc` with every strict flag of the project accepts the result (and, once `types.ts` imports it, the whole
+   app and spec compile), `--check` exits 0 on a fresh file and exits 1 ("Generated types are not up-to-date!") on a tampered one.
+   Not proven: that a newer `openapi-typescript` keeps working on TypeScript 6; the override only silences the declared peer.
+2. **Scripts.** `api:types` = `openapi-typescript openapi/ahoy-v1.yaml -o src/app/core/api/schema.d.ts --immutable && node
+scripts/openapi-mirror.mjs`; `api:check` = the same with `--check` (the flag exists in 7.13.0), then `node
+scripts/openapi-mirror.mjs --check`. Beyond the report: both also handle the JSON mirror (item 4), so one command regenerates, and
+   one checks, everything derived from the YAML. `schema.d.ts` and the mirror are in `.prettierignore` (the mirror because Prettier
+   would reflow its arrays); `schema.d.ts` was already ignored by ESLint.
+3. **`core/api/types.ts`.** Every type is an alias of `components["schemas"][...]` (or of an `operations[...]` parameter or answer),
+   and it is still the only file that imports `schema.d.ts`. Each of the 12 runtime lists (`STORY_STATUSES` and the others) is written
+   through `listOf<Union>()([...])`, a type-level check: the call fails to compile unless the list is exactly the members of the
+   generated union, and the error names `missingFromList` and `notInContract`. `guards.ts`, `api-client.ts` and every spec compiled
+   against the generated types without a change (`Shape<T>` still makes a guard that forgets or invents a field fail). **Four types are not plain aliases, on purpose, and each says why in the file:** `Problem` (`code` stays a `string`: errors must
+   never fail on a code a newer API added; the enum is `ProblemCode` and `PROBLEM_CODES`), `AhoyEvent` (`payload`) and
+   `StoryStateDocument` (`state`), which stay `Readonly<Record<string, unknown>>` because the contract says only `type: object`, which
+   the generator turns into `Record<string, never>` (nothing could be read from it), and `EventPage`, whose `items` are those
+   `AhoyEvent`s. `ItemList<T>`, `ArtifactContent` and `ifNoneMatch` of
+   `ArtifactContentQuery` are client-side shapes that are not in the contract.
+4. **`contract.spec.ts`**, as the report described: `scripts/openapi-mirror.mjs` (used by `api:types`, `api:check` and now by
+   `sync-openapi.mjs`) parses the YAML with `yaml` (`uniqueKeys`, so a duplicate key is an error) into `src/testing/fixtures/openapi.json`;
+   `api:check` compares its parsed value with the YAML's, not bytes. The Ajv helper is `src/testing/fixtures/contract.ts`: `Ajv2020`
+   from `ajv/dist/2020` with `{ strict: false, allErrors: true }`, the document registered as `ahoy`, the `#/components/` to
+   `ahoy#/components/` rewrite, and `date-time` registered by hand (RFC 3339 with a real calendar date, leap years and `Z`). It works
+   inside `ng test` (CommonJS Ajv under the Angular builder), with no `loader` entry in `angular.json`. The spec lives in
+   `core/api/contract.spec.ts` (82 tests) and checks: the contract has exactly the 19 operations the client implements plus the 5
+   it does not yet (the four phase 7 ones and `streamEvents`), so a re-sync that adds an operation fails here; each of the 18 JSON
+   fixtures against the success schema of its operation; `getArtifactContent.json` by its parts (the contract answers raw text);
+   every entry of `problems.json` against `Problem`, and that there is one per code; request bodies; the validator itself (it names
+   the field for a negative or fractional amount, a missing field, a bad status, a malformed key, an extra field and an impossible
+   timestamp, and lists every difference); `isDateTime` on 21 cases; and each of the 12 lists of `types.ts` against the YAML's enum.
+   **The bodies the client actually sends are validated in `api-client.spec.ts`**, in the test that already inspects them (7
+   commands), and a new test per operation (18) checks that the method and the path the table expects are the ones the contract
+   gives that `operationId`: 134 tests became 152.
+5. **Domain types, at the user's request.** The finishing pass found that `src/app/domain/types.ts` did not match the contract
+   (lane 2C's directory; the user said to correct it: the OpenAPI contract is sovereign). "Needs from lane 2C" below has what was
+   wrong and what changed. `core/api/domain-types.spec.ts` (6 tests) keeps it honest: `expectTypeOf<Domain.X>().toEqualTypeOf<Api.X>()`
+   for 7 enums and 11 resources, which `npm run typecheck` checks, plus run-time checks that the domain functions accept real values.
+6. **`api:check` in CI.** `npm run lint` is now `eslint . && npm run tokens:check && npm run api:check`, as lane 1A did with
+   `tokens:check`; CI runs `lint`, so it enforces the generated types and the mirror without touching `ci.yml` (lane 6D's).
+7. **`sync-openapi.mjs` keeps the provenance of the vendored copy** (decision 17): reading `openapi/ahoy-v1.yaml` itself keeps the
+   `# Source:` and `# Commit:` its header already records; a vendored copy with no such header is refused.
+8. **Docs.** This section, the header and handoff of this file, the README Status and `src/testing/fixtures/README.md`.
+
+### Proof, first pass (2026-10-06)
 
 All on Node 24.21.0, offline, 0 AIU.
 
@@ -577,6 +618,41 @@ All on Node 24.21.0, offline, 0 AIU.
   changes nothing, and it refuses a file outside a git checkout without `--commit`, a file that is not OpenAPI 3.1, a missing file,
   an `http:` URL and a malformed `--commit`.
 
+### Proof, finishing pass (2026-10-07)
+
+All on Node 24.21.0, offline, 0 AIU. No API, mock or real, was involved.
+
+- **Chain:** `npm run build`, `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (with `tokens:check`), `npm test`,
+  `npm run format:check` and `npm run api:check`, all exit 0 (outputs under "Final check"). `npm ci` from the new lockfile exit 0.
+- **Tests: 34 files, 910 tests, 0 failed, 0 skipped** (800 on `main` before): `core/api/contract.spec.ts` **82 new**,
+  `core/api/api-client.spec.ts` 134 → 152 (18 new: the method and path of each operation against the contract), and 10 for the domain
+  types: `core/api/domain-types.spec.ts` **6 new**, `domain/models.spec.ts` 3 new (the Lookouts in a list, two other slots on one model, the effort
+  sources) and `domain/outcome.spec.ts` 1 new (run `awaiting_input`).
+- **Mutation checks**, each run on a backup and restored afterwards (fixtures, YAML, mirror and `schema.d.ts` compared with `cmp`
+  or `git diff` after each):
+
+  | #   | Break                                                                                                                                                                      | Result                                                                                                                                                          |
+  | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | A   | `getStory.json`: `spentNanoAiu` 12.5                                                                                                                                       | 2 tests fail: `/spentNanoAiu must be integer`                                                                                                                   |
+  | B   | `listStories.json`: the first story loses `version`                                                                                                                        | 1 fails: `/items/0 must have required property 'version'`                                                                                                       |
+  | C   | `getRun.json`: an extra field                                                                                                                                              | 1 fails: `/ must NOT have additional properties (surprise)`                                                                                                     |
+  | D   | `api-client.spec.ts`: the `setStoryBudget` body with `budgetNanoAiu: 40_000_000_000.5`                                                                                     | 1 fails: `/budgetNanoAiu must be integer`. Only the contract check objects: the client passes the body through, so `toEqual(c.body)` still held.                |
+  | E   | `openapi.json`: a status edited by hand                                                                                                                                    | `api:check` exit 1 ("does not equal openapi/ahoy-v1.yaml. Run `npm run api:types`") and the `STORY_STATUSES` test fails                                         |
+  | F   | the YAML gains a story status `archived`                                                                                                                                   | `api:check` exit 1; after `api:types`, `tsc` fails at `STORY_STATUSES` with `missingFromList: "archived"`. The Angular test build fails too, so no spec result. |
+  | G   | `types.ts`: a value dropped from a list, one added, one renamed                                                                                                            | `tsc` fails each time, naming `missingFromList: "terminal"`, `"bogus"` and `"lowest"`                                                                           |
+  | H   | `domain/types.ts`: `Artifact.sizeBytes` renamed `size`; `agent_profile` back in `EffortSource`; `waiting` back in `GateOutcome`; `awaiting_input` dropped from `RunStatus` | `tsc` fails each time in `domain-types.spec.ts` (and in `models.ts` for the effort source), naming the type that differs                                        |
+
+- **`sync-openapi.mjs`, after decision 17:** re-syncing from `openapi/ahoy-v1.yaml` with and without `--commit` leaves the YAML and the
+  mirror byte-identical (`cmp`); a vendored copy with no header is refused (exit 1, file untouched); a sync from a file outside this
+  repository still works (its `# Source:` is the "local copy" line, as before). The YAML ended identical to HEAD after each run.
+- **`sync-openapi.mjs`** (changed to write the mirror): a YAML with a duplicate key and one with a syntax error are refused with exit
+  1 before anything is written (YAML and mirror untouched); a sync from a file outside this repository exits 0 and gives the same
+  contract body and an identical mirror. `openapi-mirror.mjs` with an unknown flag exits 1 with its usage.
+- **Production build:** `grep` finds no `ajv`, `date-time`, `x-sse-data-schema` or `openapi-typescript` in `dist/`. Ajv, the mirror
+  and the generated file reach only `ng test`.
+- **Throw-away probes** (a file in `src/testing/`, deleted at once, not in `git status`): which domain types accept a real API
+  value. Result in "Needs from lane 2C".
+
 ### Did not run, skipped, and why
 
 - **`scripts/smoke-api.mjs` and `scripts/capture-fixtures.mjs`:** not run, as the lane says (they need a local API). Checked with
@@ -586,8 +662,11 @@ All on Node 24.21.0, offline, 0 AIU.
   `readStoryState` reads (`acceptance_criteria`, `work_packages`, `human_gates`, `revisions`, `revision_ceiling`, and inside
   them `depends_on`, `open_pr`, `timestamp`) were **confirmed from the hosted renderer** (`encodeStory` in
   `packages/core/src/domain/story-document.ts` and its e2e test at 1890d5a), **not from a live `--simulate` answer**.
-- **`api:types`, `api:check`, `contract.spec.ts`:** not delivered (see "Not done"). Consequently "`api:check` limpo" and
-  "`contract.spec.ts` verde" of the acceptance criteria are **not met**.
+- **No GitHub run of any of this exists yet.** The acceptance criteria "`api:check` limpo" and "`contract.spec.ts` verde" are met locally
+  and offline. CI will run both on a pull request: `contract.spec.ts` is in `npm test`, and `api:check` is now part of `npm run lint`.
+- **Not tried:** a `loader` entry for `.yaml` in `angular.json` (not needed, so `angular.json` is untouched); a newer
+  `openapi-typescript` than 7.13.0 on TypeScript 6; the mirror on Windows line endings (`api:check` compares parsed values, not
+  bytes, for that reason, but it ran on Linux only).
 - **`sync-openapi.mjs` with an https URL:** not run (only local paths).
 - **CI on GitHub:** not run on the branch alone (the workflow runs on pull requests and on pushes to `main`); the pull request runs it.
 - **`npm run format:check` on the whole repository:** it was red on `main` at 132728f, from 24 skill files under `.agents/skills`,
@@ -597,8 +676,9 @@ All on Node 24.21.0, offline, 0 AIU.
 
 ### Decisions and deviations
 
-1. **The wire types are hand-written** in `core/api/types.ts` until `schema.d.ts` can be generated, written to mirror the
-   YAML field by field. `Shape<T>` in the guard kit makes a guard that forgets, or invents, a field of its type fail to compile.
+1. **The wire types are aliases of the generated ones** since the finishing pass (the first pass wrote them by hand, field by
+   field; the generated types turned out to match them, so no guard changed). `Shape<T>` in the guard kit makes a guard that
+   forgets, or invents, a field of its type fail to compile, and `listOf<Union>()` does the same for the 12 lists of values.
 2. **`API_BASE` now comes from `AppConfig.apiBase`** (the lane asked for a decision). `/config.json` can say
    `"apiBase": "/some/prefix/api/v1"`; the value is accepted only if it is a path on this origin (one leading `/`, no scheme or host,
    no `.` or `..` segment), else the default `/api/v1` is used and one warning is logged. F9 (same origin) still holds. To make it
@@ -632,12 +712,42 @@ All on Node 24.21.0, offline, 0 AIU.
     (`{ path, mediaType, etag, text }`, the ETag being the quoted sha256 that `listArtifacts` lists for it) because a markdown file
     cannot be imported by a spec. `src/testing/fixtures/mutate.ts` breaks a fixture one field at a time for the guard tests. All data is
     fictional, from the wireframes (PROJ-123, alex@example.com). The `.gitkeep` files of `core/auth` and `testing/fixtures` were removed.
-11. **`package.json`:** only the `api:sync` script was added. No dependency.
+11. **`package.json`:** first pass: only the `api:sync` script, no dependency. Finishing pass: the three dev dependencies, the
+    `overrides` entry (decision 14) and the scripts `api:types` and `api:check`.
 12. **`ahoy-hosted`'s own `CLAUDE.md` was not loaded:** it still holds the `node:test` and `NodeNext` conventions that plan §4 replaced.
 13. **Merging `main` (lane 1A):** `package.json` keeps `api:sync` next to 1A's `tokens` and `tokens:check`, and `lint` stays `eslint . &&
 npm run tokens:check`; the README Status has the three bullets (phase 0, 1A, 2A), with 1A's corrected to "merged, PR #4"; in this file the
     handoff sections (header, "Where we are", "Start here next", "Prompt for a new session") now cover both lanes. Lane 1A's own section
     is verbatim, including its sentence that it was not committed, which stopped being true when PR #4 merged.
+
+14. **`overrides` for the peer `typescript`.** `"overrides": { "openapi-typescript": { "typescript": "$typescript" } }` in `package.json`,
+    as the first pass's report said it would be needed. It makes npm resolve the generator's `typescript ^5.x` peer to the project's
+    `~6.0.3`; nothing else is overridden. If `openapi-typescript` ever declares TypeScript 6 itself, delete it.
+15. **A JSON mirror of the YAML, because a spec cannot read the YAML** (probes of the first pass: no `node:fs` in specs, no imports
+    from outside `src/`, no `?raw`). It is generated, in `.prettierignore`, and `api:check` compares it with the YAML by value.
+    The alternative the first pass left untested, a `loader` for `.yaml` in `angular.json`, would have touched a file this lane does
+    not own.
+16. **`api:types` also writes the mirror and `api:check` also checks it**, and `sync-openapi.mjs` writes it too (after validating
+    the YAML, so a bad contract never replaces the vendored copy). The report only asked for `sync` to write it; with the other two
+    there is one command to regenerate, and one to check, everything derived from the YAML.
+17. **`npm run api:sync` was not a no-op when its source was the vendored copy; fixed in this pass.** It read the origin from the git
+    remote of the checkout that holds the file, which for `openapi/ahoy-v1.yaml` is this repository, so it rewrote
+    `# Source: github.com/Danielimaalmeida/ahoy-hosted (...)` to `.../ahoy-frontend (...)` (the first pass's claim that re-syncing from
+    the vendored copy "changes nothing" was wrong for that line; found by running it, and the file was restored from a backup). Now,
+    when the source is the target, it keeps the `# Source:` and `# Commit:` of the header, and refuses a copy without one.
+18. **Two checks added to `api-client.spec.ts`** beyond the report's "request bodies against the request schemas": each operation
+    of the table is tested with the method and path the contract gives its `operationId`. They are cheap, and they are the only
+    thing that ties the client's URLs to the contract.
+19. **`contract.spec.ts` fails when the contract gains or loses an operation** (it lists the 19 the client implements and the 5 it
+    does not). That is deliberate: a re-sync that adds an operation must be looked at. Add the new `operationId` to
+    `NOT_IN_THE_CLIENT_YET` there (or implement it) in the same change.
+
+20. **The domain's types are copies, kept identical by a spec.** The boundary rule (`domain/` imports no `core/`) stays, so the
+    contract's shapes are written out in `domain/types.ts` and `core/api/domain-types.spec.ts` (core may import `@domain`) fails when one
+    differs from `core/api/types.ts`, at `npm run typecheck` (type identity) and in `npm test` (real values go through the domain
+    functions, and every run status and gate outcome of the contract has a presentation that is not the neutral fallback by accident).
+    This edits lane 2C's directory, which CLAUDE.md reserves to that lane; it was done because the user asked for it.
+21. **`lint` runs `api:check`** (item 6 of the finishing pass); `ci.yml` is untouched.
 
 ### What the real API does that the plan did not say
 
@@ -654,12 +764,43 @@ From the hosted sources at 1890d5a (`apps/api/src/server.ts`, `packages/core`), 
   `status` there (`approved` is what the hosted e2e test checks). So the plan's "round x of 4" is `revisions[gate] + 1`, and the next
   send-back after the ceiling answers `revision_ceiling_reached`.
 - **`lastEventId`** of `listStoryEvents` is null only when there is no event and no `after`; with `after` and nothing new it echoes `after`.
+- **The contract is stricter than the first pass's types in places a `string` hid** (found because the validator refused a body of
+  mine): `StartStoryRequest.controlRef` must match `^[0-9a-f]{40}$` (a commit sha, not `main`); `StoryKey`, `RunId`, `EventId` and
+  `ArtifactPath` have patterns and maximum lengths; `Timestamp` is an RFC 3339 `date-time`; `Limit` is 1 to 500 and `Cursor` at most
+  200 characters; `NanoAiu` has no maximum (the guards add `Number.isSafeInteger`). A form that sends these should validate them first.
 
 ### Needs from other lanes
 
-- **From the user:** the approval to install the three dev dependencies; the review and merge of the pull request; Node 24 in the
-  setup script (still open from phase 0).
-- **For lane 2C:** `check-boundaries` forbids `domain/` importing `@core`, so the plan's "re-export the types of `schema.d.ts`" cannot be
+- **From the user:** approval to commit and push this working tree (nothing is committed); the review of it, including the two
+  presentation choices in `src/app/domain/` ("Needs from lane 2C" above); whether `api:check` should stay in `lint` or become its
+  own CI step (decision 21); Node 24 in the setup script (still open from phase 0). The approval to install the dependencies was used
+  and is spent.
+- **Lane 2C: `domain/types.ts` did not match the contract, and was corrected in this pass** (the user: "the OpenAPI contract is
+  sovereign"). A throw-away probe (a file in `src/testing/`, deleted) had asked `tsc` to pass each real type of `core/api/types.ts`
+  where the domain's was wanted. It said:
+
+  | Domain type    | What failed                                                                                                                                               | What it is now                                                                                                                                                   |
+  | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `Story`        | `phase` any `string` (domain: a closed union); `title`, `haltReason` nullable (domain: `string`, optional); no `controlSha`, `currentRunId`, `createdAt`. | The contract's 13 fields. `Phase = string`; `PHASES` stays the seven the UI knows.                                                                               |
+  | `Run`          | No `spentNanoAiu`: the spend is `usage.nanoAiu`. `model` nullable; no `storyKey`, `runtime`, `gate`, ...                                                  | The contract's 17 fields, with `Usage` and `GateVerdict`.                                                                                                        |
+  | `Question`     | No `storyKey`, no `answered`: it is answered when `answer` is not null.                                                                                   | The contract's 9 fields.                                                                                                                                         |
+  | `GateRecord`   | No `at`: it is `createdAt`; `actor` required, `runId` nullable.                                                                                           | The contract's 9 fields.                                                                                                                                         |
+  | `Artifact`     | No `size`: it is `sizeBytes`; also `sha256`, `mediaType`, `runId`, `createdAt`.                                                                           | The contract's 7 fields.                                                                                                                                         |
+  | `AhoyEvent`    | No `at`, no `data`: they are `createdAt` and `payload`; `storyKey` and `actor` required.                                                                  | The contract's 6 fields (`payload` stays `Readonly<Record<string, unknown>>`).                                                                                   |
+  | `ModelPlan`    | **`slots` is an array** of slots, not a record by slot name, so `reviewersConflict(plan)` **could not work on a real plan**.                              | `{ storyKey, version, slots: readonly SlotModel[] }`; `SlotModel` has `slot`, `phase`, `lens`, `chosen`. `reviewersConflict` finds the two Lookouts in the list. |
+  | `RunStatus`    | The API has `awaiting_input` (11 values); the domain lacked it.                                                                                           | 11 values.                                                                                                                                                       |
+  | `GateOutcome`  | The domain had `waiting`, which the API never sends.                                                                                                      | The API's 8 values. `outcomePresentation("waiting")` still works: see the second choice below.                                                                   |
+  | `EffortSource` | The domain allowed `agent_profile`; the API's effort sources are `revision`, `story`, `configuration`, `phase_table`, `model_default`.                    | Those 5. `EFFORT_SOURCE_LABELS` no longer has an `agent_profile` entry.                                                                                          |
+
+  `StoryStatus`, `ModelSlot`, `ReasoningEffort` and `ModelSource` were already identical. `domain/` may not import `@core`, so it keeps its
+  own types, and **`core/api/domain-types.spec.ts` proves they stay in line** (decision 20). **Two choices for lane 2C and the design system
+  to review:** (1) a run in `awaiting_input` is shown as `input` (like a `branch` gate, "questions for a human"), because the contract has the
+  status and OutcomePill does not list it; without a mapping it would read as the neutral `queued`. (2) `waiting` stays in
+  `outcomePresentation` because OutcomePill names it ("waiting for a person", `ah-badge--decision`), but it is a UI word for a human gate
+  nobody has decided, never an API outcome (a pending gate has no record), and the type says so. Files changed in `src/app/domain/`:
+  `types.ts`, `models.ts` (and `models.spec.ts`), `outcome.ts` (and `outcome.spec.ts`); `status.ts` and `halt.ts` needed no change.
+
+- **For lane 2C (the boundary, from the first pass):** `check-boundaries` forbids `domain/` importing `@core`, so the plan's "re-export the types of `schema.d.ts`" cannot be
   done as written. Either `domain/` keeps its own structurally identical types (the types in `core/api/types.ts` are assignable to
   them, and the guards return those), or the boundary rule is relaxed for a type-only import. The names and shapes `core/api` exports:
   `Story`, `StoryPage`, `Run`, `Question`, `GateRecord`, `Artifact`, `AhoyEvent`, `ModelPlan`, `SlotModel`, `ModelChoice`, `Usage`,
@@ -670,8 +811,10 @@ From the hosted sources at 1890d5a (`apps/api/src/server.ts`, `packages/core`), 
   `core/realtime/` are untouched.
 - **For lane 2D:** the fixtures in `src/testing/fixtures/` are shaped like the real answers and can seed the mock. The mock should
   answer errors the way the real API does (`type: "urn:ahoy:problem:<code>"`, `title` the code with spaces, `errors[].path` in both
-  forms, `currentVersion` on `stale_version`). The Ajv helper for conformance tests will be in `src/testing/fixtures/` when
-  `contract.spec.ts` is done (see "Not done", 4); until then do not write a second one.
+  forms, `currentVersion` on `stale_version`). The Ajv helper for conformance tests is **`src/testing/fixtures/contract.ts`** (done):
+  `violations(schema, value)`, `responseViolations(operationId, body)`, `requestViolations(operationId, body)`, `operations()`,
+  `enumOf(...)`, over the generated mirror `openapi.json`. Do not write a second one. Mind that the real contract refuses what the
+  first pass's types allowed (see "What the real API does"): a mock answer that fails it is the mock's bug.
 - **For lane 4A:** `CommandRunner` can switch on `isStale`, `isDecisionAlreadyRecorded`, `isAlreadyAnswered`, `isStoryExists`,
   `isInvalidState`, `isRevisionCeilingReached`, `isLegacyStory`, `isValidationFailed` (with `fieldErrors` for the form), `isNotFound`,
   `isUnauthenticated` and `isUnreachable` (network or `unavailable`); an `invalid_response` is never to be shown as a verdict.
@@ -679,8 +822,8 @@ From the hosted sources at 1890d5a (`apps/api/src/server.ts`, `packages/core`), 
 - **For lane 6D:** `/config.json` takes `apiBase`, `actor` and `jiraBaseUrl` (all optional; `null` or missing means the default; an
   empty `jiraBaseUrl` means no Jira). `actor` must equal the `AHOY_ACTOR` of the dev proxy. Serve it with `Cache-Control: no-cache` and with a
   real 404 when there is none (the app also copes with an HTML page).
-- **For the composition root and docs (P0, 6A):** the README "Commands" table has no row for `npm run api:sync` (this lane may only
-  touch the Status line); `docs/architecture.md` still says `API_BASE` is provided by `app.config.ts`.
+- **For the composition root and docs (P0, 6A):** the README "Commands" table has no row for `npm run api:sync`, `api:types` or
+  `api:check` (this lane may only touch the Status line); `docs/architecture.md` still says `API_BASE` is provided by `app.config.ts`.
 
 ### Final check
 
@@ -704,5 +847,29 @@ $ npm run build               exit 0 (production bundle; main 249.16 kB raw)
 $ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
 $ npm run lint                exit 0 (eslint, then build-tokens: ok)
 $ npm test                    exit 0 (Test Files 23 passed (23); Tests 582 passed (582): 15 + 83 + 484)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
+
+After the finishing pass (2026-10-07), on the working tree of `claude/eager-cray-4c3z42` (from `main` at 56e815a), on Node 24.21.0:
+
+```
+$ node -v                     v24.21.0
+$ npm ci                      exit 0 (also from the new lockfile with the overrides entry; 411 packages audited, 0 vulnerabilities)
+$ npm run build               exit 0 (production bundle; no ajv, no mirror, no generated file in dist/)
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, then build-tokens: ok)
+$ npm test                    exit 0 (Test Files 33 passed (33); Tests 900 passed (900): 800 + 82 + 18)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+$ npm run api:check           exit 0 (openapi-typescript 7.13.0 --check; openapi-mirror: ok)
+```
+
+After the domain types, `lint` with `api:check` and the `sync-openapi.mjs` fix (same session, same working tree), on Node 24.21.0:
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0
+$ npm run typecheck           exit 0 (tsc app + spec, with the domain-types identities; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, then build-tokens: ok, then api:check: openapi-typescript --check and openapi-mirror: ok)
+$ npm test                    exit 0 (Test Files 34 passed (34); Tests 910 passed (910): 800 + 82 + 18 + 10)
 $ npm run format:check        exit 0 (All matched files use Prettier code style!)
 ```

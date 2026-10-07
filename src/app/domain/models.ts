@@ -21,9 +21,12 @@ export const MODEL_SOURCE_LABELS: Readonly<Record<ModelSource, string>> = {
   agent_profile: "Agent's own",
 };
 
-/** Where the reasoning effort comes from, in the crew's words (`vocabulary.md`). */
+/** Where the reasoning effort comes from, in the crew's words (`vocabulary.md`). An effort has no `agent_profile`. */
 export const EFFORT_SOURCE_LABELS: Readonly<Record<EffortSource, string>> = {
-  ...MODEL_SOURCE_LABELS,
+  revision: MODEL_SOURCE_LABELS.revision,
+  story: MODEL_SOURCE_LABELS.story,
+  configuration: MODEL_SOURCE_LABELS.configuration,
+  phase_table: MODEL_SOURCE_LABELS.phase_table,
   model_default: "Model's own",
 };
 
@@ -47,8 +50,9 @@ export function crewLabel(slotOrPhase: string, apiAgent?: string): string {
  * use different models; a blank model means the server decides, so it is not a conflict.
  */
 export function reviewersConflict(plan: ModelPlan | null): string | null {
-  const design = plan?.slots["review-design"]?.model?.trim() ?? "";
-  const defects = plan?.slots["review-defect"]?.model?.trim() ?? "";
+  const modelOf = (slot: ModelSlot): string => plan?.slots.find((entry) => entry.slot === slot)?.model?.trim() ?? "";
+  const design = modelOf("review-design");
+  const defects = modelOf("review-defect");
   if (design.length === 0 || defects.length === 0) return null;
   return design === defects ? design : null;
 }

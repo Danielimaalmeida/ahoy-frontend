@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Vendors the Ahoy API contract (lane 2A): copies ahoy-hosted's `openapi/ahoy-v1.yaml` to `openapi/ahoy-v1.yaml` and puts
-// the commit it came from in a comment header. No dependencies.
+// the commit it came from in a comment header. It also writes the JSON mirror that the contract tests import
+// (`scripts/openapi-mirror.mjs`), which needs the `yaml` package. Run `npm run api:types` afterwards for `schema.d.ts`.
 //
 //   node scripts/sync-openapi.mjs [path-or-url] [--commit <sha>]
 //
@@ -10,11 +11,14 @@
 //                when it names a 40-character commit.
 //   --commit     the commit the file comes from, when the script cannot tell.
 //
+// Reading `openapi/ahoy-v1.yaml` itself is allowed and keeps the source and commit its header already records.
+//
 // The copy is read-only for this repository: change the contract in ahoy-hosted, then run `npm run api:sync`.
 import { execFileSync } from "node:child_process";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildMirror, writeMirror } from "./openapi-mirror.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const target = join(root, "openapi", "ahoy-v1.yaml");
@@ -50,6 +54,16 @@ function stripHeader(text) {
   while (i < lines.length && /^# (Vendored copy of the Ahoy API contract|Source: |Commit: )/.test(lines[i])) i += 1;
   if (i > 0 && lines[i] === "") i += 1;
   return lines.slice(i).join("\n");
+}
+
+/** The source and commit an earlier sync wrote in the first lines of the vendored copy, or null when it has no such header. */
+function ownHeader(text) {
+  const top = text.split("\n").slice(0, 3);
+  const source = top.map((line) => /^# Source: (.+)$/.exec(line)?.[1]).find((value) => value !== undefined);
+  const commit = top
+    .map((line) => /^# Commit: ([0-9a-f]{40})( \(plus uncommitted changes in the source file\))?$/.exec(line))
+    .find((m) => m);
+  return source && commit ? { source, commit: commit[1], dirty: commit[2] !== undefined } : null;
 }
 
 const args = process.argv.slice(2);
@@ -96,7 +110,17 @@ if (/^https?:\/\//i.test(source)) {
   where = file;
   const dir = dirname(file);
   const top = git(dir, "rev-parse", "--show-toplevel");
-  if (top) {
+  if (file === target) {
+    // Re-reading the vendored copy: it says where it came from, and this checkout's remote is not that place.
+    const own = ownHeader(text);
+    if (!own && !commit)
+      die("the vendored copy has no source and commit header: sync it from ahoy-hosted, or pass --commit");
+    if (own) {
+      origin = own.source;
+      commit ??= own.commit;
+      dirty = own.dirty;
+    }
+  } else if (top) {
     const name = githubName(git(dir, "config", "--get", "remote.origin.url"));
     origin = `${name ? `github.com/${name}` : "a git checkout"} (${relative(top, file).split("\\").join("/")})`;
     if (!commit) commit = git(dir, "rev-parse", "HEAD");
@@ -118,10 +142,17 @@ const header = [
 ].join("\n");
 
 const out = `${header}${text.startsWith("\n") ? text.slice(1) : text}`;
+try {
+  buildMirror(out); // refuses invalid YAML before anything is overwritten
+} catch (e) {
+  die(`${where} is not valid YAML: ${e instanceof Error ? e.message : String(e)}`);
+}
 writeFileSync(`${target}.tmp`, out);
 renameSync(`${target}.tmp`, target);
+const mirrorPath = writeMirror(out);
 if (dirty)
   console.warn(
     "sync-openapi: warning: the source file has uncommitted changes; the commit above is not the whole story",
   );
 console.log(`sync-openapi: ${relative(root, target)} <- ${where} @ ${commit.slice(0, 7)} (info.version ${version})`);
+console.log(`sync-openapi: ${mirrorPath} written; run \`npm run api:types\` for schema.d.ts`);

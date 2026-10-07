@@ -16,6 +16,7 @@ describe("outcomePresentation", () => {
     // Runs.
     ["queued", "queued"],
     ["running", "running"],
+    ["awaiting_input", "input"],
     ["succeeded", "done"],
     ["failed", "halted"],
     ["lost", "halted"],

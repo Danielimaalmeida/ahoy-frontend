@@ -1,26 +1,48 @@
 /**
  * Wire types of the Ahoy API, as `openapi/ahoy-v1.yaml` (1.0.0-poc) describes them and as `guards.ts` checks them.
  *
- * These are written by hand while `schema.d.ts` cannot be generated (`openapi-typescript` is not installed yet). When it
- * is, this is the only file that changes: each type becomes an alias of `components["schemas"][...]`, and the lists of
- * values below get a type-level check against the generated enums. Nothing else imports the generated file.
+ * Each type is an alias of what `openapi-typescript` generated into `schema.d.ts` (`npm run api:types`), so a new contract
+ * changes them with no hand edit, and `guards.ts` stops compiling where a field was added, removed or renamed. This is the
+ * only file that imports the generated one. Three things are not aliases, and say why where they are:
+ *
+ * - the lists of values (`STORY_STATUSES` and the others) are needed at run time, so they are written out and checked
+ *   against the generated enums at compile time: a value the contract added or dropped fails `tsc` here;
+ * - `Problem.code`, the `payload` of an event and the `state` of the story state are open on purpose (see each);
+ * - client-side shapes that are not in the contract: `ItemList`, `ArtifactContent` and `ifNoneMatch`.
  *
  * Every field is `readonly`. AIU amounts are integer nano-AIU (1 AIU = 1_000_000_000).
  */
+import type { components, operations } from "./schema";
+
+type Schemas = components["schemas"];
+
+/** `List` itself when it holds exactly the members of the generated union `Union`; otherwise a type that says what differs. */
+type Exactly<Union extends string, List extends readonly string[]> = [
+  Exclude<Union, List[number]>,
+  Exclude<List[number], Union>,
+] extends [never, never]
+  ? List
+  : { readonly missingFromList: Exclude<Union, List[number]>; readonly notInContract: Exclude<List[number], Union> };
+
+/** Keeps a list as a tuple of literals and fails to compile unless it is exactly the members of the union `Union`. */
+function listOf<Union extends string>() {
+  return <const List extends readonly Union[]>(list: List & Exactly<Union, List>): List => list;
+}
 
 /** The states a story can be in (`StoryStatus`). */
-export const STORY_STATUSES = [
+export type StoryStatus = Schemas["StoryStatus"];
+export const STORY_STATUSES = listOf<StoryStatus>()([
   "ready",
   "running",
   "awaiting_input",
   "awaiting_decision",
   "halted",
   "terminal",
-] as const;
-export type StoryStatus = (typeof STORY_STATUSES)[number];
+]);
 
 /** The states a run can be in (`RunStatus`). */
-export const RUN_STATUSES = [
+export type RunStatus = Schemas["RunStatus"];
+export const RUN_STATUSES = listOf<RunStatus>()([
   "queued",
   "running",
   "succeeded",
@@ -32,47 +54,74 @@ export const RUN_STATUSES = [
   "output_violation",
   "auth_failed",
   "lost",
-] as const;
-export type RunStatus = (typeof RUN_STATUSES)[number];
+]);
 
 /** The reasoning efforts of the Copilot SDK (`ReasoningEffort`). A model may take fewer, or none. */
-export const REASONING_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
-export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+export type ReasoningEffort = Schemas["ReasoningEffort"];
+export const REASONING_EFFORTS = listOf<ReasoningEffort>()(["low", "medium", "high", "xhigh", "max"]);
 
 /** The parts of a story that run on one model (`ModelSlot`). */
-export const MODEL_SLOTS = ["intake", "planning", "implementation", "review-design", "review-defect"] as const;
-export type ModelSlot = (typeof MODEL_SLOTS)[number];
+export type ModelSlot = Schemas["ModelSlot"];
+export const MODEL_SLOTS = listOf<ModelSlot>()([
+  "intake",
+  "planning",
+  "implementation",
+  "review-design",
+  "review-defect",
+]);
 
-/** The reviewer lens of a `pr_review` slot. */
-export const REVIEW_LENSES = ["design-fit", "defect-failure"] as const;
-export type ReviewLens = (typeof REVIEW_LENSES)[number];
+/** The reviewer lens of a `pr_review` slot (`SlotModel.lens`, when it is not null). */
+export type ReviewLens = NonNullable<Schemas["SlotModel"]["lens"]>;
+export const REVIEW_LENSES = listOf<ReviewLens>()(["design-fit", "defect-failure"]);
 
 /** Where a slot's model comes from (`SlotModel.modelSource`). */
-export const MODEL_SOURCES = ["revision", "story", "configuration", "phase_table", "agent_profile"] as const;
-export type ModelSource = (typeof MODEL_SOURCES)[number];
+export type ModelSource = Schemas["SlotModel"]["modelSource"];
+export const MODEL_SOURCES = listOf<ModelSource>()([
+  "revision",
+  "story",
+  "configuration",
+  "phase_table",
+  "agent_profile",
+]);
 
 /** Where a slot's reasoning effort comes from (`SlotModel.effortSource`). */
-export const EFFORT_SOURCES = ["revision", "story", "configuration", "phase_table", "model_default"] as const;
-export type EffortSource = (typeof EFFORT_SOURCES)[number];
+export type EffortSource = Schemas["SlotModel"]["effortSource"];
+export const EFFORT_SOURCES = listOf<EffortSource>()([
+  "revision",
+  "story",
+  "configuration",
+  "phase_table",
+  "model_default",
+]);
 
 /** What an automated gate said about a run (`GateVerdict.result`). */
-export const GATE_RESULTS = ["pass", "fail", "error", "branch", "halt", "reject"] as const;
-export type GateResult = (typeof GATE_RESULTS)[number];
+export type GateResult = Schemas["GateVerdict"]["result"];
+export const GATE_RESULTS = listOf<GateResult>()(["pass", "fail", "error", "branch", "halt", "reject"]);
 
 /** Who made a gate record: an automated gate, or a person (`GateRecord.source`). */
-export const GATE_SOURCES = ["gate", "human"] as const;
-export type GateSource = (typeof GATE_SOURCES)[number];
+export type GateSource = Schemas["GateRecord"]["source"];
+export const GATE_SOURCES = listOf<GateSource>()(["gate", "human"]);
 
 /** What a gate record says: an automated result, or a person's decision (`GateRecord.outcome`). */
-export const GATE_OUTCOMES = ["pass", "fail", "error", "branch", "halt", "reject", "approve", "send_back"] as const;
-export type GateOutcome = (typeof GATE_OUTCOMES)[number];
+export type GateOutcome = Schemas["GateRecord"]["outcome"];
+export const GATE_OUTCOMES = listOf<GateOutcome>()([
+  "pass",
+  "fail",
+  "error",
+  "branch",
+  "halt",
+  "reject",
+  "approve",
+  "send_back",
+]);
 
 /** What a person can decide at a human gate (`DecisionRequest.decision`). */
-export const HUMAN_DECISIONS = ["approve", "send_back", "reject"] as const;
-export type HumanDecision = (typeof HUMAN_DECISIONS)[number];
+export type HumanDecision = Schemas["DecisionRequest"]["decision"];
+export const HUMAN_DECISIONS = listOf<HumanDecision>()(["approve", "send_back", "reject"]);
 
 /** The `code` of a problem, as the contract lists them. A newer API may send others: see {@link Problem.code}. */
-export const PROBLEM_CODES = [
+export type ProblemCode = Schemas["Problem"]["code"];
+export const PROBLEM_CODES = listOf<ProblemCode>()([
   "bad_request",
   "validation_failed",
   "unauthenticated",
@@ -88,44 +137,16 @@ export const PROBLEM_CODES = [
   "legacy_story",
   "internal_error",
   "unavailable",
-] as const;
-export type ProblemCode = (typeof PROBLEM_CODES)[number];
+]);
 
 /** Answer of `getHealth`. */
-export interface Health {
-  readonly status: "ok" | "degraded";
-  readonly database: "ok" | "unavailable";
-}
+export type Health = Schemas["Health"];
 
 /** What a run or a story has used so far. */
-export interface Usage {
-  readonly requests: number;
-  readonly nanoAiu: number;
-  readonly inputTokens: number;
-  readonly outputTokens: number;
-}
+export type Usage = Schemas["Usage"];
 
 /** A story (a voyage in the UI). `version` is what every command sends back as `expectedVersion`. */
-export interface Story {
-  /** Jira-shaped key, such as `PROJ-123`. */
-  readonly key: string;
-  readonly title: string | null;
-  /** Who started it; runs bill this person's token. */
-  readonly owner: string;
-  /** A phase of the pinned `phases.tsv`, or `blocked`. */
-  readonly phase: string;
-  readonly status: StoryStatus;
-  /** Why a `halted` story stopped; free text from the API, so the UI needs a fallback for codes it does not know. */
-  readonly haltReason: string | null;
-  readonly budgetNanoAiu: number;
-  readonly spentNanoAiu: number;
-  /** The control-repo commit pinned for the story's life (40 hex characters). */
-  readonly controlSha: string;
-  readonly currentRunId: string | null;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
+export type Story = Schemas["Story"];
 
 /** The envelope of the lists that are not paged: `listStoryRuns`, `listQuestions` and `listGateRecords`. */
 export interface ItemList<T> {
@@ -133,92 +154,25 @@ export interface ItemList<T> {
 }
 
 /** One page of `listStories`, most recently updated first. `nextCursor` is null on the last page. */
-export interface StoryPage {
-  readonly items: readonly Story[];
-  readonly nextCursor: string | null;
-}
+export type StoryPage = Schemas["StoryPage"];
 
 /** The verdict of the gate that judged a run's output. */
-export interface GateVerdict {
-  readonly gate: string;
-  readonly code: number;
-  readonly result: GateResult;
-  readonly message: string;
-}
+export type GateVerdict = Schemas["GateVerdict"];
 
 /** A worker run of one agent. */
-export interface Run {
-  readonly id: string;
-  readonly storyKey: string;
-  readonly phase: string;
-  /** Free text; the UI maps it to a crew name and falls back to this. */
-  readonly agent: string;
-  /** Null leaves the model to the agent's profile. */
-  readonly model: string | null;
-  /** Null is the model's own default. */
-  readonly reasoningEffort: ReasoningEffort | null;
-  readonly status: RunStatus;
-  /** Where the worker ran: `docker`, `k8s`, `replay`, `fake`... */
-  readonly runtime: string;
-  readonly controlSha: string;
-  readonly budgetNanoAiu: number;
-  readonly usage: Usage;
-  /** For runtime `replay`, the recorded run whose outputs were re-used. */
-  readonly replayOf: string | null;
-  readonly exitReason: string | null;
-  readonly gate: GateVerdict | null;
-  readonly startedBy: string;
-  readonly createdAt: string;
-  readonly startedAt: string | null;
-  readonly endedAt: string | null;
-}
+export type Run = Schemas["Run"];
 
 /** A question an agent asked, and the answer if there is one. */
-export interface Question {
-  /** `Q1`, `Q2`... */
-  readonly id: string;
-  readonly round: number;
-  readonly runId: string;
-  readonly text: string;
-  readonly recommendation: string | null;
-  readonly answer: string | null;
-  readonly answeredBy: string | null;
-  readonly answeredAt: string | null;
-  /** Whether a run has already read the answer. */
-  readonly consumed: boolean;
-}
+export type Question = Schemas["Question"];
 
 /** An automated gate verdict or a person's decision. */
-export interface GateRecord {
-  readonly id: string;
-  readonly source: GateSource;
-  /** A gate name (`intake`, `plan`) or a human gate key (`plan_accepted`). */
-  readonly gate: string;
-  readonly phase: string;
-  readonly outcome: GateOutcome;
-  readonly message: string | null;
-  readonly actor: string;
-  readonly runId: string | null;
-  readonly createdAt: string;
-}
+export type GateRecord = Schemas["GateRecord"];
 
 /** A file an agent wrote, at one revision of the story's artifact set. */
-export interface Artifact {
-  /** Story-relative path, such as `implementation-plan.md`. */
-  readonly path: string;
-  readonly sha256: string;
-  readonly sizeBytes: number;
-  readonly mediaType: string;
-  readonly revision: number;
-  readonly runId: string | null;
-  readonly createdAt: string;
-}
+export type Artifact = Schemas["Artifact"];
 
 /** The current artifact set of a story. */
-export interface ArtifactList {
-  readonly revision: number;
-  readonly items: readonly Artifact[];
-}
+export type ArtifactList = operations["listArtifacts"]["responses"][200]["content"]["application/json"];
 
 /** Answer of `getArtifactContent`: the text, or "unchanged" when the `If-None-Match` ETag still matches. */
 export type ArtifactContent =
@@ -231,171 +185,92 @@ export type ArtifactContent =
     }
   | { readonly kind: "not_modified" };
 
-/** An event of the story's log or of the live stream. `type` is open: new types may appear, and clients ignore them. */
-export interface AhoyEvent {
-  /** Increases monotonically; a decimal string. */
-  readonly id: string;
-  readonly storyKey: string;
-  readonly type: string;
-  readonly actor: string;
-  /** Type-specific; never trust it beyond what the type's reader checks. */
+/**
+ * An event of the story's log or of the live stream. `type` is open: new types may appear, and clients ignore them.
+ * The contract's `payload` is an object with no properties, which the generator types as `Record<string, never>`: nothing
+ * could be read from it. It is type-specific and untrusted, so it is `unknown` per key until its reader has checked it.
+ */
+export interface AhoyEvent extends Omit<Schemas["Event"], "payload"> {
   readonly payload: Readonly<Record<string, unknown>>;
-  readonly createdAt: string;
 }
 
 /** One page of `listStoryEvents`. Pass `lastEventId` as `after` to continue. */
-export interface EventPage {
+export interface EventPage extends Omit<Schemas["EventPage"], "items"> {
   readonly items: readonly AhoyEvent[];
-  readonly lastEventId: string | null;
 }
 
 /** A model, a reasoning effort, or both, as a person chose them. */
-export interface ModelChoice {
-  readonly model?: string;
-  readonly reasoningEffort?: ReasoningEffort;
-}
+export type ModelChoice = Schemas["ModelChoice"];
 
 /** What one slot of the model plan will run on, and where each value comes from. */
-export interface SlotModel {
-  readonly slot: ModelSlot;
-  readonly phase: string;
-  readonly lens: ReviewLens | null;
-  /** What a person chose for the story; null when the slot runs on the defaults. */
-  readonly chosen: ModelChoice | null;
-  readonly model: string | null;
-  readonly reasoningEffort: ReasoningEffort | null;
-  readonly modelSource: ModelSource;
-  readonly effortSource: EffortSource;
-}
+export type SlotModel = Schemas["SlotModel"];
 
 /** The model and reasoning effort each phase of a story runs on. */
-export interface ModelPlan {
-  readonly storyKey: string;
-  readonly version: number;
-  readonly slots: readonly SlotModel[];
-}
+export type ModelPlan = Schemas["ModelPlan"];
 
-/** Answer of `getStoryState`. `state` is the worker's `state.json`: read it with `readStoryState`. */
-export interface StoryStateDocument {
-  readonly key: string;
-  readonly version: number;
+/**
+ * Answer of `getStoryState`. `state` is the worker's `state.json`: read it with `readStoryState`. The contract describes it
+ * as an object whose fields the API does not fix (`Record<string, never>` once generated), so it is read per key as `unknown`.
+ */
+export interface StoryStateDocument extends Omit<Schemas["StoryState"], "state"> {
   readonly state: Readonly<Record<string, unknown>>;
 }
 
 /** Answer of `answerQuestion`. */
-export interface AnswerAccepted {
-  readonly story: Story;
-  readonly question: Question;
-}
+export type AnswerAccepted = Schemas["AnswerAccepted"];
 
 /** Answer of `decideHumanGate`. */
-export interface DecisionAccepted {
-  readonly story: Story;
-  readonly record: GateRecord;
-}
+export type DecisionAccepted = Schemas["DecisionAccepted"];
 
-/** One entry of a problem's `errors`: a message, and where in the request it applies. */
-export interface ProblemFieldError {
-  /** `body/budgetNanoAiu`, `/models/review-defect`, `query.limit`... See `formControlPath`. */
-  readonly path?: string;
-  readonly message: string;
-}
+/** One entry of a problem's `errors`: a message, and where in the request it applies (see `formControlPath`). */
+export type ProblemFieldError = NonNullable<Schemas["Problem"]["errors"]>[number];
 
-/** An RFC 9457 problem details body (`application/problem+json`). */
-export interface Problem {
-  readonly type: string;
-  readonly title: string;
-  readonly status: number;
-  /** One of {@link PROBLEM_CODES}, or a code a newer API added: errors must never fail on a code they do not know. */
+/**
+ * An RFC 9457 problem details body (`application/problem+json`). `code` is one of {@link PROBLEM_CODES}, or a code a newer
+ * API added: errors must never fail on a code they do not know, so it is a `string` here, where the contract has the enum.
+ */
+export interface Problem extends Omit<Schemas["Problem"], "code"> {
   readonly code: string;
-  readonly detail?: string;
-  readonly instance?: string;
-  readonly errors?: readonly ProblemFieldError[];
-  /** On `stale_version`: the story's version now. */
-  readonly currentVersion?: number;
 }
 
 /** A choice per slot for a new story (`ModelPlanRequest`). */
-export type ModelPlanRequest = Readonly<Partial<Record<ModelSlot, ModelChoice>>>;
+export type ModelPlanRequest = Schemas["ModelPlanRequest"];
 
 /** A change per slot; `null` gives a slot back to the configured defaults (`ModelPlanChange`). */
-export type ModelPlanChange = Readonly<Partial<Record<ModelSlot, ModelChoice | null>>>;
+export type ModelPlanChange = Schemas["ModelPlanChange"];
 
 /** Body of `startStory`. */
-export interface StartStoryRequest {
-  readonly key: string;
-  readonly title?: string;
-  /** Hard AIU cap for every run of the story together; at least 1. */
-  readonly budgetNanoAiu: number;
-  /** A control-repo commit to pin; the server's HEAD when absent. */
-  readonly controlRef?: string;
-  readonly models?: ModelPlanRequest;
-}
+export type StartStoryRequest = Schemas["StartStoryRequest"];
 
 /** Body of `stopStory`. */
-export interface StopStoryRequest {
-  readonly expectedVersion: number;
-  readonly reason: string;
-}
+export type StopStoryRequest = Schemas["StopStoryRequest"];
 
 /** Body of `resumeStory`. */
-export interface ResumeStoryRequest {
-  readonly expectedVersion: number;
-  readonly reason?: string;
-}
+export type ResumeStoryRequest = Schemas["ResumeStoryRequest"];
 
 /** Body of `setStoryBudget`. The new cap includes what is already spent. */
-export interface SetStoryBudgetRequest {
-  readonly expectedVersion: number;
-  readonly budgetNanoAiu: number;
-  readonly reason: string;
-}
+export type SetStoryBudgetRequest = Schemas["SetStoryBudgetRequest"];
 
 /** Body of `setStoryModels`. */
-export interface SetStoryModelsRequest {
-  readonly expectedVersion: number;
-  readonly models: ModelPlanChange;
-  readonly reason?: string;
-}
+export type SetStoryModelsRequest = Schemas["SetStoryModelsRequest"];
 
 /** Body of `answerQuestion`. */
-export interface AnswerRequest {
-  readonly answer: string;
-  readonly expectedVersion: number;
-}
+export type AnswerRequest = Schemas["AnswerRequest"];
 
 /** Body of `decideHumanGate`. `send_back` and `reject` need a `reason`. */
-export interface DecisionRequest {
-  /** The human gate key from the phase table, such as `plan_accepted`. */
-  readonly gate: string;
-  readonly decision: HumanDecision;
-  readonly reason?: string;
-  readonly expectedVersion: number;
-}
+export type DecisionRequest = Schemas["DecisionRequest"];
 
-/** Query of `listStories`. */
-export interface ListStoriesQuery {
-  readonly status?: StoryStatus;
-  /** 1 to 500; the API's default is 100. */
-  readonly limit?: number;
-  /** The `nextCursor` of the previous page. */
-  readonly cursor?: string;
-}
+/** Query of `listStories`: `limit` is 1 to 500 (the API's default is 100), `cursor` the `nextCursor` of the previous page. */
+export type ListStoriesQuery = NonNullable<operations["listStories"]["parameters"]["query"]>;
 
-/** Query of `listStoryEvents`. */
-export interface ListEventsQuery {
-  /** Only events with a greater id: the `lastEventId` of the previous page. */
-  readonly after?: string;
-  /** 1 to 500; the API's default is 100. */
-  readonly limit?: number;
-}
+/** Query of `listStoryEvents`: `after` is the `lastEventId` of the previous page, `limit` is 1 to 500. */
+export type ListEventsQuery = NonNullable<operations["listStoryEvents"]["parameters"]["query"]>;
 
-/** Query of `getArtifactContent`. */
-export interface ArtifactContentQuery {
-  /** Story-relative path, as `listArtifacts` lists it. */
-  readonly path: string;
-  /** An artifact-set revision; the current one when absent. */
-  readonly revision?: number;
-  /** An ETag from an earlier answer: a match answers `{ kind: "not_modified" }` without the text. */
+/**
+ * Query of `getArtifactContent`: `path` as `listArtifacts` lists it, and the artifact-set `revision` (the current one when
+ * absent). `ifNoneMatch` is the contract's `If-None-Match` header: an ETag from an earlier answer, and a match answers
+ * `{ kind: "not_modified" }` without the text.
+ */
+export type ArtifactContentQuery = operations["getArtifactContent"]["parameters"]["query"] & {
   readonly ifNoneMatch?: string;
-}
+};
