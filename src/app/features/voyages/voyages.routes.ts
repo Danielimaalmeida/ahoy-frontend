@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { VoyagesPage } from "./voyages";
 
-/** Voyages (lane 3A replaces the placeholder). */
-export const VOYAGES_ROUTES: Routes = [
-  { path: "", title: "Voyages · Ahoy", component: Placeholder, data: { heading: "Voyages", lane: "3A" } },
-];
+/** Voyages (`/voyages`): the list, filtered by `?status=` and `?q=`. */
+export const VOYAGES_ROUTES: Routes = [{ path: "", title: "Voyages · Ahoy", component: VoyagesPage }];

@@ -3,11 +3,12 @@ import { Router, provideRouter, withComponentInputBinding } from "@angular/route
 import { RouterTestingHarness } from "@angular/router/testing";
 import { routes } from "./app.routes";
 
-/** Every route of §5.3, with the placeholder text and the document title it must show. */
+/**
+ * Every route of §5.3 that is still a placeholder, with the placeholder text and the document title it must show. The
+ * screens of lane 3A (`/` and `/voyages`) are real now: `app.spec.ts` and the specs of `features/harbour` and
+ * `features/voyages` cover them and their titles. A lane that replaces a placeholder takes its row out of this table.
+ */
 const CASES = [
-  { url: "/", text: "All hands", lane: "3A", title: "All hands · Ahoy" },
-  { url: "/voyages", text: "Voyages", lane: "3A", title: "Voyages · Ahoy" },
-  { url: "/voyages?status=halted&q=PROJ", text: "Voyages", lane: "3A", title: "Voyages · Ahoy" },
   { url: "/docks", text: "The Docks", lane: "3C", title: "The Docks · Ahoy" },
   { url: "/voyages/PROJ-123/plan", text: "Plan", lane: "4B", title: "Plan · Ahoy" },
   { url: "/voyages/PROJ-123/questions", text: "Questions", lane: "4C", title: "Questions · Ahoy" },

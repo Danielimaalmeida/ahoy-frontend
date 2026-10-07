@@ -105,9 +105,16 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   eight voyages of the wireframes, checked against the YAML with Ajv; `npm run start:mock` serves it in the browser and
   `npm run mock:api` over HTTP on `127.0.0.1:8080` behind the real dev proxy, with no new dependency;
   `node scripts/mock-api.dist-check.mjs` proves the production build is free of it. 80 new tests; never run against a real API.
-- **Wave 3, lane 3B (Set sail): done on the mock backend, not committed yet** (branch `claude/focused-maxwell-wcaacl`).
+- **Wave 3, lane 3A (shell, All hands and Voyages): done, in review** (branch `claude/determined-wright-jqbqht`, pull request into
+  `main`). `src/app/app.ts` is the shell (top bar with the needs-you count, the Live indicator and the user; search to
+  `/voyages?q=`; one `main`; toasts; the saved theme), `src/app/features/harbour/` is All hands (`/`: tiles, "Needs you" with
+  "What's needed" and an action by status, "At sea", "Calm seas") and `src/app/features/voyages/` is Voyages (`/voyages`: chips with
+  `?status=`, table with stepper and Note, `?q=`, Load more, skeleton, empty and error states). Both follow the event stream. 143
+  new tests; checked on `npm run start:mock` in headless Chromium against the `Main` and `Voyages` boards, light and dark, at
+  1440 px and 390 px; never run against a real API.
+- **Wave 3, lane 3B (Set sail): done on the mock backend, committed and pushed** (branch `claude/focused-maxwell-wcaacl`, with `main` and lane 3A merged in).
   `/voyages/new?key=&title=` is a typed Reactive Form on `ah-field` and `ah-model-choice-table`: the budget is read by `parseAiu`
   (never a float), only the models the user filled in are sent, a double click sends one request, and `story_exists`, `400` and
   the other refusals show beside the fields or in a banner without losing what was typed. 114 new tests (three agreed seams, 26 mutation checks, a two-axis review whose findings were fixed); driven in headless Chromium on `npm run start:mock`; never run against a real API.
-- Next: review lane 3B, then the other lanes of wave 3 (3A, 3C and 4A, `docs/paralelos3.md`). Details in
+- Next: review lanes 3A and 3B and open their pull requests; lanes 3C and 4A (`docs/paralelos3.md`, sections C and D) run in other sessions. Details in
   [docs/progress.md](docs/progress.md).
