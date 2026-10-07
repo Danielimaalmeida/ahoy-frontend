@@ -1,6 +1,23 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 4A (voyage base: context, commands, header, tabs and dialogs), launched from
+**Updated 2026-10-07 by lane 4D (Models tab and Change models dialog), launched from `docs/paralelos4.md` section C through
+`/implement` on branch `claude/gifted-einstein-2wo0ou`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 4D is built,
+tested and checked in a browser on the mock backend. Nothing is committed or pushed: `CLAUDE.md` and rule 8 of paralelos4 ask
+for the user's approval first.**
+
+- **Ran for 4D (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`, `npm ci` first):** `npm run build` (no warning),
+  `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (104 files,
+  **1944 tests**: 45 new, 1 placeholder row removed from `app.routes.spec.ts`) and `npm run format:check`, all green; four
+  mutation checks of the new tests (all caught); a two-axis `/code-review`, whose real findings were fixed; `npm run
+start:mock` driven in headless Chromium at `/voyages/PROJ-118/models` (the table, the dialog, `?change=planning` with the
+  focus on Planning, the two-Lookouts error on both rows; light, dark and 390 px).
+- **Did not run for 4D:** anything against a real API, `--simulate` or TEST; browsers other than Chromium; a screen reader; a
+  pixel diff (compared by eye with `Halted` and `Dialogs`); a real "refused model" (the mock halts PROJ-118 in
+  `implementation`, see "Lane 4D" → "Deviations").
+
+Earlier: **lane 4A** (below) was the update before this one.
+
+Lane 4A, updated 2026-10-07 by lane 4A (voyage base: context, commands, header, tabs and dialogs), launched from
 `docs/paralelos3.md` section D on branch `claude/quirky-gates-t6b390`, from `main` at a2a49fe (all of waves 1 and 2, lane 2D
 included as PR #11). Lane 4A is committed and pushed with the user's approval, and `main` at 470c1e5 (lanes 3A, 3B and 3C,
 PR #12, #13 and #14) is merged in, with its conflicts resolved (`README.md`, this file and `src/app/app.routes.spec.ts`). Its
@@ -121,6 +138,8 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+**Lane 4D (Models tab and Change models dialog) is built on the mock backend and not committed**: see "Lane 4D" below.
+
 Phase 0, lane 1A (PR #4), lane 2A (PR #5 and PR #7) and lane 2C (PR #3) are merged into `main`: an
 Angular 22 app that builds, tests and serves, with the CLAUDE.md conventions enforced by `tsc`, ESLint, Prettier and
 `scripts/check-boundaries.mjs`, the design kit foundation and `/_kit`, the `ApiClient` with its guards, the auth seam and the runtime
@@ -197,6 +216,9 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+0. **User, lane 4D:** review `src/app/features/voyage/tabs/models/**` (section "Lane 4D" below) and approve the commit. It also
+   edits one line outside the lane, `src/app/app.routes.spec.ts` (the `/models` placeholder row, as that file's comment says a
+   lane must do). Lanes 4B, 4C, 5A, 5B and 5C of `docs/paralelos4.md` run in other sessions.
 1. **User:** review and merge the lane 4A pull request (`claude/quirky-gates-t6b390` into `main`; section "Lane 4A" below, in
    particular "Decisions and deviations" and the one edit outside the lane, `src/app/app.routes.spec.ts`). **When 4A is in
    `main`, open `docs/paralelos4.md`** (wave 4 builds on `VoyageContext` and `CommandRunner`). Lanes 3A, 3B and 3C (PR #12, #13
@@ -240,6 +262,46 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 4D · Models tab and Change models dialog (2026-10-07)
+
+Launched from `docs/paralelos4.md` section C through `/implement`, on `claude/gifted-einstein-2wo0ou`, from `main` at 959a7b4.
+**Pre-flight:** `main` holds 4A (`VoyageContext`, `CommandRunner`, `voyage/tabs/models/models.routes.ts` as a placeholder),
+1C (`ah-model-choice-table`, `ah-dialog`) and the mock backend. Not committed.
+
+### What changed (all in `src/app/features/voyage/tabs/models/`)
+
+| File                      | What it holds                                                                                                                                                                                                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `models-change.ts`        | Pure: `choiceOf` (blank → `null`, model alone → `{model}`, never `{}`), `changedModels` (only the changed slots), `modelsRequest`, `lookoutsConflict` (effective models, case-blind), `rowSpecs`, `refusedSlots`, `parseChangeSlot` (the query string is untrusted), `slotErrors` (a `400`'s `errors[].path` onto rows). |
+| `models-command.ts`       | `ModelsCommand.save`: `setStoryModels` through `context.commands.run`, the `202` plan to `StoryStore.acceptModels`, then the story read again (its version moved). Nothing is sent for an empty change.                                                                                                                  |
+| `change-models-dialog.ts` | "Models per phase" on `ah-dialog` and `ah-model-choice-table`: Save is blocked with no change, with two Lookouts on one model (the error on both rows), or a reason over 2000; a `409` keeps what was typed; the server's `400` shows on its row.                                                                        |
+| `models-tab.ts`           | The table (Phase, Crew member, Next run gets, Model from, Effort from, Chosen, Change/Reset only on chosen slots), "refused last run", the footer, a retry when the plan cannot be read, and `?change=<slot>` (opens once, focuses that slot, then drops the param).                                                     |
+| `models.routes.ts`        | Routes to `ModelsTab`, title "Models · Ahoy".                                                                                                                                                                                                                                                                            |
+
+45 new tests: 30 in `models-change.spec.ts`, 14 in `models-tab.spec.ts` (on the mock backend, with the real routes and dialog).
+
+### Deviations and decisions
+
+- **"refused last run" is on `implementation` in the mock, not `planning`.** `docs/paralelos4.md` and the phase file say PROJ-118's
+  `planning` row; the seed (lane 2D) halts PROJ-118 in `implementation` (and 4A's Anchored banner says so). The rule is
+  implemented as specified (voyage `halted` with `run_failed`, the last run of the slot's phase `failed`, on the model the slot
+  still has), so it marks `implementation`. Either the seed or the acceptance text needs fixing; I did not touch the mock (lane 2D).
+- **`VoyageContext` has no `setModels`.** `ModelsCommand` does the same as its `stop`/`resume` from this lane's directory, through
+  the same `CommandRunner`. See "Needs from lane 4A".
+- **One edit outside the lane:** `src/app/app.routes.spec.ts` lost the `/models` placeholder row, as the file's comment asks.
+- **Reset is one click, no dialog**, and sends `{slot: null}`. Its failure shows in a banner above the table.
+- **A row `400`** (`errors[].path` naming a slot, or `/models` for the reviewers) goes on its row(s) and the generic "Check the
+  highlighted fields" banner shows too. Anything else the server says about the form shows only in the banner.
+- Not done: the wireframe's `class="err"` row tint on a refused row (only the badge); a real `400` has not been seen (the mock's
+  `/models` one is what the test uses).
+
+### Needs from other lanes
+
+- **Lane 4A:** a `VoyageContext.setModels(models, reason)` (and, ideally, `acceptModels` on the story round-trip) so tabs do not
+  inject `ApiClient`; `ModelsCommand` can then be deleted.
+- **Lane 2D:** PROJ-118 halted in `planning` (or the acceptance text changed), and a seed with a chosen model, so Change and
+  Reset show without first saving one.
 
 ## Lane 4A · Voyage base: context, commands, header, tabs and dialogs (2026-10-07)
 

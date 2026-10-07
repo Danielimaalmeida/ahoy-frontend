@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { ModelsTab } from "./models-tab";
 
-/** Models (lane 4D replaces the placeholder). */
-export const MODELS_ROUTES: Routes = [
-  { path: "", title: "Models · Ahoy", component: Placeholder, data: { heading: "Models", lane: "4D" } },
-];
+/** Models: what each phase's next run gets, and the Change models dialog (lane 4D). */
+export const MODELS_ROUTES: Routes = [{ path: "", title: "Models · Ahoy", component: ModelsTab }];

@@ -129,5 +129,11 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
   run against a real API.
 
-- Next: review and merge lane 4A; then wave 4 (`docs/paralelos4.md`). Details in
+- **Wave 4, lane 4D (Models tab and Change models dialog): built on the mock backend, not committed** (branch
+  `claude/gifted-einstein-2wo0ou`, from `main` at 959a7b4, 4A merged). `/voyages/:key/models` shows "Models per phase"
+  (sources, "Chosen for this voyage", Change and Reset, "refused last run") and the Change models dialog, which sends only
+  the changed slots (`null` resets; a model alone is `{model}`), blocks two Lookouts on one effective model and opens by
+  itself with `?change=<slot>`. 45 new tests; checked in headless Chromium (light, dark, 390 px); never run against a real
+  API.
+- Next: review and merge lane 4A and the wave 4 lanes; then wave 4 (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).
