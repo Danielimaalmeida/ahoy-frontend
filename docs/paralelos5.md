@@ -31,7 +31,8 @@ A sessão que receber isto **faz só essa secção**. As outras secções são d
 4. **Pré-voo, antes de escrever código:** confirma que os pré-requisitos da tua secção já estão em `main` (`git fetch origin`
    e vê os ficheiros indicados). **Se faltar algum, pára e diz-me qual.**
 5. **Dependências:** só as aprovadas no §10 de `docs/plan/00-overview.md`, com a versão exata que `npm view` devolver.
-   Qualquer outra pede-me aprovação.
+   Qualquer outra pede-me aprovação. Se o sistema de permissões bloquear o `npm install` de uma dependência aprovada, pára e
+   diz-me o comando exato: aprovo-o aqui, nesta sessão (a aprovação do plano não chega para o sistema de permissões).
 6. **Nunca** contra `--live` nem contra o TEST. Qualquer resposta de teste a uma pergunta de agente leva "POC test answer,
    not a product decision".
 7. **Git:** trabalha na branch que a sessão designar. Antes de abrir PR, traz `main` para a tua branch e resolve os

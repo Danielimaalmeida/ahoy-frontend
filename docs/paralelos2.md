@@ -3,14 +3,19 @@
 **Quatro sessões ao mesmo tempo.** Cada secção tem os seus pré-requisitos: **só abres uma secção quando as lanes de que ela
 depende estiverem fundidas em `main`.** Vem depois de [paralelos1.md](paralelos1.md).
 
-| Secção | Lane | O que é                                        | Modelo sugerido | Precisa de em `main` |
-| ------ | ---- | ---------------------------------------------- | --------------- | -------------------- |
-| A      | 1B   | Kit: estado, progresso e navegação             | Sonnet 5.5      | **1A + 2C**          |
-| B      | 1C   | Kit: diálogo, cartões, passos, diff e markdown | **Opus 5.5**    | **1A + 2C**          |
-| C      | 2B   | Tempo real e stores                            | **Opus 5.5**    | **2A + 2C**          |
-| D      | 2D   | Backend falso e servidor `mock:api`            | Sonnet 5.5      | **2A + 2C**          |
+| Secção | Lane | O que é                                        | Modelo sugerido | Precisa de em `main`  |
+| ------ | ---- | ---------------------------------------------- | --------------- | --------------------- |
+| A      | 1B   | Kit: estado, progresso e navegação             | Sonnet 5.5      | **1A + 2C**           |
+| B      | 1C   | Kit: diálogo, cartões, passos, diff e markdown | **Opus 5.5**    | **1A + 2C**           |
+| C      | 2B   | Tempo real e stores                            | **Opus 5.5**    | **2A + 2C**           |
+| D      | 2D   | Backend falso e servidor `mock:api`            | Sonnet 5.5      | **2A terminada + 2C** |
 
 Se só a 1A e a 2C estiverem fundidas, abre apenas A e B. Se só a 2A e a 2C estiverem, abre apenas C e D.
+
+**"2A terminada" (secção D):** a lane 2A foi fundida sem as dependências de desenvolvimento (`openapi-typescript`, `ajv`,
+`yaml`), por isso faltavam o `schema.d.ts`, o `api:types`, o `api:check` e o `contract.spec.ts`. A 2D reutiliza o helper de
+Ajv desse `contract.spec.ts`, por isso **só abres a secção D depois de a 2A estar terminada e fundida**. A secção C (2B) não
+precisa disso: os tipos da API em `src/app/core/api/types.ts` chegam.
 
 ## Como usar este ficheiro
 
@@ -33,7 +38,8 @@ A sessão que receber isto **faz só essa secção**. As outras secções são d
    e vê os ficheiros indicados). **Se faltar algum, pára e diz-me qual. Não inventes, não copies nem refaças o trabalho de
    outra lane.**
 5. **Dependências:** só as aprovadas no §10 de `docs/plan/00-overview.md`, com a versão exata que `npm view` devolver.
-   Qualquer outra pede-me aprovação.
+   Qualquer outra pede-me aprovação. Se o sistema de permissões bloquear o `npm install` de uma dependência aprovada, pára e
+   diz-me o comando exato: aprovo-o aqui, nesta sessão (a aprovação do plano não chega para o sistema de permissões).
 6. **Nunca** contra `--live` nem contra o TEST. Qualquer resposta de teste a uma pergunta de agente leva "POC test answer,
    not a product decision".
 7. **Git:** trabalha na branch que a sessão designar. Antes de abrir PR, traz `main` para a tua branch e resolve os
@@ -103,7 +109,9 @@ na lane 1C do ficheiro da fase.
 
 **Pré-requisitos em `main` (verifica):**
 
-- **2A:** existem `openapi/ahoy-v1.yaml`, `src/app/core/api/schema.d.ts` e um `ApiClient` em `src/app/core/api/`.
+- **2A:** existem `openapi/ahoy-v1.yaml` e um `ApiClient` em `src/app/core/api/`. Os tipos da API estão em
+  `src/app/core/api/types.ts` (escritos à mão enquanto o `schema.d.ts` não existir; quando o gerador chegar, só esse
+  ficheiro muda). **O `schema.d.ts` não é pré-requisito da 2B.**
 - **2C:** `src/app/domain/` tem o vocabulário e os tipos.
 
 **Possui (só edita):** `src/app/core/realtime/**` e `src/app/core/stores/**`.
@@ -126,7 +134,10 @@ destruir. Critérios completos na lane 2B do ficheiro da fase.
 
 **Modelo sugerido:** Sonnet 5.5. **Fase:** [docs/plan/phase-2-data-layer.md](plan/phase-2-data-layer.md), lane 2D.
 
-**Pré-requisitos em `main` (verifica):** os mesmos da secção C (**2A** e **2C**).
+**Pré-requisitos em `main` (verifica):** os mesmos da secção C (**2A** e **2C**) **e a 2A terminada**: `schema.d.ts` gerado,
+`npm run api:types` e `npm run api:check` no `package.json`, e `src/app/core/api/contract.spec.ts` (ou onde a 2A o pôs; a 2D
+reutiliza o helper de Ajv que vem com ele). A secção da lane 2A em `docs/progress.md` já não pode dizer "Not done". **Se
+faltar, pára e diz-me.**
 
 **Possui (só edita):** `src/testing/mock-backend/**`, `src/app/core/mock/**`, `src/environments/environment.mock.ts`, a
 configuração `mock` do `angular.json` (só acrescentar) e o servidor `mock:api` (`scripts/mock-api.*` e a linha `mock:api`

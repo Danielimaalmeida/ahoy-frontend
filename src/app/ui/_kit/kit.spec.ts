@@ -20,7 +20,14 @@ describe("kit gallery", () => {
 
   it("shows every section under its own labelled heading", async () => {
     const root = await render();
-    expect(KIT_SECTIONS.map((s) => s.id)).toEqual(["brand", "button", "panel", "field", "banner", "table"]);
+    expect(KIT_SECTIONS.filter((s) => s.lane === "1A").map((s) => s.id)).toEqual([
+      "brand",
+      "button",
+      "panel",
+      "field",
+      "banner",
+      "table",
+    ]);
     for (const s of KIT_SECTIONS) {
       const section = root.querySelector(`section#${s.id}`)!;
       const title = section.querySelector("h2")!;
