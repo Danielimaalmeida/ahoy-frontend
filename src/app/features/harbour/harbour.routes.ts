@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { AllHands } from "./all-hands";
 
-/** All hands (lane 3A replaces the placeholder). */
-export const HARBOUR_ROUTES: Routes = [
-  { path: "", title: "All hands · Ahoy", component: Placeholder, data: { heading: "All hands", lane: "3A" } },
-];
+/** All hands (`/`): the voyages that wait on a person, and the ones at sea. */
+export const HARBOUR_ROUTES: Routes = [{ path: "", title: "All hands · Ahoy", component: AllHands }];
