@@ -20,9 +20,15 @@ describe("kit gallery", () => {
 
   it("shows every section under its own labelled heading", async () => {
     const root = await render();
-    // Lane 1A's sections come first; lanes 1B and 1C append theirs (sections/<lane>-sections.ts).
+    expect(KIT_SECTIONS.filter((s) => s.lane === "1A").map((s) => s.id)).toEqual([
+      "brand",
+      "button",
+      "panel",
+      "field",
+      "banner",
+      "table",
+    ]);
     const ids = KIT_SECTIONS.map((s) => s.id);
-    expect(ids.slice(0, 6)).toEqual(["brand", "button", "panel", "field", "banner", "table"]);
     expect(new Set(ids).size).toBe(ids.length);
     for (const s of KIT_SECTIONS) {
       const section = root.querySelector(`section#${s.id}`)!;

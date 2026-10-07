@@ -2,21 +2,30 @@
 
 **Updated 2026-10-07 by lane 1C (kit: interaction and content), launched from `docs/paralelos2.md` section B on branch
 `claude/secao-b-paralelos2-1l7xpu`. Lane 1C is committed on that branch with the user's approval, with `main` merged in
-(lanes 2A finishing pass and 2B, PRs #7 and #8); push and pull request wait for the user.**
+(at c2562e9: lanes 2A finishing pass, 2B and 1B, PRs #7, #8 and #9), pushed, and its pull request into `main` waits for review.**
 
 - **Ran for 1C (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, the approved install of `@angular/cdk@22.2.1`
   and `marked@18.1.0`, `npm run build`, `npm run typecheck` (`check-boundaries: ok`), `npm run lint`, `npm test` and
-  `npm run format:check`, all green on the lane's own tree (42 files, 900 tests, 100 new) and again after merging `main`
-  (53 files, **1156 tests**: 1056 of `main` + 100 of lane 1C); `/_kit` served by `ng serve` and screenshotted in headless
-  Chromium, light and dark, at 1100 px and 390 px; the live CDK dialog driven in that browser (focus, Esc, focus return);
-  nine mutation checks of the tests.
+  `npm run format:check`, all green on the lane's own tree (42 files, 900 tests, 100 new) and again after each merge of
+  `main` (see "Final check" in the lane 1C section); `/_kit` served by `ng serve` and screenshotted in headless Chromium,
+  light and dark, at 1100 px and 390 px; the live CDK dialog driven in that browser (focus, Esc, focus return); nine
+  mutation checks of the tests.
 - **Did not run for 1C:** `npm run start:mock` (lane 2D's mock is not in `main`; 1C shows no API data); anything against an
   API; other browsers than Chromium; a pixel diff (compared by eye).
 
-Earlier: **lane 2B (realtime and stores), launched from `docs/paralelos2.md` section C on branch
-`claude/ecstatic-allen-vkmfqi`. Lane 2B is done and committed on that branch, with `main` merged in (lane 2A's finishing pass,
-PR #7, so `schema.d.ts` and `contract.spec.ts` are in `main` now); its pull request into `main` waits for review.**
+Earlier: **lane 1B (kit: state, progress and navigation), launched from `docs/paralelos2.md` section A on branch
+`claude/paralelos2-section-a-h4ef52`, built on `main` at 56e815a, with `main` at 9b4e16f (lane 2A's finishing pass, PR #7, and lane 2B,
+PR #8) merged into the working tree. Lane 1B is built, tested and compared with the design-system previews in a browser. **Nothing is
+committed:** the merge is staged and unfinished (`git merge --no-commit`, `HEAD` is still 56e815a), so the one commit that concludes it
+will carry the lane and the merge together, once the user approves it.**
 
+- **Ran for 1B (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm run build`, `npm run typecheck` (`check-boundaries: ok`),
+  `npm run lint` (with `tokens:check`), `npm test` (47 files, **1046 tests**: 800 before this lane and 246 new) and
+  `npm run format:check`, all green on the lane's own tree; the same chain green after merging `main` (58 files, **1302 tests**);
+  14 mutation checks of the tests; `/_kit` served by `ng serve --configuration mock` and screenshotted in headless
+  Chromium in light and dark at 1100 px and 390 px next to the design system's previews; the live toast.
+- **Did not run for 1B:** anything against a mock backend or an API (the components take no data and lane 2D has not built the mock);
+  the wireframe boards in a browser; a screen reader; browsers other than Chromium. Details in "Lane 1B" below.
 - **Ran for 2B (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check`), `npm test` and `npm run format:check`, all green, on the lane's
   own tree (41 files, 946 tests, 146 of them new) and again after merging `main` (see "Final check" in the lane 2B section);
@@ -73,18 +82,28 @@ What changed, and the two presentation choices that need a review, are under "Ne
 (`StoriesStore`, `StoryStore`, `RunProgressBuffer`, `StoryEventsFeed`). No screen uses them yet. Lanes 1B, 1C and 2D of wave 2 run
 in other sessions.
 
-**Wave 2, lane 1C (kit: interaction and content)** is committed on `claude/secao-b-paralelos2-1l7xpu`, with `main` merged in:
-`ah-dialog` on the CDK `Dialog` with `DialogService`, `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`/`-row`,
-`ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` with `ahMark`, and `ah-markdown` with the pure `renderMarkdown`, each in the
-`/_kit` gallery. New runtime dependencies `@angular/cdk` 22.2.1 and `marked` 18.1.0.
+**Wave 2, lane 1B (kit: state, progress and navigation) is built and tested, not committed** (branch `claude/paralelos2-section-a-h4ef52`,
+with `main` merged into the working tree and the merge not yet committed).
+In `src/app/ui/`: `ah-status-badge`, `ah-phase-stepper` (full and compact), `ah-budget-meter`, `ah-outcome-pill`, `ah-filter-chips`,
+`ah-section-tabs` (route tabs and the pill), `ah-top-bar` (with the Live / Reconnecting indicator), `ah-empty-state`, `ah-skeleton`,
+`ToastService` with `ah-toast-host`, and the pipes `ahAiu`, `ahRelative`, `ahDateTime` and `ahActor` with a `CLOCK` token, all taking
+their vocabulary from `@domain`, with 246 new tests and 11 sections in the `/_kit` gallery compared with the design system's
+previews in light and dark. Lane 2B (the paragraph above) has been merged since it was written (PR #8). No screen uses any of this
+yet, and no data, mock or API was involved. Lane 1B has been merged since (PR #9).
+
+**Wave 2, lane 1C (kit: interaction and content)** is committed on `claude/secao-b-paralelos2-1l7xpu`, with `main` merged in, in
+review: `ah-dialog` on the CDK `Dialog` with `DialogService`, `ah-choice-card-group`, `ah-question-card`,
+`ah-model-choice-table`/`-row`, `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` with `ahMark`, and `ah-markdown` with the pure
+`renderMarkdown`, each in the `/_kit` gallery. New runtime dependencies `@angular/cdk` 22.2.1 and `marked` 18.1.0. No screen uses
+them yet.
 
 ## Start here next
 
-1. **User:** review and merge the lane 2B pull request (`claude/ecstatic-allen-vkmfqi` into `main`; section "Lane 2B" below).
+1. **User:** review and merge the lane 1C pull request (`claude/secao-b-paralelos2-1l7xpu` into `main`; section "Lane 1C"
+   below). Outside its directories it adds the two dependencies, keeps the unique-ids check in `kit.spec.ts` and updates this
+   file and the README "Status".
+   **Done since this was written:** lane 1B is merged (PR #9), and the lane 2B pull request is merged into `main` (PR #8, 9b4e16f; section "Lane 2B" below).
    Nothing outside `core/realtime/` and `core/stores/` changed, except this file and the README "Status" bullets.
-   **Lane 1C:** approve the push of `claude/secao-b-paralelos2-1l7xpu` and the pull request into `main` (section "Lane 1C").
-   It touches one assertion of lane 1A's `kit.spec.ts`, which lane 1B also has to change: whichever merges second keeps
-   one version.
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
@@ -102,9 +121,11 @@ in other sessions.
    `src/styles/_ahoy-angular.scss`.
 5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 2:** 1B and 2D run in parallel sessions (1C is done, item 1) (`docs/paralelos2.md`); 2D reuses the Ajv helper
-   `src/testing/fixtures/contract.ts`. With 1B, 2B and 2D in `main`, wave 3 can start (`docs/paralelos3.md`). Read "Needs from
-   other lanes" in the lane 2B section first: 1B cannot import `CLOCK` from `core`. **6D** is optional (`docs/paralelos1.md`).
+6. **Wave 2:** lane **1B** is merged (PR #9) and lane **1C** is in review (item 1). Earlier text: lane 1B was built and tested and awaited the user's review and approval to commit (section "Lane 1B": "Decisions to
+   review" and "Integration with `main`", which says what the merge of `main` conflicted on and how it was resolved); lane 2B is merged;
+   1C and 2D run in parallel sessions (`docs/paralelos2.md`); 2D reuses the Ajv helper `src/testing/fixtures/contract.ts`. With 1B,
+   2B and 2D in `main`, wave 3 can start (`docs/paralelos3.md`). 2B's note that 1B cannot import `CLOCK` from `core` is handled: the pipes
+   have their own token in `ui/pipes/clock.ts`. **6D** is optional (`docs/paralelos1.md`).
 7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
@@ -121,8 +142,6 @@ in other sessions.
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
-
----
 
 ## Lane 1C · Kit: interaction and content (2026-10-07)
 
@@ -275,6 +294,222 @@ $ npm run format:check        exit 0 (All matched files use Prettier code style!
 The merge had text conflicts only in `README.md` "Status" and in this file (header, "Where we are", "Start here next" and the
 lane sections, which git had interleaved with lane 2B's): this file was rebuilt from `main`'s version with the lane 1C section
 added whole. One code change was needed, in `ah-model-choice-table` (see "Decisions and deviations").
+
+Then `main` at c2562e9 (lane 1B, PR #9) merged in, on Node 24.21.0:
+
+```
+$ npm run build               exit 0
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, tokens:check, api:check)
+$ npm test                    exit 0 (Test Files 68 passed (68); Tests 1402 passed (1402): 1302 of main + 100 of lane 1C)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
+
+Conflicts: `README.md` "Status", this file (rebuilt again from `main`'s version with the lane 1C section added) and the one
+assertion of `kit.spec.ts` both kit lanes changed: lane 1B's version is kept (lane 1A's sections, by lane), plus lane 1C's check
+that every section id is unique. No code change was needed. `/_kit` was not re-checked in a browser after this merge.
+
+---
+
+## Lane 1B · Kit: state, progress and navigation (2026-10-07)
+
+Launched from `docs/paralelos2.md`, section A. **Not committed:** every change is in the working tree of
+`claude/paralelos2-section-a-h4ef52` (the branch this session was given; plan §9 would call it `lane/1b-...`), waiting for the
+user's approval to commit and push. Pre-flight (`git fetch origin main`): lane 1A (`tokens.css`, `ahoy-bundle.css`, `ui/icon/`) and
+lane 2C (`src/app/domain/` with `statusPresentation`, `outcomePresentation`, `explainHalt`, `text-diff.ts`) were both in `main`
+(56e815a), and the lane was built on that. `main` has moved since (9b4e16f: lane 2A's finishing pass, PR #7, and lane 2B, PR #8):
+see "Integration with `main`" below.
+
+### Node
+
+`node -v` was v22.22.0. `npx -y node@24 -v` gave v24.21.0; that binary was copied into the session scratchpad and put first on
+`PATH`. Every command below ran on Node 24.21.0 with npm 10.9.4, after `npm ci` (nothing new installed: **no dependency was
+added**).
+
+### What changed
+
+All in `src/app/ui/`. Every component is standalone, OnPush and zoneless, and takes its vocabulary from `@domain`.
+
+| Component                  | Selector / name                                         | Inputs → what it renders                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status-badge/`            | `ah-status-badge`                                       | `[status]` (required) `[phase]` `[showApi]` `[detail]`. `statusPresentation` gives label and class; `showApi` adds `ah-api` with the API word, and `detail` appends a second one ("awaiting_decision · plan_accepted"). A status the vocabulary does not know shows as its own word in the neutral colour.                                                                                                                         |
+| `outcome-pill/`            | `ah-outcome-pill`                                       | `[value]`. The host **is** the pill (`ah-badge ah-badge--<modifier>`), the API word as label, no dot; `outcomePresentation` gives the class, an unknown word stays neutral.                                                                                                                                                                                                                                                        |
+| `phase-stepper/`           | `ah-phase-stepper`, `phaseProgress()`                   | `[phase]` `[status]` `[stoppedAt]` `[compact]`. Full: `role="list"` of seven `ah-step` (✓ done, number current/ahead, `!` stopped), `aria-current="step"` on the current or stopped one, each item named "planning, stopped". Compact: seven `ah-dots` bars as `role="img"` with "Phase 3 of 7", "Stopped at phase 2", "Blocked at phase 3", "Blocked" or "Done". `phaseProgress` (pure, in `phase-steps.ts`) holds the rules.     |
+| `budget-meter/`            | `ah-budget-meter`, `formatCap()`                        | `[spentNanoAiu]` `[capNanoAiu]` (integer nano-AIU) `[decimals]` (1) `[width]` (120 px) `[variant]` `full` "**12.4** / 30 AIU" or `compact` mono "12.4 / 30" `[label]`. `role="meter"`, `aria-valuemin/max/now` in AIU (now clamped to the cap), `aria-valuetext`. The cap drops trailing zeros ("30", "28.6"). Amounts that are not safe non-negative integers show "— / —", no value. The fill never changes colour.              |
+| `filter-chips/`            | `ah-filter-chips`                                       | `[counts]` `[(selected)]` (`"all"` or a `StoryStatus`) `[label]`. All, then Queued, Under way, Crew asks, Your orders, Anchored and **In port** (`terminal`), each with badge, API word and count; `aria-pressed`, one at a time, pressing the pressed one does nothing. A missing count shows none.                                                                                                                               |
+| `section-tabs/`            | `ah-section-tabs`                                       | `[items]` (`SectionTab`: `id`, `label`, `link`, `queryParams`, `count`, `exact`) `[label]` `[variant]` `tabs`/`pill` `[(selected)]`. A tab with `link` is an `<a routerLink>` with `aria-current="page"` (prefix match unless `exact`); one without is a toggle `<button aria-pressed>` selected through `selected`. `<nav>` when any tab has a link, else `role="group"`. Counts muted, `0` shown. Wraps (bundle), never scrolls. |
+| `top-bar/`                 | `ah-top-bar`                                            | `[needsYou]` `[live]` `live \| reconnecting \| offline` `[user]` `{ email, initials }` `[(query)]`. Logo, nav (All hands with `ah-count`, hidden at 0; Voyages; The Docks with `ah-soon`) with `aria-current="page"`, search, a persistent `role="status"` holding "Live" / the "Reconnecting to live updates…" pill / "Live updates are off", **Set sail** (the only primary button), avatar with the e-mail as name and `title`. |
+| `empty-state/`             | `ah-empty-state`                                        | `[heading]` `[icon]` (anchor); the projected text is the sentence and `[ahEmptyAction]` the way forward.                                                                                                                                                                                                                                                                                                                           |
+| `skeleton/`                | `ah-skeleton`, `ah-skeleton-rows`                       | `ah-skeleton [width] [height]`: one bar (the host has `ah-skeleton`). `ah-skeleton-rows [rows] [columns]`: `columns` are `{ track, height? }` grid tracks; the container is `aria-busy="true"`, fixed `px` columns fill their track, flexible ones vary 85/65/75 % from row to row.                                                                                                                                                |
+| `toast/`                   | `ToastService`, `ah-toast-host`                         | `toasts.show(text)`: about 5 s (`TOAST_DURATION_MS`), at most 3 at once (`MAX_TOASTS`, the oldest goes), blank text ignored, timers cleared on destroy, never an action. One `<ah-toast-host />` in the shell: an always-present `role="status"` `aria-atomic="false"` region, fixed at the bottom centre.                                                                                                                         |
+| `pipes/`                   | `ahAiu`, `ahRelative`, `ahDateTime`, `ahActor`, `CLOCK` | `nano \| ahAiu[: decimals]` ("12.4"); `at \| ahRelative[: 'waiting']` ("22 m ago" / "22 m", reads `CLOCK`, impure); `at \| ahDateTime` ("Wed 09:48"); `actor \| ahActor` (`ahoy-reconciler` → "Ahoy"). A missing value is "—". `CLOCK` is `InjectionToken<() => Date>`, the real clock by default.                                                                                                                                 |
+| `_kit/sections/1b-*.ts`    | gallery                                                 | `1b-sections.ts` lists 11 sections (one per component, plus Pipes), each in its own file; `1b-sections.spec.ts` checks them.                                                                                                                                                                                                                                                                                                       |
+| `src/styles/_ahoy-1b.scss` | styles                                                  | The few rules the bundle lacks, each commented: `display: contents` hosts, the status badge + API word row, 18 px badges in chips, `aria-pressed` look for pill tabs, the 40 px empty-state icon, skeleton rows, the toast host's place. Loaded by one `@use` line in `src/styles.scss`.                                                                                                                                           |
+
+**Using it (for 3A, 3B, 3C, 4A and the voyage lanes):**
+
+```html
+<ah-top-bar [needsYou]="needsYou()" [live]="liveState()" [user]="user()" [(query)]="query" />
+<ah-status-badge [status]="story.status" [phase]="story.phase" showApi detail="plan_accepted" />
+<ah-phase-stepper [phase]="story.phase" [status]="story.status" [stoppedAt]="blockedAt()" />
+<ah-phase-stepper [phase]="story.phase" [status]="story.status" compact />
+<ah-budget-meter
+  [spentNanoAiu]="story.spentNanoAiu"
+  [capNanoAiu]="story.budgetNanoAiu"
+  [width]="64"
+  variant="compact"
+/>
+<ah-filter-chips [counts]="counts()" [(selected)]="status" />
+<ah-section-tabs label="Voyage sections" [items]="tabs()" />
+<ah-outcome-pill [value]="gate.outcome" />
+{{ story.updatedAt | ahRelative }} · {{ story.spentNanoAiu | ahAiu }} · {{ event.actor | ahActor }}
+```
+
+### Proof
+
+All on Node 24.21.0, offline, 0 AIU. **No API, mock or real, was involved:** lane 1B has no data (the dev server ran with
+`ng serve --configuration mock`, which is still the development build until lane 2D, and showed only `/_kit`).
+
+- **Chain:** `npm run build` (production, no `kit-routes` chunk, `grep` finds no `_kit` or `Kit ·` in `dist/`; the main bundle is
+  unchanged at 219.55 kB because nothing uses the components yet; `styles.css` is 31.09 kB with the 1B rules),
+  `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (with `tokens:check`), `npm test` and `npm run format:check`, all exit 0.
+- **Tests on the lane's own tree (56e815a): 47 files, 1046 tests, 0 failed, 0 skipped** (800 before this lane: 15 + 83 + 484 + 218).
+  New, **246 in 15 files**:
+
+  | File                                  | Tests | What it proves                                                                                                                                                                                                                                                                                          |
+  | ------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `status-badge/status-badge.spec.ts`   | 61    | **Every status × every phase** (the five non-terminal statuses × no phase, the 7 phases and `blocked`; `terminal` in each phase and in `blocked`) against the table of `vocabulary.md`, written out in the spec; the dot, the API word, the detail, an unknown status.                                  |
+  | `outcome-pill/outcome-pill.spec.ts`   | 23    | The 19 words of the OutcomePill README, each with its class and no dot; a run in `awaiting_input` (as `branch`); an unknown word; reacting to input.                                                                                                                                                    |
+  | `phase-stepper/phase-stepper.spec.ts` | 59    | **6 statuses × 7 phases**, full and compact: one `current` (or one `stopped` when anchored/aground, none when docked), the passed ones done; Aground at each of 6 stops, without a stop, an unknown phase; ✓ / number / `!`; roles, `aria-label`s, `aria-current`; the pure rule never marks two steps. |
+  | `budget-meter/budget-meter.spec.ts`   | 12    | **0, 41 and 100 %**, overshoot, 1.84 / 28.6, `formatCap`, a cap of 0, six kinds of invalid amount, width, compact variant, the fill never gets another class.                                                                                                                                           |
+  | `filter-chips/filter-chips.spec.ts`   | 14    | Seven chips in order with badge, class, API word and count; one pressed; click, same-chip click, outside change; missing counts.                                                                                                                                                                        |
+  | `section-tabs/section-tabs.spec.ts`   | 11    | Links and `href`s, `aria-current` following navigation (prefix vs `exact`, query-parameter tabs), counts (a number, 0, none), the pill as a labelled group of `aria-pressed` buttons with two-way selection.                                                                                            |
+  | `top-bar/top-bar.spec.ts`             | 22    | Layout order; `aria-current` for 6 URLs and after navigation; the count hidden at 0; Set sail the only primary button; **Live ↔ Reconnecting ↔ off** in one live region; avatar; search in and out.                                                                                                     |
+  | `empty-state/…`, `skeleton/…`         | 4, 8  | Icon, title, sentence, action; `aria-busy`, rows, grid tracks, bar heights, widths.                                                                                                                                                                                                                     |
+  | `toast/toast.spec.ts`                 | 10    | Fake timers: stays 4999 ms, goes at 5000, each timed from its own start; no action; blank ignored; the 3-toast cap and its timers cleared (spied `setTimeout`/`clearTimeout`); timers cleared on destroy.                                                                                               |
+  | `pipes/*.spec.ts`                     | 14    | `ahAiu` 3, `ahRelative` 6 (fake clock, a ticking signal clock, real clock), `ahDateTime` 2, `ahActor` 3.                                                                                                                                                                                                |
+  | `_kit/sections/1b-sections.spec.ts`   | 8     | The 11 gallery sections and their key content, the toast demo with its own host.                                                                                                                                                                                                                        |
+
+- **Mutation checks:** 14 deliberate breaks of the production code, each caught by the tests and then restored (the whole chain was
+  rerun green afterwards): halted marked `current` (10 failed), a second `current` (40), `aria-valuenow` unclamped (1), cap keeping
+  trailing zeros (9), All hands matching by prefix (7), Reconnecting still showing Live (2), chips ignoring the selection (3), timers
+  never cleared (2), toast lasting 10 s (2), an unknown outcome turning red (10), Aground ignoring the blocked phase (1), tabs
+  without `aria-current` (3), the relative pipe pure (2), the skeleton without `aria-busy` (1).
+- **Browser, `/_kit` against the previews:** `ng serve --configuration mock` and headless Chromium 1194 driven by Playwright 1.56.1
+  (installed globally in the session, **not** a dependency of the repo; the script lives in the session scratchpad). Each of the 11
+  sections screenshotted at 1100 px in light and dark, and compared by eye with the `preview.html` of StatusBadge, PhaseStepper,
+  BudgetMeter, OutcomePill, FilterChips, SectionTabs, TopBar, EmptyState, Skeleton and Toast, wrapped with the generated `tokens.css`
+  and the bundle (`docs/design/` untouched). They match in both themes, except the deliberate differences below.
+- **390 px:** `scrollWidth` 390 in light and dark, and no element of the 11 sections pokes out of the viewport. The top bar wraps
+  (logo and nav, search, then Live, Set sail and the avatar), the stepper and the chips wrap, the tabs wrap onto a second line.
+- **Live toast:** pressing "Show a toast" showed one in a `position: fixed` `role="status"` region at the bottom, and it was gone
+  5.3 s later.
+- **One 404 in the console** on every page: `/config.json`, which the dev server does not serve (the app falls back to its defaults,
+  as lane 2A's report says). Nothing else logged.
+
+### Deliberate differences from the previews
+
+- **Links styled as buttons are readable.** The TopBar preview's "Set sail" and the EmptyState preview's button are blue on blue
+  or blue text because of bundle defect 1 (lane 1A); here they use 1A's corrected colours.
+- **Pill tabs use `aria-pressed`, not `aria-selected`.** `aria-selected` is not a valid attribute on a `<button>`; the look is the same
+  through one rule in `_ahoy-1b.scss`.
+- **The compact stepper is `role="img"`** with the `aria-label`, and the full one is a labelled `role="list"` whose items name their
+  state ("planning, stopped"); the preview has `aria-label` on plain `div`s.
+- **Stopped label:** "Stopped at phase 2" (DS preview) for Anchored, "Blocked at phase 3" (the Voyages wireframe) for Aground, "Done" for
+  Docked. The wireframe says "Phase 1 of 7" for an Anchored voyage; the DS wins.
+- The top bar has an `offline` state the DS does not draw (see "Decisions to review"), and the gallery's top bars show no current
+  destination because `/_kit` is none of the three routes (the unit tests prove `aria-current`).
+- **Bundle observation (not changed):** `.ah a { color: accent-text }` is more specific than `.ah-tabs__item` and `.ah-nav__item`, so
+  the links of the tabs and of the nav are blue instead of `ink-soft` / `ink-muted`. The previews show the same, so this lane matches
+  them. For the design system, next to the two defects in lane 1A's section.
+
+### Decisions to review
+
+1. **`CLOCK` lives in `ui/pipes/clock.ts`.** `ui/` may not import `core/` and `core/` may not import `ui/`, so the "shared token" of the
+   plan cannot be one symbol; lane 2B reached the same conclusion and has its own in `core/realtime/clock.ts`, a `Clock` object
+   (`now()` and `schedule()`). Mine is a function, `() => Date`, real by default, so the shell bridges them with one provider:
+   `{ provide: UI_CLOCK, useFactory: () => { const clock = inject(CORE_CLOCK); return () => clock.now(); } }`. A clock that reads a
+   signal makes every `ahRelative` in view refresh as it ticks (tested).
+2. **`ahRelative` takes a second argument** (`'waiting'`) for the "Waiting" column (`waitingTime`); not in the plan, small.
+3. **Top-bar search is `[(query)]`** (a `model`), not an output named `query`: `queryChange` emits on every keystroke (the shell should
+   debounce before it navigates to `/voyages?q=`), and `query` puts back the text of the current `?q=` after a reload.
+4. **`offline` shows the neutral pill "Live updates are off".** The DS only draws Live and Reconnecting; the plan lists `offline` as a state
+   of the indicator and lane 2B ends in `offline` after a 4xx. Wording to confirm.
+5. **Route tabs are data** (`items`), not projected `routerLink`s as the README's one line says: easier for 4A to build from counts and
+   easier to test. A tab with no `exact` is current on the pages below it, and a tab without query parameters is current whatever the
+   query string is, so make it `exact` when its siblings differ by query parameters.
+6. **`ah-status-badge` host is `inline-flex` with an 8 px gap** (the badge and its API word), the one wrapper that is not
+   `display: contents`.
+
+### Files outside the lane's list, and why
+
+- `src/styles/_ahoy-1b.scss` (new) and **one `@use` line plus a comment line** in `src/styles.scss`: the phase file says new CSS goes in
+  `src/styles/`, and lane 1A's report invites each lane to add its own partial this way. Lane 1C will add one line next to it.
+- `src/app/ui/_kit/kit.spec.ts` (lane 1A's): **one assertion changed.** It listed _all_ gallery sections and so failed as soon as any lane
+  added its own; it now lists the lane 1A ones (`filter(s => s.lane === "1A")`). Lane 1C will hit the same failure, and the same one-line
+  change merges trivially.
+
+### Integration with `main` (9b4e16f)
+
+`main` moved while this lane was being built: lane 2A's finishing pass (PR #7: `schema.d.ts`, the domain types made to match the
+contract, `contract.spec.ts`) and lane 2B (PR #8: `core/realtime/` and `core/stores/`). It is merged into the working tree with
+`git merge --no-commit --no-ff origin/main`: **nothing is committed** and `HEAD` is still 56e815a, so `git status` says "All
+conflicts fixed but you are still merging" and the commit that concludes it carries the lane and the merge together.
+
+- **Conflicts.** Only two files conflicted when the lane and `main` were tried together (in a scratch clone, with the lane committed
+  on 56e815a): `README.md` (the "Status" bullets, where both sides appended) and `docs/progress.md` (the header, "Where we are" and "Start
+  here next", where both sides rewrote the same lines). **No source file conflicts:** apart from those two documents, `main` touched none
+  of the files this lane changed. The merge itself was done with those two documents restored to `HEAD`, so it applied without a conflict;
+  the lane's part of them was then written back on top of `main`'s text, with the two statements of `main`'s own that the merge made
+  stale corrected (lane 2B is merged, PR #8).
+- **What `main` changed under the lane's feet, checked on the merged tree.** `domain/types.ts` now has the contract's shapes: `Phase`
+  is a plain `string` (the components already took a string), `GateOutcome` lost `waiting`, `RunStatus` gained `awaiting_input`, and
+  `outcomePresentation` maps that to `input`. The gallery and the pill tests now cover `awaiting_input`; nothing else needed a change.
+  `EventBus.status()` has a fourth value, `connecting` (see "Needs from other lanes", lane 3A), and lane 2B's `CLOCK` is a
+  different type from the one in `ui/pipes/` (see "Decisions to review" 1); neither needs a change in `ui/`.
+- **Chain on the merged tree** (Node 24.21.0, after `npm ci` from `main`'s lockfile): `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check`, `api:check` and `openapi-mirror`), `npm test` (**58 files, 1302 tests**: the
+  1056 of `main`, which already holds lane 2B, plus this lane's 246) and `npm run format:check`, all exit 0.
+
+### Did not run, skipped, and why
+
+- **`npm run start:mock` against a mock backend:** lane 2D has not built it, and these components take no data; the gallery was served by
+  the `mock` configuration, which is still a copy of `development`.
+- **Wireframe boards in a browser:** not opened (they need the Claude Design runtime). The top-bar, stepper and chip compositions were
+  checked against the design system's previews and the Voyages wireframe's HTML, read as text.
+- **Not checked:** browsers other than Chromium, a real phone (390 px was viewport emulation), a screen reader, a pixel diff (the
+  comparison was by eye), keyboard order in a real browser (the unit tests cover roles and attributes, not tabbing).
+- **Not exercised by the app:** nothing uses these components yet, so the production bundle does not contain them.
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **From the user:** review of this lane, then approval to commit and push; an answer on the points under "Decisions to review".
+- **For lane 3A (shell):** put `<ah-toast-host />` once in `App`; feed `ah-top-bar` (`needsYou` from `StoriesStore.needsYou()`, `user` from
+  `CurrentUser`: `{ email: actor, initials }`) and debounce `queryChange` before navigating; map `EventBus.status()`, which is
+  `connecting | live | reconnecting | offline`, to `[live]`, which takes `live | reconnecting | offline` (as lane 2B suggests: `connecting`
+  shows as `reconnecting`, or as `live` if you prefer no flash at start-up); provide the `ui` `CLOCK` from lane 2B's (see "Decisions to
+  review" 1), with a ticking clock if the lists should keep "22 m ago" fresh; inject `ThemeService` once (still open from lane 1A).
+- **For lane 2C:** `statusPresentation` has no fallback for an unknown status (it returns `undefined`; the doc says "neutral"), so
+  `ah-status-badge` guards it; and the label **"In port"** of the filter lives in `ui/filter-chips` (`IN_PORT_LABEL`) because `domain/` only
+  has the `IN_PORT` word. Move it to `domain/status.ts` if you want one place.
+- **For lane 4A:** the voyage header needs `ah-status-badge` with `showApi` and `detail` (gate or halt reason), and
+  `ah-phase-stepper` with `[stoppedAt]` for Aground (from `story.phase_changed`).
+- **For lanes 3A and 5A:** put `ah-skeleton-rows` inside `ah-panel-body` and give a scroll box `position: relative` (lane 1A's defect 2).
+- **For lane 1C:** the one-line `kit.spec.ts` change above, and a partial `_ahoy-1c.scss` + `@use` if it needs global CSS.
+
+### Final check
+
+Run at the end of the lane, on the lane's own tree (56e815a), on Node 24.21.0 (the merged tree is under "Integration with `main`"):
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0 (production bundle, no kit-routes chunk)
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, then build-tokens: ok)
+$ npm test                    exit 0 (Test Files 47 passed (47); Tests 1046 passed (1046))
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
 
 ---
 
