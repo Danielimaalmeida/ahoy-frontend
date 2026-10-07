@@ -1,8 +1,8 @@
 import { Component, booleanAttribute, computed, effect, input, output, signal } from "@angular/core";
 import type { FormControl } from "@angular/forms";
 import { ReactiveFormsModule } from "@angular/forms";
-import { CREW, reviewersConflict } from "@domain/models";
-import type { ModelSlot, ReasoningEffort, SlotModel } from "@domain/types";
+import { CREW } from "@domain/models";
+import type { ModelSlot, ReasoningEffort } from "@domain/types";
 import { Button } from "@ui/button/button";
 import { Icon } from "@ui/icon/icon";
 import { Source } from "@ui/tags/source";
@@ -230,19 +230,18 @@ export class ModelChoiceTable {
   /** The typed model of each slot, kept current from the controls. */
   private readonly typed = signal<Readonly<Partial<Record<ModelSlot, string>>>>({});
 
-  /** The model both Lookouts would run on (typed, or the default when blank), or `null`. */
+  /**
+   * The model both Lookouts would run on, or `null`. Each side is the typed model, or the slot's default when blank;
+   * as in the domain's `reviewersConflict`, a side that is still unknown is not a conflict. (That function takes the
+   * API's whole `ModelPlan`, which a form being edited doesn't have.)
+   */
   readonly conflict = computed(() => {
     const specs = new Map(this.rows().map((s) => [s.slot, s]));
     const typed = this.typed();
-    const lookout = (slot: "review-design" | "review-defect"): SlotModel => ({
-      model: effectiveModel(typed[slot] ?? "", specs.get(slot)?.defaultModel),
-      reasoningEffort: null,
-      modelSource: "configuration",
-      effortSource: "model_default",
-    });
-    return reviewersConflict({
-      slots: { "review-design": lookout("review-design"), "review-defect": lookout("review-defect") },
-    });
+    const lookout = (slot: "review-design" | "review-defect"): string =>
+      effectiveModel(typed[slot] ?? "", specs.get(slot)?.defaultModel);
+    const design = lookout("review-design");
+    return design !== "" && design === lookout("review-defect") ? design : null;
   });
 
   constructor() {

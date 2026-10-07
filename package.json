@@ -13,10 +13,12 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
-    "lint": "eslint . && npm run tokens:check",
+    "lint": "eslint . && npm run tokens:check && npm run api:check",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && node scripts/check-boundaries.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "api:sync": "node scripts/sync-openapi.mjs",
+    "api:types": "openapi-typescript openapi/ahoy-v1.yaml -o src/app/core/api/schema.d.ts --immutable && node scripts/openapi-mirror.mjs",
+    "api:check": "openapi-typescript openapi/ahoy-v1.yaml -o src/app/core/api/schema.d.ts --immutable --check && node scripts/openapi-mirror.mjs --check",
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check",
     "format": "prettier --write .",
@@ -39,18 +41,26 @@
     "rxjs": "7.8.2",
     "tslib": "2.8.1"
   },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
+  },
   "devDependencies": {
     "@angular/build": "^22.2.1",
     "@angular/cli": "^22.2.1",
     "@angular/compiler-cli": "^22.2.1",
+    "ajv": "^8.20.0",
     "angular-eslint": "^22.5.0",
     "eslint": "^10.12.0",
     "husky": "^9.1.7",
     "jsdom": "^30.1.2",
     "lint-staged": "^17.6.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.9",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "yaml": "^2.9.1"
   }
 }

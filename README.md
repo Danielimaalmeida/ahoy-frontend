@@ -76,15 +76,24 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `npm run tokens:check`), the design-system bundle on every page, `ThemeService`, `ah-icon`, `ah-logo`, `ahButton`,
   `ah-panel`, `ah-field`, `ah-banner`, table helpers, `ah-source`, and the dev-only `/_kit` gallery with a light/dark
   switch. Unit-tested and checked in headless Chromium; no API involved.
-- **Wave 1, lane 2A (API client): merged into `main` (PR #5), not finished.** `ApiClient` with the 19 operations of
-  phases 3 to 6, `ApiError`, guards, `AuthStrategy`, `CurrentUser`, the runtime `AppConfig`, fixtures and the vendored
-  contract. Missing until `openapi-typescript`, `ajv` and `yaml` are approved and installed: the generated types,
-  `api:types`/`api:check` and `contract.spec.ts`. Never run against a real API.
-- **Wave 1, lane 2C (pure domain): merged into `main`** (PR #3). `src/app/domain/` holds the vocabulary mappings, the
-  AIU and time helpers and the project's only diff implementation.
-- **Wave 2, lane 1C (kit: interaction and content): done, not committed** (branch `claude/secao-b-paralelos2-1l7xpu`).
+- **Wave 1, lane 2A (API client): done, offline, and merged into `main`** (PR #5 and PR #7): `ApiClient` with the 19 operations
+  of phases 3 to 6, `ApiError`, guards, `AuthStrategy`, `CurrentUser`, the runtime `AppConfig`, fixtures, the vendored
+  contract. The finishing pass (PR #7) added `openapi-typescript`,
+  `ajv` and `yaml` installed, `schema.d.ts` generated (`npm run api:types`, checked by `npm run api:check`, which `npm run lint`
+  runs), `core/api/types.ts` on the generated types, and `contract.spec.ts` (fixtures, problems and request bodies against the
+  YAML with Ajv). Never run against a real API.
+- **Lane 2C (pure domain): done and merged into `main`** (PR #3). `src/app/domain/` holds the vocabulary mappings, the AIU
+  and time helpers and the project's only diff implementation. Its `types.ts` did not match the contract; the 2A finishing pass
+  corrected it (the contract is sovereign) and `core/api/domain-types.spec.ts` keeps it identical (see
+  [docs/progress.md](docs/progress.md)).
+- **Wave 2, lane 2B (realtime and stores): done, in review** (branch `claude/ecstatic-allen-vkmfqi`, pull request into
+  `main`). `FETCH`, `CLOCK`, `parseSseStream`, `EventStreamClient` (fetch, `Last-Event-ID`, back-off, terminal 4xx),
+  `EventBus` (one global connection) with the polling fallback, `StoriesStore`, `StoryStore`, `RunProgressBuffer` and
+  `StoryEventsFeed`, with 146 new tests on a fake `fetch`, a fake clock and a fake API. No screen uses them yet; never run
+  against an API or the mock backend.
+- **Wave 2, lane 1C (kit: interaction and content): done, in review** (branch `claude/secao-b-paralelos2-1l7xpu`).
   `ah-dialog` on the CDK `Dialog`, `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`, `ah-live-steps`,
   `ah-ships-log`, `ah-artifact-diff` and `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds
   `@angular/cdk` 22.2.1 and `marked` 18.1.0. Unit-tested and checked in headless Chromium; no API involved.
-- Next: review and commit lane 1C; lanes 1B, 2B and 2D run in parallel; finish lane 2A (needs that approval). Details
-  in [docs/progress.md](docs/progress.md).
+- Next: review and merge lanes 2B and 1C, and the rest of wave 2 (1B, 2D). Details in
+  [docs/progress.md](docs/progress.md).

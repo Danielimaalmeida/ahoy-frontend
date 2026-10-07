@@ -18,10 +18,13 @@ const MODIFIERS: Readonly<Record<string, OutcomeModifier>> = {
   error: "halted",
   reject: "halted",
   halt: "halted",
+  // Not an API value: the design system's word for a human gate nobody has decided yet (OutcomePill).
   waiting: "decision",
   // Runs.
   queued: "queued",
   running: "running",
+  // The run stopped to ask questions, as a `branch` gate does. The design system does not list it: to be reviewed.
+  awaiting_input: "input",
   succeeded: "done",
   failed: "halted",
   lost: "halted",
