@@ -1,9 +1,6 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 2A (API client), which merged `main` (phase 0, PR #1, and lane 1A, PR #4) into branch
-`claude/charming-clarke-tlb24e`. Lane 2A is built and tested but NOT finished: the three dev dependencies it is approved to add
-(`openapi-typescript`, `ajv`, `yaml`, plan §10) could not be installed, so the generated types, `api:types`, `api:check` and
-`contract.spec.ts` are missing. Lane 2C (wave 1) runs in another session; its state is in its own section once it reports.**
+**Updated 2026-10-07 by lane 2C (pure domain), which merged `main` (phase 0, lane 1A and the lane 2A branch) into `lane/2c-domain`. Lane 2C is done and awaits review and merge. Lane 2A is built and tested but NOT finished: the three dev dependencies it is approved to add (`openapi-typescript`, `ajv`, `yaml`, plan §10) could not be installed, so the generated types, `api:types`, `api:check` and `contract.spec.ts` are missing.**
 
 - **Ran for 2A, on the merged tree (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check`), `npm test` (23 files, **582 tests**: 15 of phase 0, 83 of lane 1A
@@ -35,6 +32,12 @@ runtime `AppConfig` (and `API_BASE` taken from it), the fixtures and the vendore
 complete (see "Start here next"). Lane 2C of wave 1 is independent of it. No screen shows data yet and no call has ever reached a
 real API (risk R1 is still open).
 
+**Lane 2C (domínio puro)** is done, committed on branch `lane/2c-domain` (PR open, not merged): `src/app/domain/` now has the vocabulary
+mappings (`statusPresentation`, `outcomePresentation`, `explainHalt`), the AIU and time helpers, `CREW` and the only
+diff implementation of the project (`diff` 9.0.0), with **218 new tests** (233 in the suite). The API types are
+provisional until lane 2A lands `schema.d.ts`. `npm run format:check` is green: the 24 skill files added by commit
+132728f are ignored in `.prettierignore` (decided by the user on 2026-10-06).
+
 ## Start here next
 
 1. **User, to finish lane 2A:** approve installing `openapi-typescript@7.13.0`, `ajv@8.20.0` and `yaml@2.9.1` as dev
@@ -53,7 +56,7 @@ real API (risk R1 is still open).
 4. **User:** decide the two points lane 1A raised: keep the `.prettierignore` entries for the copied agent skills (they are in
    `main`, and they make `npm run format:check` green again), and report the two `bundle.css` defects to the design system (section
    "Lane 1A").
-5. **Wave 1:** **2C** (pure domain) is still to do, and **6D** is optional (`docs/paralelos1.md`). With 1A and 2C in `main`, wave 2
+5. **Wave 1:** **2C** (pure domain) is done on `lane/2c-domain`, awaiting review and merge; **6D** is optional (`docs/paralelos1.md`). With 1A and 2C in `main`, wave 2
    lanes **1B** and **1C** can start (`docs/paralelos2.md`). Lanes **2B** and **2D** need 2A _and_ 2C in `main`, and 2D reuses the
    Ajv helper that comes with `contract.spec.ts`, so finish 2A first.
 6. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
@@ -401,6 +404,81 @@ $ npm run lint                exit 0 (no problems)
 $ npm test                    exit 0 (Test Files 1 passed (1); Tests 15 passed (15))
 $ npm run format:check        exit 0 (All matched files use Prettier code style!)
 ```
+
+---
+
+## Lane 2C · Domínio puro (2026-10-06)
+
+Branch `lane/2c-domain`, a partir de `main` (fase 0 já fundida). Commit e push aprovados pelo utilizador a
+2026-10-06; PR aberto para `main`.
+
+### O que mudou
+
+| Ficheiro                  | Resultado                                                                                                                                                                                                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/domain/types.ts` | Tipos provisórios da API com nomes de domínio (`Story`, `Run`, `Question`, `GateRecord`, `Artifact`, `AhoyEvent`, `ModelPlan`, `SlotModel`, `StoryStatus`, `RunStatus`, `GateOutcome`, `ModelSlot`, `ReasoningEffort`, …). A 2A troca por reexports do `schema.d.ts`. |
+| `phases.ts`               | `PHASES` (7, por ordem), `phaseIndex` (1-based; `null` para `blocked` e desconhecidas), `GATE_FOR_PHASE` (G11).                                                                                                                                                       |
+| `status.ts`               | `statusPresentation(status, phase)` → `{label, modifier, api}` com os 7 estados do `vocabulary.md`; `IN_PORT`.                                                                                                                                                        |
+| `halt.ts`                 | `HALT_REASONS` com os 9 textos exatos do `vocabulary.md`, `isHaltReason`, `explainHalt(reason, detail?)`.                                                                                                                                                             |
+| `outcome.ts`              | `outcomePresentation(value)` para gates e runs; desconhecido fica neutro (`queued`).                                                                                                                                                                                  |
+| `models.ts`               | `MODEL_SLOTS`, `CREW`, `MODEL_SOURCE_LABELS`, `EFFORT_SOURCE_LABELS`, `crewLabel` (reserva: texto da API, G14), `reviewersConflict`.                                                                                                                                  |
+| `aiu.ts`                  | `formatAiu`/`parseAiu` só com aritmética inteira, `remainingNano`, `budgetPercent`, `capCoversSpent`.                                                                                                                                                                 |
+| `time.ts`                 | `relativeTime`, `absoluteTime`, `waitingTime`, `formatDuration`; `now` por parâmetro.                                                                                                                                                                                 |
+| `identifiers.ts`          | `STORY_KEY_PATTERN`/`isStoryKey`, `shortSha`, `actorLabel`, `formatTokens`.                                                                                                                                                                                           |
+| `text-diff.ts`            | `diffLines`, `hunks`, `changedBlocks` e `markdownBlocks` sobre `diff` 9.0.0 (jsdiff). Única implementação de diff do projeto.                                                                                                                                         |
+| `package.json`            | `diff` `9.0.0` (runtime, exato; aprovado no §10). O `package-lock.json` só ganhou essa entrada.                                                                                                                                                                       |
+| `.prettierignore`         | As cópias de skills (`.agents/`, `.opencode/`, `.github/skills/`) ficam fora do Prettier (decidido pelo utilizador a 2026-10-06), para o `format:check` do CI ficar verde.                                                                                            |
+
+Decisões que convém rever:
+
+- `explainHalt().short` é sempre um prefixo exato do texto do `vocabulary.md` (a primeira frase quando há mais do que
+  uma; o texto todo quando não há), para não inventar palavras. Onde o wireframe tem rótulo próprio ("The run failed
+  before any prompt"), a 3A pode usá-lo na coluna "What's needed".
+- `formatAiu` imprime exatamente `decimals` casas; quem mostra caps inteiros passa `0` ("12.4 / 30 AIU").
+- Estado ou outcome desconhecidos ficam neutros; um motivo de halt desconhecido mostra o código da API tal como está.
+- Os índices de `changedBlocks` referem-se a `markdownBlocks(next)`; `markdownBlocks` fica exportada para a 1C/4B
+  partirem o markdown da mesma maneira.
+- `types.ts` é provisório: não há `schema.d.ts` em `main` (a 2A ainda não correu).
+
+### Provas (offline, 0 AIU, Node 24.21.0)
+
+- `npm run build` exit 0; `npm run typecheck` exit 0 (`check-boundaries: ok`); `npm run lint` exit 0;
+  `npm run format:check` exit 0 (depois de ignorar as cópias de skills no `.prettierignore`).
+- `npm test`: **10 ficheiros, 233 testes, 0 falhas** — 218 novos: `aiu` 53, `time` 32, `identifiers` 27, `text-diff`
+  26, `halt` 24, `outcome` 21, `models` 15, `phases` 11, `status` 9.
+- `parseAiu`/`formatAiu`: ida e volta exata em `0.1`, `12.4`, `24.06`, `30`, `0.000000001`; recusa `1e3`, `-1`, `+1`,
+  `25.`, `.5`, `25,5`, 10 casas e valores fora de `Number.isSafeInteger`; `formatAiu` recusa não-inteiros e `NaN`.
+- `text-diff`: igual, só adições, só remoções, linha alterada, linha movida, vazio, hunks com 3 de contexto,
+  merge/split de hunks, secção `@@ Summary @@`/`@@ WP1 … @@`, `@@ @@` sem secção; `changedBlocks` (bloco novo,
+  alterado, removido, igual, sem revisão anterior, documento anterior vazio).
+- `check-boundaries: ok` confirma que `domain/` não importa Angular, rxjs, `node:`, `core`, `ui` nem `features`; a
+  única importação externa é o `diff`.
+- `npx prettier --check src/app/domain` verde.
+
+### Não correu / saltado, e porquê
+
+- **`npm run format:check` (repo inteiro): estava vermelho antes desta lane**, por 24 ficheiros `.md` em `.agents/`,
+  `.opencode/` e `.github/skills/` (commit 132728f "Added skills"). Resolvido neste PR com a decisão do utilizador:
+  essas cópias passam a estar no `.prettierignore`, como `docs/design/`. Agora verde.
+- **Nada contra a API, o mock ou `--simulate`:** a lane é TypeScript puro, sem I/O; não havia nada para correr.
+
+### Needs from lane 2A
+
+- Substituir `src/app/domain/types.ts` por reexports do `schema.d.ts` gerado, com os nomes de domínio, e confirmar os
+  nomes dos campos e os valores dos enums (`RunStatus`, `GateOutcome`, `ModelSlot`, `SlotModel`/`ModelPlan`,
+  `HaltReason`) contra o contrato real. Até lá são provisórios.
+- Confirmar a forma de `ModelPlan` que o `reviewersConflict` lê (`slots["review-design"|"review-defect"].model`).
+
+### Needs from lanes 1B/1C/4B/4C/4D/5A/5C (contrato a consumir)
+
+- `changedBlocks` devolve índices para `markdownBlocks(next)`; a 1C deve partir o markdown com a mesma função.
+- `explainHalt` devolve `{short, text, detail}`; o `detail` vem separado para o banner o poder citar (4A).
+- `reviewersConflict(plan)` devolve o modelo em conflito ou `null` (4D).
+- `outcomePresentation` devolve `{label, modifier}` com a palavra da API no label (1B/5A/5B).
+
+### Próximos passos
+
+- Revisão da lane (alimenta quatro lanes da Onda 2) e merge em `main` quando aprovada.
 
 ---
 

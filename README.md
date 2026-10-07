@@ -80,5 +80,8 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `ApiClient` with the 19 operations of phases 3 to 6, `ApiError`, guards, `AuthStrategy`, `CurrentUser`, the runtime
   `AppConfig`, fixtures and the vendored contract. Missing until `openapi-typescript`, `ajv` and `yaml` are approved and
   installed: the generated types, `api:types`/`api:check` and `contract.spec.ts`. Never run against a real API.
-- Next: finish lane 2A (needs that approval) and lane 2C of wave 1, then wave 2. Details in
+- **Lane 2C (pure domain): done** on branch `lane/2c-domain` (PR open, not merged). `src/app/domain/` holds the vocabulary
+  mappings, the AIU and time helpers and the project's only diff implementation, with 218 new tests; the API types are
+  provisional until lane 2A lands. Details in [docs/progress.md](docs/progress.md).
+- Next: finish lane 2A (needs that approval) and merge lane 2C, then wave 2. Details in
   [docs/progress.md](docs/progress.md).
