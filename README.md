@@ -153,5 +153,14 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   The steps are a view, not a control. 57 new tests on the mock backend; checked in headless Chromium (light, dark, 390 px).
   Never run against a real API.
 
-- Next: review and merge lanes 4B, 4C, 4D and 5A; then the rest of wave 4 (`docs/paralelos4.md`). Details in
-  [docs/progress.md](docs/progress.md).
+- **Wave 4, lane 5C (Artifacts: view and compare): done on the mock backend, not committed.** `/voyages/:key/artifacts`
+  (`src/app/features/voyage/tabs/artifacts/`) lists the artifact set with each file's state against another revision
+  (`same`, `+9 −3`, `new`, `changed`), opens a file as markdown, JSON (re-indented) or text, and diffs two revisions with the
+  section named at each hunk. The API lists only the current revision, so older ones are probed per file with `If-None-Match`
+  ETags and cached, and the URL holds the selection (`?compare=`, `?to=`, `?file=`, `?mode=`). 82 new tests (one placeholder
+  row removed from `app.routes.spec.ts`); checked on `npm run start:mock` in headless Chromium (light, dark, 390 px); never run
+  against a real API.
+
+- Next: review and merge lane 5C (this branch); every other lane of wave 4 (4A to 5B) is already in `main` (PR #15 to #20).
+  When sections A to F of `docs/paralelos4.md` are all in `main` — that is, once 5C is merged — open `docs/paralelos5.md`.
+  Details in [docs/progress.md](docs/progress.md).
