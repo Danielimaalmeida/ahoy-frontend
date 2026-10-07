@@ -119,7 +119,11 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   joined to the real voyages in the `StoriesStore`. The backlog comes from a `BacklogPort`, today a `StubBacklogAdapter` with the
   wireframe's nine fictional stories (the API has no backlog yet); "Jira ↗" shows only with `jiraBaseUrl`. 40 new tests; checked on
   `npm run start:mock` in headless Chromium; never run against a real API.
-- **Wave 3, lane 4A (voyage base): done on the mock backend, committed and pushed, in review** (branch
+- **Wave 4, lane 4B (Plan tab and decision): done on the mock backend, merged into `main` (PR #16)** (branch
+  `claude/pensive-ritchie-9ja01b`). `src/app/features/voyage/tabs/plan/`: the plan with changed blocks marked, acceptance criteria,
+  "Your decision" (Approve; Send back and Reject in dialogs) and the conflict panels. 54 new tests; never run against a real API.
+  Details in [docs/progress.md](docs/progress.md).
+- **Wave 3, lane 4A (voyage base): done on the mock backend, merged into `main`** (PR #15) (branch
   `claude/quirky-gates-t6b390`, with `main` and lanes 3A, 3B and 3C merged in; pull request into `main`). `/voyages/:key`
   shows the real voyage page:
   - header, primary action, Anchored banner, tabs with counts and the default tab;
@@ -129,6 +133,18 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
   run against a real API.
 
+- **Wave 4, lane 4C (Questions): done on the mock backend, committed and pushed, in review** (branch `claude/jolly-pascal-ngq59j`, PR #17,
+  from `main` at 959a7b4, with lane 4B merged in). `/voyages/:key/questions` lists the questions by round (the newest
+  open, earlier ones folded) with "{k} of {n} answered" and a meter, an `ah-question-card` each, and "What happens next".
+  Answers are final: nothing is sent without a click on "Send answer", and "Use recommendation" only fills the field.
+  Unsent answers are drafts in memory and `sessionStorage` (`ahoy.draft.{key}.{Qn}`) that survive a conflict, a refresh of the
+  store and a page reload. 47 new tests; checked on `npm run start:mock` in headless Chromium; never run against a real API.
+- **Wave 4, lane 4D (Models tab and Change models dialog): done on the mock backend, committed and pushed, in review** (branch
+  `claude/gifted-einstein-2wo0ou`, PR #18, from `main` at 959a7b4, with `main` at f795359 (lanes 4B and 4C) merged in). `/voyages/:key/models` shows "Models per phase"
+  (sources, "Chosen for this voyage", Change and Reset, "refused last run") and the Change models dialog, which sends only
+  the changed slots (`null` resets; a model alone is `{model}`), blocks two Lookouts on one effective model and opens by
+  itself with `?change=<slot>`. 45 new tests; checked in headless Chromium (light, dark, 390 px); never run against a real
+  API.
 - **Wave 4, lane 5A (Runs, run detail and live steps): done on the mock backend, committed on
   `claude/epic-albattani-81fip3`.** The Runs tab (`src/app/features/voyage/tabs/runs/`) has the live panel (run spend against the
   run's own cap, `ah-live-steps` with "N steps not shown" rows and `[REDACTED]`, "This run"), kept as history once the run
@@ -137,5 +153,5 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   The steps are a view, not a control. 57 new tests on the mock backend; checked in headless Chromium (light, dark, 390 px).
   Never run against a real API.
 
-- Next: review and merge lanes 4A and 5A; the other wave 4 lanes (`docs/paralelos4.md`) run in other sessions. Details in
+- Next: review and merge lanes 4B, 4C, 4D and 5A; then the rest of wave 4 (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).

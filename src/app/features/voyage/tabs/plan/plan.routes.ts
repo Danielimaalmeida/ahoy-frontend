@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { PlanTab } from "./plan-tab";
 
-/** Plan (lane 4B replaces the placeholder). */
-export const PLAN_ROUTES: Routes = [
-  { path: "", title: "Plan · Ahoy", component: Placeholder, data: { heading: "Plan", lane: "4B" } },
-];
+/** Plan: the plan, its acceptance criteria and the decision at the plan gate (lane 4B). */
+export const PLAN_ROUTES: Routes = [{ path: "", title: "Plan · Ahoy", component: PlanTab }];
