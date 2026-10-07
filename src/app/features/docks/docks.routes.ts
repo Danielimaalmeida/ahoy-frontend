@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { Docks } from "./docks";
 
-/** The Docks (lane 3C replaces the placeholder). */
-export const DOCKS_ROUTES: Routes = [
-  { path: "", title: "The Docks · Ahoy", component: Placeholder, data: { heading: "The Docks", lane: "3C" } },
-];
+/** The Docks: the Jira backlog beside each story's state in Ahoy (a planned screen, see `BacklogPort`). */
+export const DOCKS_ROUTES: Routes = [{ path: "", title: "The Docks · Ahoy", component: Docks }];

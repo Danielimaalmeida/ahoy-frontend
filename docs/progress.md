@@ -1,6 +1,20 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 2D (mock backend and `mock:api`), launched from `docs/paralelos2.md` section D on branch
+**Updated 2026-10-07 by lane 3C (The Docks, planned), launched from `docs/paralelos3.md` section C on branch
+`claude/dazzling-fermat-4tvzii`, from `main` at a2a49fe (which holds every lane of waves 1 and 2, lane 2D included as PR #11).
+Lane 3C is built, tested and compared with the `Docks` wireframe in a browser. Nothing is committed or pushed: it waits for the
+user's review and approval.**
+
+- **Ran for 3C (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci` (the tree had no `.bin`), `npm run build`,
+  `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (79 files,
+  **1527 tests**: the 1487 of `main` and 40 new) and `npm run format:check`, all green; `npm run start:mock` in headless Chromium
+  at `/docks`, light, dark and 390 px.
+- **Did not run for 3C:** anything against a real API, `--simulate` or TEST; the Jira link in a browser (no `jiraBaseUrl` in the
+  dev server, it is unit-tested with a configured one); Load more, the error states and the loading skeleton in a browser (unit-tested
+  only: the stub has 9 items and the mock never fails by itself); other browsers than Chromium; a screen reader; a pixel diff;
+  mutation checks of the new tests.
+
+Earlier: **lane 2D (mock backend and `mock:api`)**, launched from `docs/paralelos2.md` section D on branch
 `claude/blissful-wozniak-qr2816`, from `main` at a99a7a2 (which holds every other lane of waves 1 and 2, lane 1C included as
 PR #10). Lane 2D is committed (0997aba) and pushed with the user's approval; its pull request into `main` waits for review.
 A review pass on the pull request then fixed six findings (see "Lane 2D" → "Review fixes"), committed and pushed to the
@@ -119,34 +133,44 @@ simulated reconciler, `/events/stream` with `Last-Event-ID`, the switches and th
 YAML with Ajv; `npm run start:mock` serves it in the browser and `npm run mock:api` over HTTP behind the real dev proxy. With it
 in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.md`).
 
+**Wave 3, lane 3C (The Docks, planned)** is built and tested, not committed (branch `claude/dazzling-fermat-4tvzii`):
+`/docks` has the "Planned screen" banner, the search, Jira status and Assignee selects, the All / Not started / In Ahoy pill
+and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The backlog comes from a `BacklogPort`, today a
+`StubBacklogAdapter` with the wireframe's nine fictional stories. Lanes 3A, 3B and 4A of wave 3 run in other sessions.
+
 ## Start here next
 
-1. **User:** review and merge the lane 2D pull request (`claude/blissful-wozniak-qr2816` into `main`; section "Lane 2D"
+1. **User, review lane 3C** (`docs/paralelos3.md` suggests DeepSeek Flash 4.1 or Sonnet 5.5 and says to review before
+   integrating; this session ran on Sonnet 5.5): the lane's section below, in particular "Decisions and deviations" (the
+   `scope` and `ahoyKeys` of the query, `planned` on the port, `facets` in the page) and the one file outside the lane's list
+   (`src/app/app.routes.spec.ts`). Then commit and merge. The other sections of `docs/paralelos3.md` (A, B and D) are for
+   other sessions.
+2. **User:** review and merge the lane 2D pull request (`claude/blissful-wozniak-qr2816` into `main`; section "Lane 2D"
    below, in particular its "Decisions and deviations"). It changes nothing outside
    its own list (one line of `angular.json`, one script line of `package.json`), plus this file and the README "Status".
    **Done since earlier versions of this item:** lanes 1B (PR #9), 2B (PR #8) and 1C (PR #10) are merged into `main`.
-2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
+3. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
-3. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
+4. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
    Angular 22 rejects), and run `npm ci` (the lane 2B session started without `node_modules`). Until then each agent must put
    `npx node@24` first on its `PATH` (see "Prompt for a new session"). Proposed setup script, **untested**:
    `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
    `ln -sf /opt/node24/node_modules/node/bin/node /root/.local/bin/node` (`/root/.local/bin` comes before
    `/opt/node22/bin` in the sessions' `PATH`; `npm install -g node@24` is not an option, because npm's global bin is
    Node 22's own directory). Check with `node -v` in a new session.
-4. **User, decided 2026-10-07:** keep the `.prettierignore` entries for the copied agent skills (they stay in `main`, and
+5. **User, decided 2026-10-07:** keep the `.prettierignore` entries for the copied agent skills (they stay in `main`, and
    they make `npm run format:check` green), and report the two `bundle.css` defects to the design system (section
    "Lane 1A"). The report text was handed to the user; whether it was sent is not recorded here. When the design system
    has fixed them, re-sync `docs/design/` and `src/styles/ahoy-bundle.css` and delete the matching rules in
    `src/styles/_ahoy-angular.scss`.
-5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
+6. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 2:** 1B, 1C and 2B are merged; **2D** is item 1. With 2D in `main` the whole wave is there: open every section of
+7. **Wave 2:** 1B, 1C and 2B are merged; **2D** is item 2. With 2D in `main` the whole wave is there: open every section of
    `docs/paralelos3.md` (3A, 3B, 3C and 4A). Screens develop on `npm run start:mock`; e2e (6C) can use `npm run mock:api`
    behind the real proxy. **6D** is optional (`docs/paralelos1.md`); when it runs, add the mock dist check to CI (lane 2D,
    "Needs from other lanes").
-7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
+8. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
    confirm the `state.json` field names `readStoryState` reads. Also `curl -s localhost:4200/api/v1/health` and
@@ -162,6 +186,118 @@ in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.m
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 3C · The Docks, planned (2026-10-07)
+
+Launched from `docs/paralelos3.md`, section C, on `claude/dazzling-fermat-4tvzii` (the branch this session was given; plan §9
+would call it `lane/3c-docks`), from `main` at a2a49fe. **Not committed and not pushed**, as the lane's rules say.
+
+**Pre-flight.** `git fetch origin`: `main` has lane 1B's `ah-section-tabs`, `ah-status-badge` and `ah-empty-state` in
+`src/app/ui/`, and lane 2B's `StoriesStore` (and the `EventBus`) in `src/app/core/`. Node was v22.22.0, so every command ran on
+**Node 24.21.0** from `npx -y node@24`, copied into the session scratchpad and put first on `PATH`. `node_modules` was present
+but incomplete (no `.bin`, no `prettier`), so `npm ci` installed the locked tree. **No dependency was added or changed.**
+Baseline on `main`: 77 files, 1487 tests.
+
+### What changed
+
+| File                                                   | What                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `features/docks/backlog-port.ts`                       | `BacklogItem`, `BacklogQuery`, `BacklogPage`, `BacklogFacets`, `BacklogScope`, the `BacklogPort` interface (`planned`, `list(query)` → `ApiResult<BacklogPage>`) and `BACKLOG_PORT`, whose default is the stub. Swapping the adapter is one provider.                    |
+| `features/docks/stub-backlog-adapter.ts`               | `StubBacklogAdapter`: the wireframe's nine fictional stories, filters (text, Jira status, assignee, scope), paging by plain offsets and the facets of the whole backlog, all on the client. `planned = true`; the "updated" times count back from the `now` it is given. |
+| `features/docks/docks.ts`                              | The `ah-docks` screen: banner, search and selects (typed `FormControl`s), `ah-section-tabs` pill, table with `ahTable`, Ahoy column, actions, loading, empty, error and "Load more". `priorityTrend` picks the arrow of a Jira priority.                                 |
+| `features/docks/docks.routes.ts`                       | The route renders `Docks` (title "The Docks · Ahoy" unchanged).                                                                                                                                                                                                          |
+| `features/docks/*.spec.ts`                             | `stub-backlog-adapter.spec.ts` (13 tests) and `docks.spec.ts` (27).                                                                                                                                                                                                      |
+| `app/app.routes.spec.ts` (**outside the lane's list**) | The `/docks` placeholder case is replaced by one test that renders the real screen at `/docks`; see "Files outside the lane's list".                                                                                                                                     |
+
+### How it behaves
+
+- **Planned, in plain sight.** A notice banner "Planned screen. The backlog is not in the API yet…" shows for as long as
+  `port.planned` is true, so an adapter for a real endpoint makes it disappear without touching the component.
+- **The Ahoy column is real.** Each row looks its key up in the `StoriesStore`: a voyage shows its `ah-status-badge` and phase as
+  a link to `/voyages/:key` (**Under way, Crew asks, Your orders, Anchored, Docked** or **Aground**), none shows "Not started".
+  The store is kept up to date while the screen is open (`store.use`), so an event moves a row from "Not started" to a voyage
+  without reading the backlog again.
+- **Never a false "Not started".** Until the voyages are read the column shows a skeleton and offers no "Set sail"; if reading
+  them failed it says "Unknown", shows an error banner with Try again, and the Not started / In Ahoy filters say they need them.
+- **Actions.** "Set sail" → `/voyages/new?key=&title=` (the summary is the title) for a story with no voyage; "Open voyage" for one
+  with a voyage. **"Jira ↗" shows only with `jiraBaseUrl` in the runtime config** (plan G13): `{jiraBaseUrl}/browse/{key}`, key
+  encoded, `target="_blank" rel="noopener noreferrer"`. No bulk start, and the footer says why.
+- **Counts.** "9 stories · 8 in Ahoy": the matches of the filters from the port, and the voyages the store has. It does not
+  pretend to the wireframe's 142: the stub has nine and says so.
+- **States.** Skeleton rows for the first read; "No stories match" with Clear filters when a filter is on; "The backlog is empty"
+  when none is; an error banner with Try again; an answer to a query that was replaced meanwhile is dropped.
+
+### Proof
+
+All offline, 0 AIU, Node 24.21.0. **No real API was involved** (not the hosted API, not `--simulate`, not the TEST environment).
+
+- **Chain:** `npm run build` (no warning), `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (ESLint, `tokens:check`,
+  `api:check`), `npm test` (**79 files, 1527 tests**, 0 failed, 0 skipped) and `npm run format:check`, all exit 0.
+- **Tests that prove the acceptance criteria:**
+  - _The filters and the three states of the Ahoy column with the stub:_ `docks.spec.ts` "with the planned stub" (nine rows and
+    columns; Not started, Under way, Crew asks, Your orders, Anchored and Docked joined from the store; the pill, search, Jira
+    status and assignee filters; clear filters) over the real `StubBacklogAdapter` and a `StoriesStore` on a `FakeApi`.
+  - _Swapping the adapter changes no component:_ "with another backlog" runs the same `Docks` over a hand-written `FakeBacklog`
+    (rows, no banner when not planned, the exact queries sent, Load more, empty, error and recovery, stale answers dropped).
+  - _No `jiraBaseUrl`, no "Jira ↗":_ "Jira links".
+  - _Never a wrong "Not started":_ "while the voyages are not known" (loading and failed).
+  - _The stub itself:_ `stub-backlog-adapter.spec.ts` (filters, scope with keys, paging, a foreign cursor, facets).
+  - _The route:_ `app.routes.spec.ts` renders `/docks` and checks the h1, the banner and the title.
+- **In a browser:** `ng serve --configuration mock` (port 4210) and headless Chromium 1194 through the session's global Playwright
+  (not a project dependency; the script lives in the scratchpad, not in the repo), `localStorage["ahoy.mock.actor"] =
+"alex@example.com"`: nine rows, "9 stories · 8 in Ahoy" (the mock's eight voyages), **Not started 4 rows and In Ahoy 5 rows**
+  (PROJ-140, 131, 123, 118, 097 are in the mock), `scrollWidth` 1280 and **390** (no sideways scroll of the page; at 390 px
+  the table scrolls inside its panel, as the wireframe's `.scroll` does). Compared by eye with the `Docks` board in light and
+  dark. The one console error is the dev server's 404 for `/config.json` (known, the app runs on the defaults).
+
+### Decisions and deviations (to review)
+
+1. **`scope` and `ahoyKeys` in the query.** The lane's text puts `scope` in `list(...)`, but a backlog adapter cannot know which
+   stories have a voyage. The query therefore also carries `ahoyKeys` (the keys in the store) for the two scopes that need it, and
+   an adapter that tracks Ahoy's state may ignore it. The keys are sent as one string-compared value, so a status change in the
+   store does not read the backlog again; the scopes wait for the store.
+2. **`planned` on the port** (not in the lane's text): the banner and "planned" are data of the adapter, not a constant of the
+   screen.
+3. **`facets` in `BacklogPage`** (not in the lane's text): the Jira status and Assignee options come from the whole backlog and do
+   not shrink with the filters. "Unassigned" is always an option; `assignee: null` in the query means unassigned.
+4. **`limit` in the query**, 25 per page; `BACKLOG_PORT` defaults to the stub in `root`, with no route provider.
+5. **No debounce on the search and no filter in the URL.** Each keystroke reads the port (instant for the stub, and a stale answer is
+   dropped); a real, remote adapter should debounce. The lane does not ask for `?scope=` and F3 mentions the URL only for the voyages
+   list, so the pill is in the component's state.
+6. **Component styles instead of `src/styles/`** (as lane 1C): the page box (max 1360 px, 24 px gutter) because the shell does not
+   give pages one yet, the priority arrows (inline SVG, `--status-input-fg`, `--ink-muted`, `--accent-text`) and the table's own
+   horizontal scroll. Each rule says why.
+7. **"Updated" uses the kit's `ahRelative` pipe** ("2 h ago", "1 d ago", "8 d ago"), not the wireframe's "today" and "yesterday". The
+   pipe reads the kit's `CLOCK` (`@ui/pipes/clock`), which is not the realtime `CLOCK`; the spec provides both.
+8. **Priority arrows** follow Jira's names (High/Highest up, Low/Lowest down, anything else a dash); the meaning is also in the
+   text beside the arrow, so colour is never the only signal.
+
+### Files outside the lane's list, and why
+
+- `src/app/app.routes.spec.ts` (lane P0's): it required the `/docks` placeholder and its "lane 3C" text, so replacing the
+  placeholder broke it. The case left the table and one test renders the real screen on fakes. **Lane 3A will need the same change
+  for `/` and `/voyages`, and 3B for `/voyages/new`; each lane touches only its own cases.**
+- `docs/progress.md` (this section and the header) and the README "Status", as every lane does.
+
+### Did not run, skipped, and why
+
+- **Nothing against a real API, `--simulate` or TEST**, by design. There is no backlog endpoint to run against (G3).
+- **In a browser:** Load more (the stub has nine items, the page size is 25), the loading skeleton, the error banners and the Jira
+  link (no `jiraBaseUrl` in the dev server) were only unit-tested.
+- **Not checked:** other browsers than Chromium, a real phone (390 px was viewport emulation), a pixel diff (by eye), a screen
+  reader (only the markup is tested), mutation checks of the new tests.
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **3A (shell):** the top bar of the Docks wireframe has a "planned" tag on the "The Docks" tab; the screen has its own page box
+  (decision 6) that can go if the shell gives pages a gutter.
+- **Backend (optional, `ahoy-hosted#23`):** `GET /backlog`. Then write a `BacklogPort` adapter for it (with `planned = false`,
+  debounced search, and `ahoyKeys` ignored if it knows the voyages), provide it in `BACKLOG_PORT` and delete the stub.
+- **6C (e2e):** `/docks` under `npm run start:mock` has the nine stub rows against the mock's eight voyages; set the actor to
+  `alex@example.com` for "you".
+
+---
 
 ## Lane 2D · Mock backend and `mock:api` (2026-10-07)
 

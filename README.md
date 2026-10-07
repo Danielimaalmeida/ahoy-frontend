@@ -105,4 +105,10 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   eight voyages of the wireframes, checked against the YAML with Ajv; `npm run start:mock` serves it in the browser and
   `npm run mock:api` over HTTP on `127.0.0.1:8080` behind the real dev proxy, with no new dependency;
   `node scripts/mock-api.dist-check.mjs` proves the production build is free of it. 80 new tests; never run against a real API.
-- Next: review and merge lane 2D, then wave 3 (`docs/paralelos3.md`). Details in [docs/progress.md](docs/progress.md).
+- **Wave 3, lane 3C (The Docks, planned): done offline, not committed** (branch `claude/dazzling-fermat-4tvzii`). `/docks` has the
+  "Planned screen" banner, the filters and the backlog table, with the **Ahoy** column joined to the real voyages in the
+  `StoriesStore`. The backlog comes from a `BacklogPort`, today a `StubBacklogAdapter` with the wireframe's nine fictional
+  stories (the API has no backlog yet); "Jira ↗" shows only with `jiraBaseUrl`. 40 new tests; checked on `npm run start:mock`
+  in headless Chromium; never run against a real API.
+- Next: review and merge lane 2D and lane 3C; the other sections of wave 3 (`docs/paralelos3.md`) are for other sessions. Details
+  in [docs/progress.md](docs/progress.md).
