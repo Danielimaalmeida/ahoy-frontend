@@ -20,7 +20,7 @@ Este ficheiro é só o mapa. Detalhe de cada lane: o ficheiro da fase, a partir 
 | [paralelos2](../paralelos2.md) | A      | 1B   | Kit: estado, progresso, navegação             | Sonnet 5.5                       | 1A + 2C                          |
 | [paralelos2](../paralelos2.md) | B      | 1C   | Kit: diálogo, cartões, passos, diff, markdown | **Opus 5.5**                     | 1A + 2C                          |
 | [paralelos2](../paralelos2.md) | C      | 2B   | Tempo real e stores                           | **Opus 5.5**                     | 2A + 2C                          |
-| [paralelos2](../paralelos2.md) | D      | 2D   | Backend falso e `mock:api`                    | Sonnet 5.5                       | 2A + 2C                          |
+| [paralelos2](../paralelos2.md) | D      | 2D   | Backend falso e `mock:api`                    | Sonnet 5.5                       | 2A terminada + 2C                |
 | [paralelos3](../paralelos3.md) | A      | 3A   | Shell, All hands, Voyages                     | Sonnet 5.5                       | 1B + 2B + 2D                     |
 | [paralelos3](../paralelos3.md) | B      | 3B   | Set sail                                      | Sonnet 5.5                       | 1A + 1C + 2D                     |
 | [paralelos3](../paralelos3.md) | C      | 3C   | The Docks (planeado)                          | DeepSeek Flash 4.1 ou Sonnet 5.5 | 1B + 2B                          |

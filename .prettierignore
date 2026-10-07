@@ -1,6 +1,7 @@
 # Copies and generated files: never reformat them.
 docs/design/
 src/app/core/api/schema.d.ts
+src/testing/fixtures/openapi.json
 src/styles/tokens.css
 src/styles/ahoy-bundle.css
 package-lock.json
