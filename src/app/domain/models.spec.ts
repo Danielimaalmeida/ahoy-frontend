@@ -1,8 +1,18 @@
 import { CREW, EFFORT_SOURCE_LABELS, MODEL_SLOTS, MODEL_SOURCE_LABELS, crewLabel, reviewersConflict } from "./models";
 import type { ModelPlan, ModelSlot, SlotModel } from "./types";
 
-function slot(model: string | null): SlotModel {
-  return { model, reasoningEffort: null, modelSource: "configuration", effortSource: "configuration" };
+/** A slot of a model plan, shaped as the API sends it. */
+function slot(name: ModelSlot, model: string | null): SlotModel {
+  return {
+    slot: name,
+    phase: name === "review-design" || name === "review-defect" ? "pr_review" : name,
+    lens: name === "review-design" ? "design-fit" : name === "review-defect" ? "defect-failure" : null,
+    chosen: null,
+    model,
+    reasoningEffort: null,
+    modelSource: "configuration",
+    effortSource: "configuration",
+  };
 }
 
 describe("MODEL_SLOTS", () => {
@@ -40,6 +50,16 @@ describe("MODEL_SOURCE_LABELS", () => {
 });
 
 describe("EFFORT_SOURCE_LABELS", () => {
+  it("has exactly the contract's effort sources: no agent_profile", () => {
+    expect(Object.keys(EFFORT_SOURCE_LABELS).sort()).toEqual([
+      "configuration",
+      "model_default",
+      "phase_table",
+      "revision",
+      "story",
+    ]);
+  });
+
   it("keeps the model sources and adds the model's own default", () => {
     expect(EFFORT_SOURCE_LABELS["model_default"]).toBe("Model's own");
     expect(EFFORT_SOURCE_LABELS["configuration"]).toBe("Server default");
@@ -64,24 +84,40 @@ describe("crewLabel", () => {
 });
 
 describe("reviewersConflict", () => {
-  function plan(slots: Partial<Record<ModelSlot, SlotModel>>): ModelPlan {
-    return { slots };
+  /** A plan as `getStoryModels` answers it: a list with one entry per slot. */
+  function plan(...slots: SlotModel[]): ModelPlan {
+    return { storyKey: "PROJ-123", version: 9, slots };
   }
 
   it("returns the model both Lookouts would run on", () => {
-    const conflict = plan({ "review-design": slot("claude-sonnet-5"), "review-defect": slot("claude-sonnet-5") });
+    const conflict = plan(slot("review-design", "claude-sonnet-5"), slot("review-defect", "claude-sonnet-5"));
+    expect(reviewersConflict(conflict)).toBe("claude-sonnet-5");
+  });
+
+  it("finds the Lookouts wherever they are in the list", () => {
+    const conflict = plan(
+      slot("review-defect", "claude-sonnet-5"),
+      slot("intake", "gpt-5.6-terra"),
+      slot("review-design", "claude-sonnet-5"),
+    );
     expect(reviewersConflict(conflict)).toBe("claude-sonnet-5");
   });
 
   it("returns null when the two Lookouts differ", () => {
-    const ok = plan({ "review-design": slot("gpt-5.6-terra"), "review-defect": slot("claude-sonnet-5") });
+    const ok = plan(slot("review-design", "gpt-5.6-terra"), slot("review-defect", "claude-sonnet-5"));
     expect(reviewersConflict(ok)).toBeNull();
   });
 
+  it("does not take two other slots on one model for a conflict", () => {
+    const other = plan(slot("planning", "claude-sonnet-5"), slot("implementation", "claude-sonnet-5"));
+    expect(reviewersConflict(other)).toBeNull();
+  });
+
   it("returns null when a slot is missing, blank or the server decides", () => {
-    expect(reviewersConflict(plan({ "review-design": slot("gpt-5.6-terra") }))).toBeNull();
-    expect(reviewersConflict(plan({ "review-design": slot(null), "review-defect": slot(null) }))).toBeNull();
-    expect(reviewersConflict(plan({ "review-design": slot("  "), "review-defect": slot("  ") }))).toBeNull();
+    expect(reviewersConflict(plan(slot("review-design", "gpt-5.6-terra")))).toBeNull();
+    expect(reviewersConflict(plan(slot("review-design", null), slot("review-defect", null)))).toBeNull();
+    expect(reviewersConflict(plan(slot("review-design", "  "), slot("review-defect", "  ")))).toBeNull();
+    expect(reviewersConflict(plan())).toBeNull();
   });
 
   it("returns null when there is no plan yet", () => {
