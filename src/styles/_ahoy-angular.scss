@@ -1,0 +1,66 @@
+// The few rules the design-system bundle can't cover (lane 1A). Values come from tokens.css; each rule says why it
+// exists. Don't restyle bundle classes here: ahoy-bundle.css is a copy that gets re-synced.
+
+// The top bar and the page gutter start at the window edge, as in the wireframes; the bundle styles body but not its
+// margin.
+body {
+  margin: 0;
+}
+
+// Wrapper components render the README markup inside their host element. The host adds no box of its own, so flex and
+// grid layouts see the README element directly (the banner's icon, a panel in a grid, a field in a two-column form).
+// Accessibility attributes always sit on the inner element, never on these hosts.
+ah-icon,
+ah-logo,
+ah-panel,
+ah-panel-head,
+ah-panel-body,
+ah-panel-foot,
+ah-field,
+ah-banner {
+  display: contents;
+}
+
+// Buttons on links. The bundle's `.ah a { color: accent-text }` is more specific than `.ah-btn--<variant>`, so a link
+// styled as a button took the link colour: the DataTable preview's "Answer" is blue on blue. These restore each
+// variant's own text colour on `<a class="ah-btn">` (reported for the design system in docs/progress.md, lane 1A).
+.ah a.ah-btn {
+  color: var(--ink);
+}
+.ah a.ah-btn--primary,
+.ah a.ah-btn--danger {
+  color: var(--on-accent);
+}
+.ah a.ah-btn--soft {
+  color: var(--accent-text);
+}
+.ah a.ah-btn--ghost {
+  color: var(--ink-soft);
+}
+.ah a.ah-btn--danger-outline {
+  color: var(--danger-text);
+}
+.ah a.ah-btn[aria-disabled="true"] {
+  color: var(--ink-disabled);
+}
+
+// Panel header actions: the Panel preview pushes them to the right with an inline `flex: 1` spacer.
+.ah-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+// "(optional)" after a field label: the Field preview sets font-weight 500 on it inline.
+.ah-field__optional {
+  font-weight: 500;
+}
+
+// A banner with a technical line: the Banner preview stacks title, text and `ah-tech` with an inline 6px column gap.
+.ah-banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

@@ -1,28 +1,39 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-06 by lane 2A (API client), committed and pushed with the user's approval to branch
-`claude/charming-clarke-tlb24e` (from `main` at 132728f; no PR yet). State: phase 0 is in `main` (PR #1). Lane 2A is built and
-tested but NOT finished: the three dev dependencies it is approved to add (`openapi-typescript`, `ajv`, `yaml`, plan §10) could not
-be installed, so the generated types, `api:types`, `api:check` and `contract.spec.ts` are missing.**
+**Updated 2026-10-07 by lane 2A (API client), which merged `main` (phase 0, PR #1, and lane 1A, PR #4) into branch
+`claude/charming-clarke-tlb24e`. Lane 2A is built and tested but NOT finished: the three dev dependencies it is approved to add
+(`openapi-typescript`, `ajv`, `yaml`, plan §10) could not be installed, so the generated types, `api:types`, `api:check` and
+`contract.spec.ts` are missing. Lane 2C (wave 1) runs in another session; its state is in its own section once it reports.**
 
-- **Ran (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm run build`, `npm run typecheck` (`check-boundaries: ok`),
-  `npm run lint`, `npm test` (13 files, **499 tests**: 15 of phase 0 and 484 of lane 2A), Prettier on everything this lane
-  touched; `npm start` in headless Chromium (the app boots with the new initializer and interceptor); the client over
-  Angular's real `fetch` backend with a fake `fetch`; five mutation checks of the tests.
-- **Did not run:** `scripts/smoke-api.mjs` and `scripts/capture-fixtures.mjs` (written, only syntax-checked: they need a
+- **Ran for 2A, on the merged tree (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check`), `npm test` (23 files, **582 tests**: 15 of phase 0, 83 of lane 1A
+  and 484 of lane 2A) and `npm run format:check`, all green. On the lane's own tree before the merge: 499 tests; `npm start` in
+  headless Chromium (the app boots with the new initializer and interceptor); the client over Angular's real `fetch` backend with a
+  fake `fetch`; five mutation checks of the tests.
+- **Did not run for 2A:** `scripts/smoke-api.mjs` and `scripts/capture-fixtures.mjs` (written, only syntax-checked: they need a
   local API, as the lane says); anything against the `ahoy-hosted` API (no Docker daemon, no Postgres server); `api:types`,
-  `api:check`, `contract.spec.ts` (not delivered); the CI workflow (nothing pushed).
-- **Red, and not from this lane:** `npm run format:check` on the whole repository fails on 24 skill files under
-  `.agents/skills`, `.github/skills` and `.opencode/skills`, which came in `main` with commit 132728f ("Added skills").
-  Everything this lane touched passes it. See "Needs from other lanes".
+  `api:check`, `contract.spec.ts` (not delivered); the CI workflow (a pull request runs it).
+- **Ran for 1A (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, `npm run build`, `npm run typecheck`,
+  `npm run lint` (now also `tokens:check`), `npm test` (98 tests, 11 files), `npm run format:check`, all green;
+  `/_kit` served by `ng serve` and screenshotted in headless Chromium in light and dark at 1100 px and 390 px, next to
+  the design system's Button, Panel, Field, Banner and DataTable previews.
+- **Did not run for 1A:** `npm run start:mock` against a mock backend (lane 2D has not built one; 1A calls no API);
+  the wireframe boards in a browser; any API.
+- **Phase 0:** see "Lane P0" below.
 
 ## Where we are
 
-Phase 0 is in `main`. Lane 2A (wave 1) delivers the data layer's client side: `ApiClient` with the 19 operations of phases 3
-to 6, `ApiError` and its predicates, the manual guards, `parseRunProgress`, `readStoryState`, the `AuthStrategy` seam, `CurrentUser`,
-the runtime `AppConfig` (and `API_BASE` taken from it), the fixtures and the vendored contract. It is waiting on one
-approval to be complete (see "Start here next"). Lanes 1A and 2C of wave 1 are independent of it. No screen exists yet and
-no call has ever reached a real API (risk R1 is still open).
+Phase 0 and lane 1A are merged into `main` (PR #1 and PR #4): an Angular 22 app that builds, tests and serves, with the CLAUDE.md
+conventions enforced by `tsc`, ESLint, Prettier and `scripts/check-boundaries.mjs`, the dev proxy, every route as a lazy placeholder,
+the design references in `docs/design/`, the generated tokens and the design-system bundle on every page, `ThemeService`, `ah-icon`,
+`ah-logo` and the primitives (`ahButton`, `ah-panel`, `ah-field`, `ah-banner`, table helpers, `ah-source`) with the dev-only `/_kit`
+gallery.
+
+Wave 1, lane 2A (API client) is on branch `claude/charming-clarke-tlb24e`: `ApiClient` with the 19 operations of phases 3 to 6,
+`ApiError` and its predicates, the manual guards, `parseRunProgress`, `readStoryState`, the `AuthStrategy` seam, `CurrentUser`, the
+runtime `AppConfig` (and `API_BASE` taken from it), the fixtures and the vendored contract. It is waiting on one approval to be
+complete (see "Start here next"). Lane 2C of wave 1 is independent of it. No screen shows data yet and no call has ever reached a
+real API (risk R1 is still open).
 
 ## Start here next
 
@@ -34,16 +45,17 @@ no call has ever reached a real API (risk R1 is still open).
    `openapi-typescript@7.13.0` declares the peer `typescript ^5.x` and the project is on `~6.0.3`; the fix is an `overrides`
    entry in `package.json` (`"openapi-typescript": { "typescript": "$typescript" }`), and whether the generator works on
    TypeScript 6 is not yet known. The steps that follow are under "Not done" in the lane 2A section.
-2. **User:** review the lane 2A commit on `claude/charming-clarke-tlb24e` and decide on a PR into `main` (none was opened).
-   The one edit outside the lane's directories is `src/app/app.config.ts` (see "Decisions and deviations", 2).
+2. **User:** review the lane 2A pull request (`claude/charming-clarke-tlb24e` into `main`). The one edit outside the lane's
+   directories is `src/app/app.config.ts` (see "Decisions and deviations", 2).
 3. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
    Angular 22 rejects). Until then each agent must put `npx node@24` first on its `PATH` (see "Prompt for a new
    session").
-4. **User:** decide what to do with the 24 unformatted skill files (add them to `.prettierignore`, or `prettier --write`
-   them), so that `npm run format:check` is green again on `main`.
-5. **Wave 1**, in parallel, one branch per lane from `main`: **1A** (kit foundation) and **2C** (pure domain) are still to
-   do; **6D** is optional. Prompts are in `docs/paralelos1.md`. Lanes 2B and 2D (wave 2) need 2A _and_ 2C in `main`. Finish 2A
-   first: 2D reuses the Ajv helper that comes with `contract.spec.ts`.
+4. **User:** decide the two points lane 1A raised: keep the `.prettierignore` entries for the copied agent skills (they are in
+   `main`, and they make `npm run format:check` green again), and report the two `bundle.css` defects to the design system (section
+   "Lane 1A").
+5. **Wave 1:** **2C** (pure domain) is still to do, and **6D** is optional (`docs/paralelos1.md`). With 1A and 2C in `main`, wave 2
+   lanes **1B** and **1C** can start (`docs/paralelos2.md`). Lanes **2B** and **2D** need 2A _and_ 2C in `main`, and 2D reuses the
+   Ajv helper that comes with `contract.spec.ts`, so finish 2A first.
 6. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
@@ -63,6 +75,183 @@ To finish lane 2A after the dependencies are approved:
 > **only** lane 2A: install the three approved dev dependencies at the versions in the report, generate `schema.d.ts`, add
 > `api:types` and `api:check`, switch `core/api/types.ts` to the generated types, add `contract.spec.ts` with the mirror of
 > the contract as the report describes it, and update the lane section. Don't commit or push.
+
+Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+---
+
+## Lane 1A · Kit foundation (2026-10-06)
+
+Launched from `docs/paralelos1.md`, section A. **Not committed:** every change is in the working tree of
+`claude/brave-keller-c1j5st` (the branch this session was given; plan §9 would call it `lane/1a-kit-foundation`),
+waiting for the user's approval to commit and push. Phase 0 was already in `main` (pre-flight checked with
+`git fetch origin` and `git log origin/main`).
+
+### Node
+
+`node -v` was v22.22.0. `npx -y node@24 -v` gave v24.21.0; that binary was copied into the session scratchpad and put
+first on `PATH`. Every command below ran on Node 24.21.0 with npm 10.9.4.
+
+### What changed
+
+| Area          | Files                                                                                                                                 | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tokens        | `scripts/build-tokens.mjs`, `src/styles/tokens.css` (generated), `package.json` scripts `tokens`, `tokens:check`                      | Every colour, spacing, radius, shadow and size token becomes `--<name>`; `.` is escaped (`--space-1\.5`); `type.families` → `--font-sans`, `--font-mono`. Light in `:root, [data-theme="light"]` (83 properties), dark in `[data-theme="dark"]` (59: the 56 colours and 3 shadows; the rest inherit light). Each block also sets `color-scheme`, so native controls follow the theme. Values are checked to be plain CSS (no `;`, `{`, `}`, `\`, comments). `--check` writes nothing and fails when `tokens.css` is missing or differs from what `tokens.json` produces, or when any `var(--x)` in `src/styles/` or `src/app/` names a property nothing defines. |
+| Styles        | `src/styles/ahoy-bundle.css`, `src/styles/_ahoy-angular.scss`, `src/styles.scss`                                                      | The bundle is a byte-for-byte copy of `components/bundle.css` under a header naming its source and version; its Google Fonts `@import` stays. `_ahoy-angular.scss` holds only what the bundle can't: `body { margin: 0 }`, `display: contents` for wrapper hosts, the link-button colour fix (below), `ah-panel__actions`, `ah-field__optional`, `ah-banner__body`; each rule says why.                                                                                                                                                                                                                                                                          |
+| Theme         | `src/app/ui/theme/theme.service.ts`                                                                                                   | `ThemeService` (`theme` signal, `set`, `toggle`): `data-theme` on `<html>`, light by default, remembered under `ahoy.theme` in `localStorage`. Every storage access is in `try/catch`; a stored value that is not a theme is ignored. `THEME_STORAGE` token so tests use a fake. No button in the app (F16).                                                                                                                                                                                                                                                                                                                                                     |
+| Icons         | `src/app/ui/icon/icons.ts`, `icon.ts`                                                                                                 | `ICON_NAMES` (16, in the README's order), closed `IconName`, `ICONS: Record<IconName, IconShape[]>` (exhaustive by type), `isIconName`. `<ah-icon name size label>`: inline SVG, `stroke="currentColor"`, 1.8 stroke, sizes 16 (default), 12, 18; `aria-hidden` unless `label` is set, then `role="img"` + `aria-label`. Shapes are data rendered with `@switch`: no `innerHTML`.                                                                                                                                                                                                                                                                                |
+| Logo, favicon | `src/app/ui/logo/logo.ts`, `public/favicon.svg`, `src/index.html`, `public/favicon.ico` (deleted)                                     | `<ah-logo [link]>`: the wheel mark and "Ahoy" in `ah-logo`, a `routerLink` to `/` by default, plain text with `link = null`. The favicon is a copy of `ahoy-app-icon.svg`; the Angular default `favicon.ico` is gone.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Button        | `src/app/ui/button/button.ts`                                                                                                         | `button[ahButton], a[ahButton]` directive: `ahButton="default                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | primary | soft | ghost | danger | danger-outline"`(bare = default),`size="sm | md  | lg"`; adds the bundle classes and leaves the element's own type, disabled state and classes alone. `buttonClasses(variant, size)` is exported. |
+| Panel         | `src/app/ui/panel/panel.ts`                                                                                                           | `ah-panel` (the `<section class="ah-panel">`), `ah-panel-head` (`heading`, `subtitle`, `level` 2 or 3, free content, actions marked `ahPanelActions` pushed right), `ah-panel-body`, `ah-panel-foot`. With a heading, the section gets `aria-labelledby` to a unique id.                                                                                                                                                                                                                                                                                                                                                                                         |
+| Field         | `src/app/ui/field/field.ts`                                                                                                           | `ah-field` (`label`, `required`, `optional`, `hint`, `unit`, `errorText`, `errorMessages`) around one `input/select/textarea[ahInput]` (`mono` for keys and model ids). Label `for`, `aria-required`, `aria-invalid` and `aria-describedby` (error, unit, hint ids, only those shown) go on the control; the asterisk is `aria-hidden`. Shows the first error of the `NgControl` once it is touched or changed, kept current through `control.events`; message = `errorMessages[key]`, else the validator's own string, else a default. `errorText` (a server error) shows whatever the state. Ids are unique; a control's own `id` is kept.                     |
+| Banner        | `src/app/ui/banner/banner.ts`                                                                                                         | `<ah-banner variant heading tech icon announce>`: `notice` (refresh icon), `error` (anchor icon), `info` (info icon) and `cost` (the `ah-cost` box: bold amount, projected "who is billed" as a hint). Icons at 18px; `tech` adds `ah-tech` last. `announce` defaults follow the preview (`notice` → `role="alert"`, `error` → `role="status"`, others none) and can be overridden.                                                                                                                                                                                                                                                                              |
+| Table, tags   | `src/app/ui/table/table.ts`, `src/app/ui/tags/source.ts`                                                                              | Directives `table[ahTable]`, `td/th[ahNowrap]`, `[ahKey]`, `[ahApi]`, `[ahCellSub]` (they add the bundle class); `<ah-source [chosen]>` (`ah-source`, `ah-source--chosen`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Gallery       | `src/app/ui/_kit/kit.routes.ts`, `kit.ts`, `kit-section.ts`, `sections/1a-*.ts`, `sections/1b-sections.ts`, `sections/1c-sections.ts` | `/_kit` (dev builds only, as in phase 0) shows the logo, a Light/Dark switch (`aria-pressed` buttons, through `ThemeService`) and one labelled section per component: Logo and icons, Button, Panel, Field (a typed reactive form; the cap starts touched so its error shows, as in the preview), Banner, DataTable and tags. Each lane lists its sections in its own `sections/<lane>-sections.ts`; the 1B and 1C files exist and are empty, so those lanes never edit `kit.ts`.                                                                                                                                                                                |
+| Tooling       | `package.json`, `.prettierignore`                                                                                                     | `npm run lint` = `eslint . && npm run tokens:check`, so CI (which runs `lint`) enforces fresh tokens without touching `ci.yml`. `.prettierignore` also skips the bundle copy and the agent-skill copies (below).                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+**Using the kit (for 1B, 1C and the feature lanes):**
+
+```html
+<button ahButton="primary" size="sm" type="button"><ah-icon name="sail" />Set sail</button>
+<ah-panel>
+  <ah-panel-head heading="Needs you" subtitle="4 voyages"
+    ><a ahButton size="sm" ahPanelActions routerLink="…">All</a></ah-panel-head
+  >
+  <ah-panel-body>…</ah-panel-body>
+</ah-panel>
+<ah-field
+  label="Total budget"
+  required
+  unit="AIU"
+  hint="…"
+  [errorMessages]="{ min: 'At least 12.4 AIU, what’s already spent.' }"
+>
+  <input ahInput formControlName="budget" inputmode="decimal" />
+</ah-field>
+<ah-banner variant="error" heading="Anchored: …" tech="run_failed · r-03">Plain words first.</ah-banner>
+```
+
+### Proof
+
+All on Node 24.21.0, offline, 0 AIU. No API, mock or real, was involved: lane 1A has no data.
+
+- **`tokens:check`**, run on a scratch copy of `tokens.json`, `tokens.css` and the bundle (`node scripts/build-tokens.mjs
+--check <root>`), so `docs/design/` was never edited:
+  1. as generated: `ok`, exit 0;
+  2. `bg` changed in `tokens.json`, not regenerated: "tokens.css is out of date", exit 1;
+  3. regenerated: `ok`, exit 0;
+  4. `avatar` and `badge-height` removed from `tokens.json` and regenerated: "undefined custom property
+     src/styles/ahoy-bundle.css: --avatar" and "--badge-height", exit 1;
+  5. `space-1.5` renamed: "--space-1.5" undefined (the bundle's escaped `var(--space-1\.5)` is matched), exit 1;
+  6. `tokens.css` deleted: "is missing", exit 1;
+  7. a value of `red; } body { x: y`: "token bg has an unexpected value", exit 1, nothing written.
+- **Icons against the sources:** a throw-away script (session scratchpad, not in the repo) parsed the 16 files in
+  `assets/Icons/` and compared every `path`, `circle` and `rect` with `ICONS`: 16 files, 16 names, 0 mismatches.
+- **Tests: 11 files, 98 tests** (83 new; P0's 15 unchanged): `icon` 21 (the 16 icons render on the 24px grid in the
+  SVG namespace, geometry copied, sizes, `aria-hidden` vs label; `ICON_NAMES` equals the README table, which is typed
+  `satisfies Record<IconName, string>`, so a missing or extra name fails to compile), `button` 21 (the 18
+  variant × size cases, native button and link kept, input changes), `field` 17 (label `for`, asterisk hidden,
+  `aria-required`, `aria-describedby` ids exist, no error until touched, first error with a valid
+  `aria-describedby`, validator text, cleared when valid, `markAllAsTouched`, server error, own id, textarea, unique
+  ids, and 7 `firstErrorMessage` cases), `theme.service` 7 (default light, stored dark, invalid value, set/toggle and
+  storage, refused storage, no storage), `panel` 5, `banner` 4, `kit` 4 (every section labelled, the theme switch
+  changes `<html>` and `aria-pressed`, the preview's field error, 16 icons), `logo` 2, `table` 1, `source` 1.
+- **The a11y tests catch regressions:** removing the Field's `aria-invalid` binding and the Panel's `aria-labelledby`
+  made 4 tests fail (restored afterwards).
+- **Visual check, `/_kit` against the previews:** `ng serve` (development configuration) and headless Chromium 1194
+  driven over the DevTools protocol by a throw-away script. `/_kit` at 1100 px in light and dark, and at 390 px in
+  light and dark; the Button, Panel, Field, Banner and DataTable `preview.html` files, wrapped with the generated
+  `tokens.css` and the bundle, at 900 px in light and dark. Compared by eye: Button, Panel, Field and Banner match in
+  both themes, except the deliberate differences below. Google Fonts loaded in the browser (`document.fonts`:
+  Plus Jakarta Sans 600 loaded). At 390 px the page has no sideways scroll (`scrollWidth` 375 with the scrollbar); the
+  table scrolls inside its own box, as the DataTable README allows.
+- **Every page uses the DS:** on `/voyages` (a P0 placeholder) the body's computed `font-family` is the DS sans stack
+  and its background is `bg` (`rgb(246, 248, 250)`).
+- **Production build:** `npm run build` has no `kit-routes` chunk and `grep` finds no `_kit`, `Kit · Ahoy`, `ah-kit` or
+  `kit__` in `dist/ahoy-frontend/`; `styles.css` holds the tokens (`--space-1\.5: 6px`) and the bundle;
+  `index.html` links `favicon.svg`.
+
+### Deliberate differences from the previews, and two bundle defects
+
+- **Bundle defect 1, links styled as buttons.** `bundle.css` has `.ah a { color: var(--accent-text) }`, which is more
+  specific than `.ah-btn--primary`, so `<a class="ah-btn ah-btn--primary">` shows blue text on blue: the DataTable
+  preview's own "Answer" and "Review plan" are unreadable. `_ahoy-angular.scss` restores each variant's text colour on
+  `.ah a.ah-btn`. The bundle copy itself is untouched. **For the design system:** fix it in `bundle.css`, then delete
+  these rules here.
+- **Bundle defect 2, `.ah-sr` escapes scroll boxes.** It is `position: absolute` with no positioned ancestor, so inside
+  a table wrapped in an `overflow-x: auto` box it widened the page at 390 px. The gallery's scroll box has
+  `position: relative`; every lane that wraps a table should do the same.
+- Icons follow the Icons README (1.8 stroke, 16/12/18 px); the Button preview draws its icon at 15 px with a 2 stroke
+  and the Banner preview at 18 px with a 2 stroke.
+- The Field preview's textarea has an inline `min-height: 60px`; `ah-field` keeps the bundle's 84 px.
+- The gallery adds an `info` banner (not in the preview) and shows the table without budget meters (lane 1B's
+  `ah-budget-meter`); its badges are the bundle's raw classes until lane 1B's `ah-status-badge`.
+
+### Decisions
+
+- **Wrapper hosts add no box.** `ah-icon`, `ah-logo`, `ah-panel*`, `ah-field` and `ah-banner` render the README markup
+  inside a `display: contents` host, so flex and grid layouts see the README element (the banner's icon is the
+  flex item, a field is the grid cell). ARIA attributes are always on the inner element. `ah-source` puts the class on
+  its host instead, because `.ah-source` is already `inline-flex`.
+- **Table helpers are attribute directives** (`ahKey`, `ahApi`, `ahCellSub`), not elements, so a key can be an
+  `<a routerLink>` and keep link semantics.
+- **`ThemeService` lives in `src/app/ui/theme/`**, a folder the lane list does not name: `ui/` is the only layer `_kit`
+  may import, and the service is not specific to the gallery. It applies the stored theme only once something
+  injects it (today only `/_kit`); see "Needs from lane 3A".
+- **Gallery layout CSS** (`kit-*`) sits in the `Kit` component with `ViewEncapsulation.None`, not in `src/styles/`, so
+  it only loads with the lazy, dev-only page and never reaches production CSS.
+- **`lint` runs `tokens:check`**, so a stale `tokens.css` fails CI without editing `.github/workflows/ci.yml` (lane 6D
+  appends to it).
+
+### Files outside the lane's list, and why
+
+- `package.json`: the `tokens` and `tokens:check` scripts the plan asks for, and `lint` running `tokens:check`.
+- `src/index.html`, `public/favicon.svg`, `public/favicon.ico` (deleted): the favicon deliverable.
+- `src/app/ui/theme/`: see Decisions.
+- `src/app/ui/_kit/sections/1b-sections.ts` and `1c-sections.ts`: empty lists, the seam that keeps 1B and 1C out of
+  `kit.ts`; they now belong to those lanes.
+- `.prettierignore`: the bundle copy (a re-synced copy, like `docs/design/`), and **`.agents/`, `.github/skills/`,
+  `.opencode/`**. The "Added skills" commit on `main` brought 24 Markdown files there that Prettier would rewrite, so
+  `npm run format:check` (and CI) already failed on `main` before this lane. They are copied agent skills, so they are
+  ignored rather than reformatted. **The user decides:** keep the ignore, or reformat them at the source.
+
+### Did not run, skipped, and why
+
+- **`npm run start:mock`:** the definition of done asks UI lanes to check on the mock backend; lane 2D has not built it
+  (until then `mock` equals `development`), and lane 1A shows no data. `/_kit` was checked with `ng serve`
+  (development) instead.
+- **Wireframe boards:** not opened; this lane was compared with the design system's previews only.
+- **Not checked:** other browsers than Chromium, real phones (390 px was viewport emulation), and a pixel diff (the
+  comparison was by eye).
+- **`build-tokens.mjs` has no automated test:** it is a Node script outside `ng test`; the 7 runs above are its proof.
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **From the user / the design system:** fix the two `bundle.css` defects above, then re-sync `docs/design/` and
+  `src/styles/ahoy-bundle.css` (lane 1A's copy) and remove the matching rules from `_ahoy-angular.scss`.
+- **For lane 3A:** inject `ThemeService` once at start-up (in `App` or an app initializer) if a theme chosen in `/_kit`
+  should apply on every page after a reload; without it, pages are light until `/_kit` is opened.
+- **For lanes 1B and 1C:** add gallery sections to `src/app/ui/_kit/sections/<lane>-sections.ts` only. A wrapper
+  component whose host must not add a box needs a `display: contents` rule in `src/styles/` (ask 1A, or add your own
+  partial and one `@use` line in `src/styles.scss`). Use `ah-icon` for icons and `ahButton` for buttons.
+- **For lanes that wrap a table in a scroll box (3A, 3C, 5A, 5B):** give the box `position: relative` (bundle defect 2).
+- **For lane 6D:** the production build **inlines the Google Fonts CSS** (Angular's font inlining), so `ng build` needs
+  network access to `fonts.googleapis.com`, and at run time the page loads font files from `fonts.gstatic.com` only.
+  The favicon is now `favicon.svg`.
+
+### Final check
+
+Run at the end of the lane, on Node 24.21.0:
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0 (production bundle, no kit-routes chunk)
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (no problems; build-tokens: ok)
+$ npm test                    exit 0 (Test Files 11 passed (11); Tests 98 passed (98))
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
 
 ---
 
@@ -222,10 +411,12 @@ permission classifier denied the `npm install` of them ("Untrusted Code Integrat
 round it: no `npx`, no hand-edited `package.json`, no use of the copies of `ajv` and `yaml` that other packages bring in
 `node_modules`. Everything that does not need them is done and verified; what is left is under "Not done".
 
-One commit on branch `claude/charming-clarke-tlb24e`, from `main` at 132728f, pushed after the user approved it in the session
-(CLAUDE.md requires that approval; the environment's stop hook had only asked for a push). No PR. The contract was read from
-`Danielimaalmeida/ahoy-hosted` at commit `1890d5aa84819480275f79060cae5d529be21ee8` (read-only; the repository was attached to
-the session and cloned outside this one).
+Two commits on branch `claude/charming-clarke-tlb24e`: the lane's own commit (from `main` at 132728f), pushed after the user
+approved it in the session (CLAUDE.md requires that approval; the environment's stop hook had only asked for a push), and a merge
+of `main` at d29002b (lane 1A, PR #4), made when the user asked for a pull request into `main`, ready for review. The merge had
+three text conflicts, all places where both lanes added lines (`package.json` scripts, the README Status bullets,
+`docs/progress.md`); both sides were kept. The contract was read from `Danielimaalmeida/ahoy-hosted` at commit
+`1890d5aa84819480275f79060cae5d529be21ee8` (read-only; the repository was attached to the session and cloned outside this one).
 
 ### What changed
 
@@ -315,9 +506,10 @@ All on Node 24.21.0, offline, 0 AIU.
 - **`api:types`, `api:check`, `contract.spec.ts`:** not delivered (see "Not done"). Consequently "`api:check` limpo" and
   "`contract.spec.ts` verde" of the acceptance criteria are **not met**.
 - **`sync-openapi.mjs` with an https URL:** not run (only local paths).
-- **CI on GitHub:** not run (nothing pushed).
-- **`npm run format:check` on the whole repository:** red, from the 24 skill files named above. It was red on `main` before this
-  lane and the lane did not touch them.
+- **CI on GitHub:** not run on the branch alone (the workflow runs on pull requests and on pushes to `main`); the pull request runs it.
+- **`npm run format:check` on the whole repository:** it was red on `main` at 132728f, from 24 skill files under `.agents/skills`,
+  `.github/skills` and `.opencode/skills` (the "Added skills" commit), which this lane did not touch. Lane 1A's `.prettierignore`
+  entries, now in `main`, make it green again, and it is green on the merged tree.
 - **Skipped test suites:** none.
 
 ### Decisions and deviations
@@ -359,6 +551,10 @@ All on Node 24.21.0, offline, 0 AIU.
     fictional, from the wireframes (PROJ-123, alex@example.com). The `.gitkeep` files of `core/auth` and `testing/fixtures` were removed.
 11. **`package.json`:** only the `api:sync` script was added. No dependency.
 12. **`ahoy-hosted`'s own `CLAUDE.md` was not loaded:** it still holds the `node:test` and `NodeNext` conventions that plan §4 replaced.
+13. **Merging `main` (lane 1A):** `package.json` keeps `api:sync` next to 1A's `tokens` and `tokens:check`, and `lint` stays `eslint . &&
+npm run tokens:check`; the README Status has the three bullets (phase 0, 1A, 2A), with 1A's corrected to "merged, PR #4"; in this file the
+    handoff sections (header, "Where we are", "Start here next", "Prompt for a new session") now cover both lanes. Lane 1A's own section
+    is verbatim, including its sentence that it was not committed, which stopped being true when PR #4 merged.
 
 ### What the real API does that the plan did not say
 
@@ -378,8 +574,8 @@ From the hosted sources at 1890d5a (`apps/api/src/server.ts`, `packages/core`), 
 
 ### Needs from other lanes
 
-- **From the user:** the approval to install the three dev dependencies; approval to commit and push; the decision on the 24
-  unformatted skill files; Node 24 in the setup script (still open from phase 0).
+- **From the user:** the approval to install the three dev dependencies; the review and merge of the pull request; Node 24 in the
+  setup script (still open from phase 0).
 - **For lane 2C:** `check-boundaries` forbids `domain/` importing `@core`, so the plan's "re-export the types of `schema.d.ts`" cannot be
   done as written. Either `domain/` keeps its own structurally identical types (the types in `core/api/types.ts` are assignable to
   them, and the guards return those), or the boundary rule is relaxed for a type-only import. The names and shapes `core/api` exports:
@@ -405,7 +601,7 @@ From the hosted sources at 1890d5a (`apps/api/src/server.ts`, `packages/core`), 
 
 ### Final check
 
-Run at the end of the lane, on Node 24.21.0, on the tree that was committed:
+Run at the end of the lane, on Node 24.21.0, on the lane's own commit (before `main` was merged in):
 
 ```
 $ node -v                     v24.21.0
@@ -415,4 +611,15 @@ $ npm run lint                exit 0 (no problems)
 $ npm test                    exit 0 (Test Files 13 passed (13); Tests 499 passed (499))
 $ npx prettier --check scripts/ openapi/ src/ package.json   exit 0 (all files use Prettier code style)
 $ npm run format:check        exit 1 (24 files, all under .agents/skills, .github/skills and .opencode/skills; none is from this lane)
+```
+
+After merging `main` (lane 1A, d29002b), on the merged tree:
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0 (production bundle; main 249.16 kB raw)
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, then build-tokens: ok)
+$ npm test                    exit 0 (Test Files 23 passed (23); Tests 582 passed (582): 15 + 83 + 484)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
 ```
