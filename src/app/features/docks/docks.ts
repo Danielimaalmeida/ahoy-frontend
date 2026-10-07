@@ -80,19 +80,14 @@ const NO_FACETS: BacklogFacets = { jiraStatuses: [], assignees: [] };
     Api,
   ],
   styles: `
-    /* The shell does not give pages a gutter yet (lane 3A); this is the Docks wireframe's own page box. */
     :host {
       display: block;
     }
+    /* The shell's main.page gives the width and the gutter; this only stacks the page's parts. */
     .docks {
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      box-sizing: border-box;
-      width: 100%;
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 22px 24px 36px;
+      gap: 16px;
     }
     .docks__title {
       margin: 0;
