@@ -99,10 +99,20 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`, `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` and
   `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds `@angular/cdk` 22.2.1 and `marked` 18.1.0.
   Unit-tested and checked in headless Chromium; no API involved.
-- **Wave 2, lane 2D (mock backend): done, in review** (branch `claude/blissful-wozniak-qr2816`, pull request into `main`).
+- **Wave 2, lane 2D (mock backend): done and merged into `main`** (PR #11).
   `MockAhoyServer` (`src/testing/mock-backend/`): the 19 operations with the contract's checks, versions and errors, a simulated
   reconciler, `/events/stream` with `Last-Event-ID`, switches (`latencyMs`, `failNext`, `conflictNext`, `dropStream`) and the
   eight voyages of the wireframes, checked against the YAML with Ajv; `npm run start:mock` serves it in the browser and
   `npm run mock:api` over HTTP on `127.0.0.1:8080` behind the real dev proxy, with no new dependency;
   `node scripts/mock-api.dist-check.mjs` proves the production build is free of it. 80 new tests; never run against a real API.
-- Next: review and merge lane 2D, then wave 3 (`docs/paralelos3.md`). Details in [docs/progress.md](docs/progress.md).
+- **Wave 3, lane 4A (voyage base): built and tested, not committed** (branch `claude/quirky-gates-t6b390`). `/voyages/:key`
+  shows the real voyage page:
+  - header, primary action, Anchored banner, tabs with counts and the default tab;
+  - `VoyageContext` and `CommandRunner` (`core/commands/`);
+  - the Stop, Resume and Budget dialogs, which keep the text through a conflict and send one request per double click.
+
+  Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
+  run against a real API.
+
+- Next: review lane 4A and approve its commit; then wave 4 (`docs/paralelos4.md`). Details in
+  [docs/progress.md](docs/progress.md).

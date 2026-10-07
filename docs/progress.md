@@ -1,10 +1,20 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 2D (mock backend and `mock:api`), launched from `docs/paralelos2.md` section D on branch
-`claude/blissful-wozniak-qr2816`, from `main` at a99a7a2 (which holds every other lane of waves 1 and 2, lane 1C included as
-PR #10). Lane 2D is committed (0997aba) and pushed with the user's approval; its pull request into `main` waits for review.
-A review pass on the pull request then fixed six findings (see "Lane 2D" → "Review fixes"), committed and pushed to the
-same branch with the user's explicit approval.**
+**Updated 2026-10-07 by lane 4A (voyage base: context, commands, header, tabs and dialogs), launched from
+`docs/paralelos3.md` section D on branch `claude/quirky-gates-t6b390`, from `main` at a2a49fe (all of waves 1 and 2, lane 2D
+included as PR #11). Lane 4A is built and tested in the working tree. Nothing is committed or pushed: that waits for the
+user's approval.**
+
+- **Ran for 4A (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (88 files, **1607 tests**, 120 new)
+  and `npm run format:check`, all green. Also 13 mutation checks (12 caught), and `npm run start:mock` in headless Chromium
+  (the 8 voyages, the 3 dialogs, a forced conflict; light, dark and 390 px).
+- **Did not run for 4A:** anything against a real API, `--simulate` or TEST; a screen reader; other browsers than Chromium; a
+  pixel diff (the screens were compared by eye with the wireframes).
+
+Earlier: **lane 2D (mock backend and `mock:api`)**, launched from `docs/paralelos2.md` section D on branch
+`claude/blissful-wozniak-qr2816`, from `main` at a99a7a2. Committed and pushed with the user's approval, then merged into
+`main` (PR #11), its review fixes included.
 
 - **Ran for 2D (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (77 files, **1487 tests**, 85 new after the review fixes)
@@ -118,13 +128,22 @@ review** (pull request into `main`): `MockAhoyServer` in `src/testing/mock-backe
 simulated reconciler, `/events/stream` with `Last-Event-ID`, the switches and the eight seeded voyages), checked against the
 YAML with Ajv; `npm run start:mock` serves it in the browser and `npm run mock:api` over HTTP behind the real dev proxy. With it
 in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.md`).
+Lane 2D has been merged since (PR #11).
+
+**Wave 3, lane 4A (voyage base)** is built and tested on `claude/quirky-gates-t6b390`, **not committed**. `/voyages/:key` now
+shows the real voyage page on the `StoryStore`: breadcrumb, header (key, badge with the API words, title, the primary action for
+the status, Budget, Models and Stop, the phase stepper, owner, budget meter, current run, revision round, agent config), the
+Anchored banner, the seven section tabs with counts, and the default tab for the status. `VoyageContext` (one per page) is
+what every tab injects. `CommandRunner` in `core/commands/` sends every command. The Stop, Resume and Budget dialogs work
+against the mock, conflicts included. The tabs are still placeholders: they belong to wave 4 (`docs/paralelos4.md`). Lanes 3A,
+3B and 3C run in other sessions.
 
 ## Start here next
 
-1. **User:** review and merge the lane 2D pull request (`claude/blissful-wozniak-qr2816` into `main`; section "Lane 2D"
-   below, in particular its "Decisions and deviations"). It changes nothing outside
-   its own list (one line of `angular.json`, one script line of `package.json`), plus this file and the README "Status".
-   **Done since earlier versions of this item:** lanes 1B (PR #9), 2B (PR #8) and 1C (PR #10) are merged into `main`.
+1. **User:** review lane 4A (section "Lane 4A" below, in particular "Decisions and deviations" and the one edit outside
+   the lane), and approve a commit and push to `claude/quirky-gates-t6b390` and a pull request into `main`. **When 4A is
+   in `main`, open `docs/paralelos4.md`** (wave 4 builds on `VoyageContext` and `CommandRunner`). Lane 2D (PR #11) and every
+   earlier lane are already merged.
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
@@ -142,10 +161,9 @@ in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.m
    `src/styles/_ahoy-angular.scss`.
 5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 2:** 1B, 1C and 2B are merged; **2D** is item 1. With 2D in `main` the whole wave is there: open every section of
-   `docs/paralelos3.md` (3A, 3B, 3C and 4A). Screens develop on `npm run start:mock`; e2e (6C) can use `npm run mock:api`
-   behind the real proxy. **6D** is optional (`docs/paralelos1.md`); when it runs, add the mock dist check to CI (lane 2D,
-   "Needs from other lanes").
+6. **Wave 3:** sections 3A, 3B, 3C and 4A of `docs/paralelos3.md` run in parallel. Screens develop on
+   `npm run start:mock`; e2e (6C) can use `npm run mock:api` behind the real proxy. **6D** is optional
+   (`docs/paralelos1.md`); when it runs, add the mock dist check to CI (lane 2D, "Needs from other lanes").
 7. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
    here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
    after driving a story through the simulation. That is the first time the client would meet a real API, and it would
@@ -162,6 +180,132 @@ in `main`, the whole of wave 2 is there and wave 3 can start (`docs/paralelos3.m
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 4A · Voyage base: context, commands, header, tabs and dialogs (2026-10-07)
+
+Launched from `docs/paralelos3.md`, section D, on `claude/quirky-gates-t6b390` (the branch this session was given; plan §9
+would call it `lane/4a-voyage-core`), from `main` at a2a49fe. Not committed or pushed: CLAUDE.md and paralelos3 rule 8 wait
+for the user's approval.
+
+**Pre-flight.** After `git fetch origin`, `main` at a2a49fe holds all four prerequisites:
+
+- **1B:** `ah-status-badge`, `ah-phase-stepper`, `ah-budget-meter`, `ah-section-tabs`, `ah-empty-state` and `ah-skeleton` in
+  `src/app/ui/`.
+- **1C:** `ah-dialog` and `DialogService`.
+- **2B:** `StoryStore`, `StoryEventsFeed` and `EventBus`.
+- **2D:** `src/testing/mock-backend/` and `npm run start:mock`.
+
+Node was v22.22.0, so every command ran on **Node 24.21.0** from `npx -y node@24`, copied into the session scratchpad and put
+first on `PATH`; `npm ci` installed the locked tree. **No dependency was added or changed.** Baseline on `main`: 77 files,
+1487 tests.
+
+### What changed
+
+| Area        | Files (under `src/app/`)                                                   | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commands    | `core/commands/command-runner.ts`, `command-error.ts`                      | `CommandRunner.run(send, { onOk })`: sends with the version the user saw and returns `ok`, `stale`, `decided`, `answered`, `other` or `skipped`. `pending` is a signal; a second `run` while one is in flight is `skipped` with no request (double click). After any `409` it re-reads the story before resolving. `commandErrorView` / `apiErrorView` map each outcome to the banner of plan §5.5 (heading, plain text, `status · code · request id`).                                                                                                                                  |
+| Context     | `features/voyage/context/voyage-context.ts`, `voyage-events.ts`, `crew.ts` | `VoyageContext` (provided by the shell, one per page):<br>• signals `key`, `story`, `version`, `status` (`loading` / `ready` / `error` / `notFound`), `error`, `state` (`readStoryState`), `models`, `runs`, `events`, `gateKey` (G11), `revisionRound` / `revisionCeiling` (G10), `isOwner`, `stoppedAt` (G12), `lastHalt` (G7), `counts`, `remainingNanoAiu`;<br>• `refresh()` and `handle()`;<br>• `stop`, `resume` and `setBudget` through the `CommandRunner`, putting the `202` story in the `StoryStore`.<br>Event payloads are read defensively (a wrong field reads as absent). |
+| Default tab | `context/default-tab.ts`, `voyage.routes.ts`                               | `/voyages/:key` waits for the story, then replaces the URL with the §5.3 tab: Questions, Plan, Runs, Models (halted), else Plan. The `redirectTo: "plan"` is gone.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Header      | `features/voyage/header/voyage-header.ts`, `primary-action.ts`             | As the `PlanReview` and `Halted` boards: key, badge with `showApi` and the gate or halt reason, H1 (title, else the key), the primary action per status (Answer questions, Decide on the plan / Decide, Resume…, none), Budget (not when done), Models ("Change models" when halted), Stop (only while moving). Then the stepper (`stoppedAt` for Aground) and the meta line (owner and "(you)", 120 px meter, current run, revision round, short sha with the full one in `title`).                                                                                                     |
+| Anchored    | `header/anchored-banner.ts`, `halt-guidance.ts`                            | Shown while `halted`:<br>• the title "Anchored: …" from `explainHalt`;<br>• the plain text and the event's detail (for `stopped_by_user`: "Stopped by X. Their reason: “…”");<br>• "To get under way again: …" per reason (9 reasons and an unknown one);<br>• the technical line `reason · runId · phase · ago · "detail"`;<br>• the worker log (last 4 KB in bytes, last 20 lines) in a closed `<details><pre>`, as text;<br>• for `run_failed`, "Change {phase} model" (→ `models?change=<slot>`, or "Change models" for `pr_review`) and "Resume as is".                             |
+| Dialogs     | `features/voyage/dialogs/*.ts`                                             | Stop, Resume and Budget, with the `Dialogs` board's texts. They keep their own form, so a conflict never touches the text. On success: a toast in the past tense and close. On a conflict: they stay open with the banner. `CommandState` holds the outcome, the banner and the server's field errors (`400` → field). Budget reads the cap with `parseAiu` and refuses a cap below what is spent, with no request. Resume can't be confirmed with nothing left.                                                                                                                         |
+| Shell       | `features/voyage/shell/voyage-shell.ts`                                    | Breadcrumb; header skeleton while loading; "This voyage doesn't exist" with a link to Voyages for a 404 or a malformed key (never sent); "Lost contact with the harbour" with Try again; tabs (`ah-section-tabs`, one URL each, counts on Questions, Runs and Gates); `<router-outlet>`.                                                                                                                                                                                                                                                                                                 |
+| Shared spec | `app.routes.spec.ts` (**outside the lane**)                                | It asserted the 4A placeholder ("Voyage PROJ-123 · not built yet") and the placeholder `h1`. Now it gives the voyage routes the mock backend, reads `ah-placeholder h1`, and checks that PROJ-123 opens on Plan. Without this the suite fails.                                                                                                                                                                                                                                                                                                                                           |
+
+### Tests (120 new, 11 files)
+
+- **Runner and errors (21):** `command-runner.spec.ts` and `command-error.spec.ts`:
+  - `expectedVersion`, `onOk`, the double click, skipped before load;
+  - the refresh after `409`, so a resend carries the new version;
+  - classification and the §5.5 headings.
+- **Pure pieces (62):**
+  - `halt-guidance.spec.ts`: the 9 reasons, all different, plus the wireframe's sentence, no spending promise when the budget
+    is exhausted, and an unknown reason;
+  - `primary-action.spec.ts`, `voyage-events.spec.ts` (log tail in bytes, G7, G10, G11, G12), `crew.spec.ts`;
+  - `budget-dialog.spec.ts` (no floats; `1e3`, `-5` and 10 decimals refused; below spent), `dialog-support.spec.ts` and
+    `anchored-banner.spec.ts`.
+- **`VoyageContext` on the mock (14):** loading → ready, gate/round/ceiling, `stoppedAt`, last halt, counts, owner, 404, 503 →
+  error, a malformed key never sent, no round after the gate is passed, the `202` reaching `StoriesStore`, resume without an
+  empty reason, switching keys, commands skipped before open.
+- **Shell on the mock (23):** each of the **8 seeded voyages** (badge with the API words, the action buttons, banner or none,
+  stepper), the default tab for 5 statuses, the tabs with counts, 404, 503 → Try again.
+  - **Stop:** the exact body `{expectedVersion, reason}` (trimmed), and the page shows Anchored without reloading; an empty
+    reason sends nothing; `stale_version` keeps the dialog, the banner and the text, re-reads the story, and the resend works;
+    a double click sends one request.
+  - **Resume:** `{expectedVersion}` without an empty reason, or with the reason; a conflict keeps the text; no budget left →
+    disabled, no request.
+  - **Budget:** below spent → field error, no request; `40.5` → `budgetNanoAiu: 40500000000`; a conflict keeps both fields.
+
+**Mutation checks (13, 12 caught):**
+
+- caught (the runner, the context, the dialogs and the header):
+  - no double-send guard (by the runner spec and by the shell spec);
+  - no refresh after a `409`;
+  - resume always sending `reason`;
+  - a cap below spent accepted;
+  - Resume's confirm not disabled without budget;
+  - a wrong `run_lost` guidance;
+  - halted opening on Plan;
+  - Stop closing on a conflict;
+  - Stop and Budget always offered;
+  - `blockedAt` broken.
+- **survived (1):** removing Resume's own `noBudget` check in `submit()`. The disabled confirm of `ah-dialog` already blocks the
+  click, so it is a second guard, kept on purpose.
+
+### Verified in the browser
+
+`npm run start:mock` (port 4300) in headless Chromium 1194, driven by the session's global Playwright, which is not a
+dependency of the repo. The script is in the session scratchpad.
+
+- **Every voyage:** each of the 8 voyages opens on its default tab, with no horizontal scroll at 390 px.
+- **Compared by eye with the boards, light and dark:**
+  - PROJ-123 with `PlanReview`'s header;
+  - PROJ-118 with `Halted`'s header and banner;
+  - Stop, Resume and Budget with `Dialogs`.
+- **Dark theme:** it is `data-theme="dark"` on `<html>`, not the media query.
+- **Conflict:** with `globalThis.ahoyMock.switches.conflictNext = "stale_version"` the Stop dialog stays open with the notice and
+  the text. The resend closes it, and the badge reads Anchored.
+- **Console:** the only error is the known `/config.json` 404.
+
+### Decisions and deviations
+
+1. **The refresh after any `409`, not only `stale`.** `decided`, `answered` and `invalid_state` also mean the story moved on.
+   **`skipped`** is a fifth outcome: nothing was sent (double click, or no story yet).
+2. **Halted header:** Resume…, Budget, "Change models" and no Stop, as the `Halted` board shows (the API refuses to stop a
+   halted voyage). The phase file lists "Budget, Models, Stop".
+3. **`stopped_by_user` banner:** its vocabulary text says "Show their reason", which is an instruction to the UI. The banner
+   shows "Stopped by {actor}. Their reason: “…”" instead. For the other reasons the body is the vocabulary text minus the
+   sentence already in the title, then the detail.
+4. **"Resume as is"** opens the Resume dialog (the cost box), not a direct resume.
+5. **The revision round** shows while a gate is open, or while the voyage is back before the phase of the last gate it waited
+   on (sent back to planning). It does not show once it has passed the gate.
+6. **Budget extras:** "Allows X AIU less" / "The cap stays at…" for a lower or equal cap; a cap of 0 is refused in the field
+   (the contract's `minimum: 1`). The amounts in the hint and the error are exact, all decimals, so 12.43 is never rounded down
+   to a cap the API would refuse.
+7. **Small additions:**
+   - "(you)" after the owner;
+   - the Budget dialog uses the `info` icon (the board's bank icon is not in `ah-icon`);
+   - run ids are shown as the API gives them (the mock's are long, the wireframes show `r-03`).
+8. **Malformed keys** (`isStoryKey` fails) read as "This voyage doesn't exist" and are never sent (untrusted route param).
+9. **One edit outside the lane:** `app.routes.spec.ts` (see the table). It is the only shared file touched.
+
+### Needs from other lanes
+
+- **Lane 3A (app shell):** render `<ah-toast-host />` in `app.ts`. The dialogs call `ToastService.show`, but nothing shows the
+  toasts until the host exists. The voyage page has no page padding of its own; it expects the shell's.
+- **Lane 2A / `core/api` owner:** `features/voyage/context/voyage-events.ts` reads the `story.halted`,
+  `story.awaiting_decision` and `story.phase_changed` payloads inside the feature. CLAUDE.md puts payload guards in
+  `core/api`, and lane 5B (Ship's log) will need the same readers. Proposal: move them to `core/api` as payload guards. Lane 4A
+  does not own that directory.
+- **Wave 4 (4B–5C):**
+  - inject `VoyageContext` (from `features/voyage/context/voyage-context`) and send commands through `context.commands` or a
+    method on it;
+  - use `context.handle()` for resources the context does not expose (artifacts, the event feed);
+  - read `?change=<slot>` in the Models tab (4D): the Anchored banner links to it.
+
+### Next
+
+User review and approval to commit; then `docs/paralelos4.md`.
 
 ## Lane 2D · Mock backend and `mock:api` (2026-10-07)
 

@@ -1,6 +1,9 @@
+import { provideHttpClient, withInterceptors } from "@angular/common/http";
 import { TestBed } from "@angular/core/testing";
 import { Router, provideRouter, withComponentInputBinding } from "@angular/router";
 import { RouterTestingHarness } from "@angular/router/testing";
+import { mockBackendInterceptor, provideMockBackend } from "@core/mock/mock-backend";
+import { settle, testServer } from "@testing/mock-backend/spec-helpers";
 import { routes } from "./app.routes";
 
 /** Every route of §5.3, with the placeholder text and the document title it must show. */
@@ -22,27 +25,41 @@ const CASES = [
 ] as const;
 
 describe("app routes", () => {
+  // The voyage shell (lane 4A) reads the story before it shows a tab: the mock backend answers it.
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideRouter(routes, withComponentInputBinding())] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(routes, withComponentInputBinding()),
+        provideHttpClient(withInterceptors([mockBackendInterceptor])),
+        provideMockBackend(testServer().server),
+      ],
+    });
   });
+
+  async function open(url: string): Promise<{ root: HTMLElement; harness: RouterTestingHarness }> {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url);
+    for (let i = 0; i < 3; i++) {
+      await settle();
+      await harness.fixture.whenStable();
+    }
+    return { root: harness.fixture.nativeElement as HTMLElement, harness };
+  }
 
   for (const c of CASES) {
     it(`shows the lane ${c.lane} placeholder and its title at ${c.url}`, async () => {
-      const harness = await RouterTestingHarness.create();
-      await harness.navigateByUrl(c.url);
-      const root = harness.fixture.nativeElement as HTMLElement;
-      expect(root.querySelector("h1")?.textContent).toBe(c.text);
+      const { root } = await open(c.url);
+      expect(root.querySelector("ah-placeholder h1")?.textContent).toBe(c.text);
       expect(root.textContent).toContain(`Not built yet · lane ${c.lane}`);
       expect(document.title).toBe(c.title);
     });
   }
 
-  it("redirects a voyage to a tab and passes the key to the shell", async () => {
-    const harness = await RouterTestingHarness.create();
-    await harness.navigateByUrl("/voyages/PROJ-123");
-    const root = harness.fixture.nativeElement as HTMLElement;
+  it("opens a voyage on its default tab and passes the key to the shell", async () => {
+    const { root } = await open("/voyages/PROJ-123");
+    // PROJ-123 waits on the plan decision, so it opens on Plan (§5.3).
     expect(TestBed.inject(Router).url).toBe("/voyages/PROJ-123/plan");
-    expect(root.textContent).toContain("Voyage PROJ-123 · not built yet · lane 4A");
-    expect(root.querySelector("h1")?.textContent).toBe("Plan");
+    expect(root.querySelector("nav[aria-label='Breadcrumb']")?.textContent).toContain("PROJ-123");
+    expect(root.querySelector("ah-placeholder h1")?.textContent).toBe("Plan");
   });
 });

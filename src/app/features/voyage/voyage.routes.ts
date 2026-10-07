@@ -1,14 +1,17 @@
 import type { Routes } from "@angular/router";
+import { VoyageDefaultTab } from "./context/default-tab";
 import { VoyageShell } from "./shell/voyage-shell";
 
-/** `/voyages/:key` and its tabs. Each tab is lazy and owned by its own lane; lane 4A owns this file. */
+/**
+ * `/voyages/:key` and its tabs. Each tab is lazy and owned by its own lane; lane 4A owns this file. The tabs inject the
+ * `VoyageContext` the shell provides. `/voyages/:key` itself opens the default tab for the voyage's status (§5.3).
+ */
 export const VOYAGE_ROUTES: Routes = [
   {
     path: "",
     component: VoyageShell,
     children: [
-      // Lane 4A replaces this with the default tab for the voyage's status (§5.3).
-      { path: "", pathMatch: "full", redirectTo: "plan" },
+      { path: "", pathMatch: "full", component: VoyageDefaultTab },
       { path: "plan", loadChildren: () => import("./tabs/plan/plan.routes").then((m) => m.PLAN_ROUTES) },
       {
         path: "questions",

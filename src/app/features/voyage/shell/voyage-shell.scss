@@ -1,0 +1,25 @@
+// The voyage page column of the PlanReview and Halted wireframes. Lane 3A's app shell sets the page width and padding.
+.voyage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3\.5);
+  min-width: 0;
+}
+
+.voyage__crumbs {
+  font-size: 12px;
+  color: var(--ink-muted);
+
+  a {
+    text-decoration: none;
+  }
+}
+
+.voyage__skeleton {
+  gap: var(--space-3);
+}
+
+.voyage__retry {
+  display: block;
+  margin-top: var(--space-2);
+}
