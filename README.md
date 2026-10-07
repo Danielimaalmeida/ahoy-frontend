@@ -129,5 +129,13 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
   run against a real API.
 
-- Next: review and merge lane 4A; then wave 4 (`docs/paralelos4.md`). Details in
+- **Wave 4, lane 5A (Runs, run detail and live steps): done on the mock backend, committed on
+  `claude/epic-albattani-81fip3`.** The Runs tab (`src/app/features/voyage/tabs/runs/`) has the live panel (run spend against the
+  run's own cap, `ah-live-steps` with "N steps not shown" rows and `[REDACTED]`, "This run"), kept as history once the run
+  ends, and the oldest-first table with the live AIU and the gate. Run detail
+  (`src/app/features/run-detail/`, `/voyages/:key/runs/:runId`) has the pager, four tiles, Details, Automated gate and Steps.
+  The steps are a view, not a control. 57 new tests on the mock backend; checked in headless Chromium (light, dark, 390 px).
+  Never run against a real API.
+
+- Next: review and merge lanes 4A and 5A; the other wave 4 lanes (`docs/paralelos4.md`) run in other sessions. Details in
   [docs/progress.md](docs/progress.md).
