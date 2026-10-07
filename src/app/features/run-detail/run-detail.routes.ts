@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { RunDetailPage } from "./run-detail-page";
 
-/** Run detail (lane 5A replaces the placeholder). */
-export const RUN_DETAIL_ROUTES: Routes = [
-  { path: "", title: "Run · Ahoy", component: Placeholder, data: { heading: "Run detail", lane: "5A" } },
-];
+/** Run detail at `/voyages/:key/runs/:runId` (lane 5A). */
+export const RUN_DETAIL_ROUTES: Routes = [{ path: "", title: "Run · Ahoy", component: RunDetailPage }];

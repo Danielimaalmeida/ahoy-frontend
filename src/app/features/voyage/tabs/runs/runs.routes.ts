@@ -1,7 +1,5 @@
 import type { Routes } from "@angular/router";
-import { Placeholder } from "@ui/placeholder/placeholder";
+import { RunsTab } from "./runs-tab";
 
-/** Runs (lane 5A replaces the placeholder). */
-export const RUNS_ROUTES: Routes = [
-  { path: "", title: "Runs · Ahoy", component: Placeholder, data: { heading: "Runs", lane: "5A" } },
-];
+/** Runs (lane 5A): the live panel and the table of the voyage's runs. */
+export const RUNS_ROUTES: Routes = [{ path: "", title: "Runs · Ahoy", component: RunsTab }];

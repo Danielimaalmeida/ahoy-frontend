@@ -1,0 +1,91 @@
+// The Running wireframe: the live panel beside "This run", then the Runs table.
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3\.5);
+  min-width: 0;
+}
+
+.runs__live {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3\.5);
+  align-items: flex-start;
+}
+
+.runs__main {
+  flex: 999 1 620px;
+  min-width: 0;
+}
+
+.runs__side {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.runs__spacer {
+  flex: 1;
+}
+
+.runs__pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--live);
+  box-shadow: 0 0 0 4px var(--live-halo);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .runs__pulse {
+    animation: runs-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes runs-pulse {
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+.runs__spend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2\.5);
+  padding: var(--space-3\.5) var(--space-4) var(--space-2\.5);
+}
+
+.runs__spend-label {
+  font-weight: 600;
+}
+
+.runs__meter {
+  flex: 1 1 200px;
+  height: 9px;
+}
+
+.runs__spent {
+  font-size: 12.5px;
+}
+
+.runs__dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1\.5) var(--space-3\.5);
+  margin: 0;
+
+  dt {
+    color: var(--ink-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.runs__open {
+  font-size: 12px;
+}

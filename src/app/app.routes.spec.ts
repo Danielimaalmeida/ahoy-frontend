@@ -16,14 +16,9 @@ import { routes } from "./app.routes";
  * `features/voyages` cover them and their titles. A lane that replaces a placeholder takes its row out of this table.
  */
 const CASES = [
-  { url: "/voyages/PROJ-123/plan", text: "Plan", lane: "4B", title: "Plan · Ahoy" },
-  { url: "/voyages/PROJ-123/questions", text: "Questions", lane: "4C", title: "Questions · Ahoy" },
-  { url: "/voyages/PROJ-123/runs", text: "Runs", lane: "5A", title: "Runs · Ahoy" },
   { url: "/voyages/PROJ-123/gates", text: "Gates", lane: "5B", title: "Gates · Ahoy" },
   { url: "/voyages/PROJ-123/artifacts", text: "Artifacts", lane: "5C", title: "Artifacts · Ahoy" },
   { url: "/voyages/PROJ-123/log", text: "Ship's log", lane: "5B", title: "Ship's log · Ahoy" },
-  { url: "/voyages/PROJ-123/models", text: "Models", lane: "4D", title: "Models · Ahoy" },
-  { url: "/voyages/PROJ-123/runs/r-02", text: "Run detail", lane: "5A", title: "Run · Ahoy" },
   { url: "/no/such/page", text: "Not found", lane: "6A", title: "Not found · Ahoy" },
 ] as const;
 
@@ -76,6 +71,6 @@ describe("app routes", () => {
     // PROJ-123 waits on the plan decision, so it opens on Plan (§5.3).
     expect(TestBed.inject(Router).url).toBe("/voyages/PROJ-123/plan");
     expect(root.querySelector("nav[aria-label='Breadcrumb']")?.textContent).toContain("PROJ-123");
-    expect(root.querySelector("ah-placeholder h1")?.textContent).toBe("Plan");
+    expect(root.querySelector("ah-plan-tab")).not.toBeNull();
   });
 });

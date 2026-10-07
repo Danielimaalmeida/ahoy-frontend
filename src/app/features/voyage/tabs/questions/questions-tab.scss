@@ -1,0 +1,100 @@
+// Layout of the Questions wireframe: the rounds on the left, "What happens next" on the right (below at 390 px).
+.questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.questions__main {
+  flex: 999 1 620px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.questions__side {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.questions__round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.questions__round--folded {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+
+  &[open] > summary {
+    margin-bottom: var(--space-3);
+  }
+}
+
+.questions__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+summary.questions__head {
+  cursor: pointer;
+}
+
+.questions__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.questions__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.questions__next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.questions__problem {
+  margin: 0;
+  color: var(--error-fg);
+  font-size: 12.5px;
+}
+
+.questions__kept {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+}
+
+.questions__kept-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.questions__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.questions__retry {
+  display: block;
+  margin-top: var(--space-2);
+}
