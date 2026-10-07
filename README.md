@@ -119,7 +119,11 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   joined to the real voyages in the `StoriesStore`. The backlog comes from a `BacklogPort`, today a `StubBacklogAdapter` with the
   wireframe's nine fictional stories (the API has no backlog yet); "Jira ↗" shows only with `jiraBaseUrl`. 40 new tests; checked on
   `npm run start:mock` in headless Chromium; never run against a real API.
-- **Wave 3, lane 4A (voyage base): done on the mock backend, committed and pushed, in review** (branch
+- **Wave 4, lane 4B (Plan tab and decision): done on the mock backend, merged into `main` (PR #16)** (branch
+  `claude/pensive-ritchie-9ja01b`). `src/app/features/voyage/tabs/plan/`: the plan with changed blocks marked, acceptance criteria,
+  "Your decision" (Approve; Send back and Reject in dialogs) and the conflict panels. 54 new tests; never run against a real API.
+  Details in [docs/progress.md](docs/progress.md).
+- **Wave 3, lane 4A (voyage base): done on the mock backend, merged into `main`** (PR #15) (branch
   `claude/quirky-gates-t6b390`, with `main` and lanes 3A, 3B and 3C merged in; pull request into `main`). `/voyages/:key`
   shows the real voyage page:
   - header, primary action, Anchored banner, tabs with counts and the default tab;
@@ -129,12 +133,12 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
   run against a real API.
 
-- **Wave 4, lane 4C (Questions): done on the mock backend, uncommitted, in review** (branch `claude/jolly-pascal-ngq59j`,
-  from `main` at 959a7b4, which holds lane 4A as PR #15). `/voyages/:key/questions` lists the questions by round (the newest
+- **Wave 4, lane 4C (Questions): done on the mock backend, committed and pushed, in review** (branch `claude/jolly-pascal-ngq59j`, PR #17,
+  from `main` at 959a7b4, with lane 4B merged in). `/voyages/:key/questions` lists the questions by round (the newest
   open, earlier ones folded) with "{k} of {n} answered" and a meter, an `ah-question-card` each, and "What happens next".
   Answers are final: nothing is sent without a click on "Send answer", and "Use recommendation" only fills the field.
   Unsent answers are drafts in memory and `sessionStorage` (`ahoy.draft.{key}.{Qn}`) that survive a conflict, a refresh of the
   store and a page reload. 47 new tests; checked on `npm run start:mock` in headless Chromium; never run against a real API.
 
-- Next: review and merge lane 4C; the other lanes of wave 4 (`docs/paralelos4.md`) run in their own sessions. Details in
+- Next: review and merge lanes 4B and 4C; then the rest of wave 4 (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).
