@@ -1,6 +1,19 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 1B (kit: state, progress and navigation), launched from `docs/paralelos2.md` section A on branch
+**Updated 2026-10-07 by lane 1C (kit: interaction and content), launched from `docs/paralelos2.md` section B on branch
+`claude/secao-b-paralelos2-1l7xpu`. Lane 1C is committed on that branch with the user's approval, with `main` merged in
+(at c2562e9: lanes 2A finishing pass, 2B and 1B, PRs #7, #8 and #9), pushed, and its pull request into `main` waits for review.**
+
+- **Ran for 1C (offline, 0 AIU, Node 24.21.0 via `npx node@24`):** `npm ci`, the approved install of `@angular/cdk@22.2.1`
+  and `marked@18.1.0`, `npm run build`, `npm run typecheck` (`check-boundaries: ok`), `npm run lint`, `npm test` and
+  `npm run format:check`, all green on the lane's own tree (42 files, 900 tests, 100 new) and again after each merge of
+  `main` (see "Final check" in the lane 1C section); `/_kit` served by `ng serve` and screenshotted in headless Chromium,
+  light and dark, at 1100 px and 390 px; the live CDK dialog driven in that browser (focus, Esc, focus return); nine
+  mutation checks of the tests.
+- **Did not run for 1C:** `npm run start:mock` (lane 2D's mock is not in `main`; 1C shows no API data); anything against an
+  API; other browsers than Chromium; a pixel diff (compared by eye).
+
+Earlier: **lane 1B (kit: state, progress and navigation), launched from `docs/paralelos2.md` section A on branch
 `claude/paralelos2-section-a-h4ef52`, built on `main` at 56e815a, with `main` at 9b4e16f (lane 2A's finishing pass, PR #7, and lane 2B,
 PR #8) merged into the working tree. Lane 1B is built, tested and compared with the design-system previews in a browser. **Nothing is
 committed:** the merge is staged and unfinished (`git merge --no-commit`, `HEAD` is still 56e815a), so the one commit that concludes it
@@ -76,11 +89,20 @@ In `src/app/ui/`: `ah-status-badge`, `ah-phase-stepper` (full and compact), `ah-
 `ToastService` with `ah-toast-host`, and the pipes `ahAiu`, `ahRelative`, `ahDateTime` and `ahActor` with a `CLOCK` token, all taking
 their vocabulary from `@domain`, with 246 new tests and 11 sections in the `/_kit` gallery compared with the design system's
 previews in light and dark. Lane 2B (the paragraph above) has been merged since it was written (PR #8). No screen uses any of this
-yet, and no data, mock or API was involved.
+yet, and no data, mock or API was involved. Lane 1B has been merged since (PR #9).
+
+**Wave 2, lane 1C (kit: interaction and content)** is committed on `claude/secao-b-paralelos2-1l7xpu`, with `main` merged in, in
+review: `ah-dialog` on the CDK `Dialog` with `DialogService`, `ah-choice-card-group`, `ah-question-card`,
+`ah-model-choice-table`/`-row`, `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` with `ahMark`, and `ah-markdown` with the pure
+`renderMarkdown`, each in the `/_kit` gallery. New runtime dependencies `@angular/cdk` 22.2.1 and `marked` 18.1.0. No screen uses
+them yet.
 
 ## Start here next
 
-1. **Done since this was written:** the lane 2B pull request is merged into `main` (PR #8, 9b4e16f; section "Lane 2B" below).
+1. **User:** review and merge the lane 1C pull request (`claude/secao-b-paralelos2-1l7xpu` into `main`; section "Lane 1C"
+   below). Outside its directories it adds the two dependencies, keeps the unique-ids check in `kit.spec.ts` and updates this
+   file and the README "Status".
+   **Done since this was written:** lane 1B is merged (PR #9), and the lane 2B pull request is merged into `main` (PR #8, 9b4e16f; section "Lane 2B" below).
    Nothing outside `core/realtime/` and `core/stores/` changed, except this file and the README "Status" bullets.
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
@@ -99,7 +121,7 @@ yet, and no data, mock or API was involved.
    `src/styles/_ahoy-angular.scss`.
 5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 2:** lane **1B** is built and tested and awaits the user's review and approval to commit (section "Lane 1B": "Decisions to
+6. **Wave 2:** lane **1B** is merged (PR #9) and lane **1C** is in review (item 1). Earlier text: lane 1B was built and tested and awaited the user's review and approval to commit (section "Lane 1B": "Decisions to
    review" and "Integration with `main`", which says what the merge of `main` conflicted on and how it was resolved); lane 2B is merged;
    1C and 2D run in parallel sessions (`docs/paralelos2.md`); 2D reuses the Ajv helper `src/testing/fixtures/contract.ts`. With 1B,
    2B and 2D in `main`, wave 3 can start (`docs/paralelos3.md`). 2B's note that 1B cannot import `CLOCK` from `core` is handled: the pipes
@@ -120,6 +142,172 @@ yet, and no data, mock or API was involved.
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 1C · Kit: interaction and content (2026-10-07)
+
+Launched from `docs/paralelos2.md`, section B, on `claude/secao-b-paralelos2-1l7xpu` (the branch this session was given; plan
+§9 would call it `lane/1c-kit-interaction`). Committed with the user's approval, then `main` merged in (see "Final check");
+the push and the pull request wait for the user. Pre-flight: `git fetch origin`; `origin/main` (56e815a) has lane 1A
+(`src/styles/tokens.css`, `src/styles/ahoy-bundle.css`, `src/app/ui/icon/`) and lane 2C (`src/app/domain/` with
+`statusPresentation`, `outcomePresentation`, `explainHalt`, `text-diff.ts`), and the branch started at that commit.
+
+### Node and dependencies
+
+- `node -v` was v22.22.0; `npx -y node@24` gave v24.21.0, copied into the session scratchpad and put first on `PATH`.
+  Every command below ran on Node 24.21.0 with npm 10.9.4.
+- **Installed, with the user's explicit approval in this session** (both are on plan §10): `@angular/cdk` **22.2.1** and
+  `marked` **18.1.0**, the exact versions `npm view` returned, as runtime dependencies pinned exactly. The lock file
+  gained only those two packages (the CDK's `parse5` was already in the tree through `jsdom`). `npm install` reported 0
+  vulnerabilities.
+
+### What changed
+
+| Component    | Files                                           | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------ | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dialog       | `ui/dialog/dialog.ts`                           | `<ah-dialog>` (`DialogShell`): icon tile by `kind` (`default`, `danger`, `sendback`; `icon` overrides), title, close button, body, footer with Cancel (`cancelLabel`) and one confirm (`ah-btn--danger` for `danger`, else primary). Body order: error region, `[ahDialogLead]`, `[ahDialogCost]`, the rest. `busy` swaps the confirm label for `busyLabel` ("Sending…"), sets `aria-disabled` on every button (so focus stays put), `aria-busy`, a `role="status"` line, ignores further confirms and sets `DialogRef.disableClose` so Esc and the backdrop can't close it. `error: DialogError` shows a notice (409) or error banner at the top. `confirmDisabled` for an invalid form. Outputs `confirm` and `dismissed`. `DialogService.open(component, { data, width })` opens on the CDK `Dialog`: modal, `aria-labelledby` the title (id passed through a `DIALOG_TITLE_ID` provider), focus on the first field (else on the dialog), restored to the opener. No business logic. |
+| ChoiceCard   | `ui/choice-card/choice-card.ts`                 | `<ah-choice-card-group [options] label>`: a `ControlValueAccessor` over native radios in `ah-choice` cards (title + `ah-choice__desc`), `role="radiogroup"`, one generated `name`; the checked card gets the bundle's ring. Arrow keys move to the next enabled card, wrapping, and focus it; disabled options and the control's disabled state are honoured.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| QuestionCard | `ui/question-card/question-card.ts`             | `<ah-question-card>`: `open` (ring, recommendation with "Use recommendation", labelled textarea, "Send answer" with "Answers are final once sent. Recorded as …"), `answered` (answer, `actorLabel · absoluteTime · note`, "Final" lock, nothing editable) and `disabled` (question and recommendation, `disabledReason` instead of the form). The parent owns the `FormControl`. "Use recommendation" sets the control (dirty), focuses the field and emits `useRecommendation`, never `send`. `send` emits the trimmed text, only when it isn't blank, not `busy` and the control isn't disabled.                                                                                                                                                                                                                                                                                                                                                                                     |
+| ModelChoice  | `ui/model-choice/model-choice.ts`               | `<ah-model-choice-row>`: phase (`pr_review` for both Lookouts) and crew from `CREW`, mono model input (placeholder "Default: …"), effort select (Default or "Default (medium)", then `low` … `max`), `ah-source` tag, reset button with `aria-label` "Reset planning to default". Reset clears both controls and emits `null` (`restoreDefault`). `error` shows under the row and the input points to it (`aria-invalid`, `aria-describedby`). `<ah-model-choice-table [rows] [controls]>` renders the rows and, with the rule of the domain's `reviewersConflict`, shows "The two Lookouts must use different models: both would run on …" under **both** reviewer rows; a blank model counts as its default when the default is known (as in the Dialogs wireframe). Exposes `conflict()` for the save button; emits `restoreDefault` with the slot.                                                                                                                                  |
+| LiveSteps    | `ui/live-steps/live-steps.ts`                   | `<ah-live-steps [steps]>`: `role="log"`, tool rows (time `HH:MM:SS`, tool icon, name, mono summary), message rows (first 200 characters, "…"), gap rows ("38 steps not shown"). `[REDACTED]` is split out and wrapped in `ah-redacted` **by interpolation** (`redactedSegments`). Scrolls to new steps only while the reader is within 24 px of the bottom. Footer "Newest at the bottom… This is a view, not a control…". No actions. The step shape mirrors 2A's `RunProgressTool`/`RunProgressMessage` plus a `gap` row (ui can't import core).                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ShipsLog     | `ui/ships-log/ships-log.ts`                     | `<ah-ships-log [entries]>`: `{id, at, title, details, actor, kind, run?}` rows in the given order (newest first), `absoluteTime`, dot `human`/`pass`/`wait`/plain (`aria-hidden`), bold title, details, run id as an `ah-key` `routerLink`, actor via `actorLabel` ("Ahoy"). `role="list"`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ArtifactDiff | `ui/artifact-diff/artifact-diff.ts`             | `<ah-artifact-diff [previous] [next] [context] label>` over the domain's `diffLines` and `hunks`; `diffBlocks` numbers removed lines in the old revision and the rest in the new one; `+ ` / `− ` signs so the change never relies on colour; "No changes between these revisions." when equal. `[ahMark]` directive (`Mark`) adds `ah-mark`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Markdown     | `ui/markdown/render-markdown.ts`, `markdown.ts` | `renderMarkdown(src, { changedBlocks })`: one `Marked` instance (GFM) with overrides: raw HTML **escaped** (block and inline), images replaced by "[image: alt]" (nothing loads), links only for absolute `http:`/`https:`/`mailto:` (parsed with `URL`), with `target="_blank" rel="noopener noreferrer"` and escaped `href`/`title`, anything else rendered as its text; task-list checkboxes as text. `changedBlocks` are indices into the domain's `markdownBlocks(src)`: blocks are located in the source and every top-level token that overlaps a changed block is wrapped in `<div class="ah-mark">` (a loose list spanning several blocks is marked once). `<ah-markdown [source] [changedBlocks]>` binds the result to `[innerHTML]` (Angular sanitizes again) in the `reading` style: 13.5/22, 75ch, headings, lists, code, tables, quotes.                                                                                                                                  |
+| Gallery      | `ui/_kit/sections/1c-*.ts`                      | Eight sections: the Dialog preview inline plus the send-back (busy) and reject (error with `tech`) kinds and a **live CDK dialog** (a pretend stop: the first confirm shows the 409 notice, the second closes); ChoiceCard; QuestionCard in its three states; ModelChoice with the Lookouts error and a disabled Save; LiveSteps; ShipsLog; ArtifactDiff with `ahMark`; Markdown (a plan with its changed blocks marked, and hostile markdown shown inert). All example data is fictional.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Dependencies | `package.json`, `package-lock.json`             | `@angular/cdk` 22.2.1 and `marked` 18.1.0 (see above).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+### Proof
+
+All on Node 24.21.0, offline, 0 AIU. No API, mock or real, was involved: lane 1C has no data.
+
+- **Tests: 42 files, 900 tests** (100 new; the 800 before the lane unchanged): `render-markdown` 32, `markdown` 2,
+  `dialog` 12, `1c-sections` 12, `model-choice` 9, `question-card` 8, `live-steps` 8, `choice-card` 6, `artifact-diff` 6,
+  `ships-log` 5.
+- **Markdown security (the lane's XSS suite):** `<script>` block and inline, `<img onerror>`, `[x](javascript:…)` in 10
+  spellings (mixed case, spaces, tab, entity, `data:`, `vbscript:`, `file:`, autolink, reference link), relative and
+  protocol-relative links, embedded `<div onclick>`, `<iframe>`, `<style>`, `<form>`, `<svg onload>`, inline
+  `<a href="javascript:">` and `<b onmouseover>`, a remote image, quote injection in `href`/`title`, HTML in code spans and
+  fences, a hostile fence language, task checkboxes. Every output is parsed and checked to have no script, img, iframe,
+  object, embed, svg, style, link, form, input or video, no `on*`, `src`, `srcset`, `style` or `action` attribute, no
+  `javascript:` anywhere, and only `http(s)`/`mailto` links. The component test renders hostile markdown in `TestBed`,
+  clicks every element, checks that a global flag the payloads would set stays unset, and that **Angular's sanitizer
+  logged nothing** (it found nothing left to strip).
+- **Dialog, on the real CDK `Dialog` in jsdom:** modal and labelled by its title; initial focus on the first field (on the
+  dialog when there is none); Esc, Cancel and the close button close with `undefined` and no `confirm`; the focus returns
+  to the opener; the concrete dialog's result comes back through `closed`; while `busy`, two more clicks, Esc, Cancel and
+  close do nothing (one `confirm`), and after `busy` ends Esc closes again; the 409 notice shows at the top of the body
+  with the typed text kept; the three kinds give the right tile, icon and confirm variant.
+- **Mutation checks (each made the suite fail, then was reverted):** dialog without the initial-field focus (1 test),
+  without `disableClose` while busy (1), without the busy guard on confirm (1), with `restoreFocus: false` (3); markdown
+  passing raw HTML through (5), accepting any link scheme (10), rendering `<img>` (2), dropping `target`/`rel` (2), not
+  escaping `title` (1).
+- **In headless Chromium 1194** (`ng serve`, development; a throw-away CDP script in the session scratchpad, not in the
+  repo): `/_kit` in light and dark at 1100 px and 390 px, each 1C section screenshotted and compared by eye with its
+  `preview.html`. The live dialog: `cdk-dialog-container` has `role="dialog"` and is labelled "Drop anchor on PROJ-140?",
+  the textarea has the focus, the dark backdrop shows (`rgba(0, 0, 0, 0.32)`), Esc closes it and the focus is back on
+  "Open a live dialog: Stop". At 390 px the page has no sideways scroll (`scrollWidth` 390) after the ModelChoice fix
+  below; at 1100 px neither.
+- `npm run build` (production) has no new warning; no `anyComponentStyle` budget was exceeded.
+
+### Decisions and deviations
+
+- **Component styles instead of `src/styles/`.** Plan rule 2 puts new CSS in `src/styles/`, which lane 1A owns. Each rule
+  1C needs lives in its own component (`:host { display: contents | block }`, the preview's inline layouts, the send-back
+  dialog tile with `status-sendback-*`, the markdown `reading` styles under `.ah-markdown` with
+  `ViewEncapsulation.None`, because `[innerHTML]` content carries no Angular attributes). Each block says why. None
+  restyles a bundle class except where the bundle has no rule for the case (below).
+- **ModelChoice on phones.** The bundle's `.ah-model` grid (`120px 1fr 130px auto`) is wider than a 390 px screen and
+  pushed the page sideways (`scrollWidth` 473). Under 600 px the row puts the phase and the source on their own lines.
+  **For the design system:** consider a narrow layout for `.ah-model`. The effort select also clips "Default (medium)"
+  at 130 px, as the preview does.
+- **The send-back dialog tile** (`ah-dialog__icon--sendback`) is not in the bundle; tokens.json documents
+  `status-sendback-*` for it. **For the design system:** add it to `bundle.css`.
+- **Busy uses `aria-disabled`**, not `disabled`, on the dialog buttons, so the focused confirm keeps the focus.
+- **`renderMarkdown` lives in `ui/markdown/`** (it uses `marked`, so it can't be in `domain/`), and imports only
+  `markdownBlocks` from the domain, as lane 2C asked.
+- **Model rows count a blank model as its known default** when checking the Lookouts (the Dialogs wireframe flags a
+  blank defect reviewer whose default equals the typed design model). With no known default, a blank model is not a
+  conflict, as `reviewersConflict` says. After the merge of `main`, `ModelPlan` is the API's shape (a list of slots with
+  `storyKey`, `version`, `phase`, `lens`, `chosen`), so the table no longer builds one to call `reviewersConflict`: it
+  compares the two effective models itself, with the same rule. This was the only code change the merge needed.
+- **Output names** avoid DOM event names (ESLint `no-output-native`): `send` (not `submit`), `restoreDefault` (not
+  `reset`), `dismissed`.
+- **Agent text is always interpolated** in QuestionCard, LiveSteps, ShipsLog and ArtifactDiff; only `ah-markdown` uses
+  `[innerHTML]`, never `bypassSecurityTrust*`.
+
+### Files outside the lane's list, and why
+
+- `package.json`, `package-lock.json`: the two approved dependencies.
+- **`src/app/ui/_kit/kit.spec.ts` (lane 1A's), one assertion.** It required the gallery to have exactly lane 1A's six
+  sections, so any 1B or 1C section broke it. It now checks that 1A's sections come first and that ids are unique.
+  **Lane 1B will need the same change**; whichever lane merges second keeps this version.
+- `docs/progress.md` (this section and the header) and the README "Status".
+
+### Did not run, skipped, and why
+
+- **`npm run start:mock`:** lane 2D's mock backend is not in `main`, and 1C shows no API data; `/_kit` ran on
+  `ng serve` (development) instead.
+- **Nothing against an API** (`--simulate` or otherwise): the lane has no I/O.
+- **Not checked:** other browsers than Chromium, real phones (390 px was viewport emulation), a pixel diff (by eye), a
+  screen reader (only the ARIA attributes are tested).
+- **Keyboard arrows on the radios** are proved in jsdom through the component's own handler; native radio arrow
+  behaviour in Chromium was not driven separately (the handler calls `preventDefault`, so only one move happens).
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **For lane 4A (dialogs):** write each dialog as a component whose template is `<ah-dialog>`, open it with
+  `DialogService.open`, set `busy` while the command runs, on a 409 set `error` to
+  `{ variant: "notice", heading: "This voyage changed since you opened it", text }` and keep the form, and close the
+  `DialogRef` with the result. Put the cost box in `[ahDialogCost]` (`<ah-banner variant="cost">`).
+- **For lanes 4B/4C:** `ah-question-card` takes a `FormControl<string>` per question and emits `send`;
+  `ah-choice-card-group` is a form control; `ah-markdown` takes `changedBlocks(previous, next)` from the domain.
+- **For lane 4D:** `ah-model-choice-table` takes `rows` and `controls`; read `conflict()` to disable Save, and send `null`
+  for each slot in `restoreDefault`.
+- **For lanes 5A/5C:** `ah-live-steps` takes `LiveStep[]` (map 2A's `RunProgressTool`/`Message`, and add a `gap` row
+  from `omitted`); `ah-ships-log` takes `ShipsLogEntry[]`; `ah-artifact-diff` takes two revisions' text.
+- **For the design system:** the `.ah-model` phone layout and the send-back dialog tile (above).
+
+### Final check
+
+Run at the end of the lane, on Node 24.21.0:
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (no problems; build-tokens: ok)
+$ npm test                    exit 0 (Test Files 42 passed (42); Tests 900 passed (900))
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
+
+After committing (e2b28bd) and merging `main` at 9b4e16f (lane 2A's finishing pass, PR #7, and lane 2B, PR #8), on the
+merged tree, Node 24.21.0, after `npm ci`:
+
+```
+$ npm run build               exit 0
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, tokens:check, api:check)
+$ npm test                    exit 0 (Test Files 53 passed (53); Tests 1156 passed (1156): 1056 of main + 100 of lane 1C)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
+
+The merge had text conflicts only in `README.md` "Status" and in this file (header, "Where we are", "Start here next" and the
+lane sections, which git had interleaved with lane 2B's): this file was rebuilt from `main`'s version with the lane 1C section
+added whole. One code change was needed, in `ah-model-choice-table` (see "Decisions and deviations").
+
+Then `main` at c2562e9 (lane 1B, PR #9) merged in, on Node 24.21.0:
+
+```
+$ npm run build               exit 0
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint, tokens:check, api:check)
+$ npm test                    exit 0 (Test Files 68 passed (68); Tests 1402 passed (1402): 1302 of main + 100 of lane 1C)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+```
+
+Conflicts: `README.md` "Status", this file (rebuilt again from `main`'s version with the lane 1C section added) and the one
+assertion of `kit.spec.ts` both kit lanes changed: lane 1B's version is kept (lane 1A's sections, by lane), plus lane 1C's check
+that every section id is unique. No code change was needed. `/_kit` was not re-checked in a browser after this merge.
 
 ---
 

@@ -90,10 +90,14 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `EventBus` (one global connection) with the polling fallback, `StoriesStore`, `StoryStore`, `RunProgressBuffer` and
   `StoryEventsFeed`, with 146 new tests on a fake `fetch`, a fake clock and a fake API. No screen uses them yet; never run
   against an API or the mock backend.
-- **Wave 2, lane 1B (kit: state, progress and navigation): built and tested, not committed** (branch
-  `claude/paralelos2-section-a-h4ef52`). `ah-status-badge`, `ah-phase-stepper`, `ah-budget-meter`, `ah-outcome-pill`, `ah-filter-chips`,
-  `ah-section-tabs`, `ah-top-bar` (with the Live indicator), `ah-empty-state`, `ah-skeleton`, the toast and the pipes `ahAiu`,
-  `ahRelative`, `ahDateTime`, `ahActor`, with 11 more sections in `/_kit`. Unit-tested and compared with the design-system previews in
-  headless Chromium; no data, mock or API involved. Details in [docs/progress.md](docs/progress.md).
-- Next: review lane 1B (it is not committed yet), and run the rest of wave 2 (1C, 2D). Details in
+- **Wave 2, lane 1B (kit: state, progress and navigation): done and merged into `main`** (PR #9). `ah-status-badge`,
+  `ah-phase-stepper`, `ah-budget-meter`, `ah-outcome-pill`, `ah-filter-chips`, `ah-section-tabs`, `ah-top-bar` (with the Live
+  indicator), `ah-empty-state`, `ah-skeleton`, the toast and the pipes `ahAiu`, `ahRelative`, `ahDateTime`, `ahActor`, with 11
+  more sections in `/_kit`. Unit-tested and compared with the design-system previews in headless Chromium; no data, mock or API
+  involved.
+- **Wave 2, lane 1C (kit: interaction and content): done, in review** (branch `claude/secao-b-paralelos2-1l7xpu`, pull
+  request into `main`). `ah-dialog` on the CDK `Dialog`, `ah-choice-card-group`, `ah-question-card`, `ah-model-choice-table`,
+  `ah-live-steps`, `ah-ships-log`, `ah-artifact-diff` and `ah-markdown` (untrusted markdown, XSS-tested), each in `/_kit`; adds
+  `@angular/cdk` 22.2.1 and `marked` 18.1.0. Unit-tested and checked in headless Chromium; no API involved.
+- Next: review and merge lane 1C, and run lane 2D, the rest of wave 2. Details in
   [docs/progress.md](docs/progress.md).

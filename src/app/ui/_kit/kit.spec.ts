@@ -28,6 +28,8 @@ describe("kit gallery", () => {
       "banner",
       "table",
     ]);
+    const ids = KIT_SECTIONS.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
     for (const s of KIT_SECTIONS) {
       const section = root.querySelector(`section#${s.id}`)!;
       const title = section.querySelector("h2")!;
