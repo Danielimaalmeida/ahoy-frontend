@@ -112,5 +112,9 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `?status=`, table with stepper and Note, `?q=`, Load more, skeleton, empty and error states). Both follow the event stream. 143
   new tests; checked on `npm run start:mock` in headless Chromium against the `Main` and `Voyages` boards, light and dark, at
   1440 px and 390 px; never run against a real API.
-- Next: review and merge lane 3A; lanes 3B, 3C and 4A (`docs/paralelos3.md`, sections B, C and D) run in other sessions. Details in
+- **Wave 3, lane 3B (Set sail): done on the mock backend, committed and pushed** (branch `claude/focused-maxwell-wcaacl`, with `main` and lane 3A merged in).
+  `/voyages/new?key=&title=` is a typed Reactive Form on `ah-field` and `ah-model-choice-table`: the budget is read by `parseAiu`
+  (never a float), only the models the user filled in are sent, a double click sends one request, and `story_exists`, `400` and
+  the other refusals show beside the fields or in a banner without losing what was typed. 114 new tests (three agreed seams, 26 mutation checks, a two-axis review whose findings were fixed); driven in headless Chromium on `npm run start:mock`; never run against a real API.
+- Next: review lanes 3A and 3B and open their pull requests; lanes 3C and 4A (`docs/paralelos3.md`, sections C and D) run in other sessions. Details in
   [docs/progress.md](docs/progress.md).

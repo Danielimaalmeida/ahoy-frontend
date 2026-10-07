@@ -1,6 +1,14 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 3A (shell, All hands and Voyages), launched from `docs/paralelos3.md` section A on branch
+**Updated 2026-10-07 by lane 3B (Set sail), launched from `docs/paralelos3.md` section B on branch
+`claude/focused-maxwell-wcaacl` through `/implement`, from `main` at a2a49fe (every lane of waves 1 and 2, lane 2D included as PR #11). Lane 3B is built, tested and checked in a browser on the mock backend. It is committed (b42d869) and pushed with the user's explicit approval, and `main` at 503f97e (lane 3A, PR #12) is merged into the branch by a merge commit, with the conflicts resolved (see "Lane 3B" → "Bringing `main` in"). No pull request has been opened yet.**
+
+- **Ran for 3B (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build` (no warning),
+  `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (**89 files, 1740 tests** after the merge of `main`: the 1627 of `main` with lane 3A, 114 new, one row removed from `app.routes.spec.ts`; 81 files and 1600 tests before it) and `npm run format:check`, all green; 26 mutation checks of the new tests; a two-axis `/code-review` (standards and spec), whose real findings were fixed; `npm run start:mock` driven in headless Chromium (light and dark, 1100 px and 390 px, empty submit, a real set sail, `story_exists`, the Lookout conflict, a simulated `503` with Try again).
+- **Did not run for 3B:** anything against a real API, `--simulate` or TEST; browsers other than Chromium; a pixel diff (the
+  wireframe was compared by eye); nothing here ran on a real phone.
+
+Earlier: **lane 3A (shell, All hands and Voyages), launched from `docs/paralelos3.md` section A on branch
 `claude/determined-wright-jqbqht`, from `main` at a2a49fe (every lane of waves 1 and 2, lane 2D included as PR #11). Lane 3A is
 committed and pushed with the user's explicit approval, in two commits: 8051c60 (the lane as first built) and a second one (the
 fixes from its two-axis review, and this report). No pull request has been opened yet.**
@@ -137,12 +145,19 @@ leads to `/voyages?q=`, one `main`, the toast host, `ThemeService`, and a clock 
 which follows the event stream, and open a voyage in the `StoryStore` only while a row on screen needs more than its story. They are
 checked on `npm run start:mock` against the `Main` and `Voyages` boards. Lanes 3B, 3C and 4A run in other sessions.
 
+**Wave 3, lane 3B (Set sail)** is committed and pushed on `claude/focused-maxwell-wcaacl` (with `main` and lane 3A merged in; **no pull request yet**): `/voyages/new?key=&title=`
+is a typed Reactive Form (`SetSailPage`, `ah-set-sail`) in `src/app/features/set-sail/`: Jira key (capitals as you type), Title,
+Total budget read by `parseAiu` (never a float), the five "Crew and models" rows on `ah-model-choice-table`, "Before you sail" with
+"Set sail · up to {X} AIU", and `startStory` with its refusals (`409 story_exists` with an "Open PROJ-145" link, `400` per field,
+banners for the rest). Only the slots the user filled in are sent. It runs on the mock backend today, inside lane 3A's shell (the toast, the page width and the top bar's "Set sail" button come from it); 3C (The Docks) and 4A (the voyage it opens) are the other lanes of the wave.
+
 ## Start here next
 
 1. **User:** review the lane 3A branch (`claude/determined-wright-jqbqht`; section "Lane 3A" below, in particular "Decisions and
    deviations"), open its pull request into `main` and merge it when satisfied. It changes nothing outside its own list except
    three placeholder cases of `src/app/app.routes.spec.ts`, plus this file and the README "Status". **Done since earlier versions of
    this item:** lane 2D is merged into `main` (PR #11), with 1B (PR #9), 2B (PR #8) and 1C (PR #10).
+   **Lane 3B** (`claude/focused-maxwell-wcaacl`, section "Lane 3B", in particular "Decisions and deviations") is in the same state: committed and pushed, `main` merged in, for the user to review and open a pull request. It touches only `src/app/features/set-sail/**`, one row of `src/app/app.routes.spec.ts`, this file and the README "Status".
 2. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
@@ -160,7 +175,7 @@ checked on `npm run start:mock` against the `Main` and `Voyages` boards. Lanes 3
    `src/styles/_ahoy-angular.scss`.
 5. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
    is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-6. **Wave 3:** the whole of wave 2 is in `main`, so every section of `docs/paralelos3.md` can run: 3A is item 1; 3B, 3C and 4A
+6. **Wave 3:** the whole of wave 2 is in `main`, so every section of `docs/paralelos3.md` can run: 3A and 3B are item 1; 3C and 4A
    (section D, the base of wave 4: do not open `docs/paralelos4.md` until it is in `main`) run in other sessions. Screens develop
    on `npm run start:mock`; e2e (6C) can use `npm run mock:api` behind the real proxy. **6D** is optional
    (`docs/paralelos1.md`); when it runs, add the mock dist check to CI (lane 2D, "Needs from other lanes").
@@ -183,6 +198,178 @@ checked on `npm run start:mock` against the `Main` and `Voyages` boards. Lanes 3
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 3B · Set sail (2026-10-07)
+
+Launched from `docs/paralelos3.md`, section B, through `/implement` on `claude/focused-maxwell-wcaacl` (the branch this session
+was given; plan §9 would call it `lane/3b-set-sail`), from `main` at a2a49fe. **Committed (b42d869) and pushed with the user's explicit approval**: the `/implement` skill says to commit and CLAUDE.md says never without the user's specific approval, so the work was left in the working tree until the user answered "Commit e push". Later the user asked to bring `main` in (see "Bringing `main` in").
+
+**Pre-flight.** `git fetch origin`: `HEAD` is `origin/main` (a2a49fe), clean tree. `main` has `ah-field`, `ah-banner` and `ahButton`
+(1A), `ah-model-choice-table` in `src/app/ui/model-choice/` (1C), and `MockAhoyServer` with `npm run start:mock` (2D); the 2A
+`ApiClient.startStory` and the 2B `StoriesStore` it needs are there too. Node was v22.22.0, so every command ran on **Node 24.21.0**
+from `npx -y node@24`, copied into the session scratchpad and put first on `PATH`; `npm ci` installed the locked tree (there was no
+`node_modules`). **No dependency was added or changed.**
+
+### What changed
+
+| File (all in `src/app/features/set-sail/`) | Tests       | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start-request.ts`                         | 63          | Pure. `budgetProblem`/`budgetNanoAiu` (through `parseAiu`: empty, `0`, `1e3`, `-5`, `25,5`, `.5`, more than 9 places and unsafe sizes are refused; `25.5` is 25 500 000 000), `keyProblem`/`normalizeKey` (`^[A-Z][A-Z0-9]+-[0-9]+$`, at most 40), `modelProblem` (the contract's `ModelId`), `chosenModel`, `buildStartRequest` (only filled slots, `models` and a blank `title` left out, `null` when anything would be refused) `titleProblem` (500 code points once trimmed, as the API counts) and `describeAiu` ("25", "25.5").                                                                                                                                                                                                                                                          |
+| `start-errors.ts`                          | 13          | Pure. `startFeedback(error, key)`: `409 story_exists` → error on the key plus the key to open; `400 validation_failed` → each `errors[].path` beside its field (both spellings; `/models` is one `lookouts` message for both Lookout rows), what names no field → banner; `503`/network → "Lost contact with the harbour" with `retry`; `invalid_response` → "Ahoy sent something unexpected"; `401` → "Sign-in needed"; others → title, detail and `status · code · request id`. `withoutField` drops the answer for a field the user edits.                                                                                                                                                                                                                                                  |
+| `set-sail-validators.ts`                   | (page spec) | Angular validators over the pure functions (key, budget, title, model id), with the messages each field shows.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `set-sail-page.ts`                         | 37          | `SetSailPage` (`ah-set-sail`): typed `FormGroup`, `?key=`/`?title=` through input binding (read as `unknown`, only a single string counts), capitals as you type with the caret kept, `ah-field` and `ah-model-choice-table`, "Before you sail", "Before you sail" (with the button, Cancel and the refusal banner, with Try again when the harbour was unreachable), "How a voyage goes". `submit()` clears the last refusal, marks everything touched, focuses the first problem (or scrolls the banner into view), never sends an invalid form or one with the Lookout conflict, locks the fields and holds the button until the voyage is open, and puts the created story in `StoriesStore`. A voyage that sets sail after the user left still gets its toast, but the user is not moved. |
+| `set-sail.routes.ts`                       | 1           | The placeholder is replaced by `SetSailPage`, titled "Set sail · Ahoy".                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+### Seams (agreed with the user before any test was written)
+
+1. **Request (pure):** form text → `StartStoryRequest`, and the validation of key, budget and model id.
+2. **Errors (pure):** `ApiError` → what the form shows.
+3. **Page** (`TestBed` + `RouterTestingHarness` over the mock backend, with a hand-written interceptor that records every
+   `POST`, can hold the answer and can replace it): the plan's acceptance criteria.
+
+### Proof
+
+All offline, 0 AIU, Node 24.21.0. **No real API was involved.**
+
+- **Chain:** `npm run build` (no warning), `npm run typecheck` (`check-boundaries: ok`), `npm run lint` (ESLint, `tokens:check`,
+  `api:check`), `npm test` (**81 files, 1600 tests**, 0 failed, 0 skipped) and `npm run format:check`, all exit 0.
+- **Acceptance, by test:** invalid key, empty budget, `0`, `1e3`, `-5`, `25.5` (→ 25 500 000 000 nano-AIU) and more than 9 places;
+  two Lookouts on one model → the error under both rows, the first one focused, nothing sent; one Lookout alone → sent;
+  `PROJ-145` with budget 25 and `planning` = `claude-sonnet-5` / `high` → the request body is exactly
+  `{key, budgetNanoAiu: 25000000000, models: {planning: {model, reasoningEffort}}}`; no `models` key when every row is blank; a
+  double click sends one `POST` and the button is disabled ("Setting sail…") until the answer; `201` → toast "Voyage PROJ-145 set
+  sail.", the story in `StoriesStore`, navigation to `/voyages/PROJ-145`; `409 story_exists` → error on the key, "Open PROJ-123"
+  linking to `/voyages/PROJ-123`, the typed text kept, the error gone when the key is edited; `400` → errors beside the field
+  and under the model row; `503` → the banner (in the summary, beside the button) with Try again, the typed text kept, the old banner gone while a retry is out or when the next attempt is blocked locally; the fields are locked while the request is out; a voyage that set sail after the user left shows its toast and does not navigate; `?key=A&title=X` → `?key=B` blanks the title.
+- **Mutation checks, first round** (each made the suite fail, then was reverted; the tree was clean after): budget read through a float (11
+  tests failed), blank slots sent (13), a blank title sent (8), `models` never omitted (4), key not in capitals (3),
+  `story_exists` not recognised (2), `/models` under one Lookout only (1), editing the key not clearing its error (2), the double
+  submit guard removed (1), the button released before the navigation (2), an invalid form sent (1), the old feedback not cleared
+  before a retry (1; **this mutant first survived**, the 503 test could not tell because the navigation destroys the page, so the
+  test now holds the retry and looks while it is out), the store not updated (1), the query key not normalised (1).
+- **Mutation checks, after the review fixes** (12 more): navigating after the user left (1), the refusal applied to a destroyed
+  view (**this mutant first "survived" because my script counted only failed tests, and Vitest reports the resulting NG0911 as an
+  unhandled error with exit code 1; the script now reads the exit code too, and the mutant is killed**), fields not locked in
+  flight (1), the old banner kept when the form is still invalid (2), the shared `/models` message not on the rows (1), the title
+  kept when the query drops it (1), a blank key counting as from The Docks (1), no Try again button (1), the title counted in
+  UTF-16 units (2) or untrimmed (1), Try again never offered (2), editing a Lookout keeping the shared message (2).
+- **`npm run start:mock` in headless Chromium** (`ng serve --configuration mock`; a throw-away script in the session scratchpad
+  with the session's Playwright, not a project dependency): `/voyages/new?key=proj-145&title=Export%20to%20CSV` in light and dark at
+  1100 px and 390 px compared by eye with the `SetSail` wireframe: `scrollWidth` equals the window width in all four (no sideways
+  scroll); an empty submit shows the two errors and focuses the key; a real set sail of `PROJ-145` (25, planning
+  `claude-sonnet-5`/`high`) landed on `/voyages/PROJ-145/plan` and the mock's `story.started` event held
+  `budgetNanoAiu: 25000000000` and `models: {planning: {model, reasoningEffort}}` and nothing else; `?key=PROJ-123` →
+  "PROJ-123 already has a voyage." with the link `/voyages/PROJ-123`; the two Lookouts on `gpt-5.6-terra` showed the error under
+  both rows with "Your choice" tags and Reset on the filled rows. The one console error is `/config.json` answering 404 on the dev server, as in lane 2D's report. After the review fixes, a `failNext=503` at 390 px: the banner sits above the button, inside the viewport (its bottom is 0.5 px from the window's), Try again set sail `PROJ-160`, `scrollWidth` 390.
+
+### Decisions and deviations (to review)
+
+1. **No default is shown, and the tag only says "Your choice"** (G5, plan deviation 2): a blank row has the placeholder "Default" and
+   no source tag; a row with a model or an effort says "Your choice" and gets Reset. "Server default" is not shown because the
+   default may come from the agent's own config (the wireframe itself says "Agent config" for implementation). The wireframe's
+   "Default from" column and the sentence "Leave a field blank to use the default shown" are replaced by "Optional. Leave a field
+   blank and the server decides."
+2. **"How a voyage goes"** lists the seven phases from `@domain/phases` and drops the wireframe's sentence "Today intake,
+   planning and plan review run end to end; the rest follow.", which the plan does not ask for and which I could not check.
+3. **An effort without a model is allowed** (`ModelChoice` is "a model, a reasoning effort, or both"); the row then sends only
+   `reasoningEffort`.
+4. **A model id is checked against the contract's `ModelId`** (letters, digits and `. _ : / -`, at most 200) before sending;
+   the plan says nothing about it, the API would answer `400`.
+5. **Title hint:** the plan prefilled the field but gave no text; the hint reads "Shown next to the key in lists."
+6. **Cancel** goes to The Docks when the page came from there (`?key=` present) and to `/voyages` otherwise; "← Back to The Docks" and
+   the "Filled in from The Docks" pill appear only with `?key=`.
+7. **The refusal banner sits in "Before you sail", above the buttons** (not at the top of the page, where a phone user at the button would not see it), announces as `alert` (the kit's `error` banner defaults to `status`) and scrolls into view; field errors are shown beside the fields and the first one takes the focus. Only an unreachable harbour (`503`, network) offers "Try again" (plan §5.5); the other refusals have nothing a retry would change. `invalid_response` says "The voyage may or may not have been created.
+   Check All voyages before trying again.", because a tooling failure must not read as a refusal.
+8. **The button stays disabled until the navigation finishes**, not only until the answer, so nothing can send a second request
+   between the `201` and the page changing.
+9. **The fields lock while the request is out** (a disabled `<fieldset>`, which does not touch the form's model), so the answer can never land on a key the user has since changed.
+10. **The query string describes the prefill:** when it changes while the page is open, the key and the title follow it and a title it no longer carries goes blank. A blank `?key=` does not count as from The Docks.
+11. **The title is counted in code points, once trimmed**, the way the API counts it (JSON Schema `maxLength`) and the way the request sends it; 500 emoji fit.
+12. **Left unfixed on purpose** (see "Review"): the "Open PROJ-145" link sits under the field, not in its error line.
+13. **Component styles instead of `src/styles/`** (as lane 1C did, plan rule 2). The page has no gutter or `page-max` of its own: they
+    belong to the shell (3A).
+
+### Review (`/code-review`, two axes, run on the working tree against a2a49fe)
+
+A standards reviewer and a spec reviewer ran in parallel and read-only. What came out, and what was done:
+
+- **Fixed, test first:** the refusal banner moved next to the button and scrolls into view (spec c1); the old banner no longer
+  survives a blocked attempt (c2); the answer can no longer land on edited text because the fields lock (c3); a voyage that sets
+  sail after the user left no longer navigates them, and a late refusal no longer touches the destroyed view, which really throws
+  NG0911 (c4); a changed query string refreshes key and title, and a blank key is not "from The Docks" (c5); the title is
+  counted as the API counts it, which also removes the standards review's duplicated title rule (c6); a `/models` refusal clears
+  from both rows when either is edited (c7); the exact-body tests use `toStrictEqual` (c8); "Try again" for an unreachable
+  harbour (spec a2, standards A2); the grammar copied from `parseAiu` is gone from `budgetProblem`; the page's `textOf` is
+  `singleText`; the unused `server` in the spec helper and the duplicated `link` helper are gone; a comment says why
+  `unauthenticated` is compared by hand (`isUnauthenticated` is a type guard whose false branch narrows `error` wrongly);
+  the stale "2D is item 1" line.
+- **Not fixed, and why:** the "Open PROJ-145" link is outside `ah-field` and not in `aria-describedby` (the kit's `ah-field`
+  has no slot for an action under the error: **for lane 1A**); the client-side `ModelId` check, `focusFirstProblem`, effort-only
+  slots, the title hint and the Cancel destination are beyond the plan's text, and stay as decisions 3 to 6 above; the smells
+  "the five slots are listed three times", `describeAiu` living in this lane instead of `@domain/aiu` (not ours to edit) and
+  the repeated "up to X AIU" text were left as they are.
+- **Not a finding:** `docs/agents/issue-tracker.md` does not exist (the `code-review` skill asks for it); the spec here is files,
+  so nothing was blocked.
+
+### Files outside the lane's list, and why
+
+- `src/app/app.routes.spec.ts` (phase 0): the `CASES` table asserted the 3B placeholder at `/voyages/new`; that row is removed and
+  `set-sail.routes.spec.ts` tests the real route. **Lane 3A edits the same table for `/` and `/voyages`**: a merge conflict there
+  is possible and trivial.
+- `docs/progress.md` (this section, the header, "Where we are", "Start here next") and the README "Status".
+
+### Did not run, skipped, and why
+
+- **Nothing against a real API, `--simulate` or TEST**, by design.
+- **The toast on screen, before the merge:** the shell had no `ah-toast-host` then, so the first browser run showed none; after lane 3A's shell was merged in it showed (see "Bringing `main` in").
+
+- **Where the page leads:** `/voyages/PROJ-145` and `/docks` are still placeholders (4A and 3C), since 3A did not build them.
+- **Not checked:** browsers other than Chromium, a real phone (390 px was viewport emulation), a pixel diff, a screen reader (only
+  the ARIA attributes are tested), Enter in a field (the page uses a native `<form>` and `ngSubmit`; the double-submit guard is
+  tested through the button), the NG0911 outside Vitest (it is proved by the unhandled-error report of the mutant).
+- **Skipped test suites:** none.
+
+### Needs from other lanes
+
+- **3A (shell), done by 3A, checked after the merge:** `<ah-toast-host />`, the page width and the top bar's "Set sail" button to `/voyages/new` are in the shell. **One thing left for 3A:** the top bar keeps "Voyages" active at `/voyages/new` (the `SetSail` board has no tab active there).
+- **3C (The Docks):** link "Set sail" to `/voyages/new?key=PROJ-145&title=…`; the page reads `key` (upper-cased) and `title`.
+- **4A (voyage shell):** `/voyages/:key` is where a created voyage opens; the page puts the story in `StoriesStore` first.
+- **User:** review the decisions above and open the pull request (none has been opened).
+
+### Bringing `main` in (2026-10-07, asked by the user)
+
+`origin/main` had moved to 503f97e: lane 3A (PR #12), 3 commits. The merge (a merge commit, no history rewritten) conflicted in
+exactly the three files this lane shares with 3A:
+
+- `src/app/app.routes.spec.ts`: 3A removed its three placeholder rows, this lane removed the 3B one. All four are gone.
+- `README.md`: both Status bullets are kept, with one "Next" line.
+- `docs/progress.md`: rebuilt from `main`'s text with this lane's header, "Where we are" paragraph, "Start here next" sentences and
+  section put back in; lane 3A's header paragraph now starts "Earlier:".
+
+No source file conflicted: 3A owns `app.ts`, `harbour/` and `voyages/`, this lane `set-sail/`. After the merge: `npm ci`,
+`npm run build` (no warning), `npm run typecheck` (`check-boundaries: ok`), `npm run lint`, `npm test` (**89 files, 1740
+tests**: 1627 + 114 − 1), `npm run format:check` and `node scripts/mock-api.dist-check.mjs` (no trace of the mock), all green.
+In headless Chromium on `npm run start:mock`, at 1100 px and 390 px: All hands → the top bar's "Set sail" → `/voyages/new`
+(tab title "Set sail · Ahoy") → `PROJ-145`, budget 25, `planning` `claude-sonnet-5`/`high` → the toast "Voyage PROJ-145 set
+sail." shows, the page lands on `/voyages/PROJ-145/plan`, and `scrollWidth` equals the window width (no sideways scroll).
+
+### Final check
+
+On Node 24.21.0, the working tree of `claude/focused-maxwell-wcaacl` with `main` at 503f97e merged in:
+
+```
+$ node -v                     v24.21.0
+$ npm run build               exit 0 (production bundle; no warning)
+$ npm run typecheck           exit 0 (tsc app + spec; check-boundaries: ok)
+$ npm run lint                exit 0 (eslint; build-tokens: ok; openapi-typescript --check and openapi-mirror: ok)
+$ npm test                    exit 0 (Test Files 89 passed (89); Tests 1740 passed (1740): 1627 of main + 114 new - 1 removed row)
+$ npm run format:check        exit 0 (All matched files use Prettier code style!)
+$ node scripts/mock-api.dist-check.mjs   exit 0 (no trace of the mock in dist/)
+```
+
+(Before the merge, on a2a49fe: 81 files and 1600 tests, 1487 + 114 − 1.)
+
+---
 
 ## Lane 3A · Shell, All hands and Voyages (2026-10-07)
 

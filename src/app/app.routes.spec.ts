@@ -9,7 +9,6 @@ import { routes } from "./app.routes";
  * `features/voyages` cover them and their titles. A lane that replaces a placeholder takes its row out of this table.
  */
 const CASES = [
-  { url: "/voyages/new?key=PROJ-123&title=Due%20date", text: "Set sail", lane: "3B", title: "Set sail · Ahoy" },
   { url: "/docks", text: "The Docks", lane: "3C", title: "The Docks · Ahoy" },
   { url: "/voyages/PROJ-123/plan", text: "Plan", lane: "4B", title: "Plan · Ahoy" },
   { url: "/voyages/PROJ-123/questions", text: "Questions", lane: "4C", title: "Questions · Ahoy" },
