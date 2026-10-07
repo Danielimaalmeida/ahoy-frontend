@@ -130,9 +130,11 @@ export class StreamHub {
     }
   }
 
+  /** Wakes when the stream that wrote longest ago has been silent for `keepaliveMs`, so none waits longer. */
   private armKeepalive(): void {
     if (this.keepaliveTimer !== null || this.subscribers.size === 0) return;
-    this.keepaliveTimer = this.clock.schedule(this.keepaliveMs, () => {
+    const lastWrite = Math.min(...[...this.subscribers].map((s) => s.lastWrite));
+    this.keepaliveTimer = this.clock.schedule(Math.max(0, lastWrite + this.keepaliveMs - this.clock.now()), () => {
       this.keepaliveTimer = null;
       const now = this.clock.now();
       for (const subscriber of [...this.subscribers])

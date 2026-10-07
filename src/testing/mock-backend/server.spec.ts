@@ -277,6 +277,27 @@ describe("MockAhoyServer · reads", () => {
 });
 
 describe("MockAhoyServer · commands", () => {
+  it("refuses an integer beyond 2^53, which a nano-AIU amount cannot hold exactly", () => {
+    const { server } = testServer();
+    const answer = call(server, "POST", "/stories", { key: "DEMO-1", budgetNanoAiu: 2 ** 53 });
+    expect([answer.status, problemCode(answer), field(answer, "errors")]).toEqual([
+      400,
+      "validation_failed",
+      [{ path: "body/budgetNanoAiu", message: "must be integer" }],
+    ]);
+  });
+
+  it("answers 500 naming each difference when its own answer would break the contract", () => {
+    const { server } = testServer();
+    Object.assign(server.state.voyages.get("PROJ-123")!.story, { budgetNanoAiu: -1 });
+    const answer = call(server, "GET", "/stories/PROJ-123");
+    expect([answer.status, problemCode(answer), field(answer, "detail")]).toEqual([
+      500,
+      "internal_error",
+      "The mock's 200 answer to getStory breaks the contract: response/budgetNanoAiu must be >= 0",
+    ]);
+  });
+
   it("refuses a stale expectedVersion with 409 stale_version and currentVersion", () => {
     const { server } = testServer();
     const answer = call(server, "POST", "/stories/PROJ-123/stop", { expectedVersion: 8, reason: "Wait" });

@@ -51,6 +51,7 @@ if (major < 23) {
 
 const { MockAhoyServer } = await import("../src/testing/mock-backend/server.ts");
 const { applySwitches } = await import("../src/testing/mock-backend/switches.ts");
+const { MockProblem, problemResponse } = await import("../src/testing/mock-backend/http.ts");
 
 const BASE = "/api/v1";
 const MAX_BODY_BYTES = 1_000_000;
@@ -139,18 +140,8 @@ const http = createServer((req, res) => {
     try {
       text = await readText(req);
     } catch {
-      return send(
-        req,
-        res,
-        mock.handle({
-          method: "POST",
-          path: "/",
-          query: url.searchParams,
-          headers,
-          body: undefined,
-          bodyIsInvalidJson: true,
-        }),
-      );
+      // The real API refuses an oversized body before routing, with the same problem.
+      return send(req, res, problemResponse(new MockProblem("bad_request", "Request body is too large")));
     }
     let body;
     let bodyIsInvalidJson = false;

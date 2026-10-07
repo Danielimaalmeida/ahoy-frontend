@@ -1,5 +1,5 @@
 /**
- * A small JSON Schema checker for the requests the mock receives. The real API checks every parameter and body against
+ * A small JSON Schema checker for the requests the mock receives and the answers it gives. The real API checks every parameter and body against
  * `openapi/ahoy-v1.yaml` with Ajv and answers `400 validation_failed` with one `errors` entry per difference; the mock
  * does the same against the same document (the JSON mirror `src/testing/fixtures/openapi.json`), with the subset of
  * keywords the contract's request schemas use and Ajv's wording. Ajv itself is a dev dependency of the specs only, so it
@@ -141,7 +141,8 @@ function hasType(value: unknown, type: string): boolean {
     case "boolean":
       return typeof value === "boolean";
     case "integer":
-      return typeof value === "number" && Number.isInteger(value);
+      // Stricter than Ajv: an integer beyond 2^53 cannot be held exactly (nano-AIU, versions), so the mock refuses it.
+      return typeof value === "number" && Number.isSafeInteger(value);
     case "number":
       return typeof value === "number" && Number.isFinite(value);
     case "array":

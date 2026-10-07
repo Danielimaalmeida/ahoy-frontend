@@ -32,6 +32,13 @@ describe("mock switches", () => {
     expect(String(failed.body)).toContain("Bad Gateway");
   });
 
+  it("failNext=409 answers stale_version with the version of the story the path names", () => {
+    const { server } = testServer();
+    server.switches.failNext = 409;
+    const failed = call(server, "GET", "/stories/PROJ-123");
+    expect([failed.status, problemCode(failed), field(failed, "currentVersion")]).toEqual([409, "stale_version", 9]);
+  });
+
   it("conflictNext answers the next valid command with a 409, stale_version with the story's version", () => {
     const { server } = testServer();
     server.switches.conflictNext = "stale_version";

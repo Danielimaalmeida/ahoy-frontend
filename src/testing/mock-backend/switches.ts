@@ -17,6 +17,7 @@ export const SWITCH_PREFIX = "ahoy.mock.";
 
 /** The names of the switches. */
 export const SWITCH_NAMES = ["latencyMs", "failNext", "conflictNext", "dropStream"] as const;
+/** The name of one switch. */
 export type SwitchName = (typeof SWITCH_NAMES)[number];
 
 /** The switches that act once and are then forgotten. */

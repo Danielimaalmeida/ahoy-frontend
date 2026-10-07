@@ -65,6 +65,12 @@ export interface RunProgress {
   next: number;
 }
 
+/** The nano-AIU a run has spent after its ticks so far: its share of `cost`, rounded down, in integer arithmetic. */
+export function spentSoFar(progress: Pick<RunProgress, "cost" | "ticks" | "totalTicks">): number {
+  const share = progress.cost * progress.ticks;
+  return (share - (share % progress.totalTicks)) / progress.totalTicks;
+}
+
 /** The slot whose model a run of `phase` uses; `pr_review` runs the design lens first, then the defect lens. */
 function slotOf(phase: string, reviewsDone: number): ModelSlot {
   if (phase === "pr_review") return reviewsDone === 0 ? "review-design" : "review-defect";
@@ -117,7 +123,7 @@ export class Simulator {
     this.after(voyage, this.timing.cancelMs, () => {
       const progress = this.progress.get(run.id);
       this.progress.delete(run.id);
-      const spent = progress ? Math.floor((progress.cost * progress.ticks) / progress.totalTicks) : 0;
+      const spent = progress ? spentSoFar(progress) : 0;
       this.end(run, "cancelled", spent, "cancelled");
       voyage.story.currentRunId = null;
       this.world.touch(voyage);
@@ -252,7 +258,7 @@ export class Simulator {
       if (step) this.writeStep(voyage, run, progress, step);
     }
     progress.ticks += 1;
-    const spent = Math.floor((progress.cost * progress.ticks) / progress.totalTicks);
+    const spent = spentSoFar(progress);
     run.usage = { ...run.usage, requests: progress.ticks * 3, nanoAiu: Math.min(spent, run.budgetNanoAiu) };
     progress.events += 1;
     this.world.append(voyage, "run.progress", SYSTEM_ACTOR, {

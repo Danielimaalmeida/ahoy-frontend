@@ -68,6 +68,23 @@ describe("GET /events/stream on the mock", () => {
     expect(tap.text).toBe(": connected\n\n: keepalive\n\n");
   });
 
+  it("keeps each stream's own 15 s: one that wrote later gets its keepalive 15 s after that, not a round later", async () => {
+    const { server, clock } = testServer({ seed: false });
+    const fetch = createMockFetch(server, { actor: () => "alex@example.com" });
+    const first = await open(fetch);
+    clock.advance(10_000);
+    const second = await open(fetch);
+    clock.advance(5_000);
+    await settle();
+    expect([first.text, second.text]).toEqual([": connected\n\n: keepalive\n\n", ": connected\n\n"]);
+    clock.advance(9_999);
+    await settle();
+    expect(second.text).toBe(": connected\n\n");
+    clock.advance(1);
+    await settle();
+    expect(second.text).toBe(": connected\n\n: keepalive\n\n");
+  });
+
   it("breaks open streams on dropStreams, and an aborted request breaks its own", async () => {
     const { server } = testServer({ seed: false });
     const fetch = createMockFetch(server, { actor: () => "alex@example.com" });

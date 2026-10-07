@@ -2,10 +2,12 @@
 
 **Updated 2026-10-07 by lane 2D (mock backend and `mock:api`), launched from `docs/paralelos2.md` section D on branch
 `claude/blissful-wozniak-qr2816`, from `main` at a99a7a2 (which holds every other lane of waves 1 and 2, lane 1C included as
-PR #10). Lane 2D is committed (0997aba) and pushed with the user's approval; its pull request into `main` waits for review.**
+PR #10). Lane 2D is committed (0997aba) and pushed with the user's approval; its pull request into `main` waits for review.
+A review pass on the pull request then fixed six findings (see "Lane 2D" → "Review fixes"), committed and pushed to the
+same branch with the user's explicit approval.**
 
 - **Ran for 2D (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
-  (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (77 files, **1482 tests**, 80 new)
+  (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` (77 files, **1487 tests**, 85 new after the review fixes)
   and `npm run format:check`, all green; ten mutation checks; `npm run start:mock` in headless Chromium (the API, the event
   stream and the switches served in the page); `npm run mock:api` beside `npm start`, with `curl` and a stream reader through
   the real dev proxy (events arrive one by one); `scripts/mock-api.dist-check.mjs` on the production `dist/` (clean) and on a
@@ -312,6 +314,28 @@ and the README "Status", as every lane does.
   types: the real reconciler also writes `story.terminal` and `run.cancel_requested`, which the contract's examples omit.
 - **P0 / 6A (README "Commands"):** add rows for `npm run mock:api` and `node scripts/mock-api.dist-check.mjs` (this lane may only
   touch "Status").
+
+### Review fixes (2026-10-07)
+
+A two-axis review of the pull request (standards and spec) found six things to fix, all inside the lane's files. Each new
+test failed on the code as pushed (0997aba) and passes now; offline, 0 AIU, Node 24.21.0.
+
+| Finding                                                                                                             | Fix                                                                                                                                                                                                                                                       | Proof                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| "valida sempre as respostas": answers were only checked by `conformance.spec.ts`, not under `start:mock`/`mock:api` | `MockAhoyServer.handle` checks each answer of a routed operation against the contract (declared status, media type, schema, with `SchemaChecker`); one that breaks it becomes `500 internal_error` naming each difference. `failNext` answers are exempt. | `server.spec.ts` (+1); the 80 earlier tests and the conformance session still pass with it on |
+| `integer` accepted any `Number.isInteger`, so `budgetNanoAiu: 1e300` was stored (CLAUDE.md "Numbers")               | `SchemaChecker` requires `Number.isSafeInteger` for `integer` (stricter than Ajv, which the real API leaves to Postgres)                                                                                                                                  | `server.spec.ts` (+1): `2 ** 53` → `400`                                                      |
+| Spend computed with a float division (`Math.floor(cost * ticks / totalTicks)`)                                      | `spentSoFar()` in `simulator.ts`, integer arithmetic only                                                                                                                                                                                                 | `simulator.spec.ts` (+1)                                                                      |
+| `failNext=409` answered `stale_version` without `currentVersion`                                                    | it carries the version of the story the path names (1 when none), as `conflictNext` does                                                                                                                                                                  | `switches.spec.ts` (+1); `mock:api` by `curl`                                                 |
+| `mock:api` answered a body over 1 MB `404 not_found` (it was sent to path `/`)                                      | `400 bad_request` "Request body is too large", the real API's answer                                                                                                                                                                                      | `mock:api` by `curl` (no spec runs the script)                                                |
+| One keepalive timer for every stream: a stream that wrote just after a round waited up to ~30 s                     | the timer wakes when the stream that wrote longest ago has been silent for 15 s                                                                                                                                                                           | `event-stream.spec.ts` (+1)                                                                   |
+
+Also a doc comment on `SwitchName`, and the headers of `server.ts`, `schema.ts` and the directory's README. **Not changed:**
+decisions 3 (delivery gate) and 8 (PROJ-109 and PROJ-140 move on their own outside specs) still wait for the user; the dist
+check in CI is still lane 6D's; the review's code smells (repeated `MockRequest` building, `isRecord` in three places, the
+timestamp `replace`) were left as they are.
+
+After the fixes: `npm run build`, `npm run typecheck`, `npm run lint`, `npm test` (**77 files, 1487 tests**, 0 failed, 0
+skipped), `npm run format:check` and `node scripts/mock-api.dist-check.mjs`, all exit 0.
 
 ### Final check
 

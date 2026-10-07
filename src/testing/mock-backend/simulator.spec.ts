@@ -1,5 +1,6 @@
 import type { MockAhoyServer } from "./server";
 import { call, field, problemCode, testServer } from "./spec-helpers";
+import { spentSoFar } from "./simulator";
 
 const AIU = 1_000_000_000;
 
@@ -236,5 +237,13 @@ describe("Simulator · a voyage from set sail to done", () => {
     expect(call(server, "GET", "/stories/DEMO-5").status).toBe(404);
     expect(server.switches.latencyMs).toBe(0);
     expect(story(server, "PROJ-123")["version"]).toBe(9);
+  });
+});
+
+describe("spentSoFar", () => {
+  it("gives a run's share of its cost after its ticks, rounded down in integers", () => {
+    expect(spentSoFar({ cost: 7, ticks: 1, totalTicks: 3 })).toBe(2);
+    expect(spentSoFar({ cost: 4_200_000_001, ticks: 3, totalTicks: 4 })).toBe(3_150_000_000);
+    expect(spentSoFar({ cost: 1_800_000_000, ticks: 4, totalTicks: 4 })).toBe(1_800_000_000);
   });
 });

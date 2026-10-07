@@ -1,8 +1,10 @@
 # Mock backend
 
 An in-memory, deterministic double of the Ahoy API (`openapi/ahoy-v1.yaml`), for developing and testing without an API,
-Docker or Postgres (lane 2D). **It is a double of the contract, not the source of truth:** `conformance.spec.ts` checks
-every answer against the YAML with Ajv (the 2A helper `src/testing/fixtures/contract.ts`). All data is fictional.
+Docker or Postgres (lane 2D). **It is a double of the contract, not the source of truth:** the server checks each of its
+own answers against the contract before giving it (status, media type and schema; one that breaks it becomes a `500
+internal_error` naming the difference), and `conformance.spec.ts` checks every answer and event against the YAML with Ajv
+(the 2A helper `src/testing/fixtures/contract.ts`). All data is fictional.
 
 The same `MockAhoyServer` runs in three places, never as two mocks:
 
@@ -16,7 +18,7 @@ The same `MockAhoyServer` runs in three places, never as two mocks:
 
 - **Routing and checks like the real server** (`apps/api/src/server.ts` of `ahoy-hosted`): routes come from the contract's
   `paths`; every path, query, header and body is checked against the contract's schemas (`schema.ts`, Ajv's wording, paths
-  `body/...`, `query.limit`); unknown or repeated query parameters, an unknown route (`404`), a wrong method (`400` with
+  `body/...`, `query.limit`; integers must be safe integers, stricter than Ajv); unknown or repeated query parameters, an unknown route (`404`), a wrong method (`400` with
   `Allow`); `X-Ahoy-Actor` is the actor (`401` without it, `/health` aside).
 - **The 19 operations of phases 3 to 6**, with versions (`409 stale_version` and `currentVersion`), `story_exists`,
   `invalid_state`, `already_answered`, `decision_already_recorded` (only through `conflictNext`: as in the real API, an

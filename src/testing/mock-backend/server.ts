@@ -1,7 +1,8 @@
 /**
  * `MockAhoyServer`: an in-memory, deterministic double of the Ahoy API (`openapi/ahoy-v1.yaml`) for development and tests,
- * with no API, Docker or Postgres. It is a double of the contract, not the source of truth: its conformance specs check
- * every answer against the YAML with Ajv.
+ * with no API, Docker or Postgres. It is a double of the contract, not the source of truth: it checks each of its own
+ * answers against the contract before giving it (a `500` naming the difference otherwise), and its conformance specs
+ * check every answer against the YAML with Ajv.
  *
  * Like the real server (`apps/api/src/server.ts` of `ahoy-hosted`) it routes by the contract's `paths`, checks every
  * parameter and body against the contract's schemas (`400 validation_failed` with `errors`), reads the actor from
@@ -103,6 +104,8 @@ interface Route {
   readonly operationId: string;
   readonly params: readonly Param[];
   readonly body: unknown;
+  /** The operation's `responses`, by status (`"200"`, `"409"`, `default`). */
+  readonly responses: Readonly<Record<string, unknown>>;
   readonly anonymous: boolean;
 }
 
@@ -174,16 +177,28 @@ export class MockAhoyServer {
     return this.world.hub.dropAll();
   }
 
-  /** Answers one request. Never throws: everything that goes wrong is an answer, as over HTTP. */
+  /**
+   * Answers one request. Never throws: everything that goes wrong is an answer, as over HTTP. Every answer of a routed
+   * operation is checked against what the contract declares for it (status, media type, JSON schema); one that breaks the
+   * contract becomes a `500 internal_error` naming each difference, so the mock never hands the app an answer the real API
+   * could not give. The `failNext` answers are exempt: they rehearse failures on purpose.
+   */
   handle(request: MockRequest): MockResponse {
+    const failure = this.takeFailNext(request);
+    if (failure) return failure;
+    let route: Route | null = null;
+    let response: MockResponse;
     try {
-      const failure = this.takeFailNext();
-      if (failure) return failure;
-      return this.route(request);
+      route = this.match(request);
+      response = this.answer(route, request);
     } catch (error: unknown) {
-      if (error instanceof MockProblem) return problemResponse(error);
-      const message = error instanceof Error ? error.message : String(error);
-      return problemResponse(new MockProblem("internal_error", `Internal error in the mock: ${message}`));
+      response = toProblem(error);
+    }
+    if (route === null) return response;
+    try {
+      return this.conform(route, response);
+    } catch (error: unknown) {
+      return toProblem(error);
     }
   }
 
@@ -192,7 +207,7 @@ export class MockAhoyServer {
     seedVoyages(this.world, this.simulator, this.options.seedAt ?? this.clock.now());
   }
 
-  private takeFailNext(): MockResponse | null {
+  private takeFailNext(request: MockRequest): MockResponse | null {
     const status = this.switches.failNext;
     if (status === null) return null;
     this.switches.failNext = null;
@@ -201,10 +216,20 @@ export class MockAhoyServer {
       return { kind: "text", status, headers: { "Content-Type": "text/html" }, body: text };
     }
     const code = FAIL_CODES[status] ?? "unavailable";
-    return problemResponse(new MockProblem(code, `The mock was told to fail this request (failNext=${status})`));
+    const detail = `The mock was told to fail this request (failNext=${status})`;
+    if (code === "stale_version") return problemResponse(new MockProblem(code, detail, this.currentVersionOf(request)));
+    return problemResponse(new MockProblem(code, detail));
   }
 
-  private route(request: MockRequest): MockResponse {
+  /** The `currentVersion` a `409 stale_version` carries: the version of the story the path names, else 1. */
+  private currentVersionOf(request: MockRequest): { readonly currentVersion: number } {
+    const segment = /^\/stories\/([^/]+)/.exec(request.path)?.[1];
+    const voyage = segment === undefined ? undefined : this.world.voyages.get(safeDecode(segment));
+    return { currentVersion: voyage ? voyage.story.version : 1 };
+  }
+
+  /** The operation the method and path name: `404 not_found` for no route, `400 bad_request` with `Allow` for a method. */
+  private match(request: MockRequest): Route {
     const path = request.path;
     const candidates = this.routes.filter((r) => r.pattern.test(path));
     if (candidates.length === 0) throw new MockProblem("not_found", `No route for ${BASE}${path}`);
@@ -213,7 +238,10 @@ export class MockAhoyServer {
       throw new MockProblem("bad_request", `${request.method} is not allowed on ${BASE}${path}`, {
         headers: { Allow: candidates.map((r) => r.method).join(", ") },
       });
+    return route;
+  }
 
+  private answer(route: Route, request: MockRequest): MockResponse {
     let actor = "";
     if (!route.anonymous) {
       actor = (request.headers["x-ahoy-actor"] ?? "").trim();
@@ -225,6 +253,35 @@ export class MockAhoyServer {
     if (NOT_SIMULATED.has(route.operationId))
       throw new MockProblem("internal_error", `The mock backend does not simulate ${route.operationId}`);
     return this.dispatch(route.operationId, call);
+  }
+
+  /** The answer if the contract allows it for `route`, else a `500 internal_error` that names every difference. */
+  private conform(route: Route, response: MockResponse): MockResponse {
+    const differences = this.differences(route, response);
+    if (differences.length === 0) return response;
+    return problemResponse(
+      new MockProblem(
+        "internal_error",
+        `The mock's ${response.status} answer to ${route.operationId} breaks the contract: ${differences.join("; ")}`,
+      ),
+    );
+  }
+
+  /** How an answer differs from what the contract declares for the operation (any operation may answer 500). */
+  private differences(route: Route, response: MockResponse): string[] {
+    const declared = route.responses[String(response.status)] ?? route.responses["default"];
+    if (declared === undefined && response.status !== 500) return [`status ${response.status} is not declared`];
+    if (response.kind !== "json") return [];
+    const mediaType = (response.headers["Content-Type"] ?? "").split(";")[0]?.trim() ?? "";
+    let schema: unknown = PROBLEM_SCHEMA;
+    if (declared !== undefined) {
+      const resolved = this.checker.resolve(declared);
+      const content = isRecord(resolved) && isRecord(resolved["content"]) ? resolved["content"] : {};
+      const media = content[mediaType];
+      if (!isRecord(media)) return [`${mediaType || "no media type"} is not declared for status ${response.status}`];
+      schema = media["schema"];
+    }
+    return this.checker.check(schema, response.body, "response").map((e) => `${e.path} ${e.message}`);
   }
 
   /** Checks the path, query, header and body against the contract, as the real API does before any handler. */
@@ -669,6 +726,16 @@ export class MockAhoyServer {
   }
 }
 
+/** The schema of an undeclared `500`: the contract's `Problem`. */
+const PROBLEM_SCHEMA = { $ref: "#/components/schemas/Problem" };
+
+/** The answer for anything thrown while answering: its problem, or `500 internal_error`. */
+function toProblem(error: unknown): MockResponse {
+  if (error instanceof MockProblem) return problemResponse(error);
+  const message = error instanceof Error ? error.message : String(error);
+  return problemResponse(new MockProblem("internal_error", `Internal error in the mock: ${message}`));
+}
+
 /** The problem code `failNext` answers each status with. */
 const FAIL_CODES: Readonly<Record<number, ProblemCode>> = {
   400: "bad_request",
@@ -727,6 +794,7 @@ function buildRoutes(contract: Readonly<Record<string, unknown>>, checker: Schem
         operationId: op["operationId"],
         params: [...shared, ...readParams(op["parameters"])],
         body: json === null ? undefined : json["schema"],
+        responses: isRecord(op["responses"]) ? op["responses"] : {},
         anonymous: Array.isArray(op["security"]) && op["security"].length === 0,
       });
     }
