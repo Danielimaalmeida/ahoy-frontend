@@ -105,7 +105,22 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   eight voyages of the wireframes, checked against the YAML with Ajv; `npm run start:mock` serves it in the browser and
   `npm run mock:api` over HTTP on `127.0.0.1:8080` behind the real dev proxy, with no new dependency;
   `node scripts/mock-api.dist-check.mjs` proves the production build is free of it. 80 new tests; never run against a real API.
-- **Wave 3, lane 4A (voyage base): built and tested, not committed** (branch `claude/quirky-gates-t6b390`). `/voyages/:key`
+- **Wave 3, lane 3A (shell, All hands and Voyages): done and merged into `main`** (PR #12). `src/app/app.ts` is the shell (top bar with the needs-you count, the Live indicator and the user; search to
+  `/voyages?q=`; one `main`; toasts; the saved theme), `src/app/features/harbour/` is All hands (`/`: tiles, "Needs you" with
+  "What's needed" and an action by status, "At sea", "Calm seas") and `src/app/features/voyages/` is Voyages (`/voyages`: chips with
+  `?status=`, table with stepper and Note, `?q=`, Load more, skeleton, empty and error states). Both follow the event stream. 143
+  new tests; checked on `npm run start:mock` in headless Chromium against the `Main` and `Voyages` boards, light and dark, at
+  1440 px and 390 px; never run against a real API.
+- **Wave 3, lane 3B (Set sail): done on the mock backend and merged into `main`** (PR #13).
+  `/voyages/new?key=&title=` is a typed Reactive Form on `ah-field` and `ah-model-choice-table`: the budget is read by `parseAiu`
+  (never a float), only the models the user filled in are sent, a double click sends one request, and `story_exists`, `400` and
+  the other refusals show beside the fields or in a banner without losing what was typed. 114 new tests (three agreed seams, 26 mutation checks, a two-axis review whose findings were fixed); driven in headless Chromium on `npm run start:mock`; never run against a real API.
+- **Wave 3, lane 3C (The Docks, planned): done offline and merged into `main`** (PR #14). `/docks` has the "Planned screen" banner, the filters and the backlog table, with the **Ahoy** column
+  joined to the real voyages in the `StoriesStore`. The backlog comes from a `BacklogPort`, today a `StubBacklogAdapter` with the
+  wireframe's nine fictional stories (the API has no backlog yet); "Jira ↗" shows only with `jiraBaseUrl`. 40 new tests; checked on
+  `npm run start:mock` in headless Chromium; never run against a real API.
+- **Wave 3, lane 4A (voyage base): done on the mock backend, committed and pushed, in review** (branch
+  `claude/quirky-gates-t6b390`, with `main` and lanes 3A, 3B and 3C merged in; pull request into `main`). `/voyages/:key`
   shows the real voyage page:
   - header, primary action, Anchored banner, tabs with counts and the default tab;
   - `VoyageContext` and `CommandRunner` (`core/commands/`);
@@ -114,5 +129,5 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   Tested on the mock backend (120 new tests) and checked in headless Chromium; the tabs stay placeholders for wave 4. Never
   run against a real API.
 
-- Next: review lane 4A and approve its commit; then wave 4 (`docs/paralelos4.md`). Details in
+- Next: review and merge lane 4A; then wave 4 (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).
