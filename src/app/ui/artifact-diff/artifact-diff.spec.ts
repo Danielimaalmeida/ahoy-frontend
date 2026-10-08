@@ -50,15 +50,13 @@ describe("ah-artifact-diff", () => {
     const lines = rows
       .slice(1)
       .map((r) => [r.className, r.querySelector(".ah-diff__ln")!.textContent, r.lastElementChild!.textContent]);
+    // The context stays inside the section: the header names it, so neither heading is repeated as a line.
     expect(lines).toEqual([
-      ["", "3", "## Summary"],
       ["", "4", ""],
       ["", "5", "Show each invoice's due date on the billing page,"],
       ["ah-diff__del", "6", "− in the server's timezone."],
       ["ah-diff__add", "6", "+ in the customer's timezone, with a clear overdue state."],
       ["", "7", ""],
-      ["", "8", "## Work"],
-      ["", "9", ""],
     ]);
   });
 

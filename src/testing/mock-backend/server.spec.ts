@@ -122,7 +122,8 @@ describe("MockAhoyServer · seeds", () => {
     const plan = call(server, "GET", "/stories/PROJ-123/artifacts/content?path=implementation-plan.md");
     expect(plan.headers["ETag"]).toBe('"c2debe2a81f6da5198e2f6df010cfbbb81d561b1c7a17a8b8e9b509ae42e135d"');
     expect(String(plan.body)).toContain("AC5 Overdue invoices");
-    const archived = call(server, "GET", "/stories/PROJ-123/artifacts/content?path=implementation-plan.round1.md");
+    const archived = call(server, "GET", "/stories/PROJ-123/artifacts/content?path=plan-round-1.md");
+    expect(archived.status).toBe(200);
     expect(String(archived.body)).not.toContain("AC5");
   });
 
@@ -223,10 +224,15 @@ describe("MockAhoyServer · reads", () => {
     const { server } = testServer();
     const list = call(server, "GET", "/stories/PROJ-123/artifacts");
     const revision = Number(field(list, "revision"));
+    // The wireframe's six files (the Records board), at revision 5.
+    expect(revision).toBe(5);
     expect(pluck(list.body, "path").sort()).toEqual([
       "implementation-plan.md",
-      "implementation-plan.round1.md",
       "jira-snapshot.md",
+      "plan-round-1.md",
+      "plan-sources.md",
+      "questions.json",
+      "state.json",
     ]);
     const plan = call(server, "GET", "/stories/PROJ-123/artifacts/content?path=implementation-plan.md");
     expect([plan.status, plan.headers["Content-Type"]]).toEqual([200, "text/markdown"]);

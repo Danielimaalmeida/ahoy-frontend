@@ -69,8 +69,7 @@ Show each invoice's due date on the billing page and in the invoice list.
 
 ## Acceptance criteria
 
-- AC1 The billing page shows the due date of each invoice.
-- AC2 The invoice list has a due date column.
+- AC1 The billing page and the invoice list show the due date of each invoice.
 - AC3 Dates use the viewer's locale format; exports use ISO 8601.
 
 ## WP1 Due date in the invoice API
@@ -81,6 +80,33 @@ Show each invoice's due date on the billing page and in the invoice list.
 
 - Show the due date on the billing page and as a column in the invoice list.
 `;
+
+/** The questions PROJ-123's second run asked, as it wrote them (artifact revision 2). */
+const PROJ_123_QUESTIONS = JSON.stringify({
+  questions: [
+    { id: "Q1", text: "Should the due date use the customer's timezone or the viewer's?" },
+    { id: "Q2", text: "Should overdue invoices be sorted to the top of the invoice list?" },
+  ],
+});
+
+/** What PROJ-123's planner read for the first plan (revision 3). */
+const PROJ_123_SOURCES_1 = `# Plan sources: PROJ-123
+
+- jira-snapshot.md: the ticket, as read at intake.
+- questions.json: Q1 and Q2, with alex@example.com's answers.
+- billing-api: \`src/invoices/invoice.serializer.ts\`, the invoice response.
+- billing-web: \`src/billing/BillingPage.tsx\` and \`src/invoices/InvoiceList.tsx\`.
+`;
+
+/** The same sources after the send-back (revision 5): two more lines. */
+const PROJ_123_SOURCES_2 = `${PROJ_123_SOURCES_1}- billing-api: \`src/time/customer-timezone.ts\`, the customer's timezone.
+- Round 1 feedback from jordan@example.com: use the customer's timezone; add an AC for the overdue state.
+`;
+
+/** PROJ-123's state file at a revision: where the voyage was when the set was written. */
+function proj123State(phase: string, planRevision: number, rounds: number): string {
+  return JSON.stringify({ storyKey: "PROJ-123", phase, planRevision, revisionRounds: { plan_accepted: rounds } });
+}
 
 /** A finished run of a seed. */
 interface PastRun {
@@ -421,6 +447,7 @@ export function seedVoyages(world: World, simulator: Simulator, seedAt: number):
       requests: 22,
       exitReason: "asked_questions",
       gate: ["branch", "2 questions need a human (Q1, Q2)."],
+      files: (id) => [artifactFile("questions.json", PROJ_123_QUESTIONS, id)],
     });
     b.ask(v, asked.id, 1419, [
       {
@@ -441,7 +468,11 @@ export function seedVoyages(world: World, simulator: Simulator, seedAt: number):
       requests: 25,
       exitReason: "ok",
       gate: ["pass", "Plan has acceptance criteria and work packages for every repository."],
-      files: (id) => [artifactFile(PLAN_FILE, PROJ_123_PLAN_1, id)],
+      files: (id) => [
+        artifactFile(PLAN_FILE, PROJ_123_PLAN_1, id),
+        artifactFile("plan-sources.md", PROJ_123_SOURCES_1, id),
+        artifactFile("state.json", proj123State("plan_review", 1, 0), id),
+      ],
     });
     for (const q of v.questions) q.consumed = true;
     b.phase(v, "plan_review", 1205);
@@ -455,7 +486,8 @@ export function seedVoyages(world: World, simulator: Simulator, seedAt: number):
       "Due date must use the customer's timezone; add an AC for the overdue state.",
       "planning",
     );
-    v.addRevision([artifactFile("implementation-plan.round1.md", PROJ_123_PLAN_1, null)], b.at(1050));
+    // The send-back records itself in the state file (revision 4); the plan's next run archives round 1 (revision 5).
+    v.addRevision([artifactFile("state.json", proj123State("planning", 1, 1), null)], b.at(1050));
     b.event(v, "artifacts.updated", "jordan@example.com", 1050, { revision: v.revisions.length });
     b.run(v, {
       phase: "planning",
@@ -467,7 +499,12 @@ export function seedVoyages(world: World, simulator: Simulator, seedAt: number):
       requests: 26,
       exitReason: "ok",
       gate: ["pass", "Plan revision 2 passes all checks."],
-      files: (id) => [artifactFile(PLAN_FILE, PROJ_123_PLAN_2, id)],
+      files: (id) => [
+        artifactFile(PLAN_FILE, PROJ_123_PLAN_2, id),
+        artifactFile("plan-sources.md", PROJ_123_SOURCES_2, id),
+        artifactFile("plan-round-1.md", PROJ_123_PLAN_1, id),
+        artifactFile("state.json", proj123State("plan_review", 2, 1), id),
+      ],
     });
     v.plan = {
       criteria: ["AC1", "AC2", "AC3", "AC4", "AC5"].map((id) => ({

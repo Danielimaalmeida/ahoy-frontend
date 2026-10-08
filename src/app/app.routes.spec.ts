@@ -15,10 +15,7 @@ import { routes } from "./app.routes";
  * screens of lane 3A (`/` and `/voyages`) are real now: `app.spec.ts` and the specs of `features/harbour` and
  * `features/voyages` cover them and their titles. A lane that replaces a placeholder takes its row out of this table.
  */
-const CASES = [
-  { url: "/voyages/PROJ-123/artifacts", text: "Artifacts", lane: "5C", title: "Artifacts · Ahoy" },
-  { url: "/no/such/page", text: "Not found", lane: "6A", title: "Not found · Ahoy" },
-] as const;
+const CASES = [{ url: "/no/such/page", text: "Not found", lane: "6A", title: "Not found · Ahoy" }] as const;
 
 describe("app routes", () => {
   // The voyage shell (lane 4A) reads the story before it shows a tab: the mock backend answers it.

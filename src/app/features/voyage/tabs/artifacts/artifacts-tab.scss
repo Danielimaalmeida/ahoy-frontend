@@ -1,0 +1,153 @@
+// The Artifacts tab (wireframe `Records`, section Artifacts): the file list beside the open file, stacked on a narrow screen.
+.artifacts__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.artifacts__select {
+  width: auto;
+  max-width: 100%;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.artifacts__body {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.artifacts__files {
+  flex: 1 1 240px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border-right: 1px solid var(--line-soft);
+  box-sizing: border-box;
+}
+
+.artifacts__file {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  color: var(--ink);
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.artifacts__file--open {
+  background: var(--accent-soft);
+
+  .artifacts__path {
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+}
+
+.artifacts__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+}
+
+.artifacts__path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.artifacts__status {
+  margin-left: auto;
+  flex: none;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.artifacts__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2\.5);
+}
+
+.artifacts__link {
+  font-size: 12px;
+
+  &:first-of-type {
+    margin-left: auto;
+  }
+}
+
+.artifacts__detail {
+  flex: 999 1 520px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.artifacts__detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2\.5) var(--space-4);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.artifacts__content {
+  min-width: 0;
+}
+
+.artifacts__doc {
+  display: block;
+  padding: var(--space-3\.5) var(--space-4);
+}
+
+.artifacts__pre {
+  margin: 0;
+  padding: var(--space-3\.5) var(--space-4);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.artifacts__note {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.artifacts__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3\.5) var(--space-4);
+}
+
+.artifacts__retry {
+  display: block;
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  .artifacts__files {
+    flex-basis: 100%;
+    max-width: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .artifacts__detail {
+    flex-basis: 100%;
+  }
+}

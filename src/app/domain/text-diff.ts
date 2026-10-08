@@ -51,21 +51,36 @@ function sectionAbove(lines: readonly DiffLine[], from: number): string {
 
 /**
  * Groups a diff into hunks with up to `context` unchanged lines around each change (3 by default), merging changes
- * whose contexts touch. Each header names the markdown section the hunk falls in.
+ * whose contexts touch. A hunk stays inside one markdown section: an unchanged heading ends its context and is never
+ * merged across, so each header names the section its changes are in ("@@ Summary @@", "@@ Acceptance criteria @@").
  */
 export function hunks(lines: readonly DiffLine[], context = 3): DiffHunk[] {
+  // For each line, the index of the unchanged heading that opens its section (-1 before the first one).
+  const opens: number[] = [];
+  let open = -1;
+  lines.forEach((line, index) => {
+    if (line.kind === "same" && HEADING.test(line.text)) open = index;
+    opens.push(open);
+  });
   const changedIndexes = lines.flatMap((line, index) => (line.kind === "same" ? [] : [index]));
   if (changedIndexes.length === 0) return [];
   const ranges: { start: number; end: number }[] = [];
   for (const index of changedIndexes) {
     const last = ranges[ranges.length - 1];
-    if (last !== undefined && index - last.end <= context * 2 + 1) last.end = index;
+    if (last !== undefined && opens[index] === opens[last.end] && index - last.end <= context * 2 + 1) last.end = index;
     else ranges.push({ start: index, end: index });
   }
   return ranges.map(({ start, end }) => {
-    const from = Math.max(0, start - context);
-    const to = Math.min(lines.length, end + context + 1);
-    const section = sectionAbove(lines, from);
+    const opening = opens[start] ?? -1;
+    const from = Math.max(start - context, opening + 1);
+    let to = Math.min(lines.length, end + context + 1);
+    for (let index = end + 1; index < to; index += 1) {
+      if (opens[index] !== opening) {
+        to = index;
+        break;
+      }
+    }
+    const section = sectionAbove(lines, start);
     return {
       section,
       header: section.length > 0 ? `@@ ${section} @@` : "@@ @@",

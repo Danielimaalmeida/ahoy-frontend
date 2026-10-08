@@ -1,9 +1,22 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 5A (Runs, run detail and live steps), launched from `docs/paralelos4.md` section D through
-`/implement` on branch `claude/epic-albattani-81fip3`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 5A is built,
-tested on the mock backend and checked in a browser. It is committed and pushed with the user's approval, and `main` is merged
-into the branch afterwards (see "Lane 5A" → "Git").**
+**Updated 2026-10-07 by lane 5C (Artifacts: view and compare), launched from `docs/paralelos4.md` section F on branch
+`lane/5c-artifacts`, from `main` at 4aae11b (which holds every earlier lane, 4A to 5B included). Lane 5C is built, tested on
+the mock backend and checked in a browser. It is in PR #21; a second review then fixed the wireframe gaps (Artifacts data,
+labels, one hunk per section) and three small bugs, see "Lane 5C" → "Second review and wireframe fixes".**
+
+- **Ran for 5C (offline, 0 AIU, Node 24.21.0):** `npm run build`, `npm run typecheck` (`check-boundaries: ok`),
+  `npm test` (125 files, **2237 tests**: the 2156 of `main`, 82 new, one placeholder row removed from `app.routes.spec.ts`)
+  and `npm run format:check`, all green; `npm run lint` fails in the harness wrapper ("ESLint output (JSON parse failed…)"),
+  so its three steps ran on their own and were green: `node_modules/.bin/eslint .`, `npm run tokens:check` and
+  `npm run api:check`; `npm run start:mock` in headless Chromium (light, dark and 390 px) next to the `Records` board.
+- **Did not run for 5C:** anything against a real API, `--simulate` or TEST; mutation checks; the formal two-axis
+  `/code-review`; browsers other than Chromium; a screen reader; a pixel diff (compared by eye).
+
+Earlier: **lane 5A (Runs, run detail and live steps)**, launched from `docs/paralelos4.md` section D through `/implement` on
+branch `claude/epic-albattani-81fip3`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 5A is built, tested on the mock
+backend and checked in a browser. It is committed and pushed with the user's approval, and `main` is merged into the branch
+afterwards (see "Lane 5A" → "Git").
 
 - **Ran for 5A (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` and `npm run format:check`, all
@@ -176,11 +189,15 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-**Wave 4 has begun.** Lane 4B (Plan tab and decision) is built on the mock backend and waits for the user's review and approval to
-commit (section "Lane 4B"). Lane 4A is merged (PR #15), so lanes 4C, 4D, 5A, 5B and 5C (`docs/paralelos4.md` sections B to F)
-can run beside it.
+**Wave 4 is built.** Lanes 4A to 5B are in `main` (PR #15 to #20) and lane 5C (Artifacts: view and compare) is built on the mock
+backend, waiting for review (section "Lane 5C" below). With it, sections A to F of `docs/paralelos4.md` are all built.
 
 **Lane 4D (Models tab and Change models dialog) is built on the mock backend, committed and pushed (PR #18)**: see "Lane 4D" below.
+
+**Wave 4, lane 5C (Artifacts: view and compare) is built on the mock backend, not committed**: `/voyages/:key/artifacts`
+replaces its placeholder with the revision selectors, the file list with each file's state against the comparison, the viewer
+and the diff; the URL holds the selection. See "Lane 5C" below. With it, sections A to F of `docs/paralelos4.md` are all built;
+4B, 4C, 4D, 5A and 5B are already in `main` and 5C waits for review.
 
 Phase 0, lane 1A (PR #4), lane 2A (PR #5 and PR #7) and lane 2C (PR #3) are merged into `main`: an
 Angular 22 app that builds, tests and serves, with the CLAUDE.md conventions enforced by `tsc`, ESLint, Prettier and
@@ -267,15 +284,12 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-0. **User, lane 5A:** review and merge the lane 5A branch (`claude/epic-albattani-81fip3`; section "Lane 5A" below). It edits
-   one line outside the lane, `src/app/app.routes.spec.ts` (the two 5A placeholder rows). Lane 4A is merged (PR #15).
-1. **User, lane 4D:** review and merge PR #18 (`src/app/features/voyage/tabs/models/**`, section "Lane 4D" below). It also
-   edits one line outside the lane, `src/app/app.routes.spec.ts` (the `/models` placeholder row, as that file's comment says a
-   lane must do). Lanes 4B, 4C, 5A, 5B and 5C of `docs/paralelos4.md` run in other sessions.
-2. **User:** review lanes 4B and 4C (sections "Lane 4B" and "Lane 4C" below, in particular their "Decisions and deviations" and
-   the edits outside their directories, in `src/app/app.routes.spec.ts`), and merge them. Lane 4B is in `main` (PR #16), lane
-   4C is PR #17; lane 4A (PR #15) and every earlier lane are merged. The other lanes of wave 4 (4D, 5A, 5B, 5C) run in their
-   own sessions; **when sections A to F of `docs/paralelos4.md` are all in `main`, open `docs/paralelos5.md`.**
+0. **User, lane 5C:** review and merge this lane (branch `lane/5c-artifacts`, section "Lane 5C" below). It is not committed:
+   the changes are in the working tree. It edits one line outside the lane, `src/app/app.routes.spec.ts` (the 5C placeholder
+   row). Every other lane of wave 4 (4A to 5B) is already in `main` (PR #15 to #20).
+1. **User:** nothing else of wave 4 waits for review: lanes 4A to 5B are already in `main` (PR #15 to #20).
+2. **User:** when sections A to F of `docs/paralelos4.md` are all in `main` — that is, once 5C is merged — open
+   `docs/paralelos5.md`.
 3. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
    cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
    from lane 2C" in the lane 2A section.
@@ -315,6 +329,200 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
+
+## Lane 5C · Artifacts: ver e comparar (2026-10-07)
+
+Launched from `docs/paralelos4.md`, section F, on `lane/5c-artifacts`, from `main` at 4aae11b (which holds 4A, 1C, 2C and every
+other earlier lane). **Pre-flight.** `main` holds the prerequisites: **4A** (`VoyageContext`, the shell and the `artifacts`
+route), **1C** (`ah-markdown`, `ah-artifact-diff`) and **2C** (`@domain/text-diff`). Node was v24.21.0; `npm ci` had installed
+the tree. **No dependency was added.** Baseline on `main`: 119 files, 2156 tests. **Nothing is committed:** the lane is in the
+working tree.
+
+### What changed (all in `src/app/features/voyage/tabs/artifacts/`)
+
+| File                                        | What                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `artifacts.routes.ts`                       | The placeholder is replaced by `ArtifactsTab` (title "Artifacts · Ahoy"). The route provides `ARTIFACT_READER`, so what it has read survives leaving the tab and coming back: the tab is recreated, the cache is not (verified in the browser and by a test).                                                                                                                                           |
+| `artifacts-tab.ts`/`.scss`                  | The tab (`Records`, Artifacts section): the panel head with **Compare [Revision X] with [Revision Y]** and the **View \| Compare** pill; the file list (path, type, size, state against the comparison, View/Compare links); the pane (markdown, JSON re-indented, text; the diff; "New file…"; "No changes"; too large; loading and errors).                                                           |
+| `artifacts-view.ts`                         | `ArtifactsView`: the current set, the revisions, the URL selection and the comparison of every file. The URL is the state (`?compare=`, `?to=`, `?file=`, `?mode=`) and defaults are left out, so the tab follows the current revision as it moves. It keeps the union of the paths seen at any revision (listings and reads), so a file a later revision drops stays listed and compares as `removed`. |
+| `artifact-reader.ts`                        | `ArtifactReader` (G9): one file at one revision, with `If-None-Match` (the ETag of a copy already held); answers for `(key, path, revision)` kept in a bounded cache (text, digest or `404`); in-flight reads shared; failures never kept; the paths ever seen per voyage remembered.                                                                                                                   |
+| `file-compare.ts`                           | `compareFile`: asks as little as possible (the current set teaches the reader its ETags, so an unchanged file is one `304` and no download); counts lines with `@domain/text-diff`; returns `same`/`new`/`removed`/`changed`/`missing`/`too_large`/`error`. `statusLabel` words the row ("same", "+9 −3", "new", "changed" for JSON).                                                                   |
+| `revision-labels.ts`                        | `revisionOptions`: revisions `1..current` newest first, each labelled from **the nearest producer before** its `artifacts.updated` (second review; it was "the event immediately before") (a `run.finished` → its id; a `decision.recorded` with `send_back` → "send-back"; anything else → plain "Revision N"): "Revision 5 · current (r-04)", "Revision 4 (send-back)", "Revision 3".                 |
+| `selection.ts`                              | `readSelection`/`selectionParams`/`adjust`: the untrusted query string → a selection held to what exists (a revision that does not fit or an unknown file is ignored), and back.                                                                                                                                                                                                                        |
+| `artifact-files.ts`                         | `fileKind`, `kindLabel`, `textBytes`, `isTooLarge` (1 MiB), `prettyJson` (2-space indent), `displayText`, `formatSize`.                                                                                                                                                                                                                                                                                 |
+| `testing/fake-content.ts`                   | A fake `getArtifactContent` for the unit specs: ETag, `304`, `404`, failures, by `path@revision`.                                                                                                                                                                                                                                                                                                       |
+| `app.routes.spec.ts` (**outside the lane**) | The `5C` placeholder row removed, as that file asks.                                                                                                                                                                                                                                                                                                                                                    |
+
+### Tests (82 new, 6 files, plus one placeholder row removed)
+
+- **`artifact-reader.spec.ts` (21):** text/cache per revision, path and voyage; shared in-flight reads; `404` kept, failures
+  not; empty file; the cache limit; the paths seen per voyage; `If-None-Match` with `304`/`200`/`404`; answers from a known
+  ETag; `learn`; a `304` without a match refused as `invalid_response`.
+- **`file-compare.spec.ts` (16):** `same` with one `304` and no download; line counts; `new`; nothing asked twice; failure
+  then retry; JSON `changed` (re-indented) and `same` when only formatting differs; the 1 MiB limit; two past revisions
+  (target read first, then base with its ETag); `removed`/`missing`; the failure of either side; a file the server sends with
+  no ETag counted by its lines; `statusLabel`.
+- **`revision-labels.spec.ts` (11):** the strict rule: a `run.finished` or a `send_back` immediately before the update; a
+  `gate.evaluated`, a phase change, an approval or an unrelated event between leaves the revision plain; a `runId` on the
+  update's own payload is ignored; malformed payloads; current first.
+- **`selection.spec.ts` (11):** the defaults (current vs previous, on the plan, Compare); no comparison at revision 1; the
+  query string; every value that does not fit ignored; the query string of a selection and back.
+- **`artifact-files.spec.ts` (9):** kind by extension and media type, labels, UTF-8 bytes, the 1 MiB limit, size wording,
+  JSON pretty-printing.
+- **`artifacts-tab.spec.ts` (14, on the mock backend, through the real routes):** PROJ-123 revision 4 against 3 (the three
+  rows with `same`/`+7 −2`, the plan diff with the +/− colours and the wireframe's sections); the mock's four plain labels
+  (its updates are not preceded by their producer); revision 4 against 2 (`plan-round-1.md` `new`, "New file: it was not in
+  revision 2." and an all-added diff); a new revision 5 that drops `plan-round-1.md` leaves it listed as `removed`, with its
+  note (once starting in Compare and once in View, where the listing itself must register the path); the reader is kept when
+  the tab is left and opened again (a route provider: the tab is recreated, the cache is not, and the return makes no content
+  request); the same comparison opened twice makes no request and the probe carried `If-None-Match`; a JSON artifact
+  `changed` and re-indented in the viewer; View and "not in that revision"; markdown with `<script>` and a remote image
+  (neither runs nor loads); query parameters that do not fit; "No artifacts yet"; the list error with Try again; a file error
+  with Try again.
+
+### Acceptance, as demonstrated
+
+- **Superseded by the second review below**, which gives PROJ-123 the wireframe's data. As first built: **the mock's PROJ-123
+  did not have the wireframe's data.** It is at revision **4** with three files
+  (`jira-snapshot.md`, `implementation-plan.md`, `implementation-plan.round1.md`), not revision 5 with six
+  (`plan-sources.md`, `plan-round-1.md`, `questions.json`, `state.json`). Demonstrated with what exists: **4 against 3** shows
+  `implementation-plan.md +7 −2`, `jira-snapshot.md same`, `implementation-plan.round1.md same`; **4 against 2** shows
+  `implementation-plan.round1.md new`. The plan's diff covers `Summary`, `Acceptance criteria`, `WP1` and `WP2` but merges them
+  into **one hunk** (`@@ Implementation plan: PROJ-123 … @@`) because with three context lines the sections are close; the
+  wireframe's four hunks need the wireframe's seed **and may still merge even with it** (see "Needs from lane X"). Recorded
+  under "Needs from lane 2D" — the mock was not touched.
+- **The same comparison twice asks nothing:** the component test counts the `/artifacts/content` requests, leaves the
+  comparison (revision 2) and comes back, and sees no new request; the unit tests prove the ETag/`304` path and the
+  `(path, revision)` cache.
+- **`<script>` and a remote image in markdown:** the tab renders through `ah-markdown`; the component test asserts no
+  `script` and no `img` element, with the script shown as text and the image as `[image: remote]` (1C's own tests cover the
+  renderer).
+- **`404` per revision:** a file absent at the comparison revision is `new` (or `removed` the other way round) with its diff
+  read from the side that has it; a `?to=99` or `?file=../etc/passwd` is ignored.
+
+### Verified in the browser (`npm run start:mock`, port 4300)
+
+Headless Chromium (the machine's Playwright Chromium 1234, driven over CDP by a script in the session scratchpad; not a
+project dependency). PROJ-123 light and dark at 1280 px and light at 390 px (scrolled to the panel): the panel head with the
+two selects and the pill, the three rows with `same`/`+7 −2`, the plan diff with the removed and added colours, and no
+horizontal page scroll (`scrollWidth` = 390 at 390 px). `?compare=2&file=implementation-plan.round1.md`: the `new` row,
+"New file: it was not in revision 2." and the all-added diff. A synthetic `state.json` added to the in-browser mock at
+runtime (no repo change): the row reads `changed` and View shows the re-indented JSON. Console: no errors. Compared by eye
+with the `Records` board (the wireframe's exact six files and four hunks cannot show, see above).
+
+### Decisions and deviations (to review)
+
+1. **The URL is the state** (`?compare=`, `?to=`, `?file=`, `?mode=`), which answers 4B's open question; the defaults are
+   omitted, so an open tab follows the current revision as new revisions arrive.
+2. **`compareFile` asks as little as possible.** The current set's ETags are known, so the older revision is probed with
+   `If-None-Match`: a `same` file costs one `304` with no text; only a changed file is read in full from both revisions.
+3. **JSON files are "changed", not counted**, in the list; the viewer and the diff re-indent them (2-space) so a line diff
+   means something. A JSON file whose bytes differ only in formatting is `same` (the diff sees no line change).
+4. **`removed` is reachable when comparing two revisions** where a file of the union was in the base and not the target; the
+   union now keeps the paths seen at any revision (listings and reads), so a file a later revision drops stays listed. A file
+   that was never seen while it existed (it was already gone before the tab was ever opened, and no listing in this session
+   had it) cannot be known: past revisions have no listing to discover paths from.
+5. **The tab opens on `implementation-plan.md`** when the voyage has one, else the first file, in Compare against the previous
+   revision; revision 1 opens in View (nothing to compare with). "Too large to preview" and "No artifacts yet" are
+   unit-tested only in a browser (the mock has no >1 MiB artifact, and its PROJ-109 gets picked up by the simulator before a
+   browser looks).
+6. **One edit outside the lane:** `app.routes.spec.ts` (the `5C` placeholder row), as 3B, 4A, 4B, 4C, 4D, 5A and 5B did.
+
+### Needs from lane X
+
+- **Lane 2D (mock backend):** done in the second review (see below). Was: the wireframe's Artifacts data for PROJ-123 — revision 5 (not 4) with `plan-sources.md`,
+  `plan-round-1.md`, `questions.json` and `state.json` (not `implementation-plan.round1.md`) — so the acceptance's exact
+  `+9 −3`/`+2`/`same`/`changed` show. **Unproven:** with that seed the plan's four hunks may still merge into one, because
+  `@domain/text-diff` keeps 3 context lines and the sections are close; if the wireframe's four hunks are required, the
+  context (or the merging) has to change — that would be a **"Needs from lane 2C/1C"**, not a mock change. The labels are
+  affected too: the mock emits a `gate.evaluated` (or a `story.phase_changed`) between a producer and its
+  `artifacts.updated`, so the strict rule (only the event immediately before) leaves them plain; the wireframe's
+  "(r-04)"/"(send-back)" need the update right after its producer.
+- **Lane 4B (Plan):** the tab reads the URL; "Compare with revision {n−1}" can pass
+  `?to=<artifact-set revision>&compare=<the one before>` if the link should open a specific pair. The plain link already opens
+  the current revision against the previous one.
+- **Lane 2C / 1C:** nothing new for now; the diff is `@domain/text-diff` and the viewer is `ah-markdown` (see the hunk doubt
+  above).
+- **Lane 6A:** the page `<title>` is the static "Artifacts · Ahoy", like the other tabs.
+
+### Review (2026-10-07, two independent reviewers: standards and spec)
+
+Fixed after it:
+
+1. **The two revision selects are typed Reactive Forms.** They are `FormControl<number>`s (`[formControl]` + `[ngValue]`),
+   synced from the URL selection with `emitEvent: false` and pushing a pick back through `view.go` (a DOM value that is not
+   a revision is ignored); no more reading `HTMLSelectElement` by hand. The component spec drives them by selecting the
+   option (as a person would) and dispatching `change`, and asserts on the selected label; re-checked in the browser:
+   picking revision 2 writes `?compare=2` and the row reads `new`, and picking 3 clears the query.
+2. **Handoff corrected.** The README "Next" and "Where we are"/"Start here next" in this file now say only lane 5C waits for
+   review; lanes 4A to 5B are in `main` (PR #15 to #20), and `docs/paralelos5.md` opens when A to F are all in `main`.
+3. **`file-compare.spec.ts` no longer promises more than it proves.** The "new" test was split from the "no ETag" claim, and
+   the latter now has its own scenario: `FakeContent.withoutEtag` answers without an ETag, and the file is counted by its
+   lines.
+4. **The paths seen at any revision are kept** (`ArtifactReader.paths`, a signal; `ArtifactsView.paths` unions them with the
+   current listing) and used in the list and in the selection validation. Every observed listing registers its paths in every
+   mode, View included (where no comparison runs), without reading content. Two component tests add a revision 5 that drops
+   `implementation-plan.round1.md`: one starting in Compare (the row stays `removed`, with its note) and one starting in View
+   (`?mode=view`: the row stays listed and compares as `removed`).
+5. **Revision labels follow the spec strictly**: only the event immediately before each `artifacts.updated` is read (a
+   `run.finished` → its id; a `decision.recorded` with `send_back` → "send-back"); a `gate.evaluated`, a phase change, an
+   approval or a `runId` on the update's own payload no longer produces a note. With the mock's event order this makes all
+   four labels plain; the sourced labels are unit-tested, and the mock difference is registered under "Needs from lane 2D".
+6. **The report no longer promises the four hunks.** "Needs from lane X" says they may still merge with the wireframe's seed
+   (3-line context) and that would be a lane 2C/1C question.
+7. **The reader's lifetime is described once, exactly — and it is the opposite of what the earlier note said.** Verified: the
+   tab component is recreated when it is left and opened again, but the route-level `ARTIFACT_READER` is not — returning
+   makes no content request, so the cache survives. The "What changed" row, the route comment and a new component test
+   (navigate to Gates and back: no new `/artifacts/content` request) say that; the earlier "recreated when the tab is left"
+   note was wrong and is gone.
+
+Judgement calls, done as well: the default-file choice and the base normalisation moved to `defaultFile`/`baseFor` in
+`selection.ts`, so the rules cannot drift; `ArtifactReader.clear()` was removed (only tests called it) and its spec now
+builds new readers and covers `paths()` instead.
+
+Left as they are, with reasons: the reader cache still treats a `(path, revision)` as immutable (the API's revisions are);
+`ArtifactsView` is recreated per tab visit, but the union of paths lives in the route-level reader, so it survives too; the
+hunk context is lane 2C's.
+
+### Second review and wireframe fixes (2026-10-07)
+
+A two-axis review (standards and spec) of PR #21 found no major bug. Asked to fix what it found and anything that does not
+match the wireframes (`Records`), this pass changed:
+
+1. **PROJ-123 has the wireframe's Artifacts data** (`src/testing/mock-backend/seeds.ts`, lane 2D's file, changed on the user's
+   instruction). Five revisions, one per producer: r-01 `jira-snapshot.md`; r-02 `questions.json`; r-03
+   `implementation-plan.md`, `plan-sources.md`, `state.json`; jordan's send-back `state.json`; r-04 the new plan,
+   `plan-sources.md` (+2), `plan-round-1.md` (round 1 archived) and `state.json`. Revision 5 against 4 (the default) and
+   against 3 (the wireframe's pick) both show `same`, `+9 −3`, `+2`, `new`, `same`, `changed`. The current plan is unchanged (it
+   is the `getArtifactContent.json` fixture, same sha256); round 1 now has AC1 and AC2 as one line, which makes the `+9 −3`.
+   `implementation-plan.round1.md` is gone from PROJ-123 (the simulator's DEMO-1 send-back still writes it).
+2. **One hunk per section** (`@domain/text-diff` `hunks`, lane 2C's file): an unchanged heading ends a hunk's context and is
+   never merged across, so the plan's diff has the wireframe's four hunks (`Summary`, `Acceptance criteria`, `WP1…`, `WP2…`)
+   with three context lines, and a header always names the section its changes are in. A changed heading does not split a
+   hunk. 1C's `artifact-diff.spec.ts` expectation follows: no heading lines as context, as in the design's preview.
+3. **Revision labels from the nearest producer**, back to the previous `artifacts.updated`: a `run.finished` → its id, a
+   `send_back` → "send-back", another decision → plain. Gate verdicts and phase changes in between are stepped over (the
+   mock, like the API, sends the gate verdict before the files). The mock now shows the wireframe's labels:
+   "Revision 5 · current (r-04)", "Revision 4 (send-back)", "Revision 3 (r-03)"… (with the mock's run ids).
+4. **The file kind is decided once** (`ArtifactsView.kindOf`: extension, then the listing's media type) and used by the row,
+   the header tag, the status and the diff: a file the listing types as JSON without a `.json` name is re-indented in Compare
+   and reads `changed`, as in View.
+5. **Reader:** a `304` keeps a text held without an ETag (it was replaced by a digest and read again); the cache evicts the
+   least recently used entry, not the oldest.
+
+Tests: 2244 (125 files), +7: text-diff (2), reader (2), labels (net +1), tab (+2: revision 3 against 5, a JSON file by
+media type); the tab and server specs now assert the wireframe's data. Ran on Node 24.21.0: `npm run build`,
+`npm run typecheck` (`check-boundaries: ok`), `npm run lint`, `npm test`, `npm run format:check`, all green. **Not run:** the
+browser check against `npm run start:mock`, anything against a real API, `--simulate` or TEST.
+
+Left as they are: an older revision's file over 1 MiB is still downloaded before "Too large to preview" (the API gives no
+size for past revisions); sizes show only at the current revision; a deep link to a removed file falls back on a fresh load
+(no listing of past revisions).
+
+### Next
+
+User review and approval. Then the rest of wave 4 is in `main` (4A to 5B) and this lane closes sections A to F of
+`docs/paralelos4.md`; when it is merged, open `docs/paralelos5.md`.
 
 ## Lane 5A · Runs, run detail and live steps (2026-10-07)
 
