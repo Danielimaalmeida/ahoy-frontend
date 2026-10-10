@@ -14,6 +14,10 @@ export type FakeApiOps = Pick<
   | 'listGateRecords'
   | 'getStoryModels'
   | 'listArtifacts'
+  | 'listRefinements'
+  | 'getRefinements'
+  | 'requestRefinement'
+  | 'cancelRefinement'
 >;
 
 /** A call the fake saw. */
@@ -93,5 +97,25 @@ export class FakeApi implements FakeApiOps {
   listArtifacts: FakeApiOps['listArtifacts'] = (key) => {
     this.calls.push({ op: 'listArtifacts', args: [key] });
     return this.handlers.listArtifacts?.(key) ?? unreachable();
+  };
+
+  listRefinements: FakeApiOps['listRefinements'] = () => {
+    this.calls.push({ op: 'listRefinements', args: [] });
+    return this.handlers.listRefinements?.() ?? unreachable();
+  };
+
+  getRefinements: FakeApiOps['getRefinements'] = (key) => {
+    this.calls.push({ op: 'getRefinements', args: [key] });
+    return this.handlers.getRefinements?.(key) ?? unreachable();
+  };
+
+  requestRefinement: FakeApiOps['requestRefinement'] = (key, body) => {
+    this.calls.push({ op: 'requestRefinement', args: [key, body] });
+    return this.handlers.requestRefinement?.(key, body) ?? unreachable();
+  };
+
+  cancelRefinement: FakeApiOps['cancelRefinement'] = (key, body) => {
+    this.calls.push({ op: 'cancelRefinement', args: [key, body] });
+    return this.handlers.cancelRefinement?.(key, body) ?? unreachable();
   };
 }

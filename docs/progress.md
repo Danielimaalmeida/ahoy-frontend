@@ -516,6 +516,8 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+**WIP (uncompiled, untested):** `src/app/features/docks/backlog-refinements.ts` (feature-local refinement store with polling) and the four refinement operations in the test `FakeApi` were committed unfinished when the session ran out. Still to do: the Refine and Cancel refinement dialogs, the detail row in `docks.ts`, specs, then the full checks.
+
 Build the Backlog's Refine action on `claude/tender-johnson-pvbvmu`: `ApiClient` already has the four refinement
 operations and the mock simulates them. Plan: read `listRefinements` once with the backlog (a state tag per row); a
 "Refine" button opens a dialog with optional notes and an optional AIU cap and the spend warning (`confirmSpend: true`);
