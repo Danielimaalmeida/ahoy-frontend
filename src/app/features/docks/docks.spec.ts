@@ -1119,7 +1119,7 @@ describe('Docks', () => {
       ]);
     });
 
-    it('refuses an AIU limit that is not an amount above zero, without a request', async () => {
+    it('refuses an AIU limit that is not an amount above zero and at most 20, without a request', async () => {
       const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
       buttonNamed(cell(rowOf(f, 'PROJ-1'), 8), 'Refine').click();
       await refresh(f);
@@ -1133,6 +1133,11 @@ describe('Docks', () => {
       await refresh(f);
       expect(text(dialog().querySelector('.ah-field__error'))).toBe(
         'The limit must be above 0 AIU.'
+      );
+      fill(dialog().querySelector('input'), '20.5');
+      await refresh(f);
+      expect(text(dialog().querySelector('.ah-field__error'))).toBe(
+        'The limit may be at most 20 AIU.'
       );
       expect(api.callsOf('requestRefinement')).toHaveLength(0);
     });

@@ -26,12 +26,16 @@ import type { BacklogRefinements } from './backlog-refinements';
 /** The longest notes and cancel reason the API takes (`maxLength: 2000`). */
 export const REFINEMENT_TEXT_MAX = 2000;
 
+/** The most the API takes as a refinement's limit, in nano-AIU (20 AIU: the `maximum` of `RefinementRequest`). */
+export const REFINEMENT_MAX_NANO_AIU = 20_000_000_000;
+
 /** Why an "AIU limit" text is refused. */
-export type RefinementCapError = 'amount' | 'positive';
+export type RefinementCapError = 'amount' | 'positive' | 'maximum';
 
 /**
  * Reads the optional "AIU limit" text: empty is no limit (`cap: null`, the server's refinement cap applies), otherwise
- * an amount in AIU read without floats by `parseAiu`, above zero. Gives the cap in nano-AIU, or why it is refused.
+ * an amount in AIU read without floats by `parseAiu`, above zero and at most {@link REFINEMENT_MAX_NANO_AIU}. Gives the
+ * cap in nano-AIU, or why it is refused.
  */
 export function checkRefinementCap(
   text: string
@@ -39,7 +43,8 @@ export function checkRefinementCap(
   if (text.trim() === '') return { cap: null };
   const cap = parseAiu(text);
   if (cap === null) return { error: 'amount' };
-  return cap < 1 ? { error: 'positive' } : { cap };
+  if (cap < 1) return { error: 'positive' };
+  return cap > REFINEMENT_MAX_NANO_AIU ? { error: 'maximum' } : { cap };
 }
 
 function capValidator(
@@ -177,7 +182,7 @@ export interface RefineDialogData {
           label="AIU limit"
           optional
           unit="AIU"
-          hint="Leave empty for the server's refinement cap."
+          hint="At most 20 AIU. Leave empty for the server's refinement cap."
           [errorMessages]="capMessages"
           [errorText]="capServerError()"
         >
@@ -206,6 +211,7 @@ export class RefineDialog {
   protected readonly capMessages = {
     amount: 'Type an amount in AIU, such as 5 or 2.5.',
     positive: 'The limit must be above 0 AIU.',
+    maximum: 'The limit may be at most 20 AIU.',
   };
   protected readonly form = new FormGroup({
     notes: new FormControl('', {

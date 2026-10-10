@@ -69,6 +69,25 @@ describe('MockAhoyServer · refinements of backlog items', () => {
     expect(problemCode(unconfirmed)).toBe('validation_failed');
   });
 
+  it('takes a limit of up to 20 AIU and refuses more as the contract does', () => {
+    const { server } = testServer();
+    const atCap = call(server, 'POST', '/refinements/PROJ-153', {
+      confirmSpend: true,
+      budgetNanoAiu: 20_000_000_000,
+    });
+    expect([atCap.status, field(atCap, 'budgetNanoAiu')]).toEqual([
+      202, 20_000_000_000,
+    ]);
+    const over = call(server, 'POST', '/refinements/PROJ-154', {
+      confirmSpend: true,
+      budgetNanoAiu: 20_000_000_001,
+    });
+    expect([over.status, problemCode(over)]).toEqual([
+      400,
+      'validation_failed',
+    ]);
+  });
+
   it('cancels a queued refinement at once and a running one a moment later, keeping who cancelled', () => {
     const { server, clock } = testServer();
     call(server, 'POST', '/refinements/PROJ-150', { confirmSpend: true });

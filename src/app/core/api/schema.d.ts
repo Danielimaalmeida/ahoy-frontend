@@ -855,7 +855,7 @@ export interface components {
       readonly confirmSpend: true;
       /** @description What the agent should look at, given to it as the requester's notes. */
       readonly notes?: string;
-      /** @description The run's AIU cap; the server's refinement cap when absent. */
+      /** @description The run's AIU cap, at most 20 AIU; the server's refinement cap when absent. */
       readonly budgetNanoAiu?: number;
     };
     readonly CancelRefinementRequest: {
