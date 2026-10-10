@@ -1,4 +1,4 @@
-import { Component, contentChild, inject, input } from "@angular/core";
+import { Component, contentChild, inject, input } from '@angular/core';
 
 let nextPanelId = 0;
 
@@ -15,9 +15,12 @@ let nextPanelId = 0;
  * ```
  */
 @Component({
-  selector: "ah-panel",
+  selector: 'ah-panel',
   template: `
-    <section class="ah-panel" [attr.aria-labelledby]="head()?.heading() ? titleId : null">
+    <section
+      class="ah-panel"
+      [attr.aria-labelledby]="head()?.heading() ? titleId : null"
+    >
       <ng-content />
     </section>
   `,
@@ -33,7 +36,7 @@ export class Panel {
  * `ahPanelActions`) pushed to the right.
  */
 @Component({
-  selector: "ah-panel-head",
+  selector: 'ah-panel-head',
   template: `
     <div class="ah-panel__head">
       @if (heading()) {
@@ -47,31 +50,35 @@ export class Panel {
         <span class="ah-muted">{{ subtitle() }}</span>
       }
       <ng-content />
-      <div class="ah-panel__actions"><ng-content select="[ahPanelActions]" /></div>
+      <div class="ah-panel__actions">
+        <ng-content select="[ahPanelActions]" />
+      </div>
     </div>
   `,
 })
 export class PanelHead {
   /** The panel title (`section-title`, 15px bold). */
-  readonly heading = input("");
+  readonly heading = input('');
   /** Muted text after the title, such as a count or a key. */
-  readonly subtitle = input("");
+  readonly subtitle = input('');
   /** The heading level; 2 unless the panel sits under another section heading. */
   readonly level = input<2 | 3>(2);
 
-  protected readonly titleId = inject(Panel, { optional: true })?.titleId ?? `ah-panel-${nextPanelId++}-title`;
+  protected readonly titleId =
+    inject(Panel, { optional: true })?.titleId ??
+    `ah-panel-${nextPanelId++}-title`;
 }
 
 /** The panel body: 14 × 16px padding, children stacked with a 12px gap. */
 @Component({
-  selector: "ah-panel-body",
+  selector: 'ah-panel-body',
   template: `<div class="ah-panel__body"><ng-content /></div>`,
 })
 export class PanelBody {}
 
 /** The panel footer: content spread across, usually a hint on the left and the action on the right. */
 @Component({
-  selector: "ah-panel-foot",
+  selector: 'ah-panel-foot',
   template: `<div class="ah-panel__foot"><ng-content /></div>`,
 })
 export class PanelFoot {}

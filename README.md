@@ -36,16 +36,18 @@ docs/design/                                  copies of the wireframes and the d
 
 ## Commands
 
-| Command                    | What it does                                                                      |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| `npm start`                | `ng serve` on <http://localhost:4200> with the API proxy (`proxy.conf.mjs`).      |
-| `npm run start:mock`       | `ng serve` with the `mock` configuration (the mock backend arrives with lane 2D). |
-| `npm run build`            | Production build into `dist/ahoy-frontend/`.                                      |
-| `npm test`                 | Unit and component tests (Vitest through `ng test`, jsdom), once.                 |
-| `npm run lint`             | ESLint (TypeScript, templates and accessibility rules).                           |
-| `npm run typecheck`        | `tsc --noEmit` for app and specs, then `scripts/check-boundaries.mjs`.            |
-| `npm run check:boundaries` | Only the layer rules.                                                             |
-| `npm run format`           | Prettier on the whole repository (`format:check` only checks).                    |
+| Command                    | What it does                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `npm start`                | `ng serve` on <http://localhost:4200> with the API proxy (`proxy.conf.mjs`).                                          |
+| `npm run start:mock`       | `ng serve` with the `mock` configuration (the mock backend arrives with lane 2D).                                     |
+| `npm run start:test`       | `ng serve` with the `test` configuration and the checked-in TEST API proxy (`src/proxy.conf.test.json`).              |
+| `npm run build`            | Production build into `dist/ahoy-frontend/`.                                                                          |
+| `npm test`                 | Unit and component tests (Vitest through `ng test`, jsdom), once.                                                     |
+| `npm run test:coverage`    | Unit tests without watch mode; writes `coverage/coverage-summary.json`, `coverage-final.json`, HTML and LCOV reports. |
+| `npm run lint`             | ESLint (TypeScript, templates and accessibility rules).                                                               |
+| `npm run typecheck`        | `tsc --noEmit` for app and specs, then `scripts/check-boundaries.mjs`.                                                |
+| `npm run check:boundaries` | Only the layer rules.                                                                                                 |
+| `npm run format`           | Prettier on the whole repository (`format:check` only checks).                                                        |
 
 Before calling work done: `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check`.
 
@@ -64,11 +66,49 @@ in `AHOY_AUTH=dev`:
 | `AHOY_API_TARGET` | `http://127.0.0.1:8080` | Where the proxy sends `/api/v1`.                                |
 | `AHOY_ACTOR`      | `dev@example.com`       | Sent as `X-Ahoy-Actor`. Must match `actor` in the app's config. |
 
-`AHOY_AUTH=dev` and this proxy are for local development only; the proxy never ships to production, and the app never
-sends `Authorization`. **Never** point the proxy at an API started with `--live` or at the TEST environment.
+`AHOY_AUTH=dev` and the default proxy are for local development only; the proxy never ships to production, and the app
+never sends `Authorization`. `npm run start:test` is the explicit exception for a local browser session against TEST;
+do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Coverage summary workflow fix (2026-10-10):** `test:coverage` now generates both the JSON coverage report and
+  `coverage/coverage-summary.md`. The converter is compatible with the repository's ESM package configuration and
+  resolves paths independently of the runner's working directory.
+- **Story budget units:** budget fields are entered and displayed in AIU; the frontend converts them to integer
+  `budgetNanoAiu` values before API requests. The conversion is exact: **100 AIU = 100,000,000,000 nano-AIU**.
+- **User-friendly nautical labels (2026-10-10):** updated visible status, navigation, action, dialog, error and activity
+  copy to `Running`, `Needs answers`, `Needs decision`, `Halted`, `Done`, `Blocked`, `Finished`, `Needs you`, `Backlog`,
+  `Activity`, `In progress`, `Start voyage` and the corresponding plain-language confirmations, while preserving API
+  values, routes and CSS modifiers. Offline build, typecheck, lint, 126 files / 2,267 tests and formatting passed on
+  Node 24.21.0. No browser/e2e, live API or TEST checks were run.
+- **Set Sail model selection (2026-10-09):** native dropdowns now read the server's catalogue from `GET /models`,
+  show per-phase defaults and retain Other model id for custom choices. Known effort support is respected; loading
+  and catalogue failures have status/retry feedback. The catalogue is not an account entitlement check.
+  Offline build, typecheck, lint, 126 files / 2,267 tests and formatting passed on Node 24.21.0. Browser/e2e and
+  real API checks were not run. `api:check` has a pre-existing raw-generator/Prettier formatting mismatch, not a
+  missing type change; the mirror check passes. The Models dialog keeps text inputs. See [docs/progress.md](docs/progress.md).
+- **NGINX container fix (2026-10-09):** the document root now matches the Dockerfile's
+  `/opt/app-root/src/ahoy-frontend`; logs go to stdout/stderr and `USER 1001` is retained. A local smoke check using
+  cached NGINX 1.29.4 reproduced HTTP 500 with the old root and verified HTTP 200 for the production index, a SPA route
+  and JavaScript with the corrected root. Offline build, typecheck, lint, 2,237 tests and formatting passed on Node 24.
+  The released image and remote probes have not been verified; see [docs/progress.md](docs/progress.md).
+- **Single-review contract migration (2026-10-09):** regenerated the OpenAPI types/mirror and updated the UI and mock
+  workflow to use one `review` slot and one Lookout run; Set Sail and the Models dialog no longer require two distinct
+  reviewer models. Offline checks on Node 26.0.0 passed: API artifact check, build, typecheck, lint, 126 test files /
+  2,237 tests, and targeted formatting of changed source files. Repository-wide `npm run format` still warns on three
+  copied wireframes and three OpenAPI/generated files; see [docs/progress.md](docs/progress.md). No browser, live API or
+  TEST check was run. At that point, `GET /models` was not implemented; it is now covered above.
+  Phase-7 `resolveReview` is still not implemented in `ApiClient`.
+- **User menu (2026-10-08):** the header reads the reactive Fedev auth profile and shows initials, name, email and
+  Log out using Ahoy tokens. The display name and initials use `given_name` and `family_name`. Full offline validation
+  passes on Node 24.21.0: build, typecheck, lint, 126 test files / 2,256 tests, formatting and generated-token checks.
+  No API or TEST environment was used; real SSO logout and browser comparison remain unproven. See
+  [docs/progress.md](docs/progress.md).
+- **CI coverage fix (2026-10-07):** installed the approved Vitest V8 provider and configured root-level JSON reports for
+  the reusable coverage workflow. Report generation itself was proven offline with 222 pure-domain tests. The full
+  Angular suite now also passes; the `field.spec.ts` case table has explicit types. See
+  [docs/progress.md](docs/progress.md).
 - **Phase 0 (foundation): done and merged into `main`.** Angular 22.2.1 scaffold, strict TypeScript, ESLint, Prettier,
   Husky, CI, proxy, every route as a placeholder, design references copied. The proxy was checked against a local stub,
   not the hosted API.
@@ -115,10 +155,15 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   `/voyages/new?key=&title=` is a typed Reactive Form on `ah-field` and `ah-model-choice-table`: the budget is read by `parseAiu`
   (never a float), only the models the user filled in are sent, a double click sends one request, and `story_exists`, `400` and
   the other refusals show beside the fields or in a banner without losing what was typed. 114 new tests (three agreed seams, 26 mutation checks, a two-axis review whose findings were fixed); driven in headless Chromium on `npm run start:mock`; never run against a real API.
-- **Wave 3, lane 3C (The Docks, planned): done offline and merged into `main`** (PR #14). `/docks` has the "Planned screen" banner, the filters and the backlog table, with the **Ahoy** column
-  joined to the real voyages in the `StoriesStore`. The backlog comes from a `BacklogPort`, today a `StubBacklogAdapter` with the
-  wireframe's nine fictional stories (the API has no backlog yet); "Jira ↗" shows only with `jiraBaseUrl`. 40 new tests; checked on
-  `npm run start:mock` in headless Chromium; never run against a real API.
+- **Wave 3, lane 3C (The Docks, Jira backlog integration): integration pushed; sprint layout implemented locally.** `/docks` now reads
+  `GET /api/v1/jira/backlog` through `JiraBacklogAdapter`; the existing filters, pagination and **Ahoy** column remain,
+  joined to the real voyages in the `StoriesStore`. The offline mock serves fictional Jira issues for local validation;
+  the `StubBacklogAdapter` remains available for tests and wireframe scenarios. The updated Backlog wireframe adds
+  sprint groups, a sprint/no-sprint filter and Collapse all / Expand all; global pagination stays at 25 items.
+  Tables use fluid columns on wide screens and labelled stacked rows on smaller screens, without horizontal scrolling.
+  Sprint dates/goals are omitted because the API does not expose them. Offline validation passed with
+  128 test files and 2,290 tests, plus a mock-only desktop/mobile browser check; no real API was used by the agent.
+  Repository formatting reports only the user's untouched new `docs/design/wireframes/Backlog.html`.
 - **Wave 4, lane 4B (Plan tab and decision): done on the mock backend, merged into `main` (PR #16)** (branch
   `claude/pensive-ritchie-9ja01b`). `src/app/features/voyage/tabs/plan/`: the plan with changed blocks marked, acceptance criteria,
   "Your decision" (Approve; Send back and Reject in dialogs) and the conflict panels. 54 new tests; never run against a real API.
@@ -152,16 +197,19 @@ sends `Authorization`. **Never** point the proxy at an API started with `--live`
   (`src/app/features/run-detail/`, `/voyages/:key/runs/:runId`) has the pager, four tiles, Details, Automated gate and Steps.
   The steps are a view, not a control. 57 new tests on the mock backend; checked in headless Chromium (light, dark, 390 px).
   Never run against a real API.
+- **Wave 4, lane 5C (Artifacts): implemented and unit-tested.** `/voyages/:key/artifacts` now has revision selection,
+  View/Compare modes, lazy file reads with ETag caching, text/JSON/Markdown previews and change summaries. The external
+  component template is `artifacts-tab.html`. Artifacts and routing: 10 tests passed on the in-memory mock. Build, typecheck,
+  ESLint and formatting pass; full tests and stylelint have unrelated failures. Fractional-token Sass errors are repaired,
+  and the preview spacing is corrected. Browser mock startup remains unwired; no browser verification was performed.
+  Details and exact check status are in [docs/progress.md](docs/progress.md).
 
-- **Wave 4, lane 5C (Artifacts: view and compare): done on the mock backend, in PR #21.** `/voyages/:key/artifacts`
-  (`src/app/features/voyage/tabs/artifacts/`) lists the artifact set with each file's state against another revision
-  (`same`, `+9 −3`, `new`, `changed`), opens a file as markdown, JSON (re-indented) or text, and diffs two revisions with the
-  section named at each hunk. The API lists only the current revision, so older ones are probed per file with `If-None-Match`
-  ETags and cached, and the URL holds the selection (`?compare=`, `?to=`, `?file=`, `?mode=`). 82 new tests (one placeholder
-  row removed from `app.routes.spec.ts`); checked on `npm run start:mock` in headless Chromium (light, dark, 390 px); never run
-  against a real API. A second review gave the mock's PROJ-123 the wireframe's Artifacts data (revision 5, six files),
-  labelled revisions by their producer and made the diff one hunk per section (2244 tests; not re-checked in a browser).
+- Next: clear lane 5C's validation blockers before review, and review/merge lanes 4C, 4D and 5A; then the rest of wave 4
+  (`docs/paralelos4.md`). Details in
+  [docs/progress.md](docs/progress.md).
 
-- Next: review and merge lane 5C (this branch); every other lane of wave 4 (4A to 5B) is already in `main` (PR #15 to #20).
-  When sections A to F of `docs/paralelos4.md` are all in `main` — that is, once 5C is merged — open `docs/paralelos5.md`.
-  Details in [docs/progress.md](docs/progress.md).
+# r3da_neo_ahoy_frontend
+
+# r3da_neo_ahoy_frontend
+
+# r3da_neo_ahoy_frontend

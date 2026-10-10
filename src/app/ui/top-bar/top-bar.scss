@@ -1,0 +1,119 @@
+.account {
+  position: relative;
+  flex: none;
+}
+
+@media (max-width: 600px) {
+  .account {
+    margin-left: auto;
+  }
+}
+
+.account__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-md);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover,
+  &--open {
+    border-color: var(--line-strong);
+    background: var(--accent-soft);
+  }
+}
+
+.account .ah-avatar {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.account svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.account__trigger--open .account__chevron {
+  transform: rotate(180deg);
+}
+
+.account__menu {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: 280px;
+  max-width: calc(100vw - var(--space-8));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-dialog);
+}
+
+.account__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.account .account__avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+}
+
+.account__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.account__name {
+  font-size: 16px;
+}
+
+.account__email {
+  color: var(--ink-muted);
+}
+
+.account__logout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.account button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

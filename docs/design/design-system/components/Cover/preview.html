@@ -1,42 +1,107 @@
 <!-- @dsCard height=288 -->
 <!doctype html>
 <html>
-<head>
-<meta charset="utf-8">
-<title>Ahoy cover</title>
-<style>
-  html, body { margin: 0; background: var(--bg); }
-  .cover { position: relative; width: 960px; height: 288px; background: var(--bg); overflow: hidden; font-family: var(--font-sans); }
-  .cover svg { position: absolute; inset: 0; }
-  .c-accent { fill: var(--accent); }
-  .c-ink { fill: var(--ink); }
-  .c-soft { fill: var(--accent-soft); }
-  .c-ground { fill: var(--bg); }
-  .r-lg { rx: var(--radius-lg); }
-  .name { position: absolute; left: 48px; bottom: 40px; max-width: 440px; display: flex; flex-direction: column; gap: 10px; }
-  .name h1 { margin: 0; font-size: 120px; line-height: .92; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
-  .name p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--ink-muted); }
-</style>
-</head>
-<body>
-<div class="cover">
-  <!--
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy cover</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+      }
+      .cover {
+        position: relative;
+        width: 960px;
+        height: 288px;
+        background: var(--bg);
+        overflow: hidden;
+        font-family: var(--font-sans);
+      }
+      .cover svg {
+        position: absolute;
+        inset: 0;
+      }
+      .c-accent {
+        fill: var(--accent);
+      }
+      .c-ink {
+        fill: var(--ink);
+      }
+      .c-soft {
+        fill: var(--accent-soft);
+      }
+      .c-ground {
+        fill: var(--bg);
+      }
+      .r-lg {
+        rx: var(--radius-lg);
+      }
+      .name {
+        position: absolute;
+        left: 48px;
+        bottom: 40px;
+        max-width: 440px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .name h1 {
+        margin: 0;
+        font-size: 120px;
+        line-height: 0.92;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+      }
+      .name p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--ink-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cover">
+      <!--
     blocks: accent 240×240 (space-6 × 10), ink 160×112, accent-soft 160×112; all corners radius-lg (14px)
     arrangement: one tall accent slab with two stacked satellites to its right, inset space-6 (24px) top and bottom, gaps space-4 (16px)
     pattern: literal motif, the wave ("a voyage"), as half-discs from the radius idea: five r=24 cut from the slab's foot in bg, four r=20 rising in accent on the soft block
     steps: space-6 24, space-4 16, half-disc pitch 48 and 40 (2 × space-6, 2.5 × space-4); radius-lg 14
   -->
-  <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
-    <rect class="c-accent r-lg" x="520" y="24" width="240" height="240"></rect>
-    <path class="c-ground" d="M520 264 A24 24 0 0 1 568 264 Z M568 264 A24 24 0 0 1 616 264 Z M616 264 A24 24 0 0 1 664 264 Z M664 264 A24 24 0 0 1 712 264 Z M712 264 A24 24 0 0 1 760 264 Z"></path>
-    <rect class="c-ink r-lg" x="776" y="24" width="160" height="112"></rect>
-    <rect class="c-soft r-lg" x="776" y="152" width="160" height="112"></rect>
-    <path class="c-accent" d="M776 240 A20 20 0 0 1 816 240 Z M816 240 A20 20 0 0 1 856 240 Z M856 240 A20 20 0 0 1 896 240 Z M896 240 A20 20 0 0 1 936 240 Z"></path>
-  </svg>
-  <div class="name">
-    <h1>Ahoy</h1>
-    <p>The look and voice of the delivery harbour: light, rounded, calm, and dense where people scan.</p>
-  </div>
-</div>
-</body>
+      <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+        <rect
+          class="c-accent r-lg"
+          x="520"
+          y="24"
+          width="240"
+          height="240"
+        ></rect>
+        <path
+          class="c-ground"
+          d="M520 264 A24 24 0 0 1 568 264 Z M568 264 A24 24 0 0 1 616 264 Z M616 264 A24 24 0 0 1 664 264 Z M664 264 A24 24 0 0 1 712 264 Z M712 264 A24 24 0 0 1 760 264 Z"
+        ></path>
+        <rect class="c-ink r-lg" x="776" y="24" width="160" height="112"></rect>
+        <rect
+          class="c-soft r-lg"
+          x="776"
+          y="152"
+          width="160"
+          height="112"
+        ></rect>
+        <path
+          class="c-accent"
+          d="M776 240 A20 20 0 0 1 816 240 Z M816 240 A20 20 0 0 1 856 240 Z M856 240 A20 20 0 0 1 896 240 Z M896 240 A20 20 0 0 1 936 240 Z"
+        ></path>
+      </svg>
+      <div class="name">
+        <h1>Ahoy</h1>
+        <p>
+          The look and voice of the delivery harbour: light, rounded, calm, and
+          dense where people scan.
+        </p>
+      </div>
+    </div>
+  </body>
 </html>

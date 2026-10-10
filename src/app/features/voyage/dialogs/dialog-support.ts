@@ -1,9 +1,9 @@
-import { computed, signal } from "@angular/core";
-import type { AbstractControl, ValidationErrors } from "@angular/forms";
-import { fieldErrors } from "@core/api/api-error";
-import { commandErrorView } from "@core/commands/command-error";
-import type { CommandOutcome } from "@core/commands/command-runner";
-import type { VoyageContext } from "../context/voyage-context";
+import { computed, signal } from '@angular/core';
+import type { AbstractControl, ValidationErrors } from '@angular/forms';
+import { fieldErrors } from '@core/api/api-error';
+import { commandErrorView } from '@core/commands/command-error';
+import type { CommandOutcome } from '@core/commands/command-runner';
+import type { VoyageContext } from '../context/voyage-context';
 
 /** The longest reason the API takes for stop, resume and budget (`maxLength: 2000`). */
 export const REASON_MAX = 2000;
@@ -15,20 +15,26 @@ export interface VoyageDialogData {
 
 /** The messages of a reason field. */
 export const REASON_MESSAGES: Readonly<Record<string, string>> = {
-  required: "A reason is required.",
+  required: 'A reason is required.',
   maxlength: `At most ${REASON_MAX} characters.`,
 };
 
 /** Requires text that is not only spaces (`Validators.required` takes "   "); the API trims nothing and wants 1 char. */
-export function requiredText(control: AbstractControl<string>): ValidationErrors | null {
-  return control.value.trim() === "" ? { required: true } : null;
+export function requiredText(
+  control: AbstractControl<string>
+): ValidationErrors | null {
+  return control.value.trim() === '' ? { required: true } : null;
 }
 
 /** Limits the trimmed text to `max` characters: what is sent is trimmed, so trailing spaces do not count. */
-export function maxTrimmed(max: number): (control: AbstractControl<string>) => ValidationErrors | null {
+export function maxTrimmed(
+  max: number
+): (control: AbstractControl<string>) => ValidationErrors | null {
   return (control) => {
     const length = control.value.trim().length;
-    return length > max ? { maxlength: { requiredLength: max, actualLength: length } } : null;
+    return length > max
+      ? { maxlength: { requiredLength: max, actualLength: length } }
+      : null;
   };
 }
 
@@ -36,12 +42,15 @@ export function maxTrimmed(max: number): (control: AbstractControl<string>) => V
  * The server's message for one field of the request, from a `400 validation_failed` (`errors[].path` such as
  * `body/reason` or `/budgetNanoAiu`); "" when there is none.
  */
-export function serverFieldError(outcome: CommandOutcome<unknown> | null, field: string): string {
-  if (outcome?.kind !== "other") return "";
+export function serverFieldError(
+  outcome: CommandOutcome<unknown> | null,
+  field: string
+): string {
+  if (outcome?.kind !== 'other') return '';
   return fieldErrors(outcome.error)
     .filter((error) => error.path?.[0] === field)
     .map((error) => error.message)
-    .join(" ");
+    .join(' ');
 }
 
 /**
@@ -64,8 +73,8 @@ export class CommandState<T> {
 
   /** Records what a command came to and returns its value on success, else null (a skipped command changes nothing). */
   settle(outcome: CommandOutcome<T>): T | null {
-    if (outcome.kind === "skipped") return null;
+    if (outcome.kind === 'skipped') return null;
     this.last.set(outcome);
-    return outcome.kind === "ok" ? outcome.value : null;
+    return outcome.kind === 'ok' ? outcome.value : null;
   }
 }

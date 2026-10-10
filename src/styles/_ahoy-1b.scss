@@ -33,7 +33,7 @@ ah-status-badge {
 
 // The pill variant of the section tabs is a group of toggle buttons. The bundle styles `aria-selected`, which is not
 // a valid attribute on a button, so the buttons carry `aria-pressed` (as the filter chips do) and get the same look.
-.ah-tabs__item[aria-pressed="true"] {
+.ah-tabs__item[aria-pressed='true'] {
   background: var(--surface);
   color: var(--accent-text);
   box-shadow: var(--shadow-selected);
@@ -52,6 +52,7 @@ ah-status-badge {
   flex-direction: column;
   gap: var(--space-3\.5);
 }
+
 .ah-skeleton-row {
   display: grid;
   gap: var(--space-3\.5);

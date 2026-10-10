@@ -3,8 +3,8 @@
  * serves `GET /events/stream` too (a `ReadableStream` body, broken when the request is aborted), so the event stream
  * client of lane 2B runs on it unchanged. Used by the browser in the `mock` configuration and by specs.
  */
-import type { MockRequest, MockResponse } from "./http";
-import type { MockAhoyServer } from "./server";
+import type { MockRequest, MockResponse } from './http';
+import type { MockAhoyServer } from './server';
 
 /** How a mock `fetch` behaves. */
 export interface MockFetchOptions {
@@ -21,20 +21,36 @@ export interface MockFetchOptions {
 }
 
 /** A `fetch` served by the mock. */
-export function createMockFetch(server: MockAhoyServer, options: MockFetchOptions = {}): typeof fetch {
-  const base = (options.base ?? "/api/v1").replace(/\/+$/, "");
-  const origin = options.origin ?? globalThis.location?.origin ?? "http://localhost";
-  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = new URL(input instanceof Request ? input.url : String(input), origin);
+export function createMockFetch(
+  server: MockAhoyServer,
+  options: MockFetchOptions = {}
+): typeof fetch {
+  const base = (options.base ?? '/api/v1').replace(/\/+$/, '');
+  const origin =
+    options.origin ?? globalThis.location?.origin ?? 'http://localhost';
+  return async (
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> => {
+    const url = new URL(
+      input instanceof Request ? input.url : String(input),
+      origin
+    );
     if (url.pathname !== base && !url.pathname.startsWith(`${base}/`)) {
       if (options.fallback) return options.fallback(input, init);
       throw new TypeError(`mock fetch: no fallback for ${url.pathname}`);
     }
     const request = input instanceof Request ? input : new Request(url, init);
-    const signal = init?.signal ?? (input instanceof Request ? input.signal : null);
+    const signal =
+      init?.signal ?? (input instanceof Request ? input.signal : null);
     options.beforeEach?.();
     await wait(server, server.switches.latencyMs, signal);
-    const mockRequest = await toMockRequest(request, url, base, options.actor?.() ?? null);
+    const mockRequest = await toMockRequest(
+      request,
+      url,
+      base,
+      options.actor?.() ?? null
+    );
     throwIfAborted(signal);
     return toResponse(server.handle(mockRequest), signal);
   };
@@ -45,17 +61,21 @@ export async function toMockRequest(
   request: Request,
   url: URL,
   base: string,
-  actor: string | null,
+  actor: string | null
 ): Promise<MockRequest> {
   const headers: Record<string, string> = {};
   request.headers.forEach((value, name) => {
     headers[name.toLowerCase()] = value;
   });
-  if (actor !== null && headers["x-ahoy-actor"] === undefined) headers["x-ahoy-actor"] = actor;
-  const text = request.method === "GET" || request.method === "HEAD" ? "" : await request.text();
+  if (actor !== null && headers['x-ahoy-actor'] === undefined)
+    headers['x-ahoy-actor'] = actor;
+  const text =
+    request.method === 'GET' || request.method === 'HEAD'
+      ? ''
+      : await request.text();
   let body: unknown = undefined;
   let bodyIsInvalidJson = false;
-  if (text !== "") {
+  if (text !== '') {
     try {
       body = JSON.parse(text);
     } catch {
@@ -65,7 +85,7 @@ export async function toMockRequest(
   }
   return {
     method: request.method,
-    path: url.pathname.slice(base.length) || "/",
+    path: url.pathname.slice(base.length) || '/',
     query: url.searchParams,
     headers,
     body,
@@ -74,20 +94,26 @@ export async function toMockRequest(
 }
 
 /** Turns a mock answer into a `Response`. An aborted request breaks a stream body, as a real `fetch` does. */
-export function toResponse(response: MockResponse, signal: AbortSignal | null = null): Response {
+export function toResponse(
+  response: MockResponse,
+  signal: AbortSignal | null = null
+): Response {
   const init = { status: response.status, headers: response.headers };
   switch (response.kind) {
-    case "json":
+    case 'json':
       return new Response(JSON.stringify(response.body), init);
-    case "text":
+    case 'text':
       return new Response(response.body, init);
-    case "empty":
+    case 'empty':
       return new Response(null, init);
-    case "stream": {
+    case 'stream': {
       const { stream } = response;
       if (signal) {
         if (signal.aborted) stream.abort(abortError());
-        else signal.addEventListener("abort", () => stream.abort(abortError()), { once: true });
+        else
+          signal.addEventListener('abort', () => stream.abort(abortError()), {
+            once: true,
+          });
       }
       return new Response(stream.body, init);
     }
@@ -95,19 +121,23 @@ export function toResponse(response: MockResponse, signal: AbortSignal | null = 
 }
 
 /** Waits `ms` on the server's clock; an abort rejects at once. */
-function wait(server: MockAhoyServer, ms: number, signal: AbortSignal | null): Promise<void> {
+function wait(
+  server: MockAhoyServer,
+  ms: number,
+  signal: AbortSignal | null
+): Promise<void> {
   throwIfAborted(signal);
   if (ms <= 0) return Promise.resolve();
   return new Promise((resolve, reject) => {
     const cancel = server.clock.schedule(ms, () => {
-      signal?.removeEventListener("abort", onAbort);
+      signal?.removeEventListener('abort', onAbort);
       resolve();
     });
     const onAbort = (): void => {
       cancel();
       reject(abortError());
     };
-    signal?.addEventListener("abort", onAbort, { once: true });
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }
 
@@ -116,5 +146,5 @@ function throwIfAborted(signal: AbortSignal | null): void {
 }
 
 function abortError(): DOMException {
-  return new DOMException("The request was aborted", "AbortError");
+  return new DOMException('The request was aborted', 'AbortError');
 }

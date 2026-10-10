@@ -1,6 +1,6 @@
-import { NgTemplateOutlet } from "@angular/common";
-import { Component, computed, input, model } from "@angular/core";
-import { RouterLink, RouterLinkActive } from "@angular/router";
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, computed, input, model } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 /** One tab. With a `link` it is a route (`<a>`, `aria-current="page"` when active); without, a button that selects. */
 export interface SectionTab {
@@ -18,7 +18,7 @@ export interface SectionTab {
 }
 
 /** `tabs` is the segmented bar of a voyage's sections; `pill` is the compact control (All / Not started / In Ahoy). */
-export type SectionTabsVariant = "tabs" | "pill";
+export type SectionTabsVariant = 'tabs' | 'pill';
 
 const EXACT = { exact: true } as const;
 const PREFIX = { exact: false } as const;
@@ -34,7 +34,7 @@ const PREFIX = { exact: false } as const;
  * ```
  */
 @Component({
-  selector: "ah-section-tabs",
+  selector: 'ah-section-tabs',
   imports: [NgTemplateOutlet, RouterLink, RouterLinkActive],
   template: `
     <ng-template #tabList>
@@ -84,13 +84,20 @@ export class SectionTabs {
   /** The accessible name of the group ("Voyage sections"). */
   readonly label = input.required<string>();
   /** The look: the segmented bar or the compact pill. */
-  readonly variant = input<SectionTabsVariant>("tabs");
+  readonly variant = input<SectionTabsVariant>('tabs');
   /** For button tabs: the `id` of the one that is on. */
   readonly selected = model<string | null>(null);
 
-  protected readonly classes = computed(() => (this.variant() === "pill" ? "ah-tabs ah-tabs--pill" : "ah-tabs"));
-  protected readonly hasLinks = computed(() => this.items().some((tab) => tab.link !== undefined));
+  protected readonly classes = computed(() =>
+    this.variant() === 'pill' ? 'ah-tabs ah-tabs--pill' : 'ah-tabs'
+  );
+  protected readonly hasLinks = computed(() =>
+    this.items().some((tab) => tab.link !== undefined)
+  );
   protected readonly views = computed(() =>
-    this.items().map((tab) => ({ tab, options: tab.exact === true ? EXACT : PREFIX })),
+    this.items().map((tab) => ({
+      tab,
+      options: tab.exact === true ? EXACT : PREFIX,
+    }))
   );
 }

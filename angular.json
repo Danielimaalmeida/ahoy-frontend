@@ -48,50 +48,50 @@
               ],
               "outputHashing": "all"
             },
-            "development": {
+            "test": {
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.development.ts"
+                  "with": "src/environments/environment.test.ts"
                 }
               ]
             },
             "mock": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true,
-              "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.mock.ts"
-                }
-              ]
+              "sourceMap": true
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "buildTarget": "ahoy-frontend:build",
+            "proxyConfig": "src/proxy.conf.json",
+            "port": 4200
+          },
           "configurations": {
-            "production": {
-              "buildTarget": "ahoy-frontend:build:production"
-            },
-            "development": {
-              "buildTarget": "ahoy-frontend:build:development"
+            "test": {
+              "buildTarget": "ahoy-frontend:build:test",
+              "proxyConfig": "src/proxy.conf.test.json"
             },
             "mock": {
               "buildTarget": "ahoy-frontend:build:mock"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "mock"
         },
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "tsconfig.spec.json"
+            "buildTarget": "ahoy-frontend:build:mock",
+            "tsConfig": "tsconfig.spec.json",
+            "runnerConfig": "vitest.config.ts",
+            "exclude": ["src/environments/environment.test.ts"]
           }
         }
       }

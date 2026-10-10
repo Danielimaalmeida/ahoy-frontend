@@ -8,6 +8,7 @@ Segmented tabs that switch between the sections of a voyage (Plan, Questions, Ru
 - `ah-tabs--pill` is the compact segmented control for filters such as All / Not started / In Ahoy, or View / Compare.
 
 ## Markup
+
 ```html
 <nav class="ah-tabs" aria-label="Voyage sections">
   <a class="ah-tabs__item" aria-current="page" href="#">Plan</a>
@@ -16,4 +17,5 @@ Segmented tabs that switch between the sections of a voyage (Plan, Questions, Ru
 ```
 
 ## Angular
+
 Route-driven tabs: `<ah-section-tabs>` with child `routerLink`s, so each section has its own URL.

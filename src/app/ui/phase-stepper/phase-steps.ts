@@ -1,9 +1,9 @@
-import { PHASES, phaseIndex } from "@domain/phases";
-import { statusPresentation } from "@domain/status";
-import type { StoryStatus } from "@domain/types";
+import { PHASES, phaseIndex } from '@domain/phases';
+import { statusPresentation } from '@domain/status';
+import type { StoryStatus } from '@domain/types';
 
 /** How one step of the stepper reads: passed, the one the voyage is in, where it stopped, or still ahead. */
-export type StepState = "done" | "current" | "stopped" | "upcoming";
+export type StepState = 'done' | 'current' | 'stopped' | 'upcoming';
 
 /** One of the seven phases as the stepper draws it. */
 export interface PhaseStep {
@@ -34,28 +34,54 @@ export interface PhaseProgress {
  *
  * At most one step is `current` or `stopped`. A phase the stepper does not know marks nothing.
  */
-export function phaseProgress(phase: string, status: StoryStatus, stoppedAt: string | null = null): PhaseProgress {
-  const kind = statusPresentation(status, phase === "blocked" ? "blocked" : null).modifier;
-  if (kind === "done") {
+export function phaseProgress(
+  phase: string,
+  status: StoryStatus,
+  stoppedAt: string | null = null
+): PhaseProgress {
+  const kind = statusPresentation(
+    status,
+    phase === 'blocked' ? 'blocked' : null
+  ).modifier;
+  if (kind === 'done') {
     return {
-      steps: PHASES.map((name, index) => ({ phase: name, n: index + 1, state: "done" })),
+      steps: PHASES.map((name, index) => ({
+        phase: name,
+        n: index + 1,
+        state: 'done',
+      })),
       position: null,
-      label: "Done",
+      label: 'Done',
     };
   }
-  const position = phaseIndex(phase === "blocked" ? (stoppedAt ?? "") : phase);
-  const marker = kind === "halted" || kind === "blocked" ? "stopped" : "current";
+  const position = phaseIndex(phase === 'blocked' ? (stoppedAt ?? '') : phase);
+  const marker =
+    kind === 'halted' || kind === 'blocked' ? 'stopped' : 'current';
   const steps = PHASES.map((name, index): PhaseStep => {
     const n = index + 1;
-    return { phase: name, n, state: position === null || n > position ? "upcoming" : n < position ? "done" : marker };
+    return {
+      phase: name,
+      n,
+      state:
+        position === null || n > position
+          ? 'upcoming'
+          : n < position
+            ? 'done'
+            : marker,
+    };
   });
   return { steps, position, label: positionLabel(kind, phase, position) };
 }
 
 /** The sentence that names where the voyage is, for the compact bars. */
-function positionLabel(kind: string, phase: string, position: number | null): string {
-  if (position === null) return kind === "blocked" ? "Blocked" : `Phase ${phase}`;
-  if (kind === "blocked") return `Blocked at phase ${position}`;
-  if (kind === "halted") return `Stopped at phase ${position}`;
+function positionLabel(
+  kind: string,
+  phase: string,
+  position: number | null
+): string {
+  if (position === null)
+    return kind === 'blocked' ? 'Blocked' : `Phase ${phase}`;
+  if (kind === 'blocked') return `Blocked at phase ${position}`;
+  if (kind === 'halted') return `Stopped at phase ${position}`;
   return `Phase ${position} of ${PHASES.length}`;
 }

@@ -1,0 +1,33 @@
+name: Create GitHub release & Publish to ACR
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    if: startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')
+    name: 'Create tag and bump package.json version'
+    uses: sflp/r3da_the_guardians_workflows/.github/workflows/semver-increment-version-and-create-tag-reusable.yml@main
+    with:
+      package-file: package.json
+      bump-file: package.json
+    secrets: inherit
+
+  publish-versioned-container-to-test:
+    if: startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')
+    needs: tag
+    name: 'Build docker image and publish to TEST ACR'
+    uses: sflp/r3da_the_guardians_workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
+    with:
+      runner: "['atc-ubuntu-latest']"
+      node-version: ${{ vars.neo_NODE_VERSION }}
+      registry-url: ${{ vars.neo_ACR_URL_TEST }}
+      registry-username: ${{ vars.neo_ACR_USERNAME_TEST }}
+      environment: 'test'
+    secrets:
+      registry-password: ${{ secrets.neo_ACR_SECRET_TEST }}

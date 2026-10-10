@@ -1,0 +1,16 @@
+{
+  "/auth/oauth2/realms/root/realms/alpha": {
+    "target": "https://emea.int.alpha.sso.company-namegroup.com",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/api": {
+    "target": "https://neo-ahoy.apps.4wm-fpm-test.azure.cloud.company-name",
+    "secure": false,
+    "changeOrigin": true,
+    "headers": {
+      "X-Ahoy-Actor": "dev-user"
+    }
+  }
+}

@@ -1,213 +1,921 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Ahoy · PROJ-123 records</title>
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<style>
-body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
-a{color:#1A64D6}a:hover{color:#1747A6}
-.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
-.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
-.logo:hover{color:#1B2733}
-.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
-.tab:hover{background:#F1F4F7;color:#1B2733}
-.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
-.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
-.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
-.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
-.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
-.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
-.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
-.btn:hover{background:#F1F4F7;color:#1B2733}
-.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
-.btn.primary:hover{background:#1755B8;color:#fff}
-.btn.danger{color:#A11F1F;border-color:#F1C4C4}
-.page{padding:18px 24px 36px;display:flex;flex-direction:column;gap:14px;max-width:1360px;width:100%;margin:0 auto;box-sizing:border-box}
-h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.25}
-h2{font-size:15px;font-weight:700;margin:0}
-.sub{color:#5B6B7A}
-.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
-.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
-.pb{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
-.key{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#1747A6}
-.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
-.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
-.b-decide{background:#EEE8FB;color:#4E3290}
-.o-pass{background:#DDF3E6;color:#1C6337}
-.o-branch{background:#FFF1D6;color:#7A4B00}
-.o-back{background:#FDEBDD;color:#8A3D0C}
-.o-wait{background:#EEE8FB;color:#4E3290}
-.src{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;background:#EEF2F5;color:#3D4B59;font-size:11px;font-weight:600;white-space:nowrap}
-.src.h{background:#E7EFFC;color:#1747A6}
-.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
-.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
-.dtabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:#EEF2F5;border-radius:12px;align-self:flex-start;max-width:100%;box-sizing:border-box}
-.dt{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;border-radius:9px;color:#455562;font-weight:600;text-decoration:none;white-space:nowrap}
-.dt:hover{color:#1B2733;background:#E3E8EE}
-.dt.on{background:#fff;color:#1747A6;box-shadow:0 1px 2px rgba(20,40,60,.12)}
-.dt em{font-style:normal;font-weight:500;color:#5B6B7A;font-size:11.5px}
-table.t{width:100%;border-collapse:collapse}
-.t th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#5B6B7A;font-weight:600;padding:8px 14px;border-bottom:1px solid #E3E8EE;background:#FAFBFC;white-space:nowrap}
-.t td{padding:7px 14px;border-bottom:1px solid #EEF2F5;vertical-align:middle;height:22px}
-.t tr:last-child td{border-bottom:0}
-.t tr.pending td{background:#FAF8FF}
-.files{display:flex;flex-direction:column;gap:2px;padding:8px}
-.file{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:9px;text-decoration:none;color:#1B2733}
-.file:hover{background:#F1F4F7;color:#1B2733}
-.file.on{background:#E7EFFC;color:#1747A6;font-weight:600}
-.file small{margin-left:auto;color:#5B6B7A;font-size:11px;font-weight:500}
-.input{height:32px;border:1px solid #D5DCE3;border-radius:9px;padding:0 10px;font:inherit;box-sizing:border-box;background:#fff;color:#1B2733}
-.diff{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.65}
-.diff div{padding:0 14px;white-space:pre-wrap;word-break:break-word}
-.diff .ln{color:#8494A2;display:inline-block;width:30px}
-.diff .add{background:#E6F6EC;color:#14532D}
-.diff .del{background:#FDECEC;color:#7F1D1D}
-.diff .hunk{background:#F1F4F7;color:#5B6B7A}
-.log{display:flex;flex-direction:column}
-.ev{display:grid;grid-template-columns:88px 16px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 16px;border-bottom:1px solid #F1F4F7}
-.ev:last-child{border-bottom:0}
-.ev time{font-size:12px;color:#5B6B7A;font-family:'JetBrains Mono',monospace;padding-top:1px}
-.ev .dot{width:10px;height:10px;border-radius:50%;margin-top:4px;background:#C7D2DC}
-.ev .dot.h{background:#1A64D6}
-.ev .dot.g{background:#2E9B5B}
-.ev .dot.w{background:#D69E2E}
-.ev .who{color:#5B6B7A;font-size:12px;white-space:nowrap}
-.hint{font-size:12px;color:#5B6B7A}
-.seg{display:inline-flex;background:#EEF2F5;border-radius:999px;padding:3px;gap:2px}
-.seg button{height:26px;padding:0 11px;border:0;border-radius:999px;background:transparent;font:inherit;font-size:12px;font-weight:600;color:#455562;cursor:pointer}
-.seg button.on{background:#fff;color:#1747A6;box-shadow:0 1px 2px rgba(20,40,60,.12)}
-</style>
-</helmet>
-<header class="top">
-  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
-  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
-    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
-    <a class="tab on" href="Voyages.dc.html">Voyages</a>
-    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
-  </nav>
-  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
-  <input id="q" class="search" type="search" placeholder="Search by key or title">
-  <span class="live"><i></i>Live</span>
-  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
-  <span class="av" title="alex@example.com (SSO)">AL</span>
-</header>
-<main class="page">
-  <div class="sub" style="font-size:12px"><a href="Voyages.dc.html" style="text-decoration:none">Voyages</a> / PROJ-123</div>
-
-  <section class="panel">
-    <div class="pb" style="gap:10px">
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
-        <div style="flex:1 1 480px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center">
-          <span class="key">PROJ-123</span><span class="badge b-decide"><i></i>Your orders</span>
-          <h1 style="font-size:18px">Show invoice due date on the billing page</h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · PROJ-123 records</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #1b2733;
+          }
+          a {
+            color: #1a64d6;
+          }
+          a:hover {
+            color: #1747a6;
+          }
+          .top {
+            background: #fff;
+            border-bottom: 1px solid #e3e8ee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 24px;
+            box-sizing: border-box;
+          }
+          .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 17px;
+            color: #1b2733;
+            text-decoration: none;
+            margin-right: 12px;
+          }
+          .logo:hover {
+            color: #1b2733;
+          }
+          .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            color: #5b6b7a;
+            font-weight: 500;
+            text-decoration: none;
+          }
+          .tab:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .tab.on {
+            background: #e7effc;
+            color: #1747a6;
+            font-weight: 600;
+          }
+          .cnt {
+            background: #1a64d6;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0 6px;
+            font-size: 11px;
+            line-height: 17px;
+            font-weight: 600;
+          }
+          .soon {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #5b6b7a;
+            background: #eef2f5;
+            border-radius: 999px;
+            padding: 1px 6px;
+          }
+          .search {
+            flex: 0 1 300px;
+            height: 34px;
+            border: 1px solid #e3e8ee;
+            border-radius: 999px;
+            padding: 0 14px;
+            font: inherit;
+            background: #f6f8fa;
+            box-sizing: border-box;
+            margin-left: auto;
+            color: #1b2733;
+          }
+          .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #1c6337;
+            font-weight: 500;
+            margin: 0 6px;
+          }
+          .live i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #2e9b5b;
+            box-shadow: 0 0 0 3px #ddf3e6;
+          }
+          .av {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e7effc;
+            color: #1747a6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            flex: none;
+          }
+          .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #1b2733;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            box-sizing: border-box;
+          }
+          .btn:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .btn.primary {
+            background: #1a64d6;
+            border-color: #1a64d6;
+            color: #fff;
+          }
+          .btn.primary:hover {
+            background: #1755b8;
+            color: #fff;
+          }
+          .btn.danger {
+            color: #a11f1f;
+            border-color: #f1c4c4;
+          }
+          .page {
+            padding: 18px 24px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-width: 1360px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+          }
+          h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.01em;
+            line-height: 1.25;
+          }
+          h2 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .sub {
+            color: #5b6b7a;
+          }
+          .panel {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            min-width: 0;
+            overflow: hidden;
+          }
+          .ph {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #eef2f5;
+          }
+          .pb {
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+          .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 500;
+          }
+          .key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1747a6;
+          }
+          .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 22px;
+            padding: 0 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .badge i {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+          }
+          .b-decide {
+            background: #eee8fb;
+            color: #4e3290;
+          }
+          .o-pass {
+            background: #ddf3e6;
+            color: #1c6337;
+          }
+          .o-branch {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .o-back {
+            background: #fdebdd;
+            color: #8a3d0c;
+          }
+          .o-wait {
+            background: #eee8fb;
+            color: #4e3290;
+          }
+          .src {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 999px;
+            background: #eef2f5;
+            color: #3d4b59;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .src.h {
+            background: #e7effc;
+            color: #1747a6;
+          }
+          .meter {
+            height: 7px;
+            background: #e9eef3;
+            border-radius: 999px;
+            overflow: hidden;
+            min-width: 60px;
+          }
+          .meter i {
+            display: block;
+            height: 100%;
+            background: #1a64d6;
+            border-radius: 999px;
+          }
+          .dtabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px;
+            background: #eef2f5;
+            border-radius: 12px;
+            align-self: flex-start;
+            max-width: 100%;
+            box-sizing: border-box;
+          }
+          .dt {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 30px;
+            padding: 0 13px;
+            border-radius: 9px;
+            color: #455562;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+          }
+          .dt:hover {
+            color: #1b2733;
+            background: #e3e8ee;
+          }
+          .dt.on {
+            background: #fff;
+            color: #1747a6;
+            box-shadow: 0 1px 2px rgba(20, 40, 60, 0.12);
+          }
+          .dt em {
+            font-style: normal;
+            font-weight: 500;
+            color: #5b6b7a;
+            font-size: 11.5px;
+          }
+          table.t {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .t th {
+            text-align: left;
+            font-size: 11px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #5b6b7a;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-bottom: 1px solid #e3e8ee;
+            background: #fafbfc;
+            white-space: nowrap;
+          }
+          .t td {
+            padding: 7px 14px;
+            border-bottom: 1px solid #eef2f5;
+            vertical-align: middle;
+            height: 22px;
+          }
+          .t tr:last-child td {
+            border-bottom: 0;
+          }
+          .t tr.pending td {
+            background: #faf8ff;
+          }
+          .files {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 8px;
+          }
+          .file {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 9px;
+            text-decoration: none;
+            color: #1b2733;
+          }
+          .file:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .file.on {
+            background: #e7effc;
+            color: #1747a6;
+            font-weight: 600;
+          }
+          .file small {
+            margin-left: auto;
+            color: #5b6b7a;
+            font-size: 11px;
+            font-weight: 500;
+          }
+          .input {
+            height: 32px;
+            border: 1px solid #d5dce3;
+            border-radius: 9px;
+            padding: 0 10px;
+            font: inherit;
+            box-sizing: border-box;
+            background: #fff;
+            color: #1b2733;
+          }
+          .diff {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.65;
+          }
+          .diff div {
+            padding: 0 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+          }
+          .diff .ln {
+            color: #8494a2;
+            display: inline-block;
+            width: 30px;
+          }
+          .diff .add {
+            background: #e6f6ec;
+            color: #14532d;
+          }
+          .diff .del {
+            background: #fdecec;
+            color: #7f1d1d;
+          }
+          .diff .hunk {
+            background: #f1f4f7;
+            color: #5b6b7a;
+          }
+          .log {
+            display: flex;
+            flex-direction: column;
+          }
+          .ev {
+            display: grid;
+            grid-template-columns: 88px 16px minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: start;
+            padding: 8px 16px;
+            border-bottom: 1px solid #f1f4f7;
+          }
+          .ev:last-child {
+            border-bottom: 0;
+          }
+          .ev time {
+            font-size: 12px;
+            color: #5b6b7a;
+            font-family: 'JetBrains Mono', monospace;
+            padding-top: 1px;
+          }
+          .ev .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 4px;
+            background: #c7d2dc;
+          }
+          .ev .dot.h {
+            background: #1a64d6;
+          }
+          .ev .dot.g {
+            background: #2e9b5b;
+          }
+          .ev .dot.w {
+            background: #d69e2e;
+          }
+          .ev .who {
+            color: #5b6b7a;
+            font-size: 12px;
+            white-space: nowrap;
+          }
+          .hint {
+            font-size: 12px;
+            color: #5b6b7a;
+          }
+          .seg {
+            display: inline-flex;
+            background: #eef2f5;
+            border-radius: 999px;
+            padding: 3px;
+            gap: 2px;
+          }
+          .seg button {
+            height: 26px;
+            padding: 0 11px;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            color: #455562;
+            cursor: pointer;
+          }
+          .seg button.on {
+            background: #fff;
+            color: #1747a6;
+            box-shadow: 0 1px 2px rgba(20, 40, 60, 0.12);
+          }
+        </style>
+      </helmet>
+      <header class="top">
+        <a class="logo" href="Main.dc.html"
+          ><svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1A64D6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="1.8"></circle>
+            <path
+              d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+            ></path></svg
+          >Ahoy</a
+        >
+        <nav style="display: flex; flex-wrap: wrap; gap: 4px" aria-label="Main">
+          <a class="tab" href="Main.dc.html"
+            >All hands <span class="cnt">4</span></a
+          >
+          <a class="tab on" href="Voyages.dc.html">Voyages</a>
+          <a class="tab" href="Docks.dc.html"
+            >The Docks <span class="soon">planned</span></a
+          >
+        </nav>
+        <label for="q" style="position: absolute; left: -9999px"
+          >Search voyages</label
+        >
+        <input
+          id="q"
+          class="search"
+          type="search"
+          placeholder="Search by key or title"
+        />
+        <span class="live"><i></i>Live</span>
+        <a class="btn primary" href="SetSail.dc.html"
+          ><svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"
+            ></path></svg
+          >Set sail</a
+        >
+        <span class="av" title="alex@example.com (SSO)">AL</span>
+      </header>
+      <main class="page">
+        <div class="sub" style="font-size: 12px">
+          <a href="Voyages.dc.html" style="text-decoration: none">Voyages</a> /
+          PROJ-123
         </div>
-        <div style="display:flex;align-items:center;gap:8px"><div class="meter" style="width:100px"><i style="width:41%"></i></div><b>12.4</b> / 30 AIU</div>
-        <a class="btn primary" href="PlanReview.dc.html">Decide on the plan</a>
-      </div>
-      <span class="hint">The full header (phase stepper, owner, current run, agent config) is the same as on the plan review screen; it's shortened here.</span>
-    </div>
-  </section>
 
-  <nav class="dtabs" aria-label="Voyage sections">
-    <a class="dt" href="PlanReview.dc.html">Plan</a>
-    <a class="dt" href="Questions.dc.html">Questions <em>2</em></a>
-    <a class="dt" href="RunDetail.dc.html">Runs <em>4</em></a>
-    <a class="dt on" href="#gates">Gates <em>5</em></a>
-    <a class="dt" href="#artifacts">Artifacts</a>
-    <a class="dt" href="#log">Ship's log</a>
-    <a class="dt" href="Halted.dc.html">Models</a>
-  </nav>
+        <section class="panel">
+          <div class="pb" style="gap: 10px">
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                align-items: center;
+              "
+            >
+              <div
+                style="
+                  flex: 1 1 480px;
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 8px 12px;
+                  align-items: center;
+                "
+              >
+                <span class="key">PROJ-123</span
+                ><span class="badge b-decide"><i></i>Your orders</span>
+                <h1 style="font-size: 18px">
+                  Show invoice due date on the billing page
+                </h1>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <div class="meter" style="width: 100px">
+                  <i style="width: 41%"></i>
+                </div>
+                <b>12.4</b> / 30 AIU
+              </div>
+              <a class="btn primary" href="PlanReview.dc.html"
+                >Decide on the plan</a
+              >
+            </div>
+            <span class="hint"
+              >The full header (phase stepper, owner, current run, agent config)
+              is the same as on the plan review screen; it's shortened
+              here.</span
+            >
+          </div>
+        </section>
 
-  <section class="panel" id="gates">
-    <div class="ph"><h2>Gate history</h2><span class="sub">Automated checks and human decisions, oldest first. Nothing passes on silence.</span></div>
-    <table class="t">
-      <thead><tr><th>When</th><th>Phase</th><th>Gate</th><th>Source</th><th>Outcome</th><th>Message</th><th>Who</th><th>Run</th></tr></thead>
-      <tbody>
-        <tr><td>Mon 10:06</td><td class="mono">intake</td><td class="mono">intake</td><td><span class="src">Automated</span></td><td><span class="badge o-pass">pass</span></td><td>Jira snapshot is complete.</td><td>Ahoy</td><td><a class="mono" href="RunDetail.dc.html">r-01</a></td></tr>
-        <tr><td>Mon 10:31</td><td class="mono">planning</td><td class="mono">plan</td><td><span class="src">Automated</span></td><td><span class="badge o-branch">branch</span></td><td>2 questions need a human (Q1, Q2).</td><td>Ahoy</td><td><a class="mono" href="RunDetail.dc.html">r-02</a></td></tr>
-        <tr><td>Mon 14:12</td><td class="mono">planning</td><td class="mono">plan</td><td><span class="src">Automated</span></td><td><span class="badge o-pass">pass</span></td><td>Plan has acceptance criteria and work packages for every repository.</td><td>Ahoy</td><td><a class="mono" href="RunDetail.dc.html">r-03</a></td></tr>
-        <tr><td>Mon 16:40</td><td class="mono">plan_review</td><td class="mono">plan_accepted</td><td><span class="src h">Human</span></td><td><span class="badge o-back">send_back</span></td><td>Due date must use the customer's timezone; add an AC for the overdue state.</td><td>jordan@example.com</td><td>—</td></tr>
-        <tr><td>Tue 09:48</td><td class="mono">planning</td><td class="mono">plan</td><td><span class="src">Automated</span></td><td><span class="badge o-pass">pass</span></td><td>Plan revision 2 passes all checks.</td><td>Ahoy</td><td><a class="mono" href="RunDetail.dc.html">r-04</a></td></tr>
-        <tr class="pending"><td>now</td><td class="mono">plan_review</td><td class="mono">plan_accepted</td><td><span class="src h">Human</span></td><td><span class="badge o-wait">waiting</span></td><td>Round 2 of 4 is open. <a href="PlanReview.dc.html">Decide</a></td><td>—</td><td>—</td></tr>
-      </tbody>
-    </table>
-  </section>
+        <nav class="dtabs" aria-label="Voyage sections">
+          <a class="dt" href="PlanReview.dc.html">Plan</a>
+          <a class="dt" href="Questions.dc.html">Questions <em>2</em></a>
+          <a class="dt" href="RunDetail.dc.html">Runs <em>4</em></a>
+          <a class="dt on" href="#gates">Gates <em>5</em></a>
+          <a class="dt" href="#artifacts">Artifacts</a>
+          <a class="dt" href="#log">Ship's log</a>
+          <a class="dt" href="Halted.dc.html">Models</a>
+        </nav>
 
-  <section class="panel" id="artifacts">
-    <div class="ph">
-      <h2>Artifacts</h2>
-      <span class="sub">Every change makes a new revision of the whole set.</span>
-      <span style="flex:1"></span>
-      <label for="ra" class="hint">Compare</label>
-      <select id="ra" class="input"><option>Revision 3 (r-03)</option><option>Revision 2 (r-02)</option><option>Revision 1 (r-01)</option></select>
-      <span class="hint">with</span>
-      <label for="rb" style="position:absolute;left:-9999px">Second revision</label>
-      <select id="rb" class="input"><option>Revision 5 · current (r-04)</option><option>Revision 4 (send-back)</option></select>
-      <div class="seg" role="group" aria-label="View"><button type="button">View</button><button type="button" class="on">Compare</button></div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap">
-      <nav class="files" style="flex:1 1 240px;max-width:300px;border-right:1px solid #EEF2F5" aria-label="Files">
-        <a class="file" href="#"><span class="mono">jira-snapshot.md</span><small>same</small></a>
-        <a class="file on" href="#"><span class="mono">implementation-plan.md</span><small>+9 −3</small></a>
-        <a class="file" href="#"><span class="mono">plan-sources.md</span><small>+2</small></a>
-        <a class="file" href="#"><span class="mono">plan-round-1.md</span><small>new</small></a>
-        <a class="file" href="#"><span class="mono">questions.json</span><small>same</small></a>
-        <a class="file" href="#"><span class="mono">state.json</span><small>changed</small></a>
-      </nav>
-      <div class="diff" style="flex:999 1 520px;min-width:0;padding:8px 0">
-        <div class="hunk">@@ Summary @@</div>
-        <div><span class="ln">3</span>Show each invoice's due date on the billing page and in the invoice list,</div>
-        <div class="del"><span class="ln">4</span>− in the server's timezone.</div>
-        <div class="add"><span class="ln">4</span>+ in the customer's timezone, with a clear overdue state.</div>
-        <div class="hunk">@@ Acceptance criteria @@</div>
-        <div><span class="ln">9</span>- AC3 Dates use the viewer's locale format; exports use ISO 8601.</div>
-        <div class="add"><span class="ln">10</span>+ - AC4 Due dates and overdue checks use the customer's timezone.</div>
-        <div class="add"><span class="ln">11</span>+ - AC5 Overdue invoices show an "Overdue" badge.</div>
-        <div class="hunk">@@ WP1 Due date in the invoice API @@</div>
-        <div class="del"><span class="ln">17</span>− - Add `dueDate` to the invoice response.</div>
-        <div class="add"><span class="ln">17</span>+ - Add `dueDate` and `isOverdue` to the invoice response.</div>
-        <div class="add"><span class="ln">18</span>+ - Compute `isOverdue` against the customer's timezone, not the server's.</div>
-        <div class="hunk">@@ WP2 Billing page and invoice list @@</div>
-        <div class="add"><span class="ln">25</span>+ - An "Overdue" badge and sort order for overdue invoices.</div>
-      </div>
-    </div>
-  </section>
+        <section class="panel" id="gates">
+          <div class="ph">
+            <h2>Gate history</h2>
+            <span class="sub"
+              >Automated checks and human decisions, oldest first. Nothing
+              passes on silence.</span
+            >
+          </div>
+          <table class="t">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Phase</th>
+                <th>Gate</th>
+                <th>Source</th>
+                <th>Outcome</th>
+                <th>Message</th>
+                <th>Who</th>
+                <th>Run</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mon 10:06</td>
+                <td class="mono">intake</td>
+                <td class="mono">intake</td>
+                <td><span class="src">Automated</span></td>
+                <td><span class="badge o-pass">pass</span></td>
+                <td>Jira snapshot is complete.</td>
+                <td>Ahoy</td>
+                <td><a class="mono" href="RunDetail.dc.html">r-01</a></td>
+              </tr>
+              <tr>
+                <td>Mon 10:31</td>
+                <td class="mono">planning</td>
+                <td class="mono">plan</td>
+                <td><span class="src">Automated</span></td>
+                <td><span class="badge o-branch">branch</span></td>
+                <td>2 questions need a human (Q1, Q2).</td>
+                <td>Ahoy</td>
+                <td><a class="mono" href="RunDetail.dc.html">r-02</a></td>
+              </tr>
+              <tr>
+                <td>Mon 14:12</td>
+                <td class="mono">planning</td>
+                <td class="mono">plan</td>
+                <td><span class="src">Automated</span></td>
+                <td><span class="badge o-pass">pass</span></td>
+                <td>
+                  Plan has acceptance criteria and work packages for every
+                  repository.
+                </td>
+                <td>Ahoy</td>
+                <td><a class="mono" href="RunDetail.dc.html">r-03</a></td>
+              </tr>
+              <tr>
+                <td>Mon 16:40</td>
+                <td class="mono">plan_review</td>
+                <td class="mono">plan_accepted</td>
+                <td><span class="src h">Human</span></td>
+                <td><span class="badge o-back">send_back</span></td>
+                <td>
+                  Due date must use the customer's timezone; add an AC for the
+                  overdue state.
+                </td>
+                <td>jordan@example.com</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>Tue 09:48</td>
+                <td class="mono">planning</td>
+                <td class="mono">plan</td>
+                <td><span class="src">Automated</span></td>
+                <td><span class="badge o-pass">pass</span></td>
+                <td>Plan revision 2 passes all checks.</td>
+                <td>Ahoy</td>
+                <td><a class="mono" href="RunDetail.dc.html">r-04</a></td>
+              </tr>
+              <tr class="pending">
+                <td>now</td>
+                <td class="mono">plan_review</td>
+                <td class="mono">plan_accepted</td>
+                <td><span class="src h">Human</span></td>
+                <td><span class="badge o-wait">waiting</span></td>
+                <td>
+                  Round 2 of 4 is open. <a href="PlanReview.dc.html">Decide</a>
+                </td>
+                <td>—</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
 
-  <section class="panel" id="log">
-    <div class="ph"><h2>Ship's log</h2><span class="sub">Every event, newest first. Updates arrive live.</span><span style="flex:1"></span><span class="live"><i></i>Live</span></div>
-    <div class="log">
-      <div class="ev"><time>Tue 09:49</time><span class="dot w"></span><span><b>Waiting at the human gate</b> plan_accepted, round 2</span><span class="who">Ahoy</span></div>
-      <div class="ev"><time>Tue 09:48</time><span class="dot g"></span><span><b>Gate evaluated</b> plan · pass · <a class="mono" href="RunDetail.dc.html">r-04</a></span><span class="who">Ahoy</span></div>
-      <div class="ev"><time>Tue 09:48</time><span class="dot"></span><span><b>Artifacts updated</b> revision 5 · implementation-plan.md, plan-sources.md</span><span class="who">Ahoy</span></div>
-      <div class="ev"><time>Tue 09:47</time><span class="dot"></span><span><b>Run finished</b> <a class="mono" href="RunDetail.dc.html">r-04</a> Cartographer · succeeded · 3.84 AIU</span><span class="who">Ahoy</span></div>
-      <div class="ev"><time>Tue 09:31</time><span class="dot"></span><span><b>Run dispatched</b> <a class="mono" href="RunDetail.dc.html">r-04</a> on claude-sonnet-5 · high</span><span class="who">Ahoy</span></div>
-      <div class="ev"><time>Tue 09:30</time><span class="dot h"></span><span><b>Budget changed</b> 20 → 30 AIU · "Revision needs more room"</span><span class="who">alex@example.com</span></div>
-      <div class="ev"><time>Mon 16:40</time><span class="dot h"></span><span><b>Decision recorded</b> plan_accepted · send_back · round 1</span><span class="who">jordan@example.com</span></div>
-      <div class="ev"><time>Mon 16:40</time><span class="dot"></span><span><b>Phase changed</b> plan_review → planning</span><span class="who">jordan@example.com</span></div>
-      <div class="ev"><time>Mon 11:02</time><span class="dot h"></span><span><b>Question answered</b> Q2</span><span class="who">priya@example.com</span></div>
-      <div class="ev"><time>Mon 10:58</time><span class="dot h"></span><span><b>Question answered</b> Q1</span><span class="who">alex@example.com</span></div>
-      <div class="ev"><time>Mon 10:31</time><span class="dot w"></span><span><b>Questions asked</b> Q1, Q2 by Cartographer</span><span class="who">Ahoy</span></div>
-      <div class="ev"><time>Mon 10:00</time><span class="dot h"></span><span><b>Voyage started</b> budget 20 AIU · planning on claude-sonnet-5 · high</span><span class="who">alex@example.com</span></div>
-      <div class="ev" style="justify-content:center"><span></span><span></span><a href="#" style="font-size:12px">Show 14 earlier events</a><span></span></div>
-    </div>
-  </section>
-</main>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1550}}'>
-class Component extends DCLogic {
-  renderVals() {
-    return {};
-  }
-}
-</script>
-</body>
+        <section class="panel" id="artifacts">
+          <div class="ph">
+            <h2>Artifacts</h2>
+            <span class="sub"
+              >Every change makes a new revision of the whole set.</span
+            >
+            <span style="flex: 1"></span>
+            <label for="ra" class="hint">Compare</label>
+            <select id="ra" class="input">
+              <option>Revision 3 (r-03)</option>
+              <option>Revision 2 (r-02)</option>
+              <option>Revision 1 (r-01)</option>
+            </select>
+            <span class="hint">with</span>
+            <label for="rb" style="position: absolute; left: -9999px"
+              >Second revision</label
+            >
+            <select id="rb" class="input">
+              <option>Revision 5 · current (r-04)</option>
+              <option>Revision 4 (send-back)</option>
+            </select>
+            <div class="seg" role="group" aria-label="View">
+              <button type="button">View</button
+              ><button type="button" class="on">Compare</button>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap">
+            <nav
+              class="files"
+              style="
+                flex: 1 1 240px;
+                max-width: 300px;
+                border-right: 1px solid #eef2f5;
+              "
+              aria-label="Files"
+            >
+              <a class="file" href="#"
+                ><span class="mono">jira-snapshot.md</span
+                ><small>same</small></a
+              >
+              <a class="file on" href="#"
+                ><span class="mono">implementation-plan.md</span
+                ><small>+9 −3</small></a
+              >
+              <a class="file" href="#"
+                ><span class="mono">plan-sources.md</span><small>+2</small></a
+              >
+              <a class="file" href="#"
+                ><span class="mono">plan-round-1.md</span><small>new</small></a
+              >
+              <a class="file" href="#"
+                ><span class="mono">questions.json</span><small>same</small></a
+              >
+              <a class="file" href="#"
+                ><span class="mono">state.json</span><small>changed</small></a
+              >
+            </nav>
+            <div
+              class="diff"
+              style="flex: 999 1 520px; min-width: 0; padding: 8px 0"
+            >
+              <div class="hunk">@@ Summary @@</div>
+              <div>
+                <span class="ln">3</span>Show each invoice's due date on the
+                billing page and in the invoice list,
+              </div>
+              <div class="del">
+                <span class="ln">4</span>− in the server's timezone.
+              </div>
+              <div class="add">
+                <span class="ln">4</span>+ in the customer's timezone, with a
+                clear overdue state.
+              </div>
+              <div class="hunk">@@ Acceptance criteria @@</div>
+              <div>
+                <span class="ln">9</span>- AC3 Dates use the viewer's locale
+                format; exports use ISO 8601.
+              </div>
+              <div class="add">
+                <span class="ln">10</span>+ - AC4 Due dates and overdue checks
+                use the customer's timezone.
+              </div>
+              <div class="add">
+                <span class="ln">11</span>+ - AC5 Overdue invoices show an
+                "Overdue" badge.
+              </div>
+              <div class="hunk">@@ WP1 Due date in the invoice API @@</div>
+              <div class="del">
+                <span class="ln">17</span>− - Add `dueDate` to the invoice
+                response.
+              </div>
+              <div class="add">
+                <span class="ln">17</span>+ - Add `dueDate` and `isOverdue` to
+                the invoice response.
+              </div>
+              <div class="add">
+                <span class="ln">18</span>+ - Compute `isOverdue` against the
+                customer's timezone, not the server's.
+              </div>
+              <div class="hunk">@@ WP2 Billing page and invoice list @@</div>
+              <div class="add">
+                <span class="ln">25</span>+ - An "Overdue" badge and sort order
+                for overdue invoices.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="log">
+          <div class="ph">
+            <h2>Ship's log</h2>
+            <span class="sub"
+              >Every event, newest first. Updates arrive live.</span
+            ><span style="flex: 1"></span><span class="live"><i></i>Live</span>
+          </div>
+          <div class="log">
+            <div class="ev">
+              <time>Tue 09:49</time><span class="dot w"></span
+              ><span
+                ><b>Waiting at the human gate</b> plan_accepted, round 2</span
+              ><span class="who">Ahoy</span>
+            </div>
+            <div class="ev">
+              <time>Tue 09:48</time><span class="dot g"></span
+              ><span
+                ><b>Gate evaluated</b> plan · pass ·
+                <a class="mono" href="RunDetail.dc.html">r-04</a></span
+              ><span class="who">Ahoy</span>
+            </div>
+            <div class="ev">
+              <time>Tue 09:48</time><span class="dot"></span
+              ><span
+                ><b>Artifacts updated</b> revision 5 · implementation-plan.md,
+                plan-sources.md</span
+              ><span class="who">Ahoy</span>
+            </div>
+            <div class="ev">
+              <time>Tue 09:47</time><span class="dot"></span
+              ><span
+                ><b>Run finished</b>
+                <a class="mono" href="RunDetail.dc.html">r-04</a> Cartographer ·
+                succeeded · 3.84 AIU</span
+              ><span class="who">Ahoy</span>
+            </div>
+            <div class="ev">
+              <time>Tue 09:31</time><span class="dot"></span
+              ><span
+                ><b>Run dispatched</b>
+                <a class="mono" href="RunDetail.dc.html">r-04</a> on
+                claude-sonnet-5 · high</span
+              ><span class="who">Ahoy</span>
+            </div>
+            <div class="ev">
+              <time>Tue 09:30</time><span class="dot h"></span
+              ><span
+                ><b>Budget changed</b> 20 → 30 AIU · "Revision needs more
+                room"</span
+              ><span class="who">alex@example.com</span>
+            </div>
+            <div class="ev">
+              <time>Mon 16:40</time><span class="dot h"></span
+              ><span
+                ><b>Decision recorded</b> plan_accepted · send_back · round
+                1</span
+              ><span class="who">jordan@example.com</span>
+            </div>
+            <div class="ev">
+              <time>Mon 16:40</time><span class="dot"></span
+              ><span><b>Phase changed</b> plan_review → planning</span
+              ><span class="who">jordan@example.com</span>
+            </div>
+            <div class="ev">
+              <time>Mon 11:02</time><span class="dot h"></span
+              ><span><b>Question answered</b> Q2</span
+              ><span class="who">priya@example.com</span>
+            </div>
+            <div class="ev">
+              <time>Mon 10:58</time><span class="dot h"></span
+              ><span><b>Question answered</b> Q1</span
+              ><span class="who">alex@example.com</span>
+            </div>
+            <div class="ev">
+              <time>Mon 10:31</time><span class="dot w"></span
+              ><span><b>Questions asked</b> Q1, Q2 by Cartographer</span
+              ><span class="who">Ahoy</span>
+            </div>
+            <div class="ev">
+              <time>Mon 10:00</time><span class="dot h"></span
+              ><span
+                ><b>Voyage started</b> budget 20 AIU · planning on
+                claude-sonnet-5 · high</span
+              ><span class="who">alex@example.com</span>
+            </div>
+            <div class="ev" style="justify-content: center">
+              <span></span><span></span
+              ><a href="#" style="font-size: 12px">Show 14 earlier events</a
+              ><span></span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1440,"height":1550}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
 </html>

@@ -1,14 +1,25 @@
-import type { HttpEvent, HttpInterceptorFn, HttpRequest } from "@angular/common/http";
-import { HttpErrorResponse, HttpHeaders, HttpResponse } from "@angular/common/http";
-import { InjectionToken, inject, type Provider } from "@angular/core";
-import { API_BASE, trimBase } from "@core/api/api-base";
-import { CurrentUser } from "@core/auth/current-user";
-import { FETCH } from "@core/realtime/fetch";
-import { createMockFetch } from "@testing/mock-backend/fetch-adapter";
-import type { MockRequest, MockResponse } from "@testing/mock-backend/http";
-import { MockAhoyServer, type MockServerOptions } from "@testing/mock-backend/server";
-import contract from "@testing/fixtures/openapi.json";
-import { Observable } from "rxjs";
+import type {
+  HttpEvent,
+  HttpInterceptorFn,
+  HttpRequest,
+} from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  HttpHeaders,
+  HttpResponse,
+} from '@angular/common/http';
+import { InjectionToken, inject, type Provider } from '@angular/core';
+import { API_BASE, trimBase } from '@core/api/api-base';
+import { CurrentUser } from '@core/auth/current-user';
+import { FETCH } from '@core/realtime/fetch';
+import { createMockFetch } from '@testing/mock-backend/fetch-adapter';
+import type { MockRequest, MockResponse } from '@testing/mock-backend/http';
+import {
+  MockAhoyServer,
+  type MockServerOptions,
+} from '@testing/mock-backend/server';
+import contract from '@testing/fixtures/openapi.json';
+import { Observable } from 'rxjs';
 
 /**
  * Dev-only providers of the mock backend (lane 2D): the `mock` configuration (`npm run start:mock`) and specs use them;
@@ -16,10 +27,12 @@ import { Observable } from "rxjs";
  */
 
 /** The mock server the providers below answer from. */
-export const MOCK_SERVER = new InjectionToken<MockAhoyServer>("MOCK_SERVER");
+export const MOCK_SERVER = new InjectionToken<MockAhoyServer>('MOCK_SERVER');
 
 /** A mock server on the vendored contract (`src/testing/fixtures/openapi.json`, the parsed `openapi/ahoy-v1.yaml`). */
-export function createMockServer(options: Omit<MockServerOptions, "contract"> = {}): MockAhoyServer {
+export function createMockServer(
+  options: Omit<MockServerOptions, 'contract'> = {}
+): MockAhoyServer {
   return new MockAhoyServer({ ...options, contract });
 }
 
@@ -53,20 +66,25 @@ export const mockBackendInterceptor: HttpInterceptorFn = (req, next) => {
   const server = inject(MOCK_SERVER, { optional: true });
   if (server === null) return next(req);
   const base = trimBase(inject(API_BASE));
-  const url = new URL(req.urlWithParams, "http://mock.invalid");
-  if (url.pathname !== base && !url.pathname.startsWith(`${base}/`)) return next(req);
+  const url = new URL(req.urlWithParams, 'http://mock.invalid');
+  if (url.pathname !== base && !url.pathname.startsWith(`${base}/`))
+    return next(req);
   const user = inject(CurrentUser);
 
   const headers: Record<string, string> = {};
-  for (const name of req.headers.keys()) headers[name.toLowerCase()] = req.headers.getAll(name)?.join(", ") ?? "";
-  headers["x-ahoy-actor"] ??= user.id();
+  for (const name of req.headers.keys())
+    headers[name.toLowerCase()] = req.headers.getAll(name)?.join(', ') ?? '';
+  headers['x-ahoy-actor'] ??= user.id();
   const request: MockRequest = {
     method: req.method,
-    path: url.pathname.slice(base.length) || "/",
+    path: url.pathname.slice(base.length) || '/',
     query: url.searchParams,
     headers,
     // Through the wire and back: the mock never holds the caller's object, and the caller never holds the mock's.
-    body: req.body === null || req.body === undefined ? undefined : JSON.parse(JSON.stringify(req.body)),
+    body:
+      req.body === null || req.body === undefined
+        ? undefined
+        : JSON.parse(JSON.stringify(req.body)),
   };
 
   return new Observable<HttpEvent<unknown>>((subscriber) => {
@@ -88,16 +106,33 @@ export const mockBackendInterceptor: HttpInterceptorFn = (req, next) => {
 };
 
 /** A mock answer as `HttpClient` hands it over. */
-function toHttpEvent(response: MockResponse, req: HttpRequest<unknown>): HttpResponse<unknown> | HttpErrorResponse {
+function toHttpEvent(
+  response: MockResponse,
+  req: HttpRequest<unknown>
+): HttpResponse<unknown> | HttpErrorResponse {
   const headers = new HttpHeaders({ ...response.headers });
-  const init = { status: response.status, statusText: "", headers, url: req.urlWithParams };
+  const init = {
+    status: response.status,
+    statusText: '',
+    headers,
+    url: req.urlWithParams,
+  };
   let body: unknown = null;
-  if (response.kind === "json") body = req.responseType === "text" ? JSON.stringify(response.body) : response.body;
-  else if (response.kind === "text") body = response.body;
-  else if (response.kind === "stream") {
-    response.stream.abort(new Error("HttpClient cannot read an event stream"));
-    return new HttpErrorResponse({ ...init, status: 0, error: "HttpClient cannot read an event stream; use FETCH" });
+  if (response.kind === 'json')
+    body =
+      req.responseType === 'text'
+        ? JSON.stringify(response.body)
+        : response.body;
+  else if (response.kind === 'text') body = response.body;
+  else if (response.kind === 'stream') {
+    response.stream.abort(new Error('HttpClient cannot read an event stream'));
+    return new HttpErrorResponse({
+      ...init,
+      status: 0,
+      error: 'HttpClient cannot read an event stream; use FETCH',
+    });
   }
-  if (response.status >= 200 && response.status < 300) return new HttpResponse({ ...init, body });
+  if (response.status >= 200 && response.status < 300)
+    return new HttpResponse({ ...init, body });
   return new HttpErrorResponse({ ...init, error: body });
 }

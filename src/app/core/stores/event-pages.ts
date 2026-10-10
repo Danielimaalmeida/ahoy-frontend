@@ -1,6 +1,6 @@
-import type { ApiClient } from "@core/api/api-client";
-import { ok, type ApiResult } from "@core/api/api-error";
-import type { AhoyEvent } from "@core/api/types";
+import type { ApiClient } from '@core/api/api-client';
+import { ok, type ApiResult } from '@core/api/api-error';
+import type { AhoyEvent } from '@core/api/types';
 
 /** Events asked for per page: the API's maximum (G8). */
 export const EVENT_PAGE_LIMIT = 500;
@@ -13,11 +13,11 @@ export const MAX_EVENT_PAGES = 200;
  * `onPage`. Gives the id to continue from next time, or the first error.
  */
 export async function readStoryEvents(
-  api: Pick<ApiClient, "listStoryEvents">,
+  api: Pick<ApiClient, 'listStoryEvents'>,
   key: string,
   after: string | null,
   onPage: (events: readonly AhoyEvent[]) => void,
-  isCancelled: () => boolean = () => false,
+  isCancelled: () => boolean = () => false
 ): Promise<ApiResult<string | null>> {
   let cursor = after;
   for (let page = 0; page < MAX_EVENT_PAGES; page++) {

@@ -1,4 +1,9 @@
-import { absoluteTime, formatDuration, relativeTime, waitingTime } from "./time";
+import {
+  absoluteTime,
+  formatDuration,
+  relativeTime,
+  waitingTime,
+} from './time';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -12,17 +17,17 @@ function ago(ms: number): Date {
   return new Date(NOW.getTime() - ms);
 }
 
-describe("relativeTime", () => {
+describe('relativeTime', () => {
   const CASES: readonly (readonly [number, string])[] = [
-    [0, "just now"],
-    [59 * SECOND, "just now"],
-    [MINUTE, "1 m ago"],
-    [22 * MINUTE, "22 m ago"],
-    [59 * MINUTE, "59 m ago"],
-    [HOUR, "1 h ago"],
-    [2 * HOUR + 10 * MINUTE, "2 h 10 m ago"],
-    [DAY, "1 d ago"],
-    [3 * DAY, "3 d ago"],
+    [0, 'just now'],
+    [59 * SECOND, 'just now'],
+    [MINUTE, '1 m ago'],
+    [22 * MINUTE, '22 m ago'],
+    [59 * MINUTE, '59 m ago'],
+    [HOUR, '1 h ago'],
+    [2 * HOUR + 10 * MINUTE, '2 h 10 m ago'],
+    [DAY, '1 d ago'],
+    [3 * DAY, '3 d ago'],
   ];
 
   for (const [elapsed, expected] of CASES) {
@@ -31,45 +36,47 @@ describe("relativeTime", () => {
     });
   }
 
-  it("treats a future time as now", () => {
-    expect(relativeTime(new Date(NOW.getTime() + MINUTE), NOW)).toBe("just now");
+  it('treats a future time as now', () => {
+    expect(relativeTime(new Date(NOW.getTime() + MINUTE), NOW)).toBe(
+      'just now'
+    );
   });
 
-  it("accepts an ISO string", () => {
-    expect(relativeTime(ago(22 * MINUTE).toISOString(), NOW)).toBe("22 m ago");
+  it('accepts an ISO string', () => {
+    expect(relativeTime(ago(22 * MINUTE).toISOString(), NOW)).toBe('22 m ago');
   });
 
-  it("shows an em dash for an invalid date", () => {
-    expect(relativeTime("not a date", NOW)).toBe("—");
+  it('shows an em dash for an invalid date', () => {
+    expect(relativeTime('not a date', NOW)).toBe('—');
   });
 });
 
-describe("absoluteTime", () => {
+describe('absoluteTime', () => {
   it('shows a log time as "Tue 09:48"', () => {
-    expect(absoluteTime(new Date(2026, 9, 6, 9, 48))).toBe("Tue 09:48");
+    expect(absoluteTime(new Date(2026, 9, 6, 9, 48))).toBe('Tue 09:48');
   });
 
   it('shows another day as "Mon 10:31"', () => {
-    expect(absoluteTime(new Date(2026, 9, 5, 10, 31))).toBe("Mon 10:31");
+    expect(absoluteTime(new Date(2026, 9, 5, 10, 31))).toBe('Mon 10:31');
   });
 
-  it("pads the minutes", () => {
-    expect(absoluteTime(new Date(2026, 9, 6, 9, 5))).toBe("Tue 09:05");
+  it('pads the minutes', () => {
+    expect(absoluteTime(new Date(2026, 9, 6, 9, 5))).toBe('Tue 09:05');
   });
 
-  it("shows an em dash for an invalid date", () => {
-    expect(absoluteTime("nope")).toBe("—");
+  it('shows an em dash for an invalid date', () => {
+    expect(absoluteTime('nope')).toBe('—');
   });
 });
 
-describe("waitingTime", () => {
+describe('waitingTime', () => {
   const CASES: readonly (readonly [number, string])[] = [
-    [30 * SECOND, "just now"],
-    [9 * MINUTE, "9 m"],
-    [48 * MINUTE, "48 m"],
-    [2 * HOUR + 10 * MINUTE, "2 h 10 m"],
-    [2 * HOUR, "2 h"],
-    [26 * HOUR, "1 d"],
+    [30 * SECOND, 'just now'],
+    [9 * MINUTE, '9 m'],
+    [48 * MINUTE, '48 m'],
+    [2 * HOUR + 10 * MINUTE, '2 h 10 m'],
+    [2 * HOUR, '2 h'],
+    [26 * HOUR, '1 d'],
   ];
 
   for (const [elapsed, expected] of CASES) {
@@ -78,36 +85,40 @@ describe("waitingTime", () => {
     });
   }
 
-  it("shows an em dash for an invalid date", () => {
-    expect(waitingTime("nope", NOW)).toBe("—");
+  it('shows an em dash for an invalid date', () => {
+    expect(waitingTime('nope', NOW)).toBe('—');
   });
 });
 
-describe("formatDuration", () => {
+describe('formatDuration', () => {
   const CASES: readonly (readonly [number, string])[] = [
-    [0, "0 s"],
-    [45 * SECOND, "45 s"],
-    [16 * MINUTE + 12 * SECOND, "16 m 12 s"],
-    [16 * MINUTE, "16 m"],
-    [HOUR + 4 * MINUTE, "1 h 4 m"],
-    [2 * HOUR, "2 h"],
+    [0, '0 s'],
+    [45 * SECOND, '45 s'],
+    [16 * MINUTE + 12 * SECOND, '16 m 12 s'],
+    [16 * MINUTE, '16 m'],
+    [HOUR + 4 * MINUTE, '1 h 4 m'],
+    [2 * HOUR, '2 h'],
   ];
 
   for (const [elapsed, expected] of CASES) {
     it(`shows "${expected}" for ${elapsed} ms`, () => {
-      expect(formatDuration(NOW, new Date(NOW.getTime() + elapsed))).toBe(expected);
+      expect(formatDuration(NOW, new Date(NOW.getTime() + elapsed))).toBe(
+        expected
+      );
     });
   }
 
-  it("never goes negative", () => {
-    expect(formatDuration(NOW, ago(MINUTE))).toBe("0 s");
+  it('never goes negative', () => {
+    expect(formatDuration(NOW, ago(MINUTE))).toBe('0 s');
   });
 
-  it("accepts ISO strings", () => {
-    expect(formatDuration(new Date(2026, 9, 6, 9, 31), new Date(2026, 9, 6, 9, 47))).toBe("16 m");
+  it('accepts ISO strings', () => {
+    expect(
+      formatDuration(new Date(2026, 9, 6, 9, 31), new Date(2026, 9, 6, 9, 47))
+    ).toBe('16 m');
   });
 
-  it("shows an em dash for an invalid date", () => {
-    expect(formatDuration("nope", NOW)).toBe("—");
+  it('shows an em dash for an invalid date', () => {
+    expect(formatDuration('nope', NOW)).toBe('—');
   });
 });

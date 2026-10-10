@@ -1,4 +1,4 @@
-import type { Type } from "@angular/core";
+import type { Type } from '@angular/core';
 
 /** One gallery section: a component showing every variant of a design-system component. */
 export interface KitSection {

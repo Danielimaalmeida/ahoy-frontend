@@ -3,7 +3,7 @@
  * the `node:http` server of `npm run mock:api`) translates to and from. Problems are written the way the real API writes
  * them (`apps/api/src/server.ts` of `ahoy-hosted`): `type` `urn:ahoy:problem:<code>`, `title` the code with spaces.
  */
-import type { ProblemCode } from "@core/api/types";
+import type { ProblemCode } from '@core/api/types';
 
 /** A request as the mock reads it. */
 export interface MockRequest {
@@ -29,20 +29,24 @@ export interface MockStream {
 /** An answer of the mock. */
 export type MockResponse =
   | {
-      readonly kind: "json";
+      readonly kind: 'json';
       readonly status: number;
       readonly headers: Readonly<Record<string, string>>;
       readonly body: unknown;
     }
   | {
-      readonly kind: "text";
+      readonly kind: 'text';
       readonly status: number;
       readonly headers: Readonly<Record<string, string>>;
       readonly body: string;
     }
-  | { readonly kind: "empty"; readonly status: number; readonly headers: Readonly<Record<string, string>> }
   | {
-      readonly kind: "stream";
+      readonly kind: 'empty';
+      readonly status: number;
+      readonly headers: Readonly<Record<string, string>>;
+    }
+  | {
+      readonly kind: 'stream';
       readonly status: 200;
       readonly headers: Readonly<Record<string, string>>;
       readonly stream: MockStream;
@@ -97,17 +101,24 @@ export class MockProblem extends Error {
 export function problemResponse(problem: MockProblem): MockResponse {
   const status = PROBLEM_STATUS[problem.code];
   return {
-    kind: "json",
+    kind: 'json',
     status,
-    headers: { "Content-Type": "application/problem+json; charset=utf-8", ...problem.extra.headers },
+    headers: {
+      'Content-Type': 'application/problem+json; charset=utf-8',
+      ...problem.extra.headers,
+    },
     body: {
       type: `urn:ahoy:problem:${problem.code}`,
-      title: problem.code.replaceAll("_", " "),
+      title: problem.code.replaceAll('_', ' '),
       status,
       code: problem.code,
       detail: problem.message,
-      ...(problem.extra.errors !== undefined ? { errors: problem.extra.errors } : {}),
-      ...(problem.extra.currentVersion !== undefined ? { currentVersion: problem.extra.currentVersion } : {}),
+      ...(problem.extra.errors !== undefined
+        ? { errors: problem.extra.errors }
+        : {}),
+      ...(problem.extra.currentVersion !== undefined
+        ? { currentVersion: problem.extra.currentVersion }
+        : {}),
     },
   };
 }
@@ -116,12 +127,12 @@ export function problemResponse(problem: MockProblem): MockResponse {
 export function jsonResponse(
   status: number,
   body: unknown,
-  headers: Readonly<Record<string, string>> = {},
+  headers: Readonly<Record<string, string>> = {}
 ): MockResponse {
   return {
-    kind: "json",
+    kind: 'json',
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
+    headers: { 'Content-Type': 'application/json; charset=utf-8', ...headers },
     body: structuredClone(body),
   };
 }
@@ -129,17 +140,19 @@ export function jsonResponse(
 /** The body of a JSON answer as text, as it goes over the wire. */
 export function responseText(response: MockResponse): string | null {
   switch (response.kind) {
-    case "json":
+    case 'json':
       return JSON.stringify(response.body);
-    case "text":
+    case 'text':
       return response.body;
-    case "empty":
-    case "stream":
+    case 'empty':
+    case 'stream':
       return null;
   }
 }
 
 /** Whether a value is a plain JSON object. */
-export function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+export function isRecord(
+  value: unknown
+): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

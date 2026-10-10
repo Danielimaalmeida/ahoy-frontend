@@ -1,4 +1,4 @@
-import { InjectionToken } from "@angular/core";
+import { InjectionToken } from '@angular/core';
 
 /**
  * What proves who the user is, as request headers (F8). It is the one place a real sign-in will plug in: a WebEAM strategy
@@ -21,7 +21,7 @@ export class NoAuthStrategy implements AuthStrategy {
 }
 
 /** The strategy in force. Defaults to {@link NoAuthStrategy}; tests and the future sign-in provide their own. */
-export const AUTH_STRATEGY = new InjectionToken<AuthStrategy>("AUTH_STRATEGY", {
-  providedIn: "root",
+export const AUTH_STRATEGY = new InjectionToken<AuthStrategy>('AUTH_STRATEGY', {
+  providedIn: 'root',
   factory: () => new NoAuthStrategy(),
 });

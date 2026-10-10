@@ -1,10 +1,10 @@
-import { Component, input } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import { actorLabel } from "@domain/identifiers";
-import { absoluteTime } from "@domain/time";
+import { Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { actorLabel } from '@domain/identifiers';
+import { absoluteTime } from '@domain/time';
 
 /** The dot of a log entry: a person acted, a gate passed, waiting on a person, or the system. */
-export type LogEntryKind = "human" | "pass" | "wait" | "system";
+export type LogEntryKind = 'human' | 'pass' | 'wait' | 'system';
 
 /** One event of the ship's log. */
 export interface ShipsLogEntry {
@@ -20,7 +20,10 @@ export interface ShipsLogEntry {
   readonly actor: string;
   readonly kind: LogEntryKind;
   /** The run the event is about, linked to its run detail. */
-  readonly run?: { readonly id: string; readonly link: string | readonly (string | number)[] };
+  readonly run?: {
+    readonly id: string;
+    readonly link: string | readonly (string | number)[];
+  };
 }
 
 /**
@@ -29,7 +32,7 @@ export interface ShipsLogEntry {
  * system shows as "Ahoy"). Every text is interpolated.
  */
 @Component({
-  selector: "ah-ships-log",
+  selector: 'ah-ships-log',
   imports: [RouterLink],
   styles: `
     :host {
@@ -40,7 +43,9 @@ export interface ShipsLogEntry {
     <div class="ah-log" role="list" [attr.aria-label]="label()">
       @for (entry of entries(); track entry.id) {
         <div class="ah-log__row" role="listitem">
-          <time class="ah-log__time" [attr.datetime]="entry.at">{{ time(entry.at) }}</time>
+          <time class="ah-log__time" [attr.datetime]="entry.at">{{
+            time(entry.at)
+          }}</time>
           <span
             class="ah-log__dot"
             [class.ah-log__dot--human]="entry.kind === 'human'"
@@ -50,7 +55,7 @@ export interface ShipsLogEntry {
           ></span>
           <span
             ><b>{{ entry.title }}</b
-            >{{ entry.details ? " " + entry.details : "" }}
+            >{{ entry.details ? ' ' + entry.details : '' }}
             @if (entry.run; as run) {
               · <a class="ah-key" [routerLink]="run.link">{{ run.id }}</a>
             }
@@ -58,7 +63,9 @@ export interface ShipsLogEntry {
           <span class="ah-log__who">{{ who(entry.actor) }}</span>
         </div>
       } @empty {
-        <div class="ah-log__row ah-hint" role="listitem">Nothing in the log yet.</div>
+        <div class="ah-log__row ah-hint" role="listitem">
+          Nothing in the log yet.
+        </div>
       }
     </div>
   `,
@@ -67,7 +74,7 @@ export class ShipsLog {
   /** The entries, newest first. */
   readonly entries = input.required<readonly ShipsLogEntry[]>();
   /** The list's accessible name. */
-  readonly label = input("Ship's log");
+  readonly label = input('Activity');
 
   protected readonly time = absoluteTime;
   protected readonly who = actorLabel;

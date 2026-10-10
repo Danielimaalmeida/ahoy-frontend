@@ -1,4 +1,4 @@
-/* Application code. src/testing/ and specs are excluded: nothing in production imports them. */
+/* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -6,5 +6,5 @@
     "types": []
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "src/testing/**"]
+  "exclude": ["src/**/*.spec.ts"]
 }

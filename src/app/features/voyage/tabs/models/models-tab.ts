@@ -1,23 +1,43 @@
-import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
-import { toSignal } from "@angular/core/rxjs-interop";
-import { ActivatedRoute, Router } from "@angular/router";
-import type { ModelSlot, SlotModel } from "@core/api/types";
-import { apiErrorView, commandErrorView, type CommandErrorView } from "@core/commands/command-error";
-import { CREW } from "@domain/models";
-import { Banner } from "@ui/banner/banner";
-import { Button } from "@ui/button/button";
-import { DialogService } from "@ui/dialog/dialog";
-import { Panel, PanelBody, PanelFoot, PanelHead } from "@ui/panel/panel";
-import { SkeletonRows, type SkeletonColumn } from "@ui/skeleton/skeleton";
-import { Source } from "@ui/tags/source";
-import { Nowrap, Table } from "@ui/table/table";
-import { ToastService } from "@ui/toast/toast";
-import { map } from "rxjs";
-import { modelLabel } from "../../context/crew";
-import { VoyageContext } from "../../context/voyage-context";
-import { ChangeModelsDialog, type ChangeModelsData } from "./change-models-dialog";
-import { chosenLabel, parseChangeSlot, refusedSlots, resetChange, sourceLabels } from "./models-change";
-import { ModelsCommand } from "./models-command";
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
+import type { ModelSlot, SlotModel } from '@core/api/types';
+import {
+  apiErrorView,
+  commandErrorView,
+  type CommandErrorView,
+} from '@core/commands/command-error';
+import { CREW } from '@domain/models';
+import { Banner } from '@ui/banner/banner';
+import { Button } from '@ui/button/button';
+import { DialogService } from '@ui/dialog/dialog';
+import { Panel, PanelBody, PanelFoot, PanelHead } from '@ui/panel/panel';
+import { SkeletonRows, type SkeletonColumn } from '@ui/skeleton/skeleton';
+import { Source } from '@ui/tags/source';
+import { Nowrap, Table } from '@ui/table/table';
+import { ToastService } from '@ui/toast/toast';
+import { map } from 'rxjs';
+import { modelLabel } from '../../context/crew';
+import { VoyageContext } from '../../context/voyage-context';
+import {
+  ChangeModelsDialog,
+  type ChangeModelsData,
+} from './change-models-dialog';
+import {
+  chosenLabel,
+  parseChangeSlot,
+  refusedSlots,
+  resetChange,
+  sourceLabels,
+} from './models-change';
+import { ModelsCommand } from './models-command';
 
 /** One row of the table as the template reads it. */
 interface ModelRow {
@@ -35,23 +55,34 @@ interface ModelRow {
 }
 
 const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
-  { track: "110px" },
-  { track: "130px" },
-  { track: "minmax(0, 1fr)" },
-  { track: "110px", height: 20 },
-  { track: "110px", height: 20 },
-  { track: "minmax(0, 1fr)" },
+  { track: '110px' },
+  { track: '130px' },
+  { track: 'minmax(0, 1fr)' },
+  { track: '110px', height: 20 },
+  { track: '110px', height: 20 },
+  { track: 'minmax(0, 1fr)' },
 ];
 
 /**
  * The Models tab (wireframe `Halted`, lane 4D): what each phase's next run gets and where it comes from, what was chosen
  * for this voyage, and Change and Reset for the slots that were chosen. A slot marked "refused last run" is the one whose
- * last run of the phase failed on the model it still has. `?change=<slot>` (from the Anchored banner and the decision
+ * last run of the phase failed on the model it still has. `?change=<slot>` (from the Halted banner and the decision
  * panel) opens the Change models dialog with the focus on that slot.
  */
 @Component({
-  selector: "ah-models-tab",
-  imports: [Banner, Button, Nowrap, Panel, PanelBody, PanelFoot, PanelHead, SkeletonRows, Source, Table],
+  selector: 'ah-models-tab',
+  imports: [
+    Banner,
+    Button,
+    Nowrap,
+    Panel,
+    PanelBody,
+    PanelFoot,
+    PanelHead,
+    SkeletonRows,
+    Source,
+    Table,
+  ],
   styles: `
     :host {
       display: block;
@@ -80,21 +111,38 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
         heading="Models per phase"
         subtitle="What each phase's next run gets, and where it comes from. A change applies from that phase's next run."
       >
-        <button ahButton size="sm" ahPanelActions type="button" [disabled]="!rows().length" (click)="change(null)">
+        <button
+          ahButton
+          size="sm"
+          ahPanelActions
+          type="button"
+          [disabled]="!rows().length"
+          (click)="change(null)"
+        >
           Change models
         </button>
       </ah-panel-head>
       @if (actionError(); as e) {
-        <ah-banner class="models__banner" [variant]="e.variant" [heading]="e.heading" [tech]="e.tech ?? ''">{{
-          e.text ?? ""
-        }}</ah-banner>
+        <ah-banner
+          class="models__banner"
+          [variant]="e.variant"
+          [heading]="e.heading"
+          [tech]="e.tech ?? ''"
+          >{{ e.text ?? '' }}</ah-banner
+        >
       }
       @if (context.models() === null) {
         <ah-panel-body>
           @if (loadError(); as e) {
-            <ah-banner [variant]="e.variant" [heading]="e.heading" [tech]="e.tech ?? ''">
-              {{ e.text ?? "" }}
-              <button ahButton size="sm" type="button" (click)="retry()">Try again</button>
+            <ah-banner
+              [variant]="e.variant"
+              [heading]="e.heading"
+              [tech]="e.tech ?? ''"
+            >
+              {{ e.text ?? '' }}
+              <button ahButton size="sm" type="button" (click)="retry()">
+                Try again
+              </button>
             </ah-banner>
           } @else {
             <ah-skeleton-rows [rows]="5" [columns]="skeletonColumns" />
@@ -106,7 +154,7 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
             <thead>
               <tr>
                 <th scope="col">Phase</th>
-                <th scope="col">Crew member</th>
+                <th scope="col">Agent</th>
                 <th scope="col">Next run gets</th>
                 <th scope="col">Model from</th>
                 <th scope="col">Effort from</th>
@@ -122,17 +170,26 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
                   <td>
                     <span class="ah-mono">{{ row.next }}</span>
                     @if (row.refused) {
-                      <span class="ah-badge ah-badge--halted models__refused">refused last run</span>
+                      <span class="ah-badge ah-badge--halted models__refused"
+                        >refused last run</span
+                      >
                     }
                   </td>
                   <td>
-                    <ah-source [chosen]="row.modelChosen">{{ row.modelFrom }}</ah-source>
+                    <ah-source [chosen]="row.modelChosen">{{
+                      row.modelFrom
+                    }}</ah-source>
                   </td>
                   <td>
-                    <ah-source [chosen]="row.effortChosen">{{ row.effortFrom }}</ah-source>
+                    <ah-source [chosen]="row.effortChosen">{{
+                      row.effortFrom
+                    }}</ah-source>
                   </td>
-                  <td [class.ah-mono]="row.chosen !== null" [class.ah-hint]="row.chosen === null">
-                    {{ row.chosen ?? "—" }}
+                  <td
+                    [class.ah-mono]="row.chosen !== null"
+                    [class.ah-hint]="row.chosen === null"
+                  >
+                    {{ row.chosen ?? '—' }}
                   </td>
                   <td ahNowrap>
                     @if (row.slot.chosen !== null) {
@@ -150,7 +207,9 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
                           ahButton="ghost"
                           size="sm"
                           type="button"
-                          [attr.aria-label]="'Reset ' + row.crew + ' to default'"
+                          [attr.aria-label]="
+                            'Reset ' + row.crew + ' to default'
+                          "
                           [disabled]="busy()"
                           (click)="reset(row.slot.slot)"
                         >
@@ -167,9 +226,9 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
       }
       <ah-panel-foot>
         <span class="ah-hint"
-          >Sources, strongest first: this revision only · chosen for this voyage · server default · agent config
-          (pinned) · the agent's own profile. A model chosen without an effort runs at its own default effort. The two
-          Lookouts must use different models.</span
+          >Sources, strongest first: this revision only · chosen for this voyage
+          · server default · agent config (pinned) · the agent's own profile. A
+          model chosen without an effort runs at its own default effort.</span
         >
       </ah-panel-foot>
     </ah-panel>
@@ -195,8 +254,14 @@ export class ModelsTab {
   });
 
   private readonly changeParam = toSignal(
-    this.route.queryParamMap.pipe(map((params) => parseChangeSlot(params.get("change")))),
-    { initialValue: parseChangeSlot(this.route.snapshot.queryParamMap.get("change")) },
+    this.route.queryParamMap.pipe(
+      map((params) => parseChangeSlot(params.get('change')))
+    ),
+    {
+      initialValue: parseChangeSlot(
+        this.route.snapshot.queryParamMap.get('change')
+      ),
+    }
   );
   /** `?change=` was already acted on: it opens the dialog once, however often the plan is read again. */
   private handledChange = false;
@@ -204,7 +269,11 @@ export class ModelsTab {
   protected readonly rows = computed((): readonly ModelRow[] => {
     const plan = this.context.models();
     if (plan === null) return [];
-    const refused = refusedSlots(this.context.story(), this.context.runs(), plan);
+    const refused = refusedSlots(
+      this.context.story(),
+      this.context.runs(),
+      plan
+    );
     return plan.slots.map((slot) => {
       const sources = sourceLabels(slot);
       return {
@@ -213,8 +282,8 @@ export class ModelsTab {
         next: modelLabel(slot),
         modelFrom: sources.model,
         effortFrom: sources.effort,
-        modelChosen: slot.modelSource === "story",
-        effortChosen: slot.effortSource === "story",
+        modelChosen: slot.modelSource === 'story',
+        effortChosen: slot.effortSource === 'story',
         chosen: chosenLabel(slot),
         refused: refused.has(slot.slot),
       };
@@ -228,7 +297,12 @@ export class ModelsTab {
         this.handledChange = false;
         return;
       }
-      if (this.handledChange || this.context.models() === null || this.context.story() === null) return;
+      if (
+        this.handledChange ||
+        this.context.models() === null ||
+        this.context.story() === null
+      )
+        return;
       this.handledChange = true;
       untracked(() => {
         this.change(slot);
@@ -236,7 +310,7 @@ export class ModelsTab {
         void this.router.navigate([], {
           relativeTo: this.route,
           queryParams: { change: null },
-          queryParamsHandling: "merge",
+          queryParamsHandling: 'merge',
           replaceUrl: true,
         });
       });
@@ -246,10 +320,13 @@ export class ModelsTab {
   /** Opens "Models per phase", with the focus on `slot` when there is one. */
   protected change(slot: ModelSlot | null): void {
     this.actionError.set(null);
-    this.dialogs.open<unknown, ChangeModelsData, ChangeModelsDialog>(ChangeModelsDialog, {
-      data: { context: this.context, slot },
-      width: "640px",
-    });
+    this.dialogs.open<unknown, ChangeModelsData, ChangeModelsDialog>(
+      ChangeModelsDialog,
+      {
+        data: { context: this.context, slot },
+        width: '640px',
+      }
+    );
   }
 
   /** Reads the model plan again after it could not be read. */
@@ -260,9 +337,15 @@ export class ModelsTab {
   /** Gives a slot back to the default: `{slot: null}`. */
   protected async reset(slot: ModelSlot): Promise<void> {
     this.actionError.set(null);
-    const outcome = await this.command.save(this.context, resetChange(slot), "");
-    if (outcome.kind === "ok") {
-      this.toasts.show(`${CREW[slot]} is back on the default model. Applies from its next run.`);
+    const outcome = await this.command.save(
+      this.context,
+      resetChange(slot),
+      ''
+    );
+    if (outcome.kind === 'ok') {
+      this.toasts.show(
+        `${CREW[slot]} is back on the default model. Applies from its next run.`
+      );
     } else {
       this.actionError.set(commandErrorView(outcome));
     }

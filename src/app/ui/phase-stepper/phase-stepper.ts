@@ -1,17 +1,22 @@
-import { Component, booleanAttribute, computed, input } from "@angular/core";
-import type { StoryStatus } from "@domain/types";
-import type { StepState } from "./phase-steps";
-import { phaseProgress } from "./phase-steps";
+import { Component, booleanAttribute, computed, input } from '@angular/core';
+import type { StoryStatus } from '@domain/types';
+import type { StepState } from './phase-steps';
+import { phaseProgress } from './phase-steps';
 
 /** The sign inside a step's circle: a check when passed, "!" where it stopped, otherwise its number. */
-const MARKS: Readonly<Record<StepState, string | null>> = { done: "✓", stopped: "!", current: null, upcoming: null };
+const MARKS: Readonly<Record<StepState, string | null>> = {
+  done: '✓',
+  stopped: '!',
+  current: null,
+  upcoming: null,
+};
 
 /** What a screen reader hears after the phase name, so the state is never carried by colour alone. */
 const STATE_WORDS: Readonly<Record<StepState, string>> = {
-  done: "done",
-  current: "current",
-  stopped: "stopped",
-  upcoming: "ahead",
+  done: 'done',
+  current: 'current',
+  stopped: 'stopped',
+  upcoming: 'ahead',
 };
 
 /**
@@ -26,7 +31,7 @@ const STATE_WORDS: Readonly<Record<StepState, string>> = {
  * ```
  */
 @Component({
-  selector: "ah-phase-stepper",
+  selector: 'ah-phase-stepper',
   template: `
     @if (compact()) {
       <div class="ah-dots" role="img" [attr.aria-label]="progress().label">
@@ -40,9 +45,15 @@ const STATE_WORDS: Readonly<Record<StepState, string>> = {
           <span
             role="listitem"
             [class]="stepClass(step.state)"
-            [attr.aria-current]="step.state === 'current' || step.state === 'stopped' ? 'step' : null"
+            [attr.aria-current]="
+              step.state === 'current' || step.state === 'stopped'
+                ? 'step'
+                : null
+            "
             [attr.aria-label]="step.phase + ', ' + stateWord(step.state)"
-            ><b class="ah-step__n" aria-hidden="true">{{ mark(step.state) ?? step.n }}</b
+            ><b class="ah-step__n" aria-hidden="true">{{
+              mark(step.state) ?? step.n
+            }}</b
             >{{ step.phase }}</span
           >
           @if (!$last) {
@@ -63,13 +74,15 @@ export class PhaseStepper {
   /** The seven bars of the voyages table instead of the full stepper. */
   readonly compact = input(false, { transform: booleanAttribute });
 
-  protected readonly progress = computed(() => phaseProgress(this.phase(), this.status(), this.stoppedAt()));
+  protected readonly progress = computed(() =>
+    phaseProgress(this.phase(), this.status(), this.stoppedAt())
+  );
 
   protected stepClass(state: StepState): string {
-    return state === "upcoming" ? "ah-step" : `ah-step ah-step--${state}`;
+    return state === 'upcoming' ? 'ah-step' : `ah-step ah-step--${state}`;
   }
   protected dotClass(state: StepState): string | null {
-    return state === "upcoming" ? null : `is-${state}`;
+    return state === 'upcoming' ? null : `is-${state}`;
   }
   protected mark(state: StepState): string | null {
     return MARKS[state];

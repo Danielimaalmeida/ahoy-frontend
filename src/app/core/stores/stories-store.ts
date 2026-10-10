@@ -1,14 +1,25 @@
-import { DestroyRef, Injectable, computed, inject, signal } from "@angular/core";
-import type { Subscription } from "rxjs";
-import { ApiClient } from "@core/api/api-client";
-import { isNotFound, ok, type ApiError, type ApiResult } from "@core/api/api-error";
-import type { AhoyEvent, Story, StoryStatus } from "@core/api/types";
-import { CLOCK, type Timer } from "@core/realtime/clock";
-import { EventBus } from "@core/realtime/event-bus";
-import { RUN_PROGRESS, isKnownEventType } from "@core/realtime/event-types";
-import { IN_PORT } from "@domain/status";
-import { releaseOnDestroy } from "./leases";
-import { newestVersion, type ResourceStatus } from "./resource";
+import {
+  DestroyRef,
+  Injectable,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import type { Subscription } from 'rxjs';
+import { ApiClient } from '@core/api/api-client';
+import {
+  isNotFound,
+  ok,
+  type ApiError,
+  type ApiResult,
+} from '@core/api/api-error';
+import type { AhoyEvent, Story, StoryStatus } from '@core/api/types';
+import { CLOCK, type Timer } from '@core/realtime/clock';
+import { EventBus } from '@core/realtime/event-bus';
+import { RUN_PROGRESS, isKnownEventType } from '@core/realtime/event-types';
+import { IN_PORT } from '@domain/status';
+import { releaseOnDestroy } from './leases';
+import { newestVersion, type ResourceStatus } from './resource';
 
 /** Stories asked for per page: the API's maximum (G4: the app loads them all and counts on the client). */
 export const STORY_PAGE_LIMIT = 500;
@@ -20,22 +31,32 @@ export const MAX_STORY_PAGES = 100;
 export const STORY_REFRESH_DEBOUNCE_MS = 300;
 
 /** The statuses that wait on a person: the "Needs you" inbox. */
-export const NEEDS_YOU: readonly StoryStatus[] = ["awaiting_input", "awaiting_decision", "halted"];
+export const NEEDS_YOU: readonly StoryStatus[] = [
+  'awaiting_input',
+  'awaiting_decision',
+  'halted',
+];
 
 /** The statuses of a voyage at sea: running, or queued to run. */
-export const AT_SEA: readonly StoryStatus[] = ["running", "ready"];
+export const AT_SEA: readonly StoryStatus[] = ['running', 'ready'];
 
 /** How many stories there are in each status. */
 export type StoryCounts = Readonly<Record<StoryStatus, number>>;
 
 /** Most recently updated first, as `listStories` orders them; the key breaks ties. */
 function byUpdatedDesc(a: Story, b: Story): number {
-  return Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || a.key.localeCompare(b.key);
+  return (
+    Date.parse(b.updatedAt) - Date.parse(a.updatedAt) ||
+    a.key.localeCompare(b.key)
+  );
 }
 
 /** Longest waiting first; the key breaks ties. */
 function byUpdatedAsc(a: Story, b: Story): number {
-  return Date.parse(a.updatedAt) - Date.parse(b.updatedAt) || a.key.localeCompare(b.key);
+  return (
+    Date.parse(a.updatedAt) - Date.parse(b.updatedAt) ||
+    a.key.localeCompare(b.key)
+  );
 }
 
 /**
@@ -45,14 +66,14 @@ function byUpdatedAsc(a: Story, b: Story): number {
  * known event of a story (except `run.progress`) gathers for 300 ms and then causes one `getStory` for it, which
  * inserts, updates or (on `404`) removes the story. While the stream is degraded the list is read again every 10 s.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class StoriesStore {
   private readonly api = inject(ApiClient);
   private readonly bus = inject(EventBus);
   private readonly clock = inject(CLOCK);
 
   private readonly byKey = signal<ReadonlyMap<string, Story>>(new Map());
-  private readonly statusSignal = signal<ResourceStatus>("idle");
+  private readonly statusSignal = signal<ResourceStatus>('idle');
   private readonly errorSignal = signal<ApiError | null>(null);
 
   /** `idle` before the first load, `loading` during it, then `ready` or `error` (the list in hand is kept). */
@@ -61,7 +82,9 @@ export class StoriesStore {
   readonly error = this.errorSignal.asReadonly();
 
   /** Every story, most recently updated first. */
-  readonly stories = computed(() => [...this.byKey().values()].sort(byUpdatedDesc));
+  readonly stories = computed(() =>
+    [...this.byKey().values()].sort(byUpdatedDesc)
+  );
 
   /** How many stories are in each status. */
   readonly counts = computed<StoryCounts>(() => {
@@ -82,11 +105,15 @@ export class StoriesStore {
 
   /** Stories waiting on a person (`awaiting_input`, `awaiting_decision`, `halted`), longest waiting first. */
   readonly needsYou = computed(() =>
-    [...this.byKey().values()].filter((s) => NEEDS_YOU.includes(s.status)).sort(byUpdatedAsc),
+    [...this.byKey().values()]
+      .filter((s) => NEEDS_YOU.includes(s.status))
+      .sort(byUpdatedAsc)
   );
 
   /** Stories at sea (`running`, `ready`), most recently updated first. */
-  readonly atSea = computed(() => this.stories().filter((s) => AT_SEA.includes(s.status)));
+  readonly atSea = computed(() =>
+    this.stories().filter((s) => AT_SEA.includes(s.status))
+  );
 
   private loading: Promise<ApiResult<readonly Story[]>> | null = null;
   /** Stories set by `upsert` while a load is in flight: the load must not undo them. */
@@ -118,7 +145,10 @@ export class StoriesStore {
 
   /** Puts a story in the list, or updates it, unless the list has a newer version: e.g. the `202` of a command. */
   upsert(story: Story): void {
-    this.touched?.set(story.key, newestVersion(this.touched.get(story.key), story));
+    this.touched?.set(
+      story.key,
+      newestVersion(this.touched.get(story.key), story)
+    );
     this.byKey.update((map) => {
       const current = map.get(story.key);
       const next = newestVersion(current, story);
@@ -148,7 +178,7 @@ export class StoriesStore {
       this.bus.events().subscribe((event) => this.onEvent(event)),
       this.bus.resync.subscribe(() => void this.loadAll()),
     ];
-    if (this.statusSignal() === "idle" || this.stale) void this.loadAll();
+    if (this.statusSignal() === 'idle' || this.stale) void this.loadAll();
   }
 
   private disconnect(): void {
@@ -169,7 +199,7 @@ export class StoriesStore {
       this.clock.schedule(STORY_REFRESH_DEBOUNCE_MS, () => {
         this.timers.delete(key);
         void this.refreshStory(key);
-      }),
+      })
     );
   }
 
@@ -189,7 +219,7 @@ export class StoriesStore {
   }
 
   private async load(): Promise<ApiResult<readonly Story[]>> {
-    if (this.statusSignal() !== "ready") this.statusSignal.set("loading");
+    if (this.statusSignal() !== 'ready') this.statusSignal.set('loading');
     this.touched = new Map();
     const fetched = new Map<string, Story>();
     let cursor: string | null = null;
@@ -201,18 +231,19 @@ export class StoriesStore {
         });
         if (!result.ok) {
           this.errorSignal.set(result.error);
-          this.statusSignal.set("error");
+          this.statusSignal.set('error');
           return result;
         }
         for (const story of result.value.items) fetched.set(story.key, story);
         cursor = result.value.nextCursor;
         if (cursor === null) break;
       }
-      for (const [key, story] of this.touched) fetched.set(key, newestVersion(fetched.get(key), story));
+      for (const [key, story] of this.touched)
+        fetched.set(key, newestVersion(fetched.get(key), story));
       this.byKey.set(fetched);
       this.stale = false;
       this.errorSignal.set(null);
-      this.statusSignal.set("ready");
+      this.statusSignal.set('ready');
       return ok(this.stories());
     } finally {
       this.touched = null;

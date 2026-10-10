@@ -130,7 +130,7 @@ commit nem push. Relatório em `docs/progress.md`."
 **Depende de:** P0 (pode começar na Onda 2). **Possui:** `Dockerfile`, `nginx.conf`, `.dockerignore`,
 `docs/deploy.md`, `.github/workflows/ci.yml` (só acrescentar o job de imagem), `src/environments/environment.ts` de produção.
 
-O TEST já tem o chart `fio-ahoy-frontend` e o Ingress que encaminha `/api/v1` para a API e `/` para o front-end (docs do
+O TEST já tem o chart `neo-ahoy-frontend` e o Ingress que encaminha `/api/v1` para a API e `/` para o front-end (docs do
 hosted, `deploy-plan.md`). **Esta lane entrega a imagem e a documentação; o chart e o deploy são do utilizador.**
 
 **Entregáveis**

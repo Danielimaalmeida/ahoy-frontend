@@ -1,23 +1,27 @@
-import { Component, computed, input } from "@angular/core";
+import { Component, computed, input } from '@angular/core';
 
 /** The height of a text-like bar in pixels, as in the Skeleton preview; a badge placeholder is 20. */
 export const BAR_HEIGHT = 10;
 
 /** The widths text-like bars cycle through from one row to the next, so the rows do not look stamped. */
-const TEXT_WIDTHS = ["85%", "65%", "75%"] as const;
+const TEXT_WIDTHS = ['85%', '65%', '75%'] as const;
 
 /**
  * One grey placeholder bar. Size it like the content it stands for, so nothing jumps when the data arrives.
  * `<ah-skeleton width="85%" />`; `[height]="20"` is the height of a badge.
  */
 @Component({
-  selector: "ah-skeleton",
-  host: { class: "ah-skeleton", "[style.width]": "width()", "[style.height.px]": "height()" },
+  selector: 'ah-skeleton',
+  host: {
+    class: 'ah-skeleton',
+    '[style.width]': 'width()',
+    '[style.height.px]': 'height()',
+  },
   template: ``,
 })
 export class Skeleton {
   /** Any CSS length: "85%", "80px". */
-  readonly width = input("100%");
+  readonly width = input('100%');
   /** Height in pixels. */
   readonly height = input(BAR_HEIGHT);
 }
@@ -39,14 +43,17 @@ export interface SkeletonColumn {
  * ```
  */
 @Component({
-  selector: "ah-skeleton-rows",
+  selector: 'ah-skeleton-rows',
   imports: [Skeleton],
   template: `
     <div class="ah-skeleton-rows" aria-busy="true">
       @for (row of rowIndexes(); track row) {
         <div class="ah-skeleton-row" [style.grid-template-columns]="tracks()">
           @for (column of columns(); track $index) {
-            <ah-skeleton [width]="widthOf(column, row)" [height]="column.height ?? barHeight" />
+            <ah-skeleton
+              [width]="widthOf(column, row)"
+              [height]="column.height ?? barHeight"
+            />
           }
         </div>
       }
@@ -60,15 +67,19 @@ export class SkeletonRows {
   readonly columns = input.required<readonly SkeletonColumn[]>();
 
   protected readonly barHeight = BAR_HEIGHT;
-  protected readonly rowIndexes = computed(() => Array.from({ length: Math.max(0, this.rows()) }, (_, i) => i));
+  protected readonly rowIndexes = computed(() =>
+    Array.from({ length: Math.max(0, this.rows()) }, (_, i) => i)
+  );
   protected readonly tracks = computed(() =>
     this.columns()
       .map((c) => c.track)
-      .join(" "),
+      .join(' ')
   );
 
   /** Fixed-width columns fill their track; flexible ones vary a little from row to row. */
   protected widthOf(column: SkeletonColumn, row: number): string {
-    return /^\d+(\.\d+)?px$/.test(column.track) ? "100%" : (TEXT_WIDTHS[row % TEXT_WIDTHS.length] ?? "100%");
+    return /^\d+(\.\d+)?px$/.test(column.track)
+      ? '100%'
+      : (TEXT_WIDTHS[row % TEXT_WIDTHS.length] ?? '100%');
   }
 }

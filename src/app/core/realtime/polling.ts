@@ -1,6 +1,6 @@
-import type { ApiClient } from "@core/api/api-client";
-import type { AhoyEvent } from "@core/api/types";
-import type { Clock, Timer } from "./clock";
+import type { ApiClient } from '@core/api/api-client';
+import type { AhoyEvent } from '@core/api/types';
+import type { Clock, Timer } from './clock';
 
 /** The cadence of the polling fallback (plan, lane 2B). */
 export const POLLING = {
@@ -16,7 +16,7 @@ export const POLLING = {
 
 /** What the fallback needs. */
 export interface PollingDeps {
-  readonly api: Pick<ApiClient, "listStoryEvents">;
+  readonly api: Pick<ApiClient, 'listStoryEvents'>;
   readonly clock: Clock;
   /** Hands an event over as if the stream had sent it. */
   readonly deliver: (event: AhoyEvent) => void;
@@ -84,7 +84,10 @@ export class PollingFallback {
   }
 
   private scheduleEvents(generation: number): void {
-    this.eventsTimer = this.deps.clock.schedule(POLLING.eventsMs, () => void this.pollEvents(generation));
+    this.eventsTimer = this.deps.clock.schedule(
+      POLLING.eventsMs,
+      () => void this.pollEvents(generation)
+    );
   }
 
   private scheduleStories(generation: number): void {

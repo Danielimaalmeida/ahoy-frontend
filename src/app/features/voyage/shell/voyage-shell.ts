@@ -1,25 +1,29 @@
-import { Component, computed, effect, inject, input } from "@angular/core";
-import { RouterLink, RouterOutlet } from "@angular/router";
-import { apiErrorView } from "@core/commands/command-error";
-import { Banner } from "@ui/banner/banner";
-import { Button } from "@ui/button/button";
-import { EmptyState } from "@ui/empty-state/empty-state";
-import { Panel } from "@ui/panel/panel";
-import { SectionTabs, type SectionTab } from "@ui/section-tabs/section-tabs";
-import { Skeleton } from "@ui/skeleton/skeleton";
-import { VOYAGE_TABS, VOYAGE_TAB_LABELS, type VoyageTab } from "../context/default-tab";
-import { VoyageContext } from "../context/voyage-context";
-import { AnchoredBanner } from "../header/anchored-banner";
-import { VoyageHeader } from "../header/voyage-header";
+import { Component, computed, effect, inject, input } from '@angular/core';
+import { RouterLink, RouterOutlet } from '@angular/router';
+import { apiErrorView } from '@core/commands/command-error';
+import { Banner } from '@ui/banner/banner';
+import { Button } from '@ui/button/button';
+import { EmptyState } from '@ui/empty-state/empty-state';
+import { Panel } from '@ui/panel/panel';
+import { SectionTabs, type SectionTab } from '@ui/section-tabs/section-tabs';
+import { Skeleton } from '@ui/skeleton/skeleton';
+import {
+  VOYAGE_TABS,
+  VOYAGE_TAB_LABELS,
+  type VoyageTab,
+} from '../context/default-tab';
+import { VoyageContext } from '../context/voyage-context';
+import { AnchoredBanner } from '../header/anchored-banner';
+import { VoyageHeader } from '../header/voyage-header';
 
 /**
  * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the Anchored banner when halted, the section
  * tabs (one URL each, with the counts) and the outlet the tabs render in. It provides the page's {@link VoyageContext},
  * which every tab injects. Until the story is read it shows the header's skeleton; a 404 shows "This voyage doesn't
- * exist" and any other failure "Lost contact with the harbour" with Try again.
+ * exist" and any other failure "Can't reach Ahoy" with Try again.
  */
 @Component({
-  selector: "ah-voyage-shell",
+  selector: 'ah-voyage-shell',
   imports: [
     AnchoredBanner,
     Banner,
@@ -33,20 +37,21 @@ import { VoyageHeader } from "../header/voyage-header";
     VoyageHeader,
   ],
   providers: [VoyageContext],
-  styleUrl: "./voyage-shell.scss",
+  styleUrl: './voyage-shell.scss',
   template: `
     <div class="voyage">
       <nav class="voyage__crumbs" aria-label="Breadcrumb">
-        <a routerLink="/voyages">Voyages</a> / <span aria-current="page">{{ key() }}</span>
+        <a routerLink="/voyages">Voyages</a> /
+        <span aria-current="page">{{ key() }}</span>
       </nav>
       @switch (context.status()) {
-        @case ("ready") {
+        @case ('ready') {
           <ah-voyage-header />
           <ah-anchored-banner />
           <ah-section-tabs label="Voyage sections" [items]="tabs()" />
           <router-outlet />
         }
-        @case ("notFound") {
+        @case ('notFound') {
           <ah-panel>
             <ah-empty-state heading="This voyage doesn't exist"
               >There is no voyage {{ key() }}. It may have been mistyped.
@@ -54,12 +59,19 @@ import { VoyageHeader } from "../header/voyage-header";
             </ah-empty-state>
           </ah-panel>
         }
-        @case ("error") {
+        @case ('error') {
           @if (errorView(); as e) {
-            <ah-banner [variant]="e.variant" [heading]="e.heading" [tech]="e.tech ?? ''" icon="offline" announce="alert"
+            <ah-banner
+              [variant]="e.variant"
+              [heading]="e.heading"
+              [tech]="e.tech ?? ''"
+              icon="offline"
+              announce="alert"
               >{{ e.text }}
               <span class="voyage__retry"
-                ><button type="button" ahButton size="sm" (click)="retry()">Try again</button></span
+                ><button type="button" ahButton size="sm" (click)="retry()">
+                  Try again
+                </button></span
               ></ah-banner
             >
           }
@@ -87,11 +99,12 @@ export class VoyageShell {
 
   protected readonly tabs = computed((): readonly SectionTab[] => {
     const key = this.key();
-    const counts: Partial<Record<VoyageTab, number | null>> = this.context.counts();
+    const counts: Partial<Record<VoyageTab, number | null>> =
+      this.context.counts();
     return VOYAGE_TABS.map((tab) => ({
       id: tab,
       label: VOYAGE_TAB_LABELS[tab],
-      link: ["/voyages", key, tab],
+      link: ['/voyages', key, tab],
       ...(tab in counts ? { count: counts[tab] ?? null } : {}),
     }));
   });

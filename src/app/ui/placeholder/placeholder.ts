@@ -1,8 +1,8 @@
-import { Component, input } from "@angular/core";
+import { Component, input } from '@angular/core';
 
 /** Stand-in for a screen a later lane builds; shows its name and owner. Bound from route `data`. */
 @Component({
-  selector: "ah-placeholder",
+  selector: 'ah-placeholder',
   template: `
     <section class="ah-placeholder">
       <h1>{{ heading() }}</h1>

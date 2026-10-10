@@ -1,4 +1,4 @@
-import type { AhoyEvent } from "@core/api/types";
+import type { AhoyEvent } from '@core/api/types';
 
 /** One revision of the artifact set, as the two selectors list it. */
 export interface RevisionOption {
@@ -13,13 +13,15 @@ export interface RevisionOption {
 /** A payload field that is a non-blank string. */
 function field(event: AhoyEvent, name: string): string | null {
   const value: unknown = event.payload[name];
-  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
 /** The revision number an `artifacts.updated` announces, when its payload says one. */
 function revisionOf(event: AhoyEvent): number | null {
-  const value: unknown = event.payload["revision"];
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 1 ? value : null;
+  const value: unknown = event.payload['revision'];
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1
+    ? value
+    : null;
 }
 
 /**
@@ -33,9 +35,11 @@ function revisionOf(event: AhoyEvent): number | null {
 function noteFor(events: readonly AhoyEvent[], index: number): string | null {
   for (let at = index - 1; at >= 0; at--) {
     const previous = events[at];
-    if (previous === undefined || previous.type === "artifacts.updated") return null;
-    if (previous.type === "run.finished") return field(previous, "runId");
-    if (previous.type === "decision.recorded") return field(previous, "decision") === "send_back" ? "send-back" : null;
+    if (previous === undefined || previous.type === 'artifacts.updated')
+      return null;
+    if (previous.type === 'run.finished') return field(previous, 'runId');
+    if (previous.type === 'decision.recorded')
+      return field(previous, 'decision') === 'send_back' ? 'send-back' : null;
   }
   return null;
 }
@@ -45,12 +49,16 @@ function noteFor(events: readonly AhoyEvent[], index: number): string | null {
  * an older revision comes from the story's events: every `artifacts.updated {revision}` with the event just before it. A
  * revision with no match is plain "Revision N". `events` are oldest first, without `run.progress`.
  */
-export function revisionOptions(events: readonly AhoyEvent[], current: number): RevisionOption[] {
+export function revisionOptions(
+  events: readonly AhoyEvent[],
+  current: number
+): RevisionOption[] {
   const notes = new Map<number, string | null>();
   events.forEach((event, index) => {
-    if (event.type !== "artifacts.updated") return;
+    if (event.type !== 'artifacts.updated') return;
     const revision = revisionOf(event);
-    if (revision !== null && !notes.has(revision)) notes.set(revision, noteFor(events, index));
+    if (revision !== null && !notes.has(revision))
+      notes.set(revision, noteFor(events, index));
   });
   const options: RevisionOption[] = [];
   for (let revision = Math.max(0, current); revision >= 1; revision--) {
@@ -60,7 +68,7 @@ export function revisionOptions(events: readonly AhoyEvent[], current: number): 
       revision,
       current: isCurrent,
       note,
-      label: `Revision ${revision}${isCurrent ? " · current" : ""}${note !== null ? ` (${note})` : ""}`,
+      label: `Revision ${revision}${isCurrent ? ' · current' : ''}${note !== null ? ` (${note})` : ''}`,
     });
   }
   return options;

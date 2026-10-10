@@ -5,13 +5,13 @@
  * the title comes from the table and the detail is {@link genericDetails}: short scalar fields only, never a dump. A
  * payload is untrusted and a field of the wrong type reads as absent, so no event can break the log.
  */
-import type { AhoyEvent } from "@core/api/types";
-import { formatAiu } from "@domain/aiu";
-import { crewLabel } from "@domain/models";
-import type { LogEntryKind } from "@ui/ships-log/ships-log";
+import type { AhoyEvent } from '@core/api/types';
+import { formatAiu } from '@domain/aiu';
+import { crewLabel } from '@domain/models';
+import type { LogEntryKind } from '@ui/ships-log/ships-log';
 
 /** The actor the reconciler writes events as; anyone else is a person. */
-export const SYSTEM_ACTOR = "ahoy-reconciler";
+export const SYSTEM_ACTOR = 'ahoy-reconciler';
 
 /** The most characters of a detail or of one generic field. */
 export const MAX_DETAIL_LENGTH = 120;
@@ -40,29 +40,30 @@ export interface EventContext {
 
 /** Titles of the types whose payload has not been confirmed, and of the confirmed ones that need no special detail. */
 const TITLES: Readonly<Record<string, string>> = {
-  "story.started": "Voyage started",
-  "story.halted": "Anchored",
-  "story.resumed": "Resumed",
-  "story.budget_changed": "Budget changed",
-  "story.models_changed": "Models changed",
-  "story.phase_changed": "Phase changed",
-  "story.awaiting_input": "Waiting for answers",
-  "story.awaiting_decision": "Waiting at the human gate",
-  "run.queued": "Run queued",
-  "run.dispatched": "Run dispatched",
-  "run.finished": "Run finished",
-  "gate.evaluated": "Gate evaluated",
-  "question.asked": "Questions asked",
-  "question.answered": "Question answered",
-  "decision.recorded": "Decision recorded",
-  "artifacts.updated": "Artifacts updated",
-  "consensus.resolved": "Consensus resolved",
-  "work_package.decided": "Work package decided",
-  "work.reopened": "Work reopened",
-  "story.unblocked": "Voyage unblocked",
-  "implementation.reported": "Implementation reported",
-  "review.reported": "Review reported",
-  "story.routed": "Voyage routed",
+  'story.started': 'Voyage started',
+  'story.halted': 'Halted',
+  'story.resumed': 'Resumed',
+  'story.budget_changed': 'Budget changed',
+  'story.models_changed': 'Models changed',
+  'story.phase_changed': 'Phase changed',
+  'story.awaiting_input': 'Waiting for answers',
+  'story.awaiting_decision': 'Waiting at the human gate',
+  'run.queued': 'Run queued',
+  'run.dispatched': 'Run dispatched',
+  'run.finished': 'Run finished',
+  'gate.evaluated': 'Gate evaluated',
+  'question.asked': 'Questions asked',
+  'question.answered': 'Question answered',
+  'decision.recorded': 'Decision recorded',
+  'artifacts.updated': 'Artifacts updated',
+  'review.resolved': 'Review resolved',
+  'run.waiting': 'Run waiting for a slot',
+  'work_package.decided': 'Work package decided',
+  'work.reopened': 'Work reopened',
+  'story.unblocked': 'Voyage unblocked',
+  'implementation.reported': 'Implementation reported',
+  'review.reported': 'Review reported',
+  'story.routed': 'Voyage routed',
 };
 
 /** Cuts a text to `max` characters, ending in an ellipsis when it was longer. */
@@ -72,7 +73,7 @@ export function clip(text: string, max = MAX_DETAIL_LENGTH): string {
 
 /** One line: runs of whitespace (newlines among them) become one space. */
 function oneLine(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 type Payload = Readonly<Record<string, unknown>>;
@@ -80,32 +81,36 @@ type Payload = Readonly<Record<string, unknown>>;
 /** A non-blank string field, on one line; null when absent or not a string. */
 function str(payload: Payload, key: string): string | null {
   const value = payload[key];
-  if (typeof value !== "string") return null;
+  if (typeof value !== 'string') return null;
   const line = oneLine(value);
-  return line === "" ? null : line;
+  return line === '' ? null : line;
 }
 
 /** A safe-integer field; null otherwise. */
 function int(payload: Payload, key: string): number | null {
   const value = payload[key];
-  return typeof value === "number" && Number.isSafeInteger(value) ? value : null;
+  return typeof value === 'number' && Number.isSafeInteger(value)
+    ? value
+    : null;
 }
 
 /** A plain object field; null otherwise. */
 function record(payload: Payload, key: string): Payload | null {
   const value = payload[key];
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Payload) : null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Payload)
+    : null;
 }
 
 /** AIU for a sentence: "20", "12.4", "3.84" (at most two decimals, no trailing zeros). */
 function aiu(nanoAiu: number): string {
   const text = formatAiu(nanoAiu, 2);
-  return text.includes(".") ? text.replace(/\.?0+$/, "") : text;
+  return text.includes('.') ? text.replace(/\.?0+$/, '') : text;
 }
 
 /** "claude-sonnet-5 · high"; a missing model or effort reads as the agent's own. */
 function modelEffort(model: string | null, effort: string | null): string {
-  return `${model ?? "the agent's own model"} · ${effort ?? "default"}`;
+  return `${model ?? "the agent's own model"} · ${effort ?? 'default'}`;
 }
 
 /**
@@ -117,77 +122,88 @@ export function genericDetails(payload: Payload): string {
   const parts: string[] = [];
   for (const [key, value] of Object.entries(payload)) {
     let shown: string | null = null;
-    if (typeof value === "string") shown = oneLine(value);
-    else if (typeof value === "number" && Number.isFinite(value)) shown = String(value);
-    else if (typeof value === "boolean") shown = String(value);
-    if (shown === null || shown === "" || shown.length > MAX_DETAIL_LENGTH) continue;
+    if (typeof value === 'string') shown = oneLine(value);
+    else if (typeof value === 'number' && Number.isFinite(value))
+      shown = String(value);
+    else if (typeof value === 'boolean') shown = String(value);
+    if (shown === null || shown === '' || shown.length > MAX_DETAIL_LENGTH)
+      continue;
     parts.push(`${clip(oneLine(key), 40)}: ${shown}`);
   }
-  return clip(parts.join(" · "));
+  return clip(parts.join(' · '));
 }
 
 /** The details of the types whose payload is confirmed; null for any other (they take the generic detail). */
-function confirmedDetails(event: AhoyEvent, context: EventContext): string | null {
+function confirmedDetails(
+  event: AhoyEvent,
+  context: EventContext
+): string | null {
   const payload: Payload = event.payload;
   switch (event.type) {
-    case "story.started": {
-      const budget = int(payload, "budgetNanoAiu");
-      const planning = record(record(payload, "models") ?? {}, "planning");
-      const model = planning === null ? null : str(planning, "model");
-      const effort = planning === null ? null : str(planning, "reasoningEffort");
+    case 'story.started': {
+      const budget = int(payload, 'budgetNanoAiu');
+      const planning = record(record(payload, 'models') ?? {}, 'planning');
+      const model = planning === null ? null : str(planning, 'model');
+      const effort =
+        planning === null ? null : str(planning, 'reasoningEffort');
       const parts: string[] = [];
       if (budget !== null) parts.push(`budget ${aiu(budget)} AIU`);
-      if (model !== null) parts.push(`planning on ${modelEffort(model, effort)}`);
-      return parts.join(" · ");
+      if (model !== null)
+        parts.push(`planning on ${modelEffort(model, effort)}`);
+      return parts.join(' · ');
     }
-    case "story.halted": {
-      const reason = str(payload, "reason");
-      const detail = str(payload, "detail");
-      return clip([reason, detail].filter((part) => part !== null).join(" · "));
+    case 'story.halted': {
+      const reason = str(payload, 'reason');
+      const detail = str(payload, 'detail');
+      return clip([reason, detail].filter((part) => part !== null).join(' · '));
     }
-    case "story.awaiting_decision": {
-      const gate = str(payload, "gate");
-      if (gate === null) return "";
+    case 'story.awaiting_decision': {
+      const gate = str(payload, 'gate');
+      if (gate === null) return '';
       return context.round === null ? gate : `${gate}, round ${context.round}`;
     }
-    case "story.phase_changed": {
-      const from = str(payload, "from");
-      const to = str(payload, "to");
-      return from !== null && to !== null ? `${from} → ${to}` : "";
+    case 'story.phase_changed': {
+      const from = str(payload, 'from');
+      const to = str(payload, 'to');
+      return from !== null && to !== null ? `${from} → ${to}` : '';
     }
-    case "run.queued": {
-      const phase = str(payload, "phase") ?? "";
-      const agent = str(payload, "agent");
+    case 'run.queued': {
+      const phase = str(payload, 'phase') ?? '';
+      const agent = str(payload, 'agent');
       const parts: string[] = [];
       if (agent !== null) parts.push(crewLabel(phase, agent));
-      parts.push(modelEffort(str(payload, "model"), str(payload, "reasoningEffort")));
-      return parts.join(" · ");
+      parts.push(
+        modelEffort(str(payload, 'model'), str(payload, 'reasoningEffort'))
+      );
+      return parts.join(' · ');
     }
-    case "run.dispatched": {
-      const runtime = str(payload, "runtime");
-      return runtime === null ? "" : `on ${runtime}`;
+    case 'run.dispatched': {
+      const runtime = str(payload, 'runtime');
+      return runtime === null ? '' : `on ${runtime}`;
     }
-    case "run.finished": {
-      const status = str(payload, "status");
-      const nano = int(payload, "nanoAiu");
+    case 'run.finished': {
+      const status = str(payload, 'status');
+      const nano = int(payload, 'nanoAiu');
       return [context.crew, status, nano === null ? null : `${aiu(nano)} AIU`]
         .filter((part) => part !== null)
-        .join(" · ");
+        .join(' · ');
     }
-    case "gate.evaluated": {
-      const gate = str(payload, "gate");
-      const result = str(payload, "result");
-      return [gate, result].filter((part) => part !== null).join(" · ");
+    case 'gate.evaluated': {
+      const gate = str(payload, 'gate');
+      const result = str(payload, 'result');
+      return [gate, result].filter((part) => part !== null).join(' · ');
     }
-    case "decision.recorded": {
-      const gate = str(payload, "gate");
-      const decision = str(payload, "decision");
-      const round = int(payload, "round");
-      return [gate, decision, round === null ? null : `round ${round}`].filter((part) => part !== null).join(" · ");
+    case 'decision.recorded': {
+      const gate = str(payload, 'gate');
+      const decision = str(payload, 'decision');
+      const round = int(payload, 'round');
+      return [gate, decision, round === null ? null : `round ${round}`]
+        .filter((part) => part !== null)
+        .join(' · ');
     }
-    case "artifacts.updated": {
-      const revision = int(payload, "revision");
-      return revision === null ? "" : `revision ${revision}`;
+    case 'artifacts.updated': {
+      const revision = int(payload, 'revision');
+      return revision === null ? '' : `revision ${revision}`;
     }
     default:
       return null;
@@ -196,16 +212,35 @@ function confirmedDetails(event: AhoyEvent, context: EventContext): string | nul
 
 /** The dot of an event: waiting, a gate that passed, a person's act, or the system's. */
 function kindOf(event: AhoyEvent): LogEntryKind {
-  if (event.type === "story.awaiting_input" || event.type === "story.awaiting_decision") return "wait";
-  if (event.type === "gate.evaluated" && str(event.payload, "result") === "pass") return "pass";
-  return event.actor === SYSTEM_ACTOR ? "system" : "human";
+  if (
+    event.type === 'story.awaiting_input' ||
+    event.type === 'story.awaiting_decision'
+  )
+    return 'wait';
+  if (
+    event.type === 'gate.evaluated' &&
+    str(event.payload, 'result') === 'pass'
+  )
+    return 'pass';
+  return event.actor === SYSTEM_ACTOR ? 'system' : 'human';
 }
 
 /** The title and detail of one event, with the round and the crew the surrounding events give it. */
-export function eventText(event: AhoyEvent, context: EventContext = { round: null, crew: null }): EventText {
+export function eventText(
+  event: AhoyEvent,
+  context: EventContext = { round: null, crew: null }
+): EventText {
   const known = Object.hasOwn(TITLES, event.type);
-  const title = known ? (TITLES[event.type] ?? event.type) : clip(oneLine(event.type), MAX_TITLE_LENGTH);
-  const details = confirmedDetails(event, context) ?? genericDetails(event.payload);
-  const runId = str(event.payload, "runId");
-  return { title: title === "" ? "Unknown event" : title, details, kind: kindOf(event), runId };
+  const title = known
+    ? (TITLES[event.type] ?? event.type)
+    : clip(oneLine(event.type), MAX_TITLE_LENGTH);
+  const details =
+    confirmedDetails(event, context) ?? genericDetails(event.payload);
+  const runId = str(event.payload, 'runId');
+  return {
+    title: title === '' ? 'Unknown event' : title,
+    details,
+    kind: kindOf(event),
+    runId,
+  };
 }

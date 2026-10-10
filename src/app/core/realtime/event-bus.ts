@@ -1,14 +1,20 @@
-import { DestroyRef, Injectable, computed, inject, signal } from "@angular/core";
-import { Observable, Subject, filter } from "rxjs";
-import { API_BASE, trimBase } from "@core/api/api-base";
-import { ApiClient } from "@core/api/api-client";
-import type { AhoyEvent } from "@core/api/types";
-import { AUTH_STRATEGY } from "@core/auth/auth-strategy";
-import { CLOCK, RANDOM } from "./clock";
-import { compareEventIds } from "./event-id";
-import { EventStreamClient, type StreamStatus } from "./event-stream-client";
-import { FETCH } from "./fetch";
-import { PollingFallback } from "./polling";
+import {
+  DestroyRef,
+  Injectable,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { Observable, Subject, filter } from 'rxjs';
+import { API_BASE, trimBase } from '@core/api/api-base';
+import { ApiClient } from '@core/api/api-client';
+import type { AhoyEvent } from '@core/api/types';
+import { AUTH_STRATEGY } from '@core/auth/auth-strategy';
+import { CLOCK, RANDOM } from './clock';
+import { compareEventIds } from './event-id';
+import { EventStreamClient, type StreamStatus } from './event-stream-client';
+import { FETCH } from './fetch';
+import { PollingFallback } from './polling';
 
 /** How many stories the bus remembers the last delivered event of (for de-duplication); the oldest go first. */
 export const MAX_TRACKED_STORIES = 1_000;
@@ -20,7 +26,7 @@ export const MAX_TRACKED_STORIES = 1_000;
  * Events reach subscribers once each and in order per story, whether they came from the stream or from the polling
  * fallback that runs while the stream is `degraded`. The top bar reads {@link status} for its Live indicator.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class EventBus {
   private readonly api = inject(ApiClient);
   private readonly clock = inject(CLOCK);
@@ -119,7 +125,8 @@ export class EventBus {
   }
 
   private syncPolling(): void {
-    if (this.subscribersSignal() > 0 && this.client.degraded()) this.polling.start();
+    if (this.subscribersSignal() > 0 && this.client.degraded())
+      this.polling.start();
     else this.polling.stop();
   }
 

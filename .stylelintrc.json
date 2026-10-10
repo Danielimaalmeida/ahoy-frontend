@@ -1,0 +1,22 @@
+{
+  "extends": "stylelint-config-sass-guidelines",
+  "ignoreFiles": ["src/styles/tokens.css"],
+  "rules": {
+    "max-nesting-depth": 6,
+    "selector-class-pattern": null,
+    "selector-no-qualifying-type": null,
+    "selector-max-compound-selectors": null
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/styles/ahoy-bundle.css",
+        "src/styles/_ahoy-1b.scss",
+        "src/app/**/*.scss"
+      ],
+      "rules": {
+        "@stylistic/number-leading-zero": null
+      }
+    }
+  ]
+}

@@ -9,25 +9,37 @@
  * | `conflictNext` | a 409 code, or `1` for `stale_version`  | the next command (POST) answers `409` with that code           |
  * | `dropStream`   | anything                                | open event streams break now; clients resume with Last-Event-ID |
  */
-import type { ProblemCode } from "@core/api/types";
-import { CONFLICT_CODES, type MockAhoyServer } from "./server";
+import type { ProblemCode } from '@core/api/types';
+import { CONFLICT_CODES, type MockAhoyServer } from './server';
 
 /** The prefix of the switches in `localStorage` and in the browser's query string. */
-export const SWITCH_PREFIX = "ahoy.mock.";
+export const SWITCH_PREFIX = 'ahoy.mock.';
 
 /** The names of the switches. */
-export const SWITCH_NAMES = ["latencyMs", "failNext", "conflictNext", "dropStream"] as const;
+export const SWITCH_NAMES = [
+  'latencyMs',
+  'failNext',
+  'conflictNext',
+  'dropStream',
+] as const;
 /** The name of one switch. */
 export type SwitchName = (typeof SWITCH_NAMES)[number];
 
 /** The switches that act once and are then forgotten. */
-export const ONE_SHOT_SWITCHES: readonly SwitchName[] = ["failNext", "conflictNext", "dropStream"];
+export const ONE_SHOT_SWITCHES: readonly SwitchName[] = [
+  'failNext',
+  'conflictNext',
+  'dropStream',
+];
 
 /** Applies the switches `read` gives a value for; returns what it applied, as `name=value`, and what it refused. */
 export function applySwitches(
   server: MockAhoyServer,
-  read: (name: SwitchName) => string | null,
-): { readonly applied: readonly string[]; readonly refused: readonly string[] } {
+  read: (name: SwitchName) => string | null
+): {
+  readonly applied: readonly string[];
+  readonly refused: readonly string[];
+} {
   const applied: string[] = [];
   const refused: string[] = [];
   for (const name of SWITCH_NAMES) {
@@ -40,27 +52,31 @@ export function applySwitches(
   return { applied, refused };
 }
 
-function apply(server: MockAhoyServer, name: SwitchName, value: string): boolean {
+function apply(
+  server: MockAhoyServer,
+  name: SwitchName,
+  value: string
+): boolean {
   switch (name) {
-    case "latencyMs": {
+    case 'latencyMs': {
       const ms = /^\d{1,5}$/.test(value) ? Number(value) : NaN;
       if (!(ms >= 0 && ms <= 60_000)) return false;
       server.switches.latencyMs = ms;
       return true;
     }
-    case "failNext": {
+    case 'failNext': {
       const status = /^\d{3}$/.test(value) ? Number(value) : NaN;
       if (!(status >= 400 && status <= 599)) return false;
       server.switches.failNext = status;
       return true;
     }
-    case "conflictNext": {
+    case 'conflictNext': {
       const code = conflictCode(value);
       if (code === null) return false;
       server.switches.conflictNext = code;
       return true;
     }
-    case "dropStream":
+    case 'dropStream':
       server.dropStreams();
       return true;
   }
@@ -68,7 +84,7 @@ function apply(server: MockAhoyServer, name: SwitchName, value: string): boolean
 
 /** The 409 code a `conflictNext` value names, or null. */
 function conflictCode(value: string): ProblemCode | null {
-  if (value === "" || value === "1" || value === "true") return "stale_version";
+  if (value === '' || value === '1' || value === 'true') return 'stale_version';
   return CONFLICT_CODES.find((code) => code === value) ?? null;
 }
 
@@ -82,12 +98,16 @@ export interface SwitchStorage {
  * Reads the switches from `localStorage` (`ahoy.mock.latencyMs` and so on) and removes the one-shots it applied, so a
  * developer can type `localStorage.setItem("ahoy.mock.failNext", "503")` and see the next request fail.
  */
-export function applyStorageSwitches(server: MockAhoyServer, storage: SwitchStorage | null): readonly string[] {
+export function applyStorageSwitches(
+  server: MockAhoyServer,
+  storage: SwitchStorage | null
+): readonly string[] {
   if (storage === null) return [];
   const read = (name: SwitchName): string | null => {
     try {
       const value = storage.getItem(SWITCH_PREFIX + name);
-      if (value !== null && ONE_SHOT_SWITCHES.includes(name)) storage.removeItem(SWITCH_PREFIX + name);
+      if (value !== null && ONE_SHOT_SWITCHES.includes(name))
+        storage.removeItem(SWITCH_PREFIX + name);
       return value;
     } catch {
       return null; // storage blocked (private window, sandbox)
@@ -97,7 +117,11 @@ export function applyStorageSwitches(server: MockAhoyServer, storage: SwitchStor
 }
 
 /** Reads the switches from a query string with the same `ahoy.mock.` names (`?ahoy.mock.latencyMs=300`). */
-export function applyQuerySwitches(server: MockAhoyServer, search: string): readonly string[] {
+export function applyQuerySwitches(
+  server: MockAhoyServer,
+  search: string
+): readonly string[] {
   const params = new URLSearchParams(search);
-  return applySwitches(server, (name) => params.get(SWITCH_PREFIX + name)).applied;
+  return applySwitches(server, (name) => params.get(SWITCH_PREFIX + name))
+    .applied;
 }

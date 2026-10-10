@@ -3,10 +3,10 @@
 Snapshot copied on **2026-10-06** by lane P0, so agents don't depend on access to the Claude Design artifacts. These files
 are references, not code: they are excluded from lint, format, `tsc` and the build. **Don't edit them; re-sync them.**
 
-| Folder            | Artifact                                                                                       | Version            | Type          |
-| ----------------- | ---------------------------------------------------------------------------------------------- | ------------------ | ------------- |
-| `wireframes/`     | "Ahoy UI wireframes", <https://claude.ai/artifact/LTbtxVqPbLAodmy4Vr44dY>                     | `1791303315-8e37`  | Design        |
-| `design-system/`  | "Ahoy" (design system), <https://claude.ai/artifact/LAzfVgbze8zdoaShrSabtf>                   | `1791303933-1d4d`  | Design System |
+| Folder           | Artifact                                                                    | Version           | Type          |
+| ---------------- | --------------------------------------------------------------------------- | ----------------- | ------------- |
+| `wireframes/`    | "Ahoy UI wireframes", <https://claude.ai/artifact/LTbtxVqPbLAodmy4Vr44dY>   | `1791303315-8e37` | Design        |
+| `design-system/` | "Ahoy" (design system), <https://claude.ai/artifact/LAzfVgbze8zdoaShrSabtf> | `1791303933-1d4d` | Design System |
 
 ## What is here
 

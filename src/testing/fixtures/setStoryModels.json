@@ -5,7 +5,6 @@
     {
       "slot": "intake",
       "phase": "intake",
-      "lens": null,
       "chosen": null,
       "model": "claude-haiku-4.5",
       "reasoningEffort": null,
@@ -15,7 +14,6 @@
     {
       "slot": "planning",
       "phase": "planning",
-      "lens": null,
       "chosen": {
         "model": "claude-sonnet-5",
         "reasoningEffort": "high"
@@ -28,7 +26,6 @@
     {
       "slot": "implementation",
       "phase": "implementation",
-      "lens": null,
       "chosen": {
         "model": "claude-sonnet-5"
       },
@@ -38,19 +35,8 @@
       "effortSource": "model_default"
     },
     {
-      "slot": "review-design",
+      "slot": "review",
       "phase": "pr_review",
-      "lens": "design-fit",
-      "chosen": null,
-      "model": "claude-sonnet-5",
-      "reasoningEffort": "high",
-      "modelSource": "configuration",
-      "effortSource": "configuration"
-    },
-    {
-      "slot": "review-defect",
-      "phase": "pr_review",
-      "lens": "defect-failure",
       "chosen": {
         "reasoningEffort": "xhigh"
       },

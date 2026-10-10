@@ -8,7 +8,13 @@
  */
 
 /** Lifecycle status of a voyage (`Story` in the API). */
-export type StoryStatus = "ready" | "running" | "awaiting_input" | "awaiting_decision" | "halted" | "terminal";
+export type StoryStatus =
+  | 'ready'
+  | 'running'
+  | 'awaiting_input'
+  | 'awaiting_decision'
+  | 'halted'
+  | 'terminal';
 
 /**
  * A phase of the pinned `phases.tsv`, or `blocked` (G12). The API sends any string, so this is not a closed union: the
@@ -18,47 +24,57 @@ export type Phase = string;
 
 /** Status of a crew member's run. */
 export type RunStatus =
-  | "queued"
-  | "running"
-  | "succeeded"
-  | "awaiting_input"
-  | "failed"
-  | "budget_exceeded"
-  | "timed_out"
-  | "cancelled"
-  | "output_violation"
-  | "auth_failed"
-  | "lost";
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'awaiting_input'
+  | 'failed'
+  | 'budget_exceeded'
+  | 'timed_out'
+  | 'cancelled'
+  | 'output_violation'
+  | 'auth_failed'
+  | 'lost';
 
 /**
  * What a gate record says: an automated result or a person's decision. `waiting` is not one of them: the API has no
  * record for a human gate nobody has decided yet (see `outcomePresentation`).
  */
-export type GateOutcome = "pass" | "fail" | "error" | "branch" | "halt" | "reject" | "approve" | "send_back";
+export type GateOutcome =
+  | 'pass'
+  | 'fail'
+  | 'error'
+  | 'branch'
+  | 'halt'
+  | 'reject'
+  | 'approve'
+  | 'send_back';
 
-/** Slot that holds the model for a phase; the two review slots are the two Lookouts. */
-export type ModelSlot = "intake" | "planning" | "implementation" | "review-design" | "review-defect";
+/** Slot that holds the model for a phase. */
+export type ModelSlot = 'intake' | 'planning' | 'implementation' | 'review';
 
 /** Reasoning effort a model can be asked for; null means the model's own default. */
-export type ReasoningEffort = "low" | "medium" | "high" | "xhigh" | "max";
+export type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 /** Where the model a phase will use comes from. */
-export type ModelSource = "revision" | "story" | "configuration" | "phase_table" | "agent_profile";
+export type ModelSource =
+  'revision' | 'story' | 'configuration' | 'phase_table' | 'agent_profile';
 
 /** Where the reasoning effort comes from. It has no `agent_profile`: an effort is never left to the agent's profile. */
-export type EffortSource = "revision" | "story" | "configuration" | "phase_table" | "model_default";
+export type EffortSource =
+  'revision' | 'story' | 'configuration' | 'phase_table' | 'model_default';
 
 /** Why a voyage anchored: the nine codes the UI explains. The API's `haltReason` is free text, so it is a `string`. */
 export type HaltReason =
-  | "stopped_by_user"
-  | "gate_rejected"
-  | "budget_exhausted"
-  | "run_failed"
-  | "run_lost"
-  | "run_result_invalid"
-  | "dispatch_failed"
-  | "revision_ceiling_reached"
-  | "reconciler_error";
+  | 'stopped_by_user'
+  | 'gate_rejected'
+  | 'budget_exhausted'
+  | 'run_failed'
+  | 'run_lost'
+  | 'run_result_invalid'
+  | 'dispatch_failed'
+  | 'revision_ceiling_reached'
+  | 'reconciler_error';
 
 /** What a run or a story has used so far. */
 export interface Usage {
@@ -89,7 +105,7 @@ export interface Story {
 export interface GateVerdict {
   readonly gate: string;
   readonly code: number;
-  readonly result: "pass" | "fail" | "error" | "branch" | "halt" | "reject";
+  readonly result: 'pass' | 'fail' | 'error' | 'branch' | 'halt' | 'reject';
   readonly message: string;
 }
 
@@ -131,7 +147,7 @@ export interface Question {
 /** An automated gate verdict or a person's decision. */
 export interface GateRecord {
   readonly id: string;
-  readonly source: "gate" | "human";
+  readonly source: 'gate' | 'human';
   readonly gate: string;
   readonly phase: Phase;
   readonly outcome: GateOutcome;
@@ -172,7 +188,6 @@ export interface ModelChoice {
 export interface SlotModel {
   readonly slot: ModelSlot;
   readonly phase: Phase;
-  readonly lens: "design-fit" | "defect-failure" | null;
   readonly chosen: ModelChoice | null;
   readonly model: string | null;
   readonly reasoningEffort: ReasoningEffort | null;

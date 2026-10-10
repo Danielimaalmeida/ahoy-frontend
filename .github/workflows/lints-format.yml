@@ -1,0 +1,16 @@
+name: Linting & Formatting
+
+on: [pull_request]
+
+jobs:
+  linting:
+    uses: ATC-GitHub/reusable-workflows/.github/workflows/angular-lint-reusable.yml@main
+    with:
+      runner: "['atc-ubuntu-latest']"
+      node-version: '24'
+
+  format:
+    uses: ATC-GitHub/reusable-workflows/.github/workflows/angular-format-reusable.yml@main
+    with:
+      runner: "['atc-ubuntu-latest']"
+      node-version: '24'

@@ -1,4 +1,4 @@
-import type { Question } from "@core/api/types";
+import type { Question } from '@core/api/types';
 
 /** The longest answer the API takes (`AnswerRequest.answer`: `maxLength: 20000`, counted in characters). */
 export const ANSWER_MAX = 20000;
@@ -23,7 +23,9 @@ export function isAnswered(question: Question): boolean {
  * Groups the questions by `round`, the newest round first (the one a person has to deal with), counting how many are
  * answered. Questions keep the order the API gave them inside their round.
  */
-export function groupRounds(questions: readonly Question[]): readonly QuestionRound[] {
+export function groupRounds(
+  questions: readonly Question[]
+): readonly QuestionRound[] {
   const byRound = new Map<number, Question[]>();
   for (const question of questions) {
     const group = byRound.get(question.round);
@@ -44,28 +46,35 @@ export function groupRounds(questions: readonly Question[]): readonly QuestionRo
 }
 
 /** The questions that still need an answer, in every round. */
-export function unanswered(questions: readonly Question[]): readonly Question[] {
+export function unanswered(
+  questions: readonly Question[]
+): readonly Question[] {
   return questions.filter((question) => !isAnswered(question));
 }
 
 /** What is wrong with a typed answer, or `null` when it can be sent. It is judged trimmed, as it is sent. */
-export function answerProblem(text: string): "empty" | "too_long" | null {
+export function answerProblem(text: string): 'empty' | 'too_long' | null {
   const trimmed = text.trim();
-  if (trimmed === "") return "empty";
-  return Array.from(trimmed).length > ANSWER_MAX ? "too_long" : null;
+  if (trimmed === '') return 'empty';
+  return Array.from(trimmed).length > ANSWER_MAX ? 'too_long' : null;
 }
 
 /** The message under a card whose answer is too long. */
 export function tooLongMessage(text: string): string {
   const length = Array.from(text.trim()).length;
-  return `An answer can have at most ${ANSWER_MAX.toLocaleString("en-US")} characters; this one has ${length.toLocaleString("en-US")}.`;
+  return `An answer can have at most ${ANSWER_MAX.toLocaleString('en-US')} characters; this one has ${length.toLocaleString('en-US')}.`;
 }
 
 /**
  * The toast after an answer was recorded: how many questions are left, or that the voyage is queued. `left` counts
  * every question still without an answer, in any round, once this one is answered.
  */
-export function answerSentToast(questionId: string, left: number, crew: string): string {
-  if (left === 0) return `Answer to ${questionId} sent. All questions answered: ${crew} is queued.`;
-  return `Answer to ${questionId} sent. ${left} ${left === 1 ? "question" : "questions"} left.`;
+export function answerSentToast(
+  questionId: string,
+  left: number,
+  crew: string
+): string {
+  if (left === 0)
+    return `Answer to ${questionId} sent. All questions answered: ${crew} is queued.`;
+  return `Answer to ${questionId} sent. ${left} ${left === 1 ? 'question' : 'questions'} left.`;
 }

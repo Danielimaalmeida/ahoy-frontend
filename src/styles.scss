@@ -6,7 +6,7 @@
  *   ahoy-angular    the few rules the bundle can't know about: Angular host elements and gaps in its markup;
  *   ahoy-1b         the same for the state, progress and navigation components (lane 1B).
  */
-@use "styles/tokens";
-@use "styles/ahoy-bundle";
-@use "styles/ahoy-angular";
-@use "styles/ahoy-1b";
+@use 'styles/tokens';
+@use 'styles/ahoy-bundle';
+@use 'styles/ahoy-angular';
+@use 'styles/ahoy-1b';

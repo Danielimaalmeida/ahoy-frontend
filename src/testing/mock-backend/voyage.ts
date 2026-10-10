@@ -15,28 +15,28 @@ import type {
   Run,
   SlotModel,
   Story,
-} from "@core/api/types";
-import { iso } from "./clock";
-import { sha256Hex, utf8Length } from "./sha256";
+} from '@core/api/types';
+import { iso } from './clock';
+import { sha256Hex, utf8Length } from './sha256';
 
 /** A writable copy of a contract type. */
 export type Writable<T> = { -readonly [K in keyof T]: T[K] };
 
 /** The control-repo commit stories are pinned to unless `controlRef` says otherwise. */
-export const DEFAULT_CONTROL_SHA = "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302";
+export const DEFAULT_CONTROL_SHA = 'a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302';
 
 /** The file the planner writes. */
-export const PLAN_FILE = "implementation-plan.md";
+export const PLAN_FILE = 'implementation-plan.md';
 
 /** The system actor of the reconciler; the UI shows it as "Ahoy". */
-export const SYSTEM_ACTOR = "ahoy-reconciler";
+export const SYSTEM_ACTOR = 'ahoy-reconciler';
 
 /** The most revisions one human gate allows when the state sets none (`DEFAULT_REVISION_CEILING`). */
 export const REVISION_CEILING = 4;
 
 /** One row of the pinned `phases.tsv` (control sha ddfb28e6), as far as the mock simulates it. */
 export interface PhaseRow {
-  readonly kind: "auto" | "human" | "terminal";
+  readonly kind: 'auto' | 'human' | 'terminal';
   /** Who runs the phase: the agent of its runs. */
   readonly agent: string | null;
   /** The automated gate that judges its runs, or the human gate key. */
@@ -48,75 +48,121 @@ export interface PhaseRow {
 
 /** The phase table the mock follows (`packages/core/src/testing/support.ts` of `ahoy-hosted`). */
 export const PHASE_TABLE: Readonly<Record<string, PhaseRow>> = {
-  intake: { kind: "auto", agent: "navigator", gate: "intake", onPass: "planning" },
-  planning: { kind: "auto", agent: "cartographer", gate: "plan", onPass: "plan_review" },
-  plan_review: { kind: "human", agent: null, gate: "plan_accepted", onPass: "implementation", producer: "planning" },
-  implementation: { kind: "auto", agent: "implementer", gate: "child_ready", onPass: "pr_review" },
-  pr_review: { kind: "auto", agent: "lookout", gate: "consensus", onPass: "delivery_gate" },
-  delivery_gate: { kind: "human", agent: null, gate: "delivery_accepted", onPass: "done", producer: "implementation" },
-  done: { kind: "terminal", agent: null, gate: null, onPass: null },
-  blocked: { kind: "terminal", agent: null, gate: null, onPass: null },
+  intake: {
+    kind: 'auto',
+    agent: 'navigator',
+    gate: 'intake',
+    onPass: 'planning',
+  },
+  planning: {
+    kind: 'auto',
+    agent: 'cartographer',
+    gate: 'plan',
+    onPass: 'plan_review',
+  },
+  plan_review: {
+    kind: 'human',
+    agent: null,
+    gate: 'plan_accepted',
+    onPass: 'implementation',
+    producer: 'planning',
+  },
+  implementation: {
+    kind: 'auto',
+    agent: 'implementer',
+    gate: 'child_ready',
+    onPass: 'pr_review',
+  },
+  pr_review: {
+    kind: 'auto',
+    agent: 'lookout',
+    gate: 'review',
+    onPass: 'delivery_gate',
+  },
+  delivery_gate: {
+    kind: 'human',
+    agent: null,
+    gate: 'delivery_accepted',
+    onPass: 'done',
+    producer: 'implementation',
+  },
+  done: { kind: 'terminal', agent: null, gate: null, onPass: null },
+  blocked: { kind: 'terminal', agent: null, gate: null, onPass: null },
 };
 
-/** The phase and reviewer lens of each model slot. */
-export const SLOT_PHASE: Readonly<Record<ModelSlot, { readonly phase: string; readonly lens: SlotModel["lens"] }>> = {
-  intake: { phase: "intake", lens: null },
-  planning: { phase: "planning", lens: null },
-  implementation: { phase: "implementation", lens: null },
-  "review-design": { phase: "pr_review", lens: "design-fit" },
-  "review-defect": { phase: "pr_review", lens: "defect-failure" },
+/** The phase of each model slot. */
+export const SLOT_PHASE: Readonly<
+  Record<ModelSlot, { readonly phase: string }>
+> = {
+  intake: { phase: 'intake' },
+  planning: { phase: 'planning' },
+  implementation: { phase: 'implementation' },
+  review: { phase: 'pr_review' },
 };
 
 /** The slots in the order `getStoryModels` lists them. */
-export const SLOTS: readonly ModelSlot[] = ["intake", "planning", "implementation", "review-design", "review-defect"];
+export const SLOTS: readonly ModelSlot[] = [
+  'intake',
+  'planning',
+  'implementation',
+  'review',
+];
 
 /** What a slot runs on when nobody chose: the server's phase configuration, else the pinned phase table. */
 interface SlotDefault {
   readonly model: string;
-  readonly modelSource: "configuration" | "phase_table";
+  readonly modelSource: 'configuration' | 'phase_table';
   readonly effort: ReasoningEffort | null;
-  readonly effortSource: "configuration" | "phase_table" | "model_default";
+  readonly effortSource: 'configuration' | 'phase_table' | 'model_default';
 }
 
 /** The mock's defaults per slot (fictional model ids, as in the wireframes). */
 export const SLOT_DEFAULTS: Readonly<Record<ModelSlot, SlotDefault>> = {
-  intake: { model: "claude-haiku-4.5", modelSource: "configuration", effort: null, effortSource: "model_default" },
-  planning: { model: "claude-sonnet-5", modelSource: "configuration", effort: "high", effortSource: "configuration" },
+  intake: {
+    model: 'claude-haiku-4.5',
+    modelSource: 'configuration',
+    effort: null,
+    effortSource: 'model_default',
+  },
+  planning: {
+    model: 'claude-sonnet-5',
+    modelSource: 'configuration',
+    effort: 'high',
+    effortSource: 'configuration',
+  },
   implementation: {
-    model: "gpt-5.6-terra",
-    modelSource: "phase_table",
-    effort: "medium",
-    effortSource: "phase_table",
+    model: 'gpt-5.6-terra',
+    modelSource: 'phase_table',
+    effort: 'medium',
+    effortSource: 'phase_table',
   },
-  "review-design": {
-    model: "claude-sonnet-5",
-    modelSource: "configuration",
-    effort: "high",
-    effortSource: "configuration",
-  },
-  "review-defect": {
-    model: "gpt-5.6-terra",
-    modelSource: "configuration",
-    effort: "high",
-    effortSource: "configuration",
+  review: {
+    model: 'gpt-5.6-terra',
+    modelSource: 'configuration',
+    effort: 'high',
+    effortSource: 'configuration',
   },
 };
 
 /** The model and effort a slot's next run gets, and where each comes from. A choice applies as a pair. */
-export function resolveSlot(slot: ModelSlot, chosen: ModelChoice | undefined): SlotModel {
+export function resolveSlot(
+  slot: ModelSlot,
+  chosen: ModelChoice | undefined
+): SlotModel {
   const fallback = SLOT_DEFAULTS[slot];
-  const { phase, lens } = SLOT_PHASE[slot];
+  const { phase } = SLOT_PHASE[slot];
   const model = chosen?.model ?? fallback.model;
-  const modelSource = chosen?.model !== undefined ? "story" : fallback.modelSource;
+  const modelSource =
+    chosen?.model !== undefined ? 'story' : fallback.modelSource;
   let reasoningEffort: ReasoningEffort | null;
-  let effortSource: SlotModel["effortSource"];
+  let effortSource: SlotModel['effortSource'];
   if (chosen?.reasoningEffort !== undefined) {
     reasoningEffort = chosen.reasoningEffort;
-    effortSource = "story";
+    effortSource = 'story';
   } else if (chosen?.model !== undefined) {
     // An effort configured for another model is not carried onto the model a person chose.
     reasoningEffort = null;
-    effortSource = "model_default";
+    effortSource = 'model_default';
   } else {
     reasoningEffort = fallback.effort;
     effortSource = fallback.effortSource;
@@ -124,7 +170,6 @@ export function resolveSlot(slot: ModelSlot, chosen: ModelChoice | undefined): S
   return {
     slot,
     phase,
-    lens,
     chosen: chosen === undefined ? null : { ...chosen },
     model,
     reasoningEffort,
@@ -144,9 +189,24 @@ export interface ArtifactFile {
 }
 
 /** An artifact file with its hash and size worked out. */
-export function artifactFile(path: string, text: string, runId: string | null): ArtifactFile {
-  const mediaType = path.endsWith(".json") ? "application/json" : path.endsWith(".md") ? "text/markdown" : "text/plain";
-  return { path, text, mediaType, sha256: sha256Hex(text), sizeBytes: utf8Length(text), runId };
+export function artifactFile(
+  path: string,
+  text: string,
+  runId: string | null
+): ArtifactFile {
+  const mediaType = path.endsWith('.json')
+    ? 'application/json'
+    : path.endsWith('.md')
+      ? 'text/markdown'
+      : 'text/plain';
+  return {
+    path,
+    text,
+    mediaType,
+    sha256: sha256Hex(text),
+    sizeBytes: utf8Length(text),
+    runId,
+  };
 }
 
 /** One complete artifact set. */
@@ -166,7 +226,7 @@ export interface DecisionLogEntry {
 
 /** A human gate's recorded decision in the state document. */
 export interface HumanGateEntry {
-  readonly status: "approved" | "rejected";
+  readonly status: 'approved' | 'rejected';
   readonly timestamp: string;
   readonly reason?: string;
 }
@@ -227,7 +287,9 @@ export class Voyage {
 
   /** One file of a revision, or null. */
   file(path: string, revision: number): ArtifactFile | null {
-    return this.revisions[revision - 1]?.files.find((f) => f.path === path) ?? null;
+    return (
+      this.revisions[revision - 1]?.files.find((f) => f.path === path) ?? null
+    );
   }
 
   /** Adds a complete artifact set made of the current one with `changes` applied; returns its number. */
@@ -235,7 +297,11 @@ export class Voyage {
     const files = new Map((this.current?.files ?? []).map((f) => [f.path, f]));
     for (const change of changes) files.set(change.path, change);
     const number = this.revisions.length + 1;
-    this.revisions.push({ number, createdAt: iso(at), files: [...files.values()] });
+    this.revisions.push({
+      number,
+      createdAt: iso(at),
+      files: [...files.values()],
+    });
     return number;
   }
 
@@ -257,14 +323,18 @@ export class Voyage {
       if (choice)
         models[slot] = {
           ...(choice.model !== undefined ? { model: choice.model } : {}),
-          ...(choice.reasoningEffort !== undefined ? { effort: choice.reasoningEffort } : {}),
+          ...(choice.reasoningEffort !== undefined
+            ? { effort: choice.reasoningEffort }
+            : {}),
         };
     }
     return {
       story_id: key,
       phase: this.story.phase,
-      ...(this.current?.files.some((f) => f.path === PLAN_FILE) ? { plan_path: `specs/${key}/${PLAN_FILE}` } : {}),
-      branch_prefix: "feature",
+      ...(this.current?.files.some((f) => f.path === PLAN_FILE)
+        ? { plan_path: `specs/${key}/${PLAN_FILE}` }
+        : {}),
+      branch_prefix: 'feature',
       human_gates: structuredClone(this.humanGates),
       revisions: { ...this.revisionRounds },
       revision_ceiling: REVISION_CEILING,
@@ -274,14 +344,14 @@ export class Voyage {
       child_repos: this.plan.repos.map((repo) => ({ repo })),
       lookout_reviews: [],
       gate_results: this.gates
-        .filter((g) => g.source === "gate")
+        .filter((g) => g.source === 'gate')
         .map((g) => ({
           gate: g.gate,
           story_id: key,
           result: g.outcome,
-          message: g.message ?? "",
-          timestamp: g.createdAt.replace(/\.\d{3}Z$/, "Z"),
-          recorded_by: "gate",
+          message: g.message ?? '',
+          timestamp: g.createdAt.replace(/\.\d{3}Z$/, 'Z'),
+          recorded_by: 'gate',
         })),
       decision_log: structuredClone(this.decisionLog),
     };
@@ -290,11 +360,18 @@ export class Voyage {
 
 /** A run as the API answers it. */
 export function runDto(run: Writable<Run>): Run {
-  return { ...run, usage: { ...run.usage }, gate: run.gate === null ? null : { ...run.gate } };
+  return {
+    ...run,
+    usage: { ...run.usage },
+    gate: run.gate === null ? null : { ...run.gate },
+  };
 }
 
 /** An artifact entry as `listArtifacts` lists it. */
-export function artifactDto(file: ArtifactFile, revision: ArtifactRevision): Artifact {
+export function artifactDto(
+  file: ArtifactFile,
+  revision: ArtifactRevision
+): Artifact {
   return {
     path: file.path,
     sha256: file.sha256,

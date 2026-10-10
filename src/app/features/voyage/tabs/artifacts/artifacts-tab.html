@@ -1,0 +1,222 @@
+@if (resourceStatus() === 'loading' || resourceStatus() === 'idle') {
+<section class="artifacts" aria-busy="true">
+  <span class="ah-sr" role="status">Loading artifacts…</span>
+  <ah-skeleton width="240px" [height]="20" />
+  <ah-skeleton width="70%" />
+</section>
+} @else if (resourceStatus() === 'error' && currentItems() === null) { @if
+(listError(); as error) {
+<ah-banner
+  [variant]="error.variant"
+  [heading]="error.heading"
+  [tech]="error.tech ?? ''"
+  icon="offline"
+>
+  {{ error.text }}
+  <button
+    type="button"
+    ahButton
+    size="sm"
+    class="artifacts__retry"
+    (click)="refreshList()"
+  >
+    Try again
+  </button>
+</ah-banner>
+} } @else if (currentItems(); as items) { @if (items.length === 0) {
+<ah-panel>
+  <ah-panel-head
+    heading="Artifacts"
+    subtitle="Every change makes a new revision of the whole set."
+  />
+  <ah-panel-body>
+    <ah-empty-state heading="No artifacts yet">
+      Files appear here when an agent writes the first artifact revision.
+    </ah-empty-state>
+  </ah-panel-body>
+</ah-panel>
+} @else {
+<ah-panel>
+  <ah-panel-head
+    heading="Artifacts"
+    subtitle="Every change makes a new revision of the whole set."
+  >
+    <div class="artifacts__controls" ahPanelActions>
+      @if (olderOptions().length > 0) {
+      <ah-field label="Compare">
+        <select
+          ahInput
+          aria-label="Earlier revision"
+          [value]="olderRevision()"
+          (change)="selectOlder($event)"
+        >
+          @for (revision of olderOptions(); track revision.revision) {
+          <option [value]="revision.revision">{{ revision.label }}</option>
+          }
+        </select>
+      </ah-field>
+      <span class="ah-hint">with</span>
+      }
+      <ah-field label="Later revision">
+        <select
+          ahInput
+          aria-label="Later revision"
+          [value]="newerRevision()"
+          (change)="selectNewer($event)"
+        >
+          @for (revision of newerOptions(); track revision.revision) {
+          <option [value]="revision.revision">{{ revision.label }}</option>
+          }
+        </select>
+      </ah-field>
+      <ah-section-tabs
+        variant="pill"
+        label="Artifact display"
+        [items]="modeTabs()"
+        [(selected)]="mode"
+      />
+    </div>
+  </ah-panel-head>
+  <ah-panel-body>
+    @if (resourceStatus() === 'error') { @if (listError(); as error) {
+    <ah-banner
+      [variant]="error.variant"
+      [heading]="error.heading"
+      [tech]="error.tech ?? ''"
+    >
+      {{ error.text }}
+    </ah-banner>
+    } }
+    <div class="artifacts__layout">
+      <nav class="artifacts__files" aria-label="Artifact files">
+        @for (file of files(); track file.path) {
+        <button
+          type="button"
+          class="artifacts__file"
+          [class.artifacts__file--selected]="
+                  selectedPath() === file.path
+                "
+          [attr.aria-pressed]="selectedPath() === file.path"
+          (click)="selectFile(file.path)"
+        >
+          <span class="artifacts__file-name ah-mono">{{ file.path }}</span>
+          @if (mode() === 'compare') { @switch (comparison(file.path).kind) {
+          @case ('same') {
+          <small>same</small>
+          } @case ('new') {
+          <small>new</small>
+          } @case ('removed') {
+          <small>removed</small>
+          } @case ('error') {
+          <small>unavailable</small>
+          } @case ('changed') {
+          <small>{{ comparisonLabel(file.path) }}</small>
+          } @default {
+          <small aria-label="Loading comparison">
+            <ah-skeleton width="48px" />
+          </small>
+          } } } @else {
+          <small>{{ file.sizeLabel }}</small>
+          }
+        </button>
+        }
+      </nav>
+
+      <section class="artifacts__content" aria-label="Selected artifact">
+        @if (selectedFile(); as file) {
+        <header class="artifacts__file-heading">
+          <h3 class="ah-mono">{{ file.path }}</h3>
+          <span class="ah-hint"
+            >{{ file.sizeLabel }} · {{ file.mediaType }}</span
+          >
+        </header>
+        @if (mode() === 'compare') { @switch (selectedComparison().kind) { @case
+        ('loading') {
+        <div aria-busy="true" class="artifacts__loading">
+          <span class="ah-sr" role="status">Loading comparison…</span>
+          <ah-skeleton width="45%" />
+          <ah-skeleton width="90%" />
+          <ah-skeleton width="70%" />
+        </div>
+        } @case ('error') {
+        <ah-banner variant="error" heading="Couldn't load this comparison">
+          Try again. The artifact may not exist in one of these revisions, or
+          Ahoy may be temporarily unavailable.
+          <button
+            type="button"
+            ahButton
+            size="sm"
+            class="artifacts__retry"
+            (click)="retrySelected()"
+          >
+            Try again
+          </button>
+        </ah-banner>
+        } @case ('new') { @if (previewTooLarge()) {
+        <p class="ah-hint">Too large to preview.</p>
+        } @else {
+        <p class="ah-hint">New in this revision.</p>
+        <ng-container [ngTemplateOutlet]="newerPreview" />
+        } } @case ('removed') {
+        <p class="ah-hint">
+          This artifact wasn't present in the later revision.
+        </p>
+        } @case ('same') {
+        <p class="ah-hint">No changes between these revisions.</p>
+        } @case ('changed') { @if (previewTooLarge()) {
+        <p class="ah-hint">Too large to preview.</p>
+        } @else if (selectedFileIsJson()) {
+        <p class="ah-hint">This JSON artifact changed between revisions.</p>
+        } @else {
+        <ah-artifact-diff
+          [previous]="olderText()"
+          [next]="newerText()"
+          [label]="
+                          file.path +
+                          ', revision ' +
+                          olderRevision() +
+                          ' to ' +
+                          newerRevision()
+                        "
+        />
+        } } } } @else { @if (viewRead(); as read) { @switch (read.kind) { @case
+        ('content') { @if (previewTooLarge()) {
+        <p class="ah-hint">Too large to preview.</p>
+        } @else {
+        <ng-container [ngTemplateOutlet]="newerPreview" />
+        } } @case ('missing') {
+        <p class="ah-hint">This artifact wasn't present in that revision.</p>
+        } @case ('error') {
+        <ah-banner variant="error" heading="Couldn't load this artifact">
+          {{ viewErrorText() }}
+          <button
+            type="button"
+            ahButton
+            size="sm"
+            class="artifacts__retry"
+            (click)="retrySelected()"
+          >
+            Try again
+          </button>
+        </ah-banner>
+        } } } @else {
+        <div aria-busy="true" class="artifacts__loading">
+          <span class="ah-sr" role="status">Loading artifact…</span>
+          <ah-skeleton width="45%" />
+          <ah-skeleton width="90%" />
+          <ah-skeleton width="70%" />
+        </div>
+        } } }
+      </section>
+    </div>
+  </ah-panel-body>
+</ah-panel>
+} }
+
+<ng-template #newerPreview>
+  @if (selectedFileIsMarkdown()) {
+  <ah-markdown [source]="newerText()" />
+  } @else {
+  <pre class="artifacts__pre">{{ formattedText(newerText()) }}</pre>
+  }
+</ng-template>

@@ -1,0 +1,15 @@
+{
+  "/auth/oauth2/realms/root/realms/alpha": {
+    "target": "https://emea.int.alpha.sso.company-namegroup.com",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/api": {
+    "target": "http://127.0.0.1:8080",
+    "secure": false,
+    "headers": {
+      "X-Ahoy-Actor": "dev-user"
+    }
+  }
+}

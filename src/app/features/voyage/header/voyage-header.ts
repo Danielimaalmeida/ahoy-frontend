@@ -1,14 +1,14 @@
-import { Component, computed, inject } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import { shortSha } from "@domain/identifiers";
-import { BudgetMeter } from "@ui/budget-meter/budget-meter";
-import { Button } from "@ui/button/button";
-import { PhaseStepper } from "@ui/phase-stepper/phase-stepper";
-import { StatusBadge } from "@ui/status-badge/status-badge";
-import { currentRunView } from "../context/crew";
-import { VoyageContext } from "../context/voyage-context";
-import { VoyageDialogs } from "../dialogs/voyage-dialogs";
-import { headerActions, primaryAction } from "./primary-action";
+import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { shortSha } from '@domain/identifiers';
+import { BudgetMeter } from '@ui/budget-meter/budget-meter';
+import { Button } from '@ui/button/button';
+import { PhaseStepper } from '@ui/phase-stepper/phase-stepper';
+import { StatusBadge } from '@ui/status-badge/status-badge';
+import { currentRunView } from '../context/crew';
+import { VoyageContext } from '../context/voyage-context';
+import { VoyageDialogs } from '../dialogs/voyage-dialogs';
+import { headerActions, primaryAction } from './primary-action';
 
 /**
  * The voyage header (wireframes `PlanReview` and `Halted`): key, status badge with the API words (`awaiting_decision ·
@@ -17,9 +17,9 @@ import { headerActions, primaryAction } from "./primary-action";
  * is read.
  */
 @Component({
-  selector: "ah-voyage-header",
+  selector: 'ah-voyage-header',
   imports: [BudgetMeter, Button, PhaseStepper, RouterLink, StatusBadge],
-  styleUrl: "./voyage-header.scss",
+  styleUrl: './voyage-header.scss',
   template: `
     @if (view(); as v) {
       <section class="ah-panel" aria-labelledby="voyage-title">
@@ -28,30 +28,59 @@ import { headerActions, primaryAction } from "./primary-action";
             <div class="header__name">
               <div class="header__line">
                 <span class="ah-key">{{ v.story.key }}</span>
-                <ah-status-badge [status]="v.story.status" [phase]="v.story.phase" showApi [detail]="v.apiDetail" />
+                <ah-status-badge
+                  [status]="v.story.status"
+                  [phase]="v.story.phase"
+                  showApi
+                  [detail]="v.apiDetail"
+                />
               </div>
-              <h1 id="voyage-title" class="header__title">{{ v.story.title ?? v.story.key }}</h1>
+              <h1 id="voyage-title" class="header__title">
+                {{ v.story.title ?? v.story.key }}
+              </h1>
             </div>
             <div class="header__actions">
               @if (v.primary; as primary) {
-                @if (primary.kind === "tab") {
-                  <a ahButton="primary" [routerLink]="['/voyages', v.story.key, primary.tab]">{{ primary.label }}</a>
+                @if (primary.kind === 'tab') {
+                  <a
+                    ahButton="primary"
+                    [routerLink]="['/voyages', v.story.key, primary.tab]"
+                    >{{ primary.label }}</a
+                  >
                 } @else {
-                  <button type="button" ahButton="primary" (click)="openResume()">{{ primary.label }}</button>
+                  <button
+                    type="button"
+                    ahButton="primary"
+                    (click)="openResume()"
+                  >
+                    {{ primary.label }}
+                  </button>
                 }
               }
               @if (v.actions.budget) {
-                <button type="button" ahButton (click)="openBudget()">Budget</button>
+                <button type="button" ahButton (click)="openBudget()">
+                  Budget
+                </button>
               }
               <a ahButton [routerLink]="['/voyages', v.story.key, 'models']">{{
-                v.story.status === "halted" ? "Change models" : "Models"
+                v.story.status === 'halted' ? 'Change models' : 'Models'
               }}</a>
               @if (v.actions.stop) {
-                <button type="button" ahButton="danger-outline" (click)="openStop()">Stop</button>
+                <button
+                  type="button"
+                  ahButton="danger-outline"
+                  (click)="openStop()"
+                >
+                  Stop
+                </button>
               }
             </div>
           </div>
-          <ah-phase-stepper [phase]="v.story.phase" [status]="v.story.status" [stoppedAt]="stoppedAt()" />
+          <ah-phase-stepper
+            [phase]="v.story.phase"
+            [status]="v.story.status"
+            [stoppedAt]="stoppedAt()"
+          />
           <dl class="header__meta">
             <div>
               <dt>Owner · billed</dt>
@@ -77,7 +106,11 @@ import { headerActions, primaryAction } from "./primary-action";
               <dd>
                 {{ v.run.prefix }}
                 @if (v.run.runId; as runId) {
-                  <a class="ah-mono" [routerLink]="['/voyages', v.story.key, 'runs', runId]">{{ runId }}</a>
+                  <a
+                    class="ah-mono"
+                    [routerLink]="['/voyages', v.story.key, 'runs', runId]"
+                    >{{ runId }}</a
+                  >
                 }
                 {{ v.run.suffix }}
               </dd>
@@ -91,7 +124,9 @@ import { headerActions, primaryAction } from "./primary-action";
             <div>
               <dt>Agent config</dt>
               <dd>
-                <span class="ah-mono ah-muted" [title]="v.story.controlSha">{{ v.sha }}</span>
+                <span class="ah-mono ah-muted" [title]="v.story.controlSha">{{
+                  v.sha
+                }}</span>
               </dd>
             </div>
           </dl>
@@ -112,11 +147,11 @@ export class VoyageHeader {
     if (story === null) return null;
     const gateKey = this.context.gateKey();
     const apiDetail =
-      story.status === "awaiting_decision"
-        ? (gateKey ?? "")
-        : story.status === "halted"
-          ? (story.haltReason ?? "")
-          : "";
+      story.status === 'awaiting_decision'
+        ? (gateKey ?? '')
+        : story.status === 'halted'
+          ? (story.haltReason ?? '')
+          : '';
     return {
       story,
       apiDetail,
@@ -133,7 +168,9 @@ export class VoyageHeader {
     const round = this.context.revisionRound();
     const ceiling = this.context.revisionCeiling();
     if (round === null || ceiling === null) return null;
-    return this.context.gateKey() !== null || round > 1 ? `${round} of ${ceiling}` : null;
+    return this.context.gateKey() !== null || round > 1
+      ? `${round} of ${ceiling}`
+      : null;
   }
 
   protected openStop(): void {

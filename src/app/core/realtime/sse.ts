@@ -24,10 +24,10 @@ const CR = 13;
  * out as soon as their blank line has arrived. {@link parseSseStream} feeds it the decoded body.
  */
 export class SseDecoder {
-  private buffer = "";
+  private buffer = '';
   private data: string[] = [];
-  private eventType = "";
-  private lastEventId = "";
+  private eventType = '';
+  private lastEventId = '';
 
   /** Adds text and returns the messages it completes. */
   push(text: string): SseMessage[] {
@@ -54,32 +54,32 @@ export class SseDecoder {
   /** Ends the stream: a held CR still ends its line, and a message without its blank line is dropped. */
   end(): SseMessage[] {
     const out: SseMessage[] = [];
-    if (this.buffer.endsWith("\r")) this.line(this.buffer.slice(0, -1), out);
-    this.buffer = "";
+    if (this.buffer.endsWith('\r')) this.line(this.buffer.slice(0, -1), out);
+    this.buffer = '';
     this.data = [];
-    this.eventType = "";
+    this.eventType = '';
     return out;
   }
 
   private line(line: string, out: SseMessage[]): void {
-    if (line === "") {
+    if (line === '') {
       this.dispatch(out);
       return;
     }
-    if (line.startsWith(":")) return;
-    const colon = line.indexOf(":");
+    if (line.startsWith(':')) return;
+    const colon = line.indexOf(':');
     const field = colon === -1 ? line : line.slice(0, colon);
-    let value = colon === -1 ? "" : line.slice(colon + 1);
-    if (value.startsWith(" ")) value = value.slice(1);
+    let value = colon === -1 ? '' : line.slice(colon + 1);
+    if (value.startsWith(' ')) value = value.slice(1);
     switch (field) {
-      case "event":
+      case 'event':
         this.eventType = value;
         break;
-      case "data":
+      case 'data':
         this.data.push(value);
         break;
-      case "id":
-        if (!value.includes("\0")) this.lastEventId = value;
+      case 'id':
+        if (!value.includes('\0')) this.lastEventId = value;
         break;
       default:
       // `retry` and unknown fields are ignored.
@@ -88,10 +88,14 @@ export class SseDecoder {
 
   private dispatch(out: SseMessage[]): void {
     if (this.data.length > 0) {
-      out.push({ event: this.eventType || "message", data: this.data.join("\n"), lastEventId: this.lastEventId });
+      out.push({
+        event: this.eventType || 'message',
+        data: this.data.join('\n'),
+        lastEventId: this.lastEventId,
+      });
     }
     this.data = [];
-    this.eventType = "";
+    this.eventType = '';
   }
 }
 
@@ -100,9 +104,11 @@ export class SseDecoder {
  * boundaries, so a chunk that cuts a character in two is fine, and a leading BOM is dropped. A read error (the
  * connection dropped) rejects the iteration. Stopping the iteration early cancels the body.
  */
-export async function* parseSseStream(body: ReadableStream<Uint8Array>): AsyncGenerator<SseMessage, void, undefined> {
+export async function* parseSseStream(
+  body: ReadableStream<Uint8Array>
+): AsyncGenerator<SseMessage, void, undefined> {
   const reader = body.getReader();
-  const decoder = new TextDecoder("utf-8");
+  const decoder = new TextDecoder('utf-8');
   const sse = new SseDecoder();
   let finished = false;
   try {

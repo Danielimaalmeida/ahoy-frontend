@@ -10,6 +10,7 @@ Shows where a voyage is in intake → planning → plan_review → implementatio
 Labels are the API phase names; they are short and people learn them. In tables use the compact `ah-dots` form (7 bars, `is-done`, `is-current`, `is-stopped`) with an `aria-label` such as "Phase 3 of 7".
 
 ## Markup
+
 ```html
 <div class="ah-stepper" aria-label="Phases">
   <span class="ah-step ah-step--done"><b class="ah-step__n">✓</b>intake</span><span class="ah-step__sep"></span>
@@ -18,4 +19,5 @@ Labels are the API phase names; they are short and people learn them. In tables 
 ```
 
 ## Angular
+
 `<ah-phase-stepper [phase]="story.phase" [status]="story.status" [compact]="false">`.

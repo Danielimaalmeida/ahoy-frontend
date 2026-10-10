@@ -1,213 +1,898 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Ahoy · PROJ-131 questions</title>
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<style>
-body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
-a{color:#1A64D6}a:hover{color:#1747A6}
-.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
-.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
-.logo:hover{color:#1B2733}
-.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
-.tab:hover{background:#F1F4F7;color:#1B2733}
-.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
-.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
-.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
-.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
-.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
-.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
-.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
-.btn:hover{background:#F1F4F7;color:#1B2733}
-.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
-.btn.primary:hover{background:#1755B8;color:#fff}
-.btn.soft{background:#E7EFFC;border-color:#E7EFFC;color:#1747A6}
-.btn.danger{color:#A11F1F;border-color:#F1C4C4}
-.btn.sm{height:28px;padding:0 11px;font-size:12px;border-radius:9px}
-.page{padding:18px 24px 36px;display:flex;flex-direction:column;gap:14px;max-width:1240px;width:100%;margin:0 auto;box-sizing:border-box}
-h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.25}
-h2{font-size:15px;font-weight:700;margin:0}
-.sub{color:#5B6B7A}
-.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
-.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
-.pb{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
-.key{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#1747A6}
-.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
-.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
-.b-input{background:#FFF1D6;color:#7A4B00}
-.b-done{background:#DDF3E6;color:#1C6337}
-.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
-.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
-.stepper{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
-.step{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 4px;border-radius:999px;background:#F1F4F7;color:#5B6B7A;font-size:12px;font-weight:500}
-.step b{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#fff;font-size:10.5px;border:1px solid #D5DCE3;color:#5B6B7A}
-.step.done{background:#E7EFFC;color:#1747A6}
-.step.done b{background:#1A64D6;color:#fff;border-color:#1A64D6}
-.step.now{background:#1A64D6;color:#fff;font-weight:600}
-.step.now b{background:#fff;color:#1A64D6;border-color:#fff}
-.sep{width:10px;height:2px;background:#D5DCE3;border-radius:2px}
-.meta{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center}
-.meta div{display:flex;flex-direction:column;gap:2px}
-.meta span{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#5B6B7A;font-weight:600}
-.dtabs{display:flex;gap:4px;overflow-x:auto;padding:4px;background:#EEF2F5;border-radius:12px;align-self:flex-start;max-width:100%;box-sizing:border-box}
-.dt{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;border-radius:9px;color:#455562;font-weight:600;text-decoration:none;white-space:nowrap}
-.dt:hover{color:#1B2733;background:#E3E8EE}
-.dt.on{background:#fff;color:#1747A6;box-shadow:0 1px 2px rgba(20,40,60,.12)}
-.dt em{font-style:normal;font-weight:500;color:#5B6B7A;font-size:11.5px}
-.q{border:1px solid #E3E8EE;border-radius:14px;background:#fff;overflow:hidden}
-.q.open{border-color:#E9C46A;box-shadow:0 0 0 1px #E9C46A}
-.qh{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 16px}
-.qid{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;background:#EEF2F5;border-radius:8px;padding:2px 8px}
-.qt{font-size:14px;font-weight:600;padding:0 16px 12px;line-height:1.5}
-.rec{margin:0 16px 12px;background:#F5F9FF;border:1px solid #D6E4FA;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
-.ans{margin:0 16px 14px;background:#F6F8FA;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
-.input{border:1px solid #D5DCE3;border-radius:10px;padding:9px 12px;font:inherit;width:100%;box-sizing:border-box;background:#fff;color:#1B2733;min-height:84px;resize:vertical}
-.input:focus{outline:2px solid #9DBDF1;outline-offset:1px;border-color:#1A64D6}
-.hint{font-size:12px;color:#5B6B7A}
-.lock{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#5B6B7A;font-weight:600}
-</style>
-</helmet>
-<header class="top">
-  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
-  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
-    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
-    <a class="tab on" href="Voyages.dc.html">Voyages</a>
-    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
-  </nav>
-  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
-  <input id="q" class="search" type="search" placeholder="Search by key or title">
-  <span class="live"><i></i>Live</span>
-  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
-  <span class="av" title="alex@example.com (SSO)">AL</span>
-</header>
-<main class="page">
-  <div class="sub" style="font-size:12px"><a href="Voyages.dc.html" style="text-decoration:none">Voyages</a> / PROJ-131</div>
-
-  <section class="panel">
-    <div class="pb" style="gap:14px">
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
-        <div style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="key">PROJ-131</span><span class="badge b-input"><i></i>Crew asks</span><span class="mono" style="color:#5B6B7A">awaiting_input</span></div>
-          <h1>Let customers download receipts as PDF</h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · PROJ-131 questions</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #1b2733;
+          }
+          a {
+            color: #1a64d6;
+          }
+          a:hover {
+            color: #1747a6;
+          }
+          .top {
+            background: #fff;
+            border-bottom: 1px solid #e3e8ee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 24px;
+            box-sizing: border-box;
+          }
+          .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 17px;
+            color: #1b2733;
+            text-decoration: none;
+            margin-right: 12px;
+          }
+          .logo:hover {
+            color: #1b2733;
+          }
+          .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            color: #5b6b7a;
+            font-weight: 500;
+            text-decoration: none;
+          }
+          .tab:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .tab.on {
+            background: #e7effc;
+            color: #1747a6;
+            font-weight: 600;
+          }
+          .cnt {
+            background: #1a64d6;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0 6px;
+            font-size: 11px;
+            line-height: 17px;
+            font-weight: 600;
+          }
+          .soon {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #5b6b7a;
+            background: #eef2f5;
+            border-radius: 999px;
+            padding: 1px 6px;
+          }
+          .search {
+            flex: 0 1 300px;
+            height: 34px;
+            border: 1px solid #e3e8ee;
+            border-radius: 999px;
+            padding: 0 14px;
+            font: inherit;
+            background: #f6f8fa;
+            box-sizing: border-box;
+            margin-left: auto;
+            color: #1b2733;
+          }
+          .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #1c6337;
+            font-weight: 500;
+            margin: 0 6px;
+          }
+          .live i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #2e9b5b;
+            box-shadow: 0 0 0 3px #ddf3e6;
+          }
+          .av {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e7effc;
+            color: #1747a6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            flex: none;
+          }
+          .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #1b2733;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            box-sizing: border-box;
+          }
+          .btn:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .btn.primary {
+            background: #1a64d6;
+            border-color: #1a64d6;
+            color: #fff;
+          }
+          .btn.primary:hover {
+            background: #1755b8;
+            color: #fff;
+          }
+          .btn.soft {
+            background: #e7effc;
+            border-color: #e7effc;
+            color: #1747a6;
+          }
+          .btn.danger {
+            color: #a11f1f;
+            border-color: #f1c4c4;
+          }
+          .btn.sm {
+            height: 28px;
+            padding: 0 11px;
+            font-size: 12px;
+            border-radius: 9px;
+          }
+          .page {
+            padding: 18px 24px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-width: 1240px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+          }
+          h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.01em;
+            line-height: 1.25;
+          }
+          h2 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .sub {
+            color: #5b6b7a;
+          }
+          .panel {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            min-width: 0;
+            overflow: hidden;
+          }
+          .ph {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #eef2f5;
+          }
+          .pb {
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+          .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 500;
+          }
+          .key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1747a6;
+          }
+          .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 22px;
+            padding: 0 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .badge i {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+          }
+          .b-input {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .b-done {
+            background: #ddf3e6;
+            color: #1c6337;
+          }
+          .meter {
+            height: 7px;
+            background: #e9eef3;
+            border-radius: 999px;
+            overflow: hidden;
+            min-width: 60px;
+          }
+          .meter i {
+            display: block;
+            height: 100%;
+            background: #1a64d6;
+            border-radius: 999px;
+          }
+          .stepper {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+          }
+          .step {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 28px;
+            padding: 0 11px 0 4px;
+            border-radius: 999px;
+            background: #f1f4f7;
+            color: #5b6b7a;
+            font-size: 12px;
+            font-weight: 500;
+          }
+          .step b {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            font-size: 10.5px;
+            border: 1px solid #d5dce3;
+            color: #5b6b7a;
+          }
+          .step.done {
+            background: #e7effc;
+            color: #1747a6;
+          }
+          .step.done b {
+            background: #1a64d6;
+            color: #fff;
+            border-color: #1a64d6;
+          }
+          .step.now {
+            background: #1a64d6;
+            color: #fff;
+            font-weight: 600;
+          }
+          .step.now b {
+            background: #fff;
+            color: #1a64d6;
+            border-color: #fff;
+          }
+          .sep {
+            width: 10px;
+            height: 2px;
+            background: #d5dce3;
+            border-radius: 2px;
+          }
+          .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 24px;
+            align-items: center;
+          }
+          .meta div {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+          .meta span {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .dtabs {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            padding: 4px;
+            background: #eef2f5;
+            border-radius: 12px;
+            align-self: flex-start;
+            max-width: 100%;
+            box-sizing: border-box;
+          }
+          .dt {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 30px;
+            padding: 0 13px;
+            border-radius: 9px;
+            color: #455562;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+          }
+          .dt:hover {
+            color: #1b2733;
+            background: #e3e8ee;
+          }
+          .dt.on {
+            background: #fff;
+            color: #1747a6;
+            box-shadow: 0 1px 2px rgba(20, 40, 60, 0.12);
+          }
+          .dt em {
+            font-style: normal;
+            font-weight: 500;
+            color: #5b6b7a;
+            font-size: 11.5px;
+          }
+          .q {
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            background: #fff;
+            overflow: hidden;
+          }
+          .q.open {
+            border-color: #e9c46a;
+            box-shadow: 0 0 0 1px #e9c46a;
+          }
+          .qh {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            padding: 12px 16px;
+          }
+          .qid {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            background: #eef2f5;
+            border-radius: 8px;
+            padding: 2px 8px;
+          }
+          .qt {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 0 16px 12px;
+            line-height: 1.5;
+          }
+          .rec {
+            margin: 0 16px 12px;
+            background: #f5f9ff;
+            border: 1px solid #d6e4fa;
+            border-radius: 12px;
+            padding: 10px 12px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+          }
+          .ans {
+            margin: 0 16px 14px;
+            background: #f6f8fa;
+            border-radius: 12px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+          }
+          .input {
+            border: 1px solid #d5dce3;
+            border-radius: 10px;
+            padding: 9px 12px;
+            font: inherit;
+            width: 100%;
+            box-sizing: border-box;
+            background: #fff;
+            color: #1b2733;
+            min-height: 84px;
+            resize: vertical;
+          }
+          .input:focus {
+            outline: 2px solid #9dbdf1;
+            outline-offset: 1px;
+            border-color: #1a64d6;
+          }
+          .hint {
+            font-size: 12px;
+            color: #5b6b7a;
+          }
+          .lock {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+        </style>
+      </helmet>
+      <header class="top">
+        <a class="logo" href="Main.dc.html"
+          ><svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1A64D6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="1.8"></circle>
+            <path
+              d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+            ></path></svg
+          >Ahoy</a
+        >
+        <nav style="display: flex; flex-wrap: wrap; gap: 4px" aria-label="Main">
+          <a class="tab" href="Main.dc.html"
+            >All hands <span class="cnt">4</span></a
+          >
+          <a class="tab on" href="Voyages.dc.html">Voyages</a>
+          <a class="tab" href="Docks.dc.html"
+            >The Docks <span class="soon">planned</span></a
+          >
+        </nav>
+        <label for="q" style="position: absolute; left: -9999px"
+          >Search voyages</label
+        >
+        <input
+          id="q"
+          class="search"
+          type="search"
+          placeholder="Search by key or title"
+        />
+        <span class="live"><i></i>Live</span>
+        <a class="btn primary" href="SetSail.dc.html"
+          ><svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"
+            ></path></svg
+          >Set sail</a
+        >
+        <span class="av" title="alex@example.com (SSO)">AL</span>
+      </header>
+      <main class="page">
+        <div class="sub" style="font-size: 12px">
+          <a href="Voyages.dc.html" style="text-decoration: none">Voyages</a> /
+          PROJ-131
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a class="btn primary" href="#q2">Answer questions</a>
-          <a class="btn" href="Dialogs.dc.html">Budget</a>
-          <a class="btn" href="Halted.dc.html">Models</a>
-          <a class="btn danger" href="Dialogs.dc.html">Stop</a>
-        </div>
-      </div>
-      <div class="stepper" aria-label="Phases">
-        <span class="step done"><b>✓</b>intake</span><span class="sep"></span>
-        <span class="step now"><b>2</b>planning</span><span class="sep"></span>
-        <span class="step"><b>3</b>plan_review</span><span class="sep"></span>
-        <span class="step"><b>4</b>implementation</span><span class="sep"></span>
-        <span class="step"><b>5</b>pr_review</span><span class="sep"></span>
-        <span class="step"><b>6</b>delivery_gate</span><span class="sep"></span>
-        <span class="step"><b>7</b>done</span>
-      </div>
-      <div class="meta">
-        <div><span>Owner · billed</span>sam@example.com</div>
-        <div style="min-width:220px"><span>Budget</span><div style="display:flex;align-items:center;gap:8px;flex-direction:row"><div class="meter" style="width:120px"><i style="width:24%"></i></div><b>6.1</b> / 25 AIU</div></div>
-        <div><span>Current run</span>none · last <a href="RunDetail.dc.html" class="mono">r-02</a> (awaiting_input)</div>
-        <div><span>Agent config</span><span class="mono" style="font-size:11px;text-transform:none;letter-spacing:0;color:#5B6B7A">a41f9c2</span></div>
-      </div>
-    </div>
-  </section>
 
-  <nav class="dtabs" aria-label="Voyage sections">
-    <a class="dt" href="PlanReview.dc.html">Plan</a>
-    <a class="dt on" href="Questions.dc.html">Questions <em>3</em></a>
-    <a class="dt" href="RunDetail.dc.html">Runs <em>2</em></a>
-    <a class="dt" href="Records.dc.html">Gates <em>2</em></a>
-    <a class="dt" href="Records.dc.html">Artifacts</a>
-    <a class="dt" href="Records.dc.html">Ship's log</a>
-    <a class="dt" href="Halted.dc.html">Models</a>
-  </nav>
-
-  <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
-    <div style="flex:999 1 620px;min-width:0;display:flex;flex-direction:column;gap:12px">
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
-        <h2>Round 1 · Cartographer asks</h2>
-        <span class="sub">1 of 3 answered</span>
-        <div class="meter" style="width:120px"><i style="width:33%"></i></div>
-      </div>
-
-      <article class="q">
-        <div class="qh"><span class="qid">Q1</span><span class="badge b-done"><i></i>Answered</span><span style="flex:1"></span><span class="lock"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Final</span></div>
-        <div class="qt">Should the PDF include the company's VAT number and address block, or only the line items and totals?</div>
-        <div class="ans">
-          <span>Include the VAT number and the full address block, same as the emailed receipt.</span>
-          <span class="hint">sam@example.com · today 09:12 · used the recommendation, edited</span>
-        </div>
-      </article>
-
-      <article class="q open" id="q2">
-        <div class="qh"><span class="qid">Q2</span><span class="badge b-input"><i></i>Needs an answer</span></div>
-        <div class="qt">Where should the download be offered: on the receipt page only, or also as a bulk download from the order history?</div>
-        <div class="rec">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
-          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-            <span><b>Cartographer recommends:</b> Receipt page only for now; bulk download needs a background job and is better as its own story.</span>
-            <div><button class="btn sm soft" type="button">Use recommendation</button></div>
+        <section class="panel">
+          <div class="pb" style="gap: 14px">
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                align-items: flex-start;
+              "
+            >
+              <div
+                style="
+                  flex: 1 1 480px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    align-items: center;
+                  "
+                >
+                  <span class="key">PROJ-131</span
+                  ><span class="badge b-input"><i></i>Crew asks</span
+                  ><span class="mono" style="color: #5b6b7a"
+                    >awaiting_input</span
+                  >
+                </div>
+                <h1>Let customers download receipts as PDF</h1>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <a class="btn primary" href="#q2">Answer questions</a>
+                <a class="btn" href="Dialogs.dc.html">Budget</a>
+                <a class="btn" href="Halted.dc.html">Models</a>
+                <a class="btn danger" href="Dialogs.dc.html">Stop</a>
+              </div>
+            </div>
+            <div class="stepper" aria-label="Phases">
+              <span class="step done"><b>✓</b>intake</span
+              ><span class="sep"></span>
+              <span class="step now"><b>2</b>planning</span
+              ><span class="sep"></span>
+              <span class="step"><b>3</b>plan_review</span
+              ><span class="sep"></span>
+              <span class="step"><b>4</b>implementation</span
+              ><span class="sep"></span>
+              <span class="step"><b>5</b>pr_review</span
+              ><span class="sep"></span>
+              <span class="step"><b>6</b>delivery_gate</span
+              ><span class="sep"></span>
+              <span class="step"><b>7</b>done</span>
+            </div>
+            <div class="meta">
+              <div><span>Owner · billed</span>sam@example.com</div>
+              <div style="min-width: 220px">
+                <span>Budget</span>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    flex-direction: row;
+                  "
+                >
+                  <div class="meter" style="width: 120px">
+                    <i style="width: 24%"></i>
+                  </div>
+                  <b>6.1</b> / 25 AIU
+                </div>
+              </div>
+              <div>
+                <span>Current run</span>none · last
+                <a href="RunDetail.dc.html" class="mono">r-02</a>
+                (awaiting_input)
+              </div>
+              <div>
+                <span>Agent config</span
+                ><span
+                  class="mono"
+                  style="
+                    font-size: 11px;
+                    text-transform: none;
+                    letter-spacing: 0;
+                    color: #5b6b7a;
+                  "
+                  >a41f9c2</span
+                >
+              </div>
+            </div>
           </div>
-        </div>
-        <div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px">
-          <label for="a2" style="font-weight:600;font-size:12.5px">Your answer</label>
-          <textarea id="a2" class="input">Receipt page only for now; bulk download needs a background job and is better as its own story. Also add the button to the order confirmation email link target.</textarea>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-            <button class="btn primary" type="button">Send answer</button>
-            <span class="hint">Answers are final once sent: they can't be edited. Recorded as alex@example.com.</span>
-          </div>
-        </div>
-      </article>
+        </section>
 
-      <article class="q">
-        <div class="qh"><span class="qid">Q3</span><span class="badge b-input"><i></i>Needs an answer</span></div>
-        <div class="qt">The receipts service stores amounts in cents. Should the PDF round tax per line or on the total?</div>
-        <div class="rec">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
-          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-            <span><b>Cartographer recommends:</b> On the total, to match the amount charged.</span>
-            <div><button class="btn sm soft" type="button">Use recommendation</button></div>
-          </div>
-        </div>
-        <div style="padding:0 16px 14px;display:flex;flex-direction:column;gap:6px">
-          <label for="a3" style="font-weight:600;font-size:12.5px">Your answer</label>
-          <textarea id="a3" class="input" placeholder="Type an answer, or start from the recommendation"></textarea>
-          <div><button class="btn primary" type="button" disabled style="opacity:.55">Send answer</button></div>
-        </div>
-      </article>
-    </div>
+        <nav class="dtabs" aria-label="Voyage sections">
+          <a class="dt" href="PlanReview.dc.html">Plan</a>
+          <a class="dt on" href="Questions.dc.html">Questions <em>3</em></a>
+          <a class="dt" href="RunDetail.dc.html">Runs <em>2</em></a>
+          <a class="dt" href="Records.dc.html">Gates <em>2</em></a>
+          <a class="dt" href="Records.dc.html">Artifacts</a>
+          <a class="dt" href="Records.dc.html">Ship's log</a>
+          <a class="dt" href="Halted.dc.html">Models</a>
+        </nav>
 
-    <aside style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:14px">
-      <section class="panel">
-        <div class="ph"><h2>What happens next</h2></div>
-        <div class="pb">
-          <span>When every question in this round is answered, the voyage is queued and Cartographer's next run reads all the answers.</span>
-          <span class="hint">That run spends from the remaining 18.9 AIU, billed to sam@example.com, on <span class="mono">claude-sonnet-5 · high</span>.</span>
-          <span class="hint">Anyone on the crew may answer. There's no chat with the agent: the answer is the whole message.</span>
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: flex-start;
+          "
+        >
+          <div
+            style="
+              flex: 999 1 620px;
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 12px;
+              "
+            >
+              <h2>Round 1 · Cartographer asks</h2>
+              <span class="sub">1 of 3 answered</span>
+              <div class="meter" style="width: 120px">
+                <i style="width: 33%"></i>
+              </div>
+            </div>
+
+            <article class="q">
+              <div class="qh">
+                <span class="qid">Q1</span
+                ><span class="badge b-done"><i></i>Answered</span
+                ><span style="flex: 1"></span
+                ><span class="lock"
+                  ><svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="5" y="11" width="14" height="9" rx="2"></rect>
+                    <path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg
+                  >Final</span
+                >
+              </div>
+              <div class="qt">
+                Should the PDF include the company's VAT number and address
+                block, or only the line items and totals?
+              </div>
+              <div class="ans">
+                <span
+                  >Include the VAT number and the full address block, same as
+                  the emailed receipt.</span
+                >
+                <span class="hint"
+                  >sam@example.com · today 09:12 · used the recommendation,
+                  edited</span
+                >
+              </div>
+            </article>
+
+            <article class="q open" id="q2">
+              <div class="qh">
+                <span class="qid">Q2</span
+                ><span class="badge b-input"><i></i>Needs an answer</span>
+              </div>
+              <div class="qt">
+                Where should the download be offered: on the receipt page only,
+                or also as a bulk download from the order history?
+              </div>
+              <div class="rec">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1A64D6"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  style="flex: none; margin-top: 2px"
+                >
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M15.5 8.5l-2 5-5 2 2-5z"></path>
+                </svg>
+                <div
+                  style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                  "
+                >
+                  <span
+                    ><b>Cartographer recommends:</b> Receipt page only for now;
+                    bulk download needs a background job and is better as its
+                    own story.</span
+                  >
+                  <div>
+                    <button class="btn sm soft" type="button">
+                      Use recommendation
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  padding: 0 16px 14px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                "
+              >
+                <label for="a2" style="font-weight: 600; font-size: 12.5px"
+                  >Your answer</label
+                >
+                <textarea id="a2" class="input">
+Receipt page only for now; bulk download needs a background job and is better as its own story. Also add the button to the order confirmation email link target.</textarea>
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    align-items: center;
+                  "
+                >
+                  <button class="btn primary" type="button">Send answer</button>
+                  <span class="hint"
+                    >Answers are final once sent: they can't be edited. Recorded
+                    as alex@example.com.</span
+                  >
+                </div>
+              </div>
+            </article>
+
+            <article class="q">
+              <div class="qh">
+                <span class="qid">Q3</span
+                ><span class="badge b-input"><i></i>Needs an answer</span>
+              </div>
+              <div class="qt">
+                The receipts service stores amounts in cents. Should the PDF
+                round tax per line or on the total?
+              </div>
+              <div class="rec">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1A64D6"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  style="flex: none; margin-top: 2px"
+                >
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M15.5 8.5l-2 5-5 2 2-5z"></path>
+                </svg>
+                <div
+                  style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                  "
+                >
+                  <span
+                    ><b>Cartographer recommends:</b> On the total, to match the
+                    amount charged.</span
+                  >
+                  <div>
+                    <button class="btn sm soft" type="button">
+                      Use recommendation
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  padding: 0 16px 14px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                "
+              >
+                <label for="a3" style="font-weight: 600; font-size: 12.5px"
+                  >Your answer</label
+                >
+                <textarea
+                  id="a3"
+                  class="input"
+                  placeholder="Type an answer, or start from the recommendation"
+                ></textarea>
+                <div>
+                  <button
+                    class="btn primary"
+                    type="button"
+                    disabled
+                    style="opacity: 0.55"
+                  >
+                    Send answer
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <aside
+            style="
+              flex: 1 1 300px;
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              gap: 14px;
+            "
+          >
+            <section class="panel">
+              <div class="ph"><h2>What happens next</h2></div>
+              <div class="pb">
+                <span
+                  >When every question in this round is answered, the voyage is
+                  queued and Cartographer's next run reads all the
+                  answers.</span
+                >
+                <span class="hint"
+                  >That run spends from the remaining 18.9 AIU, billed to
+                  sam@example.com, on
+                  <span class="mono">claude-sonnet-5 · high</span>.</span
+                >
+                <span class="hint"
+                  >Anyone on the crew may answer. There's no chat with the
+                  agent: the answer is the whole message.</span
+                >
+              </div>
+            </section>
+          </aside>
         </div>
-      </section>
-    </aside>
-  </div>
-</main>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1250}}'>
-class Component extends DCLogic {
-  renderVals() {
-    return {};
-  }
-}
-</script>
-</body>
+      </main>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1440,"height":1250}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
 </html>

@@ -1,4 +1,4 @@
-import type { HaltReason } from "./types";
+import type { HaltReason } from './types';
 
 /** The two faces of a halt reason: a one-liner for lists and the full sentence from the vocabulary. */
 export interface HaltReasonInfo {
@@ -23,19 +23,21 @@ export interface HaltExplanation {
  */
 export const HALT_REASONS: Readonly<Record<HaltReason, HaltReasonInfo>> = {
   stopped_by_user: {
-    short: "Someone on the crew stopped it.",
-    text: "Someone on the crew stopped it. Show their reason.",
+    short: 'Someone on the crew stopped it.',
+    text: 'Someone on the crew stopped it. Show their reason.',
   },
   gate_rejected: {
-    short: "An automated check rejected the crew's output, and it can't be retried automatically.",
+    short:
+      "An automated check rejected the crew's output, and it can't be retried automatically.",
     text: "An automated check rejected the crew's output, and it can't be retried automatically.",
   },
   budget_exhausted: {
-    short: "The voyage has spent its whole AIU budget.",
-    text: "The voyage has spent its whole AIU budget. Raise the budget, then resume.",
+    short: 'The voyage has spent its whole AIU budget.',
+    text: 'The voyage has spent its whole AIU budget. Raise the budget, then resume.',
   },
   run_failed: {
-    short: "A crew member's run failed, for example a refused model or a crash.",
+    short:
+      "A crew member's run failed, for example a refused model or a crash.",
     text: "A crew member's run failed, for example a refused model or a crash.",
   },
   run_lost: {
@@ -43,7 +45,8 @@ export const HALT_REASONS: Readonly<Record<HaltReason, HaltReasonInfo>> = {
     text: "Ahoy lost contact with a run and can't tell how it ended.",
   },
   run_result_invalid: {
-    short: "A run finished, but its result couldn't be read or broke the rules.",
+    short:
+      "A run finished, but its result couldn't be read or broke the rules.",
     text: "A run finished, but its result couldn't be read or broke the rules.",
   },
   dispatch_failed: {
@@ -51,12 +54,12 @@ export const HALT_REASONS: Readonly<Record<HaltReason, HaltReasonInfo>> = {
     text: "Ahoy couldn't start the run at all. Nothing was spent.",
   },
   revision_ceiling_reached: {
-    short: "The plan was sent back the maximum number of times (about 4).",
-    text: "The plan was sent back the maximum number of times (about 4).",
+    short: 'The plan was sent back the maximum number of times (about 4).',
+    text: 'The plan was sent back the maximum number of times (about 4).',
   },
   reconciler_error: {
-    short: "Something went wrong inside Ahoy while moving the voyage on.",
-    text: "Something went wrong inside Ahoy while moving the voyage on.",
+    short: 'Something went wrong inside Ahoy while moving the voyage on.',
+    text: 'Something went wrong inside Ahoy while moving the voyage on.',
   },
 };
 
@@ -70,7 +73,13 @@ export function isHaltReason(value: string): value is HaltReason {
  * like a verdict), and the event's detail is returned separately so the banner can quote it.
  */
 export function explainHalt(reason: string, detail?: string): HaltExplanation {
-  const known: HaltReasonInfo = isHaltReason(reason) ? HALT_REASONS[reason] : { short: reason, text: reason };
-  const trimmed = detail?.trim() ?? "";
-  return { short: known.short, text: known.text, detail: trimmed.length > 0 ? trimmed : null };
+  const known: HaltReasonInfo = isHaltReason(reason)
+    ? HALT_REASONS[reason]
+    : { short: reason, text: reason };
+  const trimmed = detail?.trim() ?? '';
+  return {
+    short: known.short,
+    text: known.text,
+    detail: trimmed.length > 0 ? trimmed : null,
+  };
 }

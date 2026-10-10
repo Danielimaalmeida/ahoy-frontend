@@ -16,11 +16,11 @@ import {
   text,
   timestamp,
   wholeNumber,
-} from "./guard-kit";
+} from './guard-kit';
 
 /** A tool call the agent started. */
 export interface RunProgressTool {
-  readonly kind: "tool";
+  readonly kind: 'tool';
   readonly runId: string;
   /** The line of the run's `events.jsonl` this step came from, 1-based: the key to de-duplicate on. */
   readonly line: number;
@@ -32,7 +32,7 @@ export interface RunProgressTool {
 
 /** A message the agent wrote, cut to its first 200 characters. */
 export interface RunProgressMessage {
-  readonly kind: "message";
+  readonly kind: 'message';
   readonly runId: string;
   readonly line: number;
   readonly at?: string;
@@ -41,7 +41,7 @@ export interface RunProgressMessage {
 
 /** The run's spend so far. It closes every batch of steps, so it also says where reading stopped. */
 export interface RunProgressSpend {
-  readonly kind: "spend";
+  readonly kind: 'spend';
   readonly runId: string;
   /** Lines of `events.jsonl` read so far. */
   readonly line: number;
@@ -62,48 +62,49 @@ export interface RunProgressSpend {
 }
 
 /** One `run.progress` payload, told apart by `kind`. */
-export type RunProgress = RunProgressTool | RunProgressMessage | RunProgressSpend;
+export type RunProgress =
+  RunProgressTool | RunProgressMessage | RunProgressSpend;
 
-const runId = patterned("a run id", /^[A-Za-z0-9_.-]+$/, 120);
-const count = wholeNumber("a whole number, 0 or more", 0);
+const runId = patterned('a run id', /^[A-Za-z0-9_.-]+$/, 120);
+const count = wholeNumber('a whole number, 0 or more', 0);
 
 const isTool = guard<RunProgressTool>(
-  "run.progress tool",
+  'run.progress tool',
   shape<RunProgressTool>({
-    kind: oneOf(["tool"]),
+    kind: oneOf(['tool']),
     runId,
-    line: wholeNumber("a line number, 1 or more", 1),
+    line: wholeNumber('a line number, 1 or more', 1),
     at: optional(timestamp),
     tool: nonEmptyText,
     summary: optional(text),
-  }),
+  })
 );
 
 const isMessage = guard<RunProgressMessage>(
-  "run.progress message",
+  'run.progress message',
   shape<RunProgressMessage>({
-    kind: oneOf(["message"]),
+    kind: oneOf(['message']),
     runId,
-    line: wholeNumber("a line number, 1 or more", 1),
+    line: wholeNumber('a line number, 1 or more', 1),
     at: optional(timestamp),
     text: nonEmptyText,
-  }),
+  })
 );
 
 const isSpend = guard<RunProgressSpend>(
-  "run.progress spend",
+  'run.progress spend',
   shape<RunProgressSpend>({
-    kind: oneOf(["spend"]),
+    kind: oneOf(['spend']),
     runId,
     line: count,
     offset: count,
-    nanoAiu: wholeNumber("a whole number of nano-AIU, 0 or more", 0),
+    nanoAiu: wholeNumber('a whole number of nano-AIU, 0 or more', 0),
     requests: count,
     steps: count,
     omitted: count,
     skipped: count,
-    events: wholeNumber("a whole number, 1 or more", 1),
-  }),
+    events: wholeNumber('a whole number, 1 or more', 1),
+  })
 );
 
 /**
@@ -113,12 +114,12 @@ const isSpend = guard<RunProgressSpend>(
  */
 export function parseRunProgress(payload: unknown): RunProgress | null {
   if (!isRecord(payload)) return null;
-  switch (payload["kind"]) {
-    case "tool":
+  switch (payload['kind']) {
+    case 'tool':
       return isTool(payload) ? payload : null;
-    case "message":
+    case 'message':
       return isMessage(payload) ? payload : null;
-    case "spend":
+    case 'spend':
       return isSpend(payload) ? payload : null;
     default:
       return null;

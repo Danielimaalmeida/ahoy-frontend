@@ -1,13 +1,13 @@
-import { DEFAULT_APP_CONFIG } from "@core/config/app-config";
-import { createMockFetch } from "@testing/mock-backend/fetch-adapter";
-import type { MockAhoyServer } from "@testing/mock-backend/server";
+import { DEFAULT_APP_CONFIG } from '@core/config/app-config';
+import { createMockFetch } from '@testing/mock-backend/fetch-adapter';
+import type { MockAhoyServer } from '@testing/mock-backend/server';
 import {
   applyQuerySwitches,
   applyStorageSwitches,
   SWITCH_PREFIX,
   type SwitchStorage,
-} from "@testing/mock-backend/switches";
-import { createMockServer } from "./mock-backend";
+} from '@testing/mock-backend/switches';
+import { createMockServer } from './mock-backend';
 
 /** What `installMockBackend` reads from the page; specs pass fakes. */
 export interface MockInstallHost {
@@ -30,7 +30,7 @@ function browserHost(): MockInstallHost {
   return {
     global: globalThis,
     storage,
-    search: globalThis.location?.search ?? "",
+    search: globalThis.location?.search ?? '',
     log: (message) => console.info(message),
   };
 }
@@ -45,7 +45,9 @@ function browserHost(): MockInstallHost {
  * switches are read once from the query string and before each request from `localStorage` (`ahoy.mock.failNext`...).
  * The server is also on `globalThis.ahoyMock` for the browser console (`ahoyMock.dropStreams()`, `ahoyMock.reset()`).
  */
-export function installMockBackend(host: MockInstallHost = browserHost()): MockAhoyServer {
+export function installMockBackend(
+  host: MockInstallHost = browserHost()
+): MockAhoyServer {
   const server = createMockServer();
   const realFetch = host.global.fetch.bind(host.global);
   const read = (key: string): string | null => {
@@ -61,13 +63,13 @@ export function installMockBackend(host: MockInstallHost = browserHost()): MockA
     actor: () => read(`${SWITCH_PREFIX}actor`) ?? DEFAULT_APP_CONFIG.actor,
     beforeEach: () => {
       const applied = applyStorageSwitches(server, host.storage);
-      if (applied.length > 0) host.log(`Ahoy mock: ${applied.join(", ")}`);
+      if (applied.length > 0) host.log(`Ahoy mock: ${applied.join(', ')}`);
     },
   });
   Object.assign(host.global, { ahoyMock: server });
   host.log(
     `Ahoy mock backend: /api/v1 is answered in the browser (fictional data, 0 AIU)` +
-      (fromQuery.length > 0 ? `; ${fromQuery.join(", ")}` : ""),
+      (fromQuery.length > 0 ? `; ${fromQuery.join(', ')}` : '')
   );
   return server;
 }

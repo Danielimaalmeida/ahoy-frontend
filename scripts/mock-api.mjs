@@ -16,53 +16,70 @@
 //
 // The TypeScript runs on Node 24's type stripping; a module hook resolves the project's import style (extensionless
 // relative imports and the @core/@testing/... aliases) to the .ts files. Local development only: never deploy it.
-import { readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { registerHooks } from "node:module";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { registerHooks } from 'node:module';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ALIASES = {
-  "@domain/": "src/app/domain/",
-  "@core/": "src/app/core/",
-  "@ui/": "src/app/ui/",
-  "@features/": "src/app/features/",
-  "@testing/": "src/testing/",
+  '@domain/': 'src/app/domain/',
+  '@core/': 'src/app/core/',
+  '@ui/': 'src/app/ui/',
+  '@features/': 'src/app/features/',
+  '@testing/': 'src/testing/',
 };
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
     for (const [alias, dir] of Object.entries(ALIASES))
       if (specifier.startsWith(alias))
-        return nextResolve(pathToFileURL(join(root, dir, `${specifier.slice(alias.length)}.ts`)).href, context);
-    const fromTs = context.parentURL?.endsWith(".ts") ?? false;
-    if (fromTs && /^\.\.?\//.test(specifier) && !/\.[cm]?[jt]s$|\.json$/.test(specifier))
+        return nextResolve(
+          pathToFileURL(join(root, dir, `${specifier.slice(alias.length)}.ts`))
+            .href,
+          context
+        );
+    const fromTs = context.parentURL?.endsWith('.ts') ?? false;
+    if (
+      fromTs &&
+      /^\.\.?\//.test(specifier) &&
+      !/\.[cm]?[jt]s$|\.json$/.test(specifier)
+    )
       return nextResolve(`${specifier}.ts`, context);
     return nextResolve(specifier, context);
   },
 });
 
-const major = Number(process.versions.node.split(".")[0]);
+const major = Number(process.versions.node.split('.')[0]);
 if (major < 23) {
-  console.error(`mock-api: Node ${process.versions.node} cannot run TypeScript; use Node 24 (see .nvmrc).`);
+  console.error(
+    `mock-api: Node ${process.versions.node} cannot run TypeScript; use Node 24 (see .nvmrc).`
+  );
   process.exit(1);
 }
 
-const { MockAhoyServer } = await import("../src/testing/mock-backend/server.ts");
-const { applySwitches } = await import("../src/testing/mock-backend/switches.ts");
-const { MockProblem, problemResponse } = await import("../src/testing/mock-backend/http.ts");
+const { MockAhoyServer } =
+  await import('../src/testing/mock-backend/server.ts');
+const { applySwitches } =
+  await import('../src/testing/mock-backend/switches.ts');
+const { MockProblem, problemResponse } =
+  await import('../src/testing/mock-backend/http.ts');
 
-const BASE = "/api/v1";
+const BASE = '/api/v1';
 const MAX_BODY_BYTES = 1_000_000;
-const port = Number(process.env["MOCK_API_PORT"] ?? 8080);
-const host = process.env["MOCK_API_HOST"] ?? "127.0.0.1";
+const port = Number(process.env['MOCK_API_PORT'] ?? 8080);
+const host = process.env['MOCK_API_HOST'] ?? '127.0.0.1';
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  console.error(`mock-api: MOCK_API_PORT must be a port number, got ${process.env["MOCK_API_PORT"]}`);
+  console.error(
+    `mock-api: MOCK_API_PORT must be a port number, got ${process.env['MOCK_API_PORT']}`
+  );
   process.exit(1);
 }
 
-const contract = JSON.parse(readFileSync(join(root, "src/testing/fixtures/openapi.json"), "utf8"));
+const contract = JSON.parse(
+  readFileSync(join(root, 'src/testing/fixtures/openapi.json'), 'utf8')
+);
 const mock = new MockAhoyServer({ contract });
 
 /** Reads a request body as text, refusing more than the real API accepts. */
@@ -71,27 +88,30 @@ async function readText(req) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY_BYTES) throw new Error("too large");
+    if (size > MAX_BODY_BYTES) throw new Error('too large');
     chunks.push(chunk);
   }
-  return Buffer.concat(chunks).toString("utf8");
+  return Buffer.concat(chunks).toString('utf8');
 }
 
 /** Sends a JSON answer of the control routes. */
 function sendControl(res, status, body) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "X-Ahoy-Mock": "1" });
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'X-Ahoy-Mock': '1',
+  });
   res.end(JSON.stringify(body));
 }
 
 /** Writes a mock answer; an event stream is written chunk by chunk, without buffering. */
 async function send(req, res, answer) {
-  const headers = { ...answer.headers, "X-Ahoy-Mock": "1" };
-  if (answer.kind === "stream") {
-    res.writeHead(200, { ...headers, Connection: "keep-alive" });
+  const headers = { ...answer.headers, 'X-Ahoy-Mock': '1' };
+  if (answer.kind === 'stream') {
+    res.writeHead(200, { ...headers, Connection: 'keep-alive' });
     res.flushHeaders();
     const reader = answer.stream.body.getReader();
     const stop = () => void reader.cancel().catch(() => undefined);
-    req.on("close", stop);
+    req.on('close', stop);
     try {
       for (;;) {
         const { done, value } = await reader.read();
@@ -106,46 +126,77 @@ async function send(req, res, answer) {
     return;
   }
   res.writeHead(answer.status, headers);
-  if (answer.kind === "json") res.end(JSON.stringify(answer.body));
-  else if (answer.kind === "text") res.end(answer.body);
+  if (answer.kind === 'json') res.end(JSON.stringify(answer.body));
+  else if (answer.kind === 'text') res.end(answer.body);
   else res.end();
 }
 
 const http = createServer((req, res) => {
   const started = Date.now();
-  res.once("finish", () => console.log(`${req.method} ${req.url} ${res.statusCode} ${Date.now() - started} ms`));
+  res.once('finish', () =>
+    console.log(
+      `${req.method} ${req.url} ${res.statusCode} ${Date.now() - started} ms`
+    )
+  );
   void (async () => {
-    const url = new URL(req.url ?? "/", "http://localhost");
-    if (url.pathname.startsWith("/__mock/")) {
-      if (url.pathname === "/__mock/health") return sendControl(res, 200, { mock: true });
-      if (url.pathname === "/__mock/reset") {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    if (url.pathname.startsWith('/__mock/')) {
+      if (url.pathname === '/__mock/health')
+        return sendControl(res, 200, { mock: true });
+      if (url.pathname === '/__mock/reset') {
         mock.reset();
         return sendControl(res, 200, { reset: true });
       }
-      if (url.pathname === "/__mock/switches") {
-        const result = applySwitches(mock, (name) => url.searchParams.get(name));
-        return sendControl(res, result.refused.length > 0 ? 400 : 200, { ...result, switches: mock.switches });
+      if (url.pathname === '/__mock/switches') {
+        const result = applySwitches(mock, (name) =>
+          url.searchParams.get(name)
+        );
+        return sendControl(res, result.refused.length > 0 ? 400 : 200, {
+          ...result,
+          switches: mock.switches,
+        });
       }
-      return sendControl(res, 404, { error: `no control route ${url.pathname}` });
+      return sendControl(res, 404, {
+        error: `no control route ${url.pathname}`,
+      });
     }
     if (url.pathname !== BASE && !url.pathname.startsWith(`${BASE}/`)) {
-      const problem = { type: "urn:ahoy:problem:not_found", title: "not found", status: 404, code: "not_found" };
-      res.writeHead(404, { "Content-Type": "application/problem+json; charset=utf-8", "X-Ahoy-Mock": "1" });
-      return res.end(JSON.stringify({ ...problem, detail: `No route for ${url.pathname}` }));
+      const problem = {
+        type: 'urn:ahoy:problem:not_found',
+        title: 'not found',
+        status: 404,
+        code: 'not_found',
+      };
+      res.writeHead(404, {
+        'Content-Type': 'application/problem+json; charset=utf-8',
+        'X-Ahoy-Mock': '1',
+      });
+      return res.end(
+        JSON.stringify({ ...problem, detail: `No route for ${url.pathname}` })
+      );
     }
     const headers = {};
     for (const [name, value] of Object.entries(req.headers))
-      if (value !== undefined) headers[name.toLowerCase()] = Array.isArray(value) ? value.join(", ") : value;
-    let text = "";
+      if (value !== undefined)
+        headers[name.toLowerCase()] = Array.isArray(value)
+          ? value.join(', ')
+          : value;
+    let text = '';
     try {
       text = await readText(req);
     } catch {
       // The real API refuses an oversized body before routing, with the same problem.
-      return send(req, res, problemResponse(new MockProblem("bad_request", "Request body is too large")));
+      return send(
+        req,
+        res,
+        problemResponse(
+          new MockProblem('bad_request', 'Request body is too large')
+        )
+      );
     }
     let body;
     let bodyIsInvalidJson = false;
-    if (text !== "") {
+    if (text !== '') {
       try {
         body = JSON.parse(text);
       } catch {
@@ -154,10 +205,11 @@ const http = createServer((req, res) => {
       }
     }
     const latency = mock.switches.latencyMs;
-    if (latency > 0) await new Promise((resolve) => setTimeout(resolve, latency));
+    if (latency > 0)
+      await new Promise((resolve) => setTimeout(resolve, latency));
     const request = {
-      method: req.method ?? "GET",
-      path: url.pathname.slice(BASE.length) || "/",
+      method: req.method ?? 'GET',
+      path: url.pathname.slice(BASE.length) || '/',
       query: url.searchParams,
       headers,
       body,
@@ -166,17 +218,22 @@ const http = createServer((req, res) => {
     return send(req, res, mock.handle(request));
   })().catch((error) => {
     console.error(error);
-    if (!res.headersSent) sendControl(res, 500, { error: "mock-api failed; see its terminal" });
+    if (!res.headersSent)
+      sendControl(res, 500, { error: 'mock-api failed; see its terminal' });
     else res.destroy();
   });
 });
 
 http.listen(port, host, () => {
-  console.log(`mock-api: the Ahoy mock backend listens on http://${host}:${port}${BASE} (0 AIU, fictional data)`);
-  console.log("mock-api: run `npm start` beside it; the dev proxy forwards /api/v1 here. Ctrl+C stops it.");
+  console.log(
+    `mock-api: the Ahoy mock backend listens on http://${host}:${port}${BASE} (0 AIU, fictional data)`
+  );
+  console.log(
+    'mock-api: run `npm start` beside it; the dev proxy forwards /api/v1 here. Ctrl+C stops it.'
+  );
 });
 
-for (const signal of ["SIGINT", "SIGTERM"])
+for (const signal of ['SIGINT', 'SIGTERM'])
   process.on(signal, () => {
     mock.close();
     http.close(() => process.exit(0));

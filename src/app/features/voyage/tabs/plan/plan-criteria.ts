@@ -1,4 +1,4 @@
-import type { StoryCriterion } from "@core/api/story-state";
+import type { StoryCriterion } from '@core/api/story-state';
 
 const HEADING = /^#{1,6}\s+acceptance criteria\s*#*\s*$/i;
 const ANY_HEADING = /^#{1,6}\s+\S/;
@@ -13,7 +13,7 @@ export function criteriaInPlan(plan: string | null): readonly StoryCriterion[] {
   if (plan === null) return [];
   const found: StoryCriterion[] = [];
   let inside = false;
-  for (const line of plan.split("\n")) {
+  for (const line of plan.split('\n')) {
     if (HEADING.test(line)) {
       inside = true;
     } else if (ANY_HEADING.test(line)) {
@@ -28,6 +28,9 @@ export function criteriaInPlan(plan: string | null): readonly StoryCriterion[] {
 }
 
 /** The criteria to show: the state's, else those the plan lists. */
-export function criteriaOf(fromState: readonly StoryCriterion[], plan: string | null): readonly StoryCriterion[] {
+export function criteriaOf(
+  fromState: readonly StoryCriterion[],
+  plan: string | null
+): readonly StoryCriterion[] {
   return fromState.length > 0 ? fromState : criteriaInPlan(plan);
 }

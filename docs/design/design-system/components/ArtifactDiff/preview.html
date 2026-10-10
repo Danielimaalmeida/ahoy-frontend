@@ -1,16 +1,37 @@
 <!-- @dsCard group="Data" height=200 subtitle="Comparing two artifact revisions" -->
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>ArtifactDiff preview</title></head>
-<body>
-<div class="ah" style="padding:16px;display:flex;flex-direction:column;gap:12px">
-<div class="ah-panel"><div class="ah-diff" style="padding:8px 0">
-  <div class="ah-diff__hunk">@@ Summary @@</div>
-  <div><span class="ah-diff__ln">3</span>Show each invoice's due date on the billing page,</div>
-  <div class="ah-diff__del"><span class="ah-diff__ln">4</span>− in the server's timezone.</div>
-  <div class="ah-diff__add"><span class="ah-diff__ln">4</span>+ in the customer's timezone, with a clear overdue state.</div>
-</div></div>
-<p style="margin:0">WP1 now <span class="ah-mark">computes isOverdue against the customer's timezone</span>.</p>
-</div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>ArtifactDiff preview</title>
+  </head>
+  <body>
+    <div
+      class="ah"
+      style="padding: 16px; display: flex; flex-direction: column; gap: 12px"
+    >
+      <div class="ah-panel">
+        <div class="ah-diff" style="padding: 8px 0">
+          <div class="ah-diff__hunk">@@ Summary @@</div>
+          <div>
+            <span class="ah-diff__ln">3</span>Show each invoice's due date on
+            the billing page,
+          </div>
+          <div class="ah-diff__del">
+            <span class="ah-diff__ln">4</span>− in the server's timezone.
+          </div>
+          <div class="ah-diff__add">
+            <span class="ah-diff__ln">4</span>+ in the customer's timezone, with
+            a clear overdue state.
+          </div>
+        </div>
+      </div>
+      <p style="margin: 0">
+        WP1 now
+        <span class="ah-mark"
+          >computes isOverdue against the customer's timezone</span
+        >.
+      </p>
+    </div>
+  </body>
 </html>

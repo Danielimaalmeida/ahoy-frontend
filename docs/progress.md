@@ -1,22 +1,212 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-07 by lane 5C (Artifacts: view and compare), launched from `docs/paralelos4.md` section F on branch
-`lane/5c-artifacts`, from `main` at 4aae11b (which holds every earlier lane, 4A to 5B included). Lane 5C is built, tested on
-the mock backend and checked in a browser. It is in PR #21; a second review then fixed the wireframe gaps (Artifacts data,
-labels, one hunk per section) and three small bugs, see "Lane 5C" → "Second review and wireframe fixes".**
+**Updated 2026-10-10 for the local TEST startup path on `feature/update-labels`.** The sprint-grouped Backlog is
+committed and pushed; the TEST startup path is local, documented configuration work. No TEST or remote environment was
+contacted by this session.
 
-- **Ran for 5C (offline, 0 AIU, Node 24.21.0):** `npm run build`, `npm run typecheck` (`check-boundaries: ok`),
-  `npm test` (125 files, **2237 tests**: the 2156 of `main`, 82 new, one placeholder row removed from `app.routes.spec.ts`)
-  and `npm run format:check`, all green; `npm run lint` fails in the harness wrapper ("ESLint output (JSON parse failed…)"),
-  so its three steps ran on their own and were green: `node_modules/.bin/eslint .`, `npm run tokens:check` and
-  `npm run api:check`; `npm run start:mock` in headless Chromium (light, dark and 390 px) next to the `Records` board.
-- **Did not run for 5C:** anything against a real API, `--simulate` or TEST; mutation checks; the formal two-axis
-  `/code-review`; browsers other than Chromium; a screen reader; a pixel diff (compared by eye).
+## Local TEST startup path (2026-10-10)
 
-Earlier: **lane 5A (Runs, run detail and live steps)**, launched from `docs/paralelos4.md` section D through `/implement` on
-branch `claude/epic-albattani-81fip3`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 5A is built, tested on the mock
-backend and checked in a browser. It is committed and pushed with the user's approval, and `main` is merged into the branch
-afterwards (see "Lane 5A" → "Git").
+- **Changed:** added `npm run start:test`, which selects the existing `test` build configuration and a separate
+  `src/proxy.conf.test.json` targeting the TEST API. The default `src/proxy.conf.json` remains user-owned and unchanged
+  by this task.
+- **Safety:** the TEST proxy is opt-in and is not used by unit tests, e2e tests or the default start command. No TEST
+  request, browser session or mutating action was run.
+- **Needs from other lanes:** none. Commit and push require new explicit approval.
+
+## Backlog sprint layout (2026-10-10)
+
+- **Changed:** matched the sprint sections and filter bar in the user-provided `docs/design/wireframes/Backlog.html`.
+  The adapter now preserves Jira's sprint ID, name and state and filters by sprint or "No sprint". Native
+  `details` sections support individual toggling and Collapse all / Expand all, retaining the chosen state when
+  more rows arrive. Active sprints, the first future sprint and No sprint open initially; later future and closed
+  sprints start collapsed. Groups sort by state then ID; rows retain Jira rank order within each group.
+- **Preserved:** search, Jira status, assignee and Ahoy-scope filters, story joins, Jira/voyage links, start actions,
+  loading/error/empty states and global 25-item pagination. Group metrics count displayed rows, labelled "shown"
+  when another page remains; the footer reports the global displayed/filtered total.
+- **Responsive follow-up:** removed horizontal scrolling at the user's request. Wide screens use fluid columns and
+  wrapping content; below 1280px rows become labelled, stacked records with every field and action retained. Mobile
+  actions have 44px touch targets. The user tested the layout and confirmed it.
+- **Contract limits:** no sprint dates, goals or board order are provided, so none are invented. Future sprints say
+  "Future", not "Next". Jira completion counts recognize the literal "Done" status, not an inferred status category.
+  The API also lacks assignee information; the existing column/filter remain unchanged.
+- **Mock:** corrected the Jira mock response to match the contract (`sprint` objects and required `total`) and added
+  active/future/no-sprint coverage to the route test.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint and **128 files / 2,290 tests passed**.
+  Formatting passed on the changed implementation files; repository-wide `npm run format` reports only the user's
+  new, unformatted `docs/design/wireframes/Backlog.html`, which was intentionally not edited.
+- **Browser:** an isolated temporary bootstrap used only `MockAhoyServer` and fictional identity/data (no SSO or
+  proxy/API). Checked desktop 1440px and mobile 390px, sprint/no-sprint filtering, Collapse all / Expand all and
+  keyboard disclosure. Responsive checks at 320, 390, 768, 1100, 1280, 1440 and 1920px found no document, table or cell
+  horizontal overflow. The Google Fonts request failed in this environment;
+  fallback typography was used. Temporary source and server were removed/stopped after checking.
+- **Not run:** a committed Playwright/e2e suite, screen reader, real Jira/API, local `--simulate`, live API or TEST.
+  No AIU was spent. No dependencies were added.
+- **Needs from other lanes:** none. Commit and push require new explicit approval.
+
+## Jira backlog integration (2026-10-10)
+
+- **Changed:** the Docks page now uses `GET /api/v1/jira/backlog` through `JiraBacklogAdapter` instead of the
+  fictional default backlog. The existing search, Jira-status, Ahoy-scope, pagination and story joins remain
+  client-side; the stub adapter remains available for component tests and wireframe scenarios.
+- **Changed:** added runtime validation, API-client coverage and an offline fictional Jira backlog response to the
+  mock backend. Removed the stale planned marker from the top navigation and route documentation.
+- **Ran on Node 26.0.0:** build, typecheck (`check-boundaries: ok`), lint, all unit/component tests
+  (**128 files, 2,283 tests passed**), formatting and the UI detector all passed. Targeted route/API tests covered
+  the new screen and contract.
+- **API artifact note:** `npm run api:check` still reports the repository's existing generated-types formatting
+  mismatch after generation; the generated schema and JSON mirror are synchronized and formatted. No real API,
+  TEST environment, browser/visual checks or Playwright/e2e were run. No AIU was spent.
+- **Needs from other lanes:** none. Commit and push still require explicit approval.
+
+## Event stream authentication (2026-10-10)
+
+- **Problem:** `GET /api/v1/events/stream` answered `401` on TEST while every other API call succeeded. The
+  `@company-name-fedev/auth` resource-server interceptor only decorates Angular `HttpClient` requests; the event stream reads
+  `fetch` directly (F6) and took its headers from `AUTH_STRATEGY`, which was still bound to `NoAuthStrategy`.
+- **Changed:** added `core/auth/fedev-auth-strategy.ts`, which reads `FedevAuthService.accessToken` on every call and
+  returns `Authorization: Bearer …` (nothing when there is no token yet), and bound `AUTH_STRATEGY` to it in
+  `app.config.ts`. `authInterceptor` and `EventStreamClient` were not touched; no new dependency was added.
+- **Ran on Node 24:** build, typecheck (`check-boundaries: ok`), lint, all unit/component tests
+  (**127 files, 2,272 tests passed**) and `npm run format`, all passed.
+- **Not run:** the TEST environment or any real API; no AIU was spent. The fix is therefore only proven offline — the
+  `401` itself can only be confirmed gone by signing in on TEST.
+- **Needs from other lanes:** none. Commit and push still require explicit approval.
+
+## Story budget unit conversion (2026-10-10)
+
+- **Confirmed and documented:** all user-entered story budgets use AIU in the UI and are converted by `parseAiu` to
+  integer `budgetNanoAiu` values before `startStory` and `setStoryBudget` requests. The exact conversion is
+  **100 AIU = 100,000,000,000 nano-AIU**; no floating-point arithmetic is used.
+- **Changed:** exposed the shared `NANO_AIU_PER_AIU` constant and added an explicit 100-AIU conversion test.
+- **Ran:** the AIU tests and existing offline validation remain covered by the repository test suite; no real API or
+  TEST environment was used.
+
+## Coverage summary workflow fix (2026-10-10)
+
+- **Changed:** `test:coverage` now runs the coverage-summary converter after Vitest completes, so CI receives both
+  `coverage/coverage-summary.json` and `coverage/coverage-summary.md`. The converter now uses ESM imports, works with
+  the repository's `"type": "module"` setting, loads the Vitest thresholds and resolves paths from its own location.
+- **Ran:** `npm run test:coverage` passed with **126 files and 2,267 tests**, and the converter was also verified with
+  Node 24. `npm run typecheck` and `git diff --check` passed.
+- **Not run:** the remote reusable GitHub workflow itself; no real API or TEST environment was used.
+- **Needs from other lanes:** none. Commit and push still require explicit approval.
+
+## User-friendly nautical labels (2026-10-10)
+
+- **Changed:** visible status labels now read `Running`, `Needs answers`, `Needs decision`, `Halted`, `Done`,
+  `Blocked` and `Finished`; navigation and actions now read `Needs you`, `Ideas`, `Backlog`, `Activity`,
+  `In progress` and `Start voyage`. Stop/resume dialogs, halted guidance, connectivity errors and plan messages use
+  the corresponding plain-language copy, including dynamic voyage keys in confirmation headings.
+- **Preserved:** API status values, routes, CSS modifiers, filter values and nautical visual identity. `Chart room`
+  was only present in synchronized design wireframes, which were not edited.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, all unit/component tests
+  (**126 files, 2,267 tests passed**) and `npm run format`, all passed. The repository has no `format:check` script;
+  the existing `format` script was used as the Prettier check.
+- **Did not run:** browser/visual comparison, Playwright/e2e, screen reader, live API, TEST environment or a running
+  mock-backend app. No AIU was spent.
+- **Needs from other lanes:** none. Commit and push still require explicit approval.
+
+**Updated 2026-10-09 for Set Sail model selection on `feature/dockerfile`.** This is local, uncommitted work,
+validated offline with in-process fakes and the mock backend (0 AIU). No real API or remote environment was used.
+
+## Set Sail model catalogue (2026-10-09)
+
+- **Changed:** `ApiClient.listModels()` reads `GET /models` through a complete runtime guard. Set Sail shows a native
+  model dropdown for each of the four slots, using catalogue labels/ids and the server's per-slot defaults. Default
+  remains an omitted override, not a copied model choice. Other model id reveals a labelled text field for an
+  out-of-catalogue model; the selection sentinel is never sent to the API.
+- **Behaviour:** model-specific effort options respect known support (`[]` means none; `null` leaves all options).
+  Switching to an incompatible model clears the effort. Loading has a status message; failure or an invalid response
+  has an explicit banner and retry, with custom-id entry still available. Retry preserves the user's choices.
+  The catalogue is not proof of the owner's Copilot entitlement; the worker still validates before its first prompt.
+- **Shared surfaces:** `ModelChoiceTable` accepts an optional catalogue. The existing Models dialog and kit keep
+  their text-input behaviour; fetching the catalogue for those surfaces is not part of this Set Sail change.
+  The offline mock now serves the catalogue, and the shell's hand-written API fake supports the new request.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, all unit/component tests
+  (**126 files, 2,267 tests passed**) and `npm run format`, all passed. `format:check` is not a current script.
+  Tests cover catalogue validation, request/response handling, mock contract conformance, defaults, selected/custom
+  model payloads, effort compatibility, retry and existing Set Sail behaviour. The mechanical UI detector reported
+  no findings.
+- **API artifact limitation:** `npm run api:check` reports generated types out of date because the committed
+  `schema.d.ts` is Prettier-formatted rather than the generator's raw output. Regenerating to a scratch file and
+  applying the existing `.prettierrc` produced a byte-for-byte match; no schema/type change is missing.
+  `node scripts/openapi-mirror.mjs --check` passed. Neither generated artifact was edited.
+- **Did not run:** browser/visual comparison, Playwright/e2e, screen reader, a running mock-backend app, local
+  `--simulate`, live API or TEST. Browser startup currently uses the authentication/proxy setup, not the in-process
+  mock used by component tests; it was not used as offline proof.
+- **Needs from other lanes:** none. Commit, push and release still require explicit approval.
+
+**Updated 2026-10-09 for the NGINX document-root fix on `feature/dockerfile`.** Only local, offline checks were used;
+no remote environment, real API, commit or push was used for this fix.
+
+## NGINX container HTTP 500 fix (2026-10-09)
+
+- **Changed:** `nginx.conf` now serves `/opt/app-root/src/ahoy-frontend`, matching `docker/Dockerfile`, rather than
+  the stale `/opt/app-root/src/r3da-cdm-frontend`. Error and access logs go to stderr/stdout for container diagnostics.
+  The Dockerfile's non-root `USER 1001` is unchanged.
+- **Runtime proof:** a local smoke check used the already cached `neo-frontend:latest` image (NGINX 1.29.4, UID 1001)
+  with the production build and this repository's server configuration mounted read-only, then repeated with a local
+  `npm run build:test` build. With the old document root
+  absent, `/` returned HTTP 500; with the corrected root, `/`, `/index.html`, `/voyages/PROJ-123` and the JavaScript asset
+  returned HTTP 200. HTML matched the built index; a missing JavaScript asset returned HTTP 404. `nginx -t` passed.
+  The temporary smoke containers were stopped and removed. No API requests were made.
+- **Ran offline on Node 24.21.0 via `npx -y -p node@24`:** `npm run build`, `npm run typecheck`, `npm run lint`,
+  `npm test -- --watch=false` (**126 files, 2,237 tests passed**), `npm run build:test` and `npm run format`, all passed.
+  `format:check` does not exist in the current package scripts; `format` is the existing Prettier check.
+- **Not proven:** a build/start of the exact image from the private registry, remote liveness/readiness probes,
+  browser/Playwright/e2e, real API, local `--simulate`, or the TEST environment. The local HTTP check used cached NGINX
+  directly, not the released image's entrypoint. Both the production and TEST-configuration builds were served only
+  locally as static files; the TEST environment was not contacted.
+- **Needs from other lanes:** none. A new release is needed to put the corrected NGINX configuration into the remote
+  image; no release was triggered by this session.
+
+**Updated 2026-10-09 for the single-review OpenAPI migration on `feature/dockerfile`.** This is uncommitted work in the
+local checkout; no real API, TEST environment, commit or push was used.
+
+## Single-review contract migration (2026-10-09)
+
+- **Changed:** regenerated the OpenAPI TypeScript types and JSON mirror; removed the obsolete `SlotModel.lens` validation
+  and replaced the two review slots with one `review` slot. Set Sail and the Models dialog now show one Review row, no
+  longer enforce distinct reviewer models, and consistently label the run as Lookout. The offline mock voyage now makes
+  one `pr_review` run; event handling recognizes `review.resolved` and `run.waiting`.
+- **Ran offline on Node 26.0.0:** `npm run api:check`, `npm run build`, `npm run typecheck` (`check-boundaries: ok`),
+  `npm run lint`, `npm test -- --watch=false` (**126 files, 2,237 tests passed**), `git diff --check`, and Prettier
+  check on all changed source/fixture files, all green.
+- **Formatting limitation:** repository-wide `npm run format` still reports six files: three copied wireframes under
+  `docs/design/` (do not edit), `openapi/ahoy-v1.yaml`, and the generated `schema.d.ts` / OpenAPI JSON mirror. The
+  generated files are verified by `api:check`; the other changed source files pass their targeted Prettier check.
+- **Did not run:** browser/visual comparison, Playwright/e2e, screen reader, `npm run start:mock`, local `--simulate`,
+  live API or TEST. The unit/component tests use the in-process fake/mock server and incur 0 AIU.
+- **Not included:** `GET /models` and phase-7 commands including `resolveReview` remain unimplemented in `ApiClient`;
+  current model inputs remain free-text, and no halted-review resolution UI was added in this single-review change.
+
+**Updated 2026-10-08 for the user-requested account menu and full validation repair on
+`feat/user-menu-and-checkout-updates`.** The branch includes the `main` merge at `44867cb`; the menu reads the reactive
+Fedev profile and displays `given_name` and `family_name`. All required offline validation is green. The branch was
+pushed after validation fixes; no PR has been confirmed because the GitHub integration needs reconnecting.
+
+## User menu and validation repair (2026-10-08)
+
+- **Changed:** `App` maps validated profile text into the presentational `TopBar`; removed unfinished profile console
+  logging. The menu dismisses on outside click, Escape and focus leaving, restores focus on Escape, resets on profile
+  changes, hides when signed out and uses unique disclosure ids. Styles inherit light/dark tokens and keep the dropdown
+  within narrow viewports. Display name and initials use `given_name` and `family_name`.
+- **Validation fixes:** repaired escaped spacing tokens in seven SCSS files and regenerated `src/styles/tokens.css`;
+  excluded generated tokens from Stylelint while retaining the dedicated token check; fixed field test typing, whitespace
+  assertions and stale route expectations; excluded the environment replacement file from unit-test discovery; aligned
+  mock artifact history and its tests.
+- **Ran offline, 0 AIU, Node 24.21.0:** `npm run build`, `npm run typecheck` (`check-boundaries: ok`), `npm run lint`,
+  `npm test -- --watch=false` (**126 files, 2,256 tests passed**), `npm run format`, `npm run tokens -- --check` and
+  `git diff --check`, all green. No API was contacted.
+- **Did not run:** browser/visual comparison, Playwright/e2e, screen reader, mock-backend app, local `--simulate`, real
+  authentication/SSO logout, live API or TEST. Authentication and API interactions in component tests use fakes.
+- **Needs from other lanes:** none for the user menu. The GitHub integration must be reconnected before a PR can be
+  opened; no PR is currently confirmed.
+
+**Updated 2026-10-07 by lane 5A (Runs, run detail and live steps), launched from `docs/paralelos4.md` section D through
+`/implement` on branch `claude/epic-albattani-81fip3`, from `main` at 959a7b4 (lane 4A merged as PR #15). Lane 5A is built,
+tested on the mock backend and checked in a browser. It is committed and pushed with the user's approval, and `main` is merged
+into the branch afterwards (see "Lane 5A" → "Git").**
 
 - **Ran for 5A (offline, 0 AIU, Node 24.21.0 via `npx -y node@24`):** `npm ci`, `npm run build`, `npm run typecheck`
   (`check-boundaries: ok`), `npm run lint` (with `tokens:check` and `api:check`), `npm test` and `npm run format:check`, all
@@ -189,15 +379,22 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-**Wave 4 is built.** Lanes 4A to 5B are in `main` (PR #15 to #20) and lane 5C (Artifacts: view and compare) is built on the mock
-backend, waiting for review (section "Lane 5C" below). With it, sections A to F of `docs/paralelos4.md` are all built.
+The active, uncommitted change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
+a sprint filter and native disclosure controls, plus a user-approved responsive layout without horizontal scrolling.
+Offline validation passes with 2,290 tests; a mock-only browser
+preview was checked at desktop/mobile sizes. Repository formatting reports only the untouched new design source.
+Earlier labels, coverage, budget conversion, SSE authentication, Jira integration and removal of the empty Playwright
+CI job are committed and pushed on this branch. Real Jira/API and TEST verification remain unproven.
+The earlier Set Sail model catalogue change on `feature/dockerfile` adds Set Sail model dropdowns backed by `GET /models`; the full offline
+validation passes with 2,267 tests. The catalogue represents server configuration, not Copilot account entitlements.
+The earlier NGINX fix remains in the branch; its exact released image and remote probes remain unverified.
+Earlier migration, lane and user-menu reports are historical snapshots from their original branches and dates.
+
+**Wave 4 has begun.** Lane 4B (Plan tab and decision) is built on the mock backend and waits for the user's review and approval to
+commit (section "Lane 4B"). Lane 4A is merged (PR #15), so lanes 4C, 4D, 5A, 5B and 5C (`docs/paralelos4.md` sections B to F)
+can run beside it.
 
 **Lane 4D (Models tab and Change models dialog) is built on the mock backend, committed and pushed (PR #18)**: see "Lane 4D" below.
-
-**Wave 4, lane 5C (Artifacts: view and compare) is built on the mock backend, not committed**: `/voyages/:key/artifacts`
-replaces its placeholder with the revision selectors, the file list with each file's state against the comparison, the viewer
-and the diff; the URL holds the selection. See "Lane 5C" below. With it, sections A to F of `docs/paralelos4.md` are all built;
-4B, 4C, 4D, 5A and 5B are already in `main` and 5C waits for review.
 
 Phase 0, lane 1A (PR #4), lane 2A (PR #5 and PR #7) and lane 2C (PR #3) are merged into `main`: an
 Angular 22 app that builds, tests and serves, with the CLAUDE.md conventions enforced by `tsc`, ESLint, Prettier and
@@ -284,43 +481,31 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-0. **User, lane 5C:** review and merge this lane (branch `lane/5c-artifacts`, section "Lane 5C" below). It is not committed:
-   the changes are in the working tree. It edits one line outside the lane, `src/app/app.routes.spec.ts` (the 5C placeholder
-   row). Every other lane of wave 4 (4A to 5B) is already in `main` (PR #15 to #20).
-1. **User:** nothing else of wave 4 waits for review: lanes 4A to 5B are already in `main` (PR #15 to #20).
-2. **User:** when sections A to F of `docs/paralelos4.md` are all in `main` — that is, once 5C is merged — open
-   `docs/paralelos5.md`.
-3. **User, review:** the two presentation choices in `src/app/domain/` that the contract forced and the design system does not
-   cover (run `awaiting_input` shows as `input`; `waiting` stays as the design system's word, outside the API type). See "Needs
-   from lane 2C" in the lane 2A section.
-4. **User:** make the cloud environment's setup script install Node 24 (sessions still start on Node 22.22.0, which
-   Angular 22 rejects), and run `npm ci` (the lane 2B session started without `node_modules`). Until then each agent must put
-   `npx node@24` first on its `PATH` (see "Prompt for a new session"). Proposed setup script, **untested**:
-   `mkdir -p /opt/node24 && npm install --prefix /opt/node24 node@24` and
-   `ln -sf /opt/node24/node_modules/node/bin/node /root/.local/bin/node` (`/root/.local/bin` comes before
-   `/opt/node22/bin` in the sessions' `PATH`; `npm install -g node@24` is not an option, because npm's global bin is
-   Node 22's own directory). Check with `node -v` in a new session.
-5. **User, decided 2026-10-07:** keep the `.prettierignore` entries for the copied agent skills (they stay in `main`, and
-   they make `npm run format:check` green), and report the two `bundle.css` defects to the design system (section
-   "Lane 1A"). The report text was handed to the user; whether it was sent is not recorded here. When the design system
-   has fixed them, re-sync `docs/design/` and `src/styles/ahoy-bundle.css` and delete the matching rules in
-   `src/styles/_ahoy-angular.scss`.
-6. **Done, for the user to know:** CI runs `api:check` because `npm run lint` does (as lane 1A did with `tokens:check`); `ci.yml`
-   is untouched. If a separate CI step is preferred, remove it from `lint` and add one (lane 6D appends to `ci.yml`).
-7. **Wave 3:** 3A, 3B and 3C are merged (PR #12, #13 and #14); 4A is item 1. Screens develop on `npm run start:mock`; e2e
-   (6C) can use `npm run mock:api` behind the real proxy. **6D** is optional (`docs/paralelos1.md`); when it runs, add the mock
-   dist check to CI (lane 2D, "Needs from other lanes").
-8. Optional, whenever a session has Docker and Postgres: run `npm run dev -- --simulate` in `ahoy-hosted`, then `npm start`
-   here, then `node scripts/smoke-api.mjs --confirm-simulate`, and `node scripts/capture-fixtures.mjs --confirm-simulate`
-   after driving a story through the simulation. That is the first time the client would meet a real API, and it would
-   confirm the `state.json` field names `readStoryState` reads. Also `curl -s localhost:4200/api/v1/health` and
-   `curl -N localhost:4200/api/v1/events/stream` for the proxy against the real API (lane 2D already checked the proxy's SSE
-   path against `npm run mock:api`), which is also the first test of lane 2B's SSE parser against the real server.
-9. **For lanes 2B, 6A and 4A** (details under "Needs from other lanes" of lane 3A): the row details that All hands and Voyages
-   both read are written twice, because features may not import each other; `StoryHandle` cannot stop watching a resource; the
-   local error banners wait for `ah-error-state`.
+Review the sprint-grouped Backlog implementation and the contract limits documented above. Commit, push and release
+need new explicit user approval. Keep the user's `Backlog.html` intact; it is the only formatting failure.
+Browser verification must use a proven offline setup, not the current authentication/proxy paths. Extending catalogue
+selection to the existing Models dialog and halted-review resolution (`resolveReview`) remain separate scope.
+The next release must retain the corrected NGINX document root; remote image startup/probes remain unverified.
+Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
+
+The latest uncommitted change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls
+from the user's `docs/design/wireframes/Backlog.html`. Jira sprint data now reaches `BacklogItem`; the mock response
+matches the contract. Global 25-item pagination remains, with displayed-group counts marked "shown" on partial pages.
+Build, typecheck and lint passed on Node 24.21.0; 128 test files / 2,290 tests passed. A mock-only desktop/mobile browser
+preview covered filtering and keyboard/collapse controls. No horizontal overflow was measured from 320 to 1920px;
+the user also tested and approved the responsive layout. Only the untouched new wireframe fails repository formatting.
+Sprint dates/goals are absent from the API and are not fabricated. No real API/TEST, screen-reader or full e2e suite ran.
+Earlier branch changes are committed/pushed; this layout needs new explicit commit/push approval.
+The earlier uncommitted change in `feature/dockerfile` adds `ApiClient.listModels()` and Set Sail model dropdowns,
+per-slot defaults, custom-id entry, compatible effort choices, loading/error/retry states and offline mock coverage.
+Build, typecheck, lint, 126 test files / 2,267 tests and `npm run format` passed on Node 24.21.0.
+`api:check` fails only on the pre-existing generator/Prettier formatting difference; regenerated and formatted types
+match byte-for-byte, and the OpenAPI mirror check passes. Browser/e2e and real API checks were not run.
+The Models dialog still uses text inputs; phase-7 `resolveReview` remains separate scope.
+Keep the earlier corrected NGINX document root. Its exact released image and remote probes remain unverified.
+Do not edit `docs/design/`, contact TEST or a live API, or commit/push/release without explicit user approval.
 
 > Read `CLAUDE.md`, `docs/progress.md`, `docs/plan/00-overview.md` and `docs/plan/<phase>.md`. Implement **only** lane
 > `<id>`; follow the protocol in §9 of the overview. First run `node -v`: if it is below 22.22.3, run `npx -y node@24 -v`
@@ -329,200 +514,6 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 > Finish with your lane's report in `docs/progress.md`.
 
 Sessions are launched from `docs/paralelos1.md` to `docs/paralelos5.md`, one section each.
-
-## Lane 5C · Artifacts: ver e comparar (2026-10-07)
-
-Launched from `docs/paralelos4.md`, section F, on `lane/5c-artifacts`, from `main` at 4aae11b (which holds 4A, 1C, 2C and every
-other earlier lane). **Pre-flight.** `main` holds the prerequisites: **4A** (`VoyageContext`, the shell and the `artifacts`
-route), **1C** (`ah-markdown`, `ah-artifact-diff`) and **2C** (`@domain/text-diff`). Node was v24.21.0; `npm ci` had installed
-the tree. **No dependency was added.** Baseline on `main`: 119 files, 2156 tests. **Nothing is committed:** the lane is in the
-working tree.
-
-### What changed (all in `src/app/features/voyage/tabs/artifacts/`)
-
-| File                                        | What                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `artifacts.routes.ts`                       | The placeholder is replaced by `ArtifactsTab` (title "Artifacts · Ahoy"). The route provides `ARTIFACT_READER`, so what it has read survives leaving the tab and coming back: the tab is recreated, the cache is not (verified in the browser and by a test).                                                                                                                                           |
-| `artifacts-tab.ts`/`.scss`                  | The tab (`Records`, Artifacts section): the panel head with **Compare [Revision X] with [Revision Y]** and the **View \| Compare** pill; the file list (path, type, size, state against the comparison, View/Compare links); the pane (markdown, JSON re-indented, text; the diff; "New file…"; "No changes"; too large; loading and errors).                                                           |
-| `artifacts-view.ts`                         | `ArtifactsView`: the current set, the revisions, the URL selection and the comparison of every file. The URL is the state (`?compare=`, `?to=`, `?file=`, `?mode=`) and defaults are left out, so the tab follows the current revision as it moves. It keeps the union of the paths seen at any revision (listings and reads), so a file a later revision drops stays listed and compares as `removed`. |
-| `artifact-reader.ts`                        | `ArtifactReader` (G9): one file at one revision, with `If-None-Match` (the ETag of a copy already held); answers for `(key, path, revision)` kept in a bounded cache (text, digest or `404`); in-flight reads shared; failures never kept; the paths ever seen per voyage remembered.                                                                                                                   |
-| `file-compare.ts`                           | `compareFile`: asks as little as possible (the current set teaches the reader its ETags, so an unchanged file is one `304` and no download); counts lines with `@domain/text-diff`; returns `same`/`new`/`removed`/`changed`/`missing`/`too_large`/`error`. `statusLabel` words the row ("same", "+9 −3", "new", "changed" for JSON).                                                                   |
-| `revision-labels.ts`                        | `revisionOptions`: revisions `1..current` newest first, each labelled from **the nearest producer before** its `artifacts.updated` (second review; it was "the event immediately before") (a `run.finished` → its id; a `decision.recorded` with `send_back` → "send-back"; anything else → plain "Revision N"): "Revision 5 · current (r-04)", "Revision 4 (send-back)", "Revision 3".                 |
-| `selection.ts`                              | `readSelection`/`selectionParams`/`adjust`: the untrusted query string → a selection held to what exists (a revision that does not fit or an unknown file is ignored), and back.                                                                                                                                                                                                                        |
-| `artifact-files.ts`                         | `fileKind`, `kindLabel`, `textBytes`, `isTooLarge` (1 MiB), `prettyJson` (2-space indent), `displayText`, `formatSize`.                                                                                                                                                                                                                                                                                 |
-| `testing/fake-content.ts`                   | A fake `getArtifactContent` for the unit specs: ETag, `304`, `404`, failures, by `path@revision`.                                                                                                                                                                                                                                                                                                       |
-| `app.routes.spec.ts` (**outside the lane**) | The `5C` placeholder row removed, as that file asks.                                                                                                                                                                                                                                                                                                                                                    |
-
-### Tests (82 new, 6 files, plus one placeholder row removed)
-
-- **`artifact-reader.spec.ts` (21):** text/cache per revision, path and voyage; shared in-flight reads; `404` kept, failures
-  not; empty file; the cache limit; the paths seen per voyage; `If-None-Match` with `304`/`200`/`404`; answers from a known
-  ETag; `learn`; a `304` without a match refused as `invalid_response`.
-- **`file-compare.spec.ts` (16):** `same` with one `304` and no download; line counts; `new`; nothing asked twice; failure
-  then retry; JSON `changed` (re-indented) and `same` when only formatting differs; the 1 MiB limit; two past revisions
-  (target read first, then base with its ETag); `removed`/`missing`; the failure of either side; a file the server sends with
-  no ETag counted by its lines; `statusLabel`.
-- **`revision-labels.spec.ts` (11):** the strict rule: a `run.finished` or a `send_back` immediately before the update; a
-  `gate.evaluated`, a phase change, an approval or an unrelated event between leaves the revision plain; a `runId` on the
-  update's own payload is ignored; malformed payloads; current first.
-- **`selection.spec.ts` (11):** the defaults (current vs previous, on the plan, Compare); no comparison at revision 1; the
-  query string; every value that does not fit ignored; the query string of a selection and back.
-- **`artifact-files.spec.ts` (9):** kind by extension and media type, labels, UTF-8 bytes, the 1 MiB limit, size wording,
-  JSON pretty-printing.
-- **`artifacts-tab.spec.ts` (14, on the mock backend, through the real routes):** PROJ-123 revision 4 against 3 (the three
-  rows with `same`/`+7 −2`, the plan diff with the +/− colours and the wireframe's sections); the mock's four plain labels
-  (its updates are not preceded by their producer); revision 4 against 2 (`plan-round-1.md` `new`, "New file: it was not in
-  revision 2." and an all-added diff); a new revision 5 that drops `plan-round-1.md` leaves it listed as `removed`, with its
-  note (once starting in Compare and once in View, where the listing itself must register the path); the reader is kept when
-  the tab is left and opened again (a route provider: the tab is recreated, the cache is not, and the return makes no content
-  request); the same comparison opened twice makes no request and the probe carried `If-None-Match`; a JSON artifact
-  `changed` and re-indented in the viewer; View and "not in that revision"; markdown with `<script>` and a remote image
-  (neither runs nor loads); query parameters that do not fit; "No artifacts yet"; the list error with Try again; a file error
-  with Try again.
-
-### Acceptance, as demonstrated
-
-- **Superseded by the second review below**, which gives PROJ-123 the wireframe's data. As first built: **the mock's PROJ-123
-  did not have the wireframe's data.** It is at revision **4** with three files
-  (`jira-snapshot.md`, `implementation-plan.md`, `implementation-plan.round1.md`), not revision 5 with six
-  (`plan-sources.md`, `plan-round-1.md`, `questions.json`, `state.json`). Demonstrated with what exists: **4 against 3** shows
-  `implementation-plan.md +7 −2`, `jira-snapshot.md same`, `implementation-plan.round1.md same`; **4 against 2** shows
-  `implementation-plan.round1.md new`. The plan's diff covers `Summary`, `Acceptance criteria`, `WP1` and `WP2` but merges them
-  into **one hunk** (`@@ Implementation plan: PROJ-123 … @@`) because with three context lines the sections are close; the
-  wireframe's four hunks need the wireframe's seed **and may still merge even with it** (see "Needs from lane X"). Recorded
-  under "Needs from lane 2D" — the mock was not touched.
-- **The same comparison twice asks nothing:** the component test counts the `/artifacts/content` requests, leaves the
-  comparison (revision 2) and comes back, and sees no new request; the unit tests prove the ETag/`304` path and the
-  `(path, revision)` cache.
-- **`<script>` and a remote image in markdown:** the tab renders through `ah-markdown`; the component test asserts no
-  `script` and no `img` element, with the script shown as text and the image as `[image: remote]` (1C's own tests cover the
-  renderer).
-- **`404` per revision:** a file absent at the comparison revision is `new` (or `removed` the other way round) with its diff
-  read from the side that has it; a `?to=99` or `?file=../etc/passwd` is ignored.
-
-### Verified in the browser (`npm run start:mock`, port 4300)
-
-Headless Chromium (the machine's Playwright Chromium 1234, driven over CDP by a script in the session scratchpad; not a
-project dependency). PROJ-123 light and dark at 1280 px and light at 390 px (scrolled to the panel): the panel head with the
-two selects and the pill, the three rows with `same`/`+7 −2`, the plan diff with the removed and added colours, and no
-horizontal page scroll (`scrollWidth` = 390 at 390 px). `?compare=2&file=implementation-plan.round1.md`: the `new` row,
-"New file: it was not in revision 2." and the all-added diff. A synthetic `state.json` added to the in-browser mock at
-runtime (no repo change): the row reads `changed` and View shows the re-indented JSON. Console: no errors. Compared by eye
-with the `Records` board (the wireframe's exact six files and four hunks cannot show, see above).
-
-### Decisions and deviations (to review)
-
-1. **The URL is the state** (`?compare=`, `?to=`, `?file=`, `?mode=`), which answers 4B's open question; the defaults are
-   omitted, so an open tab follows the current revision as new revisions arrive.
-2. **`compareFile` asks as little as possible.** The current set's ETags are known, so the older revision is probed with
-   `If-None-Match`: a `same` file costs one `304` with no text; only a changed file is read in full from both revisions.
-3. **JSON files are "changed", not counted**, in the list; the viewer and the diff re-indent them (2-space) so a line diff
-   means something. A JSON file whose bytes differ only in formatting is `same` (the diff sees no line change).
-4. **`removed` is reachable when comparing two revisions** where a file of the union was in the base and not the target; the
-   union now keeps the paths seen at any revision (listings and reads), so a file a later revision drops stays listed. A file
-   that was never seen while it existed (it was already gone before the tab was ever opened, and no listing in this session
-   had it) cannot be known: past revisions have no listing to discover paths from.
-5. **The tab opens on `implementation-plan.md`** when the voyage has one, else the first file, in Compare against the previous
-   revision; revision 1 opens in View (nothing to compare with). "Too large to preview" and "No artifacts yet" are
-   unit-tested only in a browser (the mock has no >1 MiB artifact, and its PROJ-109 gets picked up by the simulator before a
-   browser looks).
-6. **One edit outside the lane:** `app.routes.spec.ts` (the `5C` placeholder row), as 3B, 4A, 4B, 4C, 4D, 5A and 5B did.
-
-### Needs from lane X
-
-- **Lane 2D (mock backend):** done in the second review (see below). Was: the wireframe's Artifacts data for PROJ-123 — revision 5 (not 4) with `plan-sources.md`,
-  `plan-round-1.md`, `questions.json` and `state.json` (not `implementation-plan.round1.md`) — so the acceptance's exact
-  `+9 −3`/`+2`/`same`/`changed` show. **Unproven:** with that seed the plan's four hunks may still merge into one, because
-  `@domain/text-diff` keeps 3 context lines and the sections are close; if the wireframe's four hunks are required, the
-  context (or the merging) has to change — that would be a **"Needs from lane 2C/1C"**, not a mock change. The labels are
-  affected too: the mock emits a `gate.evaluated` (or a `story.phase_changed`) between a producer and its
-  `artifacts.updated`, so the strict rule (only the event immediately before) leaves them plain; the wireframe's
-  "(r-04)"/"(send-back)" need the update right after its producer.
-- **Lane 4B (Plan):** the tab reads the URL; "Compare with revision {n−1}" can pass
-  `?to=<artifact-set revision>&compare=<the one before>` if the link should open a specific pair. The plain link already opens
-  the current revision against the previous one.
-- **Lane 2C / 1C:** nothing new for now; the diff is `@domain/text-diff` and the viewer is `ah-markdown` (see the hunk doubt
-  above).
-- **Lane 6A:** the page `<title>` is the static "Artifacts · Ahoy", like the other tabs.
-
-### Review (2026-10-07, two independent reviewers: standards and spec)
-
-Fixed after it:
-
-1. **The two revision selects are typed Reactive Forms.** They are `FormControl<number>`s (`[formControl]` + `[ngValue]`),
-   synced from the URL selection with `emitEvent: false` and pushing a pick back through `view.go` (a DOM value that is not
-   a revision is ignored); no more reading `HTMLSelectElement` by hand. The component spec drives them by selecting the
-   option (as a person would) and dispatching `change`, and asserts on the selected label; re-checked in the browser:
-   picking revision 2 writes `?compare=2` and the row reads `new`, and picking 3 clears the query.
-2. **Handoff corrected.** The README "Next" and "Where we are"/"Start here next" in this file now say only lane 5C waits for
-   review; lanes 4A to 5B are in `main` (PR #15 to #20), and `docs/paralelos5.md` opens when A to F are all in `main`.
-3. **`file-compare.spec.ts` no longer promises more than it proves.** The "new" test was split from the "no ETag" claim, and
-   the latter now has its own scenario: `FakeContent.withoutEtag` answers without an ETag, and the file is counted by its
-   lines.
-4. **The paths seen at any revision are kept** (`ArtifactReader.paths`, a signal; `ArtifactsView.paths` unions them with the
-   current listing) and used in the list and in the selection validation. Every observed listing registers its paths in every
-   mode, View included (where no comparison runs), without reading content. Two component tests add a revision 5 that drops
-   `implementation-plan.round1.md`: one starting in Compare (the row stays `removed`, with its note) and one starting in View
-   (`?mode=view`: the row stays listed and compares as `removed`).
-5. **Revision labels follow the spec strictly**: only the event immediately before each `artifacts.updated` is read (a
-   `run.finished` → its id; a `decision.recorded` with `send_back` → "send-back"); a `gate.evaluated`, a phase change, an
-   approval or a `runId` on the update's own payload no longer produces a note. With the mock's event order this makes all
-   four labels plain; the sourced labels are unit-tested, and the mock difference is registered under "Needs from lane 2D".
-6. **The report no longer promises the four hunks.** "Needs from lane X" says they may still merge with the wireframe's seed
-   (3-line context) and that would be a lane 2C/1C question.
-7. **The reader's lifetime is described once, exactly — and it is the opposite of what the earlier note said.** Verified: the
-   tab component is recreated when it is left and opened again, but the route-level `ARTIFACT_READER` is not — returning
-   makes no content request, so the cache survives. The "What changed" row, the route comment and a new component test
-   (navigate to Gates and back: no new `/artifacts/content` request) say that; the earlier "recreated when the tab is left"
-   note was wrong and is gone.
-
-Judgement calls, done as well: the default-file choice and the base normalisation moved to `defaultFile`/`baseFor` in
-`selection.ts`, so the rules cannot drift; `ArtifactReader.clear()` was removed (only tests called it) and its spec now
-builds new readers and covers `paths()` instead.
-
-Left as they are, with reasons: the reader cache still treats a `(path, revision)` as immutable (the API's revisions are);
-`ArtifactsView` is recreated per tab visit, but the union of paths lives in the route-level reader, so it survives too; the
-hunk context is lane 2C's.
-
-### Second review and wireframe fixes (2026-10-07)
-
-A two-axis review (standards and spec) of PR #21 found no major bug. Asked to fix what it found and anything that does not
-match the wireframes (`Records`), this pass changed:
-
-1. **PROJ-123 has the wireframe's Artifacts data** (`src/testing/mock-backend/seeds.ts`, lane 2D's file, changed on the user's
-   instruction). Five revisions, one per producer: r-01 `jira-snapshot.md`; r-02 `questions.json`; r-03
-   `implementation-plan.md`, `plan-sources.md`, `state.json`; jordan's send-back `state.json`; r-04 the new plan,
-   `plan-sources.md` (+2), `plan-round-1.md` (round 1 archived) and `state.json`. Revision 5 against 4 (the default) and
-   against 3 (the wireframe's pick) both show `same`, `+9 −3`, `+2`, `new`, `same`, `changed`. The current plan is unchanged (it
-   is the `getArtifactContent.json` fixture, same sha256); round 1 now has AC1 and AC2 as one line, which makes the `+9 −3`.
-   `implementation-plan.round1.md` is gone from PROJ-123 (the simulator's DEMO-1 send-back still writes it).
-2. **One hunk per section** (`@domain/text-diff` `hunks`, lane 2C's file): an unchanged heading ends a hunk's context and is
-   never merged across, so the plan's diff has the wireframe's four hunks (`Summary`, `Acceptance criteria`, `WP1…`, `WP2…`)
-   with three context lines, and a header always names the section its changes are in. A changed heading does not split a
-   hunk. 1C's `artifact-diff.spec.ts` expectation follows: no heading lines as context, as in the design's preview.
-3. **Revision labels from the nearest producer**, back to the previous `artifacts.updated`: a `run.finished` → its id, a
-   `send_back` → "send-back", another decision → plain. Gate verdicts and phase changes in between are stepped over (the
-   mock, like the API, sends the gate verdict before the files). The mock now shows the wireframe's labels:
-   "Revision 5 · current (r-04)", "Revision 4 (send-back)", "Revision 3 (r-03)"… (with the mock's run ids).
-4. **The file kind is decided once** (`ArtifactsView.kindOf`: extension, then the listing's media type) and used by the row,
-   the header tag, the status and the diff: a file the listing types as JSON without a `.json` name is re-indented in Compare
-   and reads `changed`, as in View.
-5. **Reader:** a `304` keeps a text held without an ETag (it was replaced by a digest and read again); the cache evicts the
-   least recently used entry, not the oldest.
-
-Tests: 2244 (125 files), +7: text-diff (2), reader (2), labels (net +1), tab (+2: revision 3 against 5, a JSON file by
-media type); the tab and server specs now assert the wireframe's data. Ran on Node 24.21.0: `npm run build`,
-`npm run typecheck` (`check-boundaries: ok`), `npm run lint`, `npm test`, `npm run format:check`, all green. **Not run:** the
-browser check against `npm run start:mock`, anything against a real API, `--simulate` or TEST.
-
-Left as they are: an older revision's file over 1 MiB is still downloaded before "Too large to preview" (the API gives no
-size for past revisions); sizes show only at the current revision; a deep link to a removed file falls back on a fresh load
-(no listing of past revisions).
-
-### Next
-
-User review and approval. Then the rest of wave 4 is in `main` (4A to 5B) and this lane closes sections A to F of
-`docs/paralelos4.md`; when it is merged, open `docs/paralelos5.md`.
 
 ## Lane 5A · Runs, run detail and live steps (2026-10-07)
 
@@ -1848,12 +1839,7 @@ All in `src/app/ui/`. Every component is standalone, OnPush and zoneless, and ta
 <ah-status-badge [status]="story.status" [phase]="story.phase" showApi detail="plan_accepted" />
 <ah-phase-stepper [phase]="story.phase" [status]="story.status" [stoppedAt]="blockedAt()" />
 <ah-phase-stepper [phase]="story.phase" [status]="story.status" compact />
-<ah-budget-meter
-  [spentNanoAiu]="story.spentNanoAiu"
-  [capNanoAiu]="story.budgetNanoAiu"
-  [width]="64"
-  variant="compact"
-/>
+<ah-budget-meter [spentNanoAiu]="story.spentNanoAiu" [capNanoAiu]="story.budgetNanoAiu" [width]="64" variant="compact" />
 <ah-filter-chips [counts]="counts()" [(selected)]="status" />
 <ah-section-tabs label="Voyage sections" [items]="tabs()" />
 <ah-outcome-pill [value]="gate.outcome" />
@@ -2048,10 +2034,10 @@ How the features use it (for 3A, 4A, 5A, 5B, 6A):
 
 ```ts
 inject(StoriesStore).use(inject(DestroyRef)); // list, counts, inbox; holds the stream open
-const voyage = inject(StoryStore).for(key, { watch: ["story", "runs"], destroyRef: inject(DestroyRef) });
+const voyage = inject(StoryStore).for(key, { watch: ['story', 'runs'], destroyRef: inject(DestroyRef) });
 voyage.story.value();
 voyage.runs.status();
-voyage.watch("questions");
+voyage.watch('questions');
 voyage.events().newestFirst();
 inject(StoryStore).accept(result.value); // after a 202/201 (4A's CommandRunner)
 inject(RunProgressBuffer).follow(key, inject(DestroyRef));
@@ -2210,18 +2196,10 @@ first on `PATH`. Every command below ran on Node 24.21.0 with npm 10.9.4.
 ```html
 <button ahButton="primary" size="sm" type="button"><ah-icon name="sail" />Set sail</button>
 <ah-panel>
-  <ah-panel-head heading="Needs you" subtitle="4 voyages"
-    ><a ahButton size="sm" ahPanelActions routerLink="…">All</a></ah-panel-head
-  >
+  <ah-panel-head heading="Needs you" subtitle="4 voyages"><a ahButton size="sm" ahPanelActions routerLink="…">All</a></ah-panel-head>
   <ah-panel-body>…</ah-panel-body>
 </ah-panel>
-<ah-field
-  label="Total budget"
-  required
-  unit="AIU"
-  hint="…"
-  [errorMessages]="{ min: 'At least 12.4 AIU, what’s already spent.' }"
->
+<ah-field label="Total budget" required unit="AIU" hint="…" [errorMessages]="{ min: 'At least 12.4 AIU, what’s already spent.' }">
   <input ahInput formControlName="budget" inputmode="decimal" />
 </ah-field>
 <ah-banner variant="error" heading="Anchored: …" tech="run_failed · r-03">Plain words first.</ah-banner>

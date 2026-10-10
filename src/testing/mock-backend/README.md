@@ -23,11 +23,11 @@ The same `MockAhoyServer` runs in three places, never as two mocks:
 - **The 19 operations of phases 3 to 6**, with versions (`409 stale_version` and `currentVersion`), `story_exists`,
   `invalid_state`, `already_answered`, `decision_already_recorded` (only through `conflictNext`: as in the real API, an
   open gate never holds a decision), `revision_ceiling_reached` (ceiling 4), `unsupported_gate` (`422`), `validation_failed`
-  (with `errors`; two reviewers on one model), `not_found`. The four operations of phase 7 answer `500 internal_error`.
+  (with `errors`), `not_found`. The four operations of phase 7 answer `500 internal_error`.
 - **A simulated reconciler** (`simulator.ts`): a `ready` story gets a run (queued, dispatched, `run.progress` batches of steps
   closed by a `spend`, finished, judged by its gate) or, at a human gate, `awaiting_decision`. intake → planning (the first
   planning run asks two questions; after the answers it writes `implementation-plan.md`) → plan_review → implementation →
-  pr_review (one run per reviewer lens) → delivery_gate → done. `send_back` archives the plan as
+  pr_review (one Lookout run) → delivery_gate → done. `send_back` archives the plan as
   `implementation-plan.round<N>.md` and plans again with the reason; `reject` → blocked; stop cancels the run; a run that
   costs more than the story has left halts it on `budget_exhausted`.
 - **`GET /events/stream`**: `: connected`, the events after `Last-Event-ID` (or `after`), then new ones as they happen, and

@@ -7,7 +7,7 @@
  * (`encodeStory` in ahoy-hosted `packages/core/src/domain/story-document.ts`, commit 1890d5a), not from a live response:
  * confirm them against an answer from `npm run dev -- --simulate` when one is at hand.
  */
-import { isRecord, isWholeNumber } from "./guard-kit";
+import { isRecord, isWholeNumber } from './guard-kit';
 
 /** The revision ceiling the hosted API uses when `revision_ceiling` is unset (`DEFAULT_REVISION_CEILING`). */
 export const DEFAULT_REVISION_CEILING = 4;
@@ -53,7 +53,10 @@ export interface StoryStateView {
 }
 
 /** The entries of a list that `read` accepts, in order; anything that is not a list gives none. */
-function readList<T>(value: unknown, read: (item: Record<string, unknown>) => T | null): readonly T[] {
+function readList<T>(
+  value: unknown,
+  read: (item: Record<string, unknown>) => T | null
+): readonly T[] {
   if (!Array.isArray(value)) return [];
   const items: readonly unknown[] = value;
   const out: T[] = [];
@@ -65,7 +68,10 @@ function readList<T>(value: unknown, read: (item: Record<string, unknown>) => T 
 }
 
 /** The entries of an object that `read` accepts, by key; anything that is not an object gives none. */
-function readMap<T>(value: unknown, read: (entry: unknown) => T | null): ReadonlyMap<string, T> {
+function readMap<T>(
+  value: unknown,
+  read: (entry: unknown) => T | null
+): ReadonlyMap<string, T> {
   const out = new Map<string, T>();
   if (!isRecord(value)) return out;
   for (const [key, raw] of Object.entries(value)) {
@@ -75,35 +81,40 @@ function readMap<T>(value: unknown, read: (entry: unknown) => T | null): Readonl
   return out;
 }
 
-const str = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
+const str = (value: unknown): string | undefined =>
+  typeof value === 'string' ? value : undefined;
 
 function readCriterion(raw: Record<string, unknown>): StoryCriterion | null {
-  const id = str(raw["id"]);
-  const text = str(raw["text"]);
-  if (id === undefined || id === "" || text === undefined) return null;
-  const repo = str(raw["repo"]);
+  const id = str(raw['id']);
+  const text = str(raw['text']);
+  if (id === undefined || id === '' || text === undefined) return null;
+  const repo = str(raw['repo']);
   return { id, text, ...(repo !== undefined ? { repo } : {}) };
 }
 
 function readPackage(raw: Record<string, unknown>): StoryPackage | null {
-  const id = str(raw["id"]);
-  if (id === undefined || id === "") return null;
-  const dependsOn: readonly unknown[] = Array.isArray(raw["depends_on"]) ? raw["depends_on"] : [];
+  const id = str(raw['id']);
+  if (id === undefined || id === '') return null;
+  const dependsOn: readonly unknown[] = Array.isArray(raw['depends_on'])
+    ? raw['depends_on']
+    : [];
   return {
     id,
-    repo: str(raw["repo"]) ?? "",
-    agent: str(raw["agent"]) ?? "",
-    status: str(raw["status"]) ?? "pending",
-    openPr: raw["open_pr"] === true,
-    dependsOn: dependsOn.filter((dep): dep is string => typeof dep === "string"),
+    repo: str(raw['repo']) ?? '',
+    agent: str(raw['agent']) ?? '',
+    status: str(raw['status']) ?? 'pending',
+    openPr: raw['open_pr'] === true,
+    dependsOn: dependsOn.filter(
+      (dep): dep is string => typeof dep === 'string'
+    ),
   };
 }
 
 function readGate(raw: unknown): StoryGate | null {
   if (!isRecord(raw)) return null;
-  const status = str(raw["status"]);
-  const decidedAt = str(raw["timestamp"]);
-  const reason = str(raw["reason"]);
+  const status = str(raw['status']);
+  const decidedAt = str(raw['timestamp']);
+  const reason = str(raw['reason']);
   return {
     ...(status !== undefined ? { status } : {}),
     ...(decidedAt !== undefined ? { decidedAt } : {}),
@@ -121,12 +132,15 @@ function readRevision(raw: unknown): number | null {
  */
 export function readStoryState(state: unknown): StoryStateView {
   const doc = isRecord(state) ? state : {};
-  const ceiling = doc["revision_ceiling"];
+  const ceiling = doc['revision_ceiling'];
   return {
-    criteria: readList(doc["acceptance_criteria"], readCriterion),
-    packages: readList(doc["work_packages"], readPackage),
-    humanGates: readMap(doc["human_gates"], readGate),
-    revisions: readMap(doc["revisions"], readRevision),
-    revisionCeiling: isWholeNumber(ceiling) && ceiling > 0 ? ceiling : DEFAULT_REVISION_CEILING,
+    criteria: readList(doc['acceptance_criteria'], readCriterion),
+    packages: readList(doc['work_packages'], readPackage),
+    humanGates: readMap(doc['human_gates'], readGate),
+    revisions: readMap(doc['revisions'], readRevision),
+    revisionCeiling:
+      isWholeNumber(ceiling) && ceiling > 0
+        ? ceiling
+        : DEFAULT_REVISION_CEILING,
   };
 }

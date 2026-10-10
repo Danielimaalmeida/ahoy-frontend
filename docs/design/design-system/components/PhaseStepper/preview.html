@@ -1,27 +1,53 @@
 <!-- @dsCard group="Status" height=150 subtitle="Full stepper and compact dots" -->
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>PhaseStepper preview</title></head>
-<body>
-<div class="ah" style="padding:16px;display:flex;flex-direction:column;gap:12px">
-<div class="ah-stepper" aria-label="Phases">
-  <span class="ah-step ah-step--done"><b class="ah-step__n">✓</b>intake</span><span class="ah-step__sep"></span>
-  <span class="ah-step ah-step--done"><b class="ah-step__n">✓</b>planning</span><span class="ah-step__sep"></span>
-  <span class="ah-step ah-step--current"><b class="ah-step__n">3</b>plan_review</span><span class="ah-step__sep"></span>
-  <span class="ah-step"><b class="ah-step__n">4</b>implementation</span><span class="ah-step__sep"></span>
-  <span class="ah-step"><b class="ah-step__n">5</b>pr_review</span><span class="ah-step__sep"></span>
-  <span class="ah-step"><b class="ah-step__n">6</b>delivery_gate</span><span class="ah-step__sep"></span>
-  <span class="ah-step"><b class="ah-step__n">7</b>done</span>
-</div>
-<div class="ah-stepper" aria-label="Phases">
-  <span class="ah-step ah-step--done"><b class="ah-step__n">✓</b>intake</span><span class="ah-step__sep"></span>
-  <span class="ah-step ah-step--stopped"><b class="ah-step__n">!</b>planning</span><span class="ah-step__sep"></span>
-  <span class="ah-step"><b class="ah-step__n">3</b>plan_review</span>
-</div>
-<div style="display:flex;gap:24px">
-  <div class="ah-dots" aria-label="Phase 3 of 7"><span class="is-done"></span><span class="is-done"></span><span class="is-current"></span><span></span><span></span><span></span><span></span></div>
-  <div class="ah-dots" aria-label="Stopped at phase 2"><span class="is-done"></span><span class="is-stopped"></span><span></span><span></span><span></span><span></span><span></span></div>
-</div>
-</div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>PhaseStepper preview</title>
+  </head>
+  <body>
+    <div
+      class="ah"
+      style="padding: 16px; display: flex; flex-direction: column; gap: 12px"
+    >
+      <div class="ah-stepper" aria-label="Phases">
+        <span class="ah-step ah-step--done"
+          ><b class="ah-step__n">✓</b>intake</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step ah-step--done"
+          ><b class="ah-step__n">✓</b>planning</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step ah-step--current"
+          ><b class="ah-step__n">3</b>plan_review</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step"><b class="ah-step__n">4</b>implementation</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step"><b class="ah-step__n">5</b>pr_review</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step"><b class="ah-step__n">6</b>delivery_gate</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step"><b class="ah-step__n">7</b>done</span>
+      </div>
+      <div class="ah-stepper" aria-label="Phases">
+        <span class="ah-step ah-step--done"
+          ><b class="ah-step__n">✓</b>intake</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step ah-step--stopped"
+          ><b class="ah-step__n">!</b>planning</span
+        ><span class="ah-step__sep"></span>
+        <span class="ah-step"><b class="ah-step__n">3</b>plan_review</span>
+      </div>
+      <div style="display: flex; gap: 24px">
+        <div class="ah-dots" aria-label="Phase 3 of 7">
+          <span class="is-done"></span><span class="is-done"></span
+          ><span class="is-current"></span><span></span><span></span
+          ><span></span><span></span>
+        </div>
+        <div class="ah-dots" aria-label="Stopped at phase 2">
+          <span class="is-done"></span><span class="is-stopped"></span
+          ><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

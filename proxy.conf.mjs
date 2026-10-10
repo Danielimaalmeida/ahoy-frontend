@@ -7,22 +7,29 @@
 /** Reads an optional env var; an empty value counts as unset. */
 function env(name, fallback) {
   const value = process.env[name];
-  return value === undefined || value.trim() === "" ? fallback : value.trim();
+  return value === undefined || value.trim() === '' ? fallback : value.trim();
 }
 
-const target = env("AHOY_API_TARGET", "http://127.0.0.1:8080");
-const actor = env("AHOY_ACTOR", "dev@example.com");
+const target = env('AHOY_API_TARGET', 'http://127.0.0.1:8080');
+const actor = env('AHOY_ACTOR', 'dev@example.com');
 
 const url = new URL(target); // Throws on a malformed target, so a typo fails at start-up instead of per request.
-if (url.protocol !== "http:" && url.protocol !== "https:") {
-  throw new Error(`AHOY_API_TARGET must be an http(s) URL, got ${url.protocol}`);
+if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+  throw new Error(
+    `AHOY_API_TARGET must be an http(s) URL, got ${url.protocol}`
+  );
 }
 
 export default {
-  "/api/v1": {
+  '/auth/oauth2/realms/root/realms/alpha': {
+    target: 'https://emea.int.alpha.sso.company-namegroup.com',
+    secure: false,
+    changeOrigin: true,
+  },
+  '/api/v1': {
     target,
     secure: false,
     changeOrigin: true,
-    headers: { "X-Ahoy-Actor": actor },
+    headers: { 'X-Ahoy-Actor': actor },
   },
 };

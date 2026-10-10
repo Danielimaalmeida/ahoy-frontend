@@ -1,10 +1,10 @@
-import { Component, computed, input } from "@angular/core";
-import { budgetPercent, formatAiu } from "@domain/aiu";
+import { Component, computed, input } from '@angular/core';
+import { budgetPercent, formatAiu } from '@domain/aiu';
 
 /** A cap as it reads in "12.4 / 30 AIU": the amount at `decimals`, without trailing zeros ("30.0" is "30"). */
 export function formatCap(capNanoAiu: number, decimals: number): string {
   const text = formatAiu(capNanoAiu, decimals);
-  return text.includes(".") ? text.replace(/\.?0+$/, "") : text;
+  return text.includes('.') ? text.replace(/\.?0+$/, '') : text;
 }
 
 /**
@@ -18,7 +18,7 @@ export function formatCap(capNanoAiu: number, decimals: number): string {
  * ```
  */
 @Component({
-  selector: "ah-budget-meter",
+  selector: 'ah-budget-meter',
   template: `
     <div class="ah-budget">
       <div
@@ -33,7 +33,7 @@ export function formatCap(capNanoAiu: number, decimals: number): string {
       >
         <i class="ah-meter__fill" [style.width.%]="view().percent"></i>
       </div>
-      @if (variant() === "compact") {
+      @if (variant() === 'compact') {
         <span class="ah-mono">{{ view().spent }} / {{ view().cap }}</span>
       } @else {
         <span
@@ -53,16 +53,28 @@ export class BudgetMeter {
   /** Width of the bar in pixels (120 in a header, 64 in a table row). */
   readonly width = input(120);
   /** `full` is "12.4 / 30 AIU" with the spent amount in bold; `compact` is "12.4 / 30" in mono. */
-  readonly variant = input<"full" | "compact">("full");
+  readonly variant = input<'full' | 'compact'>('full');
   /** The meter's accessible name. */
-  readonly label = input("Budget");
+  readonly label = input('Budget');
 
   protected readonly view = computed(() => {
     const spent = this.spentNanoAiu();
     const cap = this.capNanoAiu();
     const decimals = this.decimals();
-    if (!Number.isSafeInteger(spent) || !Number.isSafeInteger(cap) || spent < 0 || cap < 0) {
-      return { spent: "—", cap: "—", max: null, now: null, percent: 0, valueText: null };
+    if (
+      !Number.isSafeInteger(spent) ||
+      !Number.isSafeInteger(cap) ||
+      spent < 0 ||
+      cap < 0
+    ) {
+      return {
+        spent: '—',
+        cap: '—',
+        max: null,
+        now: null,
+        percent: 0,
+        valueText: null,
+      };
     }
     const spentText = formatAiu(spent, decimals);
     const capText = formatCap(cap, decimals);

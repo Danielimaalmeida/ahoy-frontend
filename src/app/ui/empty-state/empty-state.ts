@@ -1,6 +1,6 @@
-import { Component, input } from "@angular/core";
-import { Icon } from "@ui/icon/icon";
-import type { IconName } from "@ui/icon/icons";
+import { Component, input } from '@angular/core';
+import { Icon } from '@ui/icon/icon';
+import type { IconName } from '@ui/icon/icons';
 
 /**
  * What a list or panel shows when it has nothing: an icon, a short title, one sentence on what will appear, and one way
@@ -15,7 +15,7 @@ import type { IconName } from "@ui/icon/icons";
  * ```
  */
 @Component({
-  selector: "ah-empty-state",
+  selector: 'ah-empty-state',
   imports: [Icon],
   template: `
     <div class="ah-empty">
@@ -30,5 +30,5 @@ export class EmptyState {
   /** The short title. */
   readonly heading = input.required<string>();
   /** The icon above it; the anchor by default. */
-  readonly icon = input<IconName>("anchor");
+  readonly icon = input<IconName>('anchor');
 }

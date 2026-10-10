@@ -13,36 +13,153 @@
       "tile": "l",
       "order": ["ahoy-mark.svg", "ahoy-mark-white.svg", "ahoy-app-icon.svg"],
       "files": {
-        "ahoy-mark.svg": { "name": "ahoy-mark.svg", "blob": "e2cf0e0ddfe157e8d95f64ac173ceda0", "size": 356, "type": "image/svg+xml" },
-        "ahoy-mark-white.svg": { "name": "ahoy-mark-white.svg", "blob": "c78e920fa07dc40e269a3cf1b78ce4f2", "size": 356, "type": "image/svg+xml" },
-        "ahoy-app-icon.svg": { "name": "ahoy-app-icon.svg", "blob": "bdc79937f3f44eae425abf7ac2fe0122", "size": 460, "type": "image/svg+xml" }
+        "ahoy-mark.svg": {
+          "name": "ahoy-mark.svg",
+          "blob": "e2cf0e0ddfe157e8d95f64ac173ceda0",
+          "size": 356,
+          "type": "image/svg+xml"
+        },
+        "ahoy-mark-white.svg": {
+          "name": "ahoy-mark-white.svg",
+          "blob": "c78e920fa07dc40e269a3cf1b78ce4f2",
+          "size": 356,
+          "type": "image/svg+xml"
+        },
+        "ahoy-app-icon.svg": {
+          "name": "ahoy-app-icon.svg",
+          "blob": "bdc79937f3f44eae425abf7ac2fe0122",
+          "size": 460,
+          "type": "image/svg+xml"
+        }
       }
     },
     "Icons": {
       "name": "Icons",
       "tile": "s",
-      "order": ["wheel.svg", "bell.svg", "compass.svg", "anchor.svg", "sail.svg", "aground.svg", "send-back.svg", "lock.svg", "check.svg", "close.svg", "reset.svg", "tool.svg", "message.svg", "info.svg", "refresh.svg", "offline.svg"],
+      "order": [
+        "wheel.svg",
+        "bell.svg",
+        "compass.svg",
+        "anchor.svg",
+        "sail.svg",
+        "aground.svg",
+        "send-back.svg",
+        "lock.svg",
+        "check.svg",
+        "close.svg",
+        "reset.svg",
+        "tool.svg",
+        "message.svg",
+        "info.svg",
+        "refresh.svg",
+        "offline.svg"
+      ],
       "files": {
-        "wheel.svg": { "name": "wheel.svg", "blob": "a25843baaf19b036d71c55e1d7794db8", "size": 380, "type": "image/svg+xml" },
-        "bell.svg": { "name": "bell.svg", "blob": "bf91b96758b9b46515fb66543c3834d3", "size": 272, "type": "image/svg+xml" },
-        "compass.svg": { "name": "compass.svg", "blob": "0aa937556d2bda8268fc5aa896ad23e2", "size": 264, "type": "image/svg+xml" },
-        "anchor.svg": { "name": "anchor.svg", "blob": "6d211b976ec32a7414cdb357dfafca31", "size": 275, "type": "image/svg+xml" },
-        "sail.svg": { "name": "sail.svg", "blob": "95faf545cbcec85d256db7292868eee3", "size": 251, "type": "image/svg+xml" },
-        "aground.svg": { "name": "aground.svg", "blob": "6353267adb0ac7a140f8b1a9b4c39a9b", "size": 282, "type": "image/svg+xml" },
-        "send-back.svg": { "name": "send-back.svg", "blob": "0bbec77c82e646f8f217c47b6220efeb", "size": 258, "type": "image/svg+xml" },
-        "lock.svg": { "name": "lock.svg", "blob": "2891997b09cc83666991dcc64eec5553", "size": 280, "type": "image/svg+xml" },
-        "check.svg": { "name": "check.svg", "blob": "592111603521038910c9764130b8dd5c", "size": 217, "type": "image/svg+xml" },
-        "close.svg": { "name": "close.svg", "blob": "0e834d9ce6c9fd2f319616324dc2ec2a", "size": 222, "type": "image/svg+xml" },
-        "reset.svg": { "name": "reset.svg", "blob": "9b35d09f0b3bd1b4b1bf4aa2a599b44c", "size": 235, "type": "image/svg+xml" },
-        "tool.svg": { "name": "tool.svg", "blob": "be915e884efd20f380e1469b31bd12da", "size": 223, "type": "image/svg+xml" },
-        "message.svg": { "name": "message.svg", "blob": "ddce4c09346d983d2fc3c37c01cd2cc2", "size": 220, "type": "image/svg+xml" },
-        "info.svg": { "name": "info.svg", "blob": "206fb0ef9700da7f0f4c03e7da18e7f8", "size": 258, "type": "image/svg+xml" },
-        "refresh.svg": { "name": "refresh.svg", "blob": "2aa3f905c44de24629c405c2af01e227", "size": 239, "type": "image/svg+xml" },
-        "offline.svg": { "name": "offline.svg", "blob": "58d77765e4ff7a3a8df28bed438d70b2", "size": 326, "type": "image/svg+xml" }
+        "wheel.svg": {
+          "name": "wheel.svg",
+          "blob": "a25843baaf19b036d71c55e1d7794db8",
+          "size": 380,
+          "type": "image/svg+xml"
+        },
+        "bell.svg": {
+          "name": "bell.svg",
+          "blob": "bf91b96758b9b46515fb66543c3834d3",
+          "size": 272,
+          "type": "image/svg+xml"
+        },
+        "compass.svg": {
+          "name": "compass.svg",
+          "blob": "0aa937556d2bda8268fc5aa896ad23e2",
+          "size": 264,
+          "type": "image/svg+xml"
+        },
+        "anchor.svg": {
+          "name": "anchor.svg",
+          "blob": "6d211b976ec32a7414cdb357dfafca31",
+          "size": 275,
+          "type": "image/svg+xml"
+        },
+        "sail.svg": {
+          "name": "sail.svg",
+          "blob": "95faf545cbcec85d256db7292868eee3",
+          "size": 251,
+          "type": "image/svg+xml"
+        },
+        "aground.svg": {
+          "name": "aground.svg",
+          "blob": "6353267adb0ac7a140f8b1a9b4c39a9b",
+          "size": 282,
+          "type": "image/svg+xml"
+        },
+        "send-back.svg": {
+          "name": "send-back.svg",
+          "blob": "0bbec77c82e646f8f217c47b6220efeb",
+          "size": 258,
+          "type": "image/svg+xml"
+        },
+        "lock.svg": {
+          "name": "lock.svg",
+          "blob": "2891997b09cc83666991dcc64eec5553",
+          "size": 280,
+          "type": "image/svg+xml"
+        },
+        "check.svg": {
+          "name": "check.svg",
+          "blob": "592111603521038910c9764130b8dd5c",
+          "size": 217,
+          "type": "image/svg+xml"
+        },
+        "close.svg": {
+          "name": "close.svg",
+          "blob": "0e834d9ce6c9fd2f319616324dc2ec2a",
+          "size": 222,
+          "type": "image/svg+xml"
+        },
+        "reset.svg": {
+          "name": "reset.svg",
+          "blob": "9b35d09f0b3bd1b4b1bf4aa2a599b44c",
+          "size": 235,
+          "type": "image/svg+xml"
+        },
+        "tool.svg": {
+          "name": "tool.svg",
+          "blob": "be915e884efd20f380e1469b31bd12da",
+          "size": 223,
+          "type": "image/svg+xml"
+        },
+        "message.svg": {
+          "name": "message.svg",
+          "blob": "ddce4c09346d983d2fc3c37c01cd2cc2",
+          "size": 220,
+          "type": "image/svg+xml"
+        },
+        "info.svg": {
+          "name": "info.svg",
+          "blob": "206fb0ef9700da7f0f4c03e7da18e7f8",
+          "size": 258,
+          "type": "image/svg+xml"
+        },
+        "refresh.svg": {
+          "name": "refresh.svg",
+          "blob": "2aa3f905c44de24629c405c2af01e227",
+          "size": 239,
+          "type": "image/svg+xml"
+        },
+        "offline.svg": {
+          "name": "offline.svg",
+          "blob": "58d77765e4ff7a3a8df28bed438d70b2",
+          "size": 326,
+          "type": "image/svg+xml"
+        }
       }
     }
   },
   "blobs": {},
   "docs": { "sections": [] },
-  "lastChange": { "by": "Claude", "at": "2026-10-06T16:40:00Z", "via": "Claude Code", "note": "First version, built from the Ahoy UI wireframes (palette A)." }
+  "lastChange": {
+    "by": "Claude",
+    "at": "2026-10-06T16:40:00Z",
+    "via": "Claude Code",
+    "note": "First version, built from the Ahoy UI wireframes (palette A)."
+  }
 }

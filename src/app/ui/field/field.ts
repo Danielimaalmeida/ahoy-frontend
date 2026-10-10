@@ -1,5 +1,5 @@
-import { NgTemplateOutlet } from "@angular/common";
-import type { AfterContentInit } from "@angular/core";
+import { NgTemplateOutlet } from '@angular/common';
+import type { AfterContentInit } from '@angular/core';
 import {
   Component,
   DestroyRef,
@@ -11,15 +11,17 @@ import {
   inject,
   input,
   signal,
-} from "@angular/core";
-import type { ValidationErrors } from "@angular/forms";
-import { NgControl } from "@angular/forms";
+} from '@angular/core';
+import type { ValidationErrors } from '@angular/forms';
+import { NgControl } from '@angular/forms';
 
 let nextFieldId = 0;
 
 /** What a field shows for an error key when the form gives no message and the validator gave no text. */
-const DEFAULT_MESSAGES: Readonly<Record<string, string>> = { required: "This is required." };
-const FALLBACK_MESSAGE = "Check this value.";
+const DEFAULT_MESSAGES: Readonly<Record<string, string>> = {
+  required: 'This is required.',
+};
+const FALLBACK_MESSAGE = 'Check this value.';
 
 /** The form state a field needs from its control. */
 export interface ControlState {
@@ -33,13 +35,18 @@ export interface ControlState {
  * The message for the first error of a control: the form's own message for that key, else the validator's text when
  * it returned a string, else a generic one.
  */
-export function firstErrorMessage(errors: ValidationErrors | null, messages: Readonly<Record<string, string>>): string {
+export function firstErrorMessage(
+  errors: ValidationErrors | null,
+  messages: Readonly<Record<string, string>>
+): string {
   const key = errors === null ? undefined : Object.keys(errors)[0];
-  if (errors === null || key === undefined) return "";
+  if (errors === null || key === undefined) return '';
   const own = messages[key] ?? DEFAULT_MESSAGES[key];
   if (own !== undefined) return own;
   const value: unknown = errors[key];
-  return typeof value === "string" && value.trim() !== "" ? value : FALLBACK_MESSAGE;
+  return typeof value === 'string' && value.trim() !== ''
+    ? value
+    : FALLBACK_MESSAGE;
 }
 
 /**
@@ -47,24 +54,29 @@ export function firstErrorMessage(errors: ValidationErrors | null, messages: Rea
  * ids), and receives the field's id, `aria-invalid`, `aria-describedby` and `aria-required`.
  */
 @Directive({
-  selector: "input[ahInput], textarea[ahInput], select[ahInput]",
+  selector: 'input[ahInput], textarea[ahInput], select[ahInput]',
   host: {
-    class: "ah-input",
-    "[class.ah-input--mono]": "mono()",
-    "[id]": "id",
-    "[attr.aria-invalid]": "field?.error() ? 'true' : null",
-    "[attr.aria-describedby]": "field?.describedBy() ?? null",
-    "[attr.aria-required]": "field?.required() ? 'true' : null",
+    class: 'ah-input',
+    '[class.ah-input--mono]': 'mono()',
+    '[id]': 'id',
+    '[attr.aria-invalid]': "field?.error() ? 'true' : null",
+    '[attr.aria-describedby]': 'field?.describedBy() ?? null',
+    '[attr.aria-required]': "field?.required() ? 'true' : null",
   },
 })
 export class FieldControl implements AfterContentInit {
   /** Monospace text, for Jira keys and model ids. */
   readonly mono = input(false, { transform: booleanAttribute });
   /** The element's id: its own `id` attribute, or a generated one. */
-  readonly id = inject(new HostAttributeToken("id"), { optional: true }) ?? `ah-field-${nextFieldId++}-control`;
+  readonly id =
+    inject(new HostAttributeToken('id'), { optional: true }) ??
+    `ah-field-${nextFieldId++}-control`;
 
   protected readonly field = inject(Field, { optional: true });
-  private readonly ngControl = inject(NgControl, { self: true, optional: true });
+  private readonly ngControl = inject(NgControl, {
+    self: true,
+    optional: true,
+  });
   private readonly destroyRef = inject(DestroyRef);
   private readonly current = signal<ControlState | null>(null);
 
@@ -100,7 +112,7 @@ export class FieldControl implements AfterContentInit {
  * ```
  */
 @Component({
-  selector: "ah-field",
+  selector: 'ah-field',
   imports: [NgTemplateOutlet],
   template: `
     <ng-template #controlSlot><ng-content /></ng-template>
@@ -139,11 +151,11 @@ export class Field {
   /** Shows "(optional)" after the label. */
   readonly optional = input(false, { transform: booleanAttribute });
   /** What the value does, under the control. */
-  readonly hint = input("");
+  readonly hint = input('');
   /** A unit shown inside the control on the right, such as AIU. */
-  readonly unit = input("");
+  readonly unit = input('');
   /** An error to show whatever the control's state, such as one from the server. */
-  readonly errorText = input("");
+  readonly errorText = input('');
   /** Messages by validator key (`required`, `min`, …) for the control's errors. */
   readonly errorMessages = input<Readonly<Record<string, string>>>({});
 
@@ -157,7 +169,7 @@ export class Field {
   readonly error = computed(() => {
     if (this.errorText()) return this.errorText();
     const state = this.control()?.state();
-    if (!state?.invalid || !(state.touched || state.dirty)) return "";
+    if (!state?.invalid || !(state.touched || state.dirty)) return '';
     return firstErrorMessage(state.errors, this.errorMessages());
   });
 
@@ -168,6 +180,6 @@ export class Field {
       ...(this.unit() ? [this.unitId] : []),
       ...(this.hint() ? [this.hintId] : []),
     ];
-    return ids.length > 0 ? ids.join(" ") : null;
+    return ids.length > 0 ? ids.join(' ') : null;
   });
 }

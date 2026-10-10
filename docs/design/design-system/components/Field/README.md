@@ -9,13 +9,15 @@ A labelled form control with optional hint, unit suffix and error.
 - Typed text is never thrown away: on a 409 conflict the form keeps it (see Banner).
 
 ## Markup
+
 ```html
 <div class="ah-field">
   <label class="ah-label" for="bud">Total budget <span class="ah-req">*</span></label>
-  <div class="ah-suffix"><input id="bud" class="ah-input" inputmode="decimal" value="25"><span class="ah-suffix__unit">AIU</span></div>
+  <div class="ah-suffix"><input id="bud" class="ah-input" inputmode="decimal" value="25" /><span class="ah-suffix__unit">AIU</span></div>
   <span class="ah-hint">A hard cap for every run of this voyage together.</span>
 </div>
 ```
 
 ## Angular
+
 Pair with Reactive Forms: `<ah-field label="Total budget" [required]="true" hint="…" unit="AIU">` projecting the input, showing the first error from the control.

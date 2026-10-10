@@ -104,6 +104,8 @@ and `provideAppInitializer(initAppConfig)` (`core/config/app-config.ts`, a no-op
 - Only a local API started with `npm run dev -- --simulate` (0 AIU). **Never** `--live`, never the TEST environment.
 - `npm run start:mock` serves the `mock` configuration (lane 2D adds the mock backend; until then it equals
   `development`).
+- `npm run start:test` explicitly serves the `test` configuration with `src/proxy.conf.test.json`, forwarding the
+  browser's API calls to the TEST API. Do not use it for automated validation or mutating actions without approval.
 
 ## Tooling (tasks 0.4, 0.5, 0.8)
 

@@ -1,15 +1,23 @@
-import { Component } from "@angular/core";
-import { ArtifactDiff, Mark } from "@ui/artifact-diff/artifact-diff";
+import { Component } from '@angular/core';
+import { ArtifactDiff, Mark } from '@ui/artifact-diff/artifact-diff';
 
 /** Gallery: the ArtifactDiff preview, and `ahMark` on changed text in a rendered plan. */
 @Component({
-  selector: "ah-kit-artifact-diff",
+  selector: 'ah-kit-artifact-diff',
   imports: [ArtifactDiff, Mark],
   template: `
     <div class="ah-panel">
-      <ah-artifact-diff [previous]="previous" [next]="next" [context]="1" label="Plan, revision 3 to 4" />
+      <ah-artifact-diff
+        [previous]="previous"
+        [next]="next"
+        [context]="1"
+        label="Plan, revision 3 to 4"
+      />
     </div>
-    <p class="kit-flush">WP1 now <span ahMark>computes isOverdue against the customer's timezone</span>.</p>
+    <p class="kit-flush">
+      WP1 now
+      <span ahMark>computes isOverdue against the customer's timezone</span>.
+    </p>
   `,
   styles: `
     .kit-flush {

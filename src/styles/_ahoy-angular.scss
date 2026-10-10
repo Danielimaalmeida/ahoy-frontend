@@ -27,20 +27,25 @@ ah-banner {
 .ah a.ah-btn {
   color: var(--ink);
 }
+
 .ah a.ah-btn--primary,
 .ah a.ah-btn--danger {
   color: var(--on-accent);
 }
+
 .ah a.ah-btn--soft {
   color: var(--accent-text);
 }
+
 .ah a.ah-btn--ghost {
   color: var(--ink-soft);
 }
+
 .ah a.ah-btn--danger-outline {
   color: var(--danger-text);
 }
-.ah a.ah-btn[aria-disabled="true"] {
+
+.ah a.ah-btn[aria-disabled='true'] {
   color: var(--ink-disabled);
 }
 

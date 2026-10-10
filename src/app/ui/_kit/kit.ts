@@ -1,18 +1,25 @@
-import { NgComponentOutlet } from "@angular/common";
-import { Component, ViewEncapsulation, inject } from "@angular/core";
-import { Button } from "@ui/button/button";
-import { Logo } from "@ui/logo/logo";
-import type { Theme } from "@ui/theme/theme.service";
-import { THEMES, ThemeService } from "@ui/theme/theme.service";
-import type { KitSection } from "./kit-section";
-import { KIT_SECTIONS_1A } from "./sections/1a-sections";
-import { KIT_SECTIONS_1B } from "./sections/1b-sections";
-import { KIT_SECTIONS_1C } from "./sections/1c-sections";
+import { NgComponentOutlet } from '@angular/common';
+import { Component, ViewEncapsulation, inject } from '@angular/core';
+import { Button } from '@ui/button/button';
+import { Logo } from '@ui/logo/logo';
+import type { Theme } from '@ui/theme/theme.service';
+import { THEMES, ThemeService } from '@ui/theme/theme.service';
+import type { KitSection } from './kit-section';
+import { KIT_SECTIONS_1A } from './sections/1a-sections';
+import { KIT_SECTIONS_1B } from './sections/1b-sections';
+import { KIT_SECTIONS_1C } from './sections/1c-sections';
 
 /** Every gallery section; each lane lists its own in `sections/<lane>-sections.ts`. */
-export const KIT_SECTIONS: readonly KitSection[] = [...KIT_SECTIONS_1A, ...KIT_SECTIONS_1B, ...KIT_SECTIONS_1C];
+export const KIT_SECTIONS: readonly KitSection[] = [
+  ...KIT_SECTIONS_1A,
+  ...KIT_SECTIONS_1B,
+  ...KIT_SECTIONS_1C,
+];
 
-const THEME_LABELS: Readonly<Record<Theme, string>> = { light: "Light", dark: "Dark" };
+const THEME_LABELS: Readonly<Record<Theme, string>> = {
+  light: 'Light',
+  dark: 'Dark',
+};
 
 /**
  * The `/_kit` gallery (development builds only): every design-system component in all its variants, with a light/dark
@@ -20,7 +27,7 @@ const THEME_LABELS: Readonly<Record<Theme, string>> = { light: "Light", dark: "D
  * (`kit-*`) are global but load only with this lazy, dev-only page.
  */
 @Component({
-  selector: "ah-kit",
+  selector: 'ah-kit',
   imports: [Button, Logo, NgComponentOutlet],
   encapsulation: ViewEncapsulation.None,
   styles: `
@@ -109,7 +116,9 @@ const THEME_LABELS: Readonly<Record<Theme, string>> = { light: "Light", dark: "D
       <header class="kit__head">
         <ah-logo />
         <h1 class="kit__title">Kit</h1>
-        <span class="ah-muted">Design-system components · development builds only</span>
+        <span class="ah-muted"
+          >Design-system components · development builds only</span
+        >
         <div class="kit__theme" role="group" aria-label="Theme">
           @for (t of themes; track t) {
             <button
@@ -125,9 +134,14 @@ const THEME_LABELS: Readonly<Record<Theme, string>> = { light: "Light", dark: "D
         </div>
       </header>
       @for (section of sections; track section.id) {
-        <section class="kit__section" [id]="section.id" [attr.aria-labelledby]="section.id + '-title'">
+        <section
+          class="kit__section"
+          [id]="section.id"
+          [attr.aria-labelledby]="section.id + '-title'"
+        >
           <h2 class="kit__section-title" [id]="section.id + '-title'">
-            {{ section.title }} <span class="ah-api">lane {{ section.lane }}</span>
+            {{ section.title }}
+            <span class="ah-api">lane {{ section.lane }}</span>
           </h2>
           <ng-container *ngComponentOutlet="section.component" />
         </section>

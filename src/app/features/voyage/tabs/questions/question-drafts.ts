@@ -1,16 +1,19 @@
-import { InjectionToken } from "@angular/core";
+import { InjectionToken } from '@angular/core';
 
 /** Where unsent answers survive a page reload: the tab's `sessionStorage`, or `null` where the browser denies it. */
-export const DRAFT_STORAGE = new InjectionToken<Storage | null>("DRAFT_STORAGE", {
-  providedIn: "root",
-  factory: () => {
-    try {
-      return globalThis.sessionStorage;
-    } catch {
-      return null;
-    }
-  },
-});
+export const DRAFT_STORAGE = new InjectionToken<Storage | null>(
+  'DRAFT_STORAGE',
+  {
+    providedIn: 'root',
+    factory: () => {
+      try {
+        return globalThis.sessionStorage;
+      } catch {
+        return null;
+      }
+    },
+  }
+);
 
 /** The storage key of one draft: `ahoy.draft.PROJ-131.Q3`. */
 export function draftKey(storyKey: string, questionId: string): string {
@@ -28,7 +31,7 @@ export class QuestionDrafts {
 
   constructor(
     private readonly storyKey: string,
-    private readonly storage: Storage | null,
+    private readonly storage: Storage | null
   ) {}
 
   /** The draft for a question: the one in memory, else the one stored; "" when there is none. */
@@ -36,13 +39,13 @@ export class QuestionDrafts {
     const kept = this.memory.get(questionId);
     if (kept !== undefined) return kept;
     const stored = this.readStored(questionId);
-    if (stored !== "") this.memory.set(questionId, stored);
+    if (stored !== '') this.memory.set(questionId, stored);
     return stored;
   }
 
   /** Keeps the text typed so far; an empty text is no draft. */
   write(questionId: string, text: string): void {
-    if (text === "") {
+    if (text === '') {
       this.clear(questionId);
       return;
     }
@@ -66,10 +69,12 @@ export class QuestionDrafts {
 
   private readStored(questionId: string): string {
     try {
-      const value: unknown = this.storage?.getItem(draftKey(this.storyKey, questionId));
-      return typeof value === "string" ? value : "";
+      const value: unknown = this.storage?.getItem(
+        draftKey(this.storyKey, questionId)
+      );
+      return typeof value === 'string' ? value : '';
     } catch {
-      return "";
+      return '';
     }
   }
 }

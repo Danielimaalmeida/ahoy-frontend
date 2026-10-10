@@ -1,23 +1,31 @@
-import { Component, effect, inject } from "@angular/core";
-import { ActivatedRoute, Router } from "@angular/router";
-import type { StoryStatus } from "@core/api/types";
-import { VoyageContext } from "./voyage-context";
+import { Component, effect, inject } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import type { StoryStatus } from '@core/api/types';
+import { VoyageContext } from './voyage-context';
 
 /** The tabs of a voyage, by their path under `/voyages/:key`. */
-export const VOYAGE_TABS = ["plan", "questions", "runs", "gates", "artifacts", "log", "models"] as const;
+export const VOYAGE_TABS = [
+  'plan',
+  'questions',
+  'runs',
+  'gates',
+  'artifacts',
+  'log',
+  'models',
+] as const;
 
 /** A tab of a voyage. */
 export type VoyageTab = (typeof VOYAGE_TABS)[number];
 
 /** The label of each tab, as the wireframes word it. */
 export const VOYAGE_TAB_LABELS: Readonly<Record<VoyageTab, string>> = {
-  plan: "Plan",
-  questions: "Questions",
-  runs: "Runs",
-  gates: "Gates",
-  artifacts: "Artifacts",
-  log: "Ship's log",
-  models: "Models",
+  plan: 'Plan',
+  questions: 'Questions',
+  runs: 'Runs',
+  gates: 'Gates',
+  artifacts: 'Artifacts',
+  log: 'Activity',
+  models: 'Models',
 };
 
 /**
@@ -26,17 +34,17 @@ export const VOYAGE_TAB_LABELS: Readonly<Record<VoyageTab, string>> = {
  */
 export function defaultTab(status: StoryStatus): VoyageTab {
   switch (status) {
-    case "awaiting_input":
-      return "questions";
-    case "awaiting_decision":
-      return "plan";
-    case "running":
-    case "ready":
-      return "runs";
-    case "halted":
-      return "models";
-    case "terminal":
-      return "plan";
+    case 'awaiting_input':
+      return 'questions';
+    case 'awaiting_decision':
+      return 'plan';
+    case 'running':
+    case 'ready':
+      return 'runs';
+    case 'halted':
+      return 'models';
+    case 'terminal':
+      return 'plan';
   }
 }
 
@@ -44,7 +52,7 @@ export function defaultTab(status: StoryStatus): VoyageTab {
  * Stands at `/voyages/:key` until the story is read, then replaces the URL with the default tab's. The shell shows the
  * header's skeleton meanwhile; this renders nothing.
  */
-@Component({ selector: "ah-voyage-default-tab", template: `` })
+@Component({ selector: 'ah-voyage-default-tab', template: `` })
 export class VoyageDefaultTab {
   private readonly context = inject(VoyageContext);
   private readonly router = inject(Router);
@@ -56,7 +64,10 @@ export class VoyageDefaultTab {
       const status = this.context.story()?.status;
       if (status === undefined || this.done) return;
       this.done = true;
-      void this.router.navigate([defaultTab(status)], { relativeTo: this.route, replaceUrl: true });
+      void this.router.navigate([defaultTab(status)], {
+        relativeTo: this.route,
+        replaceUrl: true,
+      });
     });
   }
 }

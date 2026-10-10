@@ -1,14 +1,14 @@
-import { Component, inject } from "@angular/core";
-import { Button } from "@ui/button/button";
-import { Icon } from "@ui/icon/icon";
-import { ToastHost, ToastService } from "@ui/toast/toast";
+import { Component, inject } from '@angular/core';
+import { Button } from '@ui/button/button';
+import { Icon } from '@ui/icon/icon';
+import { ToastHost, ToastService } from '@ui/toast/toast';
 
 /**
  * Gallery: the Toast preview as a static sample, and a button that shows a real one through `ToastService`. The
  * section has its own service and host, so the toast shows here and never doubles the app shell's.
  */
 @Component({
-  selector: "ah-kit-toast",
+  selector: 'ah-kit-toast',
   imports: [Button, Icon, ToastHost],
   providers: [ToastService],
   template: `
@@ -19,8 +19,12 @@ import { ToastHost, ToastService } from "@ui/toast/toast";
       </div>
     </div>
     <div class="kit-row">
-      <button ahButton size="sm" type="button" (click)="show()">Show a toast</button>
-      <span class="ah-hint">It goes after about 5 seconds and never holds an action.</span>
+      <button ahButton size="sm" type="button" (click)="show()">
+        Show a toast
+      </button>
+      <span class="ah-hint"
+        >It goes after about 5 seconds and never holds an action.</span
+      >
     </div>
     <ah-toast-host />
   `,

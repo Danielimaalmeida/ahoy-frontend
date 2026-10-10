@@ -1,11 +1,13 @@
-import { isNotFound, type ApiResult } from "@core/api/api-error";
-import type { ArtifactContent } from "@core/api/types";
+import { isNotFound, type ApiResult } from '@core/api/api-error';
+import type { ArtifactContent } from '@core/api/types';
 
 /** How many revisions back the Plan tab looks for a plan that differs (the API lists only the current revision: G9). */
 export const MAX_PROBES = 5;
 
 /** Reads the plan at one artifact-set revision (`getArtifactContent?revision=`). */
-export type ReadRevision = (revision: number) => Promise<ApiResult<ArtifactContent>>;
+export type ReadRevision = (
+  revision: number
+) => Promise<ApiResult<ArtifactContent>>;
 
 /** The earlier plan the current one is compared with. */
 export interface Comparison {
@@ -25,7 +27,7 @@ export async function findComparison(
   currentText: string,
   currentRevision: number,
   read: ReadRevision,
-  cancelled: () => boolean = () => false,
+  cancelled: () => boolean = () => false
 ): Promise<Comparison | null> {
   const lowest = Math.max(1, currentRevision - MAX_PROBES);
   for (let revision = currentRevision - 1; revision >= lowest; revision--) {
@@ -35,7 +37,7 @@ export async function findComparison(
       if (isNotFound(result.error)) continue;
       return null;
     }
-    if (result.value.kind === "content" && result.value.text !== currentText) {
+    if (result.value.kind === 'content' && result.value.text !== currentText) {
       return { revision, text: result.value.text };
     }
   }

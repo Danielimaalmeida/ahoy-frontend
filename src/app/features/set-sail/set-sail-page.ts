@@ -1,4 +1,4 @@
-import { takeUntilDestroyed, toSignal } from "@angular/core/rxjs-interop";
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   Component,
   DestroyRef,
@@ -11,28 +11,37 @@ import {
   input,
   signal,
   untracked,
-  viewChild,
-} from "@angular/core";
-import { FormControl, FormGroup, ReactiveFormsModule } from "@angular/forms";
-import { Router, RouterLink } from "@angular/router";
-import { map, merge } from "rxjs";
-import { ApiClient } from "@core/api/api-client";
-import { StoriesStore } from "@core/stores/stories-store";
-import { CurrentUser } from "@core/auth/current-user";
-import { MODEL_SLOTS } from "@domain/models";
-import { PHASES } from "@domain/phases";
-import type { ModelSlot } from "@domain/types";
-import { Banner } from "@ui/banner/banner";
-import { Button } from "@ui/button/button";
-import { Field, FieldControl } from "@ui/field/field";
-import { Icon } from "@ui/icon/icon";
-import type { EffortChoice, ModelChoiceControls } from "@ui/model-choice/model-choice";
-import { ModelChoiceTable } from "@ui/model-choice/model-choice";
-import { Panel, PanelBody, PanelHead } from "@ui/panel/panel";
-import { ToastService } from "@ui/toast/toast";
-import { MODEL_MESSAGES, budgetValidator, keyValidator, modelValidator, titleValidator } from "./set-sail-validators";
-import type { FeedbackField } from "./start-errors";
-import { NO_FEEDBACK, startFeedback, withoutField } from "./start-errors";
+} from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { map, merge } from 'rxjs';
+import { ApiClient } from '@core/api/api-client';
+import type { ModelCatalog } from '@core/api/types';
+import { StoriesStore } from '@core/stores/stories-store';
+import { CurrentUser } from '@core/auth/current-user';
+import { MODEL_SLOTS } from '@domain/models';
+import { PHASES } from '@domain/phases';
+import type { ModelSlot } from '@domain/types';
+import { Banner } from '@ui/banner/banner';
+import { Button } from '@ui/button/button';
+import { Field, FieldControl } from '@ui/field/field';
+import { Icon } from '@ui/icon/icon';
+import type {
+  EffortChoice,
+  ModelChoiceControls,
+} from '@ui/model-choice/model-choice';
+import { ModelChoiceTable } from '@ui/model-choice/model-choice';
+import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
+import { ToastService } from '@ui/toast/toast';
+import {
+  MODEL_MESSAGES,
+  budgetValidator,
+  keyValidator,
+  modelValidator,
+  titleValidator,
+} from './set-sail-validators';
+import type { FeedbackField } from './start-errors';
+import { NO_FEEDBACK, startFeedback, withoutField } from './start-errors';
 import {
   budgetNanoAiu,
   buildStartRequest,
@@ -40,22 +49,22 @@ import {
   describeAiu,
   modelProblem,
   normalizeKey,
-} from "./start-request";
-
-/** The two reviewer slots, which share one error when both would run on the same model. */
-const LOOKOUTS: readonly ModelSlot[] = ["review-design", "review-defect"];
+} from './start-request';
 
 /** A model slot's two controls: the model id as text and the reasoning effort. */
 function modelGroup(): FormGroup<ModelChoiceControls> {
   return new FormGroup({
-    model: new FormControl("", { nonNullable: true, validators: [modelValidator] }),
-    effort: new FormControl<EffortChoice>("", { nonNullable: true }),
+    model: new FormControl('', {
+      nonNullable: true,
+      validators: [modelValidator],
+    }),
+    effort: new FormControl<EffortChoice>('', { nonNullable: true }),
   });
 }
 
 /** The text of a query-string value, or `null` when it is missing or not a single string (it comes from outside). */
 function singleText(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
+  return typeof value === 'string' ? value : null;
 }
 
 /**
@@ -63,7 +72,7 @@ function singleText(value: unknown): string | null {
  * `startStory`. The budget is read as integer nano-AIU (never a float) and only the slots the user filled in are sent.
  */
 @Component({
-  selector: "ah-set-sail",
+  selector: 'ah-set-sail',
   imports: [
     Banner,
     Button,
@@ -184,20 +193,28 @@ function singleText(value: unknown): string | null {
     <div class="set-sail">
       <header>
         @if (fromDocks()) {
-          <a routerLink="/docks" class="set-sail__back">← Back to The Docks</a>
+          <a routerLink="/docks" class="set-sail__back">← Back to Backlog</a>
         }
-        <h1 class="set-sail__title">Set sail on a new voyage</h1>
+        <h1 class="set-sail__title">Start a new voyage</h1>
         <div class="ah-muted">
-          Start a Jira story in Ahoy. You become its owner, and its runs bill your personal Copilot account.
+          Start a Jira story in Ahoy. You become its owner, and its runs bill
+          your personal Copilot account.
         </div>
       </header>
 
-      <form class="set-sail__layout" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <form
+        class="set-sail__layout"
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        novalidate
+      >
         <fieldset class="set-sail__main" [disabled]="submitting()">
           <ah-panel>
             <ah-panel-head heading="The story">
               @if (fromDocks()) {
-                <span class="ah-tag ah-tag--accent">Filled in from The Docks</span>
+                <span class="ah-tag ah-tag--accent"
+                  >Filled in from Backlog</span
+                >
               }
             </ah-panel-head>
             <ah-panel-body>
@@ -219,7 +236,9 @@ function singleText(value: unknown): string | null {
                     />
                   </ah-field>
                   @if (feedback().existingKey; as existing) {
-                    <a [routerLink]="['/voyages', existing]">Open {{ existing }}</a>
+                    <a [routerLink]="['/voyages', existing]"
+                      >Open {{ existing }}</a
+                    >
                   }
                 </div>
                 <div class="set-sail__cell">
@@ -230,7 +249,12 @@ function singleText(value: unknown): string | null {
                     [errorText]="feedback().budget ?? ''"
                     hint="A hard cap for every run of this voyage together. You can raise it later."
                   >
-                    <input ahInput formControlName="budget" inputmode="decimal" autocomplete="off" />
+                    <input
+                      ahInput
+                      formControlName="budget"
+                      inputmode="decimal"
+                      autocomplete="off"
+                    />
                   </ah-field>
                 </div>
               </div>
@@ -248,16 +272,42 @@ function singleText(value: unknown): string | null {
           </ah-panel>
 
           <ah-panel>
-            <ah-panel-head heading="Crew and models" subtitle="Optional. Leave a field blank and the server decides." />
+            <ah-panel-head
+              heading="Agents and models"
+              subtitle="Optional. Leave a field blank and the server decides."
+            />
             <ah-panel-body>
-              <ah-model-choice-table [rows]="modelRows()" [controls]="modelControls" />
+              <ah-model-choice-table
+                [rows]="modelRows()"
+                [controls]="modelControls"
+                [models]="catalog()?.models ?? []"
+              />
+              @if (catalogLoading()) {
+                <span class="ah-hint" role="status"
+                  >Loading model catalogue…</span
+                >
+              } @else if (catalogError()) {
+                <ah-banner tone="warn">
+                  {{ catalogError() }}
+                  <button
+                    type="button"
+                    ahButton="soft"
+                    size="sm"
+                    (click)="loadCatalog()"
+                  >
+                    Try again
+                  </button>
+                </ah-banner>
+              }
               <span class="ah-hint"
-                >Type a Copilot model id. Ahoy can't list the models your account may use; the worker checks the model
-                and effort before the first prompt (0 AIU) and anchors the voyage if they're refused.</span
+                >Choose a model from the server's catalogue, or select Other
+                model id. This list does not guarantee access from your Copilot
+                account; the worker checks the model and effort before the first
+                prompt (0 AIU) and anchors the voyage if they're refused.</span
               >
               <span class="ah-hint"
-                >A model chosen without an effort runs at that model's own default. The two Lookouts must use different
-                models.</span
+                >A model chosen without an effort runs at that model's own
+                default.</span
               >
             </ah-panel-body>
           </ah-panel>
@@ -269,11 +319,11 @@ function singleText(value: unknown): string | null {
             <ah-panel-body>
               <dl class="set-sail__facts">
                 <dt>Voyage</dt>
-                <dd class="ah-mono">{{ voyageKey() || "—" }}</dd>
+                <dd class="ah-mono">{{ voyageKey() || '—' }}</dd>
                 <dt>Owner</dt>
                 <dd>{{ user.id() }} (you)</dd>
                 <dt>Budget cap</dt>
-                <dd>{{ cap() === null ? "—" : cap() + " AIU" }}</dd>
+                <dd>{{ cap() === null ? '—' : cap() + ' AIU' }}</dd>
                 <dt>First crew</dt>
                 <dd>Navigator reads the Jira issue</dd>
               </dl>
@@ -281,24 +331,42 @@ function singleText(value: unknown): string | null {
                 <span class="set-sail__tick"><ah-icon name="check" /></span>
                 <span
                   >Runs bill <b>your</b> Copilot account,
-                  {{ cap() === null ? "up to the cap you set" : "up to " + cap() + " AIU" }}. Nothing beyond the cap is
-                  spent.</span
+                  {{
+                    cap() === null
+                      ? 'up to the cap you set'
+                      : 'up to ' + cap() + ' AIU'
+                  }}. Nothing beyond the cap is spent.</span
                 >
               </div>
               <div class="set-sail__check">
                 <span class="set-sail__tick"><ah-icon name="check" /></span>
-                <span>The crew stops for questions and at every human gate. Nothing is approved automatically.</span>
+                <span
+                  >The crew stops for questions and at every human gate. Nothing
+                  is approved automatically.</span
+                >
               </div>
               <div class="set-sail__check">
                 <span class="set-sail__tick"><ah-icon name="check" /></span>
                 <span>Anyone on the crew can stop the voyage at any time.</span>
               </div>
               @if (feedback().banner; as banner) {
-                <ah-banner variant="error" announce="alert" [heading]="banner.heading" [tech]="banner.tech">
+                <ah-banner
+                  variant="error"
+                  announce="alert"
+                  [heading]="banner.heading"
+                  [tech]="banner.tech"
+                >
                   {{ banner.text }}
                   @if (banner.retry) {
                     <div class="set-sail__retry">
-                      <button type="button" ahButton="soft" size="sm" (click)="submit()">Try again</button>
+                      <button
+                        type="button"
+                        ahButton="soft"
+                        size="sm"
+                        (click)="submit()"
+                      >
+                        Try again
+                      </button>
                     </div>
                   }
                 </ah-banner>
@@ -331,6 +399,9 @@ function singleText(value: unknown): string | null {
   `,
 })
 export class SetSailPage {
+  protected readonly catalog = signal<ModelCatalog | null>(null);
+  protected readonly catalogLoading = signal(false);
+  protected readonly catalogError = signal('');
   /** `?key=` from The Docks (route input binding). Untrusted: only a single string is used. */
   readonly key = input<unknown>();
   /** `?title=` from The Docks (route input binding). Untrusted: only a single string is used. */
@@ -338,7 +409,7 @@ export class SetSailPage {
 
   protected readonly user = inject(CurrentUser);
   /** The seven phases of a voyage, as the "How a voyage goes" card lists them. */
-  protected readonly phases = PHASES.join(" → ");
+  protected readonly phases = PHASES.join(' → ');
 
   private readonly api = inject(ApiClient);
   private readonly router = inject(Router);
@@ -346,34 +417,45 @@ export class SetSailPage {
   private readonly toasts = inject(ToastService);
 
   protected readonly form = new FormGroup({
-    key: new FormControl("", { nonNullable: true, validators: [keyValidator] }),
-    title: new FormControl("", { nonNullable: true, validators: [titleValidator] }),
-    budget: new FormControl("", { nonNullable: true, validators: [budgetValidator] }),
+    key: new FormControl('', { nonNullable: true, validators: [keyValidator] }),
+    title: new FormControl('', {
+      nonNullable: true,
+      validators: [titleValidator],
+    }),
+    budget: new FormControl('', {
+      nonNullable: true,
+      validators: [budgetValidator],
+    }),
     models: new FormGroup({
       intake: modelGroup(),
       planning: modelGroup(),
       implementation: modelGroup(),
-      "review-design": modelGroup(),
-      "review-defect": modelGroup(),
+      review: modelGroup(),
     }),
   });
 
   /** The controls of each slot, as the Models table wants them. */
-  protected readonly modelControls: Readonly<Record<ModelSlot, ModelChoiceControls>> = {
+  protected readonly modelControls: Readonly<
+    Record<ModelSlot, ModelChoiceControls>
+  > = {
     intake: this.form.controls.models.controls.intake.controls,
     planning: this.form.controls.models.controls.planning.controls,
     implementation: this.form.controls.models.controls.implementation.controls,
-    "review-design": this.form.controls.models.controls["review-design"].controls,
-    "review-defect": this.form.controls.models.controls["review-defect"].controls,
+    review: this.form.controls.models.controls.review.controls,
   };
 
   /** What the form holds, kept current as the user types. */
-  private readonly values = toSignal(this.form.valueChanges.pipe(map(() => this.form.getRawValue())), {
-    initialValue: this.form.getRawValue(),
-  });
+  private readonly values = toSignal(
+    this.form.valueChanges.pipe(map(() => this.form.getRawValue())),
+    {
+      initialValue: this.form.getRawValue(),
+    }
+  );
 
   /** The key as it will be sent, or "" while blank. */
-  protected readonly voyageKey = computed(() => normalizeKey(this.values().key));
+  protected readonly voyageKey = computed(() =>
+    normalizeKey(this.values().key)
+  );
 
   /** The budget as an AIU amount ("25", "25.5"), or `null` while the text is not a usable amount. */
   protected readonly cap = computed(() => {
@@ -382,16 +464,23 @@ export class SetSailPage {
   });
 
   protected readonly submitLabel = computed(() =>
-    this.submitting() ? "Setting sail…" : this.cap() === null ? "Set sail" : `Set sail · up to ${this.cap()} AIU`,
+    this.submitting()
+      ? 'Starting voyage…'
+      : this.cap() === null
+        ? 'Start voyage'
+        : `Start voyage · up to ${this.cap()} AIU`
   );
 
-  /** The page was opened from The Docks, which pass the key. */
-  protected readonly fromDocks = computed(() => (singleText(this.key())?.trim() ?? "") !== "");
+  /** The page was opened from Backlog, which passes the key. */
+  protected readonly fromDocks = computed(
+    () => (singleText(this.key())?.trim() ?? '') !== ''
+  );
 
   /** Cancel goes back where the user came from: The Docks, or the list of voyages. */
-  protected readonly cancelLink = computed(() => (this.fromDocks() ? "/docks" : "/voyages"));
+  protected readonly cancelLink = computed(() =>
+    this.fromDocks() ? '/docks' : '/voyages'
+  );
 
-  private readonly modelsTable = viewChild(ModelChoiceTable);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   /** False once the user has left the page: a late answer still counts, but must not move them or touch the view. */
@@ -405,16 +494,26 @@ export class SetSailPage {
   protected readonly modelRows = computed(() =>
     MODEL_SLOTS.map((slot) => {
       const values = this.values().models[slot];
+      const fallback = this.catalog()?.defaults.find(
+        (entry) => entry.slot === slot
+      );
       const problem = modelProblem(values.model);
-      const { models, lookouts } = this.feedback();
       const error =
-        problem !== null ? MODEL_MESSAGES[problem] : (models[slot] ?? (LOOKOUTS.includes(slot) ? lookouts : undefined));
+        problem !== null
+          ? MODEL_MESSAGES[problem]
+          : this.feedback().models[slot];
       return {
         slot,
-        ...(chosenModel(values) !== null ? { source: "Your choice", chosen: true } : {}),
+        ...(fallback?.model != null ? { defaultModel: fallback.model } : {}),
+        ...(values.model === '' && fallback?.reasoningEffort != null
+          ? { defaultEffort: fallback.reasoningEffort }
+          : {}),
+        ...(chosenModel(values) !== null
+          ? { source: 'Your choice', chosen: true }
+          : {}),
         ...(error !== undefined ? { error } : {}),
       };
-    }),
+    })
   );
 
   protected readonly submitting = signal(false);
@@ -424,11 +523,18 @@ export class SetSailPage {
 
   constructor() {
     // The API's word on a field is out of date once the user edits that field.
-    const forget = (field: FeedbackField): void => this.feedback.update((feedback) => withoutField(feedback, field));
+    const forget = (field: FeedbackField): void =>
+      this.feedback.update((feedback) => withoutField(feedback, field));
     const { controls } = this.form;
-    controls.key.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => forget("key"));
-    controls.title.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => forget("title"));
-    controls.budget.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => forget("budget"));
+    controls.key.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => forget('key'));
+    controls.title.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => forget('title'));
+    controls.budget.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => forget('budget'));
     for (const slot of MODEL_SLOTS) {
       const { model, effort } = this.modelControls[slot];
       merge(model.valueChanges, effort.valueChanges)
@@ -441,11 +547,29 @@ export class SetSailPage {
       const key = singleText(this.key());
       const title = singleText(this.title());
       untracked(() => {
-        this.form.controls.key.setValue(normalizeKey(key ?? ""));
-        this.form.controls.title.setValue(title ?? "");
+        this.form.controls.key.setValue(normalizeKey(key ?? ''));
+        this.form.controls.title.setValue(title ?? '');
       });
     });
     this.destroyRef.onDestroy(() => (this.alive = false));
+    void this.loadCatalog();
+  }
+
+  protected async loadCatalog(): Promise<void> {
+    if (this.catalogLoading()) return;
+    this.catalogLoading.set(true);
+    this.catalogError.set('');
+    try {
+      const result = await this.api.listModels();
+      if (!this.alive) return;
+      if (result.ok) this.catalog.set(result.value);
+      else
+        this.catalogError.set(
+          'Could not load the model catalogue. Try again, or use Other model id.'
+        );
+    } finally {
+      if (this.alive) this.catalogLoading.set(false);
+    }
   }
 
   /** Writes the key in capitals as it is typed, keeping the caret where it was. */
@@ -470,9 +594,12 @@ export class SetSailPage {
         const root = this.host.nativeElement;
         const field = root.querySelector<HTMLElement>('[aria-invalid="true"]');
         if (field !== null) field.focus();
-        else root.querySelector(".ah-banner")?.scrollIntoView({ block: "nearest" });
+        else
+          root
+            .querySelector('.ah-banner')
+            ?.scrollIntoView({ block: 'nearest' });
       },
-      { injector: this.injector },
+      { injector: this.injector }
     );
   }
 
@@ -484,10 +611,9 @@ export class SetSailPage {
     if (this.submitting()) return;
     this.feedback.set(NO_FEEDBACK);
     this.form.markAllAsTouched();
-    const request =
-      this.form.invalid || (this.modelsTable()?.conflict() ?? null) !== null
-        ? null
-        : buildStartRequest(this.form.getRawValue());
+    const request = this.form.invalid
+      ? null
+      : buildStartRequest(this.form.getRawValue());
     if (request === null) {
       this.focusFirstProblem();
       return;
@@ -505,7 +631,8 @@ export class SetSailPage {
       }
       this.stories.upsert(result.value);
       this.toasts.show(`Voyage ${result.value.key} set sail.`);
-      if (this.alive) await this.router.navigate(["/voyages", result.value.key]);
+      if (this.alive)
+        await this.router.navigate(['/voyages', result.value.key]);
     } finally {
       this.submitting.set(false);
     }

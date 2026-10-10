@@ -1,21 +1,21 @@
-import { Component, computed, inject } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import type { ModelSlot } from "@core/api/types";
-import { explainHalt } from "@domain/halt";
-import { isModelSlot } from "@domain/models";
-import { actorLabel } from "@domain/identifiers";
-import { Button } from "@ui/button/button";
-import { Icon } from "@ui/icon/icon";
-import { RelativePipe } from "@ui/pipes/relative.pipe";
-import { runById, slotsForPhase } from "../context/crew";
-import { VoyageContext } from "../context/voyage-context";
-import type { HaltRecord } from "../context/voyage-events";
-import { VoyageDialogs } from "../dialogs/voyage-dialogs";
-import { haltGuidance } from "./halt-guidance";
+import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import type { ModelSlot } from '@core/api/types';
+import { explainHalt } from '@domain/halt';
+import { isModelSlot } from '@domain/models';
+import { actorLabel } from '@domain/identifiers';
+import { Button } from '@ui/button/button';
+import { Icon } from '@ui/icon/icon';
+import { RelativePipe } from '@ui/pipes/relative.pipe';
+import { runById, slotsForPhase } from '../context/crew';
+import { VoyageContext } from '../context/voyage-context';
+import type { HaltRecord } from '../context/voyage-events';
+import { VoyageDialogs } from '../dialogs/voyage-dialogs';
+import { haltGuidance } from './halt-guidance';
 
 /** A sentence without its closing full stop, to follow "Anchored: ". */
 function withoutStop(text: string): string {
-  return text.endsWith(".") ? text.slice(0, -1) : text;
+  return text.endsWith('.') ? text.slice(0, -1) : text;
 }
 
 /** What the vocabulary's text says beyond the sentence already in the title ("" when it is only that sentence). */
@@ -24,7 +24,10 @@ export function afterTitle(text: string, short: string): string {
 }
 
 /** The slot whose model a refused run would change: the one slot of its phase, if there is exactly one. */
-export function slotToChange(slots: readonly { readonly slot: ModelSlot }[], phase: string): ModelSlot | null {
+export function slotToChange(
+  slots: readonly { readonly slot: ModelSlot }[],
+  phase: string
+): ModelSlot | null {
   if (slots.length === 1) return slots[0]?.slot ?? null;
   return slots.length === 0 && isModelSlot(phase) ? phase : null;
 }
@@ -36,15 +39,19 @@ export function slotToChange(slots: readonly { readonly slot: ModelSlot }[], pha
  * from the last `story.halted` event (G7); until the history is read the banner shows the reason alone.
  */
 @Component({
-  selector: "ah-anchored-banner",
+  selector: 'ah-anchored-banner',
   imports: [Button, Icon, RelativePipe, RouterLink],
-  styleUrl: "./anchored-banner.scss",
+  styleUrl: './anchored-banner.scss',
   template: `
     @if (view(); as v) {
       <section class="anchored" role="status" aria-labelledby="anchored-title">
-        <span class="anchored__icon"><ah-icon name="anchor" [size]="18" /></span>
+        <span class="anchored__icon"
+          ><ah-icon name="anchor" [size]="18"
+        /></span>
         <div class="anchored__body">
-          <h2 id="anchored-title" class="anchored__title">Anchored: {{ v.title }}</h2>
+          <h2 id="anchored-title" class="anchored__title">
+            Halted: {{ v.title }}
+          </h2>
           @if (v.stoppedBy !== null) {
             <p>
               Stopped by {{ v.stoppedBy }}.
@@ -52,7 +59,7 @@ export function slotToChange(slots: readonly { readonly slot: ModelSlot }[], pha
                 Their reason: “{{ v.detail }}”
               }
             </p>
-          } @else if (v.text !== "" || v.detail !== null) {
+          } @else if (v.text !== '' || v.detail !== null) {
             <p>
               {{ v.text }}
               @if (v.detail !== null) {
@@ -60,7 +67,7 @@ export function slotToChange(slots: readonly { readonly slot: ModelSlot }[], pha
               }
             </p>
           }
-          <p><b>To get under way again:</b> {{ v.guidance }}</p>
+          <p><b>To continue:</b> {{ v.guidance }}</p>
           <div class="ah-tech">
             {{ v.tech }}
             @if (v.halt; as halt) {
@@ -80,13 +87,20 @@ export function slotToChange(slots: readonly { readonly slot: ModelSlot }[], pha
         @if (v.failedRun) {
           <div class="anchored__actions">
             @if (v.slot !== null) {
-              <a ahButton="primary" [routerLink]="['/voyages', v.key, 'models']" [queryParams]="{ change: v.slot }"
+              <a
+                ahButton="primary"
+                [routerLink]="['/voyages', v.key, 'models']"
+                [queryParams]="{ change: v.slot }"
                 >Change {{ v.phase }} model</a
               >
             } @else {
-              <a ahButton="primary" [routerLink]="['/voyages', v.key, 'models']">Change models</a>
+              <a ahButton="primary" [routerLink]="['/voyages', v.key, 'models']"
+                >Change models</a
+              >
             }
-            <button type="button" ahButton (click)="resume()">Resume as is</button>
+            <button type="button" ahButton (click)="resume()">
+              Resume as is
+            </button>
           </div>
         }
       </section>
@@ -99,27 +113,36 @@ export class AnchoredBanner {
 
   protected readonly view = computed(() => {
     const story = this.context.story();
-    if (story?.status !== "halted") return null;
+    if (story?.status !== 'halted') return null;
     const last = this.context.lastHalt();
-    const reason = story.haltReason ?? last?.reason ?? "unknown";
+    const reason = story.haltReason ?? last?.reason ?? 'unknown';
     // Only the event of this halt describes it: an older one may be from an earlier halt for another reason.
-    const halt: HaltRecord | null = last !== null && last.reason === reason ? last : null;
+    const halt: HaltRecord | null =
+      last !== null && last.reason === reason ? last : null;
     const runId = halt?.runId ?? null;
     const run = runById(this.context.runs(), runId);
     const phase = halt?.phase ?? run?.phase ?? story.phase;
     const explanation = explainHalt(reason, halt?.detail ?? undefined);
-    const tech = [reason, ...(runId !== null ? [runId] : []), phase].join(" · ");
+    const tech = [reason, ...(runId !== null ? [runId] : []), phase].join(
+      ' · '
+    );
     return {
       key: story.key,
       title: withoutStop(explanation.short),
       text: afterTitle(explanation.text, explanation.short),
       detail: explanation.detail,
-      stoppedBy: reason === "stopped_by_user" ? actorLabel(halt?.actor ?? "someone on the crew") : null,
-      guidance: haltGuidance(reason, { phase, remainingNanoAiu: this.context.remainingNanoAiu() }),
+      stoppedBy:
+        reason === 'stopped_by_user'
+          ? actorLabel(halt?.actor ?? 'someone on the crew')
+          : null,
+      guidance: haltGuidance(reason, {
+        phase,
+        remainingNanoAiu: this.context.remainingNanoAiu(),
+      }),
       tech,
       halt,
       phase,
-      failedRun: reason === "run_failed",
+      failedRun: reason === 'run_failed',
       slot: slotToChange(slotsForPhase(this.context.models(), phase), phase),
     };
   });

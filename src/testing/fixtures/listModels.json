@@ -1,0 +1,56 @@
+{
+  "source": "built_in",
+  "models": [
+    {
+      "id": "claude-haiku-4.5",
+      "label": "Claude Haiku 4.5",
+      "reasoningEfforts": []
+    },
+    {
+      "id": "claude-sonnet-5",
+      "label": "Claude Sonnet 5",
+      "reasoningEfforts": ["low", "medium", "high", "xhigh", "max"]
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "reasoningEfforts": null
+    }
+  ],
+  "reasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "defaults": [
+    {
+      "slot": "intake",
+      "phase": "intake",
+      "model": "claude-haiku-4.5",
+      "reasoningEffort": null,
+      "modelSource": "configuration",
+      "effortSource": "model_default"
+    },
+    {
+      "slot": "planning",
+      "phase": "planning",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": "high",
+      "modelSource": "configuration",
+      "effortSource": "configuration"
+    },
+    {
+      "slot": "implementation",
+      "phase": "implementation",
+      "model": "gpt-5.6-terra",
+      "reasoningEffort": "medium",
+      "modelSource": "phase_table",
+      "effortSource": "phase_table"
+    },
+    {
+      "slot": "review",
+      "phase": "pr_review",
+      "model": "gpt-5.6-terra",
+      "reasoningEffort": "high",
+      "modelSource": "configuration",
+      "effortSource": "configuration"
+    }
+  ]
+}

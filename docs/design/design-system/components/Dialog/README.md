@@ -9,4 +9,5 @@ A modal for actions that change a voyage: stop, resume, change budget, change mo
 - Every request carries the story version; on a 409 the dialog stays open, shows the notice banner and keeps the text.
 
 ## Angular
+
 Angular CDK `Dialog` with this markup as the template; focus starts on the first field.

@@ -37,7 +37,7 @@ export class ManualClock implements MockClock {
   private pending: Pending[] = [];
 
   constructor(start: number | string) {
-    this.time = typeof start === "number" ? start : Date.parse(start);
+    this.time = typeof start === 'number' ? start : Date.parse(start);
   }
 
   now(): number {
@@ -45,7 +45,11 @@ export class ManualClock implements MockClock {
   }
 
   schedule(ms: number, callback: () => void): Cancel {
-    const entry: Pending = { at: this.time + Math.max(0, ms), order: this.order++, callback };
+    const entry: Pending = {
+      at: this.time + Math.max(0, ms),
+      order: this.order++,
+      callback,
+    };
     this.pending.push(entry);
     return () => {
       this.pending = this.pending.filter((p) => p !== entry);
@@ -85,7 +89,13 @@ export class ManualClock implements MockClock {
   private nextDue(end: number): Pending | undefined {
     let best: Pending | undefined;
     for (const p of this.pending)
-      if (p.at <= end && (best === undefined || p.at < best.at || (p.at === best.at && p.order < best.order))) best = p;
+      if (
+        p.at <= end &&
+        (best === undefined ||
+          p.at < best.at ||
+          (p.at === best.at && p.order < best.order))
+      )
+        best = p;
     return best;
   }
 }

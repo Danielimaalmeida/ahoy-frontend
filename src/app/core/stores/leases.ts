@@ -1,4 +1,4 @@
-import type { DestroyRef } from "@angular/core";
+import type { DestroyRef } from '@angular/core';
 
 /** Something shared between holders, torn down when the last one lets go. */
 export interface Disposable {
@@ -23,7 +23,10 @@ export class LeaseMap<K, E extends Disposable> {
   }
 
   /** Takes a hold on the entry of `key`, creating it if needed. Calling `release` more than once does nothing. */
-  acquire(key: K, create: () => E): { readonly entry: E; readonly release: () => void } {
+  acquire(
+    key: K,
+    create: () => E
+  ): { readonly entry: E; readonly release: () => void } {
     let held = this.entries.get(key);
     if (held === undefined) {
       held = { entry: create(), holders: 0 };
@@ -52,7 +55,10 @@ export class LeaseMap<K, E extends Disposable> {
 }
 
 /** Calls `release` when `destroyRef` is destroyed, if one is given, and returns `release` for an earlier call. */
-export function releaseOnDestroy(release: () => void, destroyRef: DestroyRef | undefined): () => void {
+export function releaseOnDestroy(
+  release: () => void,
+  destroyRef: DestroyRef | undefined
+): () => void {
   if (destroyRef === undefined) return release;
   const unregister = destroyRef.onDestroy(release);
   return () => {

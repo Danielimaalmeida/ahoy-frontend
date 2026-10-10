@@ -1,7 +1,7 @@
-import { diffArrays, diffLines as jsDiffLines } from "diff";
+import { diffArrays, diffLines as jsDiffLines } from 'diff';
 
 /** Kind of a line in a diff. */
-export type DiffLineKind = "same" | "add" | "remove";
+export type DiffLineKind = 'same' | 'add' | 'remove';
 
 /** One line of a diff, without its trailing newline. */
 export interface DiffLine {
@@ -23,8 +23,8 @@ const FENCE = /^\s*(```|~~~)/;
 
 /** Splits a change's text into lines, dropping the trailing newline. */
 function splitLines(value: string): string[] {
-  const lines = value.split("\n");
-  if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+  const lines = value.split('\n');
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
   return lines;
 }
 
@@ -32,7 +32,11 @@ function splitLines(value: string): string[] {
 export function diffLines(previous: string, next: string): DiffLine[] {
   const lines: DiffLine[] = [];
   for (const change of jsDiffLines(previous, next)) {
-    const kind: DiffLineKind = change.added ? "add" : change.removed ? "remove" : "same";
+    const kind: DiffLineKind = change.added
+      ? 'add'
+      : change.removed
+        ? 'remove'
+        : 'same';
     for (const text of splitLines(change.value)) lines.push({ kind, text });
   }
   return lines;
@@ -44,9 +48,9 @@ function sectionAbove(lines: readonly DiffLine[], from: number): string {
     const line = lines[index];
     if (line === undefined) continue;
     const match = HEADING.exec(line.text);
-    if (match !== null) return (match[1] ?? "").trim();
+    if (match !== null) return (match[1] ?? '').trim();
   }
-  return "";
+  return '';
 }
 
 /**
@@ -59,15 +63,22 @@ export function hunks(lines: readonly DiffLine[], context = 3): DiffHunk[] {
   const opens: number[] = [];
   let open = -1;
   lines.forEach((line, index) => {
-    if (line.kind === "same" && HEADING.test(line.text)) open = index;
+    if (line.kind === 'same' && HEADING.test(line.text)) open = index;
     opens.push(open);
   });
-  const changedIndexes = lines.flatMap((line, index) => (line.kind === "same" ? [] : [index]));
+  const changedIndexes = lines.flatMap((line, index) =>
+    line.kind === 'same' ? [] : [index]
+  );
   if (changedIndexes.length === 0) return [];
   const ranges: { start: number; end: number }[] = [];
   for (const index of changedIndexes) {
     const last = ranges[ranges.length - 1];
-    if (last !== undefined && opens[index] === opens[last.end] && index - last.end <= context * 2 + 1) last.end = index;
+    if (
+      last !== undefined &&
+      opens[index] === opens[last.end] &&
+      index - last.end <= context * 2 + 1
+    )
+      last.end = index;
     else ranges.push({ start: index, end: index });
   }
   return ranges.map(({ start, end }) => {
@@ -83,7 +94,7 @@ export function hunks(lines: readonly DiffLine[], context = 3): DiffHunk[] {
     const section = sectionAbove(lines, start);
     return {
       section,
-      header: section.length > 0 ? `@@ ${section} @@` : "@@ @@",
+      header: section.length > 0 ? `@@ ${section} @@` : '@@ @@',
       lines: lines.slice(from, to),
     };
   });
@@ -98,14 +109,14 @@ export function markdownBlocks(markdown: string): string[] {
   let current: string[] = [];
   let inFence = false;
   const flush = (): void => {
-    const block = current.join("\n").trim();
+    const block = current.join('\n').trim();
     if (block.length > 0) blocks.push(block);
     current = [];
   };
-  for (const line of markdown.split("\n")) {
+  for (const line of markdown.split('\n')) {
     const isFence = FENCE.test(line);
     if (isFence) inFence = !inFence;
-    if (!inFence && !isFence && line.trim() === "") flush();
+    if (!inFence && !isFence && line.trim() === '') flush();
     else current.push(line);
   }
   flush();
@@ -125,7 +136,8 @@ export function changedBlocks(previous: string | null, next: string): number[] {
   for (const change of diffArrays(before, after)) {
     const count = change.value.length;
     if (change.added) {
-      for (let offset = 0; offset < count; offset += 1) changed.push(index + offset);
+      for (let offset = 0; offset < count; offset += 1)
+        changed.push(index + offset);
       index += count;
     } else if (!change.removed) {
       index += count;

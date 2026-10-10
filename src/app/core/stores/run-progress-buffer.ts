@@ -1,18 +1,25 @@
-import { DestroyRef, Injectable, computed, inject, signal, type Signal } from "@angular/core";
-import { ApiClient } from "@core/api/api-client";
-import { ok, type ApiResult } from "@core/api/api-error";
+import {
+  DestroyRef,
+  Injectable,
+  computed,
+  inject,
+  signal,
+  type Signal,
+} from '@angular/core';
+import { ApiClient } from '@core/api/api-client';
+import { ok, type ApiResult } from '@core/api/api-error';
 import {
   parseRunProgress,
   type RunProgressMessage,
   type RunProgressSpend,
   type RunProgressTool,
-} from "@core/api/run-progress";
-import type { AhoyEvent } from "@core/api/types";
-import { compareEventIds } from "@core/realtime/event-id";
-import { EventBus } from "@core/realtime/event-bus";
-import { RUN_PROGRESS } from "@core/realtime/event-types";
-import { readStoryEvents } from "./event-pages";
-import { releaseOnDestroy } from "./leases";
+} from '@core/api/run-progress';
+import type { AhoyEvent } from '@core/api/types';
+import { compareEventIds } from '@core/realtime/event-id';
+import { EventBus } from '@core/realtime/event-bus';
+import { RUN_PROGRESS } from '@core/realtime/event-types';
+import { readStoryEvents } from './event-pages';
+import { releaseOnDestroy } from './leases';
 
 /** Progress events kept per run: the API itself writes at most 1000 per run. The oldest go first. */
 export const MAX_PROGRESS_EVENTS_PER_RUN = 1_000;
@@ -22,7 +29,7 @@ export const MAX_PROGRESS_RUNS = 50;
 
 /** A step of a run: a tool call or a message, with the time to show. */
 export interface ProgressStep {
-  readonly kind: "step";
+  readonly kind: 'step';
   readonly step: RunProgressTool | RunProgressMessage;
   /** The step's own `at`, or the event's `createdAt` when the worker gave none. */
   readonly at: string;
@@ -32,7 +39,7 @@ export interface ProgressStep {
 
 /** A gap row: steps the API left out (or that this buffer no longer holds). Never zero. */
 export interface ProgressGap {
-  readonly kind: "gap";
+  readonly kind: 'gap';
   readonly count: number;
 }
 
@@ -87,9 +94,14 @@ class RunRecord {
       else high = mid;
     }
     this.events.splice(low, 0, event);
-    for (let excess = this.events.length - MAX_PROGRESS_EVENTS_PER_RUN; excess > 0; excess--) {
+    for (
+      let excess = this.events.length - MAX_PROGRESS_EVENTS_PER_RUN;
+      excess > 0;
+      excess--
+    ) {
       const dropped = this.events.shift();
-      if (dropped?.progress.kind === "spend") this.droppedOmitted = dropped.progress.omitted;
+      if (dropped?.progress.kind === 'spend')
+        this.droppedOmitted = dropped.progress.omitted;
       else if (dropped !== undefined) this.droppedSteps++;
     }
     return true;
@@ -103,7 +115,8 @@ class RunRecord {
  */
 function deriveView(record: RunRecord): RunProgressView {
   const entries: ProgressEntry[] = [];
-  if (record.droppedSteps > 0) entries.push({ kind: "gap", count: record.droppedSteps });
+  if (record.droppedSteps > 0)
+    entries.push({ kind: 'gap', count: record.droppedSteps });
   const seenLines = new Set<number>();
   let batch: ProgressStep[] = [];
   let previousOmitted = record.droppedOmitted;
@@ -111,21 +124,32 @@ function deriveView(record: RunRecord): RunProgressView {
   let steps = 0;
   for (const event of record.events) {
     const progress = event.progress;
-    if (progress.kind === "spend") {
+    if (progress.kind === 'spend') {
       const omittedNow = progress.omitted - previousOmitted;
-      if (omittedNow > 0) entries.push({ kind: "gap", count: omittedNow });
+      if (omittedNow > 0) entries.push({ kind: 'gap', count: omittedNow });
       entries.push(...batch);
       batch = [];
       previousOmitted = Math.max(previousOmitted, progress.omitted);
       spend = progress;
     } else if (!seenLines.has(progress.line)) {
       seenLines.add(progress.line);
-      batch.push({ kind: "step", step: progress, at: progress.at ?? event.createdAt, eventId: event.id });
+      batch.push({
+        kind: 'step',
+        step: progress,
+        at: progress.at ?? event.createdAt,
+        eventId: event.id,
+      });
       steps++;
     }
   }
   entries.push(...batch);
-  return { runId: record.runId, entries, spend, omitted: spend?.omitted ?? 0, steps };
+  return {
+    runId: record.runId,
+    entries,
+    spend,
+    omitted: spend?.omitted ?? 0,
+    steps,
+  };
 }
 
 /**
@@ -133,13 +157,16 @@ function deriveView(record: RunRecord): RunProgressView {
  * screen holds {@link follow} for the story, by {@link hydrate} for runs that already ended, and by `StoryEventsFeed`
  * when it reads a story's history. Bounded: 1000 events per run and 50 runs.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class RunProgressBuffer {
   private readonly api = inject(ApiClient);
   private readonly bus = inject(EventBus);
   private readonly runs = new Map<string, RunRecord>();
   private readonly hydrations = new Map<string, Promise<ApiResult<void>>>();
-  private readonly follows = new Map<string, { holders: number; stop: () => void }>();
+  private readonly follows = new Map<
+    string,
+    { holders: number; stop: () => void }
+  >();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -159,7 +186,8 @@ export class RunProgressBuffer {
     const progress = parseRunProgress(event.payload);
     if (progress === null) return;
     const record = this.record(progress.runId);
-    if (record.insert({ id: event.id, createdAt: event.createdAt, progress })) record.version.update((v) => v + 1);
+    if (record.insert({ id: event.id, createdAt: event.createdAt, progress }))
+      record.version.update((v) => v + 1);
   }
 
   /** Takes several events at once. */
@@ -174,7 +202,9 @@ export class RunProgressBuffer {
   follow(storyKey: string, destroyRef?: DestroyRef): () => void {
     let follow = this.follows.get(storyKey);
     if (follow === undefined) {
-      const subscription = this.bus.eventsFor(storyKey).subscribe((event) => this.ingest(event));
+      const subscription = this.bus
+        .eventsFor(storyKey)
+        .subscribe((event) => this.ingest(event));
       follow = { holders: 0, stop: () => subscription.unsubscribe() };
       this.follows.set(storyKey, follow);
     }
@@ -200,7 +230,9 @@ export class RunProgressBuffer {
   hydrate(storyKey: string): Promise<ApiResult<void>> {
     let hydration = this.hydrations.get(storyKey);
     if (hydration === undefined) {
-      hydration = readStoryEvents(this.api, storyKey, null, (events) => this.ingestAll(events))
+      hydration = readStoryEvents(this.api, storyKey, null, (events) =>
+        this.ingestAll(events)
+      )
         .then((result) => (result.ok ? ok(undefined) : result))
         .finally(() => this.hydrations.delete(storyKey));
       this.hydrations.set(storyKey, hydration);

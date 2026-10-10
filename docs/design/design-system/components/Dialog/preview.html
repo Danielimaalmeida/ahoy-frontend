@@ -1,18 +1,86 @@
 <!-- @dsCard group="Feedback" height=330 subtitle="Confirmation dialog with cost" -->
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>Dialog preview</title></head>
-<body>
-<div class="ah" style="padding:16px;display:flex;flex-direction:column;gap:12px">
-<div class="ah-dialog" role="dialog" aria-labelledby="dt" style="max-width:440px">
-  <div class="ah-dialog__head"><span class="ah-dialog__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg></span><h2 class="ah-dialog__title" id="dt">Weigh anchor and resume?</h2><button class="ah-dialog__close" type="button" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
-  <div class="ah-dialog__body">
-    <span>Ahoy retries <b>planning</b> with Cartographer on <span class="ah-mono">claude-sonnet-5 · high</span>.</span>
-    <div class="ah-cost"><b>This may spend up to 10.2 AIU</b><span class="ah-hint">Billed to sam@example.com. Anyone can stop it again.</span></div>
-    <div class="ah-field"><label class="ah-label" for="rr">Reason <span class="ah-hint" style="font-weight:500">(optional)</span></label><input id="rr" class="ah-input" value="Switched planning to a model the account can use."></div>
-  </div>
-  <div class="ah-dialog__foot"><button class="ah-btn" type="button">Cancel</button><button class="ah-btn ah-btn--primary" type="button">Resume · up to 10.2 AIU</button></div>
-</div>
-</div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>Dialog preview</title>
+  </head>
+  <body>
+    <div
+      class="ah"
+      style="padding: 16px; display: flex; flex-direction: column; gap: 12px"
+    >
+      <div
+        class="ah-dialog"
+        role="dialog"
+        aria-labelledby="dt"
+        style="max-width: 440px"
+      >
+        <div class="ah-dialog__head">
+          <span class="ah-dialog__icon"
+            ><svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"
+              ></path></svg
+          ></span>
+          <h2 class="ah-dialog__title" id="dt">Weigh anchor and resume?</h2>
+          <button class="ah-dialog__close" type="button" aria-label="Close">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="ah-dialog__body">
+          <span
+            >Ahoy retries <b>planning</b> with Cartographer on
+            <span class="ah-mono">claude-sonnet-5 · high</span>.</span
+          >
+          <div class="ah-cost">
+            <b>This may spend up to 10.2 AIU</b
+            ><span class="ah-hint"
+              >Billed to sam@example.com. Anyone can stop it again.</span
+            >
+          </div>
+          <div class="ah-field">
+            <label class="ah-label" for="rr"
+              >Reason
+              <span class="ah-hint" style="font-weight: 500"
+                >(optional)</span
+              ></label
+            ><input
+              id="rr"
+              class="ah-input"
+              value="Switched planning to a model the account can use."
+            />
+          </div>
+        </div>
+        <div class="ah-dialog__foot">
+          <button class="ah-btn" type="button">Cancel</button
+          ><button class="ah-btn ah-btn--primary" type="button">
+            Resume · up to 10.2 AIU
+          </button>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

@@ -1,52 +1,57 @@
-import { EnvironmentInjector, createEnvironmentInjector } from "@angular/core";
-import { TestBed } from "@angular/core/testing";
-import { ok } from "@core/api/api-error";
-import type { AhoyEvent, Question, Run, Story } from "@core/api/types";
-import { EventBus } from "@core/realtime/event-bus";
-import { aStory, anEvent } from "@core/realtime/testing/events";
-import { FakeApi } from "@core/realtime/testing/fake-api";
-import { FakeClock, settle } from "@core/realtime/testing/fake-clock";
-import { FakeFetch, type SseBody } from "@core/realtime/testing/fake-fetch";
-import { provideFakes } from "@core/realtime/testing/providers";
-import { RowDetails } from "./row-details";
+import { EnvironmentInjector, createEnvironmentInjector } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { ok } from '@core/api/api-error';
+import type { AhoyEvent, Question, Run, Story } from '@core/api/types';
+import { EventBus } from '@core/realtime/event-bus';
+import { aStory, anEvent } from '@core/realtime/testing/events';
+import { FakeApi } from '@core/realtime/testing/fake-api';
+import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
+import { FakeFetch, type SseBody } from '@core/realtime/testing/fake-fetch';
+import { provideFakes } from '@core/realtime/testing/providers';
+import { RowDetails } from './row-details';
 
 function question(id: string, answered: boolean): Question {
   return {
     id,
     round: 1,
-    runId: "proj-131-planning-001-aaaa",
+    runId: 'proj-131-planning-001-aaaa',
     text: `Question ${id}?`,
     recommendation: null,
-    answer: answered ? "An answer." : null,
-    answeredBy: answered ? "sam@example.com" : null,
-    answeredAt: answered ? "2026-10-06T09:30:00.000Z" : null,
+    answer: answered ? 'An answer.' : null,
+    answeredBy: answered ? 'sam@example.com' : null,
+    answeredAt: answered ? '2026-10-06T09:30:00.000Z' : null,
     consumed: false,
   };
 }
 
 const RUN: Run = {
-  id: "proj-140-planning-001-5c54",
-  storyKey: "PROJ-140",
-  phase: "planning",
-  agent: "cartographer",
-  model: "claude-sonnet-5",
-  reasoningEffort: "high",
-  status: "running",
-  runtime: "fake",
-  controlSha: "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  id: 'proj-140-planning-001-5c54',
+  storyKey: 'PROJ-140',
+  phase: 'planning',
+  agent: 'cartographer',
+  model: 'claude-sonnet-5',
+  reasoningEffort: 'high',
+  status: 'running',
+  runtime: 'fake',
+  controlSha: 'a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302',
   budgetNanoAiu: 8_000_000_000,
   usage: { requests: 9, nanoAiu: 600_000_000, inputTokens: 0, outputTokens: 0 },
   replayOf: null,
   exitReason: null,
   gate: null,
-  startedBy: "jordan@example.com",
-  createdAt: "2026-10-06T10:00:00.000Z",
-  startedAt: "2026-10-06T10:00:00.000Z",
+  startedBy: 'jordan@example.com',
+  createdAt: '2026-10-06T10:00:00.000Z',
+  startedAt: '2026-10-06T10:00:00.000Z',
   endedAt: null,
 };
 
 const HALTED_EVENTS: readonly AhoyEvent[] = [
-  anEvent(1, "story.halted", { reason: "run_failed", detail: "Refused." }, "PROJ-118"),
+  anEvent(
+    1,
+    'story.halted',
+    { reason: 'run_failed', detail: 'Refused.' },
+    'PROJ-118'
+  ),
 ];
 
 /** A `RowDetails` over fakes, in an injector of its own so that the spec can destroy it as a page would. */
@@ -55,65 +60,115 @@ function rig() {
   const net = new FakeFetch();
   const stream: SseBody = net.stream();
   const api = new FakeApi();
-  api.on("listQuestions", () => Promise.resolve(ok([question("Q1", true), question("Q2", false)])));
-  api.on("getStoryState", (key) =>
-    Promise.resolve(ok({ key, version: 1, state: { revisions: { plan_accepted: 1 }, revision_ceiling: 4 } })),
+  api.on('listQuestions', () =>
+    Promise.resolve(ok([question('Q1', true), question('Q2', false)]))
   );
-  api.on("listStoryEvents", (key) =>
-    Promise.resolve(ok({ items: key === "PROJ-118" ? HALTED_EVENTS : [], lastEventId: null })),
+  api.on('getStoryState', (key) =>
+    Promise.resolve(
+      ok({
+        key,
+        version: 1,
+        state: { revisions: { plan_accepted: 1 }, revision_ceiling: 4 },
+      })
+    )
   );
-  api.on("listStoryRuns", () => Promise.resolve(ok([RUN])));
-  TestBed.configureTestingModule({ providers: provideFakes({ api, clock, net }) });
-  const page = createEnvironmentInjector([RowDetails], TestBed.inject(EnvironmentInjector));
+  api.on('listStoryEvents', (key) =>
+    Promise.resolve(
+      ok({ items: key === 'PROJ-118' ? HALTED_EVENTS : [], lastEventId: null })
+    )
+  );
+  api.on('listStoryRuns', () => Promise.resolve(ok([RUN])));
+  TestBed.configureTestingModule({
+    providers: provideFakes({ api, clock, net }),
+  });
+  const page = createEnvironmentInjector(
+    [RowDetails],
+    TestBed.inject(EnvironmentInjector)
+  );
   const details = page.get(RowDetails);
   const bus = TestBed.inject(EventBus);
   return { api, clock, stream, page, details, bus };
 }
 
-const asking: Story = aStory("PROJ-131", { status: "awaiting_input", phase: "planning" });
-const deciding: Story = aStory("PROJ-123", { status: "awaiting_decision", phase: "plan_review" });
-const anchored: Story = aStory("PROJ-118", { status: "halted", haltReason: "run_failed" });
-const running: Story = aStory("PROJ-140", { status: "running", currentRunId: RUN.id });
-const docked: Story = aStory("PROJ-097", { status: "terminal", phase: "done" });
+const asking: Story = aStory('PROJ-131', {
+  status: 'awaiting_input',
+  phase: 'planning',
+});
+const deciding: Story = aStory('PROJ-123', {
+  status: 'awaiting_decision',
+  phase: 'plan_review',
+});
+const anchored: Story = aStory('PROJ-118', {
+  status: 'halted',
+  haltReason: 'run_failed',
+});
+const running: Story = aStory('PROJ-140', {
+  status: 'running',
+  currentRunId: RUN.id,
+});
+const docked: Story = aStory('PROJ-097', { status: 'terminal', phase: 'done' });
 
-describe("RowDetails (All hands)", () => {
-  it("reads what each status needs for the voyages it is given", async () => {
+describe('RowDetails (All hands)', () => {
+  it('reads what each status needs for the voyages it is given', async () => {
     const { api, details } = rig();
     details.sync([asking, deciding, anchored, running]);
     await settle();
-    expect(api.callsOf("listQuestions").map((c) => c.args[0])).toEqual(["PROJ-131"]);
-    expect(api.callsOf("getStoryState").map((c) => c.args[0])).toEqual(["PROJ-123"]);
-    expect(api.callsOf("listStoryRuns").map((c) => c.args[0])).toEqual(["PROJ-140"]);
-    expect([...new Set(api.callsOf("listStoryEvents").map((c) => c.args[0]))].sort()).toEqual(["PROJ-118", "PROJ-123"]);
+    expect(api.callsOf('listQuestions').map((c) => c.args[0])).toEqual([
+      'PROJ-131',
+    ]);
+    expect(api.callsOf('getStoryState').map((c) => c.args[0])).toEqual([
+      'PROJ-123',
+    ]);
+    expect(api.callsOf('listStoryRuns').map((c) => c.args[0])).toEqual([
+      'PROJ-140',
+    ]);
+    expect(
+      [...new Set(api.callsOf('listStoryEvents').map((c) => c.args[0]))].sort()
+    ).toEqual(['PROJ-118', 'PROJ-123']);
   });
 
-  it("does not open a voyage that needs nothing beyond its story", async () => {
+  it('does not open a voyage that needs nothing beyond its story', async () => {
     const { api, bus, details } = rig();
-    details.sync([docked, aStory("PROJ-109", { status: "ready" })]);
+    details.sync([docked, aStory('PROJ-109', { status: 'ready' })]);
     await settle();
     expect(api.calls).toEqual([]);
     expect(bus.subscribers()).toBe(0);
   });
 
-  it("gives what was read, and nothing before it is read", async () => {
+  it('gives what was read, and nothing before it is read', async () => {
     const { details } = rig();
-    expect(details.detail("PROJ-131")).toEqual({ questions: null, state: null, gate: null, halt: null });
+    expect(details.detail('PROJ-131')).toEqual({
+      questions: null,
+      state: null,
+      gate: null,
+      halt: null,
+    });
     details.sync([asking, anchored]);
     await settle();
-    expect(details.detail("PROJ-131").questions?.map((q) => q.id)).toEqual(["Q1", "Q2"]);
-    expect(details.detail("PROJ-118").halt).toEqual({ reason: "run_failed", detail: "Refused." });
+    expect(details.detail('PROJ-131').questions?.map((q) => q.id)).toEqual([
+      'Q1',
+      'Q2',
+    ]);
+    expect(details.detail('PROJ-118').halt).toEqual({
+      reason: 'run_failed',
+      detail: 'Refused.',
+    });
     expect(details.runOf(running)).toBeNull();
   });
 
-  it("gives the run a voyage at sea is on, once its runs are read", async () => {
+  it('gives the run a voyage at sea is on, once its runs are read', async () => {
     const { details } = rig();
     details.sync([running]);
     await settle();
     expect(details.runOf(running)).toEqual(RUN);
-    expect(details.runOf(aStory("PROJ-140", { status: "running", currentRunId: "another-run" }))).toBeNull();
+    expect(
+      details.runOf(
+        aStory('PROJ-140', { status: 'running', currentRunId: 'another-run' })
+      )
+    ).toBeNull();
   });
 
-  it("lets go of a voyage that leaves the list, and only of that one", async () => {
+  it('lets go of a voyage that leaves the list, and only of that one', async () => {
     const { bus, details } = rig();
     details.sync([asking, deciding]);
     await settle();
@@ -128,7 +183,7 @@ describe("RowDetails (All hands)", () => {
     expect(bus.subscribers()).toBe(0);
   });
 
-  it("lets go of every voyage when the page goes", async () => {
+  it('lets go of every voyage when the page goes', async () => {
     const { bus, page, details } = rig();
     details.sync([asking, deciding, anchored, running]);
     await settle();
@@ -137,38 +192,38 @@ describe("RowDetails (All hands)", () => {
     expect(bus.subscribers()).toBe(0);
   });
 
-  it("does not read again what it already holds when it is given the same voyages again", async () => {
+  it('does not read again what it already holds when it is given the same voyages again', async () => {
     const { api, details } = rig();
     details.sync([asking]);
     await settle();
     details.sync([{ ...asking, version: 2 }]);
     await settle();
-    expect(api.callsOf("listQuestions")).toHaveLength(1);
+    expect(api.callsOf('listQuestions')).toHaveLength(1);
   });
 
-  it("stops following what a voyage no longer needs once its status moves on", async () => {
+  it('stops following what a voyage no longer needs once its status moves on', async () => {
     const { api, clock, stream, details } = rig();
     details.sync([asking]);
     await settle();
-    expect(api.callsOf("listQuestions")).toHaveLength(1);
-    details.sync([{ ...asking, status: "running", version: 2 }]);
+    expect(api.callsOf('listQuestions')).toHaveLength(1);
+    details.sync([{ ...asking, status: 'running', version: 2 }]);
     await settle();
-    stream.sendEvent(anEvent(900, "question.answered", {}, "PROJ-131"));
+    stream.sendEvent(anEvent(900, 'question.answered', {}, 'PROJ-131'));
     await settle();
     await clock.advance(300);
-    expect(api.callsOf("listQuestions")).toHaveLength(1);
+    expect(api.callsOf('listQuestions')).toHaveLength(1);
   });
 
-  it("keeps following what a voyage still needs when its status changes to one that needs it too", async () => {
+  it('keeps following what a voyage still needs when its status changes to one that needs it too', async () => {
     const { api, clock, stream, details } = rig();
     details.sync([deciding]);
     await settle();
-    expect(api.callsOf("getStoryState")).toHaveLength(1);
+    expect(api.callsOf('getStoryState')).toHaveLength(1);
     details.sync([{ ...deciding, version: 2 }]);
     await settle();
-    stream.sendEvent(anEvent(901, "decision.recorded", {}, "PROJ-123"));
+    stream.sendEvent(anEvent(901, 'decision.recorded', {}, 'PROJ-123'));
     await settle();
     await clock.advance(300);
-    expect(api.callsOf("getStoryState")).toHaveLength(2);
+    expect(api.callsOf('getStoryState')).toHaveLength(2);
   });
 });

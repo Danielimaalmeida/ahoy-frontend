@@ -30,7 +30,9 @@ export class SseBody {
 
   /** Sends one event as the API frames it: `id`, `event` and one `data` line. */
   sendEvent(event: { readonly id: string; readonly type: string }): void {
-    this.send(`id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+    this.send(
+      `id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`
+    );
   }
 
   /** Ends the body normally (the server closed the stream). */
@@ -41,7 +43,7 @@ export class SseBody {
   }
 
   /** Breaks the body (the connection dropped). */
-  fail(error: unknown = new TypeError("network error")): void {
+  fail(error: unknown = new TypeError('network error')): void {
     if (!this.open) return;
     this.open = false;
     this.controller?.error(error);
@@ -58,17 +60,29 @@ export interface SeenRequest {
 }
 
 /** What the fake answers a request with. */
-export type FakeAnswer = Response | Error | ((request: SeenRequest) => Promise<Response>);
+export type FakeAnswer =
+  Response | Error | ((request: SeenRequest) => Promise<Response>);
 
 /** An event-stream answer around `body`. */
 export function sseResponse(body: SseBody, status = 200): Response {
-  return new Response(body.stream, { status, headers: { "Content-Type": "text/event-stream; charset=utf-8" } });
+  return new Response(body.stream, {
+    status,
+    headers: { 'Content-Type': 'text/event-stream; charset=utf-8' },
+  });
 }
 
 /** A `problem+json` answer. */
 export function problemResponse(status: number, code: string): Response {
-  const problem = { type: `urn:ahoy:problem:${code}`, title: code.replaceAll("_", " "), status, code };
-  return new Response(JSON.stringify(problem), { status, headers: { "Content-Type": "application/problem+json" } });
+  const problem = {
+    type: `urn:ahoy:problem:${code}`,
+    title: code.replaceAll('_', ' '),
+    status,
+    code,
+  };
+  return new Response(JSON.stringify(problem), {
+    status,
+    headers: { 'Content-Type': 'application/problem+json' },
+  });
 }
 
 /**
@@ -100,26 +114,35 @@ export class FakeFetch {
   }
 
   readonly fetch: typeof fetch = (input, init = {}) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
     const signal = init.signal ?? null;
     const request: SeenRequest = {
       url,
-      method: init.method ?? "GET",
+      method: init.method ?? 'GET',
       headers: new Headers(init.headers),
       init,
       signal,
     };
     this.requests.push(request);
-    const aborted = () => new DOMException("The operation was aborted.", "AbortError");
+    const aborted = () =>
+      new DOMException('The operation was aborted.', 'AbortError');
     if (signal?.aborted === true) return Promise.reject(aborted());
     const next = this.answers.shift();
     if (next === undefined) {
-      return new Promise<Response>((_resolve, reject) => signal?.addEventListener("abort", () => reject(aborted())));
+      return new Promise<Response>((_resolve, reject) =>
+        signal?.addEventListener('abort', () => reject(aborted()))
+      );
     }
     if (next instanceof Error) return Promise.reject(next);
-    if (typeof next === "function") return next(request);
+    if (typeof next === 'function') return next(request);
     const body = this.bodies.get(next);
-    if (body !== undefined) signal?.addEventListener("abort", () => body.fail(aborted()));
+    if (body !== undefined)
+      signal?.addEventListener('abort', () => body.fail(aborted()));
     return Promise.resolve(next);
   };
 }

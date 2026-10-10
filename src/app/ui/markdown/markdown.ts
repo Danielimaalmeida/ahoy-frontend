@@ -1,5 +1,5 @@
-import { Component, ViewEncapsulation, computed, input } from "@angular/core";
-import { renderMarkdown } from "./render-markdown";
+import { Component, ViewEncapsulation, computed, input } from '@angular/core';
+import { renderMarkdown } from './render-markdown';
 
 /**
  * Agent markdown (plans, snapshots) in the `reading` type style: 13.5/22, lines near 75 characters. The source is
@@ -11,7 +11,7 @@ import { renderMarkdown } from "./render-markdown";
  * ```
  */
 @Component({
-  selector: "ah-markdown",
+  selector: 'ah-markdown',
   // The rendered HTML carries no Angular attributes, so these rules can't be scoped; every one sits under
   // `.ah-markdown`. The bundle has no styles for rendered markdown (the `reading` token exists only in tokens.json).
   encapsulation: ViewEncapsulation.None,
@@ -113,14 +113,16 @@ import { renderMarkdown } from "./render-markdown";
       color: var(--ink-muted);
     }
   `,
-  host: { class: "ah-markdown", "[innerHTML]": "html()" },
-  template: "",
+  host: { class: 'ah-markdown', '[innerHTML]': 'html()' },
+  template: '',
 })
 export class Markdown {
   /** The markdown, as the agent wrote it. */
-  readonly source = input("");
+  readonly source = input('');
   /** Top-level blocks to mark as changed (indices into the domain's `markdownBlocks(source)`). */
   readonly changedBlocks = input<readonly number[]>([]);
 
-  protected readonly html = computed(() => renderMarkdown(this.source(), { changedBlocks: this.changedBlocks() }));
+  protected readonly html = computed(() =>
+    renderMarkdown(this.source(), { changedBlocks: this.changedBlocks() })
+  );
 }

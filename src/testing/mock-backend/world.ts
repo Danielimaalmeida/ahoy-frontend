@@ -2,13 +2,13 @@
  * The mock's whole state: the voyages, the global event log (ids increase across stories, as in the real API), the gate
  * record ids, and the open event streams that every new event is pushed to.
  */
-import type { AhoyEvent, GateRecord, Run } from "@core/api/types";
-import { iso, type MockClock } from "./clock";
-import type { StreamHub } from "./event-stream";
-import type { Voyage, Writable } from "./voyage";
+import type { AhoyEvent, GateRecord, Run } from '@core/api/types';
+import { iso, type MockClock } from './clock';
+import type { StreamHub } from './event-stream';
+import type { Voyage, Writable } from './voyage';
 
 /** An event to be written: everything but its id. */
-export type NewEvent = Omit<AhoyEvent, "id">;
+export type NewEvent = Omit<AhoyEvent, 'id'>;
 
 /** The state of the mock server. */
 export class World {
@@ -16,7 +16,10 @@ export class World {
   readonly events: AhoyEvent[] = [];
   readonly clock: MockClock;
   readonly hub: StreamHub;
-  private readonly runIndex = new Map<string, { readonly voyage: Voyage; readonly run: Writable<Run> }>();
+  private readonly runIndex = new Map<
+    string,
+    { readonly voyage: Voyage; readonly run: Writable<Run> }
+  >();
   private nextEventId = 1;
   private nextGateId = 1;
 
@@ -31,8 +34,19 @@ export class World {
   }
 
   /** Writes an event now and pushes it to the open streams. */
-  append(voyage: Voyage, type: string, actor: string, payload: Readonly<Record<string, unknown>>): AhoyEvent {
-    return this.record({ storyKey: voyage.story.key, type, actor, payload, createdAt: this.nowIso() });
+  append(
+    voyage: Voyage,
+    type: string,
+    actor: string,
+    payload: Readonly<Record<string, unknown>>
+  ): AhoyEvent {
+    return this.record({
+      storyKey: voyage.story.key,
+      type,
+      actor,
+      payload,
+      createdAt: this.nowIso(),
+    });
   }
 
   /** Writes an event as given (seeds pass their own time) and pushes it to the open streams. */
@@ -44,11 +58,19 @@ export class World {
   }
 
   /** The events with an id greater than `after`, of one story or all, oldest first, at most `limit`. */
-  eventsAfter(after: number, story: string | null, limit = Number.POSITIVE_INFINITY): AhoyEvent[] {
+  eventsAfter(
+    after: number,
+    story: string | null,
+    limit = Number.POSITIVE_INFINITY
+  ): AhoyEvent[] {
     const found: AhoyEvent[] = [];
     for (const event of this.events) {
       if (found.length >= limit) break;
-      if (Number(event.id) > after && (story === null || event.storyKey === story)) found.push(event);
+      if (
+        Number(event.id) > after &&
+        (story === null || event.storyKey === story)
+      )
+        found.push(event);
     }
     return found;
   }
@@ -60,7 +82,7 @@ export class World {
   }
 
   /** Adds a gate record with the next id. */
-  addGateRecord(voyage: Voyage, record: Omit<GateRecord, "id">): GateRecord {
+  addGateRecord(voyage: Voyage, record: Omit<GateRecord, 'id'>): GateRecord {
     const written: GateRecord = { id: String(this.nextGateId++), ...record };
     voyage.gates.push(written);
     return written;

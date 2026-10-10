@@ -7,5 +7,7 @@ export function withField(value: object, key: string, to: unknown): unknown {
 
 /** A copy of `value` without `key`. */
 export function withoutField(value: object, key: string): unknown {
-  return Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
+  return Object.fromEntries(
+    Object.entries(value).filter(([name]) => name !== key)
+  );
 }

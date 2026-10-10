@@ -1,0 +1,60 @@
+name: Create Branch Image & Publish to ACR
+
+on:
+  workflow_dispatch:
+    inputs:
+      update-ops-tag:
+        type: boolean
+        description: 'Update r3da_cdm_ops TEST image tag'
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish-branch-container:
+    name: 'Build docker image and publish to TEST ACR'
+    uses: sflp/r3da_the_guardians_workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
+    with:
+      runner: "['atc-ubuntu-latest']"
+      node-version: ${{ vars.neo_NODE_VERSION }}
+      registry-url: ${{ vars.neo_ACR_URL_TEST }}
+      registry-username: ${{ vars.neo_ACR_USERNAME_TEST }}
+      type: 'test'
+      environment: 'test'
+    secrets:
+      registry-password: ${{ secrets.neo_ACR_SECRET_TEST }}
+
+  validate-image-tag:
+    name: 'Validate image tag output'
+    needs: publish-branch-container
+    if: ${{ inputs['update-ops-tag'] }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure image-tag output is available
+        env:
+          IMAGE_TAG: ${{ needs.publish-branch-container.outputs.image-tag }}
+        run: |
+          if [ -z "$IMAGE_TAG" ]; then
+            echo "publish-branch-container did not expose image-tag output."
+            exit 1
+          fi
+
+  update-ops-tag:
+    name: 'Update TEST ops tag'
+    needs:
+      - publish-branch-container
+      - validate-image-tag
+    if: ${{ inputs['update-ops-tag'] }}
+    uses: sflp/r3da_the_guardians_workflows/.github/workflows/update-ops-tag-reusable.yml@main
+    with:
+      image-tag: ${{ needs.publish-branch-container.outputs.image-tag }}
+      service: neo-ahoy-frontend
+      values-file: charts/neo-ahoy-frontend/values-test.yaml
+      tag-path: image.tag
+      source-repository: ${{ github.repository }}
+      source-workflow: ${{ github.workflow }}
+      source-run-id: ${{ github.run_id }}
+    secrets:
+      ops-deploy-key: ${{ secrets.neo_OPS_DEVELOP_DEPLOY_KEY }}

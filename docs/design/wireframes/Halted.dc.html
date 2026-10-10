@@ -1,196 +1,861 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Ahoy · PROJ-118 anchored</title>
-<script src="./support.js"></script>
-</head>
-<body>
-<x-dc>
-<helmet>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<style>
-body{margin:0;background:#F6F8FA;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:13px;line-height:1.45;color:#1B2733}
-a{color:#1A64D6}a:hover{color:#1747A6}
-.top{background:#fff;border-bottom:1px solid #E3E8EE;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 24px;box-sizing:border-box}
-.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#1B2733;text-decoration:none;margin-right:12px}
-.logo:hover{color:#1B2733}
-.tab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;color:#5B6B7A;font-weight:500;text-decoration:none}
-.tab:hover{background:#F1F4F7;color:#1B2733}
-.tab.on{background:#E7EFFC;color:#1747A6;font-weight:600}
-.cnt{background:#1A64D6;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;line-height:17px;font-weight:600}
-.soon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#5B6B7A;background:#EEF2F5;border-radius:999px;padding:1px 6px}
-.search{flex:0 1 300px;height:34px;border:1px solid #E3E8EE;border-radius:999px;padding:0 14px;font:inherit;background:#F6F8FA;box-sizing:border-box;margin-left:auto;color:#1B2733}
-.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#1C6337;font-weight:500;margin:0 6px}
-.live i{width:7px;height:7px;border-radius:50%;background:#2E9B5B;box-shadow:0 0 0 3px #DDF3E6}
-.av{width:30px;height:30px;border-radius:50%;background:#E7EFFC;color:#1747A6;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex:none}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border-radius:10px;border:1px solid #D5DCE3;background:#fff;color:#1B2733;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;box-sizing:border-box}
-.btn:hover{background:#F1F4F7;color:#1B2733}
-.btn.primary{background:#1A64D6;border-color:#1A64D6;color:#fff}
-.btn.primary:hover{background:#1755B8;color:#fff}
-.btn.sm{height:28px;padding:0 11px;font-size:12px;border-radius:9px}
-.btn.ghost{border-color:transparent;background:transparent;color:#455562}
-.page{padding:18px 24px 36px;display:flex;flex-direction:column;gap:14px;max-width:1240px;width:100%;margin:0 auto;box-sizing:border-box}
-h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.25}
-h2{font-size:15px;font-weight:700;margin:0}
-.sub{color:#5B6B7A}
-.panel{background:#fff;border:1px solid #E3E8EE;border-radius:14px;min-width:0;overflow:hidden}
-.ph{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #EEF2F5}
-.pb{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-.mono{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500}
-.key{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#1747A6}
-.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
-.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
-.b-halt{background:#FDE3E3;color:#962020}
-.meter{height:7px;background:#E9EEF3;border-radius:999px;overflow:hidden;min-width:60px}
-.meter i{display:block;height:100%;background:#1A64D6;border-radius:999px}
-.stepper{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
-.step{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px 0 4px;border-radius:999px;background:#F1F4F7;color:#5B6B7A;font-size:12px;font-weight:500}
-.step b{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#fff;font-size:10.5px;border:1px solid #D5DCE3;color:#5B6B7A}
-.step.done{background:#E7EFFC;color:#1747A6}
-.step.done b{background:#1A64D6;color:#fff;border-color:#1A64D6}
-.step.stop{background:#FDE3E3;color:#962020;font-weight:600}
-.step.stop b{background:#C43D3D;color:#fff;border-color:#C43D3D}
-.sep{width:10px;height:2px;background:#D5DCE3;border-radius:2px}
-.meta{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center}
-.meta div{display:flex;flex-direction:column;gap:2px}
-.meta span{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#5B6B7A;font-weight:600}
-.dtabs{display:flex;gap:4px;overflow-x:auto;padding:4px;background:#EEF2F5;border-radius:12px;align-self:flex-start;max-width:100%;box-sizing:border-box}
-.dt{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;border-radius:9px;color:#455562;font-weight:600;text-decoration:none;white-space:nowrap}
-.dt:hover{color:#1B2733;background:#E3E8EE}
-.dt.on{background:#fff;color:#1747A6;box-shadow:0 1px 2px rgba(20,40,60,.12)}
-.dt em{font-style:normal;font-weight:500;color:#5B6B7A;font-size:11.5px}
-.anchor{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;background:#FFF5F5;border:1px solid #F3CACA;border-radius:14px;padding:16px 18px}
-.anchor .ico{width:40px;height:40px;border-radius:12px;background:#FDE3E3;color:#962020;display:inline-flex;align-items:center;justify-content:center;flex:none}
-.tech{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#fff;border:1px solid #F3CACA;border-radius:10px;padding:8px 10px;color:#5A2020}
-table.t{width:100%;border-collapse:collapse}
-.t th{text-align:left;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#5B6B7A;font-weight:600;padding:8px 14px;border-bottom:1px solid #E3E8EE;background:#FAFBFC;white-space:nowrap}
-.t td{padding:7px 14px;border-bottom:1px solid #EEF2F5;vertical-align:middle;height:24px}
-.t tr:last-child td{border-bottom:0}
-.t tr.err td{background:#FFF8F8}
-.src{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;background:#EEF2F5;color:#3D4B59;font-size:11px;font-weight:600;white-space:nowrap}
-.src.you{background:#E7EFFC;color:#1747A6}
-.hint{font-size:12px;color:#5B6B7A}
-.why td:first-child{white-space:nowrap}
-</style>
-</helmet>
-<header class="top">
-  <a class="logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A64D6" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
-  <nav style="display:flex;flex-wrap:wrap;gap:4px" aria-label="Main">
-    <a class="tab" href="Main.dc.html">All hands <span class="cnt">4</span></a>
-    <a class="tab on" href="Voyages.dc.html">Voyages</a>
-    <a class="tab" href="Docks.dc.html">The Docks <span class="soon">planned</span></a>
-  </nav>
-  <label for="q" style="position:absolute;left:-9999px">Search voyages</label>
-  <input id="q" class="search" type="search" placeholder="Search by key or title">
-  <span class="live"><i></i>Live</span>
-  <a class="btn primary" href="SetSail.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"></path></svg>Set sail</a>
-  <span class="av" title="alex@example.com (SSO)">AL</span>
-</header>
-<main class="page">
-  <div class="sub" style="font-size:12px"><a href="Voyages.dc.html" style="text-decoration:none">Voyages</a> / PROJ-118</div>
-
-  <section class="panel">
-    <div class="pb" style="gap:14px">
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start">
-        <div style="flex:1 1 480px;display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="key">PROJ-118</span><span class="badge b-halt"><i></i>Anchored</span><span class="mono" style="color:#5B6B7A">halted · run_failed</span></div>
-          <h1>Rate-limit the public search endpoint</h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · PROJ-118 anchored</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #1b2733;
+          }
+          a {
+            color: #1a64d6;
+          }
+          a:hover {
+            color: #1747a6;
+          }
+          .top {
+            background: #fff;
+            border-bottom: 1px solid #e3e8ee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 24px;
+            box-sizing: border-box;
+          }
+          .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 17px;
+            color: #1b2733;
+            text-decoration: none;
+            margin-right: 12px;
+          }
+          .logo:hover {
+            color: #1b2733;
+          }
+          .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            color: #5b6b7a;
+            font-weight: 500;
+            text-decoration: none;
+          }
+          .tab:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .tab.on {
+            background: #e7effc;
+            color: #1747a6;
+            font-weight: 600;
+          }
+          .cnt {
+            background: #1a64d6;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0 6px;
+            font-size: 11px;
+            line-height: 17px;
+            font-weight: 600;
+          }
+          .soon {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #5b6b7a;
+            background: #eef2f5;
+            border-radius: 999px;
+            padding: 1px 6px;
+          }
+          .search {
+            flex: 0 1 300px;
+            height: 34px;
+            border: 1px solid #e3e8ee;
+            border-radius: 999px;
+            padding: 0 14px;
+            font: inherit;
+            background: #f6f8fa;
+            box-sizing: border-box;
+            margin-left: auto;
+            color: #1b2733;
+          }
+          .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #1c6337;
+            font-weight: 500;
+            margin: 0 6px;
+          }
+          .live i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #2e9b5b;
+            box-shadow: 0 0 0 3px #ddf3e6;
+          }
+          .av {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e7effc;
+            color: #1747a6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            flex: none;
+          }
+          .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #1b2733;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            box-sizing: border-box;
+          }
+          .btn:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .btn.primary {
+            background: #1a64d6;
+            border-color: #1a64d6;
+            color: #fff;
+          }
+          .btn.primary:hover {
+            background: #1755b8;
+            color: #fff;
+          }
+          .btn.sm {
+            height: 28px;
+            padding: 0 11px;
+            font-size: 12px;
+            border-radius: 9px;
+          }
+          .btn.ghost {
+            border-color: transparent;
+            background: transparent;
+            color: #455562;
+          }
+          .page {
+            padding: 18px 24px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-width: 1240px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+          }
+          h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.01em;
+            line-height: 1.25;
+          }
+          h2 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .sub {
+            color: #5b6b7a;
+          }
+          .panel {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            min-width: 0;
+            overflow: hidden;
+          }
+          .ph {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #eef2f5;
+          }
+          .pb {
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+          .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 500;
+          }
+          .key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1747a6;
+          }
+          .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 22px;
+            padding: 0 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .badge i {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+          }
+          .b-halt {
+            background: #fde3e3;
+            color: #962020;
+          }
+          .meter {
+            height: 7px;
+            background: #e9eef3;
+            border-radius: 999px;
+            overflow: hidden;
+            min-width: 60px;
+          }
+          .meter i {
+            display: block;
+            height: 100%;
+            background: #1a64d6;
+            border-radius: 999px;
+          }
+          .stepper {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+          }
+          .step {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 28px;
+            padding: 0 11px 0 4px;
+            border-radius: 999px;
+            background: #f1f4f7;
+            color: #5b6b7a;
+            font-size: 12px;
+            font-weight: 500;
+          }
+          .step b {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            font-size: 10.5px;
+            border: 1px solid #d5dce3;
+            color: #5b6b7a;
+          }
+          .step.done {
+            background: #e7effc;
+            color: #1747a6;
+          }
+          .step.done b {
+            background: #1a64d6;
+            color: #fff;
+            border-color: #1a64d6;
+          }
+          .step.stop {
+            background: #fde3e3;
+            color: #962020;
+            font-weight: 600;
+          }
+          .step.stop b {
+            background: #c43d3d;
+            color: #fff;
+            border-color: #c43d3d;
+          }
+          .sep {
+            width: 10px;
+            height: 2px;
+            background: #d5dce3;
+            border-radius: 2px;
+          }
+          .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 24px;
+            align-items: center;
+          }
+          .meta div {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+          .meta span {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .dtabs {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            padding: 4px;
+            background: #eef2f5;
+            border-radius: 12px;
+            align-self: flex-start;
+            max-width: 100%;
+            box-sizing: border-box;
+          }
+          .dt {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 30px;
+            padding: 0 13px;
+            border-radius: 9px;
+            color: #455562;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+          }
+          .dt:hover {
+            color: #1b2733;
+            background: #e3e8ee;
+          }
+          .dt.on {
+            background: #fff;
+            color: #1747a6;
+            box-shadow: 0 1px 2px rgba(20, 40, 60, 0.12);
+          }
+          .dt em {
+            font-style: normal;
+            font-weight: 500;
+            color: #5b6b7a;
+            font-size: 11.5px;
+          }
+          .anchor {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-start;
+            background: #fff5f5;
+            border: 1px solid #f3caca;
+            border-radius: 14px;
+            padding: 16px 18px;
+          }
+          .anchor .ico {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: #fde3e3;
+            color: #962020;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+          }
+          .tech {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            background: #fff;
+            border: 1px solid #f3caca;
+            border-radius: 10px;
+            padding: 8px 10px;
+            color: #5a2020;
+          }
+          table.t {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .t th {
+            text-align: left;
+            font-size: 11px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #5b6b7a;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-bottom: 1px solid #e3e8ee;
+            background: #fafbfc;
+            white-space: nowrap;
+          }
+          .t td {
+            padding: 7px 14px;
+            border-bottom: 1px solid #eef2f5;
+            vertical-align: middle;
+            height: 24px;
+          }
+          .t tr:last-child td {
+            border-bottom: 0;
+          }
+          .t tr.err td {
+            background: #fff8f8;
+          }
+          .src {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 999px;
+            background: #eef2f5;
+            color: #3d4b59;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .src.you {
+            background: #e7effc;
+            color: #1747a6;
+          }
+          .hint {
+            font-size: 12px;
+            color: #5b6b7a;
+          }
+          .why td:first-child {
+            white-space: nowrap;
+          }
+        </style>
+      </helmet>
+      <header class="top">
+        <a class="logo" href="Main.dc.html"
+          ><svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1A64D6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="1.8"></circle>
+            <path
+              d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+            ></path></svg
+          >Ahoy</a
+        >
+        <nav style="display: flex; flex-wrap: wrap; gap: 4px" aria-label="Main">
+          <a class="tab" href="Main.dc.html"
+            >All hands <span class="cnt">4</span></a
+          >
+          <a class="tab on" href="Voyages.dc.html">Voyages</a>
+          <a class="tab" href="Docks.dc.html"
+            >The Docks <span class="soon">planned</span></a
+          >
+        </nav>
+        <label for="q" style="position: absolute; left: -9999px"
+          >Search voyages</label
+        >
+        <input
+          id="q"
+          class="search"
+          type="search"
+          placeholder="Search by key or title"
+        />
+        <span class="live"><i></i>Live</span>
+        <a class="btn primary" href="SetSail.dc.html"
+          ><svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"
+            ></path></svg
+          >Set sail</a
+        >
+        <span class="av" title="alex@example.com (SSO)">AL</span>
+      </header>
+      <main class="page">
+        <div class="sub" style="font-size: 12px">
+          <a href="Voyages.dc.html" style="text-decoration: none">Voyages</a> /
+          PROJ-118
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a class="btn primary" href="Dialogs.dc.html">Resume…</a>
-          <a class="btn" href="Dialogs.dc.html">Budget</a>
-          <a class="btn" href="Dialogs.dc.html">Change models</a>
+
+        <section class="panel">
+          <div class="pb" style="gap: 14px">
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                align-items: flex-start;
+              "
+            >
+              <div
+                style="
+                  flex: 1 1 480px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    align-items: center;
+                  "
+                >
+                  <span class="key">PROJ-118</span
+                  ><span class="badge b-halt"><i></i>Anchored</span
+                  ><span class="mono" style="color: #5b6b7a"
+                    >halted · run_failed</span
+                  >
+                </div>
+                <h1>Rate-limit the public search endpoint</h1>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <a class="btn primary" href="Dialogs.dc.html">Resume…</a>
+                <a class="btn" href="Dialogs.dc.html">Budget</a>
+                <a class="btn" href="Dialogs.dc.html">Change models</a>
+              </div>
+            </div>
+            <div class="stepper" aria-label="Phases">
+              <span class="step done"><b>✓</b>intake</span
+              ><span class="sep"></span>
+              <span class="step stop"><b>!</b>planning</span
+              ><span class="sep"></span>
+              <span class="step"><b>3</b>plan_review</span
+              ><span class="sep"></span>
+              <span class="step"><b>4</b>implementation</span
+              ><span class="sep"></span>
+              <span class="step"><b>5</b>pr_review</span
+              ><span class="sep"></span>
+              <span class="step"><b>6</b>delivery_gate</span
+              ><span class="sep"></span>
+              <span class="step"><b>7</b>done</span>
+            </div>
+            <div class="meta">
+              <div><span>Owner · billed</span>sam@example.com</div>
+              <div style="min-width: 220px">
+                <span>Budget</span>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    flex-direction: row;
+                  "
+                >
+                  <div class="meter" style="width: 120px">
+                    <i style="width: 49%"></i>
+                  </div>
+                  <b>9.8</b> / 20 AIU
+                </div>
+              </div>
+              <div>
+                <span>Current run</span>none · last
+                <a href="RunDetail.dc.html" class="mono">r-03</a> (failed)
+              </div>
+              <div>
+                <span>Agent config</span
+                ><span
+                  class="mono"
+                  style="
+                    font-size: 11px;
+                    text-transform: none;
+                    letter-spacing: 0;
+                    color: #5b6b7a;
+                  "
+                  >a41f9c2</span
+                >
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="anchor" role="status">
+          <span class="ico"
+            ><svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="5" r="2"></circle>
+              <path d="M12 7v14M8 10h8M4 13a8 8 0 0 0 16 0"></path></svg
+          ></span>
+          <div
+            style="
+              flex: 1 1 480px;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            "
+          >
+            <h2 style="font-size: 17px">
+              Anchored: the planning run failed before it started
+            </h2>
+            <span
+              >Cartographer's run was refused by the worker: the owner's Copilot
+              account can't use
+              <b class="mono" style="font-size: 12.5px">gpt-5.6-terra</b>. No
+              prompt was sent and no AIU was spent on that run. The voyage waits
+              here until someone resumes it.</span
+            >
+            <span
+              ><b>To get under way again:</b> pick a model this account can use
+              for planning, then resume. Resuming retries planning and may spend
+              from the remaining 10.2 AIU.</span
+            >
+            <div class="tech">
+              run_failed · r-03 · planning · 2 h 10 m ago · "preflight: model
+              gpt-5.6-terra is not enabled for this Copilot account"
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <a class="btn primary" href="Dialogs.dc.html"
+              >Change planning model</a
+            >
+            <a class="btn" href="Dialogs.dc.html">Resume as is</a>
+          </div>
         </div>
-      </div>
-      <div class="stepper" aria-label="Phases">
-        <span class="step done"><b>✓</b>intake</span><span class="sep"></span>
-        <span class="step stop"><b>!</b>planning</span><span class="sep"></span>
-        <span class="step"><b>3</b>plan_review</span><span class="sep"></span>
-        <span class="step"><b>4</b>implementation</span><span class="sep"></span>
-        <span class="step"><b>5</b>pr_review</span><span class="sep"></span>
-        <span class="step"><b>6</b>delivery_gate</span><span class="sep"></span>
-        <span class="step"><b>7</b>done</span>
-      </div>
-      <div class="meta">
-        <div><span>Owner · billed</span>sam@example.com</div>
-        <div style="min-width:220px"><span>Budget</span><div style="display:flex;align-items:center;gap:8px;flex-direction:row"><div class="meter" style="width:120px"><i style="width:49%"></i></div><b>9.8</b> / 20 AIU</div></div>
-        <div><span>Current run</span>none · last <a href="RunDetail.dc.html" class="mono">r-03</a> (failed)</div>
-        <div><span>Agent config</span><span class="mono" style="font-size:11px;text-transform:none;letter-spacing:0;color:#5B6B7A">a41f9c2</span></div>
-      </div>
-    </div>
-  </section>
 
-  <div class="anchor" role="status">
-    <span class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"></circle><path d="M12 7v14M8 10h8M4 13a8 8 0 0 0 16 0"></path></svg></span>
-    <div style="flex:1 1 480px;display:flex;flex-direction:column;gap:8px">
-      <h2 style="font-size:17px">Anchored: the planning run failed before it started</h2>
-      <span>Cartographer's run was refused by the worker: the owner's Copilot account can't use <b class="mono" style="font-size:12.5px">gpt-5.6-terra</b>. No prompt was sent and no AIU was spent on that run. The voyage waits here until someone resumes it.</span>
-      <span><b>To get under way again:</b> pick a model this account can use for planning, then resume. Resuming retries planning and may spend from the remaining 10.2 AIU.</span>
-      <div class="tech">run_failed · r-03 · planning · 2 h 10 m ago · "preflight: model gpt-5.6-terra is not enabled for this Copilot account"</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <a class="btn primary" href="Dialogs.dc.html">Change planning model</a>
-      <a class="btn" href="Dialogs.dc.html">Resume as is</a>
-    </div>
-  </div>
+        <nav class="dtabs" aria-label="Voyage sections">
+          <a class="dt" href="PlanReview.dc.html">Plan</a>
+          <a class="dt" href="Questions.dc.html">Questions <em>0</em></a>
+          <a class="dt" href="RunDetail.dc.html">Runs <em>3</em></a>
+          <a class="dt" href="Records.dc.html">Gates <em>2</em></a>
+          <a class="dt" href="Records.dc.html">Artifacts</a>
+          <a class="dt" href="Records.dc.html">Ship's log</a>
+          <a class="dt on" href="Halted.dc.html">Models</a>
+        </nav>
 
-  <nav class="dtabs" aria-label="Voyage sections">
-    <a class="dt" href="PlanReview.dc.html">Plan</a>
-    <a class="dt" href="Questions.dc.html">Questions <em>0</em></a>
-    <a class="dt" href="RunDetail.dc.html">Runs <em>3</em></a>
-    <a class="dt" href="Records.dc.html">Gates <em>2</em></a>
-    <a class="dt" href="Records.dc.html">Artifacts</a>
-    <a class="dt" href="Records.dc.html">Ship's log</a>
-    <a class="dt on" href="Halted.dc.html">Models</a>
-  </nav>
+        <section class="panel">
+          <div class="ph">
+            <h2>Models per phase</h2>
+            <span class="sub"
+              >What each phase's next run gets, and where it comes from. A
+              change applies from that phase's next run.</span
+            ><span style="flex: 1"></span
+            ><a class="btn sm" href="Dialogs.dc.html">Change models</a>
+          </div>
+          <div style="overflow-x: auto">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Phase</th>
+                  <th>Crew member</th>
+                  <th>Next run gets</th>
+                  <th>Model from</th>
+                  <th>Effort from</th>
+                  <th>Chosen for this voyage</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono">intake</td>
+                  <td>Navigator</td>
+                  <td class="mono">gpt-5.6-terra · medium</td>
+                  <td><span class="src">Server default</span></td>
+                  <td><span class="src">Server default</span></td>
+                  <td class="hint">—</td>
+                  <td></td>
+                </tr>
+                <tr class="err">
+                  <td class="mono">planning</td>
+                  <td>Cartographer</td>
+                  <td>
+                    <span class="mono">gpt-5.6-terra · high</span>
+                    <span
+                      class="badge b-halt"
+                      style="height: 18px; font-size: 10.5px"
+                      >refused last run</span
+                    >
+                  </td>
+                  <td><span class="src you">Chosen for this voyage</span></td>
+                  <td><span class="src you">Chosen for this voyage</span></td>
+                  <td class="mono">gpt-5.6-terra · high</td>
+                  <td style="text-align: right">
+                    <a class="btn sm" href="Dialogs.dc.html">Change</a>
+                    <a class="btn sm ghost" href="Dialogs.dc.html">Reset</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">implementation</td>
+                  <td>Implementer</td>
+                  <td class="mono">claude-sonnet-5 · default</td>
+                  <td><span class="src">Agent config</span></td>
+                  <td><span class="src">Model's own</span></td>
+                  <td class="hint">—</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td class="mono">pr_review</td>
+                  <td>Lookout · design</td>
+                  <td class="mono">gpt-5.6-terra · high</td>
+                  <td><span class="src">Server default</span></td>
+                  <td><span class="src">Server default</span></td>
+                  <td class="hint">—</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td class="mono">pr_review</td>
+                  <td>Lookout · defects</td>
+                  <td class="mono">claude-sonnet-5 · xhigh</td>
+                  <td><span class="src">Server default</span></td>
+                  <td><span class="src">Server default</span></td>
+                  <td class="hint">—</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div
+            class="pb"
+            style="border-top: 1px solid #eef2f5; padding-top: 10px; gap: 4px"
+          >
+            <span class="hint"
+              >Sources, strongest first: this revision only · chosen for this
+              voyage · server default · agent config (pinned) · the agent's own
+              profile. A model chosen without an effort runs at its own default
+              effort. The two Lookouts must use different models.</span
+            >
+          </div>
+        </section>
 
-  <section class="panel">
-    <div class="ph"><h2>Models per phase</h2><span class="sub">What each phase's next run gets, and where it comes from. A change applies from that phase's next run.</span><span style="flex:1"></span><a class="btn sm" href="Dialogs.dc.html">Change models</a></div>
-    <div style="overflow-x:auto">
-      <table class="t">
-        <thead><tr><th>Phase</th><th>Crew member</th><th>Next run gets</th><th>Model from</th><th>Effort from</th><th>Chosen for this voyage</th><th></th></tr></thead>
-        <tbody>
-          <tr><td class="mono">intake</td><td>Navigator</td><td class="mono">gpt-5.6-terra · medium</td><td><span class="src">Server default</span></td><td><span class="src">Server default</span></td><td class="hint">—</td><td></td></tr>
-          <tr class="err"><td class="mono">planning</td><td>Cartographer</td><td><span class="mono">gpt-5.6-terra · high</span> <span class="badge b-halt" style="height:18px;font-size:10.5px">refused last run</span></td><td><span class="src you">Chosen for this voyage</span></td><td><span class="src you">Chosen for this voyage</span></td><td class="mono">gpt-5.6-terra · high</td><td style="text-align:right"><a class="btn sm" href="Dialogs.dc.html">Change</a> <a class="btn sm ghost" href="Dialogs.dc.html">Reset</a></td></tr>
-          <tr><td class="mono">implementation</td><td>Implementer</td><td class="mono">claude-sonnet-5 · default</td><td><span class="src">Agent config</span></td><td><span class="src">Model's own</span></td><td class="hint">—</td><td></td></tr>
-          <tr><td class="mono">pr_review</td><td>Lookout · design</td><td class="mono">gpt-5.6-terra · high</td><td><span class="src">Server default</span></td><td><span class="src">Server default</span></td><td class="hint">—</td><td></td></tr>
-          <tr><td class="mono">pr_review</td><td>Lookout · defects</td><td class="mono">claude-sonnet-5 · xhigh</td><td><span class="src">Server default</span></td><td><span class="src">Server default</span></td><td class="hint">—</td><td></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="pb" style="border-top:1px solid #EEF2F5;padding-top:10px;gap:4px">
-      <span class="hint">Sources, strongest first: this revision only · chosen for this voyage · server default · agent config (pinned) · the agent's own profile. A model chosen without an effort runs at its own default effort. The two Lookouts must use different models.</span>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="ph"><h2>Why a voyage anchors</h2><span class="sub">The plain-language text shown for each halt reason</span></div>
-    <div style="overflow-x:auto">
-      <table class="t why">
-        <tbody>
-          <tr><td class="mono">stopped_by_user</td><td>Someone on the crew stopped it. Their reason is shown.</td></tr>
-          <tr><td class="mono">gate_rejected</td><td>An automated check rejected the crew's output, and it can't be retried automatically.</td></tr>
-          <tr><td class="mono">budget_exhausted</td><td>The voyage has spent its whole AIU budget. Raise the budget, then resume.</td></tr>
-          <tr><td class="mono">run_failed</td><td>A crew member's run failed, for example a refused model or a crash.</td></tr>
-          <tr><td class="mono">run_lost</td><td>Ahoy lost contact with a run and can't tell how it ended.</td></tr>
-          <tr><td class="mono">run_result_invalid</td><td>A run finished, but its result couldn't be read or broke the rules.</td></tr>
-          <tr><td class="mono">dispatch_failed</td><td>Ahoy couldn't start the run at all. Nothing was spent.</td></tr>
-          <tr><td class="mono">revision_ceiling_reached</td><td>The plan was sent back the maximum number of times (about 4).</td></tr>
-          <tr><td class="mono">reconciler_error</td><td>Something went wrong inside Ahoy while moving the voyage on.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-</main>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1350}}'>
-class Component extends DCLogic {
-  renderVals() {
-    return {};
-  }
-}
-</script>
-</body>
+        <section class="panel">
+          <div class="ph">
+            <h2>Why a voyage anchors</h2>
+            <span class="sub"
+              >The plain-language text shown for each halt reason</span
+            >
+          </div>
+          <div style="overflow-x: auto">
+            <table class="t why">
+              <tbody>
+                <tr>
+                  <td class="mono">stopped_by_user</td>
+                  <td>
+                    Someone on the crew stopped it. Their reason is shown.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">gate_rejected</td>
+                  <td>
+                    An automated check rejected the crew's output, and it can't
+                    be retried automatically.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">budget_exhausted</td>
+                  <td>
+                    The voyage has spent its whole AIU budget. Raise the budget,
+                    then resume.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">run_failed</td>
+                  <td>
+                    A crew member's run failed, for example a refused model or a
+                    crash.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">run_lost</td>
+                  <td>
+                    Ahoy lost contact with a run and can't tell how it ended.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">run_result_invalid</td>
+                  <td>
+                    A run finished, but its result couldn't be read or broke the
+                    rules.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">dispatch_failed</td>
+                  <td>
+                    Ahoy couldn't start the run at all. Nothing was spent.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">revision_ceiling_reached</td>
+                  <td>
+                    The plan was sent back the maximum number of times (about
+                    4).
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono">reconciler_error</td>
+                  <td>
+                    Something went wrong inside Ahoy while moving the voyage on.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1440,"height":1350}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
 </html>

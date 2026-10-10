@@ -1,6 +1,6 @@
-import { Component, computed, input } from "@angular/core";
-import type { IconName } from "./icons";
-import { ICONS } from "./icons";
+import { Component, computed, input } from '@angular/core';
+import type { IconName } from './icons';
+import { ICONS } from './icons';
 
 /** The icon sizes the design system uses: 16 by default, 12 inside step rows, 18 in banners and dialog tiles. */
 export type IconSize = 12 | 16 | 18;
@@ -10,7 +10,7 @@ export type IconSize = 12 | 16 | 18;
  * Decorative (`aria-hidden`) by default; give it a `label` when it stands alone, such as in an icon-only button.
  */
 @Component({
-  selector: "ah-icon",
+  selector: 'ah-icon',
   template: `
     <svg
       [attr.width]="size()"
@@ -29,13 +29,17 @@ export type IconSize = 12 | 16 | 18;
     >
       @for (shape of shapes(); track $index) {
         @switch (shape.kind) {
-          @case ("path") {
+          @case ('path') {
             <path [attr.d]="shape.d" />
           }
-          @case ("circle") {
-            <circle [attr.cx]="shape.cx" [attr.cy]="shape.cy" [attr.r]="shape.r" />
+          @case ('circle') {
+            <circle
+              [attr.cx]="shape.cx"
+              [attr.cy]="shape.cy"
+              [attr.r]="shape.r"
+            />
           }
-          @case ("rect") {
+          @case ('rect') {
             <rect
               [attr.x]="shape.x"
               [attr.y]="shape.y"
@@ -55,7 +59,7 @@ export class Icon {
   /** Width and height in pixels. */
   readonly size = input<IconSize>(16);
   /** Accessible name for an icon that stands alone; leave empty when a word sits next to it. */
-  readonly label = input("");
+  readonly label = input('');
 
   protected readonly shapes = computed(() => ICONS[this.name()]);
 }

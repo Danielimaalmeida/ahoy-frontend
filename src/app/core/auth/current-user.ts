@@ -1,5 +1,5 @@
-import { Injectable, computed, inject, type Signal } from "@angular/core";
-import { AppConfigStore } from "@core/config/app-config";
+import { Injectable, computed, inject, type Signal } from '@angular/core';
+import { AppConfigStore } from '@core/config/app-config';
 
 /**
  * Up to two letters for an avatar. The e-mail's local part is read as words: `alex.rivera@example.com` gives `AR`; a single
@@ -7,17 +7,22 @@ import { AppConfigStore } from "@core/config/app-config";
  * nothing to read.
  */
 export function initialsOf(id: string): string {
-  const local = id.split("@")[0] ?? "";
-  const [first, second] = local.split(/[^\p{L}\p{N}]+/u).filter((word) => word !== "");
-  if (first === undefined) return "?";
+  const local = id.split('@')[0] ?? '';
+  const [first, second] = local
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word !== '');
+  if (first === undefined) return '?';
   const letters = Array.from(first);
-  const picked = second !== undefined ? [letters[0] ?? "", Array.from(second)[0] ?? ""] : letters.slice(0, 2);
-  return picked.map(initial).join("");
+  const picked =
+    second !== undefined
+      ? [letters[0] ?? '', Array.from(second)[0] ?? '']
+      : letters.slice(0, 2);
+  return picked.map(initial).join('');
 }
 
 /** The first character of a letter in capitals. `ß` would give `SS`, which would break the two-letter limit. */
 function initial(letter: string): string {
-  return Array.from(letter.toUpperCase())[0] ?? "";
+  return Array.from(letter.toUpperCase())[0] ?? '';
 }
 
 /**
@@ -25,7 +30,7 @@ function initial(letter: string): string {
  * the `X-Ahoy-Actor` the dev proxy sends. It serves "Recorded as…", "(you)", the avatar and the owner check. Later it can
  * come from the token's `sub` or from `GET /me` without its readers changing.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class CurrentUser {
   private readonly config = inject(AppConfigStore).config;
 

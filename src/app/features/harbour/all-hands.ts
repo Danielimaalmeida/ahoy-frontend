@@ -1,37 +1,44 @@
-import { Component, DestroyRef, computed, effect, inject } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import type { ApiError } from "@core/api/api-error";
-import { StoriesStore } from "@core/stores/stories-store";
-import type { StoryStatus } from "@domain/types";
-import { Banner } from "@ui/banner/banner";
-import { BudgetMeter } from "@ui/budget-meter/budget-meter";
-import { Button } from "@ui/button/button";
-import { EmptyState } from "@ui/empty-state/empty-state";
-import { Panel, PanelBody, PanelHead } from "@ui/panel/panel";
-import { RelativePipe } from "@ui/pipes/relative.pipe";
-import { Skeleton, SkeletonRows, type SkeletonColumn } from "@ui/skeleton/skeleton";
-import { StatusBadge } from "@ui/status-badge/status-badge";
-import { CellSub, Key, Nowrap, Table } from "@ui/table/table";
-import { atSeaCrew, needsAction, whatsNeeded } from "./needs";
-import { RowDetails } from "./row-details";
+import { Component, DestroyRef, computed, effect, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import type { ApiError } from '@core/api/api-error';
+import { StoriesStore } from '@core/stores/stories-store';
+import type { StoryStatus } from '@domain/types';
+import { Banner } from '@ui/banner/banner';
+import { BudgetMeter } from '@ui/budget-meter/budget-meter';
+import { Button } from '@ui/button/button';
+import { EmptyState } from '@ui/empty-state/empty-state';
+import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
+import { RelativePipe } from '@ui/pipes/relative.pipe';
+import {
+  Skeleton,
+  SkeletonRows,
+  type SkeletonColumn,
+} from '@ui/skeleton/skeleton';
+import { StatusBadge } from '@ui/status-badge/status-badge';
+import { CellSub, Key, Nowrap, Table } from '@ui/table/table';
+import { atSeaCrew, needsAction, whatsNeeded } from './needs';
+import { RowDetails } from './row-details';
 
 /** The three tiles: the statuses that wait on a person, each with what it means. */
-const TILES: readonly { readonly status: StoryStatus; readonly hint: string }[] = [
-  { status: "awaiting_input", hint: "Agent questions to answer" },
-  { status: "awaiting_decision", hint: "Human gates waiting on a decision" },
-  { status: "halted", hint: "Halted until someone resumes" },
+const TILES: readonly {
+  readonly status: StoryStatus;
+  readonly hint: string;
+}[] = [
+  { status: 'awaiting_input', hint: 'Agent questions to answer' },
+  { status: 'awaiting_decision', hint: 'Human gates waiting on a decision' },
+  { status: 'halted', hint: 'Halted until someone resumes' },
 ];
 
 /** The columns of the "Needs you" table, for its placeholder rows. */
 const NEEDS_COLUMNS: readonly SkeletonColumn[] = [
-  { track: "90px", height: 20 },
-  { track: "minmax(0, 1.4fr)" },
-  { track: "80px" },
-  { track: "minmax(0, 1.4fr)" },
-  { track: "minmax(0, 0.8fr)" },
-  { track: "56px" },
-  { track: "110px" },
-  { track: "90px", height: 28 },
+  { track: '90px', height: 20 },
+  { track: 'minmax(0, 1.4fr)' },
+  { track: '80px' },
+  { track: 'minmax(0, 1.4fr)' },
+  { track: 'minmax(0, 0.8fr)' },
+  { track: '56px' },
+  { track: '110px' },
+  { track: '90px', height: 28 },
 ];
 
 /** What the page says when the list cannot be read: the heading, the sentence and the technical line. */
@@ -43,25 +50,35 @@ interface Failure {
 
 /** Says why the list could not be read. An answer the app cannot read is a failure of tooling, never a verdict. */
 function describeFailure(error: ApiError): Failure {
-  const nothingLost = "Nothing you did was lost, and no voyage stopped because of this.";
+  const nothingLost =
+    'Nothing you did was lost, and no voyage stopped because of this.';
   switch (error.kind) {
-    case "invalid_response":
+    case 'invalid_response':
       return {
-        heading: "Ahoy sent something unexpected",
+        heading: 'Ahoy sent something unexpected',
         text: `Ahoy couldn't read the answer, so it shows nothing rather than guess. ${nothingLost}`,
         tech: `invalid_response · ${error.what}`,
       };
-    case "network":
+    case 'network':
       return {
-        heading: "Lost contact with the harbour",
+        heading: "Can't reach Ahoy",
         text: `Ahoy couldn't load voyages. ${nothingLost}`,
-        tech: error.status === undefined ? "network" : `${error.status} · network`,
+        tech:
+          error.status === undefined ? 'network' : `${error.status} · network`,
       };
-    case "problem": {
-      const tech = `${error.status} · ${error.code}${error.instance === undefined ? "" : ` · request ${error.instance}`}`;
+    case 'problem': {
+      const tech = `${error.status} · ${error.code}${error.instance === undefined ? '' : ` · request ${error.instance}`}`;
       return error.status === 401
-        ? { heading: "Sign-in needed", text: "Ahoy needs you to sign in before it can show voyages.", tech }
-        : { heading: "Lost contact with the harbour", text: `Ahoy couldn't load voyages. ${nothingLost}`, tech };
+        ? {
+            heading: 'Sign-in needed',
+            text: 'Ahoy needs you to sign in before it can show voyages.',
+            tech,
+          }
+        : {
+            heading: "Can't reach Ahoy",
+            text: `Ahoy couldn't load voyages. ${nothingLost}`,
+            tech,
+          };
     }
   }
 }
@@ -71,7 +88,7 @@ function describeFailure(error: ApiError): Failure {
  * the `StoriesStore`, which follows the event stream, so a voyage moves between the two panels on its own.
  */
 @Component({
-  selector: "ah-all-hands",
+  selector: 'ah-all-hands',
   imports: [
     Banner,
     BudgetMeter,
@@ -165,22 +182,38 @@ function describeFailure(error: ApiError): Failure {
   `,
   template: `
     <div>
-      <h1>All hands on deck</h1>
+      <h1>Needs you</h1>
       <p class="ah-muted lead">
-        Voyages waiting on a person. Anyone on the crew may answer, approve, send back or stop. Only the owner is
-        billed.
+        Voyages waiting on a person. Anyone on the crew may answer, approve,
+        send back or stop. Only the owner is billed.
       </p>
     </div>
 
     @if (failure(); as problem) {
-      <ah-banner variant="error" [heading]="problem.heading" [tech]="problem.tech">
+      <ah-banner
+        variant="error"
+        [heading]="problem.heading"
+        [tech]="problem.tech"
+      >
         {{ problem.text }}
-        <button ahButton size="sm" type="button" class="retry" (click)="retry()">Try again</button>
+        <button
+          ahButton
+          size="sm"
+          type="button"
+          class="retry"
+          (click)="retry()"
+        >
+          Try again
+        </button>
       </ah-banner>
     } @else {
       <div class="tiles">
         @for (tile of tiles; track tile.status) {
-          <a class="tile" routerLink="/voyages" [queryParams]="{ status: tile.status }">
+          <a
+            class="tile"
+            routerLink="/voyages"
+            [queryParams]="{ status: tile.status }"
+          >
             @if (loaded()) {
               <b>{{ counts()[tile.status] }}</b>
             } @else {
@@ -197,14 +230,22 @@ function describeFailure(error: ApiError): Failure {
       <ah-panel>
         <ah-panel-head heading="Needs you" [subtitle]="needsSubtitle()" />
         @if (!loaded()) {
-          <ah-panel-body><ah-skeleton-rows [rows]="4" [columns]="needsColumns" /></ah-panel-body>
+          <ah-panel-body
+            ><ah-skeleton-rows [rows]="4" [columns]="needsColumns"
+          /></ah-panel-body>
         } @else if (needsYou().length === 0) {
           <ah-empty-state heading="Calm seas">
-            Nothing needs you right now. Questions, decisions and anchored voyages show up here.
+            Nothing needs you right now. Questions, decisions and halted voyages
+            show up here.
             <a ahButton ahEmptyAction routerLink="/voyages">See all voyages</a>
           </ah-empty-state>
         } @else {
-          <div class="scroll" role="region" tabindex="0" aria-label="Voyages that need you">
+          <div
+            class="scroll"
+            role="region"
+            tabindex="0"
+            aria-label="Voyages that need you"
+          >
             <table ahTable>
               <thead>
                 <tr>
@@ -221,9 +262,16 @@ function describeFailure(error: ApiError): Failure {
               <tbody>
                 @for (row of needsRows(); track row.story.key) {
                   <tr>
-                    <td ahNowrap><ah-status-badge [status]="row.story.status" [phase]="row.story.phase" /></td>
+                    <td ahNowrap>
+                      <ah-status-badge
+                        [status]="row.story.status"
+                        [phase]="row.story.phase"
+                      />
+                    </td>
                     <td class="voyage">
-                      <a ahKey [routerLink]="['/voyages', row.story.key]">{{ row.story.key }}</a
+                      <a ahKey [routerLink]="['/voyages', row.story.key]">{{
+                        row.story.key
+                      }}</a
                       >{{ row.story.title }}
                     </td>
                     <td class="ah-mono">{{ row.story.phase }}</td>
@@ -234,7 +282,9 @@ function describeFailure(error: ApiError): Failure {
                       }
                     </td>
                     <td>{{ row.story.owner }}</td>
-                    <td ahNowrap>{{ row.story.updatedAt | ahRelative: "waiting" }}</td>
+                    <td ahNowrap>
+                      {{ row.story.updatedAt | ahRelative: 'waiting' }}
+                    </td>
                     <td ahNowrap>
                       <ah-budget-meter
                         variant="compact"
@@ -249,7 +299,9 @@ function describeFailure(error: ApiError): Failure {
                         [ahButton]="row.action.variant"
                         size="sm"
                         [routerLink]="row.action.link"
-                        [attr.aria-label]="row.action.label + ' ' + row.story.key"
+                        [attr.aria-label]="
+                          row.action.label + ' ' + row.story.key
+                        "
                         >{{ row.action.label }}</a
                       >
                     </td>
@@ -262,22 +314,34 @@ function describeFailure(error: ApiError): Failure {
       </ah-panel>
 
       <ah-panel>
-        <ah-panel-head heading="At sea" subtitle="The crew is working; nothing needed from you">
+        <ah-panel-head
+          heading="In progress"
+          subtitle="Agents are working; nothing needed from you"
+        >
           <a ahPanelActions routerLink="/voyages">All voyages</a>
         </ah-panel-head>
         @if (!loaded()) {
-          <ah-panel-body><ah-skeleton-rows [rows]="2" [columns]="needsColumns" /></ah-panel-body>
+          <ah-panel-body
+            ><ah-skeleton-rows [rows]="2" [columns]="needsColumns"
+          /></ah-panel-body>
         } @else if (atSea().length === 0) {
-          <ah-empty-state heading="Nothing at sea">No voyage is under way or queued.</ah-empty-state>
+          <ah-empty-state heading="Nothing in progress"
+            >No voyage is running or queued.</ah-empty-state
+          >
         } @else {
-          <div class="scroll" role="region" tabindex="0" aria-label="Voyages at sea">
+          <div
+            class="scroll"
+            role="region"
+            tabindex="0"
+            aria-label="Voyages in progress"
+          >
             <table ahTable>
               <thead>
                 <tr>
                   <th>Status</th>
                   <th>Voyage</th>
                   <th>Phase</th>
-                  <th>Crew member</th>
+                  <th>Agent</th>
                   <th>Owner</th>
                   <th>Updated</th>
                   <th>Budget (AIU)</th>
@@ -286,9 +350,16 @@ function describeFailure(error: ApiError): Failure {
               <tbody>
                 @for (row of seaRows(); track row.story.key) {
                   <tr>
-                    <td ahNowrap><ah-status-badge [status]="row.story.status" [phase]="row.story.phase" /></td>
+                    <td ahNowrap>
+                      <ah-status-badge
+                        [status]="row.story.status"
+                        [phase]="row.story.phase"
+                      />
+                    </td>
                     <td class="voyage">
-                      <a ahKey [routerLink]="['/voyages', row.story.key]">{{ row.story.key }}</a
+                      <a ahKey [routerLink]="['/voyages', row.story.key]">{{
+                        row.story.key
+                      }}</a
                       >{{ row.story.title }}
                     </td>
                     <td class="ah-mono">{{ row.story.phase }}</td>
@@ -330,30 +401,43 @@ export class AllHandsPage {
   protected readonly atSea = this.store.atSea;
 
   /** Whether there is something to show: the list was read, or an earlier read is still in hand. */
-  protected readonly loaded = computed(() => this.store.status() === "ready" || this.store.stories().length > 0);
+  protected readonly loaded = computed(
+    () => this.store.status() === 'ready' || this.store.stories().length > 0
+  );
 
   /** Why there is nothing to show, when the first read failed. A later failure keeps the list on screen. */
   protected readonly failure = computed((): Failure | null => {
     const error = this.store.error();
-    return !this.loaded() && this.store.status() === "error" && error !== null ? describeFailure(error) : null;
+    return !this.loaded() && this.store.status() === 'error' && error !== null
+      ? describeFailure(error)
+      : null;
   });
 
   /** The rows of "Needs you", each with what it needs and the action that ends it. */
   protected readonly needsRows = computed(() =>
     this.needsYou().map((story) => {
       const detail = this.details.detail(story.key);
-      return { story, needed: whatsNeeded(story, detail), action: needsAction(story, detail.gate) };
-    }),
+      return {
+        story,
+        needed: whatsNeeded(story, detail),
+        action: needsAction(story, detail.gate),
+      };
+    })
   );
 
   /** The rows of "At sea", each with its crew member and, once known, the model and effort of its run. */
   protected readonly seaRows = computed(() =>
-    this.atSea().map((story) => ({ story, sea: atSeaCrew(story, this.details.runOf(story)) })),
+    this.atSea().map((story) => ({
+      story,
+      sea: atSeaCrew(story, this.details.runOf(story)),
+    }))
   );
 
   protected readonly needsSubtitle = computed(() => {
     const count = this.needsYou().length;
-    return count === 0 ? "" : `${count} ${count === 1 ? "voyage" : "voyages"} · longest wait first`;
+    return count === 0
+      ? ''
+      : `${count} ${count === 1 ? 'voyage' : 'voyages'} · longest wait first`;
   });
 
   constructor() {

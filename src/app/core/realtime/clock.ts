@@ -1,4 +1,4 @@
-import { InjectionToken } from "@angular/core";
+import { InjectionToken } from '@angular/core';
 
 /** A scheduled callback that can still be cancelled. Cancelling one that already ran does nothing. */
 export interface Timer {
@@ -26,7 +26,13 @@ export const systemClock: Clock = {
 };
 
 /** The clock in force: {@link systemClock} unless a test provides a fake. */
-export const CLOCK = new InjectionToken<Clock>("CLOCK", { providedIn: "root", factory: () => systemClock });
+export const CLOCK = new InjectionToken<Clock>('CLOCK', {
+  providedIn: 'root',
+  factory: () => systemClock,
+});
 
 /** A number in `[0, 1)`, for the jitter of reconnection delays. `Math.random` unless a test provides its own. */
-export const RANDOM = new InjectionToken<() => number>("RANDOM", { providedIn: "root", factory: () => Math.random });
+export const RANDOM = new InjectionToken<() => number>('RANDOM', {
+  providedIn: 'root',
+  factory: () => Math.random,
+});

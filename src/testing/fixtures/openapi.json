@@ -37,15 +37,16 @@
     },
     {
       "name": "events"
+    },
+    {
+      "name": "jira"
     }
   ],
   "paths": {
     "/health": {
       "get": {
         "operationId": "getHealth",
-        "tags": [
-          "events"
-        ],
+        "tags": ["events"],
         "summary": "Liveness and database reachability.",
         "security": [],
         "responses": {
@@ -65,12 +66,70 @@
         }
       }
     },
+    "/models": {
+      "get": {
+        "operationId": "listModels",
+        "tags": ["stories"],
+        "summary": "The models a person may choose for a story's phases, and what each phase runs on by default.",
+        "description": "The catalogue is configured on the server, not read from a Copilot account: `AHOY_MODEL_CATALOG` (a JSON\nfile, `source: file`) or the built-in list (`source: built_in`). Every model the server's phase\nconfiguration names is listed too, so a default is always one a person can pick. `reasoningEfforts` of a\nmodel is null when the catalogue does not say which efforts it takes; `[]` means it takes none.\n\nChoosing a model outside this list is still accepted by `startStory` and `setStoryModels`: whether the owner's\nCopilot account may use a model, and whether it takes the effort, is checked by the worker before it sends a\nprompt (0 AIU); a run refused there fails and the story halts.\n\n`defaults` is what each slot of a story started now (without `controlRef`) runs on when nobody chooses: the\nserver's phase configuration, then `phases.tsv` at the control repo's HEAD (`controlSha`). When the control\nrepo cannot be read, `controlSha` is null and the defaults come from the configuration alone.\n",
+        "responses": {
+          "200": {
+            "description": "The model catalogue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelCatalog"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/jira/backlog": {
+      "get": {
+        "operationId": "listJiraBacklog",
+        "tags": ["jira"],
+        "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
+        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = aaa AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n",
+        "responses": {
+          "200": {
+            "description": "Complete backlog in Jira rank order.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JiraBacklog"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories": {
       "get": {
         "operationId": "listStories",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "parameters": [
           {
             "name": "status",
@@ -108,11 +167,9 @@
       },
       "post": {
         "operationId": "startStory",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "Start a story at intake. The actor becomes its owner and runs bill the owner's token.",
-        "description": "`models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,\n`implementation` and the two `pr_review` reviewer slots); what is left out runs on the server's phase\nconfiguration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows\nwhat each phase will get. A `models` that names an unknown slot, an empty choice, a model or effort no run can\ntake, `null`, or two reviewer slots on one model (the consensus gate rejects two reviews from one model)\nanswers `400 validation_failed`, and no story is created.\n",
+        "description": "`models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,\n`implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase\nconfiguration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows\nwhat each phase will get. A `models` that names an unknown slot, an empty choice, a model or effort no run can\ntake, or `null` answers `400 validation_failed`, and no story is created.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -164,9 +221,7 @@
       ],
       "get": {
         "operationId": "getStory",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "responses": {
           "200": {
             "description": "The story.",
@@ -198,9 +253,7 @@
       ],
       "post": {
         "operationId": "stopStory",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "Halt the story and cancel its active run, if any. The phase does not change.",
         "requestBody": {
           "required": true,
@@ -246,9 +299,7 @@
       ],
       "post": {
         "operationId": "resumeStory",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "Clear a halt so the reconciler retries the current phase. May spend AIU.",
         "requestBody": {
           "required": true,
@@ -294,9 +345,7 @@
       ],
       "post": {
         "operationId": "setStoryBudget",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "Change the story's total AIU cap. May allow further spend.",
         "description": "Takes effect when the reconciler next queues a run; an active run keeps the cap it started with.\nThe new cap must not be below what the story has already spent. Status and phase do not change,\nso a halted story still needs `resume`.\n",
         "requestBody": {
@@ -343,11 +392,9 @@
       ],
       "get": {
         "operationId": "getStoryModels",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "The model and reasoning effort each phase of the story runs on, and where each comes from.",
-        "description": "One entry per slot of the story's model plan: `intake`, `planning`, `implementation`, and one per reviewer\nlens of `pr_review` (`review-design`, `review-defect`). `chosen` is what a person chose for the story;\n`model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the\npinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another\nmodel is not carried onto a model a person chose, which then runs at its own default effort. Whether the\nowner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker\nbefore it sends a prompt (0 AIU); a run refused there fails and the story halts.\n",
+        "description": "One entry per slot of the story's model plan: `intake`, `planning`, `implementation`, and `review` (the one\nreviewer of `pr_review`). `chosen` is what a person chose for the story;\n`model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the\npinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another\nmodel is not carried onto a model a person chose, which then runs at its own default effort. Whether the\nowner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker\nbefore it sends a prompt (0 AIU); a run refused there fails and the story halts.\n",
         "responses": {
           "200": {
             "description": "The story's model plan.",
@@ -375,11 +422,9 @@
       },
       "post": {
         "operationId": "setStoryModels",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "Choose the model and reasoning effort for some phases of the story.",
-        "description": "Each slot given a choice holds exactly that choice; `null` gives the slot back to the configured defaults;\nslots left out are unchanged. Takes effect when the reconciler next queues a run of that phase: an active run\nkeeps the model it started with. Status and phase do not change. The two reviewer slots must end up on\ndifferent models (the consensus gate rejects two reviews from one model), or the request answers `400`.\n",
+        "description": "Each slot given a choice holds exactly that choice; `null` gives the slot back to the configured defaults;\nslots left out are unchanged. Takes effect when the reconciler next queues a run of that phase: an active run\nkeeps the model it started with. Status and phase do not change.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -424,9 +469,7 @@
       ],
       "get": {
         "operationId": "listStoryRuns",
-        "tags": [
-          "runs"
-        ],
+        "tags": ["runs"],
         "responses": {
           "200": {
             "description": "The story's runs, oldest first.",
@@ -434,9 +477,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "items"
-                  ],
+                  "required": ["items"],
                   "additionalProperties": false,
                   "properties": {
                     "items": {
@@ -475,9 +516,7 @@
       ],
       "get": {
         "operationId": "getRun",
-        "tags": [
-          "runs"
-        ],
+        "tags": ["runs"],
         "responses": {
           "200": {
             "description": "The run.",
@@ -509,9 +548,7 @@
       ],
       "get": {
         "operationId": "listQuestions",
-        "tags": [
-          "questions"
-        ],
+        "tags": ["questions"],
         "responses": {
           "200": {
             "description": "Every question asked for the story, in order.",
@@ -519,9 +556,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "items"
-                  ],
+                  "required": ["items"],
                   "additionalProperties": false,
                   "properties": {
                     "items": {
@@ -564,9 +599,7 @@
       ],
       "post": {
         "operationId": "answerQuestion",
-        "tags": [
-          "questions"
-        ],
+        "tags": ["questions"],
         "summary": "Record one human answer. Answers are never replaced; the next run consumes them.",
         "requestBody": {
           "required": true,
@@ -612,9 +645,7 @@
       ],
       "get": {
         "operationId": "listGateRecords",
-        "tags": [
-          "decisions"
-        ],
+        "tags": ["decisions"],
         "summary": "Automated gate verdicts and human decisions, oldest first.",
         "responses": {
           "200": {
@@ -623,9 +654,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "items"
-                  ],
+                  "required": ["items"],
                   "additionalProperties": false,
                   "properties": {
                     "items": {
@@ -659,9 +688,7 @@
       ],
       "post": {
         "operationId": "decideHumanGate",
-        "tags": [
-          "decisions"
-        ],
+        "tags": ["decisions"],
         "summary": "Approve, send back or reject at a human gate. Silence is never approval.",
         "requestBody": {
           "required": true,
@@ -702,25 +729,23 @@
         }
       }
     },
-    "/stories/{key}/consensus": {
+    "/stories/{key}/review": {
       "parameters": [
         {
           "$ref": "#/components/parameters/StoryKey"
         }
       ],
       "post": {
-        "operationId": "resolveConsensus",
-        "tags": [
-          "decisions"
-        ],
-        "summary": "Settle a review the consensus gate halted on, by sending the work to rework or overriding the review.",
-        "description": "Only for a story halted on the consensus gate (`gate_halt` or `gate_rejected`) in a review phase. `rework`\ncharges the rework ceiling and reopens the work the findings name, or exactly `packages`. `override` moves the\nstory to the delivery gate, which still needs a person's decision. Reworking may spend AIU.\n",
+        "operationId": "resolveReview",
+        "tags": ["decisions"],
+        "summary": "Settle a review the review gate halted on, by sending the work to rework or overriding the review.",
+        "description": "Only for a story halted on the review gate (`gate_halt` or `gate_rejected`) in a review phase. `rework`\ncharges the rework ceiling and reopens the work the findings name, or exactly `packages`. `override` moves the\nstory to the delivery gate, which still needs a person's decision. Reworking may spend AIU.\n",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolveConsensusRequest"
+                "$ref": "#/components/schemas/ResolveReviewRequest"
               }
             }
           }
@@ -765,9 +790,7 @@
       ],
       "post": {
         "operationId": "decideWorkPackage",
-        "tags": [
-          "decisions"
-        ],
+        "tags": ["decisions"],
         "summary": "Retry or accept a work package nothing else will move (failed, stalled, blocked or unverified).",
         "description": "Only while the story is halted in implementation. `retry` sends the package round again with `reason` as its\nrework note (may spend AIU); `accept` marks it done as it stands. The repository is still checked by\n`child_ready` before review.\n",
         "requestBody": {
@@ -817,9 +840,7 @@
       ],
       "post": {
         "operationId": "reopenWork",
-        "tags": [
-          "decisions"
-        ],
+        "tags": ["decisions"],
         "summary": "Send delivered work packages round again by hand, from a halted implementation or review.",
         "description": "Reopens `packages` (even in a merged repository), or the delivered packages of `repos`, or all delivered\npackages, with `note` as their rework note, and moves the story to implementation. No rework round is charged.\nMay spend AIU. A delivery gate is sent back with a decision instead.\n",
         "requestBody": {
@@ -869,9 +890,7 @@
       ],
       "post": {
         "operationId": "unblockStory",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "Take a story out of `blocked`, back to the phase it was blocked from, with more rework rounds.",
         "description": "Raises the rework ceiling of each repository at it (or of each of `repos`) by `rounds`, then returns the story\nto the phase that moved it to `blocked`, which evaluates its gate again. A story blocked by a person's\nrejection at a human gate cannot be unblocked. May spend AIU.\n",
         "requestBody": {
@@ -921,11 +940,9 @@
       ],
       "get": {
         "operationId": "getStoryState",
-        "tags": [
-          "stories"
-        ],
+        "tags": ["stories"],
         "summary": "The story's state, as a worker's `state.json` shows it to the agents.",
-        "description": "Rendered from the story's typed tables in Postgres, where the state lives: acceptance criteria, work packages, child repositories, reviews, human gates, revisions, the gate rejection, `gate_results` (from the gate records) and `decision_log` (from the `decisions` table). The field names follow the control repo's `state.json`; fields the agents wrote that no rule reads are passed through as they wrote them. A reviewer's report shows the fields the consensus gate reads; the report as written is in its `review.reported` event.",
+        "description": "Rendered from the story's typed tables in Postgres, where the state lives: acceptance criteria, work packages, child repositories, reviews, human gates, revisions, the gate rejection, `gate_results` (from the gate records) and `decision_log` (from the `decisions` table). The field names follow the control repo's `state.json`; fields the agents wrote that no rule reads are passed through as they wrote them. A reviewer's report shows the fields the review gate reads; the report as written is in its `review.reported` event.",
         "responses": {
           "200": {
             "description": "The state document.",
@@ -960,9 +977,7 @@
       ],
       "get": {
         "operationId": "listArtifacts",
-        "tags": [
-          "artifacts"
-        ],
+        "tags": ["artifacts"],
         "summary": "The story's current artifact set (Jira snapshot, plan and the other files its agents wrote).",
         "responses": {
           "200": {
@@ -971,10 +986,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "revision",
-                    "items"
-                  ],
+                  "required": ["revision", "items"],
                   "additionalProperties": false,
                   "properties": {
                     "revision": {
@@ -1041,9 +1053,7 @@
       ],
       "get": {
         "operationId": "getArtifactContent",
-        "tags": [
-          "artifacts"
-        ],
+        "tags": ["artifacts"],
         "responses": {
           "200": {
             "description": "The artifact bytes.",
@@ -1097,9 +1107,7 @@
       ],
       "get": {
         "operationId": "listStoryEvents",
-        "tags": [
-          "events"
-        ],
+        "tags": ["events"],
         "parameters": [
           {
             "$ref": "#/components/parameters/After"
@@ -1134,9 +1142,7 @@
     "/events/stream": {
       "get": {
         "operationId": "streamEvents",
-        "tags": [
-          "events"
-        ],
+        "tags": ["events"],
         "summary": "Live events as Server-Sent Events.",
         "description": "Each message is `id: <Event.id>`, `event: <Event.type>` and one `data:` line holding the\n`Event` JSON. IDs are stable and increase monotonically. To resume, reconnect with the\n`Last-Event-ID` header (or `after`); the server replays every later event before streaming\nnew ones. Comment lines (`: keepalive`) are sent periodically. Clients that cannot use SSE\nmay poll `listStoryEvents` instead.\n",
         "parameters": [
@@ -1323,38 +1329,110 @@
         ],
         "description": "`ready`: the reconciler will act. `running`: a worker run is active.\n`awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.\n`halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.\n"
       },
+      "JiraSprint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "state"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "type": "string",
+            "enum": ["active", "future", "closed"]
+          }
+        }
+      },
+      "JiraBacklogIssue": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "issueType",
+          "summary",
+          "status",
+          "priority",
+          "updatedAt",
+          "sprint"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*-[1-9][0-9]*$"
+          },
+          "issueType": {
+            "type": "string",
+            "enum": ["Story", "Task", "Bug"]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "priority": {
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sprint": {
+            "description": "Selected from Jira customfield_10000: active first, then future, then closed; the lowest\nsprint ID breaks ties. Null when unassigned. Supports Jira Server's legacy sprint strings.\n",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraSprint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "JiraBacklog": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items", "total"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JiraBacklogIssue"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
       "Health": {
         "type": "object",
-        "required": [
-          "status",
-          "database"
-        ],
+        "required": ["status", "database"],
         "additionalProperties": false,
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "ok",
-              "degraded"
-            ]
+            "enum": ["ok", "degraded"]
           },
           "database": {
             "type": "string",
-            "enum": [
-              "ok",
-              "unavailable"
-            ]
+            "enum": ["ok", "unavailable"]
           }
         }
       },
       "Problem": {
         "type": "object",
-        "required": [
-          "type",
-          "title",
-          "status",
-          "code"
-        ],
+        "required": ["type", "title", "status", "code"],
         "properties": {
           "type": {
             "type": "string"
@@ -1397,9 +1475,7 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "message"
-              ],
+              "required": ["message"],
               "properties": {
                 "path": {
                   "type": "string"
@@ -1417,12 +1493,7 @@
       },
       "Usage": {
         "type": "object",
-        "required": [
-          "requests",
-          "nanoAiu",
-          "inputTokens",
-          "outputTokens"
-        ],
+        "required": ["requests", "nanoAiu", "inputTokens", "outputTokens"],
         "additionalProperties": false,
         "properties": {
           "requests": {
@@ -1465,10 +1536,7 @@
             "$ref": "#/components/schemas/StoryKey"
           },
           "title": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "owner": {
             "$ref": "#/components/schemas/Actor"
@@ -1480,10 +1548,7 @@
             "$ref": "#/components/schemas/StoryStatus"
           },
           "haltReason": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "budgetNanoAiu": {
             "$ref": "#/components/schemas/NanoAiu"
@@ -1519,10 +1584,7 @@
       },
       "StoryPage": {
         "type": "object",
-        "required": [
-          "items",
-          "nextCursor"
-        ],
+        "required": ["items", "nextCursor"],
         "additionalProperties": false,
         "properties": {
           "items": {
@@ -1532,19 +1594,13 @@
             }
           },
           "nextCursor": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         }
       },
       "StartStoryRequest": {
         "type": "object",
-        "required": [
-          "key",
-          "budgetNanoAiu"
-        ],
+        "required": ["key", "budgetNanoAiu"],
         "additionalProperties": false,
         "properties": {
           "key": {
@@ -1572,10 +1628,7 @@
       },
       "StopStoryRequest": {
         "type": "object",
-        "required": [
-          "expectedVersion",
-          "reason"
-        ],
+        "required": ["expectedVersion", "reason"],
         "additionalProperties": false,
         "properties": {
           "expectedVersion": {
@@ -1600,21 +1653,14 @@
         "maxLength": 64,
         "description": "A plan alias of a child repository, as in `child_repos[].repo`."
       },
-      "ResolveConsensusRequest": {
+      "ResolveReviewRequest": {
         "type": "object",
-        "required": [
-          "decision",
-          "reason",
-          "expectedVersion"
-        ],
+        "required": ["decision", "reason", "expectedVersion"],
         "additionalProperties": false,
         "properties": {
           "decision": {
             "type": "string",
-            "enum": [
-              "rework",
-              "override"
-            ]
+            "enum": ["rework", "override"]
           },
           "reason": {
             "type": "string",
@@ -1638,19 +1684,12 @@
       },
       "WorkPackageDecisionRequest": {
         "type": "object",
-        "required": [
-          "decision",
-          "reason",
-          "expectedVersion"
-        ],
+        "required": ["decision", "reason", "expectedVersion"],
         "additionalProperties": false,
         "properties": {
           "decision": {
             "type": "string",
-            "enum": [
-              "retry",
-              "accept"
-            ]
+            "enum": ["retry", "accept"]
           },
           "reason": {
             "type": "string",
@@ -1664,10 +1703,7 @@
       },
       "ReopenWorkRequest": {
         "type": "object",
-        "required": [
-          "note",
-          "expectedVersion"
-        ],
+        "required": ["note", "expectedVersion"],
         "additionalProperties": false,
         "properties": {
           "note": {
@@ -1701,10 +1737,7 @@
       },
       "UnblockStoryRequest": {
         "type": "object",
-        "required": [
-          "reason",
-          "expectedVersion"
-        ],
+        "required": ["reason", "expectedVersion"],
         "additionalProperties": false,
         "properties": {
           "reason": {
@@ -1734,9 +1767,7 @@
       },
       "ResumeStoryRequest": {
         "type": "object",
-        "required": [
-          "expectedVersion"
-        ],
+        "required": ["expectedVersion"],
         "additionalProperties": false,
         "properties": {
           "expectedVersion": {
@@ -1750,11 +1781,7 @@
       },
       "SetStoryBudgetRequest": {
         "type": "object",
-        "required": [
-          "expectedVersion",
-          "budgetNanoAiu",
-          "reason"
-        ],
+        "required": ["expectedVersion", "budgetNanoAiu", "reason"],
         "additionalProperties": false,
         "properties": {
           "expectedVersion": {
@@ -1774,34 +1801,19 @@
       },
       "ModelSlot": {
         "type": "string",
-        "enum": [
-          "intake",
-          "planning",
-          "implementation",
-          "review-design",
-          "review-defect"
-        ],
-        "description": "A part of the story that runs on one model: a phase, or for `pr_review` one reviewer lens (`review-design` is the `design-fit` lens, `review-defect` the `defect-failure` lens)."
+        "enum": ["intake", "planning", "implementation", "review"],
+        "description": "A part of the story that runs on one model, by phase; `review` is the one reviewer of `pr_review`."
       },
       "ModelId": {
         "type": "string",
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
         "maxLength": 200,
         "description": "A Copilot model id, e.g. `claude-sonnet-5` or `gpt-5.6-terra`.",
-        "examples": [
-          "claude-sonnet-5",
-          "gpt-5.6-terra"
-        ]
+        "examples": ["claude-sonnet-5", "gpt-5.6-terra"]
       },
       "ReasoningEffort": {
         "type": "string",
-        "enum": [
-          "low",
-          "medium",
-          "high",
-          "xhigh",
-          "max"
-        ],
+        "enum": ["low", "medium", "high", "xhigh", "max"],
         "description": "The Copilot SDK's reasoning effort levels; a model may accept fewer, or none."
       },
       "ModelChoice": {
@@ -1832,10 +1844,7 @@
           "implementation": {
             "$ref": "#/components/schemas/ModelChoice"
           },
-          "review-design": {
-            "$ref": "#/components/schemas/ModelChoice"
-          },
-          "review-defect": {
+          "review": {
             "$ref": "#/components/schemas/ModelChoice"
           }
         }
@@ -1876,17 +1885,7 @@
               }
             ]
           },
-          "review-design": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ModelChoice"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "review-defect": {
+          "review": {
             "oneOf": [
               {
                 "$ref": "#/components/schemas/ModelChoice"
@@ -1900,10 +1899,7 @@
       },
       "SetStoryModelsRequest": {
         "type": "object",
-        "required": [
-          "expectedVersion",
-          "models"
-        ],
+        "required": ["expectedVersion", "models"],
         "additionalProperties": false,
         "properties": {
           "expectedVersion": {
@@ -1924,7 +1920,6 @@
         "required": [
           "slot",
           "phase",
-          "lens",
           "chosen",
           "model",
           "reasoningEffort",
@@ -1938,18 +1933,6 @@
           },
           "phase": {
             "$ref": "#/components/schemas/Phase"
-          },
-          "lens": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "design-fit",
-              "defect-failure",
-              null
-            ],
-            "description": "The reviewer lens of a `pr_review` slot."
           },
           "chosen": {
             "description": "What a person chose for the story; null when the slot runs on the defaults.",
@@ -2009,11 +1992,7 @@
       },
       "ModelPlan": {
         "type": "object",
-        "required": [
-          "storyKey",
-          "version",
-          "slots"
-        ],
+        "required": ["storyKey", "version", "slots"],
         "additionalProperties": false,
         "properties": {
           "storyKey": {
@@ -2026,6 +2005,130 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SlotModel"
+            }
+          }
+        }
+      },
+      "CatalogModel": {
+        "type": "object",
+        "required": ["id", "label", "reasoningEfforts"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ModelId"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "What a person reads; the id when none is configured."
+          },
+          "reasoningEfforts": {
+            "description": "The efforts the model takes (`[]`, none); null when the catalogue does not say.",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ReasoningEffort"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "SlotDefault": {
+        "type": "object",
+        "required": [
+          "slot",
+          "phase",
+          "model",
+          "reasoningEffort",
+          "modelSource",
+          "effortSource"
+        ],
+        "additionalProperties": false,
+        "description": "What a slot of a story started now runs on when nobody chooses (a `SlotModel` without `chosen`).",
+        "properties": {
+          "slot": {
+            "$ref": "#/components/schemas/ModelSlot"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/Phase"
+          },
+          "model": {
+            "description": "The model; null leaves it to the agent profile.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ModelId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reasoningEffort": {
+            "description": "The effort; null is the model's own default.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningEffort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelSource": {
+            "type": "string",
+            "enum": ["configuration", "phase_table", "agent_profile"]
+          },
+          "effortSource": {
+            "type": "string",
+            "enum": ["configuration", "phase_table", "model_default"]
+          }
+        }
+      },
+      "ModelCatalog": {
+        "type": "object",
+        "required": [
+          "source",
+          "models",
+          "reasoningEfforts",
+          "controlSha",
+          "defaults"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["built_in", "file"],
+            "description": "Where the list came from; neither is checked against a Copilot account."
+          },
+          "models": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/CatalogModel"
+            }
+          },
+          "reasoningEfforts": {
+            "type": "array",
+            "description": "Every effort `startStory` and `setStoryModels` accept; a model may take fewer.",
+            "items": {
+              "$ref": "#/components/schemas/ReasoningEffort"
+            }
+          },
+          "controlSha": {
+            "description": "The control commit whose `phases.tsv` filled the defaults; null when it could not be read.",
+            "type": ["string", "null"],
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "defaults": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotDefault"
             }
           }
         }
@@ -2083,10 +2186,7 @@
             "type": "string"
           },
           "model": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "The model the run was started with; null leaves it to the agent profile."
           },
           "reasoningEffort": {
@@ -2118,17 +2218,11 @@
             "$ref": "#/components/schemas/Usage"
           },
           "replayOf": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "For runtime `replay`, the recorded worker run whose outputs were re-used. Its usage is not charged again, so `usage` is zero."
           },
           "exitReason": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "gate": {
             "description": "The verdict of the gate that judged this run's output, from the story's gate records.",
@@ -2171,11 +2265,7 @@
       },
       "StoryState": {
         "type": "object",
-        "required": [
-          "key",
-          "version",
-          "state"
-        ],
+        "required": ["key", "version", "state"],
         "additionalProperties": false,
         "properties": {
           "key": {
@@ -2192,12 +2282,7 @@
       },
       "GateVerdict": {
         "type": "object",
-        "required": [
-          "gate",
-          "code",
-          "result",
-          "message"
-        ],
+        "required": ["gate", "code", "result", "message"],
         "additionalProperties": false,
         "properties": {
           "gate": {
@@ -2210,14 +2295,7 @@
           },
           "result": {
             "type": "string",
-            "enum": [
-              "pass",
-              "fail",
-              "error",
-              "branch",
-              "halt",
-              "reject"
-            ]
+            "enum": ["pass", "fail", "error", "branch", "halt", "reject"]
           },
           "message": {
             "type": "string"
@@ -2254,16 +2332,10 @@
             "type": "string"
           },
           "recommendation": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "answer": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "answeredBy": {
             "oneOf": [
@@ -2292,10 +2364,7 @@
       },
       "AnswerRequest": {
         "type": "object",
-        "required": [
-          "answer",
-          "expectedVersion"
-        ],
+        "required": ["answer", "expectedVersion"],
         "additionalProperties": false,
         "properties": {
           "answer": {
@@ -2310,10 +2379,7 @@
       },
       "AnswerAccepted": {
         "type": "object",
-        "required": [
-          "story",
-          "question"
-        ],
+        "required": ["story", "question"],
         "additionalProperties": false,
         "properties": {
           "story": {
@@ -2345,10 +2411,7 @@
           },
           "source": {
             "type": "string",
-            "enum": [
-              "gate",
-              "human"
-            ],
+            "enum": ["gate", "human"],
             "description": "`gate`: an automated gate the harness ran. `human`: a recorded decision."
           },
           "gate": {
@@ -2372,10 +2435,7 @@
             ]
           },
           "message": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "actor": {
             "$ref": "#/components/schemas/Actor"
@@ -2397,11 +2457,7 @@
       },
       "DecisionRequest": {
         "type": "object",
-        "required": [
-          "gate",
-          "decision",
-          "expectedVersion"
-        ],
+        "required": ["gate", "decision", "expectedVersion"],
         "additionalProperties": false,
         "properties": {
           "gate": {
@@ -2411,11 +2467,7 @@
           },
           "decision": {
             "type": "string",
-            "enum": [
-              "approve",
-              "send_back",
-              "reject"
-            ],
+            "enum": ["approve", "send_back", "reject"],
             "description": "`approve` advances per the phase table. `send_back` returns the story to the phase\nthat produced the artifact with `reason` for the agent (counts a revision round).\n`reject` moves the story to `blocked`. `send_back` and `reject` require `reason`.\n"
           },
           "reason": {
@@ -2429,10 +2481,7 @@
       },
       "DecisionAccepted": {
         "type": "object",
-        "required": [
-          "story",
-          "record"
-        ],
+        "required": ["story", "record"],
         "additionalProperties": false,
         "properties": {
           "story": {
@@ -2509,7 +2558,7 @@
           "question.asked",
           "question.answered",
           "decision.recorded",
-          "consensus.resolved",
+          "review.resolved",
           "work_package.decided",
           "work.reopened",
           "story.unblocked",
@@ -2517,19 +2566,13 @@
           "implementation.reported",
           "review.reported",
           "story.routed",
-          "run.progress"
+          "run.progress",
+          "run.waiting"
         ]
       },
       "Event": {
         "type": "object",
-        "required": [
-          "id",
-          "storyKey",
-          "type",
-          "actor",
-          "payload",
-          "createdAt"
-        ],
+        "required": ["id", "storyKey", "type", "actor", "payload", "createdAt"],
         "additionalProperties": false,
         "properties": {
           "id": {
@@ -2546,7 +2589,7 @@
           },
           "payload": {
             "type": "object",
-            "description": "Type-specific JSON; never contains tokens or credentials. A `run.progress` payload is a `RunProgressPayload`."
+            "description": "Type-specific JSON; never contains tokens or credentials. A `run.progress` payload is a `RunProgressPayload`. A `run.waiting` event says the story's next run is waiting for a run slot: the server allows at most `maxActiveRuns` runs queued or running at once (`AHOY_MAX_ACTIVE_RUNS`, one worker container or pod each), and `activeRuns` were when the story looked. Its payload is `{phase, activeRuns, maxActiveRuns}`. It is written once when the wait starts; the story stays `ready` at the same version and its run is queued (`run.queued`) when a slot frees."
           },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
@@ -2558,12 +2601,7 @@
         "oneOf": [
           {
             "type": "object",
-            "required": [
-              "runId",
-              "kind",
-              "line",
-              "tool"
-            ],
+            "required": ["runId", "kind", "line", "tool"],
             "additionalProperties": false,
             "properties": {
               "runId": {
@@ -2596,12 +2634,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "runId",
-              "kind",
-              "line",
-              "text"
-            ],
+            "required": ["runId", "kind", "line", "text"],
             "additionalProperties": false,
             "properties": {
               "runId": {
@@ -2692,10 +2725,7 @@
       },
       "EventPage": {
         "type": "object",
-        "required": [
-          "items",
-          "lastEventId"
-        ],
+        "required": ["items", "lastEventId"],
         "additionalProperties": false,
         "properties": {
           "items": {

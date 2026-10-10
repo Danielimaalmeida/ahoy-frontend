@@ -1,11 +1,11 @@
-import { Component, signal } from "@angular/core";
-import { FormControl } from "@angular/forms";
-import type { QuestionAnswer } from "@ui/question-card/question-card";
-import { QuestionCard } from "@ui/question-card/question-card";
+import { Component, signal } from '@angular/core';
+import { FormControl } from '@angular/forms';
+import type { QuestionAnswer } from '@ui/question-card/question-card';
+import { QuestionCard } from '@ui/question-card/question-card';
 
 /** Gallery: the QuestionCard preview (open), plus the answered and disabled states. Sending only records it here. */
 @Component({
-  selector: "ah-kit-question-card",
+  selector: 'ah-kit-question-card',
   imports: [QuestionCard],
   template: `
     <div class="kit-stack">
@@ -29,7 +29,10 @@ import { QuestionCard } from "@ui/question-card/question-card";
         questionId="Q3"
         [round]="1"
         text="Should the PDF round tax per line or on the total?"
-        [recommendation]="{ agent: 'Cartographer', text: 'On the total, to match the amount charged.' }"
+        [recommendation]="{
+          agent: 'Cartographer',
+          text: 'On the total, to match the amount charged.',
+        }"
         disabled
         disabledReason="The voyage was stopped, so it isn't waiting for answers."
       />
@@ -38,19 +41,23 @@ import { QuestionCard } from "@ui/question-card/question-card";
 })
 export class KitQuestionCard {
   protected readonly q2Recommendation = {
-    agent: "Cartographer",
-    text: "Receipt page only for now; bulk download is better as its own story.",
+    agent: 'Cartographer',
+    text: 'Receipt page only for now; bulk download is better as its own story.',
   };
-  protected readonly answer = new FormControl("", { nonNullable: true });
+  protected readonly answer = new FormControl('', { nonNullable: true });
   protected readonly sent = signal<QuestionAnswer | null>(null);
   protected readonly answered: QuestionAnswer = {
-    text: "Include the VAT number and the full address block, same as the emailed receipt.",
-    actor: "sam@example.com",
-    at: "2026-10-06T09:12:00Z",
-    note: "used the recommendation, edited",
+    text: 'Include the VAT number and the full address block, same as the emailed receipt.',
+    actor: 'sam@example.com',
+    at: '2026-10-06T09:12:00Z',
+    note: 'used the recommendation, edited',
   };
 
   protected send(text: string): void {
-    this.sent.set({ text, actor: "alex@example.com", at: new Date().toISOString() });
+    this.sent.set({
+      text,
+      actor: 'alex@example.com',
+      at: new Date().toISOString(),
+    });
   }
 }

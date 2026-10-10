@@ -1,9 +1,9 @@
-import { Component } from "@angular/core";
-import { BudgetMeter } from "@ui/budget-meter/budget-meter";
+import { Component } from '@angular/core';
+import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 
 /** Gallery: the BudgetMeter preview (header and run forms), then empty, 41 % and full, which never change colour. */
 @Component({
-  selector: "ah-kit-budget-meter",
+  selector: 'ah-kit-budget-meter',
   imports: [BudgetMeter],
   template: `
     <ah-budget-meter [spentNanoAiu]="spent" [capNanoAiu]="cap" />
@@ -19,9 +19,24 @@ import { BudgetMeter } from "@ui/budget-meter/budget-meter";
       <span class="ah-hint">this run, live</span>
     </div>
     <div class="kit-row">
-      <ah-budget-meter [spentNanoAiu]="0" [capNanoAiu]="cap" [width]="64" variant="compact" />
-      <ah-budget-meter [spentNanoAiu]="spent" [capNanoAiu]="cap" [width]="64" variant="compact" />
-      <ah-budget-meter [spentNanoAiu]="cap" [capNanoAiu]="cap" [width]="64" variant="compact" />
+      <ah-budget-meter
+        [spentNanoAiu]="0"
+        [capNanoAiu]="cap"
+        [width]="64"
+        variant="compact"
+      />
+      <ah-budget-meter
+        [spentNanoAiu]="spent"
+        [capNanoAiu]="cap"
+        [width]="64"
+        variant="compact"
+      />
+      <ah-budget-meter
+        [spentNanoAiu]="cap"
+        [capNanoAiu]="cap"
+        [width]="64"
+        variant="compact"
+      />
     </div>
   `,
 })

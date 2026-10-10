@@ -1,7 +1,7 @@
-import { HttpClient } from "@angular/common/http";
-import { Injectable, inject, signal, type Signal } from "@angular/core";
-import { firstValueFrom } from "rxjs";
-import { isRecord } from "@core/api/guard-kit";
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, signal, type Signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { isRecord } from '@core/api/guard-kit';
 
 /**
  * Runtime configuration, read from `/config.json` at start-up. In production whatever serves the app (the nginx of the
@@ -22,12 +22,12 @@ export interface AppConfig {
 
 /** Values used when `/config.json` is missing or invalid. */
 export const DEFAULT_APP_CONFIG: AppConfig = {
-  apiBase: "/api/v1",
-  actor: "dev@example.com",
+  apiBase: '/api/v1',
+  actor: 'dev@example.com',
 };
 
 /** Where the runtime configuration is served from. */
-export const APP_CONFIG_URL = "/config.json";
+export const APP_CONFIG_URL = '/config.json';
 
 /** How long start-up waits for it: a stalled request must not keep the app from opening. */
 export const APP_CONFIG_TIMEOUT_MS = 5_000;
@@ -45,33 +45,48 @@ export interface ParsedAppConfig {
 
 /** The `apiBase` for a document value: a same-origin path without trailing slashes, or null. */
 function readApiBase(value: unknown): string | null {
-  if (typeof value !== "string" || !SAME_ORIGIN_PATH.test(value) || DOT_SEGMENT.test(value)) return null;
-  const trimmed = value.replace(/\/+$/, "");
-  return trimmed === "" ? null : trimmed;
+  if (
+    typeof value !== 'string' ||
+    !SAME_ORIGIN_PATH.test(value) ||
+    DOT_SEGMENT.test(value)
+  )
+    return null;
+  const trimmed = value.replace(/\/+$/, '');
+  return trimmed === '' ? null : trimmed;
 }
 
 /** The `actor` for a document value: 1 to 200 characters without control characters, or null. */
 function readActor(value: unknown): string | null {
-  if (typeof value !== "string") return null;
+  if (typeof value !== 'string') return null;
   const trimmed = value.trim();
-  return trimmed.length >= 1 && trimmed.length <= 200 && !/\p{Cc}/u.test(trimmed) ? trimmed : null;
+  return trimmed.length >= 1 &&
+    trimmed.length <= 200 &&
+    !/\p{Cc}/u.test(trimmed)
+    ? trimmed
+    : null;
 }
 
 /** The `jiraBaseUrl` for a document value: an http(s) URL without credentials, query or fragment, or null. */
 function readJiraBaseUrl(value: unknown): string | null {
-  if (typeof value !== "string") return null;
+  if (typeof value !== 'string') return null;
   try {
     const url = new URL(value);
-    const plain = url.username === "" && url.password === "" && url.search === "" && url.hash === "";
-    if ((url.protocol !== "https:" && url.protocol !== "http:") || !plain) return null;
-    return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+    const plain =
+      url.username === '' &&
+      url.password === '' &&
+      url.search === '' &&
+      url.hash === '';
+    if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !plain)
+      return null;
+    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
   } catch {
     return null;
   }
 }
 
 /** Whether a document sets a field: a missing field and a `null` both mean "not set". */
-const isSet = (value: unknown): boolean => value !== undefined && value !== null;
+const isSet = (value: unknown): boolean =>
+  value !== undefined && value !== null;
 
 /**
  * Reads a `/config.json` document. Everything in it is untrusted: a field that is not set (missing, `null`, or an empty
@@ -79,20 +94,35 @@ const isSet = (value: unknown): boolean => value !== undefined && value !== null
  * `problems`. Fields the app does not know are ignored.
  */
 export function parseAppConfig(document: unknown): ParsedAppConfig {
-  if (!isRecord(document)) return { config: DEFAULT_APP_CONFIG, problems: ["it must be a JSON object"] };
+  if (!isRecord(document))
+    return {
+      config: DEFAULT_APP_CONFIG,
+      problems: ['it must be a JSON object'],
+    };
   const problems: string[] = [];
 
-  const apiBase = readApiBase(document["apiBase"]);
-  if (isSet(document["apiBase"]) && apiBase === null) {
-    problems.push("apiBase must be a path on this origin, such as /api/v1");
+  const apiBase = readApiBase(document['apiBase']);
+  if (isSet(document['apiBase']) && apiBase === null) {
+    problems.push('apiBase must be a path on this origin, such as /api/v1');
   }
-  const actor = readActor(document["actor"]);
-  if (isSet(document["actor"]) && actor === null) {
-    problems.push("actor must be 1 to 200 characters without control characters");
+  const actor = readActor(document['actor']);
+  if (isSet(document['actor']) && actor === null) {
+    problems.push(
+      'actor must be 1 to 200 characters without control characters'
+    );
   }
-  const jiraBaseUrl = document["jiraBaseUrl"] === "" ? null : readJiraBaseUrl(document["jiraBaseUrl"]);
-  if (isSet(document["jiraBaseUrl"]) && document["jiraBaseUrl"] !== "" && jiraBaseUrl === null) {
-    problems.push("jiraBaseUrl must be an http(s) URL without credentials, query or fragment");
+  const jiraBaseUrl =
+    document['jiraBaseUrl'] === ''
+      ? null
+      : readJiraBaseUrl(document['jiraBaseUrl']);
+  if (
+    isSet(document['jiraBaseUrl']) &&
+    document['jiraBaseUrl'] !== '' &&
+    jiraBaseUrl === null
+  ) {
+    problems.push(
+      'jiraBaseUrl must be an http(s) URL without credentials, query or fragment'
+    );
   }
 
   return {
@@ -110,11 +140,20 @@ export function parseAppConfig(document: unknown): ParsedAppConfig {
  * with `try_files`, answers an unknown path with its `index.html`) and a request that fails or stalls all give the
  * defaults without a complaint: that is how the app runs without the file.
  */
-export async function loadAppConfig(http: HttpClient): Promise<ParsedAppConfig> {
-  const defaults: ParsedAppConfig = { config: DEFAULT_APP_CONFIG, problems: [] };
+export async function loadAppConfig(
+  http: HttpClient
+): Promise<ParsedAppConfig> {
+  const defaults: ParsedAppConfig = {
+    config: DEFAULT_APP_CONFIG,
+    problems: [],
+  };
   try {
     const body = await firstValueFrom(
-      http.get(APP_CONFIG_URL, { responseType: "text", cache: "no-cache", timeout: APP_CONFIG_TIMEOUT_MS }),
+      http.get(APP_CONFIG_URL, {
+        responseType: 'text',
+        cache: 'no-cache',
+        timeout: APP_CONFIG_TIMEOUT_MS,
+      })
     );
     let document: unknown;
     try {
@@ -129,7 +168,7 @@ export async function loadAppConfig(http: HttpClient): Promise<ParsedAppConfig> 
 }
 
 /** Holds the runtime configuration: the defaults until `initAppConfig` has read `/config.json`. */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class AppConfigStore {
   private readonly value = signal<AppConfig>(DEFAULT_APP_CONFIG);
 
@@ -147,6 +186,7 @@ export async function initAppConfig(): Promise<void> {
   const http = inject(HttpClient);
   const store = inject(AppConfigStore);
   const { config, problems } = await loadAppConfig(http);
-  for (const problem of problems) console.warn(`config.json: ${problem}; using the default`);
+  for (const problem of problems)
+    console.warn(`config.json: ${problem}; using the default`);
   store.set(config);
 }

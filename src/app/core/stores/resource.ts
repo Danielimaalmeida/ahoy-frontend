@@ -1,18 +1,23 @@
-import { signal } from "@angular/core";
-import type { ApiError, ApiResult } from "@core/api/api-error";
+import { signal } from '@angular/core';
+import type { ApiError, ApiResult } from '@core/api/api-error';
 
 /**
  * Where a resource stands. `idle` until someone first needs it; `loading` only while there is no value yet (a refresh
  * keeps the old value on screen and the status `ready`); `error` keeps the last value, if there was one.
  */
-export type ResourceStatus = "idle" | "loading" | "ready" | "error";
+export type ResourceStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 /** Decides which of two values to keep: the one in hand or the one just received. */
 export type Reconcile<T> = (current: T | undefined, next: T) => T;
 
 /** Keeps the received value unless the one in hand has a greater `version` (a command answer can beat a slow GET). */
-export function newestVersion<T extends { readonly version: number }>(current: T | undefined, next: T): T {
-  return current !== undefined && current.version > next.version ? current : next;
+export function newestVersion<T extends { readonly version: number }>(
+  current: T | undefined,
+  next: T
+): T {
+  return current !== undefined && current.version > next.version
+    ? current
+    : next;
 }
 
 /**
@@ -20,7 +25,7 @@ export function newestVersion<T extends { readonly version: number }>(current: T
  * one is in flight runs once more after it, so the last answer always reflects the last request.
  */
 export class StoreResource<T> {
-  private readonly statusSignal = signal<ResourceStatus>("idle");
+  private readonly statusSignal = signal<ResourceStatus>('idle');
   private readonly valueSignal = signal<T | undefined>(undefined);
   private readonly errorSignal = signal<ApiError | null>(null);
   private readonly busySignal = signal(false);
@@ -40,7 +45,7 @@ export class StoreResource<T> {
 
   constructor(
     private readonly load: () => Promise<ApiResult<T>>,
-    private readonly reconcile: Reconcile<T> = (_current, next) => next,
+    private readonly reconcile: Reconcile<T> = (_current, next) => next
   ) {}
 
   /** Reads the resource from the API. Resolves when the value (or the error) is in place. */
@@ -61,7 +66,7 @@ export class StoreResource<T> {
     if (this.disposed) return;
     this.valueSignal.set(this.reconcile(this.valueSignal(), value));
     this.errorSignal.set(null);
-    this.statusSignal.set("ready");
+    this.statusSignal.set('ready');
   }
 
   /** Stops it for good: answers still in flight are dropped. */
@@ -75,14 +80,14 @@ export class StoreResource<T> {
     try {
       do {
         this.again = false;
-        if (this.valueSignal() === undefined) this.statusSignal.set("loading");
+        if (this.valueSignal() === undefined) this.statusSignal.set('loading');
         const result = await this.load();
         if (this.disposed) return;
         if (result.ok) {
           this.accept(result.value);
         } else {
           this.errorSignal.set(result.error);
-          this.statusSignal.set("error");
+          this.statusSignal.set('error');
         }
       } while (this.again);
     } finally {

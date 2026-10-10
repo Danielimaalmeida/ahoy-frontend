@@ -1,6 +1,6 @@
-import type { OnDestroy } from "@angular/core";
-import { Component, Injectable, inject, signal } from "@angular/core";
-import { Icon } from "@ui/icon/icon";
+import type { OnDestroy } from '@angular/core';
+import { Component, Injectable, inject, signal } from '@angular/core';
+import { Icon } from '@ui/icon/icon';
 
 /** How long a toast stays: about 5 seconds, as the Toast README says. */
 export const TOAST_DURATION_MS = 5000;
@@ -19,7 +19,7 @@ export interface ToastMessage {
  * `toasts.show("Answer to Q2 sent. 1 question left.")`. They disappear on their own and never hold an action; anything
  * someone must decide is a banner or a dialog. Render them with one `<ah-toast-host />` in the app shell.
  */
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class ToastService implements OnDestroy {
   private readonly queue = signal<readonly ToastMessage[]>([]);
   private readonly timers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -31,17 +31,18 @@ export class ToastService implements OnDestroy {
   /** Shows a toast for about 5 seconds. Blank text shows nothing. */
   show(text: string): void {
     const trimmed = text.trim();
-    if (trimmed === "") return;
+    if (trimmed === '') return;
     const id = this.nextId++;
     const next = [...this.queue(), { id, text: trimmed }];
-    for (const dropped of next.splice(0, Math.max(0, next.length - MAX_TOASTS))) this.forget(dropped.id);
+    for (const dropped of next.splice(0, Math.max(0, next.length - MAX_TOASTS)))
+      this.forget(dropped.id);
     this.queue.set(next);
     this.timers.set(
       id,
       setTimeout(() => {
         this.forget(id);
         this.queue.update((all) => all.filter((toast) => toast.id !== id));
-      }, TOAST_DURATION_MS),
+      }, TOAST_DURATION_MS)
     );
   }
 
@@ -61,7 +62,7 @@ export class ToastService implements OnDestroy {
  * page (`role="status"`, only additions announced) so a screen reader hears each toast as it arrives.
  */
 @Component({
-  selector: "ah-toast-host",
+  selector: 'ah-toast-host',
   imports: [Icon],
   template: `
     <div class="ah-toast-host" role="status" aria-atomic="false">

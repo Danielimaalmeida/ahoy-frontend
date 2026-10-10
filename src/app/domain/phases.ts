@@ -1,18 +1,18 @@
 /** The seven delivery phases, in order. `blocked` is a status, not a position (G12). */
 export const PHASES = [
-  "intake",
-  "planning",
-  "plan_review",
-  "implementation",
-  "pr_review",
-  "delivery_gate",
-  "done",
+  'intake',
+  'planning',
+  'plan_review',
+  'implementation',
+  'pr_review',
+  'delivery_gate',
+  'done',
 ] as const;
 
 /** A phase whose gate record is missing is named after its phase (G11). */
 export const GATE_FOR_PHASE = {
-  plan_review: "plan_accepted",
-  delivery_gate: "delivery_accepted",
+  plan_review: 'plan_accepted',
+  delivery_gate: 'delivery_accepted',
 } as const;
 
 /**

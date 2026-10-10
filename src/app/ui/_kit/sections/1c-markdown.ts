@@ -1,6 +1,6 @@
-import { Component } from "@angular/core";
-import { changedBlocks } from "@domain/text-diff";
-import { Markdown } from "@ui/markdown/markdown";
+import { Component } from '@angular/core';
+import { changedBlocks } from '@domain/text-diff';
+import { Markdown } from '@ui/markdown/markdown';
 
 const PREVIOUS = `## Summary
 
@@ -44,11 +44,13 @@ const HOSTILE = `Untrusted input stays inert:
 
 /** Gallery: a rendered plan in the reading style with its changed blocks marked, and hostile markdown kept inert. */
 @Component({
-  selector: "ah-kit-markdown",
+  selector: 'ah-kit-markdown',
   imports: [Markdown],
   template: `
     <div class="kit-grid-2">
-      <div class="ah-panel kit-pad"><ah-markdown [source]="next" [changedBlocks]="changed" /></div>
+      <div class="ah-panel kit-pad">
+        <ah-markdown [source]="next" [changedBlocks]="changed" />
+      </div>
       <div class="ah-panel kit-pad"><ah-markdown [source]="hostile" /></div>
     </div>
   `,

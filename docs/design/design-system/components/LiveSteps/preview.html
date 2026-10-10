@@ -1,15 +1,83 @@
 <!-- @dsCard group="Data" height=230 subtitle="A running agent's steps, read only" -->
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>LiveSteps preview</title></head>
-<body>
-<div class="ah" style="padding:16px;display:flex;flex-direction:column;gap:12px">
-<div class="ah-panel"><div class="ah-steps" role="log" aria-label="Live steps">
-  <div class="ah-steps__row"><span class="ah-steps__time">10:41:05</span><span class="ah-steps__icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"></path></svg></span><span class="ah-steps__tool">grep</span><span class="ah-steps__text ah-mono" style="font-weight:400">"assignRole|revokeRole" in services/</span></div>
-  <div class="ah-steps__row ah-steps__row--message"><span class="ah-steps__time">10:41:19</span><span class="ah-steps__icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"></path></svg></span><span class="ah-steps__tool">message</span><span class="ah-steps__text">Role changes go through RoleService only. An audit event can be written in the same transaction…</span></div>
-  <div class="ah-steps__gap">38 steps not shown</div>
-  <div class="ah-steps__row"><span class="ah-steps__time">10:43:40</span><span class="ah-steps__icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"></path></svg></span><span class="ah-steps__tool">bash</span><span class="ah-steps__text ah-mono" style="font-weight:400">psql -c '\d audit_events' PGPASSWORD=<span class="ah-redacted">[REDACTED]</span></span></div>
-</div></div>
-</div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>LiveSteps preview</title>
+  </head>
+  <body>
+    <div
+      class="ah"
+      style="padding: 16px; display: flex; flex-direction: column; gap: 12px"
+    >
+      <div class="ah-panel">
+        <div class="ah-steps" role="log" aria-label="Live steps">
+          <div class="ah-steps__row">
+            <span class="ah-steps__time">10:41:05</span
+            ><span class="ah-steps__icon"
+              ><svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 17l6-6-6-6M12 19h8"></path></svg></span
+            ><span class="ah-steps__tool">grep</span
+            ><span class="ah-steps__text ah-mono" style="font-weight: 400"
+              >"assignRole|revokeRole" in services/</span
+            >
+          </div>
+          <div class="ah-steps__row ah-steps__row--message">
+            <span class="ah-steps__time">10:41:19</span
+            ><span class="ah-steps__icon"
+              ><svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 5h16v11H8l-4 4z"></path></svg></span
+            ><span class="ah-steps__tool">message</span
+            ><span class="ah-steps__text"
+              >Role changes go through RoleService only. An audit event can be
+              written in the same transaction…</span
+            >
+          </div>
+          <div class="ah-steps__gap">38 steps not shown</div>
+          <div class="ah-steps__row">
+            <span class="ah-steps__time">10:43:40</span
+            ><span class="ah-steps__icon"
+              ><svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 17l6-6-6-6M12 19h8"></path></svg></span
+            ><span class="ah-steps__tool">bash</span
+            ><span class="ah-steps__text ah-mono" style="font-weight: 400"
+              >psql -c '\d audit_events' PGPASSWORD=<span class="ah-redacted"
+                >[REDACTED]</span
+              ></span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

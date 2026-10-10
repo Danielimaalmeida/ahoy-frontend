@@ -1,4 +1,4 @@
-import type { Clock, Timer } from "../clock";
+import type { Clock, Timer } from '../clock';
 
 interface Scheduled {
   readonly at: number;
@@ -9,7 +9,8 @@ interface Scheduled {
 
 /** Lets pending promise callbacks run: a few turns of the real event loop, with no delay. For specs only. */
 export async function settle(): Promise<void> {
-  for (let i = 0; i < 10; i++) await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+  for (let i = 0; i < 10; i++)
+    await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
 }
 
 /**
@@ -21,7 +22,7 @@ export class FakeClock implements Clock {
   private seq = 0;
   private timers: Scheduled[] = [];
 
-  constructor(start = "2026-10-06T10:00:00.000Z") {
+  constructor(start = '2026-10-06T10:00:00.000Z') {
     this.time = Date.parse(start);
   }
 
@@ -30,7 +31,12 @@ export class FakeClock implements Clock {
   }
 
   schedule(ms: number, callback: () => void): Timer {
-    const timer: Scheduled = { at: this.time + Math.max(0, ms), seq: this.seq++, callback, active: true };
+    const timer: Scheduled = {
+      at: this.time + Math.max(0, ms),
+      seq: this.seq++,
+      callback,
+      active: true,
+    };
     this.timers.push(timer);
     return {
       cancel: () => {
@@ -57,7 +63,9 @@ export class FakeClock implements Clock {
     const target = this.time + ms;
     await settle();
     for (;;) {
-      const due = this.timers.filter((t) => t.active && t.at <= target).sort((a, b) => a.at - b.at || a.seq - b.seq)[0];
+      const due = this.timers
+        .filter((t) => t.active && t.at <= target)
+        .sort((a, b) => a.at - b.at || a.seq - b.seq)[0];
       if (due === undefined) break;
       due.active = false;
       this.time = due.at;

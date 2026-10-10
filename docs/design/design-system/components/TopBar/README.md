@@ -10,4 +10,5 @@ The app header on every screen: logo, the three destinations, search, the Live i
 - The bar wraps on narrow screens; it is never sticky.
 
 ## Angular
+
 `<ah-top-bar [needsYou]="count" [live]="connected">` with `routerLink` + `routerLinkActive` setting `aria-current`.

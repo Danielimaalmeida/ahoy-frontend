@@ -1,13 +1,13 @@
-import { signal } from "@angular/core";
-import { isEvent } from "@core/api/guards";
-import type { AhoyEvent } from "@core/api/types";
-import type { AuthStrategy } from "@core/auth/auth-strategy";
-import type { Clock, Timer } from "./clock";
-import { isEventId } from "./event-id";
-import { parseSseStream, type SseMessage } from "./sse";
+import { signal } from '@angular/core';
+import { isEvent } from '@core/api/guards';
+import type { AhoyEvent } from '@core/api/types';
+import type { AuthStrategy } from '@core/auth/auth-strategy';
+import type { Clock, Timer } from './clock';
+import { isEventId } from './event-id';
+import { parseSseStream, type SseMessage } from './sse';
 
 /** Where the live stream stands. `offline` is also the state of a stream that was never started or was stopped. */
-export type StreamStatus = "connecting" | "live" | "reconnecting" | "offline";
+export type StreamStatus = 'connecting' | 'live' | 'reconnecting' | 'offline';
 
 /** The timing of reconnection (plan, lane 2B). */
 export const RECONNECT = {
@@ -29,7 +29,10 @@ export const RECONNECT = {
  */
 export function reconnectDelay(attempt: number, random: () => number): number {
   const exponential = RECONNECT.initialMs * 2 ** Math.min(attempt, 16);
-  return Math.min(RECONNECT.maxMs, Math.round(exponential * (0.8 + 0.4 * random())));
+  return Math.min(
+    RECONNECT.maxMs,
+    Math.round(exponential * (0.8 + 0.4 * random()))
+  );
 }
 
 /** What the client needs; all of it is injected so that tests run on fakes. */
@@ -67,7 +70,7 @@ export interface EventStreamQuery {
  * It uses no zone and keeps no subscription: {@link stop} aborts the request and cancels every timer.
  */
 export class EventStreamClient {
-  private readonly statusSignal = signal<StreamStatus>("offline");
+  private readonly statusSignal = signal<StreamStatus>('offline');
   private readonly degradedSignal = signal(false);
   private readonly lastEventIdSignal = signal<string | null>(null);
   private readonly refusedSignal = signal<number | null>(null);
@@ -91,17 +94,17 @@ export class EventStreamClient {
 
   constructor(
     private readonly deps: EventStreamDeps,
-    private readonly query: EventStreamQuery = {},
+    private readonly query: EventStreamQuery = {}
   ) {}
 
   /** Opens the stream. Does nothing when it is already open or opening. */
   start(): void {
-    if (this.statusSignal() !== "offline") return;
+    if (this.statusSignal() !== 'offline') return;
     this.generation++;
     this.attempt = 0;
     this.failures = [];
     this.refusedSignal.set(null);
-    this.set("connecting", false);
+    this.set('connecting', false);
     void this.connect(this.generation);
   }
 
@@ -111,16 +114,17 @@ export class EventStreamClient {
     this.clearTimers();
     this.controller?.abort();
     this.controller = null;
-    this.set("offline", false);
+    this.set('offline', false);
   }
 
   private url(): string {
     const params = new URLSearchParams();
-    if (this.query.story !== undefined) params.set("story", this.query.story);
+    if (this.query.story !== undefined) params.set('story', this.query.story);
     // Once the stream has seen an event, `Last-Event-ID` says where to resume; `after` is only for the first time.
-    if (this.lastEventIdSignal() === null && this.query.after !== undefined) params.set("after", this.query.after);
+    if (this.lastEventIdSignal() === null && this.query.after !== undefined)
+      params.set('after', this.query.after);
     const search = params.toString();
-    return `${this.deps.base}/events/stream${search === "" ? "" : `?${search}`}`;
+    return `${this.deps.base}/events/stream${search === '' ? '' : `?${search}`}`;
   }
 
   private async connect(generation: number): Promise<void> {
@@ -130,13 +134,16 @@ export class EventStreamClient {
     try {
       const auth = await this.deps.auth.headers();
       if (!current()) return;
-      const headers: Record<string, string> = { ...auth, Accept: "text/event-stream" };
+      const headers: Record<string, string> = {
+        ...auth,
+        Accept: 'text/event-stream',
+      };
       const lastEventId = this.lastEventIdSignal();
-      if (lastEventId !== null) headers["Last-Event-ID"] = lastEventId;
+      if (lastEventId !== null) headers['Last-Event-ID'] = lastEventId;
       const response = await this.deps.fetch(this.url(), {
-        method: "GET",
+        method: 'GET',
         headers,
-        cache: "no-store",
+        cache: 'no-store',
         signal: controller.signal,
       });
       if (!current()) return;
@@ -162,7 +169,7 @@ export class EventStreamClient {
   }
 
   private opened(generation: number): void {
-    this.set("live", false);
+    this.set('live', false);
     this.stableTimer = this.deps.clock.schedule(RECONNECT.stableMs, () => {
       if (generation !== this.generation) return;
       this.attempt = 0;
@@ -177,7 +184,11 @@ export class EventStreamClient {
     } catch {
       parsed = undefined;
     }
-    const id = isEventId(message.lastEventId) ? message.lastEventId : isEvent(parsed) ? parsed.id : null;
+    const id = isEventId(message.lastEventId)
+      ? message.lastEventId
+      : isEvent(parsed)
+        ? parsed.id
+        : null;
     if (id !== null) this.lastEventIdSignal.set(id);
     if (isEvent(parsed)) this.deps.onEvent(parsed);
   }
@@ -186,9 +197,14 @@ export class EventStreamClient {
     this.clearTimers();
     this.controller = null;
     const now = this.deps.clock.now().getTime();
-    this.failures = [...this.failures.filter((t) => now - t < RECONNECT.degradedWindowMs), now];
-    const degraded = this.degradedSignal() || this.failures.length >= RECONNECT.degradedFailures;
-    this.set("reconnecting", degraded);
+    this.failures = [
+      ...this.failures.filter((t) => now - t < RECONNECT.degradedWindowMs),
+      now,
+    ];
+    const degraded =
+      this.degradedSignal() ||
+      this.failures.length >= RECONNECT.degradedFailures;
+    this.set('reconnecting', degraded);
     const delay = reconnectDelay(this.attempt++, this.deps.random);
     this.retryTimer = this.deps.clock.schedule(delay, () => {
       if (generation === this.generation) void this.connect(generation);
@@ -200,7 +216,7 @@ export class EventStreamClient {
     this.clearTimers();
     this.controller = null;
     this.refusedSignal.set(status);
-    this.set("offline", false);
+    this.set('offline', false);
   }
 
   private clearTimers(): void {
@@ -211,7 +227,8 @@ export class EventStreamClient {
   }
 
   private set(status: StreamStatus, degraded: boolean): void {
-    const changed = this.statusSignal() !== status || this.degradedSignal() !== degraded;
+    const changed =
+      this.statusSignal() !== status || this.degradedSignal() !== degraded;
     this.statusSignal.set(status);
     this.degradedSignal.set(degraded);
     if (changed) this.deps.onChange?.();
@@ -220,8 +237,8 @@ export class EventStreamClient {
 
 /** Whether an answer is an event stream; a dev server's HTML page with a 200 is not. */
 function isEventStream(response: Response): boolean {
-  const type = response.headers.get("Content-Type") ?? "";
-  return type.toLowerCase().startsWith("text/event-stream");
+  const type = response.headers.get('Content-Type') ?? '';
+  return type.toLowerCase().startsWith('text/event-stream');
 }
 
 /** Lets go of a body that will not be read. */

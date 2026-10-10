@@ -1,19 +1,38 @@
-import { DestroyRef, Injectable, computed, inject, signal } from "@angular/core";
-import { ApiClient } from "@core/api/api-client";
-import { isNotFound, type ApiError } from "@core/api/api-error";
-import { readStoryState, type StoryStateView } from "@core/api/story-state";
-import type { ApiResult } from "@core/api/api-error";
-import type { AhoyEvent, ModelPlan, Run, Story } from "@core/api/types";
-import { CurrentUser } from "@core/auth/current-user";
-import { CommandRunner, type CommandOutcome } from "@core/commands/command-runner";
-import type { StoryEventsHandle } from "@core/stores/story-events-feed";
-import { StoryStore, type StoryHandle, type StoryResourceName } from "@core/stores/story-store";
-import { remainingNano } from "@domain/aiu";
-import { isStoryKey } from "@domain/identifiers";
-import { blockedAt, lastHalt, openGateKey, revisingGateKey, type HaltRecord } from "./voyage-events";
+import {
+  DestroyRef,
+  Injectable,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { ApiClient } from '@core/api/api-client';
+import { isNotFound, type ApiError } from '@core/api/api-error';
+import { readStoryState, type StoryStateView } from '@core/api/story-state';
+import type { ApiResult } from '@core/api/api-error';
+import type { AhoyEvent, ModelPlan, Run, Story } from '@core/api/types';
+import { CurrentUser } from '@core/auth/current-user';
+import {
+  CommandRunner,
+  type CommandOutcome,
+} from '@core/commands/command-runner';
+import type { StoryEventsHandle } from '@core/stores/story-events-feed';
+import {
+  StoryStore,
+  type StoryHandle,
+  type StoryResourceName,
+} from '@core/stores/story-store';
+import { remainingNano } from '@domain/aiu';
+import { isStoryKey } from '@domain/identifiers';
+import {
+  blockedAt,
+  lastHalt,
+  openGateKey,
+  revisingGateKey,
+  type HaltRecord,
+} from './voyage-events';
 
 /** Where the voyage page stands: the story is being read, is there, does not exist, or could not be read. */
-export type VoyageStatus = "loading" | "ready" | "error" | "notFound";
+export type VoyageStatus = 'loading' | 'ready' | 'error' | 'notFound';
 
 /** The numbers on the section tabs; null until the list is read. */
 export interface VoyageCounts {
@@ -24,12 +43,12 @@ export interface VoyageCounts {
 
 /** The resources the voyage page keeps fresh while it is open (the tabs watch more through {@link VoyageContext.handle}). */
 export const CONTEXT_RESOURCES: readonly StoryResourceName[] = [
-  "story",
-  "state",
-  "runs",
-  "questions",
-  "gates",
-  "models",
+  'story',
+  'state',
+  'runs',
+  'questions',
+  'gates',
+  'models',
 ];
 
 /** The open voyage and its event history, held together. */
@@ -56,13 +75,18 @@ export class VoyageContext {
   private readonly opened = signal<string | null>(null);
 
   /** The voyage's commands, one at a time, with `expectedVersion` = {@link version} (plan §5.5). */
-  readonly commands = new CommandRunner({ version: () => this.version(), refresh: () => this.refresh() });
+  readonly commands = new CommandRunner({
+    version: () => this.version(),
+    refresh: () => this.refresh(),
+  });
 
   /** The Jira key of the open voyage; null before {@link open}. */
   readonly key = computed(() => this.held()?.handle.key ?? null);
 
   /** The story as last read or as the last command answered it; null until it is read. */
-  readonly story = computed<Story | null>(() => this.held()?.handle.story.value() ?? null);
+  readonly story = computed<Story | null>(
+    () => this.held()?.handle.story.value() ?? null
+  );
 
   /** The version the user sees, sent back as `expectedVersion`. */
   readonly version = computed(() => this.story()?.version ?? null);
@@ -70,7 +94,9 @@ export class VoyageContext {
   /** Why the story could not be read, while the page has no story to show. */
   readonly error = computed<ApiError | null>(() => {
     const held = this.held();
-    return held !== null && held.handle.story.value() === undefined ? held.handle.story.error() : null;
+    return held !== null && held.handle.story.value() === undefined
+      ? held.handle.story.error()
+      : null;
   });
 
   /**
@@ -78,11 +104,11 @@ export class VoyageContext {
    * key, which is never sent) or `error`.
    */
   readonly status = computed<VoyageStatus>(() => {
-    if (this.story() !== null) return "ready";
-    if (this.opened() !== null && this.held() === null) return "notFound";
+    if (this.story() !== null) return 'ready';
+    if (this.opened() !== null && this.held() === null) return 'notFound';
     const error = this.error();
-    if (error === null) return "loading";
-    return isNotFound(error) ? "notFound" : "error";
+    if (error === null) return 'loading';
+    return isNotFound(error) ? 'notFound' : 'error';
   });
 
   /** What the UI reads of the state document; null until it is read. */
@@ -92,28 +118,40 @@ export class VoyageContext {
   });
 
   /** The model plan; null until it is read. */
-  readonly models = computed<ModelPlan | null>(() => this.held()?.handle.models.value() ?? null);
+  readonly models = computed<ModelPlan | null>(
+    () => this.held()?.handle.models.value() ?? null
+  );
 
   /** What is left of the budget (`cap − spent`, never below zero), in nano-AIU: what a resume may spend. */
   readonly remainingNanoAiu = computed(() => {
     const story = this.story();
-    return story === null ? 0 : remainingNano(story.budgetNanoAiu, story.spentNanoAiu);
+    return story === null
+      ? 0
+      : remainingNano(story.budgetNanoAiu, story.spentNanoAiu);
   });
 
   /** The voyage's runs, as the API lists them; empty until read. */
-  readonly runs = computed<readonly Run[]>(() => this.held()?.handle.runs.value() ?? []);
+  readonly runs = computed<readonly Run[]>(
+    () => this.held()?.handle.runs.value() ?? []
+  );
 
   /** The event history without `run.progress`, oldest first. */
-  readonly events = computed<readonly AhoyEvent[]>(() => this.held()?.events.events() ?? []);
+  readonly events = computed<readonly AhoyEvent[]>(
+    () => this.held()?.events.events() ?? []
+  );
 
   /** The key of the human gate the voyage waits on (G11), only while it is `awaiting_decision`. */
   readonly gateKey = computed(() => {
     const story = this.story();
-    return story?.status === "awaiting_decision" ? openGateKey(this.events(), story.phase) : null;
+    return story?.status === 'awaiting_decision'
+      ? openGateKey(this.events(), story.phase)
+      : null;
   });
 
   /** How many send-backs a gate takes (G10); 4 unless the state says otherwise. */
-  readonly revisionCeiling = computed(() => this.state()?.revisionCeiling ?? null);
+  readonly revisionCeiling = computed(
+    () => this.state()?.revisionCeiling ?? null
+  );
 
   /**
    * The revision round (G10): one more than the send-backs of the open gate, or of the gate whose rounds the voyage is
@@ -121,7 +159,7 @@ export class VoyageContext {
    */
   readonly revisionRound = computed(() => {
     const state = this.state();
-    const phase = this.story()?.phase ?? "";
+    const phase = this.story()?.phase ?? '';
     const gate = this.gateKey() ?? revisingGateKey(this.events(), phase);
     if (state === null || gate === null) return null;
     return (state.revisions.get(gate) ?? 0) + 1;
@@ -134,10 +172,14 @@ export class VoyageContext {
   });
 
   /** For a blocked voyage, the phase it was in when it ran aground (G12); null otherwise. */
-  readonly stoppedAt = computed(() => (this.story()?.phase === "blocked" ? blockedAt(this.events()) : null));
+  readonly stoppedAt = computed(() =>
+    this.story()?.phase === 'blocked' ? blockedAt(this.events()) : null
+  );
 
   /** The last `story.halted` of the voyage (G7), whatever its status now. */
-  readonly lastHalt = computed<HaltRecord | null>(() => lastHalt(this.events()));
+  readonly lastHalt = computed<HaltRecord | null>(() =>
+    lastHalt(this.events())
+  );
 
   /** The counts on the Questions, Runs and Gates tabs. */
   readonly counts = computed<VoyageCounts>(() => {
@@ -176,25 +218,36 @@ export class VoyageContext {
     const held = this.held();
     if (held === null) return;
     const { handle, events } = held;
-    await Promise.all([...CONTEXT_RESOURCES.map((name) => handle[name].refresh()), events.refresh()]);
+    await Promise.all([
+      ...CONTEXT_RESOURCES.map((name) => handle[name].refresh()),
+      events.refresh(),
+    ]);
   }
 
   /** Drops anchor: `stopStory` with the reason. The `202` story goes to the store. */
   stop(reason: string): Promise<CommandOutcome<Story>> {
-    return this.storyCommand((key, expectedVersion) => this.api.stopStory(key, { expectedVersion, reason }));
+    return this.storyCommand((key, expectedVersion) =>
+      this.api.stopStory(key, { expectedVersion, reason })
+    );
   }
 
   /** Weighs anchor: `resumeStory`, with the reason only when there is one. */
   resume(reason: string): Promise<CommandOutcome<Story>> {
     return this.storyCommand((key, expectedVersion) =>
-      this.api.resumeStory(key, { expectedVersion, ...(reason !== "" ? { reason } : {}) }),
+      this.api.resumeStory(key, {
+        expectedVersion,
+        ...(reason !== '' ? { reason } : {}),
+      })
     );
   }
 
   /** Sets the total cap: `setStoryBudget` with the new cap in nano-AIU and the reason. */
-  setBudget(budgetNanoAiu: number, reason: string): Promise<CommandOutcome<Story>> {
+  setBudget(
+    budgetNanoAiu: number,
+    reason: string
+  ): Promise<CommandOutcome<Story>> {
     return this.storyCommand((key, expectedVersion) =>
-      this.api.setStoryBudget(key, { expectedVersion, budgetNanoAiu, reason }),
+      this.api.setStoryBudget(key, { expectedVersion, budgetNanoAiu, reason })
     );
   }
 
@@ -203,10 +256,10 @@ export class VoyageContext {
    * lists. Skipped while no voyage is open.
    */
   private storyCommand(
-    send: (key: string, expectedVersion: number) => Promise<ApiResult<Story>>,
+    send: (key: string, expectedVersion: number) => Promise<ApiResult<Story>>
   ): Promise<CommandOutcome<Story>> {
     const key = this.key();
-    if (key === null) return Promise.resolve({ kind: "skipped" });
+    if (key === null) return Promise.resolve({ kind: 'skipped' });
     return this.commands.run((expectedVersion) => send(key, expectedVersion), {
       onOk: (story) => this.store.accept(story),
     });

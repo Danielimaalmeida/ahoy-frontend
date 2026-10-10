@@ -1,0 +1,12 @@
+name: Run Tests
+
+on: [pull_request]
+
+jobs:
+  unit-tests:
+    name: unit tests
+    uses: ATC-GitHub/reusable-workflows/.github/workflows/vitest-coverage-reusable.yml@main
+    with:
+      runner: "['atc-ubuntu-latest']"
+      node-version: '24'
+    secrets: inherit

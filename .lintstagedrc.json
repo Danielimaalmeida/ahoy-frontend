@@ -1,0 +1,5 @@
+{
+  "src/**/*.{ts,html,js}": ["eslint --fix", "npm run format:fix"],
+  "src/**/*.{scss,sass,css}": ["stylelint --fix", "npm run format:fix"],
+  "*.json": ["npm run format:fix"]
+}

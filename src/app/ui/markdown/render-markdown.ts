@@ -1,6 +1,6 @@
-import { markdownBlocks } from "@domain/text-diff";
-import type { RendererObject, Token, Tokens } from "marked";
-import { Marked } from "marked";
+import { markdownBlocks } from '@domain/text-diff';
+import type { RendererObject, Token, Tokens } from 'marked';
+import { Marked } from 'marked';
 
 /** Options of `renderMarkdown`. */
 export interface RenderMarkdownOptions {
@@ -12,14 +12,14 @@ export interface RenderMarkdownOptions {
 }
 
 /** The URL schemes a link may use; anything else (`javascript:`, `data:`, relative paths) renders as plain text. */
-const LINK_PROTOCOLS: readonly string[] = ["http:", "https:", "mailto:"];
+const LINK_PROTOCOLS: readonly string[] = ['http:', 'https:', 'mailto:'];
 
 const ESCAPES: Readonly<Record<string, string>> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
 };
 
 /** Escapes text for an HTML text node or a double-quoted attribute. */
@@ -46,27 +46,37 @@ export function safeHref(href: string): string | null {
 const SAFE_RENDERER: RendererObject = {
   html(token: Tokens.HTML | Tokens.Tag): string {
     const escaped = escapeHtml(token.text);
-    return "block" in token && token.block ? `<p>${escaped}</p>\n` : escaped;
+    return 'block' in token && token.block ? `<p>${escaped}</p>\n` : escaped;
   },
   image({ text }: Tokens.Image): string {
-    return text.trim() === "" ? "" : `<span class="ah-markdown__image">[image: ${escapeHtml(text)}]</span>`;
+    return text.trim() === ''
+      ? ''
+      : `<span class="ah-markdown__image">[image: ${escapeHtml(text)}]</span>`;
   },
   link({ href, title, tokens }: Tokens.Link): string {
     const label = this.parser.parseInline(tokens);
     const safe = safeHref(href);
     if (safe === null) return label;
-    const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+    const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
     return `<a href="${escapeHtml(safe)}"${titleAttr} target="_blank" rel="noopener noreferrer">${label}</a>`;
   },
   checkbox({ checked }: Tokens.Checkbox): string {
-    return `<span class="ah-markdown__task">${checked ? "[x]" : "[ ]"}</span> `;
+    return `<span class="ah-markdown__task">${checked ? '[x]' : '[ ]'}</span> `;
   },
 };
 
-const MARKED = new Marked({ async: false, gfm: true, breaks: false, renderer: SAFE_RENDERER });
+const MARKED = new Marked({
+  async: false,
+  gfm: true,
+  breaks: false,
+  renderer: SAFE_RENDERER,
+});
 
 /** Where each changed block sits in the source, as `[start, end)` offsets. Blocks not found are skipped. */
-function changedRanges(source: string, changed: ReadonlySet<number>): [number, number][] {
+function changedRanges(
+  source: string,
+  changed: ReadonlySet<number>
+): [number, number][] {
   const ranges: [number, number][] = [];
   let cursor = 0;
   markdownBlocks(source).forEach((block, index) => {
@@ -84,8 +94,11 @@ function changedRanges(source: string, changed: ReadonlySet<number>): [number, n
  * With `changedBlocks`, the top-level blocks they name are wrapped in `<div class="ah-mark">`; a block that
  * spans several of them (a loose list) is marked when any of them changed.
  */
-export function renderMarkdown(source: string, options: RenderMarkdownOptions = {}): string {
-  const text = source.replace(/\r\n?/g, "\n");
+export function renderMarkdown(
+  source: string,
+  options: RenderMarkdownOptions = {}
+): string {
+  const text = source.replace(/\r\n?/g, '\n');
   const changed = new Set(options.changedBlocks ?? []);
   if (changed.size === 0) return MARKED.parse(text, { async: false });
 
@@ -96,7 +109,7 @@ export function renderMarkdown(source: string, options: RenderMarkdownOptions = 
   for (const token of tokens) {
     const start = offset;
     offset += token.raw.length;
-    if (token.type === "space") continue;
+    if (token.type === 'space') continue;
     const marked = ranges.some(([from, to]) => from < offset && to > start);
     const last = groups[groups.length - 1];
     if (last !== undefined && last.marked === marked) last.tokens.push(token);
@@ -108,5 +121,5 @@ export function renderMarkdown(source: string, options: RenderMarkdownOptions = 
       const html = MARKED.parser(group.tokens);
       return group.marked ? `<div class="ah-mark">${html}</div>\n` : html;
     })
-    .join("");
+    .join('');
 }

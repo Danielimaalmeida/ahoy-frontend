@@ -1,6 +1,3 @@
-# Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
-# Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 1890d5aa84819480275f79060cae5d529be21ee8
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -45,6 +42,7 @@ tags:
   - name: decisions
   - name: artifacts
   - name: events
+  - name: jira
 paths:
   /health:
     get:
@@ -53,13 +51,72 @@ paths:
       summary: Liveness and database reachability.
       security: []
       responses:
-        "200":
+        '200':
           description: The API and database are reachable.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Health" }
-        "503":
-          $ref: "#/components/responses/Problem"
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          $ref: '#/components/responses/Problem'
+  /models:
+    get:
+      operationId: listModels
+      tags: [stories]
+      summary: The models a person may choose for a story's phases, and what each phase runs on by default.
+      description: |
+        The catalogue is configured on the server, not read from a Copilot account: `AHOY_MODEL_CATALOG` (a JSON
+        file, `source: file`) or the built-in list (`source: built_in`). Every model the server's phase
+        configuration names is listed too, so a default is always one a person can pick. `reasoningEfforts` of a
+        model is null when the catalogue does not say which efforts it takes; `[]` means it takes none.
+
+        Choosing a model outside this list is still accepted by `startStory` and `setStoryModels`: whether the owner's
+        Copilot account may use a model, and whether it takes the effort, is checked by the worker before it sends a
+        prompt (0 AIU); a run refused there fails and the story halts.
+
+        `defaults` is what each slot of a story started now (without `controlRef`) runs on when nobody chooses: the
+        server's phase configuration, then `phases.tsv` at the control repo's HEAD (`controlSha`). When the control
+        repo cannot be read, `controlSha` is null and the defaults come from the configuration alone.
+      responses:
+        '200':
+          description: The model catalogue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelCatalog' }
+        '401': { $ref: '#/components/responses/Problem' }
+  /jira/backlog:
+    get:
+      operationId: listJiraBacklog
+      tags: [jira]
+      summary: All Jira Stories, Tasks and Bugs matching the configured backlog query.
+      description: |
+        Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
+        WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
+        `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
+        `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
+        AND "Feature Team" = aaa AND Team in (34115) ORDER BY Rank ASC`.
+
+        The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
+        board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
+        issues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters
+        are accepted. The backend follows all Jira search pages and preserves rank order; `total` equals
+        the number of returned items. Issues already started in Ahoy are not excluded.
+
+        A successful result is cached on the server for 30 seconds. No stale or partial result is served.
+        Missing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout
+        errors, malformed responses or pagination inconsistencies return `503 unavailable`.
+        This lookup never starts a delivery or spends AIU.
+      responses:
+        '200':
+          description: Complete backlog in Jira rank order.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JiraBacklog' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /stories:
     get:
       operationId: listStories
@@ -68,64 +125,63 @@ paths:
         - name: status
           in: query
           required: false
-          schema: { $ref: "#/components/schemas/StoryStatus" }
-        - $ref: "#/components/parameters/Limit"
-        - $ref: "#/components/parameters/Cursor"
+          schema: { $ref: '#/components/schemas/StoryStatus' }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
       responses:
-        "200":
+        '200':
           description: Stories, most recently updated first.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/StoryPage" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/StoryPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
     post:
       operationId: startStory
       tags: [stories]
       summary: Start a story at intake. The actor becomes its owner and runs bill the owner's token.
       description: |
         `models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,
-        `implementation` and the two `pr_review` reviewer slots); what is left out runs on the server's phase
+        `implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase
         configuration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows
         what each phase will get. A `models` that names an unknown slot, an empty choice, a model or effort no run can
-        take, `null`, or two reviewer slots on one model (the consensus gate rejects two reviews from one model)
-        answers `400 validation_failed`, and no story is created.
+        take, or `null` answers `400 validation_failed`, and no story is created.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/StartStoryRequest" }
+            schema: { $ref: '#/components/schemas/StartStoryRequest' }
       responses:
-        "201":
+        '201':
           description: The story was created in phase `intake`; the reconciler will dispatch Navigator.
           headers:
             Location:
               schema: { type: string }
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
-        "422": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /stories/{key}:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: getStory
       tags: [stories]
       responses:
-        "200":
+        '200':
           description: The story.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/stop:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     post:
       operationId: stopStory
       tags: [stories]
@@ -134,20 +190,20 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/StopStoryRequest" }
+            schema: { $ref: '#/components/schemas/StopStoryRequest' }
       responses:
-        "202":
+        '202':
           description: The story is halted; cancellation of an active run completes asynchronously.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/resume:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     post:
       operationId: resumeStory
       tags: [stories]
@@ -156,20 +212,20 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ResumeStoryRequest" }
+            schema: { $ref: '#/components/schemas/ResumeStoryRequest' }
       responses:
-        "202":
+        '202':
           description: The story is ready to be stepped again.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/budget:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     post:
       operationId: setStoryBudget
       tags: [stories]
@@ -182,42 +238,42 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/SetStoryBudgetRequest" }
+            schema: { $ref: '#/components/schemas/SetStoryBudgetRequest' }
       responses:
-        "202":
+        '202':
           description: The story with its new budget.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/models:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: getStoryModels
       tags: [stories]
       summary: The model and reasoning effort each phase of the story runs on, and where each comes from.
       description: |
-        One entry per slot of the story's model plan: `intake`, `planning`, `implementation`, and one per reviewer
-        lens of `pr_review` (`review-design`, `review-defect`). `chosen` is what a person chose for the story;
+        One entry per slot of the story's model plan: `intake`, `planning`, `implementation`, and `review` (the one
+        reviewer of `pr_review`). `chosen` is what a person chose for the story;
         `model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the
         pinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another
         model is not carried onto a model a person chose, which then runs at its own default effort. Whether the
         owner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker
         before it sends a prompt (0 AIU); a run refused there fails and the story halts.
       responses:
-        "200":
+        '200':
           description: The story's model plan.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ModelPlan" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/ModelPlan' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
     post:
       operationId: setStoryModels
       tags: [stories]
@@ -225,31 +281,30 @@ paths:
       description: |
         Each slot given a choice holds exactly that choice; `null` gives the slot back to the configured defaults;
         slots left out are unchanged. Takes effect when the reconciler next queues a run of that phase: an active run
-        keeps the model it started with. Status and phase do not change. The two reviewer slots must end up on
-        different models (the consensus gate rejects two reviews from one model), or the request answers `400`.
+        keeps the model it started with. Status and phase do not change.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/SetStoryModelsRequest" }
+            schema: { $ref: '#/components/schemas/SetStoryModelsRequest' }
       responses:
-        "202":
+        '202':
           description: The story's model plan after the change, at the story's new version.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ModelPlan" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/ModelPlan' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/runs:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: listStoryRuns
       tags: [runs]
       responses:
-        "200":
+        '200':
           description: The story's runs, oldest first.
           content:
             application/json:
@@ -260,36 +315,36 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: "#/components/schemas/Run" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
+                    items: { $ref: '#/components/schemas/Run' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /runs/{runId}:
     parameters:
       - name: runId
         in: path
         required: true
-        schema: { $ref: "#/components/schemas/RunId" }
+        schema: { $ref: '#/components/schemas/RunId' }
     get:
       operationId: getRun
       tags: [runs]
       responses:
-        "200":
+        '200':
           description: The run.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Run" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Run' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/questions:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: listQuestions
       tags: [questions]
       responses:
-        "200":
+        '200':
           description: Every question asked for the story, in order.
           content:
             application/json:
@@ -300,17 +355,17 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: "#/components/schemas/Question" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
+                    items: { $ref: '#/components/schemas/Question' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/questions/{questionId}/answer:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
       - name: questionId
         in: path
         required: true
-        schema: { type: string, pattern: "^Q[1-9][0-9]*$" }
+        schema: { type: string, pattern: '^Q[1-9][0-9]*$' }
     post:
       operationId: answerQuestion
       tags: [questions]
@@ -319,28 +374,28 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/AnswerRequest" }
+            schema: { $ref: '#/components/schemas/AnswerRequest' }
       responses:
-        "202":
+        '202':
           description: |
             The answer is recorded. When it was the last pending question the story becomes
             `ready` and the reconciler starts a new run of the same phase.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/AnswerAccepted" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/AnswerAccepted' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/gates:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: listGateRecords
       tags: [decisions]
       summary: Automated gate verdicts and human decisions, oldest first.
       responses:
-        "200":
+        '200':
           description: Gate records.
           content:
             application/json:
@@ -351,13 +406,13 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: "#/components/schemas/GateRecord" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
+                    items: { $ref: '#/components/schemas/GateRecord' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/decisions:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     post:
       operationId: decideHumanGate
       tags: [decisions]
@@ -366,49 +421,49 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DecisionRequest" }
+            schema: { $ref: '#/components/schemas/DecisionRequest' }
       responses:
-        "202":
+        '202':
           description: The decision is recorded and the story is routed per the phase table.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DecisionAccepted" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
-        "422": { $ref: "#/components/responses/Problem" }
-  /stories/{key}/consensus:
+              schema: { $ref: '#/components/schemas/DecisionAccepted' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/review:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     post:
-      operationId: resolveConsensus
+      operationId: resolveReview
       tags: [decisions]
-      summary: Settle a review the consensus gate halted on, by sending the work to rework or overriding the review.
+      summary: Settle a review the review gate halted on, by sending the work to rework or overriding the review.
       description: |
-        Only for a story halted on the consensus gate (`gate_halt` or `gate_rejected`) in a review phase. `rework`
+        Only for a story halted on the review gate (`gate_halt` or `gate_rejected`) in a review phase. `rework`
         charges the rework ceiling and reopens the work the findings name, or exactly `packages`. `override` moves the
         story to the delivery gate, which still needs a person's decision. Reworking may spend AIU.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ResolveConsensusRequest" }
+            schema: { $ref: '#/components/schemas/ResolveReviewRequest' }
       responses:
-        "202":
+        '202':
           description: The decision is applied; the story is ready (or terminal at `blocked`).
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
-        "422": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /stories/{key}/work-packages/{workPackageId}/decision:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
-      - $ref: "#/components/parameters/WorkPackageId"
+      - $ref: '#/components/parameters/StoryKey'
+      - $ref: '#/components/parameters/WorkPackageId'
     post:
       operationId: decideWorkPackage
       tags: [decisions]
@@ -421,21 +476,21 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/WorkPackageDecisionRequest" }
+            schema: { $ref: '#/components/schemas/WorkPackageDecisionRequest' }
       responses:
-        "202":
+        '202':
           description: The decision is applied and the story is ready.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
-        "422": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /stories/{key}/reopen:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     post:
       operationId: reopenWork
       tags: [decisions]
@@ -448,21 +503,21 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ReopenWorkRequest" }
+            schema: { $ref: '#/components/schemas/ReopenWorkRequest' }
       responses:
-        "202":
+        '202':
           description: The packages are reopened and the story is ready.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
-        "422": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /stories/{key}/unblock:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     post:
       operationId: unblockStory
       tags: [stories]
@@ -475,21 +530,21 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/UnblockStoryRequest" }
+            schema: { $ref: '#/components/schemas/UnblockStoryRequest' }
       responses:
-        "202":
+        '202':
           description: The story is ready again.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Story" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
-        "422": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
   /stories/{key}/state:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: getStoryState
       tags: [stories]
@@ -499,27 +554,27 @@ paths:
         packages, child repositories, reviews, human gates, revisions, the gate rejection, `gate_results` (from the
         gate records) and `decision_log` (from the `decisions` table). The field names follow the control
         repo's `state.json`; fields the agents wrote that no rule reads are passed through as they wrote them. A
-        reviewer's report shows the fields the consensus gate reads; the report as written is in its
+        reviewer's report shows the fields the review gate reads; the report as written is in its
         `review.reported` event.
       responses:
-        "200":
+        '200':
           description: The state document.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/StoryState" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/StoryState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/artifacts:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: listArtifacts
       tags: [artifacts]
       summary: The story's current artifact set (Jira snapshot, plan and the other files its agents wrote).
       responses:
-        "200":
+        '200':
           description: Current artifacts.
           content:
             application/json:
@@ -533,18 +588,18 @@ paths:
                     minimum: 0
                   items:
                     type: array
-                    items: { $ref: "#/components/schemas/Artifact" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
+                    items: { $ref: '#/components/schemas/Artifact' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/artifacts/content:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
       - name: path
         in: query
         required: true
         description: Story-relative path, as listed by `listArtifacts`.
-        schema: { $ref: "#/components/schemas/ArtifactPath" }
+        schema: { $ref: '#/components/schemas/ArtifactPath' }
       - name: revision
         in: query
         required: false
@@ -559,9 +614,9 @@ paths:
       operationId: getArtifactContent
       tags: [artifacts]
       responses:
-        "304":
+        '304':
           description: The content has not changed since the given ETag.
-        "200":
+        '200':
           description: The artifact bytes.
           headers:
             ETag:
@@ -574,28 +629,28 @@ paths:
               schema: {}
             text/plain:
               schema: { type: string }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/events:
     parameters:
-      - $ref: "#/components/parameters/StoryKey"
+      - $ref: '#/components/parameters/StoryKey'
     get:
       operationId: listStoryEvents
       tags: [events]
       parameters:
-        - $ref: "#/components/parameters/After"
-        - $ref: "#/components/parameters/Limit"
+        - $ref: '#/components/parameters/After'
+        - $ref: '#/components/parameters/Limit'
       responses:
-        "200":
+        '200':
           description: Events after `after`, oldest first.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/EventPage" }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
-        "404": { $ref: "#/components/responses/Problem" }
+              schema: { $ref: '#/components/schemas/EventPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /events/stream:
     get:
       operationId: streamEvents
@@ -612,21 +667,21 @@ paths:
           in: query
           required: false
           description: Only events for this story.
-          schema: { $ref: "#/components/schemas/StoryKey" }
-        - $ref: "#/components/parameters/After"
+          schema: { $ref: '#/components/schemas/StoryKey' }
+        - $ref: '#/components/parameters/After'
         - name: Last-Event-ID
           in: header
           required: false
-          schema: { $ref: "#/components/schemas/EventId" }
+          schema: { $ref: '#/components/schemas/EventId' }
       responses:
-        "200":
+        '200':
           description: An open event stream.
-          x-sse-data-schema: { $ref: "#/components/schemas/Event" }
+          x-sse-data-schema: { $ref: '#/components/schemas/Event' }
           content:
             text/event-stream:
               schema: { type: string }
-        "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     webeam:
@@ -644,12 +699,12 @@ components:
       name: key
       in: path
       required: true
-      schema: { $ref: "#/components/schemas/StoryKey" }
+      schema: { $ref: '#/components/schemas/StoryKey' }
     WorkPackageId:
       name: workPackageId
       in: path
       required: true
-      schema: { $ref: "#/components/schemas/WorkPackageId" }
+      schema: { $ref: '#/components/schemas/WorkPackageId' }
     Limit:
       name: limit
       in: query
@@ -666,25 +721,25 @@ components:
       in: query
       required: false
       description: Return only events with a greater ID.
-      schema: { $ref: "#/components/schemas/EventId" }
+      schema: { $ref: '#/components/schemas/EventId' }
   responses:
     Problem:
       description: An error, as RFC 9457 problem details.
       content:
         application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+          schema: { $ref: '#/components/schemas/Problem' }
   schemas:
     StoryKey:
       type: string
-      pattern: "^[A-Z][A-Z0-9]+-[0-9]+$"
+      pattern: '^[A-Z][A-Z0-9]+-[0-9]+$'
       maxLength: 40
     RunId:
       type: string
-      pattern: "^[A-Za-z0-9_.-]+$"
+      pattern: '^[A-Za-z0-9_.-]+$'
       maxLength: 120
     EventId:
       type: string
-      pattern: "^[0-9]+$"
+      pattern: '^[0-9]+$'
       maxLength: 20
     Actor:
       type: string
@@ -702,7 +757,7 @@ components:
       description: Optimistic-concurrency version; increases on every story change.
     ArtifactPath:
       type: string
-      pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]*(/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$"
+      pattern: '^[A-Za-z0-9_][A-Za-z0-9_.-]*(/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$'
       maxLength: 300
     Phase:
       type: string
@@ -710,11 +765,47 @@ components:
       examples: [intake, planning, plan_review, implementation, blocked, done]
     StoryStatus:
       type: string
-      enum: [ready, running, awaiting_input, awaiting_decision, halted, terminal]
+      enum:
+        [ready, running, awaiting_input, awaiting_decision, halted, terminal]
       description: |
         `ready`: the reconciler will act. `running`: a worker run is active.
         `awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.
         `halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.
+    JiraSprint:
+      type: object
+      additionalProperties: false
+      required: [id, name, state]
+      properties:
+        id: { type: integer, minimum: 0 }
+        name: { type: string, minLength: 1 }
+        state: { type: string, enum: [active, future, closed] }
+    JiraBacklogIssue:
+      type: object
+      additionalProperties: false
+      required: [key, issueType, summary, status, priority, updatedAt, sprint]
+      properties:
+        key: { type: string, pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$' }
+        issueType: { type: string, enum: [Story, Task, Bug] }
+        summary: { type: string, minLength: 1 }
+        status: { type: string, minLength: 1 }
+        priority: { type: [string, 'null'], minLength: 1 }
+        updatedAt: { type: string, format: date-time }
+        sprint:
+          description: |
+            Selected from Jira customfield_10000: active first, then future, then closed; the lowest
+            sprint ID breaks ties. Null when unassigned. Supports Jira Server's legacy sprint strings.
+          oneOf:
+            - $ref: '#/components/schemas/JiraSprint'
+            - type: 'null'
+    JiraBacklog:
+      type: object
+      additionalProperties: false
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/JiraBacklogIssue' }
+        total: { type: integer, minimum: 0 }
     Health:
       type: object
       required: [status, database]
@@ -757,14 +848,14 @@ components:
             properties:
               path: { type: string }
               message: { type: string }
-        currentVersion: { $ref: "#/components/schemas/Version" }
+        currentVersion: { $ref: '#/components/schemas/Version' }
     Usage:
       type: object
       required: [requests, nanoAiu, inputTokens, outputTokens]
       additionalProperties: false
       properties:
         requests: { type: integer, minimum: 0 }
-        nanoAiu: { $ref: "#/components/schemas/NanoAiu" }
+        nanoAiu: { $ref: '#/components/schemas/NanoAiu' }
         inputTokens: { type: integer, minimum: 0 }
         outputTokens: { type: integer, minimum: 0 }
     Story:
@@ -787,22 +878,23 @@ components:
         ]
       additionalProperties: false
       properties:
-        key: { $ref: "#/components/schemas/StoryKey" }
-        title: { type: [string, "null"] }
-        owner: { $ref: "#/components/schemas/Actor" }
-        phase: { $ref: "#/components/schemas/Phase" }
-        status: { $ref: "#/components/schemas/StoryStatus" }
-        haltReason: { type: [string, "null"] }
-        budgetNanoAiu: { $ref: "#/components/schemas/NanoAiu" }
-        spentNanoAiu: { $ref: "#/components/schemas/NanoAiu" }
+        key: { $ref: '#/components/schemas/StoryKey' }
+        title: { type: [string, 'null'] }
+        owner: { $ref: '#/components/schemas/Actor' }
+        phase: { $ref: '#/components/schemas/Phase' }
+        status: { $ref: '#/components/schemas/StoryStatus' }
+        haltReason: { type: [string, 'null'] }
+        budgetNanoAiu: { $ref: '#/components/schemas/NanoAiu' }
+        spentNanoAiu: { $ref: '#/components/schemas/NanoAiu' }
         controlSha:
           type: string
-          pattern: "^[0-9a-f]{40}$"
+          pattern: '^[0-9a-f]{40}$'
           description: Control-repo commit (agents, skills, phase rules) pinned for the story's life.
-        currentRunId: { oneOf: [{ $ref: "#/components/schemas/RunId" }, { type: "null" }] }
-        version: { $ref: "#/components/schemas/Version" }
-        createdAt: { $ref: "#/components/schemas/Timestamp" }
-        updatedAt: { $ref: "#/components/schemas/Timestamp" }
+        currentRunId:
+          { oneOf: [{ $ref: '#/components/schemas/RunId' }, { type: 'null' }] }
+        version: { $ref: '#/components/schemas/Version' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
     StoryPage:
       type: object
       required: [items, nextCursor]
@@ -810,14 +902,14 @@ components:
       properties:
         items:
           type: array
-          items: { $ref: "#/components/schemas/Story" }
-        nextCursor: { type: [string, "null"] }
+          items: { $ref: '#/components/schemas/Story' }
+        nextCursor: { type: [string, 'null'] }
     StartStoryRequest:
       type: object
       required: [key, budgetNanoAiu]
       additionalProperties: false
       properties:
-        key: { $ref: "#/components/schemas/StoryKey" }
+        key: { $ref: '#/components/schemas/StoryKey' }
         title: { type: string, maxLength: 500 }
         budgetNanoAiu:
           type: integer
@@ -825,10 +917,10 @@ components:
           description: Hard AIU cap for every run of the story together.
         controlRef:
           type: string
-          pattern: "^[0-9a-f]{40}$"
+          pattern: '^[0-9a-f]{40}$'
           description: Control-repo commit to pin. Defaults to the configured control repo's HEAD.
         models:
-          $ref: "#/components/schemas/ModelPlanRequest"
+          $ref: '#/components/schemas/ModelPlanRequest'
           description: >-
             The model and reasoning effort for each phase; a slot left out runs on the server's configured defaults.
             Can be changed later with `setStoryModels`.
@@ -837,19 +929,19 @@ components:
       required: [expectedVersion, reason]
       additionalProperties: false
       properties:
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
         reason: { type: string, minLength: 1, maxLength: 2000 }
     WorkPackageId:
       type: string
-      pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
       maxLength: 64
       description: A work package id from the plan, e.g. `WP1`.
     RepoAlias:
       type: string
-      pattern: "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
       maxLength: 64
       description: A plan alias of a child repository, as in `child_repos[].repo`.
-    ResolveConsensusRequest:
+    ResolveReviewRequest:
       type: object
       required: [decision, reason, expectedVersion]
       additionalProperties: false
@@ -860,12 +952,12 @@ components:
         reason: { type: string, minLength: 1, maxLength: 5000 }
         packages:
           type: array
-          description: "`rework` only: reopen exactly these packages instead of the ones the findings name."
+          description: '`rework` only: reopen exactly these packages instead of the ones the findings name.'
           minItems: 1
           maxItems: 50
           uniqueItems: true
-          items: { $ref: "#/components/schemas/WorkPackageId" }
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+          items: { $ref: '#/components/schemas/WorkPackageId' }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
     WorkPackageDecisionRequest:
       type: object
       required: [decision, reason, expectedVersion]
@@ -875,26 +967,32 @@ components:
           type: string
           enum: [retry, accept]
         reason: { type: string, minLength: 1, maxLength: 5000 }
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
     ReopenWorkRequest:
       type: object
       required: [note, expectedVersion]
       additionalProperties: false
       properties:
-        note: { type: string, minLength: 1, maxLength: 5000, description: The rework note the implementer gets. }
+        note:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 5000,
+            description: The rework note the implementer gets.,
+          }
         packages:
           type: array
           minItems: 1
           maxItems: 50
           uniqueItems: true
-          items: { $ref: "#/components/schemas/WorkPackageId" }
+          items: { $ref: '#/components/schemas/WorkPackageId' }
         repos:
           type: array
           minItems: 1
           maxItems: 50
           uniqueItems: true
-          items: { $ref: "#/components/schemas/RepoAlias" }
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+          items: { $ref: '#/components/schemas/RepoAlias' }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
     UnblockStoryRequest:
       type: object
       required: [reason, expectedVersion]
@@ -907,21 +1005,21 @@ components:
           minItems: 1
           maxItems: 50
           uniqueItems: true
-          items: { $ref: "#/components/schemas/RepoAlias" }
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+          items: { $ref: '#/components/schemas/RepoAlias' }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
     ResumeStoryRequest:
       type: object
       required: [expectedVersion]
       additionalProperties: false
       properties:
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
         reason: { type: string, maxLength: 2000 }
     SetStoryBudgetRequest:
       type: object
       required: [expectedVersion, budgetNanoAiu, reason]
       additionalProperties: false
       properties:
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
         budgetNanoAiu:
           type: integer
           minimum: 1
@@ -929,13 +1027,11 @@ components:
         reason: { type: string, minLength: 1, maxLength: 2000 }
     ModelSlot:
       type: string
-      enum: [intake, planning, implementation, review-design, review-defect]
-      description: >-
-        A part of the story that runs on one model: a phase, or for `pr_review` one reviewer lens (`review-design` is
-        the `design-fit` lens, `review-defect` the `defect-failure` lens).
+      enum: [intake, planning, implementation, review]
+      description: A part of the story that runs on one model, by phase; `review` is the one reviewer of `pr_review`.
     ModelId:
       type: string
-      pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._:/-]*$'
       maxLength: 200
       description: A Copilot model id, e.g. `claude-sonnet-5` or `gpt-5.6-terra`.
       examples: [claude-sonnet-5, gpt-5.6-terra]
@@ -949,63 +1045,74 @@ components:
       additionalProperties: false
       description: A model, a reasoning effort, or both; what is left out comes from the defaults.
       properties:
-        model: { $ref: "#/components/schemas/ModelId" }
-        reasoningEffort: { $ref: "#/components/schemas/ReasoningEffort" }
+        model: { $ref: '#/components/schemas/ModelId' }
+        reasoningEffort: { $ref: '#/components/schemas/ReasoningEffort' }
     ModelPlanRequest:
       type: object
       additionalProperties: false
       description: A choice per slot.
       properties:
-        intake: { $ref: "#/components/schemas/ModelChoice" }
-        planning: { $ref: "#/components/schemas/ModelChoice" }
-        implementation: { $ref: "#/components/schemas/ModelChoice" }
-        review-design: { $ref: "#/components/schemas/ModelChoice" }
-        review-defect: { $ref: "#/components/schemas/ModelChoice" }
+        intake: { $ref: '#/components/schemas/ModelChoice' }
+        planning: { $ref: '#/components/schemas/ModelChoice' }
+        implementation: { $ref: '#/components/schemas/ModelChoice' }
+        review: { $ref: '#/components/schemas/ModelChoice' }
     ModelPlanChange:
       type: object
       minProperties: 1
       additionalProperties: false
       description: A choice per slot to change; `null` gives a slot back to the configured defaults.
       properties:
-        intake: { oneOf: [{ $ref: "#/components/schemas/ModelChoice" }, { type: "null" }] }
-        planning: { oneOf: [{ $ref: "#/components/schemas/ModelChoice" }, { type: "null" }] }
-        implementation: { oneOf: [{ $ref: "#/components/schemas/ModelChoice" }, { type: "null" }] }
-        review-design: { oneOf: [{ $ref: "#/components/schemas/ModelChoice" }, { type: "null" }] }
-        review-defect: { oneOf: [{ $ref: "#/components/schemas/ModelChoice" }, { type: "null" }] }
+        intake:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/ModelChoice' }, { type: 'null' }],
+          }
+        planning:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/ModelChoice' }, { type: 'null' }],
+          }
+        implementation:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/ModelChoice' }, { type: 'null' }],
+          }
+        review:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/ModelChoice' }, { type: 'null' }],
+          }
     SetStoryModelsRequest:
       type: object
       required: [expectedVersion, models]
       additionalProperties: false
       properties:
-        expectedVersion: { $ref: "#/components/schemas/Version" }
-        models: { $ref: "#/components/schemas/ModelPlanChange" }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
+        models: { $ref: '#/components/schemas/ModelPlanChange' }
         reason: { type: string, minLength: 1, maxLength: 2000 }
     SlotModel:
       type: object
-      required: [slot, phase, lens, chosen, model, reasoningEffort, modelSource, effortSource]
+      required:
+        [slot, phase, chosen, model, reasoningEffort, modelSource, effortSource]
       additionalProperties: false
       properties:
-        slot: { $ref: "#/components/schemas/ModelSlot" }
-        phase: { $ref: "#/components/schemas/Phase" }
-        lens:
-          type: [string, "null"]
-          enum: [design-fit, defect-failure, null]
-          description: The reviewer lens of a `pr_review` slot.
+        slot: { $ref: '#/components/schemas/ModelSlot' }
+        phase: { $ref: '#/components/schemas/Phase' }
         chosen:
           description: What a person chose for the story; null when the slot runs on the defaults.
           oneOf:
-            - $ref: "#/components/schemas/ModelChoice"
-            - type: "null"
+            - $ref: '#/components/schemas/ModelChoice'
+            - type: 'null'
         model:
           description: The model the slot's next run gets; null leaves it to the agent profile.
           oneOf:
-            - $ref: "#/components/schemas/ModelId"
-            - type: "null"
+            - $ref: '#/components/schemas/ModelId'
+            - type: 'null'
         reasoningEffort:
           description: The effort the slot's next run gets; null is the model's own default.
           oneOf:
-            - $ref: "#/components/schemas/ReasoningEffort"
-            - type: "null"
+            - $ref: '#/components/schemas/ReasoningEffort'
+            - type: 'null'
         modelSource:
           type: string
           enum: [revision, story, configuration, phase_table, agent_profile]
@@ -1021,11 +1128,78 @@ components:
       required: [storyKey, version, slots]
       additionalProperties: false
       properties:
-        storyKey: { $ref: "#/components/schemas/StoryKey" }
-        version: { $ref: "#/components/schemas/Version" }
+        storyKey: { $ref: '#/components/schemas/StoryKey' }
+        version: { $ref: '#/components/schemas/Version' }
         slots:
           type: array
-          items: { $ref: "#/components/schemas/SlotModel" }
+          items: { $ref: '#/components/schemas/SlotModel' }
+    CatalogModel:
+      type: object
+      required: [id, label, reasoningEfforts]
+      additionalProperties: false
+      properties:
+        id: { $ref: '#/components/schemas/ModelId' }
+        label:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 200,
+            description: What a person reads; the id when none is configured.,
+          }
+        reasoningEfforts:
+          description: The efforts the model takes (`[]`, none); null when the catalogue does not say.
+          oneOf:
+            - type: array
+              items: { $ref: '#/components/schemas/ReasoningEffort' }
+            - type: 'null'
+    SlotDefault:
+      type: object
+      required: [slot, phase, model, reasoningEffort, modelSource, effortSource]
+      additionalProperties: false
+      description: What a slot of a story started now runs on when nobody chooses (a `SlotModel` without `chosen`).
+      properties:
+        slot: { $ref: '#/components/schemas/ModelSlot' }
+        phase: { $ref: '#/components/schemas/Phase' }
+        model:
+          description: The model; null leaves it to the agent profile.
+          oneOf:
+            - $ref: '#/components/schemas/ModelId'
+            - type: 'null'
+        reasoningEffort:
+          description: The effort; null is the model's own default.
+          oneOf:
+            - $ref: '#/components/schemas/ReasoningEffort'
+            - type: 'null'
+        modelSource:
+          type: string
+          enum: [configuration, phase_table, agent_profile]
+        effortSource:
+          type: string
+          enum: [configuration, phase_table, model_default]
+    ModelCatalog:
+      type: object
+      required: [source, models, reasoningEfforts, controlSha, defaults]
+      additionalProperties: false
+      properties:
+        source:
+          type: string
+          enum: [built_in, file]
+          description: Where the list came from; neither is checked against a Copilot account.
+        models:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/CatalogModel' }
+        reasoningEfforts:
+          type: array
+          description: Every effort `startStory` and `setStoryModels` accept; a model may take fewer.
+          items: { $ref: '#/components/schemas/ReasoningEffort' }
+        controlSha:
+          description: The control commit whose `phases.tsv` filled the defaults; null when it could not be read.
+          type: [string, 'null']
+          pattern: '^[0-9a-f]{40}$'
+        defaults:
+          type: array
+          items: { $ref: '#/components/schemas/SlotDefault' }
     RunStatus:
       type: string
       enum:
@@ -1067,47 +1241,55 @@ components:
         ]
       additionalProperties: false
       properties:
-        id: { $ref: "#/components/schemas/RunId" }
-        storyKey: { $ref: "#/components/schemas/StoryKey" }
-        phase: { $ref: "#/components/schemas/Phase" }
+        id: { $ref: '#/components/schemas/RunId' }
+        storyKey: { $ref: '#/components/schemas/StoryKey' }
+        phase: { $ref: '#/components/schemas/Phase' }
         agent: { type: string }
         model:
-          type: [string, "null"]
+          type: [string, 'null']
           description: The model the run was started with; null leaves it to the agent profile.
         reasoningEffort:
           description: The reasoning effort the run was started with; null is the model's own default.
           oneOf:
-            - $ref: "#/components/schemas/ReasoningEffort"
-            - type: "null"
-        status: { $ref: "#/components/schemas/RunStatus" }
+            - $ref: '#/components/schemas/ReasoningEffort'
+            - type: 'null'
+        status: { $ref: '#/components/schemas/RunStatus' }
         runtime:
           type: string
           description: Where the worker ran, e.g. `docker`, `k8s` (one Kubernetes Job), `replay` (offline re-use of recorded evidence) or `fake`.
-        controlSha: { type: string, pattern: "^[0-9a-f]{40}$" }
-        budgetNanoAiu: { $ref: "#/components/schemas/NanoAiu" }
-        usage: { $ref: "#/components/schemas/Usage" }
+        controlSha: { type: string, pattern: '^[0-9a-f]{40}$' }
+        budgetNanoAiu: { $ref: '#/components/schemas/NanoAiu' }
+        usage: { $ref: '#/components/schemas/Usage' }
         replayOf:
-          type: [string, "null"]
+          type: [string, 'null']
           description: >-
             For runtime `replay`, the recorded worker run whose outputs were re-used. Its usage is
             not charged again, so `usage` is zero.
-        exitReason: { type: [string, "null"] }
+        exitReason: { type: [string, 'null'] }
         gate:
           description: The verdict of the gate that judged this run's output, from the story's gate records.
           oneOf:
-            - $ref: "#/components/schemas/GateVerdict"
-            - type: "null"
-        startedBy: { $ref: "#/components/schemas/Actor" }
-        createdAt: { $ref: "#/components/schemas/Timestamp" }
-        startedAt: { oneOf: [{ $ref: "#/components/schemas/Timestamp" }, { type: "null" }] }
-        endedAt: { oneOf: [{ $ref: "#/components/schemas/Timestamp" }, { type: "null" }] }
+            - $ref: '#/components/schemas/GateVerdict'
+            - type: 'null'
+        startedBy: { $ref: '#/components/schemas/Actor' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        startedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
+        endedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
     StoryState:
       type: object
       required: [key, version, state]
       additionalProperties: false
       properties:
-        key: { $ref: "#/components/schemas/StoryKey" }
-        version: { $ref: "#/components/schemas/Version" }
+        key: { $ref: '#/components/schemas/StoryKey' }
+        version: { $ref: '#/components/schemas/Version' }
         state:
           type: object
           description: >-
@@ -1120,21 +1302,38 @@ components:
       properties:
         gate: { type: string }
         code: { type: integer, minimum: 0, maximum: 5 }
-        result: { type: string, enum: [pass, fail, error, branch, halt, reject] }
+        result:
+          { type: string, enum: [pass, fail, error, branch, halt, reject] }
         message: { type: string }
     Question:
       type: object
-      required: [id, round, runId, text, recommendation, answer, answeredBy, answeredAt, consumed]
+      required:
+        [
+          id,
+          round,
+          runId,
+          text,
+          recommendation,
+          answer,
+          answeredBy,
+          answeredAt,
+          consumed,
+        ]
       additionalProperties: false
       properties:
-        id: { type: string, pattern: "^Q[1-9][0-9]*$" }
+        id: { type: string, pattern: '^Q[1-9][0-9]*$' }
         round: { type: integer, minimum: 1 }
-        runId: { $ref: "#/components/schemas/RunId" }
+        runId: { $ref: '#/components/schemas/RunId' }
         text: { type: string }
-        recommendation: { type: [string, "null"] }
-        answer: { type: [string, "null"] }
-        answeredBy: { oneOf: [{ $ref: "#/components/schemas/Actor" }, { type: "null" }] }
-        answeredAt: { oneOf: [{ $ref: "#/components/schemas/Timestamp" }, { type: "null" }] }
+        recommendation: { type: [string, 'null'] }
+        answer: { type: [string, 'null'] }
+        answeredBy:
+          { oneOf: [{ $ref: '#/components/schemas/Actor' }, { type: 'null' }] }
+        answeredAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
         consumed: { type: boolean }
     AnswerRequest:
       type: object
@@ -1142,33 +1341,39 @@ components:
       additionalProperties: false
       properties:
         answer: { type: string, minLength: 1, maxLength: 20000 }
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
     AnswerAccepted:
       type: object
       required: [story, question]
       additionalProperties: false
       properties:
-        story: { $ref: "#/components/schemas/Story" }
-        question: { $ref: "#/components/schemas/Question" }
+        story: { $ref: '#/components/schemas/Story' }
+        question: { $ref: '#/components/schemas/Question' }
     GateRecord:
       type: object
-      required: [id, source, gate, phase, outcome, message, actor, runId, createdAt]
+      required:
+        [id, source, gate, phase, outcome, message, actor, runId, createdAt]
       additionalProperties: false
       properties:
-        id: { type: string, pattern: "^[0-9]+$" }
+        id: { type: string, pattern: '^[0-9]+$' }
         source:
           type: string
           enum: [gate, human]
-          description: "`gate`: an automated gate the harness ran. `human`: a recorded decision."
-        gate: { type: string, description: "Gate name (`intake`, `plan`) or human gate key (`plan_accepted`)." }
-        phase: { $ref: "#/components/schemas/Phase" }
+          description: '`gate`: an automated gate the harness ran. `human`: a recorded decision.'
+        gate:
+          {
+            type: string,
+            description: 'Gate name (`intake`, `plan`) or human gate key (`plan_accepted`).',
+          }
+        phase: { $ref: '#/components/schemas/Phase' }
         outcome:
           type: string
           enum: [pass, fail, error, branch, halt, reject, approve, send_back]
-        message: { type: [string, "null"] }
-        actor: { $ref: "#/components/schemas/Actor" }
-        runId: { oneOf: [{ $ref: "#/components/schemas/RunId" }, { type: "null" }] }
-        createdAt: { $ref: "#/components/schemas/Timestamp" }
+        message: { type: [string, 'null'] }
+        actor: { $ref: '#/components/schemas/Actor' }
+        runId:
+          { oneOf: [{ $ref: '#/components/schemas/RunId' }, { type: 'null' }] }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
     DecisionRequest:
       type: object
       required: [gate, decision, expectedVersion]
@@ -1177,7 +1382,7 @@ components:
         gate:
           type: string
           description: Human gate key from the phase table, e.g. `plan_accepted`.
-          pattern: "^[a-z][a-z0-9_]*$"
+          pattern: '^[a-z][a-z0-9_]*$'
         decision:
           type: string
           enum: [approve, send_back, reject]
@@ -1186,29 +1391,30 @@ components:
             that produced the artifact with `reason` for the agent (counts a revision round).
             `reject` moves the story to `blocked`. `send_back` and `reject` require `reason`.
         reason: { type: string, maxLength: 5000 }
-        expectedVersion: { $ref: "#/components/schemas/Version" }
+        expectedVersion: { $ref: '#/components/schemas/Version' }
     DecisionAccepted:
       type: object
       required: [story, record]
       additionalProperties: false
       properties:
-        story: { $ref: "#/components/schemas/Story" }
-        record: { $ref: "#/components/schemas/GateRecord" }
+        story: { $ref: '#/components/schemas/Story' }
+        record: { $ref: '#/components/schemas/GateRecord' }
     Artifact:
       type: object
       required: [path, sha256, sizeBytes, mediaType, revision, runId, createdAt]
       additionalProperties: false
       properties:
-        path: { $ref: "#/components/schemas/ArtifactPath" }
-        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        path: { $ref: '#/components/schemas/ArtifactPath' }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
         sizeBytes: { type: integer, minimum: 0 }
         mediaType: { type: string }
         revision:
           type: integer
           minimum: 1
           description: The artifact-set revision this entry belongs to (every revision is a complete set).
-        runId: { oneOf: [{ $ref: "#/components/schemas/RunId" }, { type: "null" }] }
-        createdAt: { $ref: "#/components/schemas/Timestamp" }
+        runId:
+          { oneOf: [{ $ref: '#/components/schemas/RunId' }, { type: 'null' }] }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
     EventType:
       type: string
       description: Stable event type. New types may be added in a minor version; clients must ignore unknown types.
@@ -1228,7 +1434,7 @@ components:
         - question.asked
         - question.answered
         - decision.recorded
-        - consensus.resolved
+        - review.resolved
         - work_package.decided
         - work.reopened
         - story.unblocked
@@ -1237,21 +1443,26 @@ components:
         - review.reported
         - story.routed
         - run.progress
+        - run.waiting
     Event:
       type: object
       required: [id, storyKey, type, actor, payload, createdAt]
       additionalProperties: false
       properties:
-        id: { $ref: "#/components/schemas/EventId" }
-        storyKey: { $ref: "#/components/schemas/StoryKey" }
-        type: { $ref: "#/components/schemas/EventType" }
-        actor: { $ref: "#/components/schemas/Actor" }
+        id: { $ref: '#/components/schemas/EventId' }
+        storyKey: { $ref: '#/components/schemas/StoryKey' }
+        type: { $ref: '#/components/schemas/EventType' }
+        actor: { $ref: '#/components/schemas/Actor' }
         payload:
           type: object
           description: >-
             Type-specific JSON; never contains tokens or credentials. A `run.progress` payload is a
-            `RunProgressPayload`.
-        createdAt: { $ref: "#/components/schemas/Timestamp" }
+            `RunProgressPayload`. A `run.waiting` event says the story's next run is waiting for a run slot: the server
+            allows at most `maxActiveRuns` runs queued or running at once (`AHOY_MAX_ACTIVE_RUNS`, one worker container
+            or pod each), and `activeRuns` were when the story looked. Its payload is `{phase, activeRuns,
+            maxActiveRuns}`. It is written once when the wait starts; the story stays `ready` at the same version and
+            its run is queued (`run.queued`) when a slot frees.
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
     RunProgressPayload:
       description: |
         The payload of a `run.progress` event: what a running agent is doing. The worker writes each step of its
@@ -1281,42 +1492,90 @@ components:
           required: [runId, kind, line, tool]
           additionalProperties: false
           properties:
-            runId: { $ref: "#/components/schemas/RunId" }
+            runId: { $ref: '#/components/schemas/RunId' }
             kind: { const: tool }
-            line: { type: integer, minimum: 1, description: The line of `events.jsonl` (1-based). }
-            at: { $ref: "#/components/schemas/Timestamp", description: When the worker logged it, if it said. }
+            line:
+              {
+                type: integer,
+                minimum: 1,
+                description: The line of `events.jsonl` (1-based).,
+              }
+            at:
+              {
+                $ref: '#/components/schemas/Timestamp',
+                description: When the worker logged it,
+                if it said.,
+              }
             tool: { type: string, minLength: 1, maxLength: 80 }
             summary: { type: string, minLength: 1, maxLength: 120 }
         - type: object
           required: [runId, kind, line, text]
           additionalProperties: false
           properties:
-            runId: { $ref: "#/components/schemas/RunId" }
+            runId: { $ref: '#/components/schemas/RunId' }
             kind: { const: message }
             line: { type: integer, minimum: 1 }
-            at: { $ref: "#/components/schemas/Timestamp" }
+            at: { $ref: '#/components/schemas/Timestamp' }
             text: { type: string, minLength: 1, maxLength: 200 }
         - type: object
-          required: [runId, kind, line, offset, nanoAiu, requests, steps, omitted, skipped, events]
+          required:
+            [
+              runId,
+              kind,
+              line,
+              offset,
+              nanoAiu,
+              requests,
+              steps,
+              omitted,
+              skipped,
+              events,
+            ]
           additionalProperties: false
           properties:
-            runId: { $ref: "#/components/schemas/RunId" }
+            runId: { $ref: '#/components/schemas/RunId' }
             kind: { const: spend }
-            line: { type: integer, minimum: 0, description: Lines of `events.jsonl` read so far. }
-            offset: { type: integer, minimum: 0, description: Bytes of `events.jsonl` read so far. }
+            line:
+              {
+                type: integer,
+                minimum: 0,
+                description: Lines of `events.jsonl` read so far.,
+              }
+            offset:
+              {
+                type: integer,
+                minimum: 0,
+                description: Bytes of `events.jsonl` read so far.,
+              }
             nanoAiu:
               type: integer
               minimum: 0
               description: Spent so far by the run, as its log shows it; `run.finished` has what is charged.
-            requests: { type: integer, minimum: 0, description: Model requests so far. }
-            steps: { type: integer, minimum: 0, description: "`tool` and `message` events written for the run." }
-            omitted: { type: integer, minimum: 0, description: Steps left out by the limits. }
-            skipped: { type: integer, minimum: 0, description: Lines that could not be read. }
+            requests:
+              { type: integer, minimum: 0, description: Model requests so far. }
+            steps:
+              {
+                type: integer,
+                minimum: 0,
+                description: '`tool` and `message` events written for the run.',
+              }
+            omitted:
+              {
+                type: integer,
+                minimum: 0,
+                description: Steps left out by the limits.,
+              }
+            skipped:
+              {
+                type: integer,
+                minimum: 0,
+                description: Lines that could not be read.,
+              }
             events:
               {
                 type: integer,
                 minimum: 1,
-                description: "`run.progress` events written for the run, this one included.",
+                description: '`run.progress` events written for the run, this one included.',
               }
     EventPage:
       type: object
@@ -1325,7 +1584,7 @@ components:
       properties:
         items:
           type: array
-          items: { $ref: "#/components/schemas/Event" }
+          items: { $ref: '#/components/schemas/Event' }
         lastEventId:
-          oneOf: [{ $ref: "#/components/schemas/EventId" }, { type: "null" }]
+          oneOf: [{ $ref: '#/components/schemas/EventId' }, { type: 'null' }]
           description: Pass as `after` to continue.

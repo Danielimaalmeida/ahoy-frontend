@@ -1,37 +1,44 @@
-import { Component, computed, inject, linkedSignal } from "@angular/core";
-import { RouterLink } from "@angular/router";
-import type { Run } from "@core/api/types";
-import { apiErrorView } from "@core/commands/command-error";
-import { RunProgressBuffer } from "@core/stores/run-progress-buffer";
-import { budgetPercent, formatAiu } from "@domain/aiu";
-import { Banner } from "@ui/banner/banner";
-import { formatCap } from "@ui/budget-meter/budget-meter";
-import { EmptyState } from "@ui/empty-state/empty-state";
-import { LiveSteps, stepTime } from "@ui/live-steps/live-steps";
-import { OutcomePill } from "@ui/outcome-pill/outcome-pill";
-import { Panel, PanelHead } from "@ui/panel/panel";
-import { ActorPipe } from "@ui/pipes/actor.pipe";
-import { AiuPipe } from "@ui/pipes/aiu.pipe";
-import { DateTimePipe } from "@ui/pipes/date-time.pipe";
-import { RelativePipe } from "@ui/pipes/relative.pipe";
-import { SkeletonRows, type SkeletonColumn } from "@ui/skeleton/skeleton";
-import { Key, Nowrap, Table } from "@ui/table/table";
-import { runById, runCrew } from "../../context/crew";
-import { VoyageContext } from "../../context/voyage-context";
-import { isRunActive, oldestFirst, runModelLabel, runRequests, runSpendNanoAiu, toLiveSteps } from "./run-rows";
+import { Component, computed, inject, linkedSignal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import type { Run } from '@core/api/types';
+import { apiErrorView } from '@core/commands/command-error';
+import { RunProgressBuffer } from '@core/stores/run-progress-buffer';
+import { budgetPercent, formatAiu } from '@domain/aiu';
+import { Banner } from '@ui/banner/banner';
+import { formatCap } from '@ui/budget-meter/budget-meter';
+import { EmptyState } from '@ui/empty-state/empty-state';
+import { LiveSteps, stepTime } from '@ui/live-steps/live-steps';
+import { OutcomePill } from '@ui/outcome-pill/outcome-pill';
+import { Panel, PanelHead } from '@ui/panel/panel';
+import { ActorPipe } from '@ui/pipes/actor.pipe';
+import { AiuPipe } from '@ui/pipes/aiu.pipe';
+import { DateTimePipe } from '@ui/pipes/date-time.pipe';
+import { RelativePipe } from '@ui/pipes/relative.pipe';
+import { SkeletonRows, type SkeletonColumn } from '@ui/skeleton/skeleton';
+import { Key, Nowrap, Table } from '@ui/table/table';
+import { runById, runCrew } from '../../context/crew';
+import { VoyageContext } from '../../context/voyage-context';
+import {
+  isRunActive,
+  oldestFirst,
+  runModelLabel,
+  runRequests,
+  runSpendNanoAiu,
+  toLiveSteps,
+} from './run-rows';
 
 /** The columns of the Runs table, for its placeholder rows. */
 const RUN_COLUMNS: readonly SkeletonColumn[] = [
-  { track: "minmax(0, 1.4fr)" },
-  { track: "90px" },
-  { track: "100px" },
-  { track: "minmax(0, 1.4fr)" },
-  { track: "90px", height: 20 },
-  { track: "80px" },
-  { track: "80px" },
-  { track: "70px" },
-  { track: "60px", height: 20 },
-  { track: "minmax(0, 1fr)" },
+  { track: 'minmax(0, 1.4fr)' },
+  { track: '90px' },
+  { track: '100px' },
+  { track: 'minmax(0, 1.4fr)' },
+  { track: '90px', height: 20 },
+  { track: '80px' },
+  { track: '80px' },
+  { track: '70px' },
+  { track: '60px', height: 20 },
+  { track: 'minmax(0, 1fr)' },
 ];
 
 /** One row of the Runs table. */
@@ -69,7 +76,7 @@ interface LiveView {
  * Progress is a view, never a control: the steps come from the `RunProgressBuffer`, which the voyage's event feed fills.
  */
 @Component({
-  selector: "ah-runs-tab",
+  selector: 'ah-runs-tab',
   imports: [
     ActorPipe,
     AiuPipe,
@@ -87,7 +94,7 @@ interface LiveView {
     SkeletonRows,
     Table,
   ],
-  styleUrl: "./runs-tab.scss",
+  styleUrl: './runs-tab.scss',
   template: `
     @if (live(); as l) {
       <div class="runs__live">
@@ -99,11 +106,15 @@ interface LiveView {
             <span class="ah-mono ah-muted">{{ l.run.id }} · {{ l.model }}</span>
             <span class="runs__spacer"></span>
             <span class="ah-hint">{{
-              l.active ? "Live, a few seconds behind the agent" : "Ended. The steps below are kept as history."
+              l.active
+                ? 'Live, a few seconds behind the agent'
+                : 'Ended. The steps below are kept as history.'
             }}</span>
           </ah-panel-head>
           <div class="runs__spend">
-            <span class="ah-hint runs__spend-label">{{ l.active ? "Run spend" : "Run spent" }}</span>
+            <span class="ah-hint runs__spend-label">{{
+              l.active ? 'Run spend' : 'Run spent'
+            }}</span>
             <div
               class="ah-meter runs__meter"
               role="meter"
@@ -117,7 +128,9 @@ interface LiveView {
             </div>
             <span
               ><b class="ah-mono runs__spent">{{ l.spent }}</b
-              >&ngsp;<span class="ah-hint">of this run's {{ l.cap }} AIU cap</span></span
+              >&ngsp;<span class="ah-hint"
+                >of this run's {{ l.cap }} AIU cap</span
+              ></span
             >
           </div>
           <ah-live-steps [steps]="steps()" [label]="'Steps of ' + l.run.id" />
@@ -134,7 +147,7 @@ interface LiveView {
               <dt>Model</dt>
               <dd class="ah-mono">{{ l.run.model ?? "agent's own" }}</dd>
               <dt>Effort</dt>
-              <dd>{{ l.run.reasoningEffort ?? "default" }}</dd>
+              <dd>{{ l.run.reasoningEffort ?? 'default' }}</dd>
               <dt>Started</dt>
               <dd>
                 @if (l.run.startedAt !== null) {
@@ -148,7 +161,11 @@ interface LiveView {
               <dt>Requests</dt>
               <dd>{{ l.requests }}</dd>
             </dl>
-            <a class="runs__open" [routerLink]="['/voyages', key(), 'runs', l.run.id]">Open run detail</a>
+            <a
+              class="runs__open"
+              [routerLink]="['/voyages', key(), 'runs', l.run.id]"
+              >Open run detail</a
+            >
           </div>
         </ah-panel>
       </div>
@@ -174,7 +191,8 @@ interface LiveView {
         </div>
       } @else if (rows().length === 0) {
         <ah-empty-state heading="No runs yet" icon="anchor"
-          >Runs show up here when an agent starts work on this voyage.</ah-empty-state
+          >Runs show up here when an agent starts work on this
+          voyage.</ah-empty-state
         >
       } @else {
         <table ahTable>
@@ -196,7 +214,11 @@ interface LiveView {
             @for (row of rows(); track row.run.id) {
               <tr>
                 <td ahNowrap>
-                  <a ahKey [routerLink]="['/voyages', key(), 'runs', row.run.id]">{{ row.run.id }}</a>
+                  <a
+                    ahKey
+                    [routerLink]="['/voyages', key(), 'runs', row.run.id]"
+                    >{{ row.run.id }}</a
+                  >
                 </td>
                 <td class="ah-mono">{{ row.run.phase }}</td>
                 <td>{{ row.crew }}</td>
@@ -212,7 +234,10 @@ interface LiveView {
                 </td>
                 <td ahNowrap>
                   @if (row.run.gate; as gate) {
-                    <ah-outcome-pill [value]="gate.result" [attr.title]="gate.gate + ' · ' + gate.message" />
+                    <ah-outcome-pill
+                      [value]="gate.result"
+                      [attr.title]="gate.gate + ' · ' + gate.message"
+                    />
                   } @else {
                     <span aria-label="No gate">—</span>
                   }
@@ -236,7 +261,7 @@ export class RunsTab {
   /** The run the story is on, while it is `running`. */
   private readonly currentRunId = computed(() => {
     const story = this.context.story();
-    return story?.status === "running" ? story.currentRunId : null;
+    return story?.status === 'running' ? story.currentRunId : null;
   });
 
   /** The run the live panel is about: the current one, and after it ended, the same one until the page is left. */
@@ -245,7 +270,9 @@ export class RunsTab {
     computation: (current, previous) => current ?? previous?.value ?? null,
   });
 
-  private readonly watchedRun = computed(() => runById(this.context.runs(), this.watchedRunId()) ?? null);
+  private readonly watchedRun = computed(
+    () => runById(this.context.runs(), this.watchedRunId()) ?? null
+  );
 
   /** The run's progress rows; empty until its events arrive. */
   private readonly view = computed(() => {
@@ -274,7 +301,9 @@ export class RunsTab {
     };
   });
 
-  protected readonly steps = computed(() => toLiveSteps(this.view()?.entries ?? []));
+  protected readonly steps = computed(() =>
+    toLiveSteps(this.view()?.entries ?? [])
+  );
 
   protected readonly rows = computed<readonly RunRow[]>(() =>
     oldestFirst(this.context.runs()).map((run) => {
@@ -283,16 +312,20 @@ export class RunsTab {
         run,
         crew: runCrew(run),
         model: runModelLabel(run),
-        nanoAiu: live ? runSpendNanoAiu(run, this.progress.run(run.id)().spend) : run.usage.nanoAiu,
+        nanoAiu: live
+          ? runSpendNanoAiu(run, this.progress.run(run.id)().spend)
+          : run.usage.nanoAiu,
         live,
       };
-    }),
+    })
   );
 
   /** The runs are being read for the first time. */
   protected readonly loading = computed(() => {
     const runs = this.context.handle()?.runs;
-    return runs !== undefined && runs.value() === undefined && runs.error() === null;
+    return (
+      runs !== undefined && runs.value() === undefined && runs.error() === null
+    );
   });
 
   /** Why the runs could not be read, while there is nothing to show. */

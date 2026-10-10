@@ -1,6 +1,6 @@
-import { formatAiu } from "@domain/aiu";
-import { isHaltReason } from "@domain/halt";
-import type { HaltReason } from "@domain/types";
+import { formatAiu } from '@domain/aiu';
+import { isHaltReason } from '@domain/halt';
+import type { HaltReason } from '@domain/types';
 
 /** What the guidance needs to know about the voyage. */
 export interface HaltGuidanceContext {
@@ -16,7 +16,9 @@ function retries(context: HaltGuidanceContext): string {
 }
 
 /** The step the crew takes before resuming, per reason; the sentence about the cost of a resume follows it. */
-const STEPS: Readonly<Record<HaltReason, (context: HaltGuidanceContext) => string>> = {
+const STEPS: Readonly<
+  Record<HaltReason, (context: HaltGuidanceContext) => string>
+> = {
   stopped_by_user: (c) =>
     `read the reason above and settle it with whoever stopped the voyage, then resume. ${retries(c)}`,
   gate_rejected: (c) =>
@@ -25,7 +27,8 @@ const STEPS: Readonly<Record<HaltReason, (context: HaltGuidanceContext) => strin
     `raise the budget, then resume. Raising it doesn't resume the voyage on its own. Resuming retries ${c.phase}.`,
   run_failed: (c) =>
     `pick a model this account can use for ${c.phase}, or fix what the run's log points at, then resume. ${retries(c)}`,
-  run_lost: (c) => `check the run in Runs: if it delivered nothing, resume to run ${c.phase} again. ${retries(c)}`,
+  run_lost: (c) =>
+    `check the run in Runs: if it delivered nothing, resume to run ${c.phase} again. ${retries(c)}`,
   run_result_invalid: (c) =>
     `look at the run's output in Runs and Artifacts, change the model if it keeps breaking the rules, then resume. ${retries(c)}`,
   dispatch_failed: (c) =>
@@ -37,10 +40,13 @@ const STEPS: Readonly<Record<HaltReason, (context: HaltGuidanceContext) => strin
 };
 
 /**
- * The "To get under way again: …" line of the Anchored banner, per halt reason (the nine of `vocabulary.md`). A reason
+ * The "To continue: …" line of the Halted banner, per halt reason (the nine of `vocabulary.md`). A reason
  * this version does not know gets a generic step that sends the reader to the technical line, never a guess.
  */
-export function haltGuidance(reason: string, context: HaltGuidanceContext): string {
+export function haltGuidance(
+  reason: string,
+  context: HaltGuidanceContext
+): string {
   if (isHaltReason(reason)) return STEPS[reason](context);
-  return `check the technical line below and the Ship's log, then resume when it's safe. ${retries(context)}`;
+  return `check the technical line below and the Activity, then resume when it's safe. ${retries(context)}`;
 }

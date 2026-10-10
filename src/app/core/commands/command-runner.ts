@@ -1,4 +1,4 @@
-import { signal } from "@angular/core";
+import { signal } from '@angular/core';
 import {
   isAlreadyAnswered,
   isDecisionAlreadyRecorded,
@@ -6,7 +6,7 @@ import {
   type ApiError,
   type ApiResult,
   type ProblemError,
-} from "@core/api/api-error";
+} from '@core/api/api-error';
 
 /**
  * What a command came to (plan §5.5). Every outcome is a value: the caller keeps what the user typed whatever comes
@@ -20,10 +20,13 @@ import {
  * - `skipped`: nothing was sent, because a command was already in flight or the story was not loaded yet.
  */
 export type CommandOutcome<T> =
-  | { readonly kind: "ok"; readonly value: T }
-  | { readonly kind: "stale" | "decided" | "answered"; readonly error: ProblemError }
-  | { readonly kind: "other"; readonly error: ApiError }
-  | { readonly kind: "skipped" };
+  | { readonly kind: 'ok'; readonly value: T }
+  | {
+      readonly kind: 'stale' | 'decided' | 'answered';
+      readonly error: ProblemError;
+    }
+  | { readonly kind: 'other'; readonly error: ApiError }
+  | { readonly kind: 'skipped' };
 
 /** What a {@link CommandRunner} works on: the story version the user saw, and how to read the story again. */
 export interface CommandTarget {
@@ -41,10 +44,10 @@ export interface RunOptions<T> {
 
 /** Sorts an error of a command into the outcome the UI handles. */
 export function classifyCommandError(error: ApiError): CommandOutcome<never> {
-  if (isStale(error)) return { kind: "stale", error };
-  if (isDecisionAlreadyRecorded(error)) return { kind: "decided", error };
-  if (isAlreadyAnswered(error)) return { kind: "answered", error };
-  return { kind: "other", error };
+  if (isStale(error)) return { kind: 'stale', error };
+  if (isDecisionAlreadyRecorded(error)) return { kind: 'decided', error };
+  if (isAlreadyAnswered(error)) return { kind: 'answered', error };
+  return { kind: 'other', error };
 }
 
 /**
@@ -68,20 +71,21 @@ export class CommandRunner {
   /** Sends one command with the current version. Never throws for an outcome the API can give. */
   async run<T>(
     send: (expectedVersion: number) => Promise<ApiResult<T>>,
-    options: RunOptions<T> = {},
+    options: RunOptions<T> = {}
   ): Promise<CommandOutcome<T>> {
     const version = this.target.version();
-    if (this.inFlight || version === null) return { kind: "skipped" };
+    if (this.inFlight || version === null) return { kind: 'skipped' };
     this.inFlight = true;
     this.pendingSignal.set(true);
     try {
       const result = await send(version);
       if (result.ok) {
         options.onOk?.(result.value);
-        return { kind: "ok", value: result.value };
+        return { kind: 'ok', value: result.value };
       }
       // A 409 means the story is not what the user saw: show them what it is now before they try again.
-      if (result.error.kind === "problem" && result.error.status === 409) await this.target.refresh();
+      if (result.error.kind === 'problem' && result.error.status === 409)
+        await this.target.refresh();
       return classifyCommandError(result.error);
     } finally {
       this.inFlight = false;

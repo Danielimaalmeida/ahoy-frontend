@@ -5,8 +5,8 @@
  * A payload is untrusted and type-specific: every field is checked, and one that is missing or of the wrong type reads
  * as absent rather than failing the page.
  */
-import type { AhoyEvent } from "@core/api/types";
-import { GATE_FOR_PHASE, phaseIndex } from "@domain/phases";
+import type { AhoyEvent } from '@core/api/types';
+import { GATE_FOR_PHASE, phaseIndex } from '@domain/phases';
 
 /** The most of a worker log the banner keeps, in UTF-8 bytes: its last 4 KB. */
 export const WORKER_LOG_MAX_BYTES = 4096;
@@ -30,13 +30,19 @@ export interface HaltRecord {
 }
 
 /** A non-blank string field of a payload, trimmed; null otherwise. */
-function text(payload: Readonly<Record<string, unknown>>, key: string): string | null {
+function text(
+  payload: Readonly<Record<string, unknown>>,
+  key: string
+): string | null {
   const value = payload[key];
-  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
 /** The newest event of `type`, searching from the end (events are oldest first). */
-function lastOfType(events: readonly AhoyEvent[], type: string): AhoyEvent | null {
+function lastOfType(
+  events: readonly AhoyEvent[],
+  type: string
+): AhoyEvent | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
     if (event?.type === type) return event;
@@ -50,23 +56,26 @@ export function tailLog(log: string): string {
   // A cut inside a multi-byte character decodes to U+FFFD at the start: drop it.
   const recent =
     bytes.length > WORKER_LOG_MAX_BYTES
-      ? new TextDecoder().decode(bytes.subarray(bytes.length - WORKER_LOG_MAX_BYTES)).replace(/^\uFFFD+/, "")
+      ? new TextDecoder()
+          .decode(bytes.subarray(bytes.length - WORKER_LOG_MAX_BYTES))
+          .replace(/^\uFFFD+/, '')
       : log;
-  const lines = recent.replace(/\s+$/, "").split(/\r?\n/);
-  return lines.slice(-WORKER_LOG_MAX_LINES).join("\n");
+  const lines = recent.replace(/\s+$/, '').split(/\r?\n/);
+  return lines.slice(-WORKER_LOG_MAX_LINES).join('\n');
 }
 
 /** Reads a `story.halted` event; null when it has no reason. */
 export function readHalt(event: AhoyEvent): HaltRecord | null {
-  const reason = text(event.payload, "reason");
+  const reason = text(event.payload, 'reason');
   if (reason === null) return null;
-  const log = event.payload["workerLog"];
+  const log = event.payload['workerLog'];
   return {
     reason,
-    runId: text(event.payload, "runId"),
-    phase: text(event.payload, "phase"),
-    detail: text(event.payload, "detail"),
-    workerLog: typeof log === "string" && log.trim() !== "" ? tailLog(log) : null,
+    runId: text(event.payload, 'runId'),
+    phase: text(event.payload, 'phase'),
+    detail: text(event.payload, 'detail'),
+    workerLog:
+      typeof log === 'string' && log.trim() !== '' ? tailLog(log) : null,
     actor: event.actor,
     at: event.createdAt,
   };
@@ -74,7 +83,7 @@ export function readHalt(event: AhoyEvent): HaltRecord | null {
 
 /** The last halt of the history (G7), or null if it never halted or the event cannot be read. */
 export function lastHalt(events: readonly AhoyEvent[]): HaltRecord | null {
-  const event = lastOfType(events, "story.halted");
+  const event = lastOfType(events, 'story.halted');
   return event === null ? null : readHalt(event);
 }
 
@@ -82,11 +91,16 @@ export function lastHalt(events: readonly AhoyEvent[]): HaltRecord | null {
  * The key of the human gate a voyage waits on (G11): the `gate` of the last `story.awaiting_decision`, or, when the
  * history has none yet, the gate named after the phase (`plan_review` → `plan_accepted`). Null when there is neither.
  */
-export function openGateKey(events: readonly AhoyEvent[], phase: string): string | null {
-  const event = lastOfType(events, "story.awaiting_decision");
-  const gate = event === null ? null : text(event.payload, "gate");
+export function openGateKey(
+  events: readonly AhoyEvent[],
+  phase: string
+): string | null {
+  const event = lastOfType(events, 'story.awaiting_decision');
+  const gate = event === null ? null : text(event.payload, 'gate');
   if (gate !== null) return gate;
-  return Object.hasOwn(GATE_FOR_PHASE, phase) ? GATE_FOR_PHASE[phase as keyof typeof GATE_FOR_PHASE] : null;
+  return Object.hasOwn(GATE_FOR_PHASE, phase)
+    ? GATE_FOR_PHASE[phase as keyof typeof GATE_FOR_PHASE]
+    : null;
 }
 
 /**
@@ -94,21 +108,27 @@ export function openGateKey(events: readonly AhoyEvent[], phase: string): string
  * `story.awaiting_decision`, while the voyage is still before that gate's phase (a plan sent back to planning is in
  * the plan gate's rounds; a voyage that passed the gate is not). Null otherwise.
  */
-export function revisingGateKey(events: readonly AhoyEvent[], phase: string): string | null {
-  const event = lastOfType(events, "story.awaiting_decision");
+export function revisingGateKey(
+  events: readonly AhoyEvent[],
+  phase: string
+): string | null {
+  const event = lastOfType(events, 'story.awaiting_decision');
   if (event === null) return null;
-  const gate = text(event.payload, "gate");
-  const gatePhase = phaseIndex(text(event.payload, "phase") ?? "");
+  const gate = text(event.payload, 'gate');
+  const gatePhase = phaseIndex(text(event.payload, 'phase') ?? '');
   const now = phaseIndex(phase);
-  return gate !== null && gatePhase !== null && now !== null && now < gatePhase ? gate : null;
+  return gate !== null && gatePhase !== null && now !== null && now < gatePhase
+    ? gate
+    : null;
 }
 
 /** The phase a blocked voyage was in (G12): the `from` of the last `story.phase_changed` to `blocked`. */
 export function blockedAt(events: readonly AhoyEvent[]): string | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
-    if (event?.type !== "story.phase_changed") continue;
-    if (text(event.payload, "to") === "blocked") return text(event.payload, "from");
+    if (event?.type !== 'story.phase_changed') continue;
+    if (text(event.payload, 'to') === 'blocked')
+      return text(event.payload, 'from');
   }
   return null;
 }

@@ -1,26 +1,38 @@
-import { DestroyRef, Injectable, inject, signal, untracked, type WritableSignal } from "@angular/core";
-import { readStoryState } from "@core/api/story-state";
-import type { Story } from "@core/api/types";
-import type { StoryEventsHandle } from "@core/stores/story-events-feed";
-import { StoryStore, type StoryHandle } from "@core/stores/story-store";
-import { gateOpen, haltOf, type RowDetail, type RunModel } from "./needs";
+import {
+  DestroyRef,
+  Injectable,
+  inject,
+  signal,
+  untracked,
+  type WritableSignal,
+} from '@angular/core';
+import { readStoryState } from '@core/api/story-state';
+import type { Story } from '@core/api/types';
+import type { StoryEventsHandle } from '@core/stores/story-events-feed';
+import { StoryStore, type StoryHandle } from '@core/stores/story-store';
+import { gateOpen, haltOf, type RowDetail, type RunModel } from './needs';
 
 /** What a row must read beyond its story: the questions, the state, the event history, or the runs. */
-type Need = "questions" | "state" | "events" | "runs";
+type Need = 'questions' | 'state' | 'events' | 'runs';
 
-const UNREAD: RowDetail = { questions: null, state: null, gate: null, halt: null };
+const UNREAD: RowDetail = {
+  questions: null,
+  state: null,
+  gate: null,
+  halt: null,
+};
 
 /** What the row of a voyage needs: the questions of one that asks, the state and events of one that waits, and so on. */
 function needsOf(story: Story): readonly Need[] {
   switch (story.status) {
-    case "awaiting_input":
-      return ["questions"];
-    case "awaiting_decision":
-      return ["state", "events"];
-    case "halted":
-      return ["events"];
-    case "running":
-      return ["runs"];
+    case 'awaiting_input':
+      return ['questions'];
+    case 'awaiting_decision':
+      return ['state', 'events'];
+    case 'halted':
+      return ['events'];
+    case 'running':
+      return ['runs'];
     default:
       return [];
   }
@@ -69,7 +81,10 @@ export class RowDetails {
         // The stores let go of a resource only when the last hold on the voyage does. So a voyage that stops needing
         // something it read (its questions, once answered) gets a new hold, opened before the old one is let go: the
         // stream stays open and what was read stays in the store.
-        if (held !== undefined && [...held.needs].some((need) => !needs.includes(need))) {
+        if (
+          held !== undefined &&
+          [...held.needs].some((need) => !needs.includes(need))
+        ) {
           const old = held;
           held = this.open(key);
           next.set(key, held);
@@ -81,7 +96,11 @@ export class RowDetails {
         next.set(key, held);
         for (const need of needs) this.read(held, need);
       }
-      if (next.size !== current.size || [...next].some(([key, held]) => current.get(key) !== held)) this.held.set(next);
+      if (
+        next.size !== current.size ||
+        [...next].some(([key, held]) => current.get(key) !== held)
+      )
+        this.held.set(next);
     });
   }
 
@@ -106,13 +125,17 @@ export class RowDetails {
   }
 
   private open(key: string): Held {
-    return { handle: this.stories.for(key), feed: signal(null), needs: new Set() };
+    return {
+      handle: this.stories.for(key),
+      feed: signal(null),
+      needs: new Set(),
+    };
   }
 
   private read(held: Held, need: Need): void {
     if (held.needs.has(need)) return;
     held.needs.add(need);
-    if (need === "events") held.feed.set(held.handle.events());
+    if (need === 'events') held.feed.set(held.handle.events());
     else held.handle.watch(need);
   }
 }

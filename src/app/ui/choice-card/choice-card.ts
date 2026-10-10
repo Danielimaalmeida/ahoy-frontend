@@ -1,6 +1,13 @@
-import type { ControlValueAccessor } from "@angular/forms";
-import { NG_VALUE_ACCESSOR } from "@angular/forms";
-import { Component, ElementRef, forwardRef, inject, input, signal } from "@angular/core";
+import type { ControlValueAccessor } from '@angular/forms';
+import { NG_VALUE_ACCESSOR } from '@angular/forms';
+import {
+  Component,
+  ElementRef,
+  forwardRef,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 
 /** One card: the choice and what happens next if it is picked. */
 export interface ChoiceOption<T> {
@@ -15,7 +22,12 @@ export interface ChoiceOption<T> {
 let nextGroupId = 0;
 
 /** Keys that move the selection, and in which direction. */
-const ARROWS: Readonly<Record<string, 1 | -1>> = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+const ARROWS: Readonly<Record<string, 1 | -1>> = {
+  ArrowDown: 1,
+  ArrowRight: 1,
+  ArrowUp: -1,
+  ArrowLeft: -1,
+};
 
 /**
  * Radio choices drawn as cards (`ah-choice`), for decisions whose consequence must be read: the human gate's
@@ -27,8 +39,14 @@ const ARROWS: Readonly<Record<string, 1 | -1>> = { ArrowDown: 1, ArrowRight: 1, 
  * ```
  */
 @Component({
-  selector: "ah-choice-card-group",
-  providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => ChoiceCardGroup), multi: true }],
+  selector: 'ah-choice-card-group',
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => ChoiceCardGroup),
+      multi: true,
+    },
+  ],
   styles: `
     :host {
       display: block;
@@ -44,7 +62,11 @@ const ARROWS: Readonly<Record<string, 1 | -1>> = { ArrowDown: 1, ArrowRight: 1, 
     }
   `,
   template: `
-    <div class="ah-choice-group" role="radiogroup" [attr.aria-label]="label() || null">
+    <div
+      class="ah-choice-group"
+      role="radiogroup"
+      [attr.aria-label]="label() || null"
+    >
       @for (option of options(); track $index) {
         <label class="ah-choice">
           <input
@@ -69,7 +91,7 @@ export class ChoiceCardGroup<T> implements ControlValueAccessor {
   /** The cards, in order. */
   readonly options = input.required<readonly ChoiceOption<T>[]>();
   /** The group's accessible name ("Your decision"). */
-  readonly label = input("");
+  readonly label = input('');
 
   protected readonly name = `ah-choice-${nextGroupId++}`;
   protected readonly value = signal<T | null>(null);
@@ -125,6 +147,8 @@ export class ChoiceCardGroup<T> implements ControlValueAccessor {
     const option = next === undefined ? undefined : options[next];
     if (option === undefined || next === undefined) return;
     this.select(option.value);
-    this.host.nativeElement.querySelectorAll<HTMLInputElement>("input[type=radio]")[next]?.focus();
+    this.host.nativeElement
+      .querySelectorAll<HTMLInputElement>('input[type=radio]')
+      [next]?.focus();
   }
 }

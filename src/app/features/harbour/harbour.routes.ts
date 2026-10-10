@@ -1,5 +1,7 @@
-import type { Routes } from "@angular/router";
-import { AllHandsPage } from "./all-hands";
+import type { Routes } from '@angular/router';
+import { AllHandsPage } from './all-hands';
 
-/** All hands (`/`): the voyages that wait on a person, and the ones at sea. */
-export const HARBOUR_ROUTES: Routes = [{ path: "", title: "All hands · Ahoy", component: AllHandsPage }];
+/** Needs you (`/`): the voyages that wait on a person, and the ones in progress. */
+export const HARBOUR_ROUTES: Routes = [
+  { path: '', title: 'Needs you · Ahoy', component: AllHandsPage },
+];

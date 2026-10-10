@@ -11,16 +11,25 @@
 // `var(--x)` in src/styles/ or src/app/ names a custom property that neither the tokens nor the sources define.
 //
 // Usage: node scripts/build-tokens.mjs [--check] [root]   (root defaults to the repository root)
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
-const check = args.includes("--check");
-const root = resolve(args.find((a) => !a.startsWith("--")) ?? join(dirname(fileURLToPath(import.meta.url)), ".."));
-const SOURCE = "docs/design/design-system/tokens.json";
-const OUTPUT = "src/styles/tokens.css";
-const THEMES = ["light", "dark"];
+const check = args.includes('--check');
+const root = resolve(
+  args.find((a) => !a.startsWith('--')) ??
+    join(dirname(fileURLToPath(import.meta.url)), '..')
+);
+const SOURCE = 'docs/design/design-system/tokens.json';
+const OUTPUT = 'src/styles/tokens.css';
+const THEMES = ['light', 'dark'];
 
 /** Stops with a message on stderr. */
 function fail(message) {
@@ -30,14 +39,18 @@ function fail(message) {
 
 /** Returns the token name as a CSS custom property, with `.` escaped; rejects names that need other escapes. */
 function property(name) {
-  if (typeof name !== "string" || !/^[a-z][a-z0-9.-]*$/.test(name))
+  if (typeof name !== 'string' || !/^[a-z][a-z0-9.-]*$/.test(name))
     fail(`unexpected token name ${JSON.stringify(name)}`);
-  return `--${name.replace(/\./g, "\\.")}`;
+  return `--${name.replace(/\./g, '\\.')}`;
 }
 
 /** Returns a token value checked to be a plain CSS value that cannot end the declaration or the rule. */
 function cssValue(name, value) {
-  if (typeof value !== "string" || value.trim() === "" || /[;{}\\<>]|\/\*/.test(value))
+  if (
+    typeof value !== 'string' ||
+    value.trim() === '' ||
+    /[;{}\\<>]|\/\*/.test(value)
+  )
     fail(`token ${name} has an unexpected value ${JSON.stringify(value)}`);
   return value;
 }
@@ -45,34 +58,48 @@ function cssValue(name, value) {
 /** Returns `[light, dark | undefined]` for a token whose value is a string or a `{ light, dark }` object. */
 function themed(token) {
   const v = token.value;
-  if (typeof v === "string") return [cssValue(token.name, v), undefined];
-  if (v === null || typeof v !== "object") fail(`token ${token.name} has no value`);
+  if (typeof v === 'string') return [cssValue(token.name, v), undefined];
+  if (v === null || typeof v !== 'object')
+    fail(`token ${token.name} has no value`);
   const light = cssValue(token.name, v.light);
-  return [light, v.dark === undefined ? undefined : cssValue(token.name, v.dark)];
+  return [
+    light,
+    v.dark === undefined ? undefined : cssValue(token.name, v.dark),
+  ];
 }
 
 /** Reads the token groups from tokens.json into ordered `{ prop, light, dark }` entries. */
 function readTokens(json) {
   const out = [];
   const add = (prop, light, dark) => {
-    if (out.some((t) => t.prop === prop)) fail(`token ${prop} is defined twice`);
+    if (out.some((t) => t.prop === prop))
+      fail(`token ${prop} is defined twice`);
     out.push({ prop, light, dark });
   };
   for (const id of THEMES)
-    if (!json.color?.themes?.some((t) => t.id === id)) fail(`tokens.json has no "${id}" colour theme`);
+    if (!json.color?.themes?.some((t) => t.id === id))
+      fail(`tokens.json has no "${id}" colour theme`);
   const families = json.type?.families ?? {};
   for (const [group, list] of [
-    ["color", json.color?.tokens],
-    ["spacing", json.spacing?.tokens],
-    ["radius", json.radius?.tokens],
-    ["shadow", json.shadow?.tokens],
-    ["size", json.size?.tokens],
+    ['color', json.color?.tokens],
+    ['spacing', json.spacing?.tokens],
+    ['radius', json.radius?.tokens],
+    ['shadow', json.shadow?.tokens],
+    ['size', json.size?.tokens],
   ]) {
     if (!Array.isArray(list)) fail(`tokens.json has no ${group}.tokens array`);
     for (const token of list) add(property(token.name), ...themed(token));
-    if (group === "color") {
-      add("--font-sans", cssValue("type.families.sans", families.sans), undefined);
-      add("--font-mono", cssValue("type.families.mono", families.mono), undefined);
+    if (group === 'color') {
+      add(
+        '--font-sans',
+        cssValue('type.families.sans', families.sans),
+        undefined
+      );
+      add(
+        '--font-mono',
+        cssValue('type.families.mono', families.mono),
+        undefined
+      );
     }
   }
   return out;
@@ -82,31 +109,36 @@ function readTokens(json) {
 function render(json) {
   const tokens = readTokens(json);
   const block = (selector, scheme, entries) =>
-    [`${selector} {`, `  color-scheme: ${scheme};`, ...entries.map(([p, v]) => `  ${p}: ${v};`), "}"].join("\n");
+    [
+      `${selector} {`,
+      `  color-scheme: ${scheme};`,
+      ...entries.map(([p, v]) => `  ${p}: ${v};`),
+      '}',
+    ].join('\n');
   return [
     `/* Generated by scripts/build-tokens.mjs from ${SOURCE} ("${json.name}", version ${json.version}).`,
     "   Don't edit: change the source, then run npm run tokens. npm run tokens:check fails while this file is stale.",
-    "   color-scheme is not a token: it makes native controls and scrollbars follow the theme. */",
-    "",
+    '   color-scheme is not a token: it makes native controls and scrollbars follow the theme. */',
+    '',
     block(
       ':root,\n[data-theme="light"]',
-      "light",
-      tokens.map((t) => [t.prop, t.light]),
+      'light',
+      tokens.map((t) => [t.prop, t.light])
     ),
-    "",
+    '',
     block(
       '[data-theme="dark"]',
-      "dark",
-      tokens.filter((t) => t.dark !== undefined).map((t) => [t.prop, t.dark]),
+      'dark',
+      tokens.filter((t) => t.dark !== undefined).map((t) => [t.prop, t.dark])
     ),
-    "",
-  ].join("\n");
+    '',
+  ].join('\n');
 }
 
 /** Turns an escaped CSS identifier (`space-1\.5`) into the name it denotes (`space-1.5`). */
 function unescapeIdent(ident) {
   return ident.replace(/\\([0-9a-fA-F]{1,6}\s?|[^0-9a-fA-F\n])/g, (_, e) =>
-    /^[0-9a-fA-F]/.test(e) ? String.fromCodePoint(parseInt(e, 16)) : e,
+    /^[0-9a-fA-F]/.test(e) ? String.fromCodePoint(parseInt(e, 16)) : e
   );
 }
 
@@ -126,38 +158,53 @@ const IDENT = String.raw`(?:[\w-]|\\[^\n])+`;
 
 /** Returns the custom properties a CSS text reads with `var(--x)` and the ones it declares with `--x:`. */
 function customProperties(text) {
-  const code = text.replace(/\/\*[\s\S]*?\*\//g, "");
-  const used = [...code.matchAll(new RegExp(String.raw`var\(\s*--(${IDENT})`, "g"))].map((m) => unescapeIdent(m[1]));
-  const declared = [...code.matchAll(new RegExp(String.raw`(?:^|[\s{;"'\x60])--(${IDENT})\s*:`, "g"))].map((m) =>
-    unescapeIdent(m[1]),
-  );
+  const code = text.replace(/\/\*[\s\S]*?\*\//g, '');
+  const used = [
+    ...code.matchAll(new RegExp(String.raw`var\(\s*--(${IDENT})`, 'g')),
+  ].map((m) => unescapeIdent(m[1]));
+  const declared = [
+    ...code.matchAll(
+      new RegExp(String.raw`(?:^|[\s{;"'\x60])--(${IDENT})\s*:`, 'g')
+    ),
+  ].map((m) => unescapeIdent(m[1]));
   return { used, declared };
 }
 
 /** Lists every `var(--x)` in src/styles/ and src/app/ that nothing defines, as `file: --x`. */
 function undefinedProperties(css) {
   const files = [
-    ...listFiles(join(root, "src/styles"), [".css", ".scss"]),
-    join(root, "src/styles.scss"),
-    ...listFiles(join(root, "src/app"), [".css", ".scss", ".ts", ".html"]),
-  ].filter((f) => existsSync(f) && relative(root, f).split(sep).join("/") !== OUTPUT);
+    ...listFiles(join(root, 'src/styles'), ['.css', '.scss']),
+    join(root, 'src/styles.scss'),
+    ...listFiles(join(root, 'src/app'), ['.css', '.scss', '.ts', '.html']),
+  ].filter(
+    (f) => existsSync(f) && relative(root, f).split(sep).join('/') !== OUTPUT
+  );
   const defined = new Set(customProperties(css).declared);
   const uses = [];
   for (const file of files) {
-    const text = readFileSync(file, "utf8");
+    const text = readFileSync(file, 'utf8');
     // In TypeScript string literals CSS escapes are doubled: `var(--space-3\\.5)` is the CSS `var(--space-3\.5)`.
-    const { used, declared } = customProperties(file.endsWith(".ts") ? text.replace(/\\\\/g, "\\") : text);
+    const { used, declared } = customProperties(
+      file.endsWith('.ts') ? text.replace(/\\\\/g, '\\') : text
+    );
     for (const d of declared) defined.add(d);
-    for (const u of used) uses.push({ file: relative(root, file).split(sep).join("/"), name: u });
+    for (const u of used)
+      uses.push({ file: relative(root, file).split(sep).join('/'), name: u });
   }
-  return [...new Set(uses.filter((u) => !defined.has(u.name)).map((u) => `${u.file}: --${u.name}`))];
+  return [
+    ...new Set(
+      uses
+        .filter((u) => !defined.has(u.name))
+        .map((u) => `${u.file}: --${u.name}`)
+    ),
+  ];
 }
 
 const sourcePath = join(root, SOURCE);
 const outputPath = join(root, OUTPUT);
 let json;
 try {
-  json = JSON.parse(readFileSync(sourcePath, "utf8"));
+  json = JSON.parse(readFileSync(sourcePath, 'utf8'));
 } catch (e) {
   fail(`cannot read ${SOURCE}: ${e instanceof Error ? e.message : String(e)}`);
 }
@@ -170,13 +217,19 @@ if (!check) {
 }
 
 const problems = [];
-const current = existsSync(outputPath) ? readFileSync(outputPath, "utf8") : null;
+const current = existsSync(outputPath)
+  ? readFileSync(outputPath, 'utf8')
+  : null;
 if (current === null) problems.push(`${OUTPUT} is missing; run npm run tokens`);
-else if (current !== css) problems.push(`${OUTPUT} is out of date with ${SOURCE}; run npm run tokens`);
-for (const u of undefinedProperties(css)) problems.push(`undefined custom property ${u}`);
+else if (current !== css)
+  problems.push(`${OUTPUT} is out of date with ${SOURCE}; run npm run tokens`);
+for (const u of undefinedProperties(css))
+  problems.push(`undefined custom property ${u}`);
 
 if (problems.length > 0) {
   for (const p of problems) console.error(`build-tokens: ${p}`);
   process.exit(1);
 }
-console.log("build-tokens: ok (tokens.css is current; every var(--x) is defined)");
+console.log(
+  'build-tokens: ok (tokens.css is current; every var(--x) is defined)'
+);

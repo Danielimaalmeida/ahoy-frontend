@@ -8,23 +8,41 @@
   },
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --proxy-config proxy.conf.mjs",
-    "start:mock": "ng serve --configuration mock",
-    "mock:api": "node scripts/mock-api.mjs",
+    "start": "ng serve",
+    "start:test": "ng serve --configuration test",
     "build": "ng build",
+    "build:test": "ng build --configuration test",
+    "build:stats": "ng build --stats-json && npm run analyze",
+    "build:compress": "gzipper compress ./dist/r3da-neo-ahoy-frontend ./dist/r3da-neo-ahoy-frontend-gzip",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test --watch=false",
-    "lint": "eslint . && npm run tokens:check && npm run api:check",
+    "analyze": "esbuild-visualizer --metadata ./dist/r3da-neo-ahoy-frontend/stats.json --filename dist/analysis/index.html",
+    "test": "ng test",
+    "test:coverage": "ng test --coverage --watch=false && npm run test:convert-coverage",
+    "test:convert-coverage": "node .github/workflows/workflow-utils/convertJSONToMd.js",
+    "lint": "npm run eslint && npm run stylelint",
+    "lint:fix": "npm run eslint:fix && npm run stylelint:fix",
+    "eslint": "npx eslint",
+    "eslint:fix": "npx eslint --fix",
+    "lint-stage": "npx lint-staged -v",
+    "stylelint": "stylelint ./src/**/*.{scss,sass,css}",
+    "stylelint:fix": "stylelint ./src/**/*.{scss,sass,css} --fix",
+    "prepare:husky": "npx husky init",
+    "prepare": "husky",
+    "postinstall": "node ./tracking/postinstall.js || true",
+    "format": "npx prettier . --check --ignore-unknown",
+    "format:fix": "npx prettier . --write --ignore-unknown",
+    "preplaywright": "npx playwright install",
+    "playwright": "npx playwright test",
+    "playwright:ui": "npm run playwright -- --ui",
+    "audit": "npm audit --registry=https://registry.npmjs.org",
+    "audit:fix": "npm audit fix --registry=https://registry.npmjs.org",
+    "add-density": "ng add @company-name-fedev/density-components",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && node scripts/check-boundaries.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "api:sync": "node scripts/sync-openapi.mjs",
     "api:types": "openapi-typescript openapi/ahoy-v1.yaml -o src/app/core/api/schema.d.ts --immutable && node scripts/openapi-mirror.mjs",
     "api:check": "openapi-typescript openapi/ahoy-v1.yaml -o src/app/core/api/schema.d.ts --immutable --check && node scripts/openapi-mirror.mjs --check",
-    "tokens": "node scripts/build-tokens.mjs",
-    "tokens:check": "node scripts/build-tokens.mjs --check",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "prepare": "husky"
+    "tokens": "node scripts/build-tokens.mjs"
   },
   "lint-staged": {
     "*": "prettier --write --ignore-unknown"
@@ -40,7 +58,9 @@
     "diff": "9.0.0",
     "marked": "18.1.0",
     "rxjs": "7.8.2",
-    "tslib": "2.8.1"
+    "tslib": "2.8.1",
+    "@company-name-fedev/auth": "^8.0.0",
+    "@company-name-fedev/playwright-helpers": "^3.0.0"
   },
   "overrides": {
     "openapi-typescript": {
@@ -51,6 +71,8 @@
     "@angular/build": "^22.2.1",
     "@angular/cli": "^22.2.1",
     "@angular/compiler-cli": "^22.2.1",
+    "@playwright/test": "^1.56.1",
+    "@vitest/coverage-v8": "^5.0.3",
     "ajv": "^8.20.0",
     "angular-eslint": "^22.5.0",
     "eslint": "^10.12.0",
@@ -62,6 +84,8 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.1",
     "vitest": "^5.0.3",
-    "yaml": "^2.9.1"
+    "yaml": "^2.9.1",
+    "stylelint": "^17.15.0",
+    "stylelint-config-sass-guidelines": "^13.0.0"
   }
 }
