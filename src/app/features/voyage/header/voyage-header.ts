@@ -17,9 +17,8 @@ import {
 /**
  * The voyage header (wireframes `PlanReview` and `Halted`): key, status badge with the API words (`awaiting_decision ·
  * plan_accepted`, `halted · run_failed`), title, the primary action for the status with Budget, Models, Back to intake
- * (in planning and plan review) and Stop, the
- * phase stepper, and the meta line (owner, budget, current run, revision round, agent config). Shown once the story
- * is read.
+ * (in planning and plan review) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
+ * round, agent config). Shown once the story is read.
  */
 @Component({
   selector: 'ah-voyage-header',

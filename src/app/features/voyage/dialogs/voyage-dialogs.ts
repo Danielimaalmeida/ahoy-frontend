@@ -10,8 +10,9 @@ import { ResumeDialog } from './resume-dialog';
 import { StopDialog } from './stop-dialog';
 
 /**
- * Opens the voyage's Stop, Resume, Back to intake and Budget dialogs over the page. Each closes with the story the API answered, or
- * `undefined` when cancelled; the page needs nothing from the result, since the store already holds the new story.
+ * Opens the voyage's Stop, Resume, Back to intake and Budget dialogs over the page. Each closes with the story the API
+ * answered, or `undefined` when cancelled; the page needs nothing from the result, since the store already holds the new
+ * story.
  */
 @Injectable({ providedIn: 'root' })
 export class VoyageDialogs {

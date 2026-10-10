@@ -1,6 +1,6 @@
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 
-/** Requires text that is not only spaces (`Validators.required` takes "   "); the API trims nothing and wants 1 char. */
+/** Requires text that is not only spaces (`Validators.required` takes "   "): the API wants at least one character. */
 export function requiredText(
   control: AbstractControl<string>
 ): ValidationErrors | null {

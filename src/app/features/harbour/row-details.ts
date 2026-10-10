@@ -156,7 +156,9 @@ export class RowDetails {
     }
   }
 
-  /** One read; an answer for a version no longer on screen, or after the page went, is dropped. A failure shows nothing. */
+  /**
+   * One read; an answer for a version no longer on screen, or after the page went, is dropped. A failure shows nothing.
+   */
   private async readDiagnosis(key: string, version: number): Promise<void> {
     const result = await this.api.getStoryDiagnosis(key);
     if (this.disposed || this.asked.get(key) !== version || !result.ok) return;

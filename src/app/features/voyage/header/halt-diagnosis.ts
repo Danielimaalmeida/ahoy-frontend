@@ -48,7 +48,7 @@ export class HaltDiagnosis {
     effect(() => {
       const halt = this.halt();
       if (halt === null) return;
-      // A later halt of the same voyage moves its version; a story that only reloads with the same version reads nothing.
+      // A later halt of the same voyage moves its version; the same version again reads nothing.
       untracked(() => void this.load(halt.key));
     });
   }
