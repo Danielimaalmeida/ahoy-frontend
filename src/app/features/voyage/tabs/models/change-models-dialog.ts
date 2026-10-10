@@ -21,11 +21,11 @@ import {
   type ModelChoiceRowSpec,
 } from '@ui/model-choice/model-choice';
 import { ToastService } from '@ui/toast/toast';
+import { maxTrimmed } from '@ui/field/text-validators';
 import {
   CommandState,
   REASON_MAX,
   REASON_MESSAGES,
-  maxTrimmed,
   type VoyageDialogData,
 } from '../../dialogs/dialog-support';
 import {

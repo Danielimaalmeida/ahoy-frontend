@@ -11,11 +11,8 @@ import { crewLabel } from '@domain/models';
 import { ToastService } from '@ui/toast/toast';
 import { modelLabel, slotsForPhase } from '../../context/crew';
 import { VoyageContext } from '../../context/voyage-context';
-import {
-  maxTrimmed,
-  requiredText,
-  serverFieldError,
-} from '../../dialogs/dialog-support';
+import { maxTrimmed, requiredText } from '@ui/field/text-validators';
+import { serverFieldError } from '../../dialogs/dialog-support';
 import {
   DECISION_REASON_MAX,
   PLAN_GATE,

@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
-  fieldErrors,
+  fieldMessage,
   isInvalidState,
   type ApiError,
   type ApiResult,
@@ -20,6 +20,7 @@ import {
   type DialogError,
 } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
+import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import { ToastService } from '@ui/toast/toast';
 import type { BacklogRefinements } from './backlog-refinements';
 
@@ -52,26 +53,6 @@ function capValidator(
 ): ValidationErrors | null {
   const checked = checkRefinementCap(control.value);
   return 'error' in checked ? { [checked.error]: true } : null;
-}
-
-/** Limits the trimmed text to {@link REFINEMENT_TEXT_MAX}: what is sent is trimmed, so trailing spaces do not count. */
-function maxTrimmed(control: AbstractControl<string>): ValidationErrors | null {
-  const length = control.value.trim().length;
-  return length > REFINEMENT_TEXT_MAX
-    ? {
-        maxlength: {
-          requiredLength: REFINEMENT_TEXT_MAX,
-          actualLength: length,
-        },
-      }
-    : null;
-}
-
-/** Requires text that is not only spaces: the API wants at least one non-space character. */
-function requiredText(
-  control: AbstractControl<string>
-): ValidationErrors | null {
-  return control.value.trim() === '' ? { required: true } : null;
 }
 
 /** Which request a refinement error answers: they read differently on a `409 invalid_state`. */
@@ -117,16 +98,15 @@ export function refinementErrorView(
       };
 }
 
-/** The server's message for one field of the request ("" when there is none). */
-function serverFieldError(
+/** The server's message for one field of the request, from a result that failed ("" when there is none). */
+function resultFieldError(
   result: ApiResult<unknown> | null,
   field: string
 ): string {
-  if (result === null || result.ok) return '';
-  return fieldErrors(result.error)
-    .filter((error) => error.path?.[0] === field)
-    .map((error) => error.message)
-    .join(' ');
+  return fieldMessage(
+    result === null || result.ok ? null : result.error,
+    field
+  );
 }
 
 /** What the Refine dialog is opened with. */
@@ -216,7 +196,7 @@ export class RefineDialog {
   protected readonly form = new FormGroup({
     notes: new FormControl('', {
       nonNullable: true,
-      validators: [maxTrimmed],
+      validators: [maxTrimmed(REFINEMENT_TEXT_MAX)],
     }),
     cap: new FormControl('', {
       nonNullable: true,
@@ -246,10 +226,10 @@ export class RefineDialog {
       : refinementErrorView(last.error, 'request');
   });
   protected readonly notesServerError = computed(() =>
-    serverFieldError(this.last(), 'notes')
+    resultFieldError(this.last(), 'notes')
   );
   protected readonly capServerError = computed(() =>
-    serverFieldError(this.last(), 'budgetNanoAiu')
+    resultFieldError(this.last(), 'budgetNanoAiu')
   );
 
   protected async submit(): Promise<void> {
@@ -334,7 +314,7 @@ export class CancelRefinementDialog {
   };
   protected readonly reason = new FormControl('', {
     nonNullable: true,
-    validators: [requiredText, maxTrimmed],
+    validators: [requiredText, maxTrimmed(REFINEMENT_TEXT_MAX)],
   });
   protected readonly busy = signal(false);
   protected readonly error = computed(() => {
@@ -344,7 +324,7 @@ export class CancelRefinementDialog {
       : refinementErrorView(last.error, 'cancel');
   });
   protected readonly serverError = computed(() =>
-    serverFieldError(this.last(), 'reason')
+    resultFieldError(this.last(), 'reason')
   );
 
   protected async submit(): Promise<void> {

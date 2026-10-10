@@ -10,12 +10,11 @@ import { formatCap } from '@ui/budget-meter/budget-meter';
 import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { ToastService } from '@ui/toast/toast';
+import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import {
   CommandState,
   REASON_MAX,
   REASON_MESSAGES,
-  maxTrimmed,
-  requiredText,
   type VoyageDialogData,
 } from './dialog-support';
 

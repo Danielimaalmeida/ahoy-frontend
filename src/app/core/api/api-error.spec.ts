@@ -2,6 +2,7 @@ import problems from '@testing/fixtures/problems.json';
 import {
   fail,
   fieldErrors,
+  fieldMessage,
   formControlPath,
   hasProblemCode,
   invalidResponse,
@@ -211,5 +212,38 @@ describe('fieldErrors', () => {
     expect(fieldErrors(problemOf('not_found'))).toEqual([]);
     expect(fieldErrors({ kind: 'network' })).toEqual([]);
     expect(fieldErrors(invalidResponse('x', 'y'))).toEqual([]);
+  });
+});
+
+describe('fieldMessage', () => {
+  it('joins the messages of one field, in either path form, and nothing for another field', () => {
+    const error = problemToError(400, {
+      type: 'urn:x',
+      title: 't',
+      status: 400,
+      code: 'validation_failed',
+      errors: [
+        { path: 'body/reason', message: 'must not be empty' },
+        { path: '/reason', message: 'is required' },
+        { path: '/budgetNanoAiu', message: 'must be >= 1' },
+      ],
+    });
+    expect(fieldMessage(error, 'reason')).toBe('must not be empty is required');
+    expect(fieldMessage(error, 'budgetNanoAiu')).toBe('must be >= 1');
+    expect(fieldMessage(error, 'models')).toBe('');
+  });
+
+  it('gives nothing without an error, for an error with no field messages, and for one aimed at the form as a whole', () => {
+    expect(fieldMessage(null, 'reason')).toBe('');
+    expect(fieldMessage({ kind: 'network' }, 'reason')).toBe('');
+    expect(fieldMessage(problemOf('not_found'), 'reason')).toBe('');
+    const whole = problemToError(400, {
+      type: 'urn:x',
+      title: 't',
+      status: 400,
+      code: 'validation_failed',
+      errors: [{ path: 'body', message: 'title contains a NUL character' }],
+    });
+    expect(fieldMessage(whole, 'reason')).toBe('');
   });
 });
