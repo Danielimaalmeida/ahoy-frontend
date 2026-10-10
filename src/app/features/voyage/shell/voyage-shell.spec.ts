@@ -93,10 +93,11 @@ async function open(url: string, options: OpenOptions = {}): Promise<Page> {
 function storyOf(
   server: MockAhoyServer,
   key: string
-): { version: number; spentNanoAiu: number } {
+): { version: number; spentNanoAiu: number; phase: string } {
   return call(server, 'GET', `/stories/${key}`).body as {
     version: number;
     spentNanoAiu: number;
+    phase: string;
   };
 }
 
@@ -196,6 +197,7 @@ describe('VoyageShell on the mock backend', () => {
         'Decide on the plan',
         'Budget',
         'Models',
+        'Back to intake',
         'Stop',
       ]);
       expect(
@@ -222,6 +224,7 @@ describe('VoyageShell on the mock backend', () => {
         'Answer questions',
         'Budget',
         'Models',
+        'Back to intake',
         'Stop',
       ]);
     });
@@ -396,6 +399,65 @@ describe('VoyageShell on the mock backend', () => {
       expect(text(page.root.querySelector('ah-voyage-header h1'))).toBe(
         'Show invoice due date on the billing page'
       );
+    });
+  });
+
+  describe('Back to intake', () => {
+    it('sends what changed in Jira with the spend confirmation and shows the voyage back in intake', async () => {
+      const page = await open('/voyages/PROJ-123/plan');
+      const version = storyOf(page.server, 'PROJ-123').version;
+      click(buttonNamed(header(page), 'Back to intake'));
+      await flush(page);
+
+      const d = dialog();
+      expect(text(d.querySelector('.ah-dialog__title'))).toBe(
+        'Send PROJ-123 back to intake?'
+      );
+      expect(text(d)).toContain('Update the Jira ticket first.');
+      expect(text(d)).toMatch(/This may spend up to [\d.]+ AIU/);
+      type(
+        d.querySelector('textarea'),
+        '  Jira now names the export limits.  '
+      );
+      click(buttonNamed(d, /^Back to intake/));
+      await flush(page);
+
+      const sent = commands(page);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.path).toBe('/stories/PROJ-123/refresh-intake');
+      expect(sent[0]?.body).toEqual({
+        expectedVersion: version,
+        reason: 'Jira now names the export limits.',
+        confirmSpend: true,
+      });
+      expect(hasDialog()).toBe(false);
+      expect(storyOf(page.server, 'PROJ-123').phase).toBe('intake');
+      expect(buttonsIn(header(page))).not.toContain('Back to intake');
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .map((t) => t.text)
+      ).toEqual([
+        'Voyage sent back to intake. Navigator reads PROJ-123 from Jira again.',
+      ]);
+    });
+
+    it('needs a reason: an empty one shows the error and sends nothing', async () => {
+      const page = await open('/voyages/PROJ-123/plan');
+      click(buttonNamed(header(page), 'Back to intake'));
+      await flush(page);
+      type(dialog().querySelector('textarea'), '   ');
+      click(buttonNamed(dialog(), /^Back to intake/));
+      await flush(page);
+      expect(text(dialog().querySelector('.ah-field__error'))).toBe(
+        'A reason is required.'
+      );
+      expect(commands(page)).toHaveLength(0);
+    });
+
+    it('is not offered while a run is under way', async () => {
+      const page = await open('/voyages/PROJ-140/runs');
+      expect(buttonsIn(header(page))).not.toContain('Back to intake');
     });
   });
 

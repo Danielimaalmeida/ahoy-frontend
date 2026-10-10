@@ -30,6 +30,9 @@ import {
   isModelCatalog,
   isProblem,
   isQuestionList,
+  isRefinement,
+  isRefinementList,
+  isRefinementSummaryList,
   isRun,
   isRunList,
   isStory,
@@ -53,6 +56,12 @@ import type {
   ModelPlan,
   ModelCatalog,
   Question,
+  CancelRefinementRequest,
+  Refinement,
+  RefinementList,
+  RefinementRequest,
+  RefinementSummary,
+  RefreshIntakeRequest,
   ResumeStoryRequest,
   Run,
   SetStoryBudgetRequest,
@@ -187,6 +196,67 @@ export class ApiClient {
       `/stories/${segment(key)}/budget`,
       body,
       isStory
+    );
+  }
+
+  /**
+   * Sends a story in planning or plan review back to intake, after Jira was updated: the plan, its approvals and open
+   * questions become history, and intake and planning run again. May spend AIU. The answer (202) is the story.
+   */
+  refreshIntake(
+    key: string,
+    body: RefreshIntakeRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'refreshIntake',
+      `/stories/${segment(key)}/refresh-intake`,
+      body,
+      isStory
+    );
+  }
+
+  /** The newest refinement of every refined backlog item, without content. */
+  async listRefinements(): Promise<ApiResult<readonly RefinementSummary[]>> {
+    const result = await this.get(
+      'listRefinements',
+      '/refinements',
+      isRefinementSummaryList
+    );
+    return mapResult(result, (list) => list.items);
+  }
+
+  /** Every refinement of one backlog item, newest first, with the agent's Markdown. */
+  getRefinements(key: string): Promise<ApiResult<RefinementList>> {
+    return this.get(
+      'getRefinements',
+      `/refinements/${segment(key)}`,
+      isRefinementList
+    );
+  }
+
+  /** Asks an agent to pre-refine a backlog item. May spend AIU. The answer (202) is the queued refinement. */
+  requestRefinement(
+    key: string,
+    body: RefinementRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'requestRefinement',
+      `/refinements/${segment(key)}`,
+      body,
+      isRefinement
+    );
+  }
+
+  /** Stops the item's refinement in progress. The answer (202) is the refinement, cancelled or being cancelled. */
+  cancelRefinement(
+    key: string,
+    body: CancelRefinementRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'cancelRefinement',
+      `/refinements/${segment(key)}/cancel`,
+      body,
+      isRefinement
     );
   }
 

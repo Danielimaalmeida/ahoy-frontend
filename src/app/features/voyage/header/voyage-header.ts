@@ -8,11 +8,16 @@ import { StatusBadge } from '@ui/status-badge/status-badge';
 import { currentRunView } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
-import { headerActions, primaryAction } from './primary-action';
+import {
+  canRefreshIntake,
+  headerActions,
+  primaryAction,
+} from './primary-action';
 
 /**
  * The voyage header (wireframes `PlanReview` and `Halted`): key, status badge with the API words (`awaiting_decision ·
- * plan_accepted`, `halted · run_failed`), title, the primary action for the status with Budget, Models and Stop, the
+ * plan_accepted`, `halted · run_failed`), title, the primary action for the status with Budget, Models, Back to intake
+ * (in planning and plan review) and Stop, the
  * phase stepper, and the meta line (owner, budget, current run, revision round, agent config). Shown once the story
  * is read.
  */
@@ -65,6 +70,11 @@ import { headerActions, primaryAction } from './primary-action';
               <a ahButton [routerLink]="['/voyages', v.story.key, 'models']">{{
                 v.story.status === 'halted' ? 'Change models' : 'Models'
               }}</a>
+              @if (v.intake) {
+                <button type="button" ahButton (click)="openRefreshIntake()">
+                  Back to intake
+                </button>
+              }
               @if (v.actions.stop) {
                 <button
                   type="button"
@@ -157,6 +167,7 @@ export class VoyageHeader {
       apiDetail,
       primary: primaryAction(story.status, gateKey),
       actions: headerActions(story.status),
+      intake: canRefreshIntake(story, this.context.runs()),
       run: currentRunView(story.currentRunId, this.context.runs()),
       round: this.roundText(),
       sha: shortSha(story.controlSha),
@@ -183,5 +194,9 @@ export class VoyageHeader {
 
   protected openBudget(): void {
     this.dialogs.budget(this.context);
+  }
+
+  protected openRefreshIntake(): void {
+    this.dialogs.refreshIntake(this.context);
   }
 }

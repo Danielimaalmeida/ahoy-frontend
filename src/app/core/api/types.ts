@@ -73,6 +73,21 @@ export const RUN_STATUSES = listOf<RunStatus>()([
   'lost',
 ]);
 
+/** The states of a backlog item's refinement (`RefinementStatus`): queued, running, then how it ended. */
+export type RefinementStatus = Schemas['RefinementStatus'];
+export const REFINEMENT_STATUSES = listOf<RefinementStatus>()([
+  'queued',
+  'running',
+  'succeeded',
+  'failed',
+  'budget_exceeded',
+  'timed_out',
+  'cancelled',
+  'output_violation',
+  'auth_failed',
+  'lost',
+]);
+
 /** The reasoning efforts of the Copilot SDK (`ReasoningEffort`). A model may take fewer, or none. */
 export type ReasoningEffort = Schemas['ReasoningEffort'];
 export const REASONING_EFFORTS = listOf<ReasoningEffort>()([
@@ -191,7 +206,10 @@ export type GateVerdict = Schemas['GateVerdict'];
 /** A worker run of one agent. */
 export type Run = Schemas['Run'];
 
-/** A question an agent asked, and the answer if there is one. */
+/**
+ * A question an agent asked, and the answer if there is one. A non-null `supersededAt` means an intake refresh made it
+ * history: it is shown, never answered, and never counts as waiting for an answer.
+ */
 export type Question = Schemas['Question'];
 
 /** An automated gate verdict or a person's decision. */
@@ -282,6 +300,24 @@ export type StopStoryRequest = Schemas['StopStoryRequest'];
 
 /** Body of `resumeStory`. */
 export type ResumeStoryRequest = Schemas['ResumeStoryRequest'];
+
+/** Body of `refreshIntake`: sends a story in planning or plan review back to intake. `confirmSpend` must be true. */
+export type RefreshIntakeRequest = Schemas['RefreshIntakeRequest'];
+
+/** An agent's pre-refinement of a Jira backlog item; `content` is its Markdown, non-null exactly when it succeeded. */
+export type Refinement = Schemas['Refinement'];
+
+/** A refinement without its content, as `listRefinements` lists the newest one of each issue. */
+export type RefinementSummary = Schemas['RefinementSummary'];
+
+/** Answer of `getRefinements`: every refinement of one issue, newest first. */
+export type RefinementList = Schemas['RefinementList'];
+
+/** Body of `requestRefinement`. May spend AIU: `confirmSpend` must be true. */
+export type RefinementRequest = Schemas['RefinementRequest'];
+
+/** Body of `cancelRefinement`. */
+export type CancelRefinementRequest = Schemas['CancelRefinementRequest'];
 
 /** Body of `setStoryBudget`. The new cap includes what is already spent. */
 export type SetStoryBudgetRequest = Schemas['SetStoryBudgetRequest'];

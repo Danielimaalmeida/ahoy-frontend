@@ -14,6 +14,7 @@ import {
   boundedText,
   flag,
   guard,
+  isRecord,
   nonEmptyText,
   nullable,
   oneOf,
@@ -24,6 +25,7 @@ import {
   text,
   timestamp,
   wholeNumber,
+  type Check,
 } from './guard-kit';
 import {
   EFFORT_SOURCES,
@@ -33,6 +35,7 @@ import {
   MODEL_SLOTS,
   MODEL_SOURCES,
   REASONING_EFFORTS,
+  REFINEMENT_STATUSES,
   RUN_STATUSES,
   STORY_STATUSES,
   type AhoyEvent,
@@ -55,6 +58,9 @@ import {
   type Problem,
   type ProblemFieldError,
   type Question,
+  type Refinement,
+  type RefinementList,
+  type RefinementSummary,
   type Run,
   type SlotModel,
   type Story,
@@ -201,6 +207,7 @@ const question = shape<Question>({
   answeredBy: nullable(actor),
   answeredAt: nullable(timestamp),
   consumed: flag,
+  supersededAt: nullable(timestamp),
 });
 
 /** A question. */
@@ -299,6 +306,59 @@ const slotDefault = shape<SlotDefault>({
   modelSource: oneOf(['configuration', 'phase_table', 'agent_profile']),
   effortSource: oneOf(['configuration', 'phase_table', 'model_default']),
 });
+
+/** What a refinement and its summary share: everything but the content. */
+const refinementFields = {
+  id: runId,
+  key: storyKey,
+  status: oneOf(REFINEMENT_STATUSES),
+  notes: nullable(text),
+  requestedBy: actor,
+  agent: nullable(text),
+  model: nullable(text),
+  reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+  runtime: nullable(text),
+  controlSha: sha1,
+  budgetNanoAiu: nanoAiu,
+  usage,
+  exitReason: nullable(text),
+  cancelRequested: flag,
+  createdAt: timestamp,
+  startedAt: nullable(timestamp),
+  endedAt: nullable(timestamp),
+} as const;
+
+const refinementSummary = shape<RefinementSummary>(refinementFields);
+
+/**
+ * A refinement with its Markdown. The contract says `content` is set exactly when it succeeded; a refinement that breaks
+ * that is refused, so the screen never shows text for a failed run or nothing for a succeeded one.
+ */
+const refinement: Check = (value, at) => {
+  const why = shape<Refinement>({
+    ...refinementFields,
+    content: nullable(text),
+  })(value, at);
+  if (why !== null || !isRecord(value)) return why;
+  return (value['status'] === 'succeeded') === (value['content'] !== null)
+    ? null
+    : `${at}.content must be set exactly when the status is succeeded`;
+};
+
+/** A refinement, as `requestRefinement` and `cancelRefinement` answer it. */
+export const isRefinement = guard<Refinement>('Refinement', refinement);
+
+/** Every refinement of one issue, newest first. */
+export const isRefinementList = guard<RefinementList>(
+  'RefinementList',
+  shape<RefinementList>({ key: storyKey, items: arrayOf(refinement) })
+);
+
+/** The newest refinement of each refined issue, without content. */
+export const isRefinementSummaryList = guard<ItemList<RefinementSummary>>(
+  'RefinementSummaryList',
+  shape<ItemList<RefinementSummary>>({ items: arrayOf(refinementSummary) })
+);
 
 /** The configured catalogue, including the defaults of new stories. */
 export const isModelCatalog = guard<ModelCatalog>(

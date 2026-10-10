@@ -29,6 +29,7 @@ function question(id: string, round: number, answered: boolean): Question {
     answeredBy: answered ? 'sam@example.com' : null,
     answeredAt: answered ? '2026-10-06T09:30:00.000Z' : null,
     consumed: false,
+    supersededAt: null,
   };
 }
 

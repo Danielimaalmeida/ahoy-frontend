@@ -1,4 +1,5 @@
 import type { Question } from '@core/api/types';
+import { openQuestions } from '@domain/questions';
 
 /** The longest answer the API takes (`AnswerRequest.answer`: `maxLength: 20000`, counted in characters). */
 export const ANSWER_MAX = 20000;
@@ -45,11 +46,11 @@ export function groupRounds(
     });
 }
 
-/** The questions that still need an answer, in every round. */
+/** The questions that still need an answer, in every round; one an intake refresh superseded never does. */
 export function unanswered(
   questions: readonly Question[]
 ): readonly Question[] {
-  return questions.filter((question) => !isAnswered(question));
+  return openQuestions(questions);
 }
 
 /** What is wrong with a typed answer, or `null` when it can be sent. It is judged trimmed, as it is sent. */

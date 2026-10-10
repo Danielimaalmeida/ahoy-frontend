@@ -72,6 +72,12 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Back to intake and the refinement contract (2026-10-10, `claude/tender-johnson-pvbvmu`):** vendored the hosted
+  contract (refresh intake, superseded questions, backlog refinements), added the voyage header's Back to intake dialog
+  (planning and plan review only, with the spend warning), read-only "Before the intake refresh" questions, the
+  `ApiClient` refinement operations and their mock. Offline build, typecheck, lint, 130 files / 2,349 tests and
+  formatting passed on Node 24.21.0 in a cloud sandbox (public-registry install, auth library stubbed, nothing of that
+  committed). The Backlog's Refine action is not built yet; no browser, real API or TEST check was run.
 - **Coverage summary workflow fix (2026-10-10):** `test:coverage` now generates both the JSON coverage report and
   `coverage/coverage-summary.md`. The converter is compatible with the repository's ESM package configuration and
   resolves paths independently of the runner's working directory.

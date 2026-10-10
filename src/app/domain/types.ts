@@ -142,6 +142,8 @@ export interface Question {
   readonly answeredBy: string | null;
   readonly answeredAt: string | null;
   readonly consumed: boolean;
+  /** Set when an intake refresh made the question history: shown, never answered, never counted as waiting. */
+  readonly supersededAt: string | null;
 }
 
 /** An automated gate verdict or a person's decision. */

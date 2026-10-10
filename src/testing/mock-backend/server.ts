@@ -13,10 +13,13 @@
  * (`npm run mock:api`): never two mocks.
  */
 import type {
+  CancelRefinementRequest,
   DecisionRequest,
   ModelChoice,
   ModelSlot,
   ProblemCode,
+  RefinementRequest,
+  RefreshIntakeRequest,
   ResumeStoryRequest,
   SetStoryBudgetRequest,
   SetStoryModelsRequest,
@@ -37,6 +40,7 @@ import {
   type MockRequest,
   type MockResponse,
 } from './http';
+import { RefinementDesk } from './refinements';
 import { SchemaChecker, unstorableText } from './schema';
 import { seedVoyages } from './seeds';
 import { LIVE_TIMING, Simulator, type SimulationTiming } from './simulator';
@@ -176,6 +180,7 @@ export class MockAhoyServer {
   private readonly options: MockServerOptions;
   private world: World;
   private simulator: Simulator;
+  private refinements: RefinementDesk;
 
   constructor(options: MockServerOptions) {
     if (!isRecord(options.contract) || !isRecord(options.contract['paths']))
@@ -191,6 +196,10 @@ export class MockAhoyServer {
       new StreamHub(this.clock, options.keepaliveMs ?? KEEPALIVE_MS)
     );
     this.simulator = new Simulator(this.world, options.timing ?? LIVE_TIMING);
+    this.refinements = new RefinementDesk(
+      this.clock,
+      options.timing ?? LIVE_TIMING
+    );
     this.load();
   }
 
@@ -204,9 +213,15 @@ export class MockAhoyServer {
     return this.simulator;
   }
 
+  /** The refinements of backlog items, for specs that look inside. */
+  get refinementDesk(): RefinementDesk {
+    return this.refinements;
+  }
+
   /** Throws away every change: the seeds again (or nothing), the switches cleared, open streams ended. */
   reset(): void {
     this.simulator.stopAll();
+    this.refinements.stopAll();
     this.world.hub.closeAll();
     this.world = new World(
       this.clock,
@@ -214,6 +229,10 @@ export class MockAhoyServer {
     );
     this.simulator = new Simulator(
       this.world,
+      this.options.timing ?? LIVE_TIMING
+    );
+    this.refinements = new RefinementDesk(
+      this.clock,
       this.options.timing ?? LIVE_TIMING
     );
     Object.assign(this.switches, {
@@ -227,6 +246,7 @@ export class MockAhoyServer {
   /** Stops the simulation and ends every open stream. */
   close(): void {
     this.simulator.stopAll();
+    this.refinements.stopAll();
     this.world.hub.closeAll();
   }
 
@@ -485,6 +505,32 @@ export class MockAhoyServer {
         return this.stopStory(call);
       case 'resumeStory':
         return this.resumeStory(call);
+      case 'refreshIntake':
+        return this.refreshIntake(call);
+      case 'listRefinements':
+        return jsonResponse(200, { items: this.refinements.latest() });
+      case 'getRefinements': {
+        const key = call.path['key'] ?? '';
+        return jsonResponse(200, { key, items: this.refinements.of(key) });
+      }
+      case 'requestRefinement': {
+        const body = call.body as RefinementRequest; // validated
+        return jsonResponse(
+          202,
+          this.refinements.request(call.path['key'] ?? '', call.actor, body)
+        );
+      }
+      case 'cancelRefinement': {
+        const body = call.body as CancelRefinementRequest; // validated
+        return jsonResponse(
+          202,
+          this.refinements.cancel(
+            call.path['key'] ?? '',
+            call.actor,
+            body.reason
+          )
+        );
+      }
       case 'setStoryBudget':
         return this.setStoryBudget(call);
       case 'getStoryModels':
@@ -694,6 +740,62 @@ export class MockAhoyServer {
     return jsonResponse(202, voyage.storyDto());
   }
 
+  /**
+   * Sends a story in planning or plan review back to intake, as `refreshIntake` of `ahoy-hosted` does: its questions
+   * become history (`supersededAt`), the planner asks afresh, and intake and planning run again.
+   */
+  private refreshIntake(call: Call): MockResponse {
+    const body = call.body as RefreshIntakeRequest; // validated
+    const voyage = this.lock(call, body.expectedVersion);
+    const story = voyage.story;
+    if (
+      !['planning', 'plan_review'].includes(story.phase) ||
+      story.status === 'terminal'
+    )
+      throw new MockProblem(
+        'invalid_state',
+        'Intake can only be refreshed during planning or plan review'
+      );
+    if (story.currentRunId !== null || story.status === 'running')
+      throw new MockProblem(
+        'invalid_state',
+        'Stop the active run and wait for it to end before refreshing intake'
+      );
+    if (voyage.runs.some((run) => run.phase === 'implementation'))
+      throw new MockProblem(
+        'invalid_state',
+        'Intake cannot be refreshed with an active run or after implementation started'
+      );
+    if (story.spentNanoAiu >= story.budgetNanoAiu)
+      throw new MockProblem(
+        'invalid_state',
+        'Increase the story budget before refreshing intake'
+      );
+    const now = this.world.nowIso();
+    const superseded: string[] = [];
+    for (const question of voyage.questions)
+      if (question.supersededAt === null) {
+        question.supersededAt = now;
+        superseded.push(question.id);
+      }
+    voyage.asked = false;
+    const from = story.phase;
+    story.phase = 'intake';
+    story.status = 'ready';
+    story.haltReason = null;
+    this.world.touch(voyage);
+    this.world.append(voyage, 'story.intake_refreshed', call.actor, {
+      reason: body.reason.trim(),
+      from,
+      supersededQuestions: superseded,
+      budgetNanoAiu: story.budgetNanoAiu,
+      spentNanoAiu: story.spentNanoAiu,
+      confirmSpend: true,
+    });
+    this.simulator.poke(voyage);
+    return jsonResponse(202, voyage.storyDto());
+  }
+
   private setStoryBudget(call: Call): MockResponse {
     const body = call.body as SetStoryBudgetRequest; // validated
     const voyage = this.lock(call, body.expectedVersion);
@@ -753,6 +855,11 @@ export class MockAhoyServer {
         'not_found',
         `Story ${story.key} has no question ${questionId}`
       );
+    if (question.supersededAt !== null)
+      throw new MockProblem(
+        'invalid_state',
+        `${questionId} was superseded by an intake refresh and cannot be answered`
+      );
     if (question.answer !== null)
       throw new MockProblem(
         'already_answered',
@@ -774,7 +881,9 @@ export class MockAhoyServer {
     question.answeredBy = call.actor;
     question.answeredAt = this.world.nowIso();
     question.consumed = false;
-    const pending = voyage.questions.filter((q) => q.answer === null).length;
+    const pending = voyage.questions.filter(
+      (q) => q.answer === null && q.supersededAt === null
+    ).length;
     if (pending === 0) story.status = 'ready';
     this.world.touch(voyage);
     this.world.append(voyage, 'question.answered', call.actor, {

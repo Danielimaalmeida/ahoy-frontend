@@ -54,6 +54,13 @@ export const STALE_AFTER: Readonly<
   'story.awaiting_decision': ['story', 'state', 'gates'],
   'story.unblocked': ['story', 'state'],
   'story.routed': ['story', 'state'],
+  'story.intake_refreshed': [
+    'story',
+    'state',
+    'questions',
+    'gates',
+    'artifacts',
+  ],
   'run.queued': ['story', 'runs'],
   'run.waiting': ['story', 'runs'],
   'run.dispatched': ['story', 'runs'],

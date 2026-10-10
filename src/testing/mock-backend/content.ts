@@ -192,3 +192,37 @@ export function progressSteps(
       ];
   }
 }
+
+/** The pre-refinement the simulated refinement agent replies with, in the sections the real prompt asks for. */
+export function refinementMarkdown(key: string, notes: string | null): string {
+  return [
+    '## Verdict',
+    `NEEDS WORK. A simulated pre-refinement of ${key}: the mock read no Jira and called no model.`,
+    '',
+    '## Summary',
+    'The story asks for one visible change for customers; it names no failure case and no limit.',
+    '',
+    '## Proposed story',
+    'As a billing administrator, I want the change the ticket describes, so that customers see correct invoices.',
+    '',
+    '## Acceptance criteria',
+    '1. Given a customer on the page the ticket names, when it loads, then the change is visible. (from Jira)',
+    '2. Given the data is missing, when the page loads, then it says so instead of showing a blank. (new)',
+    '',
+    '## Open questions',
+    '1. Should the change apply to every customer at once, or behind a feature flag first?',
+    '',
+    '## Assumptions',
+    '- Assumption: the service already stores the data the page needs.',
+    '',
+    '## Risks and dependencies',
+    'None found (simulated).',
+    '',
+    '## Suggested split',
+    'Not needed',
+    '',
+    '## Affected repositories',
+    'From the issue only: no code was read (simulated).',
+    ...(notes !== null ? ['', "## Requester's notes", notes] : []),
+  ].join('\n');
+}

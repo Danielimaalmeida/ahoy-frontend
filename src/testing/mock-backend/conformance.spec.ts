@@ -210,6 +210,47 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   get('/health');
   server.switches.conflictNext = 'stale_version';
   post('/stories/PROJ-131/resume', { expectedVersion: version('PROJ-131') });
+
+  // Back to intake from planning: the questions become history and the planner asks afresh.
+  post('/stories', { key: 'DEMO-3', budgetNanoAiu: 40 * AIU });
+  advance(12_000);
+  post('/stories/DEMO-3/refresh-intake', {
+    expectedVersion: version('DEMO-3'),
+    reason: 'Jira now names the export limits',
+    confirmSpend: true,
+  });
+  advance(12_000);
+  get('/stories/DEMO-3/questions');
+  get('/stories/DEMO-3/events?limit=500');
+
+  // A backlog item's refinement: queued, run, read; then one cancelled.
+  post('/refinements/PROJ-145', {
+    confirmSpend: true,
+    notes: 'Check the CSV export limits',
+  });
+  get('/refinements');
+  advance(10_000);
+  get('/refinements');
+  get('/refinements/PROJ-145');
+  get('/refinements/PROJ-999');
+  post('/refinements/PROJ-150', { confirmSpend: true });
+  post('/refinements/PROJ-150/cancel', { reason: 'Asked for the wrong story' });
+  get('/refinements/PROJ-150');
+
+  post('/stories/PROJ-140/refresh-intake', {
+    expectedVersion: version('PROJ-140'),
+    reason: 'Not in planning',
+    confirmSpend: true,
+  });
+  post('/stories/DEMO-3/refresh-intake', {
+    expectedVersion: version('DEMO-3'),
+    reason: 'x',
+    confirmSpend: false,
+  });
+  post('/refinements/PROJ-151', { confirmSpend: true });
+  post('/refinements/PROJ-151', { confirmSpend: true });
+  post('/refinements/PROJ-145/cancel', { reason: 'Nothing in progress' });
+  post('/refinements/PROJ-152', {});
 }
 
 describe('the mock against openapi/ahoy-v1.yaml', () => {
@@ -241,6 +282,11 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'listArtifacts',
       'getArtifactContent',
       'listStoryEvents',
+      'refreshIntake',
+      'listRefinements',
+      'getRefinements',
+      'requestRefinement',
+      'cancelRefinement',
     ])
       expect(used.has(op), op).toBe(true);
     const statuses = new Set(exchanges.map((e) => e.response.status));

@@ -43,6 +43,7 @@ tags:
   - name: artifacts
   - name: events
   - name: jira
+  - name: refinements
 paths:
   /health:
     get:
@@ -216,6 +217,37 @@ paths:
       responses:
         '202':
           description: The story is ready to be stepped again.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/refresh-intake:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: refreshIntake
+      tags: [stories]
+      summary: Refresh Jira intake and invalidate the old plan. May spend AIU.
+      description: |
+        Human-triggered, during planning or plan_review only, with no active run and before
+        implementation has started. Update Jira first. Preserves the story identity, owner,
+        pinned control commit, model choices, total budget, cumulative spend and audit evidence.
+        Archives current artifacts and state, supersedes all existing questions (still listed
+        with supersededAt), and clears the current plan, criteria, work packages and approvals.
+        Schedules a new intake run followed by planning within the remaining story budget.
+        confirmSpend must be true; this does not increase the cap or guarantee a successful refresh.
+        A failed intake does not restore the obsolete snapshot or plan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshIntakeRequest' }
+      responses:
+        '202':
+          description: Intake refresh scheduled, not yet completed.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Story' }
@@ -682,6 +714,94 @@ paths:
               schema: { type: string }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+  /refinements:
+    get:
+      operationId: listRefinements
+      tags: [refinements]
+      summary: The newest refinement of every Jira issue that has one, newest first, without content.
+      description: |
+        One entry per Jira issue, so a backlog view can show each item's refinement state in one call. Read the
+        Markdown with `getRefinements`. An issue that was never refined is absent.
+      responses:
+        '200':
+          description: The newest refinement of each refined issue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefinementSummaryList' }
+        '401': { $ref: '#/components/responses/Problem' }
+  /refinements/{key}:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    get:
+      operationId: getRefinements
+      tags: [refinements]
+      summary: Every refinement of one Jira issue, newest first, with the agent's Markdown.
+      description: An issue that was never refined answers `200` with no items, not `404`.
+      responses:
+        '200':
+          description: The issue's refinements, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefinementList' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: requestRefinement
+      tags: [refinements]
+      summary: Ask an agent to pre-refine a Jira backlog item. May spend AIU.
+      description: |
+        Queues one worker run of the server's refinement agent (`AHOY_REFINEMENT_AGENT`) for the issue, pinned to the
+        control repo's HEAD now. The agent reads the issue through the Jira and Confluence MCP servers (and, by
+        default, read-only clones of the mapped child repositories) and replies with a pre-refinement in Markdown:
+        verdict, summary, proposed story, acceptance criteria, open questions, assumptions, risks, suggested split and
+        affected repositories. The reply is kept in Ahoy only; nothing is written to Jira, Confluence or GitHub, and
+        the agent writes no files. The issue need not have been started in Ahoy.
+
+        `confirmSpend` must be true. The run is capped at `budgetNanoAiu`, else the server's refinement cap; it is not
+        charged to any story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll
+        `getRefinements` for the outcome; refinements send no events. One refinement per issue is in progress at a
+        time: another request answers `409 invalid_state`. `503 unavailable` when refinement is not configured or the
+        control repo cannot be read.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefinementRequest' }
+      responses:
+        '202':
+          description: The refinement, queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Refinement' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /refinements/{key}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: cancelRefinement
+      tags: [refinements]
+      summary: Stop the issue's refinement in progress.
+      description: |
+        A queued refinement ends `cancelled` at once and spends nothing. A running one is marked
+        `cancelRequested`; the reconciler stops its worker and records what it spent. Who cancelled and why become its
+        `exitReason`. `409 invalid_state` when nothing is in progress.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelRefinementRequest' }
+      responses:
+        '202':
+          description: The refinement, cancelled or being cancelled.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Refinement' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     webeam:
@@ -1007,6 +1127,36 @@ components:
           uniqueItems: true
           items: { $ref: '#/components/schemas/RepoAlias' }
         expectedVersion: { $ref: '#/components/schemas/Version' }
+    RefinementRequest:
+      type: object
+      required: [confirmSpend]
+      additionalProperties: false
+      properties:
+        confirmSpend: { type: boolean, const: true }
+        notes:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          pattern: "\\S"
+          description: What the agent should look at, given to it as the requester's notes.
+        budgetNanoAiu:
+          type: integer
+          minimum: 1
+          description: The run's AIU cap; the server's refinement cap when absent.
+    CancelRefinementRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 2000, pattern: "\\S" }
+    RefreshIntakeRequest:
+      type: object
+      required: [expectedVersion, reason, confirmSpend]
+      additionalProperties: false
+      properties:
+        expectedVersion: { $ref: '#/components/schemas/Version' }
+        reason: { type: string, minLength: 1, maxLength: 2000, pattern: "\\S" }
+        confirmSpend: { type: boolean, const: true }
     ResumeStoryRequest:
       type: object
       required: [expectedVersion]
@@ -1283,6 +1433,162 @@ components:
             oneOf:
               [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
           }
+    RefinementStatus:
+      type: string
+      enum:
+        [
+          queued,
+          running,
+          succeeded,
+          failed,
+          budget_exceeded,
+          timed_out,
+          cancelled,
+          output_violation,
+          auth_failed,
+          lost,
+        ]
+      description: |
+        `queued`: waiting for a run slot. `running`: holds a slot; its worker runs once `startedAt` is set.
+        `succeeded`: `content` holds the refinement. Every other value is how the run ended without one; see
+        `exitReason`.
+    RefinementSummary:
+      type: object
+      required:
+        [
+          id,
+          key,
+          status,
+          notes,
+          requestedBy,
+          agent,
+          model,
+          reasoningEffort,
+          runtime,
+          controlSha,
+          budgetNanoAiu,
+          usage,
+          exitReason,
+          cancelRequested,
+          createdAt,
+          startedAt,
+          endedAt,
+        ]
+      additionalProperties: false
+      properties:
+        id: { $ref: '#/components/schemas/RunId' }
+        key: { $ref: '#/components/schemas/StoryKey' }
+        status: { $ref: '#/components/schemas/RefinementStatus' }
+        notes: { type: [string, 'null'] }
+        requestedBy: { $ref: '#/components/schemas/Actor' }
+        agent:
+          {
+            type: [string, 'null'],
+            description: The agent profile; null until the run takes a slot.,
+          }
+        model:
+          {
+            type: [string, 'null'],
+            description: The model the run was started with; null leaves it to the agent profile.,
+          }
+        reasoningEffort:
+          oneOf:
+            - $ref: '#/components/schemas/ReasoningEffort'
+            - type: 'null'
+        runtime:
+          {
+            type: [string, 'null'],
+            description: Where the worker ran; null until the run takes a slot.,
+          }
+        controlSha: { type: string, pattern: '^[0-9a-f]{40}$' }
+        budgetNanoAiu: { $ref: '#/components/schemas/NanoAiu' }
+        usage: { $ref: '#/components/schemas/Usage' }
+        exitReason: { type: [string, 'null'] }
+        cancelRequested: { type: boolean }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        startedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
+        endedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
+    Refinement:
+      type: object
+      required:
+        [
+          id,
+          key,
+          status,
+          notes,
+          requestedBy,
+          agent,
+          model,
+          reasoningEffort,
+          runtime,
+          controlSha,
+          budgetNanoAiu,
+          usage,
+          exitReason,
+          cancelRequested,
+          createdAt,
+          startedAt,
+          endedAt,
+          content,
+        ]
+      additionalProperties: false
+      properties:
+        id: { $ref: '#/components/schemas/RunId' }
+        key: { $ref: '#/components/schemas/StoryKey' }
+        status: { $ref: '#/components/schemas/RefinementStatus' }
+        notes: { type: [string, 'null'] }
+        requestedBy: { $ref: '#/components/schemas/Actor' }
+        agent: { type: [string, 'null'] }
+        model: { type: [string, 'null'] }
+        reasoningEffort:
+          oneOf:
+            - $ref: '#/components/schemas/ReasoningEffort'
+            - type: 'null'
+        runtime: { type: [string, 'null'] }
+        controlSha: { type: string, pattern: '^[0-9a-f]{40}$' }
+        budgetNanoAiu: { $ref: '#/components/schemas/NanoAiu' }
+        usage: { $ref: '#/components/schemas/Usage' }
+        exitReason: { type: [string, 'null'] }
+        cancelRequested: { type: boolean }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        startedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
+        endedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
+        content:
+          type: [string, 'null']
+          description: The agent's pre-refinement, as Markdown (untrusted agent text); non-null exactly when `succeeded`.
+    RefinementSummaryList:
+      type: object
+      required: [items]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RefinementSummary' }
+    RefinementList:
+      type: object
+      required: [key, items]
+      additionalProperties: false
+      properties:
+        key: { $ref: '#/components/schemas/StoryKey' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Refinement' }
     StoryState:
       type: object
       required: [key, version, state]
@@ -1318,6 +1624,7 @@ components:
           answeredBy,
           answeredAt,
           consumed,
+          supersededAt,
         ]
       additionalProperties: false
       properties:
@@ -1335,6 +1642,9 @@ components:
               [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
           }
         consumed: { type: boolean }
+        supersededAt:
+          oneOf: [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }]
+          description: Non-null means historical context invalidated by an intake refresh; cannot be answered.
     AnswerRequest:
       type: object
       required: [answer, expectedVersion]
@@ -1422,6 +1732,7 @@ components:
         - story.started
         - story.halted
         - story.resumed
+        - story.intake_refreshed
         - story.budget_changed
         - story.models_changed
         - story.phase_changed

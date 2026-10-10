@@ -3,6 +3,7 @@ import type { AhoyEvent, Question, Run, Story } from '@core/api/types';
 import { GATE_FOR_PHASE } from '@domain/phases';
 import { crewLabel } from '@domain/models';
 import { explainHalt, isHaltReason } from '@domain/halt';
+import { currentQuestions } from '@domain/questions';
 
 /** What the last `story.halted` event says (G7): the code and the person's or the worker's words. */
 export interface HaltInfo {
@@ -88,10 +89,11 @@ function questionsNeeded(
   questions: readonly Question[] | null
 ): Needed {
   const crew = crewOfPhase(story.phase);
-  if (questions === null || questions.length === 0)
+  const asked = questions === null ? [] : currentQuestions(questions);
+  if (asked.length === 0)
     return { headline: `${crew} is waiting for answers`, sub: null };
-  const round = Math.max(...questions.map((question) => question.round));
-  const current = questions.filter((question) => question.round === round);
+  const round = Math.max(...asked.map((question) => question.round));
+  const current = asked.filter((question) => question.round === round);
   const answered = current.filter(
     (question) => question.answer !== null
   ).length;

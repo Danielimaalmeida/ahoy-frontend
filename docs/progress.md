@@ -1,8 +1,40 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-10 for the local TEST startup path on `feature/update-labels`.** The sprint-grouped Backlog is
-committed and pushed; the TEST startup path is local, documented configuration work. No TEST or remote environment was
-contacted by this session.
+**Updated 2026-10-10 for Back to intake and the refinement contract on `claude/tender-johnson-pvbvmu`.** Committed and
+pushed with the user's approval, from a cloud session. The Backlog's Refine action is not built yet (see "Start here
+next"). No TEST environment or real API was contacted; 0 AIU.
+
+## Back to intake and the refinement contract (2026-10-10)
+
+- **Contract:** vendored `ahoy-hosted`'s `openapi/ahoy-v1.yaml` (refresh intake, `Question.supersededAt`,
+  `story.intake_refreshed`, and the backlog refinement operations `listRefinements`, `getRefinements`,
+  `requestRefinement`, `cancelRefinement`) keeping this repository's redacted JQL example. `schema.d.ts` was regenerated
+  with `openapi-typescript` 7.13.0 plus Prettier (the same pipeline reproduces the previous file byte for byte) and the
+  JSON mirror with `scripts/openapi-mirror.mjs`'s logic plus Prettier. `api:check` still reports the pre-existing raw
+  generator/Prettier formatting difference; `openapi-mirror --check` passes.
+- **API layer:** `ApiClient.refreshIntake`, `listRefinements`, `getRefinements`, `requestRefinement`,
+  `cancelRefinement`; guards for refinements (content must be set exactly when `succeeded`) and `supersededAt`;
+  fictional fixtures for every new operation; the contract, guard and client specs cover them.
+- **Back to intake:** a "Back to intake" button in the voyage header during `planning` and `plan_review`, with no run
+  queued or running and no implementation run ever (`canRefreshIntake`). Its dialog asks what changed in Jira
+  (required), shows what it may spend from the remaining budget (refused with nothing left) and sends
+  `confirmSpend: true`. `story.intake_refreshed` refreshes the story, state, questions, gates and artifacts and reads
+  "Sent back to intake" in Activity.
+- **Superseded questions:** `@domain/questions` (`isSuperseded`, `currentQuestions`, `openQuestions`) is used by the
+  Voyages notes, Needs you, the Plan tab's earlier-round count and the Questions tab. Superseded questions never count as
+  open; the Questions tab shows them folded under "Before the intake refresh", read-only, after the current rounds.
+- **Mock backend:** `refreshIntake` (supersedes questions, the planner asks afresh with new ids, refuses answers to
+  superseded questions) and a simulated refinement lifecycle (`RefinementDesk`: queued, running, succeeded; cancel).
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **130 files / 2,349 tests passed** and
+  `npm run format`. The clean-HEAD baseline in the same session was 128 files / 2,290 tests.
+- **How dependencies were installed in that session (never committed):** the company registry is not reachable from
+  the cloud sandbox and this repository's lockfile has a few redaction-damaged integrity hashes, so the user approved a
+  fresh install from the public npm registry in a scratch directory, with every direct dependency pinned to its
+  lockfile version and the two `@company-name-fedev` packages left out; `@company-name-fedev/auth` was replaced by a
+  local stub inside `node_modules`. `package.json` and `package-lock.json` are unchanged. Run the checks again locally
+  with the real registry before release.
+- **Not run:** a browser session, Playwright/e2e, screen reader, local `--simulate` API, real API or TEST.
+- **Needs from other lanes:** none. `ahoy-hosted` serves these operations from its commit `e31f6ea` (PR #30).
 
 ## Local TEST startup path (2026-10-10)
 
@@ -379,7 +411,10 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-The active, uncommitted change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
+Back to intake and the refinement contract are committed on `claude/tender-johnson-pvbvmu` (above): 2,349 tests pass
+offline. The Backlog does not offer refinements yet.
+
+The earlier change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
 a sprint filter and native disclosure controls, plus a user-approved responsive layout without horizontal scrolling.
 Offline validation passes with 2,290 tests; a mock-only browser
 preview was checked at desktop/mobile sizes. Repository formatting reports only the untouched new design source.
@@ -481,6 +516,14 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+Build the Backlog's Refine action on `claude/tender-johnson-pvbvmu`: `ApiClient` already has the four refinement
+operations and the mock simulates them. Plan: read `listRefinements` once with the backlog (a state tag per row); a
+"Refine" button opens a dialog with optional notes and an optional AIU cap and the spend warning (`confirmSpend: true`);
+a row toggle shows a details row with the newest refinement's status, requester, spend, exit reason, a Cancel button
+while it is queued or running, and its Markdown through `ah-markdown` once it succeeded; poll `getRefinements` every
+few seconds while it is queued or running. Keep the docks feature self-contained (no import from another feature).
+Then review Back to intake in a browser on the mock backend.
+
 Review the sprint-grouped Backlog implementation and the contract limits documented above. Commit, push and release
 need new explicit user approval. Keep the user's `Backlog.html` intact; it is the only formatting failure.
 Browser verification must use a proven offline setup, not the current authentication/proxy paths. Extending catalogue
@@ -490,7 +533,12 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest uncommitted change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls
+The latest change, committed on `claude/tender-johnson-pvbvmu`, vendors the hosted contract with refresh intake and
+backlog refinements, adds the voyage header's Back to intake dialog, shows superseded questions as read-only history,
+and extends the mock backend. 130 test files / 2,349 tests pass on Node 24.21.0. Next is the Backlog's Refine action
+("Start here next"). Do not contact TEST or a live API.
+
+The earlier change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls
 from the user's `docs/design/wireframes/Backlog.html`. Jira sprint data now reaches `BacklogItem`; the mock response
 matches the contract. Global 25-item pagination remains, with displayed-group counts marked "shown" on partial pages.
 Build, typecheck and lint passed on Node 24.21.0; 128 test files / 2,290 tests passed. A mock-only desktop/mobile browser

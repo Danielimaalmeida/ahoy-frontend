@@ -241,6 +241,20 @@ export class VoyageContext {
     );
   }
 
+  /**
+   * Sends the voyage back to intake (`refreshIntake`) with what changed in Jira, confirming that it may spend AIU. The
+   * `202` story goes to the store; the questions, gates and artifacts follow with the `story.intake_refreshed` event.
+   */
+  refreshIntake(reason: string): Promise<CommandOutcome<Story>> {
+    return this.storyCommand((key, expectedVersion) =>
+      this.api.refreshIntake(key, {
+        expectedVersion,
+        reason,
+        confirmSpend: true,
+      })
+    );
+  }
+
   /** Sets the total cap: `setStoryBudget` with the new cap in nano-AIU and the reason. */
   setBudget(
     budgetNanoAiu: number,
