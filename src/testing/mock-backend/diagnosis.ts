@@ -82,6 +82,15 @@ const RULES: Readonly<
     actor: 'operator',
     resumable: false,
   },
+  preflight_failed: {
+    kind: 'configuration',
+    title:
+      'The agent needs an MCP server this phase does not give it, so no run was started.',
+    action:
+      "Add the server to the phase's mcpServers and to the worker's MCP configuration, or remove its tools from the agent's profile; then resume the story. Nothing was spent.",
+    actor: 'operator',
+    resumable: false,
+  },
   stopped_by_user: {
     kind: 'stopped_by_user',
     title: 'Someone stopped the story.',

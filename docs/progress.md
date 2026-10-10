@@ -21,6 +21,10 @@ approval, from a cloud session. No TEST environment or real API was contacted; 0
   event and last run; the conformance walk calls it on every seeded voyage.
 - **Not done:** the diagnosis is not shown in "Needs you" (it would read one diagnosis per halted voyage); the banner
   is the only place for now.
+- **Hosted follow-up (`ahoy-hosted` `b58551a`):** a run whose agent profile is missing or needs an MCP server its
+  phase does not give halts `preflight_failed` before dispatch; the mock simulates its diagnosis. The banner's title
+  reads the raw `preflight_failed` until `docs/design/` (a synced copy, not edited here) gives it vocabulary; its
+  diagnosis explains it.
 - **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **134 files / 2,411 tests passed** and
   `npm run format`. Before this change: 132 files / 2,389.
 - **Not run:** a browser session, Playwright/e2e, a local `--simulate` API, real API or TEST.
