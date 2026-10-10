@@ -716,13 +716,14 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                               "
                               [attr.aria-label]="
                                 'Refinement · ' +
-                                refinementLabel(refinement) +
+                                refinementStateLabel(refinement) +
                                 ' for ' +
                                 item.key
                               "
                               (click)="refinements.toggle(item.key)"
                             >
-                              Refinement · {{ refinementLabel(refinement) }}
+                              Refinement ·
+                              {{ refinementStateLabel(refinement) }}
                             </button>
                           } @else if (refinements.status() !== 'loading') {
                             <button
@@ -1033,9 +1034,7 @@ export class Docks {
   }
 
   /** The words of a row's refinement button: "Refined", "Refining", "Cancelling"… */
-  protected refinementLabel(refinement: RefinementSummary): string {
-    return refinementStateLabel(refinement);
-  }
+  protected readonly refinementStateLabel = refinementStateLabel;
 
   /** The id of an item's refinement row, which its toggle controls. */
   protected refinementRowId(key: string): string {

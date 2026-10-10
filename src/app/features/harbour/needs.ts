@@ -133,17 +133,17 @@ function decisionNeeded(story: Story, detail: RowDetail): Needed {
 }
 
 /** What a halted voyage needs, with the line of its diagnosis once it is read. */
-function haltNeeded(
+function neededWithDiagnosis(
   story: Story,
   halt: HaltInfo | null,
   diagnosis: Diagnosis | null
 ): Needed {
-  const needed = haltReasonNeeded(story, halt);
+  const needed = neededByHaltReason(story, halt);
   const line = diagnosis === null ? null : diagnosisLine(diagnosis.findings);
   return line === null ? needed : { ...needed, diagnosis: line };
 }
 
-function haltReasonNeeded(story: Story, halt: HaltInfo | null): Needed {
+function neededByHaltReason(story: Story, halt: HaltInfo | null): Needed {
   const reason = story.haltReason;
   if (reason === null) return { headline: 'The voyage is halted', sub: null };
   const detail = halt?.detail ?? null;
@@ -164,7 +164,7 @@ export function whatsNeeded(story: Story, detail: RowDetail): Needed {
     case 'awaiting_decision':
       return decisionNeeded(story, detail);
     case 'halted':
-      return haltNeeded(story, detail.halt, detail.diagnosis);
+      return neededWithDiagnosis(story, detail.halt, detail.diagnosis);
     default:
       return { headline: story.status, sub: null };
   }
