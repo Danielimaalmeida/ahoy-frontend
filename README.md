@@ -39,7 +39,7 @@ docs/design/                                  copies of the wireframes and the d
 | Command                    | What it does                                                                                                          |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `npm start`                | `ng serve` on <http://localhost:4200> with the API proxy (`proxy.conf.mjs`).                                          |
-| `npm run start:mock`       | `ng serve` with the `mock` configuration (the mock backend arrives with lane 2D).                                     |
+| `npm run start:mock`       | Does not exist since commit `f49c7da`; see "Found" in `docs/progress.md` for what works instead.                      |
 | `npm run start:test`       | `ng serve` with the `test` configuration and the checked-in TEST API proxy (`src/proxy.conf.test.json`).              |
 | `npm run build`            | Production build into `dist/ahoy-frontend/`.                                                                          |
 | `npm test`                 | Unit and component tests (Vitest through `ng test`, jsdom), once.                                                     |
@@ -47,9 +47,9 @@ docs/design/                                  copies of the wireframes and the d
 | `npm run lint`             | ESLint (TypeScript, templates and accessibility rules).                                                               |
 | `npm run typecheck`        | `tsc --noEmit` for app and specs, then `scripts/check-boundaries.mjs`.                                                |
 | `npm run check:boundaries` | Only the layer rules.                                                                                                 |
-| `npm run format`           | Prettier on the whole repository (`format:check` only checks).                                                        |
+| `npm run format`           | Prettier check on the whole repository (writes nothing); `npm run format:fix` writes.                                 |
 
-Before calling work done: `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check`.
+Before calling work done: `npm run build && npm run typecheck && npm run lint && npm test && npm run format`.
 
 ## Running against the hosted API (local, 0 AIU)
 
@@ -72,6 +72,13 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Review fixes of PR #22 (2026-10-10, `claude/tender-johnson-pvbvmu`):** the refinement list no longer loses a refinement
+  just asked for when an older read answers later, the halt diagnosis is read again only when the voyage's version moves,
+  Back to intake waits for the runs, the Refinement buttons are named by their item, the dialogs share their text
+  validators, and the Refine dialog stops at the 20 AIU cap the API now has. Offline build, typecheck, lint, 136 files /
+  2,439 tests and formatting passed on Node 24.21.0 (public-registry install, auth library stubbed, nothing of that
+  committed). The standalone mock server (`node scripts/mock-api.mjs`) does not start and `start:mock` does not exist
+  (`docs/progress.md`). No browser, real API, `--simulate` or TEST check.
 - **Halt diagnosis (2026-10-10, `claude/tender-johnson-pvbvmu`):** a halted voyage's Anchored banner adds the
   diagnosis from `GET /stories/{key}/diagnosis` (cause, action, who takes it, evidence as plain text), and "Needs you"
   adds its cause and who acts in one line per halted voyage. Contract, client, guard, fixture and mock included.
