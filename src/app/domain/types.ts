@@ -76,6 +76,26 @@ export type HaltReason =
   | 'revision_ceiling_reached'
   | 'reconciler_error';
 
+/** The causes the diagnosis of a halted story knows; `other` is a halt no rule explains. */
+export type DiagnosisKind =
+  | 'copilot_auth'
+  | 'gate_rejected'
+  | 'configuration'
+  | 'cluster_capacity'
+  | 'pod_evicted'
+  | 'out_of_memory'
+  | 'image_pull'
+  | 'runtime_deadline'
+  | 'budget_exhausted'
+  | 'run_timed_out'
+  | 'output_violation'
+  | 'run_lost'
+  | 'agent_failed'
+  | 'revision_ceiling'
+  | 'reconciler_error'
+  | 'stopped_by_user'
+  | 'other';
+
 /** Who a diagnosis finding asks to act: the story's owner, the operator or the maintainer of the agents' instructions. */
 export type DiagnosisActor = 'story_owner' | 'operator' | 'agent_maintainer';
 

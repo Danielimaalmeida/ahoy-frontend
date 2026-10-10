@@ -1,4 +1,4 @@
-import type { DiagnosisActor } from './types';
+import type { DiagnosisActor, DiagnosisKind } from './types';
 
 /** Who a finding asks to act, in words for the screens. */
 export const DIAGNOSIS_ACTOR_LABELS: Readonly<Record<DiagnosisActor, string>> =
@@ -10,7 +10,7 @@ export const DIAGNOSIS_ACTOR_LABELS: Readonly<Record<DiagnosisActor, string>> =
 
 /** The part of a diagnosis finding the screens read. */
 export interface FindingSummary {
-  readonly kind: string;
+  readonly kind: DiagnosisKind;
   readonly title: string;
   readonly actor: DiagnosisActor;
 }

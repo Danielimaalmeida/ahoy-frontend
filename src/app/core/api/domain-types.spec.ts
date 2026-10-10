@@ -24,6 +24,7 @@ describe('@domain/types is the contract', () => {
     expectTypeOf<Domain.ModelSource>().toEqualTypeOf<Api.ModelSource>();
     expectTypeOf<Domain.EffortSource>().toEqualTypeOf<Api.EffortSource>();
     expectTypeOf<Domain.DiagnosisActor>().toEqualTypeOf<Api.DiagnosisActor>();
+    expectTypeOf<Domain.DiagnosisKind>().toEqualTypeOf<Api.DiagnosisKind>();
   });
 
   it('has the same resources as the generated types, field for field', () => {

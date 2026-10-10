@@ -6,7 +6,7 @@ import {
 } from './diagnosis';
 
 const finding = (
-  kind: string,
+  kind: FindingSummary['kind'],
   title = 'A cause.',
   actor: FindingSummary['actor'] = 'operator'
 ): FindingSummary => ({ kind, title, actor });
