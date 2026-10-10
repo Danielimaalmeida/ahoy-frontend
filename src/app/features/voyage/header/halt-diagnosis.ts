@@ -25,6 +25,17 @@ export class HaltDiagnosis {
   /** Counts reads, so that the answer to a read that was replaced meanwhile is dropped. */
   private generation = 0;
 
+  /** The halted voyage on screen as its key and version; equal while only other fields of the story change. */
+  private readonly halt = computed(
+    () => {
+      const story = this.context.story();
+      return story?.status === 'halted'
+        ? { key: story.key, version: story.version }
+        : null;
+    },
+    { equal: (a, b) => a?.key === b?.key && a?.version === b?.version }
+  );
+
   /** The diagnosis of the voyage on screen while it is halted; null before it is read and when it is not halted. */
   readonly diagnosis = computed(() => {
     const story = this.context.story();
@@ -35,11 +46,10 @@ export class HaltDiagnosis {
   constructor() {
     inject(DestroyRef).onDestroy(() => (this.disposed = true));
     effect(() => {
-      const story = this.context.story();
-      if (story?.status !== 'halted') return;
-      // Every change of the story (a later halt of the same voyage, its version) reads it again.
-      const key = story.key;
-      untracked(() => void this.load(key));
+      const halt = this.halt();
+      if (halt === null) return;
+      // A later halt of the same voyage moves its version; a story that only reloads with the same version reads nothing.
+      untracked(() => void this.load(halt.key));
     });
   }
 
