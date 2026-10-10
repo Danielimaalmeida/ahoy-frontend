@@ -75,6 +75,11 @@ export class BacklogRefinements {
   );
   private timer: Timer | null = null;
   private disposed = false;
+  /**
+   * Counts the refinements the API answered to a request or a cancel ({@link accept}). A read that began before one was
+   * answered may not have seen it, so its answer is read again instead of replacing what the row shows.
+   */
+  private accepted = 0;
 
   /** Whether the list of refinements is in hand; `error` leaves the rows without a refinement state. */
   readonly status = this.statusSignal.asReadonly();
@@ -107,11 +112,14 @@ export class BacklogRefinements {
 
   /**
    * Reads the newest refinement of every item, then the history of each open row whose newest refinement changed. A
-   * failure keeps what was read before.
+   * failure keeps what was read before. An answer that began before a request or a cancel was answered is read again:
+   * it may not hold that refinement, and taking it would drop the refinement from the row and stop its polling.
    */
   async load(): Promise<void> {
+    const accepted = this.accepted;
     const result = await this.api.listRefinements();
     if (this.disposed) return;
+    if (accepted !== this.accepted) return this.load();
     if (result.ok) {
       this.latestByKey.set(new Map(result.value.map((r) => [r.key, r])));
       this.statusSignal.set('ready');
@@ -136,10 +144,15 @@ export class BacklogRefinements {
     void this.readHistory(key);
   }
 
-  /** Reads an item's refinements, newest first, and takes the newest as its row's state. */
+  /**
+   * Reads an item's refinements, newest first, and takes the newest as its row's state. Like {@link load}, an answer that
+   * began before a request or a cancel was answered is read again.
+   */
   async readHistory(key: string): Promise<void> {
+    const accepted = this.accepted;
     const result = await this.api.getRefinements(key);
     if (this.disposed) return;
+    if (accepted !== this.accepted) return this.readHistory(key);
     if (!result.ok) {
       this.setHistory(key, {
         items: this.history(key)?.items ?? null,
@@ -212,6 +225,7 @@ export class BacklogRefinements {
 
   /** Takes a refinement the API answered as the newest of its item, in its row's state and history. */
   private accept(refinement: Refinement): void {
+    this.accepted += 1;
     this.setLatest(refinement);
     const items = this.history(refinement.key)?.items ?? [];
     this.setHistory(refinement.key, {

@@ -349,6 +349,103 @@ describe('BacklogRefinements', () => {
     expect(clock.pending).toBe(1);
   });
 
+  it('keeps a refinement just asked for, and keeps polling it, when a list read that began before it answers after it', async () => {
+    const queued = aRefinement('PROJ-1', { status: 'queued' });
+    api.on('requestRefinement', () => Promise.resolve(ok(queued)));
+    const refinements = store();
+    await refinements.load();
+    expect(clock.pending).toBe(0);
+
+    // A read of the list is under way (a poll, or a retry) and the server answers it as it was before the request.
+    let release: (
+      value: ApiResult<readonly RefinementSummary[]>
+    ) => void = () => undefined;
+    api.on(
+      'listRefinements',
+      () => new Promise((resolve) => (release = resolve))
+    );
+    const pending = refinements.load();
+    await refinements.request('PROJ-1', '', null);
+    expect(refinements.latest('PROJ-1')?.status).toBe('queued');
+    expect(clock.pending).toBe(1);
+
+    held = [queued];
+    api.on('listRefinements', () => Promise.resolve(ok(held)));
+    release(ok([]));
+    await pending;
+    await settle();
+    expect(refinements.latest('PROJ-1')?.status).toBe('queued');
+    expect(refinements.newest('PROJ-1')).toEqual(queued);
+    expect(clock.pending).toBe(1);
+  });
+
+  it('keeps a cancel just answered when a list read that began before it answers after it', async () => {
+    held = [aRefinement('PROJ-1', { status: 'running' })];
+    const cancelled = aRefinement('PROJ-1', {
+      status: 'cancelled',
+      cancelRequested: true,
+      exitReason: 'cancelled by alex@example.com: Wrong story',
+    });
+    api.on('cancelRefinement', () => Promise.resolve(ok(cancelled)));
+    const refinements = store();
+    await refinements.load();
+
+    let release: (
+      value: ApiResult<readonly RefinementSummary[]>
+    ) => void = () => undefined;
+    const before = held;
+    api.on(
+      'listRefinements',
+      () => new Promise((resolve) => (release = resolve))
+    );
+    const pending = refinements.load();
+    await refinements.cancel('PROJ-1', 'Wrong story');
+    held = [cancelled];
+    api.on('listRefinements', () => Promise.resolve(ok(held)));
+    release(ok(before));
+    await pending;
+    await settle();
+    expect(refinements.latest('PROJ-1')?.status).toBe('cancelled');
+    expect(clock.pending).toBe(0);
+  });
+
+  it('keeps a refinement just asked for when a history read that began before it answers after it', async () => {
+    const earlier = aRefinement('PROJ-1');
+    held = [earlier];
+    const refinements = store();
+    await refinements.load();
+    refinements.toggle('PROJ-1');
+    await settle();
+    const queued = aRefinement('PROJ-1', {
+      id: 'proj-1-refinement-002-beef',
+      status: 'queued',
+    });
+    api.on('requestRefinement', () => Promise.resolve(ok(queued)));
+
+    let release: (
+      value: ApiResult<{ key: string; items: readonly Refinement[] }>
+    ) => void = () => undefined;
+    api.on(
+      'getRefinements',
+      () => new Promise((resolve) => (release = resolve))
+    );
+    const pending = refinements.readHistory('PROJ-1');
+    await refinements.request('PROJ-1', '', null);
+    held = [queued, earlier];
+    api.on('getRefinements', (key) =>
+      Promise.resolve(ok({ key, items: held }))
+    );
+    release(ok({ key: 'PROJ-1', items: [earlier] }));
+    await pending;
+    await settle();
+    expect(refinements.latest('PROJ-1')?.status).toBe('queued');
+    expect(refinements.history('PROJ-1')?.items?.map((r) => r.id)).toEqual([
+      queued.id,
+      earlier.id,
+    ]);
+    expect(clock.pending).toBe(1);
+  });
+
   it('stops polling and ignores late answers once the page is gone', async () => {
     held = [aRefinement('PROJ-1', { status: 'running' })];
     const page = createEnvironmentInjector(
