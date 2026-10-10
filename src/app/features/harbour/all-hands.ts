@@ -280,6 +280,11 @@ function describeFailure(error: ApiError): Failure {
                       @if (row.needed.sub; as sub) {
                         <small ahCellSub>{{ sub }}</small>
                       }
+                      @if (row.needed.diagnosis; as diagnosis) {
+                        <small ahCellSub class="need__diagnosis"
+                          >Diagnosis: {{ diagnosis }}</small
+                        >
+                      }
                     </td>
                     <td>{{ row.story.owner }}</td>
                     <td ahNowrap>

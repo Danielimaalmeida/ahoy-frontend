@@ -16,6 +16,7 @@ const NONE: RowDetail = {
   state: null,
   gate: null,
   halt: null,
+  diagnosis: null,
 };
 
 function question(id: string, round: number, answered: boolean): Question {
@@ -238,6 +239,68 @@ describe('whatsNeeded: Anchored', () => {
       headline: 'cosmic_rays',
       sub: 'A bit flipped.',
     });
+  });
+
+  it('adds the cause the diagnosis names and who acts on it, once it is read', () => {
+    const story = aStory('PROJ-118', {
+      status: 'halted',
+      haltReason: 'run_failed',
+    });
+    const needed = whatsNeeded(story, {
+      ...NONE,
+      diagnosis: {
+        key: 'PROJ-118',
+        status: 'halted',
+        phase: 'planning',
+        haltReason: 'run_failed',
+        findings: [
+          {
+            kind: 'copilot_auth',
+            title:
+              "Copilot did not accept the worker's token, so the agent never started.",
+            evidence: [],
+            action: 'Renew the token.',
+            actor: 'operator',
+            resumable: false,
+            runId: null,
+          },
+        ],
+      },
+    });
+    expect(needed.diagnosis).toBe(
+      "Copilot did not accept the worker's token, so the agent never started. · For the Ahoy operators"
+    );
+    expect(needed.headline).toBe(
+      "A crew member's run failed, for example a refused model or a crash."
+    );
+  });
+
+  it("adds nothing for a diagnosis that only repeats a person's stop", () => {
+    const story = aStory('PROJ-126', {
+      status: 'halted',
+      haltReason: 'stopped_by_user',
+    });
+    const needed = whatsNeeded(story, {
+      ...NONE,
+      diagnosis: {
+        key: 'PROJ-126',
+        status: 'halted',
+        phase: 'intake',
+        haltReason: 'stopped_by_user',
+        findings: [
+          {
+            kind: 'stopped_by_user',
+            title: 'Someone stopped the story.',
+            evidence: [],
+            action: 'Resume it.',
+            actor: 'story_owner',
+            resumable: true,
+            runId: null,
+          },
+        ],
+      },
+    });
+    expect('diagnosis' in needed).toBe(false);
   });
 
   it('says the voyage is halted when the API gave no reason', () => {

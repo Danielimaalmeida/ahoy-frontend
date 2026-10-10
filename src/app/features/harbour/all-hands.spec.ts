@@ -325,6 +325,56 @@ describe('All hands', () => {
       ]);
     });
 
+    it('adds the diagnosis of each halted voyage, read only for those', async () => {
+      const { root, api } = await render(EIGHT, (fake) =>
+        fake.on('getStoryDiagnosis', (key) =>
+          Promise.resolve(
+            ok({
+              key,
+              status: 'halted',
+              phase: 'planning',
+              haltReason: key === 'PROJ-118' ? 'run_failed' : 'stopped_by_user',
+              findings: [
+                key === 'PROJ-118'
+                  ? {
+                      kind: 'cluster_capacity',
+                      title:
+                        "The cluster found no node for the run's pod, so it never started.",
+                      evidence: [],
+                      action: 'Ask the platform team for capacity.',
+                      actor: 'operator',
+                      resumable: false,
+                      runId: null,
+                    }
+                  : {
+                      kind: 'stopped_by_user',
+                      title: 'Someone stopped the story.',
+                      evidence: [],
+                      action: 'Resume it.',
+                      actor: 'story_owner',
+                      resumable: true,
+                      runId: null,
+                    },
+              ],
+            })
+          )
+        )
+      );
+      expect(
+        api
+          .callsOf('getStoryDiagnosis')
+          .map((call) => call.args[0])
+          .sort()
+      ).toEqual(['PROJ-118', 'PROJ-126']);
+      const needed = rowsOf(panel(root, 'Needs you')).map((cells) => cells[3]);
+      expect(needed[0]).toBe(
+        "A crew member's run failed, for example a refused model or a crash. run_failed · the worker refused model gpt-5.6-terra (0 AIU) Diagnosis: The cluster found no node for the run's pod, so it never started. · For the Ahoy operators"
+      );
+      expect(needed[3]).toBe(
+        'Someone on the crew stopped it. stopped_by_user · "Waiting for the Jira ticket to be split"'
+      );
+    });
+
     it('shows the row as the board does: status, voyage, phase, owner, waiting and budget', async () => {
       const { root } = await render();
       const [halted, asks, orders] = rowsOf(panel(root, 'Needs you'));

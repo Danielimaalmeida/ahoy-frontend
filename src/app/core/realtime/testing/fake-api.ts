@@ -18,6 +18,7 @@ export type FakeApiOps = Pick<
   | 'getRefinements'
   | 'requestRefinement'
   | 'cancelRefinement'
+  | 'getStoryDiagnosis'
 >;
 
 /** A call the fake saw. */
@@ -117,5 +118,10 @@ export class FakeApi implements FakeApiOps {
   cancelRefinement: FakeApiOps['cancelRefinement'] = (key, body) => {
     this.calls.push({ op: 'cancelRefinement', args: [key, body] });
     return this.handlers.cancelRefinement?.(key, body) ?? unreachable();
+  };
+
+  getStoryDiagnosis: FakeApiOps['getStoryDiagnosis'] = (key) => {
+    this.calls.push({ op: 'getStoryDiagnosis', args: [key] });
+    return this.handlers.getStoryDiagnosis?.(key) ?? unreachable();
   };
 }

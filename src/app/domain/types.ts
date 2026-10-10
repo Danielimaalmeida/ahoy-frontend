@@ -76,6 +76,9 @@ export type HaltReason =
   | 'revision_ceiling_reached'
   | 'reconciler_error';
 
+/** Who a diagnosis finding asks to act: the story's owner, the operator or the maintainer of the agents' instructions. */
+export type DiagnosisActor = 'story_owner' | 'operator' | 'agent_maintainer';
+
 /** What a run or a story has used so far. */
 export interface Usage {
   readonly requests: number;

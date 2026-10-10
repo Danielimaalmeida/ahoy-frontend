@@ -8,28 +8,8 @@ import {
   untracked,
 } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
-import type {
-  Diagnosis,
-  DiagnosisActor,
-  DiagnosisFinding,
-} from '@core/api/types';
+import type { Diagnosis } from '@core/api/types';
 import { VoyageContext } from '../context/voyage-context';
-
-/** Who a finding asks to act, in words for the banner. */
-export const DIAGNOSIS_ACTOR_LABELS: Readonly<Record<DiagnosisActor, string>> =
-  {
-    story_owner: "For the voyage's owner",
-    operator: 'For the Ahoy operators',
-    agent_maintainer: "For whoever maintains the agents' instructions",
-  };
-
-/** The findings worth showing: none for a diagnosis that only repeats a person's stop, which the banner already says. */
-export function shownFindings(
-  diagnosis: Diagnosis | null
-): readonly DiagnosisFinding[] {
-  const findings = diagnosis?.findings ?? [];
-  return findings.every((f) => f.kind === 'stopped_by_user') ? [] : findings;
-}
 
 /**
  * The diagnosis of a halted voyage (`getStoryDiagnosis`, design §5 of `ahoy-hosted`), for the Anchored banner. It is

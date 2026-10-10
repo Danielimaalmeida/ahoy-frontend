@@ -73,9 +73,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 ## Status
 
 - **Halt diagnosis (2026-10-10, `claude/tender-johnson-pvbvmu`):** a halted voyage's Anchored banner adds the
-  diagnosis from `GET /stories/{key}/diagnosis` (cause, action, who takes it, evidence as plain text). Contract,
-  client, guard, fixture and mock included. Offline build, typecheck, lint, 134 files / 2,411 tests and formatting
-  passed on Node 24.21.0 (same sandbox install). Not shown in "Needs you"; no browser, real API or TEST check.
+  diagnosis from `GET /stories/{key}/diagnosis` (cause, action, who takes it, evidence as plain text), and "Needs you"
+  adds its cause and who acts in one line per halted voyage. Contract, client, guard, fixture and mock included.
+  Offline build, typecheck, lint, 134 files / 2,420 tests and formatting passed on Node 24.21.0 (same sandbox
+  install); checked on the in-browser mock. No real API, `--simulate` or TEST check.
 - **Backlog Refine (2026-10-10, `claude/tender-johnson-pvbvmu`):** each Backlog row offers "Refine" (optional notes,
   optional AIU limit, spend warning, `confirmSpend: true`) or "Refinement · <state>", which opens a detail row with the
   newest refinement's state, requester, spend, notes and exit reason, Cancel refinement (reason required) while it is

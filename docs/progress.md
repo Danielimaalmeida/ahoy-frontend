@@ -19,14 +19,17 @@ approval, from a cloud session. No TEST environment or real API was contacted; 0
   banner already quotes it); a failed read leaves the banner as it was.
 - **Mock backend:** `getStoryDiagnosis` simulates a finding per halt reason from the voyage's last `story.halted`
   event and last run; the conformance walk calls it on every seeded voyage.
-- **Not done:** the diagnosis is not shown in "Needs you" (it would read one diagnosis per halted voyage); the banner
-  is the only place for now.
+- **Needs you (All hands):** each halted voyage's "What's needed" cell adds a line "Diagnosis: <cause> · <who acts>"
+  (and "(+N more)" when there are several causes). `RowDetails` reads the diagnosis of the halted voyages on screen only,
+  again when a voyage's version moves, and forgets it when the voyage leaves the list or is no longer halted; a failed
+  read adds nothing. The labels and the one-line summary moved to `@domain/diagnosis`, shared by the banner and the
+  list. Checked in headless Chromium on the in-browser mock (throwaway copy, external hosts blocked).
 - **Hosted follow-up (`ahoy-hosted` `b58551a`):** a run whose agent profile is missing or needs an MCP server its
   phase does not give halts `preflight_failed` before dispatch; the mock simulates its diagnosis. The banner's title
   reads the raw `preflight_failed` until `docs/design/` (a synced copy, not edited here) gives it vocabulary; its
   diagnosis explains it.
-- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **134 files / 2,411 tests passed** and
-  `npm run format`. Before this change: 132 files / 2,389.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **134 files / 2,420 tests passed** and
+  `npm run format`. Before the diagnosis: 132 files / 2,389.
 - **Not run:** a browser session, Playwright/e2e, a local `--simulate` API, real API or TEST.
 
 ## Backlog Refine (2026-10-10)
@@ -473,7 +476,7 @@ will carry the lane and the merge together, once the user approves it.**
 ## Where we are
 
 The halt diagnosis, the Backlog's Refine action, Back to intake and the refinement contract are committed on
-`claude/tender-johnson-pvbvmu` (above): 2,411 tests pass offline, and the Refine flow was clicked through on the
+`claude/tender-johnson-pvbvmu` (above): 2,420 tests pass offline, and the Refine flow was clicked through on the
 in-browser mock. Neither has met a real or `--simulate` API.
 
 The earlier change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
@@ -593,10 +596,10 @@ Do not use the live API or TEST without explicit approval.
 ## Prompt for a new session
 
 The latest change, committed on `claude/tender-johnson-pvbvmu`, shows a halted voyage's diagnosis
-(`getStoryDiagnosis`) in the Anchored banner. Before it, the Backlog's Refine action (row button or
+(`getStoryDiagnosis`) in the Anchored banner and in "Needs you". Before it, the Backlog's Refine action (row button or
 "Refinement · <state>" toggle, detail row with Cancel refinement and Refine again, Markdown via `ah-markdown`, polling
 only while one is in progress). Before it on the same branch: the vendored hosted contract, Back to intake and
-superseded questions. 134 test files / 2,411 tests pass on Node 24.21.0. Next is "Start here next". Do not contact
+superseded questions. 134 test files / 2,420 tests pass on Node 24.21.0. Next is "Start here next". Do not contact
 TEST or a live API.
 
 The earlier change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls

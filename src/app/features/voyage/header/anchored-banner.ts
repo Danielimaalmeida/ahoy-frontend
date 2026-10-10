@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ModelSlot } from '@core/api/types';
+import { DIAGNOSIS_ACTOR_LABELS, shownFindings } from '@domain/diagnosis';
 import { explainHalt } from '@domain/halt';
 import { isModelSlot } from '@domain/models';
 import { actorLabel } from '@domain/identifiers';
@@ -11,11 +12,7 @@ import { runById, slotsForPhase } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import type { HaltRecord } from '../context/voyage-events';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
-import {
-  DIAGNOSIS_ACTOR_LABELS,
-  HaltDiagnosis,
-  shownFindings,
-} from './halt-diagnosis';
+import { HaltDiagnosis } from './halt-diagnosis';
 import { haltGuidance } from './halt-guidance';
 
 /** A sentence without its closing full stop, to follow "Anchored: ". */
@@ -143,12 +140,14 @@ export class AnchoredBanner {
 
   /** The causes the diagnosis names, beyond a person's stop, which the banner already says. */
   protected readonly findings = computed(() =>
-    shownFindings(this.diagnosis.diagnosis()).map((finding) => ({
-      title: finding.title,
-      action: finding.action,
-      who: DIAGNOSIS_ACTOR_LABELS[finding.actor],
-      evidence: finding.evidence.join('\n'),
-    }))
+    shownFindings(this.diagnosis.diagnosis()?.findings ?? []).map(
+      (finding) => ({
+        title: finding.title,
+        action: finding.action,
+        who: DIAGNOSIS_ACTOR_LABELS[finding.actor],
+        evidence: finding.evidence.join('\n'),
+      })
+    )
   );
 
   protected readonly view = computed(() => {
