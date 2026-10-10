@@ -51,13 +51,15 @@ const REFRESHABLE_PHASES: readonly string[] = ['planning', 'plan_review'];
 
 /**
  * Whether the header offers Back to intake: in planning or plan review, with no run under way or queued, and no
- * implementation run ever (the API refuses the rest with `409 invalid_state`).
+ * implementation run ever (the API refuses the rest with `409 invalid_state`). `runs` is null until they are read: with
+ * an unread list nobody knows there was no implementation yet, so nothing is offered.
  */
 export function canRefreshIntake(
   story: Pick<Story, 'phase' | 'status' | 'currentRunId'>,
-  runs: readonly Pick<Run, 'phase'>[]
+  runs: readonly Pick<Run, 'phase'>[] | null
 ): boolean {
   return (
+    runs !== null &&
     REFRESHABLE_PHASES.includes(story.phase) &&
     story.status !== 'running' &&
     story.status !== 'terminal' &&

@@ -167,7 +167,10 @@ export class VoyageHeader {
       apiDetail,
       primary: primaryAction(story.status, gateKey),
       actions: headerActions(story.status),
-      intake: canRefreshIntake(story, this.context.runs()),
+      intake: canRefreshIntake(
+        story,
+        this.context.counts().runs === null ? null : this.context.runs()
+      ),
       run: currentRunView(story.currentRunId, this.context.runs()),
       round: this.roundText(),
       sha: shortSha(story.controlSha),

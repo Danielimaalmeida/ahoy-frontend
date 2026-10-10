@@ -464,6 +464,30 @@ describe('VoyageShell on the mock backend', () => {
   });
 
   describe('Back to intake', () => {
+    it('is not offered while the voyage’s runs could not be read, since an implementation may be among them', async () => {
+      const mock = testServer();
+      let failRuns = true;
+      const page = await open('/voyages/PROJ-123/plan', {
+        mock,
+        before: (request) => {
+          if (
+            failRuns &&
+            request.method === 'GET' &&
+            request.path === '/stories/PROJ-123/runs'
+          ) {
+            failRuns = false;
+            mock.server.switches.failNext = 503;
+          }
+        },
+      });
+      expect(buttonsIn(header(page))).toEqual([
+        'Decide on the plan',
+        'Budget',
+        'Models',
+        'Stop',
+      ]);
+    });
+
     it('sends what changed in Jira with the spend confirmation and shows the voyage back in intake', async () => {
       const page = await open('/voyages/PROJ-123/plan');
       const version = storyOf(page.server, 'PROJ-123').version;
