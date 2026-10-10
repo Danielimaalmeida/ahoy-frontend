@@ -2,7 +2,7 @@ import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { fail, ok, type ApiResult } from '@core/api/api-error';
-import type { Story } from '@core/api/types';
+import type { Refinement, Story } from '@core/api/types';
 import { AppConfigStore } from '@core/config/app-config';
 import { aStory } from '@core/realtime/testing/events';
 import { FakeApi } from '@core/realtime/testing/fake-api';
@@ -18,6 +18,7 @@ import {
   type BacklogPort,
   type BacklogQuery,
 } from './backlog-port';
+import { REFINEMENT_POLL_MS } from './backlog-refinements';
 import { Docks, priorityTrend } from './docks';
 import { StubBacklogAdapter } from './stub-backlog-adapter';
 
@@ -32,6 +33,46 @@ function anItem(key: string, changes: Partial<BacklogItem> = {}): BacklogItem {
     assignee: null,
     updatedAt: '2026-10-06T09:00:00.000Z',
     sprint: null,
+    ...changes,
+  };
+}
+
+/** A refinement for specs, succeeded unless changed; fictional data. */
+function aRefinement(
+  key: string,
+  changes: Partial<Refinement> = {}
+): Refinement {
+  const status = changes.status ?? 'succeeded';
+  return {
+    id: `${key.toLowerCase()}-refinement-001-abcd`,
+    key,
+    status,
+    notes: null,
+    requestedBy: 'alex@example.com',
+    agent: 'quartermaster',
+    model: null,
+    reasoningEffort: null,
+    runtime: 'k8s',
+    controlSha: 'a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302',
+    budgetNanoAiu: 10_000_000_000,
+    usage: {
+      requests: 6,
+      nanoAiu: 2_400_000_000,
+      inputTokens: 48_210,
+      outputTokens: 3_120,
+    },
+    exitReason: null,
+    cancelRequested: false,
+    createdAt: '2026-10-06T09:30:00.000Z',
+    startedAt: '2026-10-06T09:30:05.000Z',
+    endedAt:
+      status === 'queued' || status === 'running'
+        ? null
+        : '2026-10-06T09:34:00.000Z',
+    content:
+      status === 'succeeded'
+        ? '## Verdict\nNEEDS WORK. No limit on export size.'
+        : null,
     ...changes,
   };
 }
@@ -92,7 +133,12 @@ describe('priorityTrend', () => {
 
 describe('Docks', () => {
   let api: FakeApi;
+  let clock: FakeClock;
   let stories: readonly Story[];
+  /** Every refinement the fake API holds, newest first per key. */
+  let refinements: Refinement[];
+  let refinementsAnswer:
+    (() => Promise<ApiResult<readonly Refinement[]>>) | null;
   let storiesAnswer:
     | (() => Promise<
         ApiResult<{ items: readonly Story[]; nextCursor: string | null }>
@@ -101,8 +147,22 @@ describe('Docks', () => {
 
   beforeEach(() => {
     api = new FakeApi();
+    clock = new FakeClock('2026-10-06T10:00:00.000Z');
     stories = [];
     storiesAnswer = null;
+    refinements = [];
+    refinementsAnswer = null;
+    api.on('listRefinements', () => {
+      if (refinementsAnswer !== null) return refinementsAnswer();
+      const newest = new Map<string, Refinement>();
+      for (const r of refinements) if (!newest.has(r.key)) newest.set(r.key, r);
+      return Promise.resolve(ok([...newest.values()]));
+    });
+    api.on('getRefinements', (key) =>
+      Promise.resolve(
+        ok({ key, items: refinements.filter((r) => r.key === key) })
+      )
+    );
     api.on(
       'listStories',
       () =>
@@ -113,7 +173,7 @@ describe('Docks', () => {
       providers: [
         ...provideFakes({
           api,
-          clock: new FakeClock('2026-10-06T10:00:00.000Z'),
+          clock,
           net: new FakeFetch(),
         }),
         // The relative times of the pipes read the kit's own clock, not the realtime one.
@@ -288,7 +348,7 @@ describe('Docks', () => {
     it('offers Open voyage, not Set sail, for a story that already has a voyage', async () => {
       const f = await mount();
       const actions = cell(rowOf(f, 'PROJ-123'), 8);
-      expect(text(actions)).toBe('Open voyage');
+      expect(text(actions)).toBe('Refine Open voyage');
       expect(actions.querySelector('a')?.getAttribute('href')).toBe(
         '/voyages/PROJ-123'
       );
@@ -313,7 +373,7 @@ describe('Docks', () => {
       );
       await refresh(f);
       expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('Running planning');
-      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Open voyage');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Refine Open voyage');
     });
 
     it('shows only the stories with no voyage under Not started', async () => {
@@ -707,7 +767,8 @@ describe('Docks', () => {
       const f = await mount(new FakeBacklog([anItem('PROJ-145')]));
       expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('');
       expect(root(f).querySelector('tbody ah-skeleton')).not.toBeNull();
-      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('');
+      // Refining does not need a voyage, so only the voyage actions wait.
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Refine');
     });
 
     it('does not read the backlog for Not started or In Ahoy until the voyages are read', async () => {
@@ -727,7 +788,7 @@ describe('Docks', () => {
       const f = await mount(new FakeBacklog([anItem('PROJ-145')]));
       expect(text(root(f))).toContain('Could not read the voyages in Ahoy');
       expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('Unknown');
-      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Refine');
       pill(f, 'In Ahoy').click();
       await refresh(f);
       expect(text(root(f))).toContain(
@@ -740,6 +801,509 @@ describe('Docks', () => {
         .click();
       await refresh(f);
       expect(rows(f).map((r) => text(cell(r, 0)))).toEqual(['PROJ-145']);
+    });
+  });
+
+  describe('refinements', () => {
+    afterEach(() => {
+      document.querySelector('.cdk-overlay-container')?.replaceChildren();
+    });
+
+    /** The open dialog (the CDK puts it in an overlay under `body`). */
+    function dialog(): HTMLElement {
+      const element = document.querySelector<HTMLElement>(
+        '.cdk-overlay-container .ah-dialog'
+      );
+      if (element === null) throw new Error('no dialog open');
+      return element;
+    }
+
+    const hasDialog = (): boolean =>
+      document.querySelector('.cdk-overlay-container .ah-dialog') !== null;
+
+    function buttonNamed(
+      container: Element,
+      label: string | RegExp
+    ): HTMLButtonElement {
+      const found = [...container.querySelectorAll('button')].find((b) =>
+        typeof label === 'string' ? text(b) === label : label.test(text(b))
+      );
+      if (found === undefined) throw new Error(`no button ${String(label)}`);
+      return found;
+    }
+
+    function fill(
+      field: HTMLInputElement | HTMLTextAreaElement | null,
+      value: string
+    ): void {
+      if (field === null) throw new Error('no field');
+      field.value = value;
+      field.dispatchEvent(new Event('input'));
+    }
+
+    const detail = (
+      f: ComponentFixture<Docks>,
+      key: string
+    ): HTMLElement | null =>
+      root(f).querySelector<HTMLElement>(`#refinement-${key}`);
+
+    /** The value of one fact of a detail row ("Spent" → "2.4 of 10 AIU"). */
+    const fact = (row: HTMLElement, term: string): string =>
+      text(
+        [...row.querySelectorAll('dt')].find((dt) => text(dt) === term)
+          ?.nextElementSibling
+      );
+
+    /** Clicks a row's "Refinement · …" toggle. */
+    async function toggle(
+      f: ComponentFixture<Docks>,
+      key: string
+    ): Promise<HTMLButtonElement> {
+      const button = buttonNamed(cell(rowOf(f, key), 8), /^Refinement · /);
+      button.click();
+      await refresh(f);
+      return button;
+    }
+
+    it('offers Refine on an item never refined and shows the state of the newest refinement of the others', async () => {
+      refinements = [
+        aRefinement('PROJ-2', { status: 'running' }),
+        aRefinement('PROJ-3'),
+        aRefinement('PROJ-4', { status: 'budget_exceeded' }),
+        aRefinement('PROJ-5', { status: 'running', cancelRequested: true }),
+      ];
+      const f = await mount(
+        new FakeBacklog(
+          ['PROJ-1', 'PROJ-2', 'PROJ-3', 'PROJ-4', 'PROJ-5'].map((k) =>
+            anItem(k)
+          )
+        )
+      );
+      const refineButton = buttonNamed(cell(rowOf(f, 'PROJ-1'), 8), 'Refine');
+      expect(refineButton.getAttribute('aria-label')).toBe('Refine PROJ-1');
+      expect(text(cell(rowOf(f, 'PROJ-2'), 8))).toContain(
+        'Refinement · Refining'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-3'), 8))).toContain(
+        'Refinement · Refined'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-4'), 8))).toContain(
+        'Refinement · Failed'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-5'), 8))).toContain(
+        'Refinement · Cancelling'
+      );
+      expect(api.callsOf('listRefinements')).toHaveLength(1);
+    });
+
+    it('offers no Refine until the refinements are read, so a refinement in progress is never hidden', async () => {
+      refinementsAnswer = () => new Promise(() => undefined);
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).not.toContain('Refine');
+    });
+
+    it('says when the refinements cannot be read, still offers Refine, and recovers with Try again', async () => {
+      refinementsAnswer = () => Promise.resolve(fail({ kind: 'network' }));
+      refinements = [aRefinement('PROJ-1')];
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      expect(text(root(f))).toContain('Could not read the refinements');
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toBe('Refine Start voyage');
+      refinementsAnswer = null;
+      buttonNamed(root(f), 'Try again').click();
+      await refresh(f);
+      expect(text(root(f))).not.toContain('Could not read the refinements');
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toBe(
+        'Refinement · Refined Start voyage'
+      );
+    });
+
+    it('opens and closes the detail row of a succeeded refinement, with its facts and the Markdown', async () => {
+      refinements = [
+        aRefinement('PROJ-1', { notes: 'Check the export limits' }),
+      ];
+      const f = await mount(
+        new FakeBacklog([anItem('PROJ-1'), anItem('PROJ-2')])
+      );
+      expect(detail(f, 'PROJ-1')).toBeNull();
+      const button = await toggle(f, 'PROJ-1');
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(button.getAttribute('aria-controls')).toBe('refinement-PROJ-1');
+      const row = detail(f, 'PROJ-1')!;
+      expect(row.previousElementSibling).toBe(rowOf(f, 'PROJ-1'));
+      expect(row.querySelector('td')?.getAttribute('colspan')).toBe('9');
+      expect(fact(row, 'State')).toBe('Refined succeeded');
+      expect(fact(row, 'Requested by')).toBe('alex@example.com · 30 m ago');
+      expect(fact(row, 'Spent')).toBe('2.4 of 10 AIU');
+      expect(fact(row, 'Notes')).toBe('Check the export limits');
+      expect(text(row.querySelector('ah-markdown h2'))).toBe('Verdict');
+      expect(text(row.querySelector('ah-markdown'))).toContain(
+        'NEEDS WORK. No limit on export size.'
+      );
+      expect(buttonNamed(row, 'Refine again')).toBeDefined();
+      expect(text(row)).not.toContain('Cancel refinement');
+      expect(api.callsOf('getRefinements').map((c) => c.args)).toEqual([
+        ['PROJ-1'],
+      ]);
+      await toggle(f, 'PROJ-1');
+      expect(detail(f, 'PROJ-1')).toBeNull();
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(button.hasAttribute('aria-controls')).toBe(false);
+    });
+
+    it('shows why a refinement ended without content, and offers to refine again', async () => {
+      refinements = [
+        aRefinement('PROJ-1', {
+          status: 'cancelled',
+          exitReason: 'cancelled by sam@example.com: Asked for the wrong story',
+          usage: { requests: 0, nanoAiu: 0, inputTokens: 0, outputTokens: 0 },
+        }),
+      ];
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      await toggle(f, 'PROJ-1');
+      const row = detail(f, 'PROJ-1')!;
+      expect(fact(row, 'State')).toBe('Cancelled cancelled');
+      expect(fact(row, 'Spent')).toBe('0 of 10 AIU');
+      expect(fact(row, 'Exit reason')).toBe(
+        'cancelled by sam@example.com: Asked for the wrong story'
+      );
+      expect(row.querySelector('ah-markdown')).toBeNull();
+      expect(buttonNamed(row, 'Refine again')).toBeDefined();
+    });
+
+    it('says when the refinement cannot be read and reads it again on Try again', async () => {
+      refinements = [aRefinement('PROJ-1')];
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      api.on('getRefinements', () =>
+        Promise.resolve(fail({ kind: 'network' }))
+      );
+      await toggle(f, 'PROJ-1');
+      expect(text(detail(f, 'PROJ-1'))).toContain(
+        'Could not read the refinement'
+      );
+      expect(detail(f, 'PROJ-1')!.querySelector('ah-markdown')).toBeNull();
+      api.on('getRefinements', (key) =>
+        Promise.resolve(
+          ok({ key, items: refinements.filter((r) => r.key === key) })
+        )
+      );
+      buttonNamed(detail(f, 'PROJ-1')!, 'Try again').click();
+      await refresh(f);
+      expect(text(detail(f, 'PROJ-1')!.querySelector('ah-markdown'))).toContain(
+        'NEEDS WORK'
+      );
+    });
+
+    it('reads a refinement in progress again every few seconds until it ends, then stops', async () => {
+      refinements = [
+        aRefinement('PROJ-1', {
+          status: 'running',
+          usage: {
+            requests: 1,
+            nanoAiu: 300_000_000,
+            inputTokens: 1,
+            outputTokens: 1,
+          },
+        }),
+      ];
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      await toggle(f, 'PROJ-1');
+      expect(text(detail(f, 'PROJ-1'))).toContain(
+        'The agent is refining it; checked again every 5 s.'
+      );
+      expect(fact(detail(f, 'PROJ-1')!, 'Spent')).toBe('0.3 of 10 AIU');
+      expect(clock.delays).toEqual([REFINEMENT_POLL_MS]);
+      await clock.advance(REFINEMENT_POLL_MS);
+      await refresh(f);
+      expect(api.callsOf('listRefinements')).toHaveLength(2);
+      // Nothing moved, so the open row's history is not read again.
+      expect(api.callsOf('getRefinements')).toHaveLength(1);
+      refinements = [aRefinement('PROJ-1')];
+      await clock.advance(REFINEMENT_POLL_MS);
+      await refresh(f);
+      expect(api.callsOf('listRefinements')).toHaveLength(3);
+      expect(api.callsOf('getRefinements')).toHaveLength(2);
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toContain(
+        'Refinement · Refined'
+      );
+      expect(text(detail(f, 'PROJ-1')!.querySelector('ah-markdown'))).toContain(
+        'NEEDS WORK'
+      );
+      expect(clock.pending).toBe(0);
+    });
+
+    it('polls nothing when no refinement is in progress, and stops polling when the page closes', async () => {
+      refinements = [aRefinement('PROJ-1')];
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      expect(clock.pending).toBe(0);
+      refinements = [aRefinement('PROJ-1', { status: 'queued' })];
+      buttonNamed(root(f), /^Refinement · /).click();
+      await refresh(f);
+      expect(clock.pending).toBe(1);
+      f.destroy();
+      expect(clock.pending).toBe(0);
+    });
+
+    it('asks for a refinement with the notes and the AIU limit, confirms the spend and opens the queued row', async () => {
+      api.on('requestRefinement', (key, body) => {
+        const queued = aRefinement(key, {
+          status: 'queued',
+          notes: body.notes ?? null,
+          budgetNanoAiu: body.budgetNanoAiu ?? 10_000_000_000,
+          usage: { requests: 0, nanoAiu: 0, inputTokens: 0, outputTokens: 0 },
+          startedAt: null,
+        });
+        refinements = [queued];
+        return Promise.resolve(ok(queued));
+      });
+      const f = await mount(
+        new FakeBacklog([
+          anItem('PROJ-1', { summary: 'Export invoices as CSV' }),
+        ])
+      );
+      buttonNamed(cell(rowOf(f, 'PROJ-1'), 8), 'Refine').click();
+      await refresh(f);
+      const d = dialog();
+      expect(text(d.querySelector('.ah-dialog__title'))).toBe('Refine PROJ-1?');
+      expect(text(d)).toContain('(Export invoices as CSV)');
+      expect(text(d)).toContain('Nothing is written to Jira.');
+      expect(text(d.querySelector('ah-banner'))).toContain(
+        "This may spend AIU, up to the server's refinement cap"
+      );
+      expect(text(d.querySelector('ah-banner'))).toContain(
+        "not charged to any voyage's budget"
+      );
+      expect(buttonNamed(d, 'Refine')).toBeDefined();
+      fill(d.querySelector('textarea'), '  Check the export limits  ');
+      fill(d.querySelector('input'), '2.5');
+      await refresh(f);
+      expect(text(d.querySelector('ah-banner'))).toContain(
+        'This may spend up to 2.5 AIU'
+      );
+      buttonNamed(d, 'Refine · up to 2.5 AIU').click();
+      await refresh(f);
+      expect(api.callsOf('requestRefinement').map((c) => c.args)).toEqual([
+        [
+          'PROJ-1',
+          {
+            confirmSpend: true,
+            notes: 'Check the export limits',
+            budgetNanoAiu: 2_500_000_000,
+          },
+        ],
+      ]);
+      expect(hasDialog()).toBe(false);
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toContain(
+        'Refinement · Queued'
+      );
+      const row = detail(f, 'PROJ-1')!;
+      expect(fact(row, 'Spent')).toBe('0 of 2.5 AIU');
+      expect(text(row)).toContain(
+        'Waiting for a run slot; checked again every 5 s.'
+      );
+      expect(buttonNamed(row, 'Cancel refinement')).toBeDefined();
+      expect(clock.delays).toEqual([REFINEMENT_POLL_MS]);
+    });
+
+    it('sends only confirmSpend when the notes and the limit are left empty', async () => {
+      api.on('requestRefinement', (key) =>
+        Promise.resolve(ok(aRefinement(key, { status: 'queued' })))
+      );
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      buttonNamed(cell(rowOf(f, 'PROJ-1'), 8), 'Refine').click();
+      await refresh(f);
+      fill(dialog().querySelector('textarea'), '   ');
+      buttonNamed(dialog(), 'Refine').click();
+      await refresh(f);
+      expect(api.callsOf('requestRefinement').map((c) => c.args)).toEqual([
+        ['PROJ-1', { confirmSpend: true }],
+      ]);
+    });
+
+    it('refuses an AIU limit that is not an amount above zero, without a request', async () => {
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      buttonNamed(cell(rowOf(f, 'PROJ-1'), 8), 'Refine').click();
+      await refresh(f);
+      fill(dialog().querySelector('input'), '1e3');
+      buttonNamed(dialog(), 'Refine').click();
+      await refresh(f);
+      expect(text(dialog().querySelector('.ah-field__error'))).toBe(
+        'Type an amount in AIU, such as 5 or 2.5.'
+      );
+      fill(dialog().querySelector('input'), '0');
+      await refresh(f);
+      expect(text(dialog().querySelector('.ah-field__error'))).toBe(
+        'The limit must be above 0 AIU.'
+      );
+      expect(api.callsOf('requestRefinement')).toHaveLength(0);
+    });
+
+    it('keeps the dialog open with a notice when a refinement is already in progress, and reads the refinements again', async () => {
+      api.on('requestRefinement', () =>
+        Promise.resolve(
+          fail({
+            kind: 'problem',
+            status: 409,
+            code: 'invalid_state',
+            title: 'Invalid state',
+            detail: 'PROJ-1 already has a refinement in progress',
+          })
+        )
+      );
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      buttonNamed(cell(rowOf(f, 'PROJ-1'), 8), 'Refine').click();
+      await refresh(f);
+      refinements = [
+        aRefinement('PROJ-1', {
+          status: 'running',
+          requestedBy: 'sam@example.com',
+        }),
+      ];
+      fill(dialog().querySelector('textarea'), 'Look at the limits');
+      buttonNamed(dialog(), 'Refine').click();
+      await refresh(f);
+      const banner = text(dialog().querySelector('ah-banner'));
+      expect(banner).toContain(
+        'This item already has a refinement in progress'
+      );
+      expect(banner).toContain('PROJ-1 already has a refinement in progress');
+      expect(dialog().querySelector('textarea')?.value).toBe(
+        'Look at the limits'
+      );
+      expect(api.callsOf('listRefinements')).toHaveLength(2);
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toContain(
+        'Refinement · Refining'
+      );
+    });
+
+    it('says refinement is not available when the server has none configured', async () => {
+      api.on('requestRefinement', () =>
+        Promise.resolve(
+          fail({
+            kind: 'problem',
+            status: 503,
+            code: 'unavailable',
+            title: 'Unavailable',
+          })
+        )
+      );
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      buttonNamed(cell(rowOf(f, 'PROJ-1'), 8), 'Refine').click();
+      await refresh(f);
+      buttonNamed(dialog(), 'Refine').click();
+      await refresh(f);
+      expect(text(dialog().querySelector('ah-banner'))).toContain(
+        "Refinement isn't available"
+      );
+    });
+
+    it('asks again from the detail row of an ended refinement', async () => {
+      refinements = [aRefinement('PROJ-1')];
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      await toggle(f, 'PROJ-1');
+      buttonNamed(detail(f, 'PROJ-1')!, 'Refine again').click();
+      await refresh(f);
+      expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
+        'Refine PROJ-1?'
+      );
+    });
+
+    it('cancels a refinement in progress with a required reason and shows it cancelled', async () => {
+      refinements = [
+        aRefinement('PROJ-1', { status: 'queued', startedAt: null }),
+      ];
+      api.on('cancelRefinement', (key, body) => {
+        const cancelled = aRefinement(key, {
+          status: 'cancelled',
+          cancelRequested: true,
+          exitReason: `cancelled by alex@example.com: ${body.reason}`,
+          usage: { requests: 0, nanoAiu: 0, inputTokens: 0, outputTokens: 0 },
+        });
+        refinements = [cancelled];
+        return Promise.resolve(ok(cancelled));
+      });
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      await toggle(f, 'PROJ-1');
+      buttonNamed(detail(f, 'PROJ-1')!, 'Cancel refinement').click();
+      await refresh(f);
+      const d = dialog();
+      expect(text(d.querySelector('.ah-dialog__title'))).toBe(
+        'Cancel the refinement of PROJ-1?'
+      );
+      expect(text(d)).toContain('it ends at once and spends nothing');
+      fill(d.querySelector('textarea'), '   ');
+      buttonNamed(d, 'Cancel refinement').click();
+      await refresh(f);
+      expect(text(d.querySelector('.ah-field__error'))).toBe(
+        'A reason is required.'
+      );
+      expect(api.callsOf('cancelRefinement')).toHaveLength(0);
+      fill(d.querySelector('textarea'), ' Asked for the wrong story ');
+      buttonNamed(d, 'Cancel refinement').click();
+      await refresh(f);
+      expect(api.callsOf('cancelRefinement').map((c) => c.args)).toEqual([
+        ['PROJ-1', { reason: 'Asked for the wrong story' }],
+      ]);
+      expect(hasDialog()).toBe(false);
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toContain(
+        'Refinement · Cancelled'
+      );
+      expect(fact(detail(f, 'PROJ-1')!, 'Exit reason')).toBe(
+        'cancelled by alex@example.com: Asked for the wrong story'
+      );
+      expect(clock.pending).toBe(0);
+    });
+
+    it('shows a running refinement as cancelling until it ends, without a second Cancel', async () => {
+      refinements = [aRefinement('PROJ-1', { status: 'running' })];
+      api.on('cancelRefinement', (key) =>
+        Promise.resolve(
+          ok(aRefinement(key, { status: 'running', cancelRequested: true }))
+        )
+      );
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      await toggle(f, 'PROJ-1');
+      buttonNamed(detail(f, 'PROJ-1')!, 'Cancel refinement').click();
+      await refresh(f);
+      expect(text(dialog())).toContain('What it spent so far stays spent');
+      fill(dialog().querySelector('textarea'), 'Not needed');
+      buttonNamed(dialog(), 'Cancel refinement').click();
+      await refresh(f);
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toContain(
+        'Refinement · Cancelling'
+      );
+      expect(text(detail(f, 'PROJ-1'))).toContain('Stopping the agent');
+      expect(text(detail(f, 'PROJ-1'))).not.toContain('Cancel refinement');
+    });
+
+    it('tells a cancel that comes too late that nothing is left to cancel', async () => {
+      refinements = [aRefinement('PROJ-1', { status: 'running' })];
+      api.on('cancelRefinement', () =>
+        Promise.resolve(
+          fail({
+            kind: 'problem',
+            status: 409,
+            code: 'invalid_state',
+            title: 'Invalid state',
+          })
+        )
+      );
+      const f = await mount(new FakeBacklog([anItem('PROJ-1')]));
+      await toggle(f, 'PROJ-1');
+      buttonNamed(detail(f, 'PROJ-1')!, 'Cancel refinement').click();
+      await refresh(f);
+      refinements = [aRefinement('PROJ-1')];
+      fill(dialog().querySelector('textarea'), 'Not needed');
+      buttonNamed(dialog(), 'Cancel refinement').click();
+      await refresh(f);
+      expect(text(dialog().querySelector('ah-banner'))).toContain(
+        'Nothing to cancel any more'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-1'), 8))).toContain(
+        'Refinement · Refined'
+      );
+      expect(text(detail(f, 'PROJ-1')!.querySelector('ah-markdown'))).toContain(
+        'NEEDS WORK'
+      );
     });
   });
 });

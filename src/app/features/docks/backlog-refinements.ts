@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
-import type { ApiResult } from '@core/api/api-error';
+import { isInvalidState, type ApiResult } from '@core/api/api-error';
 import type {
   Refinement,
   RefinementStatus,
@@ -16,7 +16,7 @@ export function isActiveRefinement(status: RefinementStatus): boolean {
   return status === 'queued' || status === 'running';
 }
 
-/** The word a backlog row shows for a refinement's status. */
+/** The word a backlog row shows for a refinement's status ("Refinement · Refined"). */
 export function refinementLabel(status: RefinementStatus): string {
   switch (status) {
     case 'queued':
@@ -37,6 +37,13 @@ export function refinementLabel(status: RefinementStatus): string {
   }
 }
 
+/** The word for a refinement as it stands: "Cancelling" once a cancel was asked for and the run has not ended yet. */
+export function refinementStateLabel(refinement: RefinementSummary): string {
+  return refinement.cancelRequested && isActiveRefinement(refinement.status)
+    ? 'Cancelling'
+    : refinementLabel(refinement.status);
+}
+
 /** What the backlog has read of one item's refinements: every one, newest first, once read. */
 export interface RefinementHistory {
   /** Null until the first read answered. */
@@ -48,16 +55,17 @@ export interface RefinementHistory {
 /**
  * The refinements the Backlog shows (provided by the Docks component): the newest of every refined item, for the row's
  * state, and the full history of the rows a person opened. Refinements send no events, so while one is in progress the
- * list, and the history of the open rows, are read again every {@link REFINEMENT_POLL_MS}; nothing is polled otherwise.
+ * list is read again every {@link REFINEMENT_POLL_MS}, with the history of each open row whose newest refinement moved
+ * on; nothing is polled otherwise.
  */
 @Injectable()
 export class BacklogRefinements {
   private readonly api = inject(ApiClient);
   private readonly clock = inject(CLOCK);
 
-  private readonly latestByKey = signal<
-    ReadonlyMap<string, RefinementSummary>
-  >(new Map());
+  private readonly latestByKey = signal<ReadonlyMap<string, RefinementSummary>>(
+    new Map()
+  );
   private readonly historyByKey = signal<
     ReadonlyMap<string, RefinementHistory>
   >(new Map());
@@ -85,18 +93,33 @@ export class BacklogRefinements {
     return this.historyByKey().get(key) ?? null;
   }
 
+  /** The newest refinement of an item with its Markdown, once its history has been read; null before. */
+  newest(key: string): Refinement | null {
+    const latest = this.latest(key);
+    const newest = this.history(key)?.items?.[0];
+    return latest !== null && newest?.id === latest.id ? newest : null;
+  }
+
   /** Whether an item's refinement row is open. */
   isOpen(key: string): boolean {
     return this.openKeys().has(key);
   }
 
-  /** Reads the newest refinement of every item. A failure keeps what was read before. */
+  /**
+   * Reads the newest refinement of every item, then the history of each open row whose newest refinement changed. A
+   * failure keeps what was read before.
+   */
   async load(): Promise<void> {
     const result = await this.api.listRefinements();
     if (this.disposed) return;
     if (result.ok) {
       this.latestByKey.set(new Map(result.value.map((r) => [r.key, r])));
       this.statusSignal.set('ready');
+      await Promise.all(
+        [...this.openKeys()]
+          .filter((key) => this.moved(key))
+          .map((key) => this.readHistory(key))
+      );
     } else if (this.statusSignal() !== 'ready') {
       this.statusSignal.set('error');
     }
@@ -117,9 +140,11 @@ export class BacklogRefinements {
   async readHistory(key: string): Promise<void> {
     const result = await this.api.getRefinements(key);
     if (this.disposed) return;
-    const before = this.history(key);
     if (!result.ok) {
-      this.setHistory(key, { items: before?.items ?? null, failed: true });
+      this.setHistory(key, {
+        items: this.history(key)?.items ?? null,
+        failed: true,
+      });
       return;
     }
     this.setHistory(key, { items: result.value.items, failed: false });
@@ -128,7 +153,10 @@ export class BacklogRefinements {
     this.schedule();
   }
 
-  /** Asks for a refinement; on success the row shows it at once, open. */
+  /**
+   * Asks for a refinement (`confirmSpend: true`); on success the row shows it at once, open. Empty notes and a missing
+   * cap are left out of the request. A `409 invalid_state` (one is already in progress) reads the item again.
+   */
   async request(
     key: string,
     notes: string,
@@ -139,18 +167,47 @@ export class BacklogRefinements {
       ...(notes !== '' ? { notes } : {}),
       ...(budgetNanoAiu !== null ? { budgetNanoAiu } : {}),
     });
-    if (result.ok && !this.disposed) {
+    if (this.disposed) return result;
+    if (result.ok) {
       this.accept(result.value);
       this.setOpen(key, true);
+    } else if (isInvalidState(result.error)) {
+      void this.refresh(key);
     }
     return result;
   }
 
-  /** Stops an item's refinement in progress; on success the row shows it cancelled, or being cancelled. */
+  /**
+   * Stops an item's refinement in progress; on success the row shows it cancelled, or being cancelled. A
+   * `409 invalid_state` (nothing in progress any more) reads the item again.
+   */
   async cancel(key: string, reason: string): Promise<ApiResult<Refinement>> {
     const result = await this.api.cancelRefinement(key, { reason });
-    if (result.ok && !this.disposed) this.accept(result.value);
+    if (this.disposed) return result;
+    if (result.ok) this.accept(result.value);
+    else if (isInvalidState(result.error)) void this.refresh(key);
     return result;
+  }
+
+  /** Reads the list and, when its row is open, the item's history: after the API said the item is not as shown. */
+  private async refresh(key: string): Promise<void> {
+    await Promise.all([
+      this.load(),
+      ...(this.isOpen(key) ? [this.readHistory(key)] : []),
+    ]);
+  }
+
+  /** Whether an open row's history is behind the list: it was never read, or its newest differs in id or status. */
+  private moved(key: string): boolean {
+    const latest = this.latest(key);
+    if (latest === null) return false;
+    const newest = this.history(key)?.items?.[0];
+    return (
+      newest === undefined ||
+      newest.id !== latest.id ||
+      newest.status !== latest.status ||
+      newest.cancelRequested !== latest.cancelRequested
+    );
   }
 
   /** Takes a refinement the API answered as the newest of its item, in its row's state and history. */
@@ -164,29 +221,25 @@ export class BacklogRefinements {
     this.schedule();
   }
 
-  /** Reads again in {@link REFINEMENT_POLL_MS} while some refinement is in progress; never twice at once. */
+  /**
+   * Reads again in {@link REFINEMENT_POLL_MS} while some refinement is in progress, never twice at once; drops a pending
+   * read once none is.
+   */
   private schedule(): void {
-    if (this.disposed || this.timer !== null) return;
+    if (this.disposed) return;
     const active = [...this.latestByKey().values()].some((r) =>
       isActiveRefinement(r.status)
     );
-    if (!active) return;
+    if (!active) {
+      this.timer?.cancel();
+      this.timer = null;
+      return;
+    }
+    if (this.timer !== null) return;
     this.timer = this.clock.schedule(REFINEMENT_POLL_MS, () => {
       this.timer = null;
-      void this.poll();
+      void this.load();
     });
-  }
-
-  /** One round: the list, and the history of the open rows whose refinement is in progress. */
-  private async poll(): Promise<void> {
-    const open = [...this.openKeys()].filter((key) => {
-      const latest = this.latest(key);
-      return latest !== null && isActiveRefinement(latest.status);
-    });
-    await Promise.all([
-      this.load(),
-      ...open.map((key) => this.readHistory(key)),
-    ]);
   }
 
   private setLatest(refinement: RefinementSummary): void {

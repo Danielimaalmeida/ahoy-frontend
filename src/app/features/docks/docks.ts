@@ -10,6 +10,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import type { RefinementSummary } from '@core/api/types';
 import { AppConfigStore } from '@core/config/app-config';
 import { StoriesStore } from '@core/stores/stories-store';
 import { Banner } from '@ui/banner/banner';
@@ -32,6 +33,12 @@ import {
   type BacklogScope,
   type BacklogSprint,
 } from './backlog-port';
+import {
+  BacklogRefinements,
+  refinementStateLabel,
+} from './backlog-refinements';
+import { RefinementDetails } from './refinement-details';
+import { RefinementDialogs } from './refinement-dialogs';
 
 /** How many backlog items one page asks for. */
 export const DOCKS_PAGE_SIZE = 25;
@@ -115,7 +122,9 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
     Nowrap,
     Key,
     Api,
+    RefinementDetails,
   ],
+  providers: [BacklogRefinements],
   styles: `
     :host {
       display: block;
@@ -310,7 +319,7 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
     .docks__table .docks__actions {
       text-align: right;
     }
-    .docks__actions a {
+    .docks__actions > * {
       max-width: 100%;
       margin-block: 2px;
       height: auto;
@@ -370,7 +379,7 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
         justify-content: flex-end;
         gap: 8px;
       }
-      .docks__actions a {
+      .docks__actions > * {
         min-height: 44px;
         margin: 0;
       }
@@ -417,6 +426,15 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
         <ah-banner variant="error" heading="Could not read the voyages in Ahoy">
           The Ahoy column and the "Not started" and "In Ahoy" filters need them.
           <button ahButton size="sm" type="button" (click)="retryStories()">
+            Try again
+          </button>
+        </ah-banner>
+      }
+
+      @if (refinements.status() === 'error') {
+        <ah-banner variant="error" heading="Could not read the refinements">
+          The rows don't show their refinements until they are read.
+          <button ahButton size="sm" type="button" (click)="retryRefinements()">
             Try again
           </button>
         </ah-banner>
@@ -683,6 +701,34 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                           }
                         </td>
                         <td ahNowrap class="docks__actions">
+                          @if (refinements.latest(item.key); as refinement) {
+                            <button
+                              ahButton="ghost"
+                              size="sm"
+                              type="button"
+                              [attr.aria-expanded]="
+                                refinements.isOpen(item.key)
+                              "
+                              [attr.aria-controls]="
+                                refinements.isOpen(item.key)
+                                  ? refinementRowId(item.key)
+                                  : null
+                              "
+                              (click)="refinements.toggle(item.key)"
+                            >
+                              Refinement · {{ refinementLabel(refinement) }}
+                            </button>
+                          } @else if (refinements.status() !== 'loading') {
+                            <button
+                              ahButton="ghost"
+                              size="sm"
+                              type="button"
+                              [attr.aria-label]="'Refine ' + item.key"
+                              (click)="refine(item)"
+                            >
+                              Refine
+                            </button>
+                          }
                           @if (jiraUrl(item.key); as url) {
                             <a
                               ahButton="ghost"
@@ -715,6 +761,25 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                           }
                         </td>
                       </tr>
+                      @if (openRefinement(item.key); as refinement) {
+                        <tr
+                          class="docks__refinement"
+                          [id]="refinementRowId(item.key)"
+                        >
+                          <td colspan="9">
+                            <ah-refinement-details
+                              [summary]="refinement"
+                              [refinement]="refinements.newest(item.key)"
+                              [failed]="
+                                refinements.history(item.key)?.failed ?? false
+                              "
+                              (cancelRefinement)="cancelRefinement(refinement)"
+                              (refineAgain)="refine(item)"
+                              (retry)="refinements.readHistory(item.key)"
+                            />
+                          </td>
+                        </tr>
+                      }
                     }
                   </tbody>
                 </table>
@@ -746,7 +811,9 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
 export class Docks {
   protected readonly port = inject(BACKLOG_PORT);
   protected readonly store = inject(StoriesStore);
+  protected readonly refinements = inject(BacklogRefinements);
   private readonly config = inject(AppConfigStore);
+  private readonly refinementDialogs = inject(RefinementDialogs);
 
   protected readonly scopeTabs = SCOPE_TABS;
   protected readonly skeletonColumns = SKELETON_COLUMNS;
@@ -905,6 +972,7 @@ export class Docks {
 
   constructor() {
     this.store.use(inject(DestroyRef));
+    void this.refinements.load();
     effect(() => {
       const query = this.query();
       untracked(() => void this.start(query));
@@ -956,6 +1024,43 @@ export class Docks {
     return base === undefined
       ? null
       : `${base}/browse/${encodeURIComponent(key)}`;
+  }
+
+  /** The words of a row's refinement button: "Refined", "Refining", "Cancelling"… */
+  protected refinementLabel(refinement: RefinementSummary): string {
+    return refinementStateLabel(refinement);
+  }
+
+  /** The id of an item's refinement row, which its toggle controls. */
+  protected refinementRowId(key: string): string {
+    return `refinement-${key}`;
+  }
+
+  /** The newest refinement of an item whose refinement row is open, else null (the row is not shown). */
+  protected openRefinement(key: string): RefinementSummary | null {
+    return this.refinements.isOpen(key) ? this.refinements.latest(key) : null;
+  }
+
+  /** Opens "Refine PROJ-145?". */
+  protected refine(item: BacklogItem): void {
+    this.refinementDialogs.refine({
+      key: item.key,
+      summary: item.summary,
+      refinements: this.refinements,
+    });
+  }
+
+  /** Opens "Cancel the refinement of PROJ-145?". */
+  protected cancelRefinement(refinement: RefinementSummary): void {
+    this.refinementDialogs.cancel({
+      refinement,
+      refinements: this.refinements,
+    });
+  }
+
+  /** Reads the refinements again after they failed. */
+  protected retryRefinements(): void {
+    void this.refinements.load();
   }
 
   /** Turns every filter off. */

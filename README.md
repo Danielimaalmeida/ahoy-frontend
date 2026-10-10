@@ -72,6 +72,14 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Backlog Refine (2026-10-10, `claude/tender-johnson-pvbvmu`):** each Backlog row offers "Refine" (optional notes,
+  optional AIU limit, spend warning, `confirmSpend: true`) or "Refinement · <state>", which opens a detail row with the
+  newest refinement's state, requester, spend, notes and exit reason, Cancel refinement (reason required) while it is
+  queued or running, Refine again once it ended, and the agent's Markdown through `ah-markdown` when it succeeded. The
+  list is read once with the page and polled every 5 s only while a refinement is in progress. Offline build,
+  typecheck, lint, 132 files / 2,389 tests and formatting passed on Node 24.21.0 (same sandbox install as below); the
+  flow was also clicked through in headless Chromium against the in-browser mock backend (a throwaway copy, external
+  hosts blocked). No real API, `--simulate` API or TEST check was run.
 - **Back to intake and the refinement contract (2026-10-10, `claude/tender-johnson-pvbvmu`):** vendored the hosted
   contract (refresh intake, superseded questions, backlog refinements), added the voyage header's Back to intake dialog
   (planning and plan review only, with the spend warning), read-only "Before the intake refresh" questions, the

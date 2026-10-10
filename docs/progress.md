@@ -1,8 +1,43 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-10 for Back to intake and the refinement contract on `claude/tender-johnson-pvbvmu`.** Committed and
-pushed with the user's approval, from a cloud session. The Backlog's Refine action is not built yet (see "Start here
-next"). No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-10 for the Backlog's Refine action on `claude/tender-johnson-pvbvmu`.** Committed and pushed with the
+user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Backlog Refine (2026-10-10)
+
+- **Rows:** every Backlog row offers "Refine" (labelled "Refine PROJ-…") once `listRefinements` answered, or
+  "Refinement · Queued / Refining / Cancelling / Refined / Cancelled / Failed" for an item that has one. The toggle
+  (`aria-expanded`, `aria-controls`) opens and closes a detail row (`<td colspan="9">`) under the item. Nothing is
+  offered while the list is still loading, so a refinement in progress is never hidden behind a "Refine"; if the list
+  fails, a banner with Try again appears and "Refine" stays available (the server answers `409` if one is running).
+- **Detail row (`refinement-details.ts`):** state (label and API word), requester and when, spend of cap, notes, exit
+  reason; Cancel refinement while queued or running (hidden once a cancel was asked for, "Stopping the agent"),
+  Refine again once it ended; the agent's Markdown through `ah-markdown` once it succeeded, a skeleton while it is read
+  and an error with Try again if the read fails.
+- **Dialogs (`refinement-dialogs.ts`):** "Refine PROJ-…?" with optional notes (max 2,000 after trimming) and an
+  optional AIU limit read by `parseAiu` (no floats, above 0), a cost banner ("up to X AIU", or "up to the server's
+  refinement cap", not charged to any voyage's budget) and `confirmSpend: true`; empty notes and limit are left out of
+  the body. "Cancel the refinement of PROJ-…?" requires a reason. `409 invalid_state` reads as a notice ("already has a
+  refinement in progress" / "Nothing to cancel any more") and refreshes the row; `503` reads "Refinement isn't
+  available"; other errors use `apiErrorView`. Validators are feature-local, as in Set sail (no import from `voyage`).
+- **Store (`backlog-refinements.ts`, provided by `Docks`):** reads the list once with the page, the history when a row
+  opens, and polls the list every 5 s only while some refinement is queued or running; on each poll it reads again only
+  the open rows whose newest refinement moved. The timer is dropped when nothing is in progress and when the page
+  closes.
+- **Tests:** `backlog-refinements.spec.ts` (16), `refinement-dialogs.spec.ts` (7) and 17 new `docks.spec.ts` tests;
+  four existing Docks assertions now include the "Refine" button in the Actions cell.
+- **Ran on Node 24.21.0:** build (no budget warning), typecheck (`check-boundaries: ok`), lint, **132 files / 2,389
+  tests passed** and `npm run format` (Prettier check: all files pass). Baseline on the WIP commit in the same session:
+  130 files / 2,349. Dependencies came from the same approved sandbox install as below (public registry, direct
+  dependencies pinned to the lockfile, `@company-name-fedev/auth` stubbed in `node_modules`; nothing of it committed).
+- **Browser (mock only):** a throwaway copy of the repository in the session's scratch directory installed
+  `installMockBackend()` in `main.ts`; headless Chromium with every non-localhost request aborted clicked through
+  Refine (notes and a 2.5 AIU limit), the queued row, polling to Refined with the Markdown, Refine again, Cancel
+  refinement and the toggle, at 1440px and 390px (no horizontal overflow). Not part of the repository.
+- **Found:** this repository has no `start:mock` script and no `environment.mock.ts`, so `ng serve` no longer installs
+  the mock backend although `CLAUDE.md` and the plan refer to `npm run start:mock`. Not changed here.
+- **Not run:** Playwright/e2e suite, screen reader, a local `ahoy-hosted --simulate` API, real API or TEST.
+- **Needs from other lanes:** none.
 
 ## Back to intake and the refinement contract (2026-10-10)
 
@@ -411,8 +446,9 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-Back to intake and the refinement contract are committed on `claude/tender-johnson-pvbvmu` (above): 2,349 tests pass
-offline. The Backlog does not offer refinements yet.
+The Backlog's Refine action, Back to intake and the refinement contract are committed on
+`claude/tender-johnson-pvbvmu` (above): 2,389 tests pass offline, and the Refine flow was clicked through on the
+in-browser mock. Neither has met a real or `--simulate` API.
 
 The earlier change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
 a sprint filter and native disclosure controls, plus a user-approved responsive layout without horizontal scrolling.
@@ -516,18 +552,12 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-**WIP (uncompiled, untested):** `src/app/features/docks/backlog-refinements.ts` (feature-local refinement store with polling) and the four refinement operations in the test `FakeApi` were committed unfinished when the session ran out. Still to do: the Refine and Cancel refinement dialogs, the detail row in `docks.ts`, specs, then the full checks.
-
-Build the Backlog's Refine action on `claude/tender-johnson-pvbvmu`: `ApiClient` already has the four refinement
-operations and the mock simulates them. Plan: read `listRefinements` once with the backlog (a state tag per row); a
-"Refine" button opens a dialog with optional notes and an optional AIU cap and the spend warning (`confirmSpend: true`);
-a row toggle shows a details row with the newest refinement's status, requester, spend, exit reason, a Cancel button
-while it is queued or running, and its Markdown through `ah-markdown` once it succeeded; poll `getRefinements` every
-few seconds while it is queued or running. Keep the docks feature self-contained (no import from another feature).
-Then review Back to intake in a browser on the mock backend.
+Check Refine and Back to intake against a local `ahoy-hosted` started with `npm run dev -- --simulate` (0 AIU), and
+decide whether to restore a `start:mock` script with a mock bootstrap (see "Found" above). Then review Back to intake
+in a browser.
 
 Review the sprint-grouped Backlog implementation and the contract limits documented above. Commit, push and release
-need new explicit user approval. Keep the user's `Backlog.html` intact; it is the only formatting failure.
+need new explicit user approval. Keep the user's `Backlog.html` intact.
 Browser verification must use a proven offline setup, not the current authentication/proxy paths. Extending catalogue
 selection to the existing Models dialog and halted-review resolution (`resolveReview`) remain separate scope.
 The next release must retain the corrected NGINX document root; remote image startup/probes remain unverified.
@@ -535,10 +565,11 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest change, committed on `claude/tender-johnson-pvbvmu`, vendors the hosted contract with refresh intake and
-backlog refinements, adds the voyage header's Back to intake dialog, shows superseded questions as read-only history,
-and extends the mock backend. 130 test files / 2,349 tests pass on Node 24.21.0. Next is the Backlog's Refine action
-("Start here next"). Do not contact TEST or a live API.
+The latest change, committed on `claude/tender-johnson-pvbvmu`, adds the Backlog's Refine action (row button or
+"Refinement · <state>" toggle, detail row with Cancel refinement and Refine again, Markdown via `ah-markdown`, polling
+only while one is in progress). Before it on the same branch: the vendored hosted contract, Back to intake and
+superseded questions. 132 test files / 2,389 tests pass on Node 24.21.0. Next is "Start here next". Do not contact
+TEST or a live API.
 
 The earlier change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls
 from the user's `docs/design/wireframes/Backlog.html`. Jira sprint data now reaches `BacklogItem`; the mock response
