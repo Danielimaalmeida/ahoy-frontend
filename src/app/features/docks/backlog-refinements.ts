@@ -11,30 +11,30 @@ import { CLOCK, type Timer } from '@core/realtime/clock';
 /** How often refinements in progress are read again: they send no events. */
 export const REFINEMENT_POLL_MS = 5_000;
 
+/** What each status means for the Backlog: the word a row shows, and whether the refinement is still in progress. */
+const STATUSES: Readonly<
+  Record<RefinementStatus, { readonly label: string; readonly active: boolean }>
+> = {
+  queued: { label: 'Queued', active: true },
+  running: { label: 'Refining', active: true },
+  succeeded: { label: 'Refined', active: false },
+  cancelled: { label: 'Cancelled', active: false },
+  failed: { label: 'Failed', active: false },
+  budget_exceeded: { label: 'Failed', active: false },
+  timed_out: { label: 'Failed', active: false },
+  output_violation: { label: 'Failed', active: false },
+  auth_failed: { label: 'Failed', active: false },
+  lost: { label: 'Failed', active: false },
+};
+
 /** Whether a refinement is still in progress: queued for a run slot, or running. */
 export function isActiveRefinement(status: RefinementStatus): boolean {
-  return status === 'queued' || status === 'running';
+  return STATUSES[status].active;
 }
 
 /** The word a backlog row shows for a refinement's status ("Refinement · Refined"). */
 export function refinementLabel(status: RefinementStatus): string {
-  switch (status) {
-    case 'queued':
-      return 'Queued';
-    case 'running':
-      return 'Refining';
-    case 'succeeded':
-      return 'Refined';
-    case 'cancelled':
-      return 'Cancelled';
-    case 'failed':
-    case 'budget_exceeded':
-    case 'timed_out':
-    case 'output_violation':
-    case 'auth_failed':
-    case 'lost':
-      return 'Failed';
-  }
+  return STATUSES[status].label;
 }
 
 /** The word for a refinement as it stands: "Cancelling" once a cancel was asked for and the run has not ended yet. */
