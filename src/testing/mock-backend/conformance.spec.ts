@@ -284,6 +284,7 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'listArtifacts',
       'getArtifactContent',
       'listStoryEvents',
+      'getStoryDiagnosis',
       'refreshIntake',
       'listRefinements',
       'getRefinements',
