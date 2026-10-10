@@ -896,6 +896,35 @@ describe('Docks', () => {
       expect(api.callsOf('listRefinements')).toHaveLength(1);
     });
 
+    it('names every Refine and Refinement button by its item, so rows in the same state do not sound alike', async () => {
+      refinements = [
+        aRefinement('PROJ-2', { status: 'running' }),
+        aRefinement('PROJ-3'),
+        aRefinement('PROJ-4'),
+      ];
+      const f = await mount(
+        new FakeBacklog(
+          ['PROJ-1', 'PROJ-2', 'PROJ-3', 'PROJ-4'].map((k) => anItem(k))
+        )
+      );
+      const names = ['PROJ-1', 'PROJ-2', 'PROJ-3', 'PROJ-4'].map((key) => {
+        const button = cell(rowOf(f, key), 8).querySelector('button');
+        return [
+          button?.getAttribute('aria-label') ?? text(button),
+          text(button),
+        ];
+      });
+      expect(names).toEqual([
+        ['Refine PROJ-1', 'Refine'],
+        ['Refinement · Refining for PROJ-2', 'Refinement · Refining'],
+        ['Refinement · Refined for PROJ-3', 'Refinement · Refined'],
+        ['Refinement · Refined for PROJ-4', 'Refinement · Refined'],
+      ]);
+      // The visible words stay at the start of the name (WCAG 2.5.3, Label in Name).
+      for (const [name, visible] of names)
+        expect(name?.startsWith(visible ?? '\0')).toBe(true);
+    });
+
     it('offers no Refine until the refinements are read, so a refinement in progress is never hidden', async () => {
       refinementsAnswer = () => new Promise(() => undefined);
       const f = await mount(new FakeBacklog([anItem('PROJ-1')]));

@@ -714,6 +714,12 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                                   ? refinementRowId(item.key)
                                   : null
                               "
+                              [attr.aria-label]="
+                                'Refinement · ' +
+                                refinementLabel(refinement) +
+                                ' for ' +
+                                item.key
+                              "
                               (click)="refinements.toggle(item.key)"
                             >
                               Refinement · {{ refinementLabel(refinement) }}
