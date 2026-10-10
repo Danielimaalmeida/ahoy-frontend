@@ -30,6 +30,7 @@ import {
   isModelCatalog,
   isProblem,
   isQuestionList,
+  isDiagnosis,
   isRefinement,
   isRefinementList,
   isRefinementSummaryList,
@@ -57,6 +58,7 @@ import type {
   ModelCatalog,
   Question,
   CancelRefinementRequest,
+  Diagnosis,
   Refinement,
   RefinementList,
   RefinementRequest,
@@ -212,6 +214,15 @@ export class ApiClient {
       `/stories/${segment(key)}/refresh-intake`,
       body,
       isStory
+    );
+  }
+
+  /** Why the story stands where it stands, and what fixes it; no findings unless it is halted. Spends nothing. */
+  getStoryDiagnosis(key: string): Promise<ApiResult<Diagnosis>> {
+    return this.get(
+      'getStoryDiagnosis',
+      `/stories/${segment(key)}/diagnosis`,
+      isDiagnosis
     );
   }
 

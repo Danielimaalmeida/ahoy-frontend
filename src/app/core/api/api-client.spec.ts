@@ -18,6 +18,7 @@ import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
+import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
@@ -358,6 +359,16 @@ const CASES: readonly Case[] = [
     problem: 'unauthenticated',
   },
   {
+    op: 'getStoryDiagnosis',
+    call: (api) => api.getStoryDiagnosis('PROJ-118'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-118/diagnosis',
+    reply: getStoryDiagnosis,
+    status: 200,
+    value: getStoryDiagnosis,
+    problem: 'not_found',
+  },
+  {
     op: 'getRefinements',
     call: (api) => api.getRefinements('PROJ-145'),
     method: 'GET',
@@ -533,6 +544,7 @@ describe('ApiClient', () => {
         'listStories',
         'startStory',
         'getStory',
+        'getStoryDiagnosis',
         'stopStory',
         'resumeStory',
         'setStoryBudget',

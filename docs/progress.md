@@ -1,7 +1,29 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-10 for the Backlog's Refine action on `claude/tender-johnson-pvbvmu`.** Committed and pushed with the
-user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-10 for the halt diagnosis on `claude/tender-johnson-pvbvmu`.** Committed and pushed with the user's
+approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Halt diagnosis (2026-10-10)
+
+- **Contract:** vendored `ahoy-hosted`'s `getStoryDiagnosis` (`GET /stories/{key}/diagnosis`, commit `5fe131b`) with
+  `Diagnosis`, `DiagnosisFinding` and `DiagnosisKind`, keeping the redacted JQL example. The YAML was formatted with
+  this repository's Prettier; `schema.d.ts` and the JSON mirror were regenerated (additive only; `openapi-mirror
+--check` passes).
+- **API layer:** `ApiClient.getStoryDiagnosis`, `isDiagnosis` (kinds and actors from `DIAGNOSIS_KINDS` and
+  `DIAGNOSIS_ACTORS`, checked against the contract's enums), a fictional `getStoryDiagnosis.json` fixture; the contract,
+  guard and client specs cover it.
+- **Anchored banner:** a halted voyage reads its diagnosis (`HaltDiagnosis`, provided by the banner; read again when
+  the story changes while halted, never while it is not halted) and shows a "Diagnosis" block under "To continue":
+  each cause, its action, who takes it ("For the voyage's owner", "For the Ahoy operators", "For whoever maintains the
+  agents' instructions") and the evidence as plain text in a disclosure. A person's stop alone adds nothing (the
+  banner already quotes it); a failed read leaves the banner as it was.
+- **Mock backend:** `getStoryDiagnosis` simulates a finding per halt reason from the voyage's last `story.halted`
+  event and last run; the conformance walk calls it on every seeded voyage.
+- **Not done:** the diagnosis is not shown in "Needs you" (it would read one diagnosis per halted voyage); the banner
+  is the only place for now.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **134 files / 2,411 tests passed** and
+  `npm run format`. Before this change: 132 files / 2,389.
+- **Not run:** a browser session, Playwright/e2e, a local `--simulate` API, real API or TEST.
 
 ## Backlog Refine (2026-10-10)
 
@@ -446,8 +468,8 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-The Backlog's Refine action, Back to intake and the refinement contract are committed on
-`claude/tender-johnson-pvbvmu` (above): 2,389 tests pass offline, and the Refine flow was clicked through on the
+The halt diagnosis, the Backlog's Refine action, Back to intake and the refinement contract are committed on
+`claude/tender-johnson-pvbvmu` (above): 2,411 tests pass offline, and the Refine flow was clicked through on the
 in-browser mock. Neither has met a real or `--simulate` API.
 
 The earlier change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
@@ -552,7 +574,8 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-Check Refine and Back to intake against a local `ahoy-hosted` started with `npm run dev -- --simulate` (0 AIU), and
+Check Refine, Back to intake and the diagnosis banner against a local `ahoy-hosted` started with
+`npm run dev -- --simulate` (0 AIU), and
 decide whether to restore a `start:mock` script with a mock bootstrap (see "Found" above). Then review Back to intake
 in a browser.
 
@@ -565,10 +588,11 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest change, committed on `claude/tender-johnson-pvbvmu`, adds the Backlog's Refine action (row button or
+The latest change, committed on `claude/tender-johnson-pvbvmu`, shows a halted voyage's diagnosis
+(`getStoryDiagnosis`) in the Anchored banner. Before it, the Backlog's Refine action (row button or
 "Refinement · <state>" toggle, detail row with Cancel refinement and Refine again, Markdown via `ah-markdown`, polling
 only while one is in progress). Before it on the same branch: the vendored hosted contract, Back to intake and
-superseded questions. 132 test files / 2,389 tests pass on Node 24.21.0. Next is "Start here next". Do not contact
+superseded questions. 134 test files / 2,411 tests pass on Node 24.21.0. Next is "Start here next". Do not contact
 TEST or a live API.
 
 The earlier change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls

@@ -88,6 +88,36 @@ export const REFINEMENT_STATUSES = listOf<RefinementStatus>()([
   'lost',
 ]);
 
+/** The causes the diagnosis of a halted story knows (`DiagnosisKind`); `other` is a halt no rule explains. */
+export type DiagnosisKind = Schemas['DiagnosisKind'];
+export const DIAGNOSIS_KINDS = listOf<DiagnosisKind>()([
+  'copilot_auth',
+  'gate_rejected',
+  'configuration',
+  'cluster_capacity',
+  'pod_evicted',
+  'out_of_memory',
+  'image_pull',
+  'runtime_deadline',
+  'budget_exhausted',
+  'run_timed_out',
+  'output_violation',
+  'run_lost',
+  'agent_failed',
+  'revision_ceiling',
+  'reconciler_error',
+  'stopped_by_user',
+  'other',
+]);
+
+/** Who can act on a diagnosis finding: the story's owner, the operator or the maintainer of the agents' instructions. */
+export type DiagnosisActor = DiagnosisFinding['actor'];
+export const DIAGNOSIS_ACTORS = listOf<DiagnosisActor>()([
+  'story_owner',
+  'operator',
+  'agent_maintainer',
+]);
+
 /** The reasoning efforts of the Copilot SDK (`ReasoningEffort`). A model may take fewer, or none. */
 export type ReasoningEffort = Schemas['ReasoningEffort'];
 export const REASONING_EFFORTS = listOf<ReasoningEffort>()([
@@ -300,6 +330,12 @@ export type StopStoryRequest = Schemas['StopStoryRequest'];
 
 /** Body of `resumeStory`. */
 export type ResumeStoryRequest = Schemas['ResumeStoryRequest'];
+
+/** One cause of a halt: the evidence (untrusted text), the action that fixes it and who takes it. */
+export type DiagnosisFinding = Schemas['DiagnosisFinding'];
+
+/** Answer of `getStoryDiagnosis`: why a story stands where it stands; no findings unless it is halted. */
+export type Diagnosis = Schemas['Diagnosis'];
 
 /** Body of `refreshIntake`: sends a story in planning or plan review back to intake. `confirmSpend` must be true. */
 export type RefreshIntakeRequest = Schemas['RefreshIntakeRequest'];

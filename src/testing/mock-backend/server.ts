@@ -30,6 +30,7 @@ import type {
   JiraBacklog,
 } from '@core/api/types';
 import { realClock, type MockClock } from './clock';
+import { diagnosisOf } from './diagnosis';
 import { KEEPALIVE_MS, StreamHub } from './event-stream';
 import {
   isRecord,
@@ -557,6 +558,15 @@ export class MockAhoyServer {
         return jsonResponse(200, { items: this.voyage(call).gates });
       case 'decideHumanGate':
         return this.decide(call);
+      case 'getStoryDiagnosis': {
+        const voyage = this.voyage(call);
+        const halted = this.world.events
+          .filter(
+            (e) => e.storyKey === voyage.story.key && e.type === 'story.halted'
+          )
+          .at(-1);
+        return jsonResponse(200, diagnosisOf(voyage, halted));
+      }
       case 'getStoryState': {
         const voyage = this.relational(this.voyage(call));
         return jsonResponse(200, {

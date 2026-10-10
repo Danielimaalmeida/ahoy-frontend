@@ -1149,6 +1149,40 @@
         }
       }
     },
+    "/stories/{key}/diagnosis": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "get": {
+        "operationId": "getStoryDiagnosis",
+        "tags": ["stories"],
+        "summary": "Why the story stands where it stands, and what fixes it.",
+        "description": "Read from the story, its runs and its latest `story.halted` event by fixed rules; it spends nothing and\nchanges nothing. A story that is not `halted` has no findings. Each finding names a known cause (Copilot\nauthentication, a gate rejection, missing configuration, the cluster not scheduling or removing the run's pod,\nthe budget, a timeout, forbidden writes, a lost run…), the evidence for it, the action that fixes it and who\ntakes it; a halt no rule explains gets one `other` finding with what is known. Evidence quotes runs, gates and\nKubernetes and is untrusted text.\n",
+        "responses": {
+          "200": {
+            "description": "The diagnosis.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Diagnosis"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories/{key}/events": {
       "parameters": [
         {
@@ -2504,6 +2538,106 @@
                 "type": "null"
               }
             ]
+          }
+        }
+      },
+      "DiagnosisKind": {
+        "type": "string",
+        "enum": [
+          "copilot_auth",
+          "gate_rejected",
+          "configuration",
+          "cluster_capacity",
+          "pod_evicted",
+          "out_of_memory",
+          "image_pull",
+          "runtime_deadline",
+          "budget_exhausted",
+          "run_timed_out",
+          "output_violation",
+          "run_lost",
+          "agent_failed",
+          "revision_ceiling",
+          "reconciler_error",
+          "stopped_by_user",
+          "other"
+        ]
+      },
+      "DiagnosisFinding": {
+        "type": "object",
+        "required": [
+          "kind",
+          "title",
+          "evidence",
+          "action",
+          "actor",
+          "resumable",
+          "runId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/DiagnosisKind"
+          },
+          "title": {
+            "type": "string",
+            "description": "The cause in one sentence."
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "type": "string"
+            },
+            "description": "What the run, the gate or the runtime said (untrusted text)."
+          },
+          "action": {
+            "type": "string",
+            "description": "What fixes it."
+          },
+          "actor": {
+            "type": "string",
+            "enum": ["story_owner", "operator", "agent_maintainer"],
+            "description": "Who can act: the story's owner (resume, budget, models), the operator (cluster, secrets, configuration) or the maintainer of the agents' instructions."
+          },
+          "resumable": {
+            "type": "boolean",
+            "description": "Whether resuming as things are is likely to help, rather than only after the action."
+          },
+          "runId": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RunId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Diagnosis": {
+        "type": "object",
+        "required": ["key", "status", "phase", "haltReason", "findings"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StoryStatus"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/Phase"
+          },
+          "haltReason": {
+            "type": ["string", "null"]
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiagnosisFinding"
+            }
           }
         }
       },

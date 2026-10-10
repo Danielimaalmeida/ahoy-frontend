@@ -11,6 +11,11 @@ import { runById, slotsForPhase } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import type { HaltRecord } from '../context/voyage-events';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
+import {
+  DIAGNOSIS_ACTOR_LABELS,
+  HaltDiagnosis,
+  shownFindings,
+} from './halt-diagnosis';
 import { haltGuidance } from './halt-guidance';
 
 /** A sentence without its closing full stop, to follow "Anchored: ". */
@@ -36,11 +41,13 @@ export function slotToChange(
  * The Anchored banner (wireframe `Halted`), under the header of a halted voyage: what happened in plain words
  * (`explainHalt` and the event's detail), what to do to get under way again (per reason), the technical line, the tail
  * of the worker log as plain text, and for a failed run the way to change its model or resume as is. The detail comes
- * from the last `story.halted` event (G7); until the history is read the banner shows the reason alone.
+ * from the last `story.halted` event (G7); until the history is read the banner shows the reason alone. Once the
+ * diagnosis is read (`HaltDiagnosis`), it adds each cause with its action, who takes it and the evidence as plain text.
  */
 @Component({
   selector: 'ah-anchored-banner',
   imports: [Button, Icon, RelativePipe, RouterLink],
+  providers: [HaltDiagnosis],
   styleUrl: './anchored-banner.scss',
   template: `
     @if (view(); as v) {
@@ -68,6 +75,28 @@ export function slotToChange(
             </p>
           }
           <p><b>To continue:</b> {{ v.guidance }}</p>
+          @if (findings().length > 0) {
+            <div class="anchored__diagnosis">
+              <h3 class="anchored__subtitle">Diagnosis</h3>
+              @for (finding of findings(); track $index) {
+                <div class="anchored__finding">
+                  <p>
+                    <b>{{ finding.title }}</b>
+                  </p>
+                  <p>
+                    {{ finding.action }}
+                    <span class="ah-muted">· {{ finding.who }}</span>
+                  </p>
+                  @if (finding.evidence !== '') {
+                    <details class="anchored__log">
+                      <summary>Evidence</summary>
+                      <pre>{{ finding.evidence }}</pre>
+                    </details>
+                  }
+                </div>
+              }
+            </div>
+          }
           <div class="ah-tech">
             {{ v.tech }}
             @if (v.halt; as halt) {
@@ -110,6 +139,17 @@ export function slotToChange(
 export class AnchoredBanner {
   private readonly context = inject(VoyageContext);
   private readonly dialogs = inject(VoyageDialogs);
+  private readonly diagnosis = inject(HaltDiagnosis);
+
+  /** The causes the diagnosis names, beyond a person's stop, which the banner already says. */
+  protected readonly findings = computed(() =>
+    shownFindings(this.diagnosis.diagnosis()).map((finding) => ({
+      title: finding.title,
+      action: finding.action,
+      who: DIAGNOSIS_ACTOR_LABELS[finding.actor],
+      evidence: finding.evidence.join('\n'),
+    }))
+  );
 
   protected readonly view = computed(() => {
     const story = this.context.story();

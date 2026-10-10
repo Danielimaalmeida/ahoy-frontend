@@ -28,6 +28,8 @@ import {
   type Check,
 } from './guard-kit';
 import {
+  DIAGNOSIS_ACTORS,
+  DIAGNOSIS_KINDS,
   EFFORT_SOURCES,
   GATE_OUTCOMES,
   GATE_RESULTS,
@@ -39,6 +41,8 @@ import {
   RUN_STATUSES,
   STORY_STATUSES,
   type AhoyEvent,
+  type Diagnosis,
+  type DiagnosisFinding,
   type AnswerAccepted,
   type Artifact,
   type ArtifactList,
@@ -306,6 +310,28 @@ const slotDefault = shape<SlotDefault>({
   modelSource: oneOf(['configuration', 'phase_table', 'agent_profile']),
   effortSource: oneOf(['configuration', 'phase_table', 'model_default']),
 });
+
+const diagnosisFinding = shape<DiagnosisFinding>({
+  kind: oneOf(DIAGNOSIS_KINDS),
+  title: text,
+  evidence: arrayOf(text),
+  action: text,
+  actor: oneOf(DIAGNOSIS_ACTORS),
+  resumable: flag,
+  runId: nullable(runId),
+});
+
+/** Why a story stands where it stands: its findings, none unless it is halted. */
+export const isDiagnosis = guard<Diagnosis>(
+  'Diagnosis',
+  shape<Diagnosis>({
+    key: storyKey,
+    status: oneOf(STORY_STATUSES),
+    phase: nonEmptyText,
+    haltReason: nullable(text),
+    findings: arrayOf(diagnosisFinding),
+  })
+);
 
 /** What a refinement and its summary share: everything but the content. */
 const refinementFields = {

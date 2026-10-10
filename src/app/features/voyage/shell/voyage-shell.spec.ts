@@ -287,6 +287,67 @@ describe('VoyageShell on the mock backend', () => {
       expect(banner && buttonNamed(banner, 'Resume as is')).toBeTruthy();
     });
 
+    it('PROJ-118: the banner adds the diagnosis, with its action, who takes it and the evidence', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      expect(
+        page.requests.filter(
+          (r) => r.method === 'GET' && r.path === '/stories/PROJ-118/diagnosis'
+        )
+      ).toHaveLength(1);
+      const diagnosis = page.root.querySelector(
+        'ah-anchored-banner .anchored__diagnosis'
+      );
+      expect(text(diagnosis?.querySelector('h3'))).toBe('Diagnosis');
+      const finding = diagnosis?.querySelector('.anchored__finding');
+      expect(text(finding)).toContain(
+        "The agent's run failed before it finished."
+      );
+      expect(text(finding)).toContain(
+        "Resume the story to try again. If it fails the same way, report the message to the Ahoy operators. · For the voyage's owner"
+      );
+      const evidence = finding?.querySelector('pre')?.textContent ?? '';
+      expect(evidence.split('\n')).toEqual([
+        'The worker exited with code 1 before it wrote a result.',
+        expect.stringMatching(
+          /^run proj-118-implementation-\S+: worker_exit_1$/
+        ),
+        'worker: [ahoy-worker] npm test: 2 failed, 118 passed',
+        'worker: [ahoy-worker] token [REDACTED] refused by the registry',
+        'worker: [ahoy-worker] exit 1',
+      ]);
+    });
+
+    it('a voyage stopped by a person gets no diagnosis section, and one under way is never diagnosed', async () => {
+      const stopped = await open('/voyages/PROJ-126/models');
+      expect(
+        stopped.requests.some((r) => r.path === '/stories/PROJ-126/diagnosis')
+      ).toBe(true);
+      expect(
+        stopped.root.querySelector('ah-anchored-banner .anchored__diagnosis')
+      ).toBeNull();
+      TestBed.resetTestingModule();
+      const running = await open('/voyages/PROJ-140/models');
+      expect(running.requests.some((r) => r.path.endsWith('/diagnosis'))).toBe(
+        false
+      );
+    });
+
+    it('a diagnosis that cannot be read leaves the banner as it was', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-118/models', {
+        mock,
+        before: (request) => {
+          if (request.path === '/stories/PROJ-118/diagnosis')
+            mock.server.switches.failNext = 503;
+        },
+      });
+      const banner = page.root.querySelector('ah-anchored-banner section');
+      expect(text(banner?.querySelector('h2'))).toBe(
+        "Halted: A crew member's run failed, for example a refused model or a crash"
+      );
+      expect(banner?.querySelector('.anchored__diagnosis')).toBeNull();
+    });
+
     it('PROJ-126 stopped by a person: their reason in the banner, no run buttons', async () => {
       const page = await open('/voyages/PROJ-126/models');
       expect(text(header(page).querySelector('ah-status-badge'))).toBe(

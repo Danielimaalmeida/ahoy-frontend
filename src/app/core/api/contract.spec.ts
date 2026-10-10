@@ -4,6 +4,7 @@ import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
+import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
@@ -57,6 +58,8 @@ import {
   GATE_SOURCES,
   HUMAN_DECISIONS,
   MODEL_SLOTS,
+  DIAGNOSIS_ACTORS,
+  DIAGNOSIS_KINDS,
   MODEL_SOURCES,
   PROBLEM_CODES,
   REASONING_EFFORTS,
@@ -85,6 +88,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['listGateRecords', listGateRecords],
   ['decideHumanGate', decideHumanGate],
   ['getStoryState', getStoryState],
+  ['getStoryDiagnosis', getStoryDiagnosis],
   ['listArtifacts', listArtifacts],
   ['listStoryEvents', listStoryEvents],
   ['listRefinements', listRefinements],
@@ -115,7 +119,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 1).toBe(26);
+    expect(CLIENT_OPERATIONS.length + 1).toBe(27);
   });
 
   it('has no operation id twice', () => {
@@ -402,6 +406,8 @@ describe('the check itself', () => {
 describe("the lists of values in types.ts are the contract's enums", () => {
   it.each([
     ['STORY_STATUSES', STORY_STATUSES, enumOf('StoryStatus')],
+    ['DIAGNOSIS_KINDS', DIAGNOSIS_KINDS, enumOf('DiagnosisKind')],
+    ['DIAGNOSIS_ACTORS', DIAGNOSIS_ACTORS, enumOf('DiagnosisFinding', 'actor')],
     ['RUN_STATUSES', RUN_STATUSES, enumOf('RunStatus')],
     ['REASONING_EFFORTS', REASONING_EFFORTS, enumOf('ReasoningEffort')],
     ['MODEL_SLOTS', MODEL_SLOTS, enumOf('ModelSlot')],

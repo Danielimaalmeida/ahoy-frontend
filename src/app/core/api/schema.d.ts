@@ -530,6 +530,33 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/diagnosis': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * Why the story stands where it stands, and what fixes it.
+     * @description Read from the story, its runs and its latest `story.halted` event by fixed rules; it spends nothing and
+     *     changes nothing. A story that is not `halted` has no findings. Each finding names a known cause (Copilot
+     *     authentication, a gate rejection, missing configuration, the cluster not scheduling or removing the run's pod,
+     *     the budget, a timeout, forbidden writes, a lost run…), the evidence for it, the action that fixes it and who
+     *     takes it; a halt no rule explains gets one `other` finding with what is known. Evidence quotes runs, gates and
+     *     Kubernetes and is untrusted text.
+     */
+    readonly get: operations['getStoryDiagnosis'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/events': {
     readonly parameters: {
       readonly query?: never;
@@ -993,6 +1020,49 @@ export interface components {
       readonly createdAt: components['schemas']['Timestamp'];
       readonly startedAt: components['schemas']['Timestamp'] | null;
       readonly endedAt: components['schemas']['Timestamp'] | null;
+    };
+    /** @enum {string} */
+    readonly DiagnosisKind:
+      | 'copilot_auth'
+      | 'gate_rejected'
+      | 'configuration'
+      | 'cluster_capacity'
+      | 'pod_evicted'
+      | 'out_of_memory'
+      | 'image_pull'
+      | 'runtime_deadline'
+      | 'budget_exhausted'
+      | 'run_timed_out'
+      | 'output_violation'
+      | 'run_lost'
+      | 'agent_failed'
+      | 'revision_ceiling'
+      | 'reconciler_error'
+      | 'stopped_by_user'
+      | 'other';
+    readonly DiagnosisFinding: {
+      readonly kind: components['schemas']['DiagnosisKind'];
+      /** @description The cause in one sentence. */
+      readonly title: string;
+      /** @description What the run, the gate or the runtime said (untrusted text). */
+      readonly evidence: readonly string[];
+      /** @description What fixes it. */
+      readonly action: string;
+      /**
+       * @description Who can act: the story's owner (resume, budget, models), the operator (cluster, secrets, configuration) or the maintainer of the agents' instructions.
+       * @enum {string}
+       */
+      readonly actor: 'story_owner' | 'operator' | 'agent_maintainer';
+      /** @description Whether resuming as things are is likely to help, rather than only after the action. */
+      readonly resumable: boolean;
+      readonly runId: components['schemas']['RunId'] | null;
+    };
+    readonly Diagnosis: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly status: components['schemas']['StoryStatus'];
+      readonly phase: components['schemas']['Phase'];
+      readonly haltReason: string | null;
+      readonly findings: readonly components['schemas']['DiagnosisFinding'][];
     };
     /**
      * @description `queued`: waiting for a run slot. `running`: holds a slot; its worker runs once `startedAt` is set.
@@ -1999,6 +2069,31 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getStoryDiagnosis: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The diagnosis. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Diagnosis'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
     };
   };
   readonly listStoryEvents: {

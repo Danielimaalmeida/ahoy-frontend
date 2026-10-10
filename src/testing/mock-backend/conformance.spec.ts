@@ -82,6 +82,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     get(`/stories/${key}/gates`);
     get(`/stories/${key}/models`);
     get(`/stories/${key}/state`);
+    get(`/stories/${key}/diagnosis`);
     const artifacts = get(`/stories/${key}/artifacts`).body as {
       items: { path: string }[];
     };
@@ -154,6 +155,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   for (const key of ['DEMO-1', 'PROJ-140', 'PROJ-109']) {
     get(`/stories/${key}/runs`);
     get(`/stories/${key}/state`);
+    get(`/stories/${key}/diagnosis`);
     get(`/stories/${key}/events?limit=500`);
     const artifacts = get(`/stories/${key}/artifacts`).body as {
       items: { path: string }[];

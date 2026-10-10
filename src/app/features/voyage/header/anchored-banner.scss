@@ -45,6 +45,27 @@
   overflow-wrap: anywhere;
 }
 
+.anchored__diagnosis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--error-line);
+}
+
+.anchored__subtitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.anchored__finding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
 .anchored__log {
   summary {
     cursor: pointer;
