@@ -45,7 +45,8 @@
   overflow-wrap: anywhere;
 }
 
-.anchored__diagnosis {
+.anchored__diagnosis,
+.anchored__agent {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -91,5 +92,11 @@
 .anchored__actions {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+}
+
+.anchored__row {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }

@@ -360,7 +360,10 @@ describe('VoyageShell on the mock backend', () => {
       expect(text(banner)).toContain(
         "Stopped by priya@example.com. Their reason: “Waiting for the compliance team's answer on retention.”"
       );
-      expect(banner?.querySelectorAll('a, button')).toHaveLength(0);
+      // No run buttons (Change model, Resume as is); only the agent diagnosis may be asked for.
+      expect(
+        [...(banner?.querySelectorAll('a, button') ?? [])].map((b) => text(b))
+      ).toEqual(['Ask an agent to diagnose']);
     });
 
     it('PROJ-097 is docked: no primary action, no Stop, Budget or Resume', async () => {
@@ -812,6 +815,126 @@ describe('VoyageShell on the mock backend', () => {
       await flush(page);
       expect(commands(page)).toHaveLength(2);
       expect(hasDialog()).toBe(false);
+    });
+  });
+  describe('Agent diagnosis', () => {
+    function agentSection(page: Page): HTMLElement {
+      const element = page.root.querySelector<HTMLElement>(
+        'ah-anchored-banner .anchored__agent'
+      );
+      if (element === null) throw new Error('no agent diagnosis section');
+      return element;
+    }
+
+    it('offers to ask on a halted voyage, reads nothing else, and is absent on one under way', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      expect(
+        page.requests.filter((r) => r.path.endsWith('/agent-diagnoses'))
+      ).toHaveLength(1);
+      expect(text(agentSection(page))).toContain('It may spend AIU');
+      expect(
+        buttonNamed(agentSection(page), 'Ask an agent to diagnose')
+      ).toBeTruthy();
+      TestBed.resetTestingModule();
+      const running = await open('/voyages/PROJ-140/models');
+      expect(
+        running.requests.some((r) => r.path.endsWith('/agent-diagnoses'))
+      ).toBe(false);
+      expect(running.root.querySelector('.anchored__agent')).toBeNull();
+    });
+
+    it('asks with the spend confirmation only, shows it queued at once, follows it to the end and renders its Markdown', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-118/models', { mock });
+      click(buttonNamed(agentSection(page), 'Ask an agent to diagnose'));
+      await flush(page);
+      const d = dialog();
+      expect(text(d.querySelector('.ah-dialog__title'))).toBe(
+        'Ask an agent to diagnose PROJ-118?'
+      );
+      expect(text(d.querySelector('.ah-cost'))).toContain(
+        "This may spend AIU, up to the server's diagnosis cap"
+      );
+      click(buttonNamed(d, 'Diagnose'));
+      await flush(page);
+      expect(commands(page).map((r) => [r.path, r.body])).toEqual([
+        ['/stories/PROJ-118/agent-diagnoses', { confirmSpend: true }],
+      ]);
+      expect(hasDialog()).toBe(false);
+      expect(text(agentSection(page))).toContain('Waiting for a run slot');
+      expect(buttonNamed(agentSection(page), 'Cancel diagnosis')).toBeTruthy();
+      mock.clock.advance(1_000);
+      mock.clock.advance(5_000);
+      await flush(page);
+      expect(text(agentSection(page))).toContain('Diagnosed');
+      expect(agentSection(page).querySelector('ah-markdown')).not.toBeNull();
+      expect(buttonNamed(agentSection(page), 'Diagnose again')).toBeTruthy();
+      const reads = page.requests.filter((r) =>
+        r.path.endsWith('/agent-diagnoses')
+      );
+      expect(reads.filter((r) => r.method === 'GET').length).toBeGreaterThan(1);
+    });
+
+    it('sends the notes and an AIU limit in nano-AIU, and refuses a limit above 20 AIU in the field', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      click(buttonNamed(agentSection(page), 'Ask an agent to diagnose'));
+      await flush(page);
+      type(dialog().querySelector('textarea'), '  Is it the token?  ');
+      type(dialog().querySelector('input'), '25');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Diagnose/));
+      await flush(page);
+      expect(commands(page)).toHaveLength(0);
+      expect(text(dialog())).toContain('The limit may be at most 20 AIU.');
+      type(dialog().querySelector('input'), '2.5');
+      await flush(page);
+      click(buttonNamed(dialog(), 'Diagnose · up to 2.5 AIU'));
+      await flush(page);
+      expect(commands(page)[0]?.body).toEqual({
+        confirmSpend: true,
+        notes: 'Is it the token?',
+        budgetNanoAiu: 2_500_000_000,
+      });
+    });
+
+    it('cancels one in progress with a required reason, and shows it cancelled', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      click(buttonNamed(agentSection(page), 'Ask an agent to diagnose'));
+      await flush(page);
+      click(buttonNamed(dialog(), 'Diagnose'));
+      await flush(page);
+      click(buttonNamed(agentSection(page), 'Cancel diagnosis'));
+      await flush(page);
+      expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
+        'Cancel the diagnosis of PROJ-118?'
+      );
+      click(buttonNamed(dialog(), 'Cancel diagnosis'));
+      await flush(page);
+      expect(text(dialog())).toContain('A reason is required.');
+      expect(commands(page)).toHaveLength(1);
+      type(dialog().querySelector('textarea'), 'Not needed.');
+      click(buttonNamed(dialog(), 'Cancel diagnosis'));
+      await flush(page);
+      expect(commands(page)[1]).toMatchObject({
+        path: '/stories/PROJ-118/agent-diagnoses/cancel',
+        body: { reason: 'Not needed.' },
+      });
+      expect(hasDialog()).toBe(false);
+      expect(text(agentSection(page))).toContain('Cancelled');
+      expect(buttonNamed(agentSection(page), 'Diagnose again')).toBeTruthy();
+    });
+
+    it('keeps the dialog open with the explanation when the voyage is not halted any more', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      click(buttonNamed(agentSection(page), 'Ask an agent to diagnose'));
+      await flush(page);
+      page.server.switches.conflictNext = 'invalid_state';
+      click(buttonNamed(dialog(), 'Diagnose'));
+      await flush(page);
+      expect(hasDialog()).toBe(true);
+      expect(text(dialog().querySelector('.ah-banner'))).toContain(
+        'This voyage cannot be diagnosed by an agent now'
+      );
     });
   });
 });
