@@ -3,28 +3,64 @@
 The technical decisions of the Angular 22 front end. The plan they come from is
 [docs/plan/00-overview.md](plan/00-overview.md) (§3 decisions, §5 architecture); this file records them as decided and
 adds what phase 0 confirmed against the installed packages. When the plan and this file disagree on something phase 0
-checked, this file wins.
+checked, this file wins. Reviewed against the code on 2026-10-11 (WebEAM sign-in, the company template's tooling, the
+Jira backlog, refinements and diagnoses). The system around it is in `ahoy-hosted/docs/architecture.md`.
+
+## The app at a glance
+
+```mermaid
+flowchart TB
+  user["Person in a browser"] -->|"WebEAM sign-in"| shell
+  subgraph app["ahoy-frontend · Angular 22, standalone, zoneless, signals"]
+    direction TB
+    shell["Shell · app.ts<br/>top bar, Needs you count, Live indicator, user menu"]
+    features["features/ · one lazy route per screen<br/>harbour: Needs you · voyages: list · set-sail: start a voyage<br/>docks: Jira backlog and Refine · run-detail: one run, live steps<br/>voyage: header, halt diagnosis, plan, questions, runs, gates, artifacts, log, models"]
+    subgraph core["core/"]
+      direction LR
+      api["api<br/>ApiClient, guards,<br/>generated schema"]
+      auth["auth<br/>FedevAuthStrategy,<br/>interceptor"]
+      realtime["realtime<br/>one SSE stream over fetch,<br/>polling fallback"]
+      stores["stores and commands<br/>signals, refetch on event,<br/>expectedVersion"]
+    end
+    ui["ui/ · ah-* components on the design system's CSS"]
+    domain["domain/ · pure TypeScript: vocabulary, phases, AIU, diff, diagnosis"]
+    shell --> features
+    features --> core
+    features --> ui
+    core --> domain
+    ui --> domain
+  end
+  api -->|"/api/v1, Authorization: Bearer"| hosted["ahoy-hosted API"]
+  realtime -->|"/api/v1/events/stream"| hosted
+```
+
+- Screens read shared state from the signal stores in `core/stores` and send story commands through
+  `core/commands` (`CommandRunner`: conflicts, double clicks, `expectedVersion`). Reads that belong to one screen (the
+  backlog, refinements, diagnoses, the plan document, run detail) call `ApiClient` from the feature.
+- One event stream for the whole app; an event marks a resource stale and it is read again (F5, F6).
+- Everything the API returns is `unknown` until a guard in `core/api` accepts it (F7); agent text is shown only through
+  `ah-markdown` (F12).
 
 ## Decisions F1–F16
 
-| #   | Decision                                                                                                                                           | Status in phase 0                                                                              |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| F1  | Angular 22.2.x, standalone, `@angular/build`, zoneless with signals. Node `^22.22.3 \|\| ^24.15.0 \|\| >=26`, TypeScript `>=6.0 <6.1`.             | **Confirmed**: Angular 22.2.1, TypeScript 6.0.3, zoneless and OnPush are defaults (see below). |
-| F2  | No UI library. The design system's CSS (`tokens.css` + `bundle.css`) with thin Angular wrappers; `@angular/cdk` only for Dialog, overlay and a11y. | Decided; lane 1A/1C.                                                                           |
-| F3  | Lazy routes per feature; the URL is the state (status filter, tab, Set sail query).                                                                | **Done**: every route of §5.3 is lazy, with a placeholder.                                     |
-| F4  | State in signals and services. No NgRx.                                                                                                            | Decided; lane 2B.                                                                              |
-| F5  | Refetch on event, not local patching (300 ms debounce). Every command sends `expectedVersion`.                                                     | Decided; lanes 2B, 4A.                                                                         |
-| F6  | One global SSE stream read with `fetch` (not `EventSource`), `Last-Event-ID` on reconnect, polling fallback.                                       | `FETCH` token created; lane 2B. Proxy streams SSE unbuffered (verified against a stub only).   |
-| F7  | Types generated from the vendored OpenAPI + hand-written guards at the boundary; errors as values (`ApiResult`).                                   | Decided; lane 2A.                                                                              |
-| F8  | No auth now; `AuthStrategy` as the extension point. `X-Ahoy-Actor` only in the dev-server proxy.                                                   | **Done** for the proxy (`proxy.conf.mjs`); `AuthStrategy` is lane 2A.                          |
-| F9  | Same origin: the app always calls the relative `/api/v1`.                                                                                          | **Done**: `API_BASE` = `/api/v1`; dev proxy forwards it.                                       |
-| F10 | Typed Reactive Forms.                                                                                                                              | Decided; lanes 3B, 4A–4D.                                                                      |
-| F11 | Vitest (the Angular CLI runner via `@angular/build`) for unit and component tests; Playwright for e2e.                                             | **Confirmed**: `ng test` runs Vitest 5.0.3 with jsdom 30.1.2. Playwright is lane 6C.           |
-| F12 | Markdown with `marked` → `[innerHTML]`, sanitised by Angular. No `bypassSecurityTrust*`; raw HTML and images off.                                  | Decided; lane 1C.                                                                              |
-| F13 | Client-side diff (`diff`, jsdiff) to compare artifact revisions.                                                                                   | Decided; lanes 2C, 5C.                                                                         |
-| F14 | AIU as integer nano-AIU; parse and format without floats (`domain/aiu`).                                                                           | Decided; lane 2C.                                                                              |
-| F15 | UI text in English, like the design system. No i18n framework for now.                                                                             | Decided.                                                                                       |
-| F16 | Light theme by default, dark via `data-theme="dark"` on `<html>`. No visible toggle yet.                                                           | Decided; lane 1A.                                                                              |
+| #   | Decision                                                                                                                                           | Status in phase 0                                                                                    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| F1  | Angular 22.2.x, standalone, `@angular/build`, zoneless with signals. Node `^22.22.3 \|\| ^24.15.0 \|\| >=26`, TypeScript `>=6.0 <6.1`.             | **Confirmed**: Angular 22.2.1, TypeScript 6.0.3, zoneless and OnPush are defaults (see below).       |
+| F2  | No UI library. The design system's CSS (`tokens.css` + `bundle.css`) with thin Angular wrappers; `@angular/cdk` only for Dialog, overlay and a11y. | Decided; lane 1A/1C.                                                                                 |
+| F3  | Lazy routes per feature; the URL is the state (status filter, tab, Set sail query).                                                                | **Done**: every route of §5.3 is lazy, with a placeholder.                                           |
+| F4  | State in signals and services. No NgRx.                                                                                                            | Decided; lane 2B.                                                                                    |
+| F5  | Refetch on event, not local patching (300 ms debounce). Every command sends `expectedVersion`.                                                     | Decided; lanes 2B, 4A.                                                                               |
+| F6  | One global SSE stream read with `fetch` (not `EventSource`), `Last-Event-ID` on reconnect, polling fallback.                                       | `FETCH` token created; lane 2B. Proxy streams SSE unbuffered (verified against a stub only).         |
+| F7  | Types generated from the vendored OpenAPI + hand-written guards at the boundary; errors as values (`ApiResult`).                                   | Decided; lane 2A.                                                                                    |
+| F8  | WebEAM sign-in through `@company-name-fedev/auth`; `AuthStrategy` is the seam. `X-Ahoy-Actor` only in the dev-server proxy, for a local API.       | **Done** 2026-10-08: `FedevAuthStrategy` sends the bearer token (see below). SSO not proven on TEST. |
+| F9  | Same origin: the app always calls the relative `/api/v1`.                                                                                          | **Done**: `API_BASE` = `/api/v1`; dev proxy forwards it.                                             |
+| F10 | Typed Reactive Forms.                                                                                                                              | Decided; lanes 3B, 4A–4D.                                                                            |
+| F11 | Vitest (the Angular CLI runner via `@angular/build`) for unit and component tests; Playwright for e2e.                                             | **Confirmed**: `ng test` runs Vitest 5.0.3 with jsdom 30.1.2. Playwright is lane 6C.                 |
+| F12 | Markdown with `marked` → `[innerHTML]`, sanitised by Angular. No `bypassSecurityTrust*`; raw HTML and images off.                                  | Decided; lane 1C.                                                                                    |
+| F13 | Client-side diff (`diff`, jsdiff) to compare artifact revisions.                                                                                   | Decided; lanes 2C, 5C.                                                                               |
+| F14 | AIU as integer nano-AIU; parse and format without floats (`domain/aiu`).                                                                           | Decided; lane 2C.                                                                                    |
+| F15 | UI text in English, like the design system. No i18n framework for now.                                                                             | Decided.                                                                                             |
+| F16 | Light theme by default, dark via `data-theme="dark"` on `<html>`. No visible toggle yet.                                                           | Decided; lane 1A.                                                                                    |
 
 ## What phase 0 confirmed (tasks 0.2 and 0.3)
 
@@ -68,8 +104,9 @@ Folders as in plan §5.1. `scripts/check-boundaries.mjs` (part of `npm run typec
 - `core/` imports `domain/`, `core/` and Angular; never `ui` or `features`. `core/mock/` (lane 2D) may import
   `src/testing/`.
 - `features/<x>/` import `domain`, `ui` and `core`; never another feature, nor the app root or environment files.
-- Production code (anything but `*.spec.ts` and `src/testing/`) never imports `src/testing/`. The one exception is
-  `src/environments/environment.mock.ts` (lane 2D).
+- Production code (anything but `*.spec.ts` and `src/testing/`) never imports `src/testing/`. The one exception was
+  `src/environments/environment.mock.ts` (lane 2D); the company template no longer has it, so the `mock` configuration
+  replaces no file and the in-browser mock backend is not wired in (see `docs/progress.md`).
 - The composition root (`src/main.ts`, `src/app/app*.ts`) and `src/environments/` may import any layer.
 
 ## Routing (task 0.7)
@@ -82,41 +119,48 @@ Folders as in plan §5.1. `scripts/check-boundaries.mjs` (part of `npm run typec
 - Placeholders are `ah-placeholder` (`src/app/ui/placeholder/`), fed by route `data` (`heading`, `lane`) through
   `withComponentInputBinding()`. Each lane replaces its own; lane 6A deletes the component when nothing uses it.
 - `**` shows a "Not found" placeholder (lane 6A). This is an addition to §5.3.
-- **Dev-only routes** (`/_kit`) come from `environment.devRoutes`. `environment.ts` (production) has none;
-  `environment.development.ts` (used by `development` and, until lane 2D, `mock`) adds `_kit`. Because the production
-  file never references the kit, its chunk is absent from `ng build` output (checked: no `kit-routes` chunk).
+- **Dev-only routes** (`/_kit`) come from `environment.devRoutes`. Today `environment.ts` (the default, named `DEV`)
+  adds `_kit` and `environment.test.ts` (the `test` configuration) has none. The `production` configuration replaces no
+  file, so a production build uses `environment.ts` and carries `/_kit`; check which configuration the release builds.
 - Each route sets its `title` (`<Name> · Ahoy`) through the router's default `TitleStrategy`.
 
 ## Application config (task 0.7)
 
-`app.config.ts` provides `provideRouter(routes, withComponentInputBinding())`, `provideHttpClient(withFetch())`,
-`API_BASE` (`/api/v1`, `core/api/api-base.ts`, lane 2A), `FETCH` (`globalThis.fetch`, `core/realtime/fetch.ts`, lane 2B)
-and `provideAppInitializer(initAppConfig)` (`core/config/app-config.ts`, a no-op until lane 2A reads `/config.json`).
+`app.config.ts` provides `provideFedevAuth({ env, includeAccessTokenInBackendRequests: true })` with its initializer,
+`AUTH_STRATEGY` (`FedevAuthStrategy`), `provideAppInitializer(initAppConfig)` (`core/config/app-config.ts`),
+`provideRouter(routes, withComponentInputBinding())`, `provideHttpClient(withFetch(), withInterceptors([authInterceptor]))`
+and `FETCH` (`globalThis.fetch`, `core/realtime/fetch.ts`). `API_BASE` (`core/api/api-base.ts`) comes from
+`AppConfig.apiBase` (`/config.json`, `/api/v1` when there is none). `HttpClient` requests carry `Authorization: Bearer <WebEAM token>`; the event stream reads `fetch` directly, so
+it takes the same token from `AUTH_STRATEGY`. Without a token the API answers `401 unauthenticated`.
 
 ## Dev server and proxy (task 0.6)
 
-`npm start` = `ng serve --proxy-config proxy.conf.mjs`. The proxy forwards `/api/v1` to `AHOY_API_TARGET` (default
-`http://127.0.0.1:8080`) with `secure: false` and `changeOrigin: true`, and adds `X-Ahoy-Actor: $AHOY_ACTOR` (default
-`dev@example.com`, which must match `AppConfig.actor`). The app never sends `Authorization`.
+`npm start` = `ng serve`, whose `proxyConfig` is `src/proxy.conf.json` (`angular.json`). It forwards `/api` to
+`http://127.0.0.1:8080` with `X-Ahoy-Actor: dev-user`, and the WebEAM paths (`/auth/oauth2/realms/root/realms/alpha`)
+to the SSO host. `proxy.conf.mjs` (with `AHOY_API_TARGET` and `AHOY_ACTOR`) is no longer read by `ng serve`. The app
+itself sends `Authorization: Bearer` when a WebEAM session exists (see "Application config").
 
 - `AHOY_AUTH=dev` (which makes the API trust `X-Ahoy-Actor`) is for a local API only. The proxy is part of `ng serve`
   and never reaches production, where the Ingress routes `/api/v1` and real authentication applies.
 - Only a local API started with `npm run dev -- --simulate` (0 AIU). **Never** `--live`, never the TEST environment.
-- `npm run start:mock` serves the `mock` configuration (lane 2D adds the mock backend; until then it equals
-  `development`).
+- There is no `start:mock` script any more; `ng serve --configuration mock` builds without the mock backend (see
+  "Layout and boundaries").
 - `npm run start:test` explicitly serves the `test` configuration with `src/proxy.conf.test.json`, forwarding the
   browser's API calls to the TEST API. Do not use it for automated validation or mutating actions without approval.
 
 ## Tooling (tasks 0.4, 0.5, 0.8)
 
-- **Prettier** (`.prettierrc.json`): `printWidth 120`, double quotes (`singleQuote: false` set explicitly, because
-  Prettier also reads `.editorconfig`), `trailingComma: all`, `proseWrap: preserve`, the
-  `angular` parser for HTML. `.prettierignore` skips `docs/design/`, generated files and build output.
-- **ESLint** (`eslint.config.js`, flat config): `typescript-eslint` `strict` + `stylistic`, `angular-eslint`
-  `tsRecommended`, `templateRecommended` and `templateAccessibility`, plus `no-explicit-any`, `ban-ts-comment`,
-  `consistent-type-imports`, `no-restricted-syntax` (enum, namespace, `as unknown as`), `no-restricted-exports` (no
-  default exports except tool config files), selector prefix `ah`, and the OnPush rule. `no-non-null-assertion` is off in
-  specs and `src/testing/`. Empty classes are allowed only with a decorator (Angular components).
-- **Husky + lint-staged**: the pre-commit hook runs `prettier --write --ignore-unknown` on staged files.
-- **CI** (`.github/workflows/ci.yml`): Node from `.nvmrc` (24), `npm ci`, `format:check`, `lint`, `typecheck`, `build`,
-  `test`. It publishes nothing.
+The company template (2026-10-08) brought its own tool files beside the original ones. Where both exist, the tool reads
+the template's first:
+
+- **Prettier**: `.prettierrc` (single quotes, `trailingComma: es5`, the default 80-column width) is found before
+  `.prettierrc.json` (120 columns, double quotes, `angular` parser for HTML), so the code now follows `.prettierrc`.
+  `npm run format` checks and `npm run format:fix` writes. `.prettierignore` skips `docs/design/`, generated files and
+  build output. Decide which file stays, and align `CLAUDE.md` ("Style") with it.
+- **ESLint**: `eslint.config.js` (the original flat config: `typescript-eslint` `strict` + `stylistic`, `angular-eslint`
+  `tsRecommended`, `templateRecommended` and `templateAccessibility`, `no-explicit-any`, `ban-ts-comment`,
+  `consistent-type-imports`, no enum, namespace or `as unknown as`, no default exports, selector prefix `ah`, the OnPush
+  rule) is found before `eslint.config.mjs`. `npm run lint` runs ESLint and Stylelint (`.stylelintrc.json`).
+- **Husky + lint-staged** (`.lintstagedrc.json`) on staged files before a commit.
+- **CI**: `.github/workflows/lints-format.yml` and `test.yml` call the company's reusable workflows (lint, format,
+  Vitest with coverage); `release.yaml` and `branch-release.yaml` build the image and publish it to the ACR.
