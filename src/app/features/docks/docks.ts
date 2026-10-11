@@ -33,10 +33,8 @@ import {
   type BacklogScope,
   type BacklogSprint,
 } from './backlog-port';
-import {
-  BacklogRefinements,
-  refinementStateLabel,
-} from './backlog-refinements';
+import { refinementStateLabel } from '@domain/refinement';
+import { BacklogRefinements } from './backlog-refinements';
 import { RefinementDetails } from './refinement-details';
 import { RefinementDialogs } from './refinement-dialogs';
 

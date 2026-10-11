@@ -11,7 +11,8 @@ import {
 } from '@core/api/api-error';
 import type { Refinement, RefinementSummary } from '@core/api/types';
 import { apiErrorView, techLine } from '@core/commands/command-error';
-import { parseAiu } from '@domain/aiu';
+import { checkAiuLimit } from '@domain/aiu';
+import { AGENT_RUN_MAX_NANO_AIU } from '@domain/refinement';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import {
@@ -27,31 +28,10 @@ import type { BacklogRefinements } from './backlog-refinements';
 /** The longest notes and cancel reason the API takes (`maxLength: 2000`). */
 export const REFINEMENT_TEXT_MAX = 2000;
 
-/** The most the API takes as a refinement's limit, in nano-AIU (20 AIU: the `maximum` of `RefinementRequest`). */
-export const REFINEMENT_MAX_NANO_AIU = 20_000_000_000;
-
-/** Why an "AIU limit" text is refused. */
-export type RefinementCapError = 'amount' | 'positive' | 'maximum';
-
-/**
- * Reads the optional "AIU limit" text: empty is no limit (`cap: null`, the server's refinement cap applies), otherwise
- * an amount in AIU read without floats by `parseAiu`, above zero and at most {@link REFINEMENT_MAX_NANO_AIU}. Gives the
- * cap in nano-AIU, or why it is refused.
- */
-export function checkRefinementCap(
-  text: string
-): { readonly cap: number | null } | { readonly error: RefinementCapError } {
-  if (text.trim() === '') return { cap: null };
-  const cap = parseAiu(text);
-  if (cap === null) return { error: 'amount' };
-  if (cap < 1) return { error: 'positive' };
-  return cap > REFINEMENT_MAX_NANO_AIU ? { error: 'maximum' } : { cap };
-}
-
 function capValidator(
   control: AbstractControl<string>
 ): ValidationErrors | null {
-  const checked = checkRefinementCap(control.value);
+  const checked = checkAiuLimit(control.value, AGENT_RUN_MAX_NANO_AIU);
   return 'error' in checked ? { [checked.error]: true } : null;
 }
 
@@ -208,7 +188,7 @@ export class RefineDialog {
   });
   /** The limit typed, in nano-AIU; null when there is none or it is not an amount. */
   protected readonly cap = computed(() => {
-    const checked = checkRefinementCap(this.capValue());
+    const checked = checkAiuLimit(this.capValue(), AGENT_RUN_MAX_NANO_AIU);
     return 'cap' in checked ? checked.cap : null;
   });
   protected readonly capText = computed(() => formatCap(this.cap() ?? 0, 9));
@@ -235,7 +215,10 @@ export class RefineDialog {
   protected async submit(): Promise<void> {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.busy()) return;
-    const checked = checkRefinementCap(this.form.controls.cap.value);
+    const checked = checkAiuLimit(
+      this.form.controls.cap.value,
+      AGENT_RUN_MAX_NANO_AIU
+    );
     const cap = 'cap' in checked ? checked.cap : null;
     this.busy.set(true);
     const result = await this.data.refinements.request(

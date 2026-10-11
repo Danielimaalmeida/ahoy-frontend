@@ -7,11 +7,8 @@ import { Markdown } from '@ui/markdown/markdown';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { Api } from '@ui/table/table';
-import {
-  REFINEMENT_POLL_MS,
-  isActiveRefinement,
-  refinementStateLabel,
-} from './backlog-refinements';
+import { isActiveRefinement, refinementStateLabel } from '@domain/refinement';
+import { REFINEMENT_POLL_MS } from './backlog-refinements';
 
 /**
  * The detail row of a refined backlog item: the newest refinement's state, who asked for it, what it spent and why it

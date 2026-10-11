@@ -76,6 +76,19 @@ export type HaltReason =
   | 'revision_ceiling_reached'
   | 'reconciler_error';
 
+/** Where an agent run that is not a story phase stands: a refinement of a backlog item or an agent diagnosis of a story. */
+export type RefinementStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'budget_exceeded'
+  | 'timed_out'
+  | 'cancelled'
+  | 'output_violation'
+  | 'auth_failed'
+  | 'lost';
+
 /** The causes the diagnosis of a halted story knows; `other` is a halt no rule explains. */
 export type DiagnosisKind =
   | 'copilot_auth'

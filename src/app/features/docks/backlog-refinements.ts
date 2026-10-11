@@ -1,48 +1,12 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 import { isInvalidState, type ApiResult } from '@core/api/api-error';
-import type {
-  Refinement,
-  RefinementStatus,
-  RefinementSummary,
-} from '@core/api/types';
+import type { Refinement, RefinementSummary } from '@core/api/types';
 import { CLOCK, type Timer } from '@core/realtime/clock';
+import { isActiveRefinement } from '@domain/refinement';
 
 /** How often refinements in progress are read again: they send no events. */
 export const REFINEMENT_POLL_MS = 5_000;
-
-/** What each status means for the Backlog: the word a row shows, and whether the refinement is still in progress. */
-const STATUSES: Readonly<
-  Record<RefinementStatus, { readonly label: string; readonly active: boolean }>
-> = {
-  queued: { label: 'Queued', active: true },
-  running: { label: 'Refining', active: true },
-  succeeded: { label: 'Refined', active: false },
-  cancelled: { label: 'Cancelled', active: false },
-  failed: { label: 'Failed', active: false },
-  budget_exceeded: { label: 'Failed', active: false },
-  timed_out: { label: 'Failed', active: false },
-  output_violation: { label: 'Failed', active: false },
-  auth_failed: { label: 'Failed', active: false },
-  lost: { label: 'Failed', active: false },
-};
-
-/** Whether a refinement is still in progress: queued for a run slot, or running. */
-export function isActiveRefinement(status: RefinementStatus): boolean {
-  return STATUSES[status].active;
-}
-
-/** The word a backlog row shows for a refinement's status ("Refinement · Refined"). */
-export function refinementLabel(status: RefinementStatus): string {
-  return STATUSES[status].label;
-}
-
-/** The word for a refinement as it stands: "Cancelling" once a cancel was asked for and the run has not ended yet. */
-export function refinementStateLabel(refinement: RefinementSummary): string {
-  return refinement.cancelRequested && isActiveRefinement(refinement.status)
-    ? 'Cancelling'
-    : refinementLabel(refinement.status);
-}
 
 /** What the backlog has read of one item's refinements: every one, newest first, once read. */
 export interface RefinementHistory {

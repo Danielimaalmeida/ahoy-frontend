@@ -1,44 +1,5 @@
 import type { ApiError } from '@core/api/api-error';
-import contract from '@testing/fixtures/openapi.json';
-import {
-  REFINEMENT_MAX_NANO_AIU,
-  checkRefinementCap,
-  refinementErrorView,
-} from './refinement-dialogs';
-
-describe('checkRefinementCap', () => {
-  it('reads an empty limit as none, so the server cap applies', () => {
-    expect(checkRefinementCap('')).toEqual({ cap: null });
-    expect(checkRefinementCap('   ')).toEqual({ cap: null });
-  });
-
-  it('reads an amount in AIU as nano-AIU without floats', () => {
-    expect(checkRefinementCap('5')).toEqual({ cap: 5_000_000_000 });
-    expect(checkRefinementCap(' 2.5 ')).toEqual({ cap: 2_500_000_000 });
-    expect(checkRefinementCap('0.000000001')).toEqual({ cap: 1 });
-  });
-
-  it('takes up to 20 AIU, the most the API takes, and refuses more', () => {
-    expect(checkRefinementCap('20')).toEqual({ cap: 20_000_000_000 });
-    expect(checkRefinementCap('19.999999999')).toEqual({ cap: 19_999_999_999 });
-    expect(checkRefinementCap('20.000000001')).toEqual({ error: 'maximum' });
-    expect(checkRefinementCap('500')).toEqual({ error: 'maximum' });
-  });
-
-  it('keeps its limit in step with the contract’s maximum', () => {
-    const budget = contract.components.schemas.RefinementRequest.properties
-      .budgetNanoAiu as { maximum: number };
-    expect(REFINEMENT_MAX_NANO_AIU).toBe(budget.maximum);
-  });
-
-  it('refuses what is not an amount, and zero', () => {
-    expect(checkRefinementCap('1e3')).toEqual({ error: 'amount' });
-    expect(checkRefinementCap('-1')).toEqual({ error: 'amount' });
-    expect(checkRefinementCap('1,5')).toEqual({ error: 'amount' });
-    expect(checkRefinementCap('0')).toEqual({ error: 'positive' });
-    expect(checkRefinementCap('0.0')).toEqual({ error: 'positive' });
-  });
-});
+import { refinementErrorView } from './refinement-dialogs';
 
 describe('refinementErrorView', () => {
   const conflict: ApiError = {

@@ -1,22 +1,13 @@
 import { EnvironmentInjector, createEnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { fail, ok, type ApiResult } from '@core/api/api-error';
-import type {
-  Refinement,
-  RefinementStatus,
-  RefinementSummary,
-} from '@core/api/types';
+import type { Refinement, RefinementSummary } from '@core/api/types';
 import { FakeApi } from '@core/realtime/testing/fake-api';
 import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
 import { FakeFetch } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
-import {
-  BacklogRefinements,
-  REFINEMENT_POLL_MS,
-  isActiveRefinement,
-  refinementLabel,
-  refinementStateLabel,
-} from './backlog-refinements';
+import { isActiveRefinement } from '@domain/refinement';
+import { BacklogRefinements, REFINEMENT_POLL_MS } from './backlog-refinements';
 
 /** A refinement for specs; fictional data. */
 function aRefinement(
@@ -61,54 +52,6 @@ const invalidState = (): Promise<ApiResult<never>> =>
       title: 'Invalid state',
     })
   );
-
-describe('refinement labels', () => {
-  it('counts only queued and running refinements as in progress', () => {
-    const active: RefinementStatus[] = ['queued', 'running'];
-    const ended: RefinementStatus[] = [
-      'succeeded',
-      'failed',
-      'budget_exceeded',
-      'timed_out',
-      'cancelled',
-      'output_violation',
-      'auth_failed',
-      'lost',
-    ];
-    expect(active.every(isActiveRefinement)).toBe(true);
-    expect(ended.some(isActiveRefinement)).toBe(false);
-  });
-
-  it('words every status for the row, with every way of ending without content as Failed except a cancel', () => {
-    expect(refinementLabel('queued')).toBe('Queued');
-    expect(refinementLabel('running')).toBe('Refining');
-    expect(refinementLabel('succeeded')).toBe('Refined');
-    expect(refinementLabel('cancelled')).toBe('Cancelled');
-    for (const status of [
-      'failed',
-      'budget_exceeded',
-      'timed_out',
-      'output_violation',
-      'auth_failed',
-      'lost',
-    ] as const)
-      expect(refinementLabel(status)).toBe('Failed');
-  });
-
-  it('says Cancelling for a refinement in progress whose cancel was asked for, and nothing else', () => {
-    expect(
-      refinementStateLabel(
-        aRefinement('PROJ-1', { status: 'running', cancelRequested: true })
-      )
-    ).toBe('Cancelling');
-    expect(
-      refinementStateLabel(
-        aRefinement('PROJ-1', { status: 'cancelled', cancelRequested: true })
-      )
-    ).toBe('Cancelled');
-    expect(refinementStateLabel(aRefinement('PROJ-1'))).toBe('Refined');
-  });
-});
 
 describe('BacklogRefinements', () => {
   let api: FakeApi;
