@@ -3,23 +3,14 @@ import { Component, Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import {
-  fieldMessage,
-  isInvalidState,
-  type ApiError,
-  type ApiResult,
-} from '@core/api/api-error';
+import { fieldMessage, type ApiResult } from '@core/api/api-error';
 import type { Refinement, RefinementSummary } from '@core/api/types';
-import { apiErrorView, techLine } from '@core/commands/command-error';
+import { agentRunErrorView } from '@core/commands/command-error';
 import { checkAiuLimit } from '@domain/aiu';
 import { AGENT_RUN_MAX_NANO_AIU } from '@domain/refinement';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
-import {
-  DialogService,
-  DialogShell,
-  type DialogError,
-} from '@ui/dialog/dialog';
+import { DialogService, DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import { ToastService } from '@ui/toast/toast';
@@ -33,49 +24,6 @@ function capValidator(
 ): ValidationErrors | null {
   const checked = checkAiuLimit(control.value, AGENT_RUN_MAX_NANO_AIU);
   return 'error' in checked ? { [checked.error]: true } : null;
-}
-
-/** Which request a refinement error answers: they read differently on a `409 invalid_state`. */
-export type RefinementAction = 'request' | 'cancel';
-
-/**
- * What a refinement dialog shows for an API error. `409 invalid_state` means the item moved on meanwhile (a refinement
- * is already in progress, or none is any more) and `503 unavailable` that the server has no refinement configured;
- * everything else reads as any other API error.
- */
-export function refinementErrorView(
-  error: ApiError,
-  action: RefinementAction
-): DialogError {
-  if (error.kind !== 'problem') return apiErrorView(error);
-  const detail = error.detail?.trim() ?? '';
-  const tech = techLine(error);
-  if (error.status === 503) {
-    return {
-      variant: 'error',
-      heading: "Refinement isn't available",
-      text:
-        detail ||
-        "Ahoy has no refinement agent configured, or can't read its control repository.",
-      tech,
-    };
-  }
-  if (!isInvalidState(error)) return apiErrorView(error);
-  return action === 'request'
-    ? {
-        variant: 'notice',
-        heading: 'This item already has a refinement in progress',
-        text: detail || 'Its row has been refreshed: cancel that one first.',
-        tech,
-      }
-    : {
-        variant: 'notice',
-        heading: 'Nothing to cancel any more',
-        text:
-          detail ||
-          'The refinement ended meanwhile. Its row has been refreshed.',
-        tech,
-      };
 }
 
 /** The server's message for one field of the request, from a result that failed ("" when there is none). */
@@ -203,7 +151,7 @@ export class RefineDialog {
     const last = this.last();
     return last === null || last.ok
       ? null
-      : refinementErrorView(last.error, 'request');
+      : agentRunErrorView(last.error, 'request', 'refinement');
   });
   protected readonly notesServerError = computed(() =>
     resultFieldError(this.last(), 'notes')
@@ -304,7 +252,7 @@ export class CancelRefinementDialog {
     const last = this.last();
     return last === null || last.ok
       ? null
-      : refinementErrorView(last.error, 'cancel');
+      : agentRunErrorView(last.error, 'cancel', 'refinement');
   });
   protected readonly serverError = computed(() =>
     resultFieldError(this.last(), 'reason')
