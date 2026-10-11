@@ -1,4 +1,5 @@
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
+import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getHealth from '@testing/fixtures/getHealth.json';
@@ -8,6 +9,7 @@ import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
+import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
@@ -19,6 +21,7 @@ import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -27,6 +30,7 @@ import startStory from '@testing/fixtures/startStory.json';
 import stopStory from '@testing/fixtures/stopStory.json';
 import type { Guard } from './guard-kit';
 import {
+  isAgentDiagnosisList,
   isAnswerAccepted,
   isArtifact,
   isArtifactList,
@@ -92,6 +96,9 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['getStoryDiagnosis', isDiagnosis, getStoryDiagnosis],
     ['requestRefinement', isRefinement, requestRefinement],
     ['cancelRefinement', isRefinement, cancelRefinement],
+    ['listAgentDiagnoses', isAgentDiagnosisList, listAgentDiagnoses],
+    ['requestAgentDiagnosis', isRefinement, requestAgentDiagnosis],
+    ['cancelAgentDiagnosis', isRefinement, cancelAgentDiagnosis],
   ];
 
   it.each(cases)('%s', (_name, accepts, fixture) => {
@@ -613,5 +620,38 @@ describe('isDiagnosis', () => {
     );
     expect(isDiagnosis(withFinding({ evidence: 'one line' }))).toBe(false);
     expect(isDiagnosis(withFinding({ resumable: 'yes' }))).toBe(false);
+  });
+});
+
+describe('isAgentDiagnosisList', () => {
+  const [succeeded, cancelled] = listAgentDiagnoses.items;
+
+  it('accepts the diagnoses of a story, newest first, with content only where one succeeded', () => {
+    expect(isAgentDiagnosisList(listAgentDiagnoses)).toBe(true);
+    expect(
+      isAgentDiagnosisList(withField(listAgentDiagnoses, 'items', []))
+    ).toBe(true);
+  });
+
+  it('refuses content on one that did not succeed, none on one that did, and a key that is not a Jira key', () => {
+    expect(
+      isAgentDiagnosisList.explain(
+        withField(listAgentDiagnoses, 'items', [
+          withField(cancelled!, 'content', '# x'),
+        ])
+      )
+    ).toBe(
+      'AgentDiagnosisList.items[0].content must be set exactly when the status is succeeded'
+    );
+    expect(
+      isAgentDiagnosisList(
+        withField(listAgentDiagnoses, 'items', [
+          withField(succeeded!, 'content', null),
+        ])
+      )
+    ).toBe(false);
+    expect(
+      isAgentDiagnosisList(withField(listAgentDiagnoses, 'key', 'proj-118'))
+    ).toBe(false);
   });
 });

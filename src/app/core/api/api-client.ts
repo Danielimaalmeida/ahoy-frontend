@@ -22,6 +22,7 @@ import {
   isAnswerAccepted,
   isArtifactList,
   isDecisionAccepted,
+  isAgentDiagnosisList,
   isEventPage,
   isGateRecordList,
   isHealth,
@@ -41,6 +42,8 @@ import {
   isStoryStateDocument,
 } from './guards';
 import type {
+  AgentDiagnosisList,
+  AgentDiagnosisRequest,
   AnswerAccepted,
   AnswerRequest,
   ArtifactContent,
@@ -266,6 +269,41 @@ export class ApiClient {
     return this.post(
       'cancelRefinement',
       `/refinements/${segment(key)}/cancel`,
+      body,
+      isRefinement
+    );
+  }
+
+  /** Every agent diagnosis of one halted story, newest first, with the agent's Markdown. */
+  listAgentDiagnoses(key: string): Promise<ApiResult<AgentDiagnosisList>> {
+    return this.get(
+      'listAgentDiagnoses',
+      `/stories/${segment(key)}/agent-diagnoses`,
+      isAgentDiagnosisList
+    );
+  }
+
+  /** Asks an agent to diagnose a halted story. May spend AIU. The answer (202) is the queued diagnosis. */
+  requestAgentDiagnosis(
+    key: string,
+    body: AgentDiagnosisRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'requestAgentDiagnosis',
+      `/stories/${segment(key)}/agent-diagnoses`,
+      body,
+      isRefinement
+    );
+  }
+
+  /** Stops the story's agent diagnosis in progress. The answer (202) is it, cancelled or being cancelled. */
+  cancelAgentDiagnosis(
+    key: string,
+    body: CancelRefinementRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'cancelAgentDiagnosis',
+      `/stories/${segment(key)}/agent-diagnoses/cancel`,
       body,
       isRefinement
     );

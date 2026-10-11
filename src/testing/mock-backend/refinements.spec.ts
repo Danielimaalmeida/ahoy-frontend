@@ -196,3 +196,147 @@ describe('MockAhoyServer · back to intake', () => {
     expect(problemCode(unconfirmed)).toBe('validation_failed');
   });
 });
+
+describe('MockAhoyServer · agent diagnoses of halted stories', () => {
+  it('queues a diagnosis of a halted voyage, runs it on the clock and keeps its Markdown, leaving the voyage as it was', () => {
+    const { server, clock } = testServer();
+    const before = call(server, 'GET', '/stories/PROJ-118').body;
+    const asked = call(server, 'POST', '/stories/PROJ-118/agent-diagnoses', {
+      confirmSpend: true,
+      notes: ' Is it the token? ',
+    });
+    expect(asked.status).toBe(202);
+    expect([
+      field(asked, 'key'),
+      field(asked, 'status'),
+      field(asked, 'notes'),
+      field(asked, 'requestedBy'),
+      field(asked, 'budgetNanoAiu'),
+      field(asked, 'content'),
+    ]).toEqual([
+      'PROJ-118',
+      'queued',
+      'Is it the token?',
+      ACTOR,
+      10_000_000_000,
+      null,
+    ]);
+    expect(String(field(asked, 'id'))).toMatch(
+      /^proj-118-diagnosis-001-[0-9a-f]{4}$/
+    );
+
+    clock.advance(3_000);
+    const [done] = items(
+      call(server, 'GET', '/stories/PROJ-118/agent-diagnoses').body
+    );
+    expect([done?.['status'], done?.['agent']]).toEqual([
+      'succeeded',
+      'shipwright',
+    ]);
+    expect(String(done?.['content'])).toMatch(
+      /^## Cause\nA simulated diagnosis of PROJ-118/
+    );
+    expect(String(done?.['content'])).toMatch(/## What is still unknown/);
+    expect(call(server, 'GET', '/stories/PROJ-118').body).toEqual(before);
+    // It is not a refinement.
+    expect(call(server, 'GET', '/refinements/PROJ-118').body).toEqual({
+      key: 'PROJ-118',
+      items: [],
+    });
+  });
+
+  it('refuses a voyage that is not halted, one that does not exist, a second request in progress and a limit above 20 AIU', () => {
+    const { server } = testServer();
+    const notHalted = call(
+      server,
+      'POST',
+      '/stories/PROJ-140/agent-diagnoses',
+      {
+        confirmSpend: true,
+      }
+    );
+    expect([notHalted.status, problemCode(notHalted)]).toEqual([
+      409,
+      'invalid_state',
+    ]);
+    const unknown = call(server, 'POST', '/stories/PROJ-999/agent-diagnoses', {
+      confirmSpend: true,
+    });
+    expect([unknown.status, problemCode(unknown)]).toEqual([404, 'not_found']);
+    expect(
+      problemCode(call(server, 'GET', '/stories/PROJ-999/agent-diagnoses'))
+    ).toBe('not_found');
+    const over = call(server, 'POST', '/stories/PROJ-118/agent-diagnoses', {
+      confirmSpend: true,
+      budgetNanoAiu: 20_000_000_001,
+    });
+    expect(problemCode(over)).toBe('validation_failed');
+    call(server, 'POST', '/stories/PROJ-118/agent-diagnoses', {
+      confirmSpend: true,
+    });
+    const again = call(server, 'POST', '/stories/PROJ-118/agent-diagnoses', {
+      confirmSpend: true,
+    });
+    expect([again.status, problemCode(again)]).toEqual([409, 'invalid_state']);
+  });
+
+  it('cancels a queued diagnosis at once and a running one a moment later, keeping who cancelled, beside a refinement of the same key', () => {
+    const { server, clock } = testServer();
+    call(server, 'POST', '/refinements/PROJ-126', { confirmSpend: true });
+    call(server, 'POST', '/stories/PROJ-126/agent-diagnoses', {
+      confirmSpend: true,
+    });
+    const queued = call(
+      server,
+      'POST',
+      '/stories/PROJ-126/agent-diagnoses/cancel',
+      {
+        reason: 'Asked by mistake',
+      }
+    );
+    expect([
+      queued.status,
+      field(queued, 'status'),
+      field(queued, 'exitReason'),
+    ]).toEqual([202, 'cancelled', `cancelled by ${ACTOR}: Asked by mistake`]);
+    // The refinement is untouched.
+    expect(
+      items(call(server, 'GET', '/refinements/PROJ-126').body).map(
+        (r) => r['status']
+      )
+    ).toEqual(['queued']);
+    call(server, 'POST', '/stories/PROJ-126/agent-diagnoses', {
+      confirmSpend: true,
+    });
+    clock.advance(1_000);
+    const running = call(
+      server,
+      'POST',
+      '/stories/PROJ-126/agent-diagnoses/cancel',
+      {
+        reason: 'Too slow',
+      }
+    );
+    expect([
+      field(running, 'status'),
+      field(running, 'cancelRequested'),
+    ]).toEqual(['running', true]);
+    clock.advance(500);
+    const [ended] = items(
+      call(server, 'GET', '/stories/PROJ-126/agent-diagnoses').body
+    );
+    expect([ended?.['status'], ended?.['content']]).toEqual([
+      'cancelled',
+      null,
+    ]);
+    const none = call(
+      server,
+      'POST',
+      '/stories/PROJ-126/agent-diagnoses/cancel',
+      {
+        reason: 'again',
+      }
+    );
+    expect(problemCode(none)).toBe('invalid_state');
+  });
+});

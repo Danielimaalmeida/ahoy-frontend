@@ -40,6 +40,7 @@ import {
   REFINEMENT_STATUSES,
   RUN_STATUSES,
   STORY_STATUSES,
+  type AgentDiagnosisList,
   type AhoyEvent,
   type Diagnosis,
   type DiagnosisFinding,
@@ -378,6 +379,12 @@ export const isRefinement = guard<Refinement>('Refinement', refinement);
 export const isRefinementList = guard<RefinementList>(
   'RefinementList',
   shape<RefinementList>({ key: storyKey, items: arrayOf(refinement) })
+);
+
+/** Every agent diagnosis of one story, newest first; each has the shape of a refinement. */
+export const isAgentDiagnosisList = guard<AgentDiagnosisList>(
+  'AgentDiagnosisList',
+  shape<AgentDiagnosisList>({ key: storyKey, items: arrayOf(refinement) })
 );
 
 /** The newest refinement of each refined issue, without content. */

@@ -226,3 +226,28 @@ export function refinementMarkdown(key: string, notes: string | null): string {
     ...(notes !== null ? ['', "## Requester's notes", notes] : []),
   ].join('\n');
 }
+
+/** The diagnosis the simulated diagnosing agent replies with, in the sections the real prompt asks for. */
+export function agentDiagnosisMarkdown(
+  key: string,
+  haltReason: string | null,
+  notes: string | null
+): string {
+  return [
+    '## Cause',
+    `A simulated diagnosis of ${key}: the mock read no evidence and called no model. The halt reason was ${haltReason ?? 'not recorded'}.`,
+    '',
+    '## Evidence',
+    `- halt reason: ${haltReason ?? 'none'} (simulated)`,
+    '',
+    '## What fixes it',
+    "Read the rules' findings above, apply the action they name, then resume the story (simulated).",
+    '',
+    '## Who acts',
+    "The story's owner (simulated).",
+    '',
+    '## What is still unknown',
+    'Everything an agent would have read in the control repository (simulated).',
+    ...(notes !== null ? ['', "## Requester's notes", notes] : []),
+  ].join('\n');
+}

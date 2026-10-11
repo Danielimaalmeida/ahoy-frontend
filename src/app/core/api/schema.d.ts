@@ -557,6 +557,68 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/agent-diagnoses': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * Every agent diagnosis of one story, newest first, with the agent's Markdown.
+     * @description A story no agent was asked to diagnose answers `200` with no items. `404` when the story does not exist. An agent
+     *     diagnosis has the shape of a refinement (`Refinement`); it is not the rules' diagnosis of `getStoryDiagnosis`.
+     */
+    readonly get: operations['listAgentDiagnoses'];
+    readonly put?: never;
+    /**
+     * Ask an agent to diagnose a halted story. May spend AIU.
+     * @description For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis
+     *     agent (`AHOY_DIAGNOSIS_AGENT`) for the story, pinned to the control repo's HEAD now. The agent reads the evidence
+     *     Ahoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the
+     *     control repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and
+     *     who takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it
+     *     changes nothing about the story: the halt reason, the status and the version stay as they are.
+     *
+     *     The story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
+     *     `budgetNanoAiu` (at most 20 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the
+     *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for
+     *     the outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request
+     *     answers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.
+     */
+    readonly post: operations['requestAgentDiagnosis'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/agent-diagnoses/cancel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Stop the story's agent diagnosis in progress.
+     * @description A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
+     *     reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
+     *     `409 invalid_state` when nothing is in progress.
+     */
+    readonly post: operations['cancelAgentDiagnosis'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/events': {
     readonly parameters: {
       readonly query?: never;
@@ -856,6 +918,18 @@ export interface components {
       /** @description What the agent should look at, given to it as the requester's notes. */
       readonly notes?: string;
       /** @description The run's AIU cap, at most 20 AIU; the server's refinement cap when absent. */
+      readonly budgetNanoAiu?: number;
+    };
+    readonly AgentDiagnosisList: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly items: readonly components['schemas']['Refinement'][];
+    };
+    readonly AgentDiagnosisRequest: {
+      /** @constant */
+      readonly confirmSpend: true;
+      /** @description What the agent should look into, given to it as the requester's notes. */
+      readonly notes?: string;
+      /** @description The run's AIU cap, at most 20 AIU; the server's diagnosis cap when absent. */
       readonly budgetNanoAiu?: number;
     };
     readonly CancelRefinementRequest: {
@@ -2094,6 +2168,91 @@ export interface operations {
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly listAgentDiagnoses: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The story's agent diagnoses, newest first. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['AgentDiagnosisList'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly requestAgentDiagnosis: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['AgentDiagnosisRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The agent diagnosis, queued. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Refinement'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly cancelAgentDiagnosis: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CancelRefinementRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The agent diagnosis, cancelled or being cancelled. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Refinement'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly listStoryEvents: {

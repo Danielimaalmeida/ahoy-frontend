@@ -253,6 +253,31 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   post('/refinements/PROJ-151', { confirmSpend: true });
   post('/refinements/PROJ-145/cancel', { reason: 'Nothing in progress' });
   post('/refinements/PROJ-152', {});
+
+  // An agent's diagnosis of a halted story: queued, run, read; one cancelled; and every way to be refused.
+  post('/stories/PROJ-118/agent-diagnoses', {
+    confirmSpend: true,
+    notes: 'Is it the token or the cluster?',
+  });
+  get('/stories/PROJ-118/agent-diagnoses');
+  advance(10_000);
+  get('/stories/PROJ-118/agent-diagnoses');
+  post('/stories/PROJ-126/agent-diagnoses', { confirmSpend: true });
+  post('/stories/PROJ-126/agent-diagnoses/cancel', {
+    reason: 'Asked by mistake',
+  });
+  get('/stories/PROJ-126/agent-diagnoses');
+  post('/stories/PROJ-140/agent-diagnoses', { confirmSpend: true });
+  post('/stories/PROJ-999/agent-diagnoses', { confirmSpend: true });
+  get('/stories/PROJ-999/agent-diagnoses');
+  post('/stories/PROJ-118/agent-diagnoses', { confirmSpend: false });
+  post('/stories/PROJ-118/agent-diagnoses', {
+    confirmSpend: true,
+    budgetNanoAiu: 20_000_000_001,
+  });
+  post('/stories/PROJ-118/agent-diagnoses/cancel', {
+    reason: 'Nothing in progress',
+  });
 }
 
 describe('the mock against openapi/ahoy-v1.yaml', () => {
@@ -290,6 +315,9 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'getRefinements',
       'requestRefinement',
       'cancelRefinement',
+      'listAgentDiagnoses',
+      'requestAgentDiagnosis',
+      'cancelAgentDiagnosis',
     ])
       expect(used.has(op), op).toBe(true);
     const statuses = new Set(exchanges.map((e) => e.response.status));

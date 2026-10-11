@@ -1,4 +1,5 @@
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
+import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
@@ -9,6 +10,7 @@ import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
+import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
@@ -20,6 +22,7 @@ import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -95,6 +98,9 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['getRefinements', getRefinements],
   ['requestRefinement', requestRefinement],
   ['cancelRefinement', cancelRefinement],
+  ['listAgentDiagnoses', listAgentDiagnoses],
+  ['requestAgentDiagnosis', requestAgentDiagnosis],
+  ['cancelAgentDiagnosis', cancelAgentDiagnosis],
 ];
 
 /** In the contract, not in the client yet: phase 7 (`resolveReview`...) and the live stream (lane 2B). */
@@ -119,7 +125,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 1).toBe(27);
+    expect(CLIENT_OPERATIONS.length + 1).toBe(30);
   });
 
   it('has no operation id twice', () => {
@@ -161,6 +167,8 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'refreshIntake',
       'requestRefinement',
       'cancelRefinement',
+      'requestAgentDiagnosis',
+      'cancelAgentDiagnosis',
     ])
       expect(statusOf(id)).toEqual(['202']);
     expect(
@@ -223,6 +231,31 @@ describe('the request bodies the client sends', () => {
     ).toEqual([]);
     expect(
       requestViolations('cancelRefinement', { reason: 'Wrong story' })
+    ).toEqual([]);
+  });
+
+  it('are valid for requestAgentDiagnosis and cancelAgentDiagnosis as the client sends them, up to 20 AIU', () => {
+    expect(
+      requestViolations('requestAgentDiagnosis', { confirmSpend: true })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestAgentDiagnosis', {
+        confirmSpend: true,
+        notes: 'Is it the token or the cluster?',
+        budgetNanoAiu: 20_000_000_000,
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestAgentDiagnosis', {
+        confirmSpend: true,
+        budgetNanoAiu: 20_000_000_001,
+      })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('requestAgentDiagnosis', { confirmSpend: false })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('cancelAgentDiagnosis', { reason: 'Asked by mistake' })
     ).toEqual([]);
   });
 

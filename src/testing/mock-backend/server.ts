@@ -13,6 +13,7 @@
  * (`npm run mock:api`): never two mocks.
  */
 import type {
+  AgentDiagnosisRequest,
   CancelRefinementRequest,
   DecisionRequest,
   ModelChoice,
@@ -182,6 +183,7 @@ export class MockAhoyServer {
   private world: World;
   private simulator: Simulator;
   private refinements: RefinementDesk;
+  private agentDiagnoses: RefinementDesk;
 
   constructor(options: MockServerOptions) {
     if (!isRecord(options.contract) || !isRecord(options.contract['paths']))
@@ -201,6 +203,7 @@ export class MockAhoyServer {
       this.clock,
       options.timing ?? LIVE_TIMING
     );
+    this.agentDiagnoses = this.newAgentDiagnoses();
     this.load();
   }
 
@@ -214,15 +217,31 @@ export class MockAhoyServer {
     return this.simulator;
   }
 
+  /** The agent diagnoses of halted stories, for specs that look inside. */
+  get agentDiagnosisDesk(): RefinementDesk {
+    return this.agentDiagnoses;
+  }
+
   /** The refinements of backlog items, for specs that look inside. */
   get refinementDesk(): RefinementDesk {
     return this.refinements;
+  }
+
+  /** A desk for the agent diagnoses of this world's stories, which reads their halt reasons as they are. */
+  private newAgentDiagnoses(): RefinementDesk {
+    return new RefinementDesk(
+      this.clock,
+      this.options.timing ?? LIVE_TIMING,
+      'diagnosis',
+      (key) => this.world.voyages.get(key)?.story.haltReason ?? null
+    );
   }
 
   /** Throws away every change: the seeds again (or nothing), the switches cleared, open streams ended. */
   reset(): void {
     this.simulator.stopAll();
     this.refinements.stopAll();
+    this.agentDiagnoses.stopAll();
     this.world.hub.closeAll();
     this.world = new World(
       this.clock,
@@ -236,6 +255,7 @@ export class MockAhoyServer {
       this.clock,
       this.options.timing ?? LIVE_TIMING
     );
+    this.agentDiagnoses = this.newAgentDiagnoses();
     Object.assign(this.switches, {
       latencyMs: 0,
       failNext: null,
@@ -248,6 +268,7 @@ export class MockAhoyServer {
   close(): void {
     this.simulator.stopAll();
     this.refinements.stopAll();
+    this.agentDiagnoses.stopAll();
     this.world.hub.closeAll();
   }
 
@@ -519,6 +540,34 @@ export class MockAhoyServer {
         return jsonResponse(
           202,
           this.refinements.request(call.path['key'] ?? '', call.actor, body)
+        );
+      }
+      case 'listAgentDiagnoses': {
+        const key = this.voyage(call).story.key;
+        return jsonResponse(200, { key, items: this.agentDiagnoses.of(key) });
+      }
+      case 'requestAgentDiagnosis': {
+        const voyage = this.voyage(call);
+        if (voyage.story.status !== 'halted')
+          throw new MockProblem(
+            'invalid_state',
+            `Story ${voyage.story.key} is ${voyage.story.status}, not halted: there is nothing to diagnose`
+          );
+        const body = call.body as AgentDiagnosisRequest; // validated
+        return jsonResponse(
+          202,
+          this.agentDiagnoses.request(voyage.story.key, call.actor, body)
+        );
+      }
+      case 'cancelAgentDiagnosis': {
+        const body = call.body as CancelRefinementRequest; // validated
+        return jsonResponse(
+          202,
+          this.agentDiagnoses.cancel(
+            this.voyage(call).story.key,
+            call.actor,
+            body.reason
+          )
         );
       }
       case 'cancelRefinement': {

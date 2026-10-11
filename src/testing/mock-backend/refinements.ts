@@ -4,12 +4,13 @@
  * 0 AIU of anything real.
  */
 import type {
+  AgentDiagnosisRequest,
   Refinement,
   RefinementRequest,
   RefinementSummary,
 } from '@core/api/types';
 import { iso, type Cancel, type MockClock } from './clock';
-import { refinementMarkdown } from './content';
+import { agentDiagnosisMarkdown, refinementMarkdown } from './content';
 import { MockProblem } from './http';
 import { sha256Hex } from './sha256';
 import type { SimulationTiming } from './simulator';
@@ -28,14 +29,20 @@ function summary(item: Refinement): RefinementSummary {
   ) as RefinementSummary; // every field of a refinement but `content` is a summary's
 }
 
+/** What a desk holds: a backlog item's refinements, or the agent diagnoses of halted stories (same shape, other words). */
+export type DeskKind = 'refinement' | 'diagnosis';
+
 /** The refinements of a mock world, newest first per Jira key, and the timers that move them on. */
 export class RefinementDesk {
   private readonly byKey = new Map<string, Writable<Refinement>[]>();
   private readonly timers = new Map<string, Cancel>();
 
+  /** `haltReasonOf` gives the diagnosing agent's simulated reply the halt reason of a story (null for an unknown key). */
   constructor(
     private readonly clock: MockClock,
-    private readonly timing: SimulationTiming
+    private readonly timing: SimulationTiming,
+    private readonly kind: DeskKind = 'refinement',
+    private readonly haltReasonOf: (key: string) => string | null = () => null
   ) {}
 
   /** The newest refinement of every refined key, newest first, without content. */
@@ -60,7 +67,11 @@ export class RefinementDesk {
   }
 
   /** Queues a refinement; `409 invalid_state` when the key already has one in progress. */
-  request(key: string, actor: string, body: RefinementRequest): Refinement {
+  request(
+    key: string,
+    actor: string,
+    body: RefinementRequest | AgentDiagnosisRequest
+  ): Refinement {
     const items = this.byKey.get(key) ?? [];
     if (
       items.some(
@@ -69,16 +80,16 @@ export class RefinementDesk {
     )
       throw new MockProblem(
         'invalid_state',
-        `${key} already has a refinement in progress`
+        `${key} already has a ${this.kind} in progress`
       );
     const attempt = items.length + 1;
-    const suffix = sha256Hex(`${key}/refinement/${attempt}`).slice(0, 4);
+    const suffix = sha256Hex(`${key}/${this.kind}/${attempt}`).slice(0, 4);
     const notes =
       body.notes !== undefined && body.notes.trim() !== ''
         ? body.notes.trim()
         : null;
     const refinement: Writable<Refinement> = {
-      id: `${key.toLowerCase()}-refinement-${String(attempt).padStart(3, '0')}-${suffix}`,
+      id: `${key.toLowerCase()}-${this.kind}-${String(attempt).padStart(3, '0')}-${suffix}`,
       key,
       status: 'queued',
       notes,
@@ -112,12 +123,12 @@ export class RefinementDesk {
     if (!active)
       throw new MockProblem(
         'invalid_state',
-        `${key} has no refinement in progress`
+        `${key} has no ${this.kind} in progress`
       );
     if (reason.trim() === '')
       throw new MockProblem(
         'validation_failed',
-        'Cancelling a refinement needs a reason'
+        `Cancelling a ${this.kind} needs a reason`
       );
     active.cancelRequested = true;
     active.exitReason = `cancelled by ${actor}: ${reason.trim()}`;
@@ -143,7 +154,8 @@ export class RefinementDesk {
 
   private start(refinement: Writable<Refinement>): void {
     refinement.status = 'running';
-    refinement.agent = 'quartermaster';
+    refinement.agent =
+      this.kind === 'diagnosis' ? 'shipwright' : 'quartermaster';
     refinement.model = 'claude-sonnet-5';
     refinement.runtime = 'mock';
     refinement.startedAt = this.now();
@@ -155,7 +167,14 @@ export class RefinementDesk {
         inputTokens: 21_400,
         outputTokens: 1_850,
       };
-      refinement.content = refinementMarkdown(refinement.key, refinement.notes);
+      refinement.content =
+        this.kind === 'diagnosis'
+          ? agentDiagnosisMarkdown(
+              refinement.key,
+              this.haltReasonOf(refinement.key),
+              refinement.notes
+            )
+          : refinementMarkdown(refinement.key, refinement.notes);
       refinement.endedAt = this.now();
     });
   }

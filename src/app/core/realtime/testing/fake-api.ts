@@ -18,6 +18,9 @@ export type FakeApiOps = Pick<
   | 'getRefinements'
   | 'requestRefinement'
   | 'cancelRefinement'
+  | 'listAgentDiagnoses'
+  | 'requestAgentDiagnosis'
+  | 'cancelAgentDiagnosis'
   | 'getStoryDiagnosis'
 >;
 
@@ -118,6 +121,21 @@ export class FakeApi implements FakeApiOps {
   cancelRefinement: FakeApiOps['cancelRefinement'] = (key, body) => {
     this.calls.push({ op: 'cancelRefinement', args: [key, body] });
     return this.handlers.cancelRefinement?.(key, body) ?? unreachable();
+  };
+
+  listAgentDiagnoses: FakeApiOps['listAgentDiagnoses'] = (key) => {
+    this.calls.push({ op: 'listAgentDiagnoses', args: [key] });
+    return this.handlers.listAgentDiagnoses?.(key) ?? unreachable();
+  };
+
+  requestAgentDiagnosis: FakeApiOps['requestAgentDiagnosis'] = (key, body) => {
+    this.calls.push({ op: 'requestAgentDiagnosis', args: [key, body] });
+    return this.handlers.requestAgentDiagnosis?.(key, body) ?? unreachable();
+  };
+
+  cancelAgentDiagnosis: FakeApiOps['cancelAgentDiagnosis'] = (key, body) => {
+    this.calls.push({ op: 'cancelAgentDiagnosis', args: [key, body] });
+    return this.handlers.cancelAgentDiagnosis?.(key, body) ?? unreachable();
   };
 
   getStoryDiagnosis: FakeApiOps['getStoryDiagnosis'] = (key) => {

@@ -12,6 +12,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { throwError } from 'rxjs';
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
+import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import { operationNamed, requestViolations } from '@testing/fixtures/contract';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
@@ -23,6 +24,7 @@ import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
+import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
@@ -33,6 +35,7 @@ import listStoryEvents from '@testing/fixtures/listStoryEvents.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -405,6 +408,43 @@ const CASES: readonly Case[] = [
     value: cancelRefinement,
     problem: 'invalid_state',
   },
+  {
+    op: 'listAgentDiagnoses',
+    call: (api) => api.listAgentDiagnoses('PROJ-118'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-118/agent-diagnoses',
+    reply: listAgentDiagnoses,
+    status: 200,
+    value: listAgentDiagnoses,
+    problem: 'not_found',
+  },
+  {
+    op: 'requestAgentDiagnosis',
+    call: (api) =>
+      api.requestAgentDiagnosis('PROJ-118', {
+        confirmSpend: true,
+        notes: 'Is it the token or the cluster?',
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-118/agent-diagnoses',
+    body: { confirmSpend: true, notes: 'Is it the token or the cluster?' },
+    reply: requestAgentDiagnosis,
+    status: 202,
+    value: requestAgentDiagnosis,
+    problem: 'invalid_state',
+  },
+  {
+    op: 'cancelAgentDiagnosis',
+    call: (api) =>
+      api.cancelAgentDiagnosis('PROJ-118', { reason: 'Asked by mistake' }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-118/agent-diagnoses/cancel',
+    body: { reason: 'Asked by mistake' },
+    reply: cancelAgentDiagnosis,
+    status: 202,
+    value: cancelAgentDiagnosis,
+    problem: 'invalid_state',
+  },
 ];
 
 const STATUS_TEXT: Readonly<Record<number, string>> = {
@@ -565,6 +605,9 @@ describe('ApiClient', () => {
         'getRefinements',
         'requestRefinement',
         'cancelRefinement',
+        'listAgentDiagnoses',
+        'requestAgentDiagnosis',
+        'cancelAgentDiagnosis',
       ].sort()
     );
   });
