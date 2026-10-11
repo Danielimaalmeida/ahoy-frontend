@@ -7,7 +7,7 @@ import { fieldMessage, type ApiResult } from '@core/api/api-error';
 import type { Refinement } from '@core/api/types';
 import { agentRunErrorView } from '@core/commands/command-error';
 import { checkAiuLimit } from '@domain/aiu';
-import { AGENT_RUN_MAX_NANO_AIU } from '@domain/refinement';
+import { AGENT_DIAGNOSIS_MAX_NANO_AIU } from '@domain/refinement';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import { DialogShell } from '@ui/dialog/dialog';
@@ -23,7 +23,7 @@ export const DIAGNOSIS_NOTES_MAX = 2000;
 function capValidator(
   control: AbstractControl<string>
 ): ValidationErrors | null {
-  const checked = checkAiuLimit(control.value, AGENT_RUN_MAX_NANO_AIU);
+  const checked = checkAiuLimit(control.value, AGENT_DIAGNOSIS_MAX_NANO_AIU);
   return 'error' in checked ? { [checked.error]: true } : null;
 }
 
@@ -91,7 +91,7 @@ export interface AgentDiagnosisDialogData {
           label="AIU limit"
           optional
           unit="AIU"
-          hint="At most 20 AIU. Leave empty for the server's diagnosis cap."
+          hint="At most 100 AIU. Leave empty for the server's diagnosis cap."
           [errorMessages]="capMessages"
           [errorText]="capServerError()"
         >
@@ -119,7 +119,7 @@ export class AgentDiagnosisDialog {
   protected readonly capMessages = {
     amount: 'Type an amount in AIU, such as 5 or 2.5.',
     positive: 'The limit must be above 0 AIU.',
-    maximum: 'The limit may be at most 20 AIU.',
+    maximum: 'The limit may be at most 100 AIU.',
   };
   protected readonly form = new FormGroup({
     notes: new FormControl('', {
@@ -136,7 +136,10 @@ export class AgentDiagnosisDialog {
   });
   /** The limit typed, in nano-AIU; null when there is none or it is not an amount. */
   protected readonly cap = computed(() => {
-    const checked = checkAiuLimit(this.capValue(), AGENT_RUN_MAX_NANO_AIU);
+    const checked = checkAiuLimit(
+      this.capValue(),
+      AGENT_DIAGNOSIS_MAX_NANO_AIU
+    );
     return 'cap' in checked ? checked.cap : null;
   });
   protected readonly capText = computed(() => formatCap(this.cap() ?? 0, 9));
@@ -165,7 +168,7 @@ export class AgentDiagnosisDialog {
     if (this.form.invalid || this.busy()) return;
     const checked = checkAiuLimit(
       this.form.controls.cap.value,
-      AGENT_RUN_MAX_NANO_AIU
+      AGENT_DIAGNOSIS_MAX_NANO_AIU
     );
     const cap = 'cap' in checked ? checked.cap : null;
     this.busy.set(true);

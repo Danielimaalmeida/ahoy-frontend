@@ -234,7 +234,7 @@ describe('the request bodies the client sends', () => {
     ).toEqual([]);
   });
 
-  it('are valid for requestAgentDiagnosis and cancelAgentDiagnosis as the client sends them, up to 20 AIU', () => {
+  it('are valid for requestAgentDiagnosis and cancelAgentDiagnosis as the client sends them, up to 100 AIU', () => {
     expect(
       requestViolations('requestAgentDiagnosis', { confirmSpend: true })
     ).toEqual([]);
@@ -242,13 +242,13 @@ describe('the request bodies the client sends', () => {
       requestViolations('requestAgentDiagnosis', {
         confirmSpend: true,
         notes: 'Is it the token or the cluster?',
-        budgetNanoAiu: 20_000_000_000,
+        budgetNanoAiu: 100_000_000_000,
       })
     ).toEqual([]);
     expect(
       requestViolations('requestAgentDiagnosis', {
         confirmSpend: true,
-        budgetNanoAiu: 20_000_000_001,
+        budgetNanoAiu: 100_000_000_001,
       })
     ).not.toEqual([]);
     expect(

@@ -245,7 +245,7 @@ describe('MockAhoyServer · agent diagnoses of halted stories', () => {
     });
   });
 
-  it('refuses a voyage that is not halted, one that does not exist, a second request in progress and a limit above 20 AIU', () => {
+  it('refuses a voyage that is not halted, one that does not exist, a second request in progress and a limit above 100 AIU', () => {
     const { server } = testServer();
     const notHalted = call(
       server,
@@ -268,7 +268,7 @@ describe('MockAhoyServer · agent diagnoses of halted stories', () => {
     ).toBe('not_found');
     const over = call(server, 'POST', '/stories/PROJ-118/agent-diagnoses', {
       confirmSpend: true,
-      budgetNanoAiu: 20_000_000_001,
+      budgetNanoAiu: 100_000_000_001,
     });
     expect(problemCode(over)).toBe('validation_failed');
     call(server, 'POST', '/stories/PROJ-118/agent-diagnoses', {

@@ -1220,7 +1220,7 @@
         "operationId": "requestAgentDiagnosis",
         "tags": ["stories"],
         "summary": "Ask an agent to diagnose a halted story. May spend AIU.",
-        "description": "For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis\nagent (`AHOY_DIAGNOSIS_AGENT`) for the story, pinned to the control repo's HEAD now. The agent reads the evidence\nAhoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the\ncontrol repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and\nwho takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it\nchanges nothing about the story: the halt reason, the status and the version stay as they are.\n\nThe story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 20 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for\nthe outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request\nanswers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.\n",
+        "description": "For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis\nagent (`AHOY_DIAGNOSIS_AGENT`) for the story, pinned to the control repo's HEAD now. The agent reads the evidence\nAhoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the\ncontrol repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and\nwho takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it\nchanges nothing about the story: the halt reason, the status and the version stay as they are.\n\nThe story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 100 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for\nthe outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request\nanswers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2167,8 +2167,8 @@
           "budgetNanoAiu": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 20000000000,
-            "description": "The run's AIU cap, at most 20 AIU; the server's diagnosis cap when absent."
+            "maximum": 100000000000,
+            "description": "The run's AIU cap, at most 100 AIU; the server's diagnosis cap when absent."
           }
         }
       },

@@ -583,7 +583,7 @@ export interface paths {
      *     changes nothing about the story: the halt reason, the status and the version stay as they are.
      *
      *     The story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
-     *     `budgetNanoAiu` (at most 20 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the
+     *     `budgetNanoAiu` (at most 100 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the
      *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for
      *     the outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request
      *     answers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.
@@ -929,7 +929,7 @@ export interface components {
       readonly confirmSpend: true;
       /** @description What the agent should look into, given to it as the requester's notes. */
       readonly notes?: string;
-      /** @description The run's AIU cap, at most 20 AIU; the server's diagnosis cap when absent. */
+      /** @description The run's AIU cap, at most 100 AIU; the server's diagnosis cap when absent. */
       readonly budgetNanoAiu?: number;
     };
     readonly CancelRefinementRequest: {

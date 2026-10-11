@@ -875,17 +875,17 @@ describe('VoyageShell on the mock backend', () => {
       expect(reads.filter((r) => r.method === 'GET').length).toBeGreaterThan(1);
     });
 
-    it('sends the notes and an AIU limit in nano-AIU, and refuses a limit above 20 AIU in the field', async () => {
+    it('sends the notes and an AIU limit in nano-AIU, and refuses a limit above 100 AIU in the field', async () => {
       const page = await open('/voyages/PROJ-118/models');
       click(buttonNamed(agentSection(page), 'Ask an agent to diagnose'));
       await flush(page);
       type(dialog().querySelector('textarea'), '  Is it the token?  ');
-      type(dialog().querySelector('input'), '25');
+      type(dialog().querySelector('input'), '101');
       await flush(page);
       click(buttonNamed(dialog(), /^Diagnose/));
       await flush(page);
       expect(commands(page)).toHaveLength(0);
-      expect(text(dialog())).toContain('The limit may be at most 20 AIU.');
+      expect(text(dialog())).toContain('The limit may be at most 100 AIU.');
       type(dialog().querySelector('input'), '2.5');
       await flush(page);
       click(buttonNamed(dialog(), 'Diagnose · up to 2.5 AIU'));

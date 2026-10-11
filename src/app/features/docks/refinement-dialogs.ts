@@ -7,7 +7,7 @@ import { fieldMessage, type ApiResult } from '@core/api/api-error';
 import type { Refinement, RefinementSummary } from '@core/api/types';
 import { agentRunErrorView } from '@core/commands/command-error';
 import { checkAiuLimit } from '@domain/aiu';
-import { AGENT_RUN_MAX_NANO_AIU } from '@domain/refinement';
+import { REFINEMENT_MAX_NANO_AIU } from '@domain/refinement';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import { DialogService, DialogShell } from '@ui/dialog/dialog';
@@ -22,7 +22,7 @@ export const REFINEMENT_TEXT_MAX = 2000;
 function capValidator(
   control: AbstractControl<string>
 ): ValidationErrors | null {
-  const checked = checkAiuLimit(control.value, AGENT_RUN_MAX_NANO_AIU);
+  const checked = checkAiuLimit(control.value, REFINEMENT_MAX_NANO_AIU);
   return 'error' in checked ? { [checked.error]: true } : null;
 }
 
@@ -136,7 +136,7 @@ export class RefineDialog {
   });
   /** The limit typed, in nano-AIU; null when there is none or it is not an amount. */
   protected readonly cap = computed(() => {
-    const checked = checkAiuLimit(this.capValue(), AGENT_RUN_MAX_NANO_AIU);
+    const checked = checkAiuLimit(this.capValue(), REFINEMENT_MAX_NANO_AIU);
     return 'cap' in checked ? checked.cap : null;
   });
   protected readonly capText = computed(() => formatCap(this.cap() ?? 0, 9));
@@ -165,7 +165,7 @@ export class RefineDialog {
     if (this.form.invalid || this.busy()) return;
     const checked = checkAiuLimit(
       this.form.controls.cap.value,
-      AGENT_RUN_MAX_NANO_AIU
+      REFINEMENT_MAX_NANO_AIU
     );
     const cap = 'cap' in checked ? checked.cap : null;
     this.busy.set(true);

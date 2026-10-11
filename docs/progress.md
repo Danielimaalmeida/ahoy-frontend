@@ -8,7 +8,7 @@ of 2026-10-10). Committed and pushed with the user's approval, from a cloud sess
 An agent that diagnoses what the fixed rules of the halt diagnosis cannot, on a person's request. It is "point 3" of the
 `ahoy-hosted` design (§5, "Agent diagnosis", approved by the user as a D18 exception); its backend is in PR #30
 (`ahoy-hosted`, head `48b14b4`). The backend runs it as a `kind = 'diagnosis'` row of `refinements`, read-only, capped
-at 10 AIU by default and 20 AIU at most, charged to no voyage.
+at 10 AIU by default and 100 AIU at most (20 AIU at most for a refinement), charged to no voyage.
 
 - **Contract:** vendored `listAgentDiagnoses`, `requestAgentDiagnosis` and `cancelAgentDiagnosis`
   (`/stories/{key}/agent-diagnoses[/cancel]`) with `AgentDiagnosisList` and `AgentDiagnosisRequest`; an agent diagnosis
@@ -18,7 +18,7 @@ at 10 AIU by default and 20 AIU at most, charged to no voyage.
 - **Mock backend:** `RefinementDesk` is now generic by kind: a diagnosis queues, runs for two ticks, then succeeds with
   Markdown that follows the halt reason; `409 invalid_state` if the voyage is not halted or has one in progress, `404`
   for an unknown voyage.
-- **Domain and shared code:** `AGENT_RUN_MAX_NANO_AIU`, `isActiveRefinement`, `refinementLabel`,
+- **Domain and shared code:** `REFINEMENT_MAX_NANO_AIU` (20 AIU), `AGENT_DIAGNOSIS_MAX_NANO_AIU` (100 AIU), `isActiveRefinement`, `refinementLabel`,
   `refinementStateLabel` moved to `domain/refinement.ts` (a feature may not import another), `checkAiuLimit` to
   `domain/aiu.ts`, and `agentRunErrorView` to `core/commands/command-error.ts`, which the Backlog's dialogs now use too.
 - **Screen:** the Anchored banner of a halted voyage has an "Agent diagnosis" section. `AgentDiagnoses` (provided by the
@@ -26,11 +26,11 @@ at 10 AIU by default and 20 AIU at most, charged to no voyage.
   newest is queued or running, and drops a read that a request or cancel answered after. The section shows the state
   ("Waiting for a run slot", "The agent is diagnosing it", "Diagnosed", "Cancelled", "Failed" and the exit reason), who
   asked and when, and the agent's Markdown through `ah-markdown`. "Ask an agent to diagnose" opens a dialog with
-  optional notes and an AIU limit (at most 20 AIU, refused in the field), the spend warning and `confirmSpend: true`;
+  optional notes and an AIU limit (at most 100 AIU, refused in the field), the spend warning and `confirmSpend: true`;
   "Cancel diagnosis" needs a reason.
 - **Tests:** `agent-diagnoses.spec.ts` (10, written first), `command-error.spec.ts`, the contract, guard, client,
   conformance and mock specs, and five shell specs on the mock backend (offer, ask and follow to Markdown, notes and
-  limit in nano-AIU with the 20 AIU refusal, cancel, `409`). Build, typecheck (`check-boundaries: ok`), lint,
+  limit in nano-AIU with the 100 AIU refusal, cancel, `409`). Build, typecheck (`check-boundaries: ok`), lint,
   **137 files / 2,485 tests passed** and `npm run format` on Node 24.21.0 (same sandbox install as below).
 - **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real agent, a real API or
   TEST. Nothing has seen a real diagnosis.
