@@ -65,7 +65,7 @@ export interface paths {
      *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
      *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
      *     `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-     *     AND "Feature Team" = aaa AND Team in (34115) ORDER BY Rank ASC`.
+     *     AND "Feature Team" = MY_COMPANY AND Team in (34115) ORDER BY Rank ASC`.
      *
      *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
      *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
@@ -79,6 +79,52 @@ export interface paths {
      *     This lookup never starts a delivery or spends AIU.
      */
     readonly get: operations['listJiraBacklog'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/metrics': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Where the harness spends AIU, where stories halt, which errors repeat and how long people keep them waiting.
+     * @description Read-only and 0 AIU (design §5, "Metrics"): aggregated from `runs`, `gate_records`, `review_findings` and
+     *     `events`. Halts are explained by the same rules as `GET /stories/{key}/diagnosis`. The period is
+     *     `[from, to)`; it defaults to the 30 days before now and may span at most 366 days. `owner` keeps the stories
+     *     of one owner, `repo` the stories that touch one child repository, and `model` the runs of one model. Error
+     *     signatures and gate messages are untrusted text. AIU in integer nano-AIU, durations in whole seconds.
+     */
+    readonly get: operations['getMetrics'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/metrics/export': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The rows behind the metrics as CSV or JSON, one table at a time.
+     * @description `runs`: every run in the period with its spend, tokens, outcome and gate verdict. `halts`: every halt with its
+     *     diagnosis and when it was resumed. `gates`: every automated gate verdict. `errors`: the grouped errors. Same
+     *     period and filters as `GET /metrics`. No story text or agent output is exported; messages are untrusted text.
+     */
+    readonly get: operations['exportMetrics'];
     readonly put?: never;
     readonly post?: never;
     readonly delete?: never;
@@ -1400,6 +1446,181 @@ export interface components {
       /** @description Pass as `after` to continue. */
       readonly lastEventId: components['schemas']['EventId'] | null;
     };
+    /** @description The metrics of one period (`GET /metrics`). AIU in integer nano-AIU, durations in whole seconds. */
+    readonly MetricsReport: {
+      /** Format: date-time */
+      readonly from: string;
+      /** Format: date-time */
+      readonly to: string;
+      readonly totals: {
+        readonly nanoAiu: components['schemas']['MetricsCount'];
+        readonly runs: components['schemas']['MetricsCount'];
+        readonly runsSucceeded: components['schemas']['MetricsCount'];
+        readonly inputTokens: components['schemas']['MetricsCount'];
+        readonly outputTokens: components['schemas']['MetricsCount'];
+        readonly storiesFinished: components['schemas']['MetricsCount'];
+        readonly storiesDone: components['schemas']['MetricsCount'];
+        readonly storiesBlocked: components['schemas']['MetricsCount'];
+        readonly medianNanoAiuPerDoneStory: number | null;
+        readonly halts: components['schemas']['MetricsCount'];
+        readonly haltedStories: components['schemas']['MetricsCount'];
+        readonly repeatHaltStories: components['schemas']['MetricsCount'];
+        readonly gateEvaluations: components['schemas']['MetricsCount'];
+        readonly gatePasses: components['schemas']['MetricsCount'];
+        readonly gateErrors: components['schemas']['MetricsCount'];
+      };
+      /** @description AIU per phase for each week (Monday 00:00 UTC) that has runs. */
+      readonly weeks: readonly {
+        /** Format: date */
+        readonly weekStart: string;
+        readonly byPhase: {
+          readonly [key: string]: components['schemas']['MetricsCount'];
+        };
+      }[];
+      readonly phases: readonly {
+        readonly phase: components['schemas']['Phase'];
+        readonly runs: components['schemas']['MetricsCount'];
+        readonly nanoAiu: components['schemas']['MetricsCount'];
+        readonly medianNanoAiu: components['schemas']['MetricsCount'];
+        readonly p90NanoAiu: components['schemas']['MetricsCount'];
+        /** @description The median per-run AIU cap of the phase's runs. */
+        readonly runCapNanoAiu: components['schemas']['MetricsCount'];
+        /** @description Runs that ended `budget_exceeded`. */
+        readonly runsAtCap: components['schemas']['MetricsCount'];
+        readonly medianDurationSeconds: number | null;
+        readonly inputTokens: components['schemas']['MetricsCount'];
+        readonly outputTokens: components['schemas']['MetricsCount'];
+      }[];
+      readonly agents: readonly {
+        readonly agent: string;
+        readonly model: string | null;
+        readonly runs: components['schemas']['MetricsCount'];
+        readonly nanoAiu: components['schemas']['MetricsCount'];
+        readonly medianNanoAiu: components['schemas']['MetricsCount'];
+        readonly notSucceeded: components['schemas']['MetricsCount'];
+      }[];
+      readonly runOutcomes: readonly {
+        readonly status: string;
+        readonly runs: components['schemas']['MetricsCount'];
+      }[];
+      readonly topStories: readonly {
+        readonly key: components['schemas']['StoryKey'];
+        readonly phase: components['schemas']['Phase'];
+        readonly status: components['schemas']['StoryStatus'];
+        readonly spentNanoAiu: components['schemas']['MetricsCount'];
+        readonly budgetNanoAiu: components['schemas']['MetricsCount'];
+        readonly periodNanoAiu: components['schemas']['MetricsCount'];
+        readonly runs: components['schemas']['MetricsCount'];
+        readonly halts: components['schemas']['MetricsCount'];
+        readonly topPhase: components['schemas']['Phase'];
+        readonly topPhaseNanoAiu: components['schemas']['MetricsCount'];
+      }[];
+      readonly halts: readonly components['schemas']['MetricsHalt'][];
+      readonly haltReasons: readonly {
+        readonly reason: string;
+        readonly kind: components['schemas']['DiagnosisKind'];
+        /** @enum {string} */
+        readonly actor: 'story_owner' | 'operator' | 'agent_maintainer';
+        readonly action: string;
+        readonly halts: components['schemas']['MetricsCount'];
+        readonly stories: components['schemas']['MetricsCount'];
+        readonly resumed: components['schemas']['MetricsCount'];
+        /** @description Resumed halts not followed by another halt with the same diagnosis. */
+        readonly fixedByFirstResume: components['schemas']['MetricsCount'];
+        readonly medianHaltedSeconds: number | null;
+      }[];
+      /** @description Stories that halted with the same diagnosis twice or more in a row. */
+      readonly repeatHalts: readonly {
+        readonly storyKey: components['schemas']['StoryKey'];
+        readonly kind: components['schemas']['DiagnosisKind'];
+        readonly halts: components['schemas']['MetricsCount'];
+        readonly resumes: components['schemas']['MetricsCount'];
+        readonly nanoAiuBetween: components['schemas']['MetricsCount'];
+        readonly status: string;
+      }[];
+      readonly errors: readonly components['schemas']['MetricsError'][];
+      readonly gates: readonly {
+        readonly gate: string;
+        readonly phase: components['schemas']['Phase'];
+        readonly runs: components['schemas']['MetricsCount'];
+        readonly pass: components['schemas']['MetricsCount'];
+        /** @description `fail` and `branch` (sent to rework). */
+        readonly fail: components['schemas']['MetricsCount'];
+        readonly rejectOrHalt: components['schemas']['MetricsCount'];
+        /** @description The gate could not judge; never a verdict. */
+        readonly error: components['schemas']['MetricsCount'];
+        readonly topFailure: null | {
+          readonly signature: string;
+          readonly times: components['schemas']['MetricsCount'];
+        };
+      }[];
+      readonly findings: readonly {
+        readonly severity: string;
+        readonly count: components['schemas']['MetricsCount'];
+      }[];
+      /** @description For the stories that ended in the period, how many went to rework how many times. */
+      readonly reworkRounds: readonly {
+        readonly rounds: components['schemas']['MetricsCount'];
+        readonly stories: components['schemas']['MetricsCount'];
+      }[];
+      readonly waits: readonly {
+        /** @enum {string} */
+        readonly kind: 'answers' | 'decision' | 'resume';
+        readonly gate: string | null;
+        readonly times: components['schemas']['MetricsCount'];
+        readonly outcomes: {
+          readonly [key: string]: components['schemas']['MetricsCount'];
+        };
+        readonly medianSeconds: number | null;
+        readonly p90Seconds: number | null;
+        readonly waitingNow: components['schemas']['MetricsCount'];
+        readonly longestNowSeconds: number | null;
+      }[];
+      readonly insights: readonly {
+        /** @enum {string} */
+        readonly rule:
+          | 'phase_run_cap'
+          | 'resume_loop'
+          | 'gate_first_fail'
+          | 'gate_tooling_errors';
+        readonly title: string;
+        readonly evidence: string;
+        readonly action: string;
+      }[];
+    };
+    readonly MetricsCount: number;
+    readonly MetricsHalt: {
+      readonly storyKey: components['schemas']['StoryKey'];
+      /** Format: date-time */
+      readonly at: string;
+      readonly reason: string;
+      readonly phase: string | null;
+      readonly runId: string | null;
+      readonly kind: components['schemas']['DiagnosisKind'];
+      /** @enum {string} */
+      readonly actor: 'story_owner' | 'operator' | 'agent_maintainer';
+      readonly action: string;
+      /** Format: date-time */
+      readonly resumedAt: string | null;
+    };
+    readonly MetricsError: {
+      /** @enum {string} */
+      readonly source: 'halt' | 'gate_fail' | 'gate_error' | 'run';
+      /** @description The halt reason, the gate's name or the run's status. */
+      readonly code: string;
+      /** @description The message with ids, numbers and hashes blanked, so that the same error groups (untrusted text). */
+      readonly signature: string;
+      readonly phase: string | null;
+      readonly agent: string | null;
+      readonly times: components['schemas']['MetricsCount'];
+      readonly stories: components['schemas']['MetricsCount'];
+      /** Format: date-time */
+      readonly firstSeen: string;
+      /** Format: date-time */
+      readonly lastSeen: string;
+      readonly exampleStory: components['schemas']['StoryKey'];
+      readonly exampleRunId: string | null;
+    };
   };
   responses: {
     /** @description An error, as RFC 9457 problem details. */
@@ -1413,6 +1634,13 @@ export interface components {
     };
   };
   parameters: {
+    /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
+    readonly MetricsFrom: string;
+    /** @description End of the period (exclusive). Defaults to now. */
+    readonly MetricsTo: string;
+    readonly MetricsOwner: string;
+    readonly MetricsRepo: string;
+    readonly MetricsModel: string;
     readonly StoryKey: components['schemas']['StoryKey'];
     readonly WorkPackageId: components['schemas']['WorkPackageId'];
     readonly Limit: number;
@@ -1491,6 +1719,70 @@ export interface operations {
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly getMetrics: {
+    readonly parameters: {
+      readonly query?: {
+        /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
+        readonly from?: components['parameters']['MetricsFrom'];
+        /** @description End of the period (exclusive). Defaults to now. */
+        readonly to?: components['parameters']['MetricsTo'];
+        readonly owner?: components['parameters']['MetricsOwner'];
+        readonly repo?: components['parameters']['MetricsRepo'];
+        readonly model?: components['parameters']['MetricsModel'];
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The metrics of the period. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MetricsReport'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+    };
+  };
+  readonly exportMetrics: {
+    readonly parameters: {
+      readonly query: {
+        readonly table: 'runs' | 'halts' | 'gates' | 'errors';
+        readonly format?: 'csv' | 'json';
+        /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
+        readonly from?: components['parameters']['MetricsFrom'];
+        /** @description End of the period (exclusive). Defaults to now. */
+        readonly to?: components['parameters']['MetricsTo'];
+        readonly owner?: components['parameters']['MetricsOwner'];
+        readonly repo?: components['parameters']['MetricsRepo'];
+        readonly model?: components['parameters']['MetricsModel'];
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The table, as a file to save. */
+      readonly 200: {
+        headers: {
+          readonly 'Content-Disposition'?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'text/csv': string;
+          readonly 'application/json': readonly Record<string, never>[];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
     };
   };
   readonly listStories: {

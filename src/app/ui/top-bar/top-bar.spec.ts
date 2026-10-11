@@ -80,7 +80,7 @@ describe('ah-top-bar', () => {
     ]);
   });
 
-  it('links the logo home and the destinations to Needs you, Voyages and Backlog', async () => {
+  it('links the logo home and the destinations to Needs you, Voyages, Backlog and Metrics', async () => {
     const { root, nav } = await render();
     expect(root.querySelector('a.ah-logo')!.getAttribute('href')).toBe('/');
     expect(root.querySelector('nav')!.getAttribute('aria-label')).toBe('Main');
@@ -88,6 +88,7 @@ describe('ah-top-bar', () => {
       '/',
       '/voyages',
       '/docks',
+      '/metrics',
     ]);
   });
 
@@ -98,6 +99,7 @@ describe('ah-top-bar', () => {
     ['/voyages/new', 'Voyages'],
     ['/voyages/PROJ-123/plan', 'Voyages'],
     ['/docks', 'Backlog'],
+    ['/metrics/halts', 'Metrics'],
   ] as const)
     it(`marks only ${destination} as the current destination at ${url}`, async () => {
       const { current } = await render(url);
@@ -131,7 +133,7 @@ describe('ah-top-bar', () => {
     const { nav } = await render();
     expect(
       nav().map((a) => a.querySelector('.ah-soon')?.textContent ?? null)
-    ).toEqual([null, null, null]);
+    ).toEqual([null, null, null, null]);
   });
 
   it('has Start voyage as its only primary button, a link to the form with the sail icon', async () => {

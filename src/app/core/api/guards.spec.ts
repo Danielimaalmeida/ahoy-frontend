@@ -3,6 +3,7 @@ import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getHealth from '@testing/fixtures/getHealth.json';
+import getMetrics from '@testing/fixtures/getMetrics.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
 import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
@@ -40,6 +41,7 @@ import {
   isGateRecord,
   isGateRecordList,
   isHealth,
+  isMetricsReport,
   isModelPlan,
   isModelCatalog,
   isProblem,
@@ -99,6 +101,7 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['listAgentDiagnoses', isAgentDiagnosisList, listAgentDiagnoses],
     ['requestAgentDiagnosis', isRefinement, requestAgentDiagnosis],
     ['cancelAgentDiagnosis', isRefinement, cancelAgentDiagnosis],
+    ['getMetrics', isMetricsReport, getMetrics],
   ];
 
   it.each(cases)('%s', (_name, accepts, fixture) => {
@@ -652,6 +655,74 @@ describe('isAgentDiagnosisList', () => {
     ).toBe(false);
     expect(
       isAgentDiagnosisList(withField(listAgentDiagnoses, 'key', 'proj-118'))
+    ).toBe(false);
+  });
+});
+
+describe('isMetricsReport', () => {
+  const [halt] = getMetrics.halts;
+  const [error] = getMetrics.errors;
+
+  it('accepts an empty period: no runs, no halts, no medians', () => {
+    expect(
+      isMetricsReport({
+        ...getMetrics,
+        totals: { ...getMetrics.totals, medianNanoAiuPerDoneStory: null },
+        weeks: [],
+        phases: [],
+        agents: [],
+        runOutcomes: [],
+        topStories: [],
+        halts: [],
+        haltReasons: [],
+        repeatHalts: [],
+        errors: [],
+        gates: [],
+        findings: [],
+        reworkRounds: [],
+        waits: [],
+        insights: [],
+      })
+    ).toBe(true);
+  });
+
+  it('refuses a fractional AIU amount and names it', () => {
+    expect(
+      isMetricsReport.explain(
+        withField(getMetrics, 'totals', { ...getMetrics.totals, nanoAiu: 12.5 })
+      )
+    ).toContain('totals.nanoAiu');
+  });
+
+  it('refuses an error kind, a fixer or an insight rule the contract does not have', () => {
+    expect(
+      isMetricsReport(
+        withField(getMetrics, 'errors', [
+          withField(error!, 'source', 'cosmic_ray'),
+        ])
+      )
+    ).toBe(false);
+    expect(
+      isMetricsReport(
+        withField(getMetrics, 'halts', [withField(halt!, 'actor', 'everyone')])
+      )
+    ).toBe(false);
+    expect(
+      isMetricsReport(
+        withField(getMetrics, 'insights', [
+          { rule: 'gut_feeling', title: 't', evidence: 'e', action: 'a' },
+        ])
+      )
+    ).toBe(false);
+  });
+
+  it('refuses a week whose phase total is not a count', () => {
+    expect(
+      isMetricsReport(
+        withField(getMetrics, 'weeks', [
+          { weekStart: '2026-09-14', byPhase: { planning: -1 } },
+        ])
+      )
     ).toBe(false);
   });
 });

@@ -44,6 +44,7 @@ tags:
   - name: events
   - name: jira
   - name: refinements
+  - name: metrics
 paths:
   /health:
     get:
@@ -118,6 +119,68 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
+  /metrics:
+    get:
+      operationId: getMetrics
+      tags: [metrics]
+      summary: Where the harness spends AIU, where stories halt, which errors repeat and how long people keep them waiting.
+      description: |
+        Read-only and 0 AIU (design §5, "Metrics"): aggregated from `runs`, `gate_records`, `review_findings` and
+        `events`. Halts are explained by the same rules as `GET /stories/{key}/diagnosis`. The period is
+        `[from, to)`; it defaults to the 30 days before now and may span at most 366 days. `owner` keeps the stories
+        of one owner, `repo` the stories that touch one child repository, and `model` the runs of one model. Error
+        signatures and gate messages are untrusted text. AIU in integer nano-AIU, durations in whole seconds.
+      parameters:
+        - $ref: '#/components/parameters/MetricsFrom'
+        - $ref: '#/components/parameters/MetricsTo'
+        - $ref: '#/components/parameters/MetricsOwner'
+        - $ref: '#/components/parameters/MetricsRepo'
+        - $ref: '#/components/parameters/MetricsModel'
+      responses:
+        '200':
+          description: The metrics of the period.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MetricsReport' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+  /metrics/export:
+    get:
+      operationId: exportMetrics
+      tags: [metrics]
+      summary: The rows behind the metrics as CSV or JSON, one table at a time.
+      description: |
+        `runs`: every run in the period with its spend, tokens, outcome and gate verdict. `halts`: every halt with its
+        diagnosis and when it was resumed. `gates`: every automated gate verdict. `errors`: the grouped errors. Same
+        period and filters as `GET /metrics`. No story text or agent output is exported; messages are untrusted text.
+      parameters:
+        - name: table
+          in: query
+          required: true
+          schema: { type: string, enum: [runs, halts, gates, errors] }
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, json], default: csv }
+        - $ref: '#/components/parameters/MetricsFrom'
+        - $ref: '#/components/parameters/MetricsTo'
+        - $ref: '#/components/parameters/MetricsOwner'
+        - $ref: '#/components/parameters/MetricsRepo'
+        - $ref: '#/components/parameters/MetricsModel'
+      responses:
+        '200':
+          description: The table, as a file to save.
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+          content:
+            text/csv:
+              schema: { type: string }
+            application/json:
+              schema:
+                type: array
+                items: { type: object }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
   /stories:
     get:
       operationId: listStories
@@ -915,6 +978,28 @@ components:
       name: X-Ahoy-Actor
       description: Local POC only; honoured when the server runs with AHOY_AUTH=dev. The value is the acting user's ID.
   parameters:
+    MetricsFrom:
+      name: from
+      in: query
+      description: Start of the period (inclusive). Defaults to 30 days before `to`.
+      schema: { type: string, format: date-time }
+    MetricsTo:
+      name: to
+      in: query
+      description: End of the period (exclusive). Defaults to now.
+      schema: { type: string, format: date-time }
+    MetricsOwner:
+      name: owner
+      in: query
+      schema: { type: string, minLength: 1, maxLength: 320 }
+    MetricsRepo:
+      name: repo
+      in: query
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    MetricsModel:
+      name: model
+      in: query
+      schema: { type: string, minLength: 1, maxLength: 200 }
     StoryKey:
       name: key
       in: path
@@ -2086,3 +2171,365 @@ components:
         lastEventId:
           oneOf: [{ $ref: '#/components/schemas/EventId' }, { type: 'null' }]
           description: Pass as `after` to continue.
+    MetricsReport:
+      type: object
+      description: The metrics of one period (`GET /metrics`). AIU in integer nano-AIU, durations in whole seconds.
+      required:
+        [
+          from,
+          to,
+          totals,
+          weeks,
+          phases,
+          agents,
+          runOutcomes,
+          topStories,
+          halts,
+          haltReasons,
+          repeatHalts,
+          errors,
+          gates,
+          findings,
+          reworkRounds,
+          waits,
+          insights,
+        ]
+      additionalProperties: false
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        totals:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              nanoAiu,
+              runs,
+              runsSucceeded,
+              inputTokens,
+              outputTokens,
+              storiesFinished,
+              storiesDone,
+              storiesBlocked,
+              medianNanoAiuPerDoneStory,
+              halts,
+              haltedStories,
+              repeatHaltStories,
+              gateEvaluations,
+              gatePasses,
+              gateErrors,
+            ]
+          properties:
+            nanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+            runs: { $ref: '#/components/schemas/MetricsCount' }
+            runsSucceeded: { $ref: '#/components/schemas/MetricsCount' }
+            inputTokens: { $ref: '#/components/schemas/MetricsCount' }
+            outputTokens: { $ref: '#/components/schemas/MetricsCount' }
+            storiesFinished: { $ref: '#/components/schemas/MetricsCount' }
+            storiesDone: { $ref: '#/components/schemas/MetricsCount' }
+            storiesBlocked: { $ref: '#/components/schemas/MetricsCount' }
+            medianNanoAiuPerDoneStory: { type: [integer, 'null'], minimum: 0 }
+            halts: { $ref: '#/components/schemas/MetricsCount' }
+            haltedStories: { $ref: '#/components/schemas/MetricsCount' }
+            repeatHaltStories: { $ref: '#/components/schemas/MetricsCount' }
+            gateEvaluations: { $ref: '#/components/schemas/MetricsCount' }
+            gatePasses: { $ref: '#/components/schemas/MetricsCount' }
+            gateErrors: { $ref: '#/components/schemas/MetricsCount' }
+        weeks:
+          type: array
+          description: AIU per phase for each week (Monday 00:00 UTC) that has runs.
+          items:
+            type: object
+            additionalProperties: false
+            required: [weekStart, byPhase]
+            properties:
+              weekStart: { type: string, format: date }
+              byPhase:
+                type: object
+                additionalProperties:
+                  { $ref: '#/components/schemas/MetricsCount' }
+        phases:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              [
+                phase,
+                runs,
+                nanoAiu,
+                medianNanoAiu,
+                p90NanoAiu,
+                runCapNanoAiu,
+                runsAtCap,
+                medianDurationSeconds,
+                inputTokens,
+                outputTokens,
+              ]
+            properties:
+              phase: { $ref: '#/components/schemas/Phase' }
+              runs: { $ref: '#/components/schemas/MetricsCount' }
+              nanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              medianNanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              p90NanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              runCapNanoAiu:
+                $ref: '#/components/schemas/MetricsCount'
+                description: The median per-run AIU cap of the phase's runs.
+              runsAtCap:
+                $ref: '#/components/schemas/MetricsCount'
+                description: Runs that ended `budget_exceeded`.
+              medianDurationSeconds: { type: [integer, 'null'], minimum: 0 }
+              inputTokens: { $ref: '#/components/schemas/MetricsCount' }
+              outputTokens: { $ref: '#/components/schemas/MetricsCount' }
+        agents:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [agent, model, runs, nanoAiu, medianNanoAiu, notSucceeded]
+            properties:
+              agent: { type: string }
+              model: { type: [string, 'null'] }
+              runs: { $ref: '#/components/schemas/MetricsCount' }
+              nanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              medianNanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              notSucceeded: { $ref: '#/components/schemas/MetricsCount' }
+        runOutcomes:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [status, runs]
+            properties:
+              status: { type: string }
+              runs: { $ref: '#/components/schemas/MetricsCount' }
+        topStories:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              [
+                key,
+                phase,
+                status,
+                spentNanoAiu,
+                budgetNanoAiu,
+                periodNanoAiu,
+                runs,
+                halts,
+                topPhase,
+                topPhaseNanoAiu,
+              ]
+            properties:
+              key: { $ref: '#/components/schemas/StoryKey' }
+              phase: { $ref: '#/components/schemas/Phase' }
+              status: { $ref: '#/components/schemas/StoryStatus' }
+              spentNanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              budgetNanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              periodNanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+              runs: { $ref: '#/components/schemas/MetricsCount' }
+              halts: { $ref: '#/components/schemas/MetricsCount' }
+              topPhase: { $ref: '#/components/schemas/Phase' }
+              topPhaseNanoAiu: { $ref: '#/components/schemas/MetricsCount' }
+        halts:
+          type: array
+          items: { $ref: '#/components/schemas/MetricsHalt' }
+        haltReasons:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              [
+                reason,
+                kind,
+                actor,
+                action,
+                halts,
+                stories,
+                resumed,
+                fixedByFirstResume,
+                medianHaltedSeconds,
+              ]
+            properties:
+              reason: { type: string }
+              kind: { $ref: '#/components/schemas/DiagnosisKind' }
+              actor:
+                {
+                  type: string,
+                  enum: [story_owner, operator, agent_maintainer],
+                }
+              action: { type: string }
+              halts: { $ref: '#/components/schemas/MetricsCount' }
+              stories: { $ref: '#/components/schemas/MetricsCount' }
+              resumed: { $ref: '#/components/schemas/MetricsCount' }
+              fixedByFirstResume:
+                $ref: '#/components/schemas/MetricsCount'
+                description: Resumed halts not followed by another halt with the same diagnosis.
+              medianHaltedSeconds: { type: [integer, 'null'], minimum: 0 }
+        repeatHalts:
+          type: array
+          description: Stories that halted with the same diagnosis twice or more in a row.
+          items:
+            type: object
+            additionalProperties: false
+            required: [storyKey, kind, halts, resumes, nanoAiuBetween, status]
+            properties:
+              storyKey: { $ref: '#/components/schemas/StoryKey' }
+              kind: { $ref: '#/components/schemas/DiagnosisKind' }
+              halts: { $ref: '#/components/schemas/MetricsCount' }
+              resumes: { $ref: '#/components/schemas/MetricsCount' }
+              nanoAiuBetween: { $ref: '#/components/schemas/MetricsCount' }
+              status: { type: string }
+        errors:
+          type: array
+          items: { $ref: '#/components/schemas/MetricsError' }
+        gates:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              [gate, phase, runs, pass, fail, rejectOrHalt, error, topFailure]
+            properties:
+              gate: { type: string }
+              phase: { $ref: '#/components/schemas/Phase' }
+              runs: { $ref: '#/components/schemas/MetricsCount' }
+              pass: { $ref: '#/components/schemas/MetricsCount' }
+              fail:
+                $ref: '#/components/schemas/MetricsCount'
+                description: '`fail` and `branch` (sent to rework).'
+              rejectOrHalt: { $ref: '#/components/schemas/MetricsCount' }
+              error:
+                $ref: '#/components/schemas/MetricsCount'
+                description: The gate could not judge; never a verdict.
+              topFailure:
+                oneOf:
+                  - type: 'null'
+                  - type: object
+                    additionalProperties: false
+                    required: [signature, times]
+                    properties:
+                      signature: { type: string }
+                      times: { $ref: '#/components/schemas/MetricsCount' }
+        findings:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [severity, count]
+            properties:
+              severity: { type: string }
+              count: { $ref: '#/components/schemas/MetricsCount' }
+        reworkRounds:
+          type: array
+          description: For the stories that ended in the period, how many went to rework how many times.
+          items:
+            type: object
+            additionalProperties: false
+            required: [rounds, stories]
+            properties:
+              rounds: { $ref: '#/components/schemas/MetricsCount' }
+              stories: { $ref: '#/components/schemas/MetricsCount' }
+        waits:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              [
+                kind,
+                gate,
+                times,
+                outcomes,
+                medianSeconds,
+                p90Seconds,
+                waitingNow,
+                longestNowSeconds,
+              ]
+            properties:
+              kind: { type: string, enum: [answers, decision, resume] }
+              gate: { type: [string, 'null'] }
+              times: { $ref: '#/components/schemas/MetricsCount' }
+              outcomes:
+                type: object
+                additionalProperties:
+                  { $ref: '#/components/schemas/MetricsCount' }
+              medianSeconds: { type: [integer, 'null'], minimum: 0 }
+              p90Seconds: { type: [integer, 'null'], minimum: 0 }
+              waitingNow: { $ref: '#/components/schemas/MetricsCount' }
+              longestNowSeconds: { type: [integer, 'null'], minimum: 0 }
+        insights:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [rule, title, evidence, action]
+            properties:
+              rule:
+                {
+                  type: string,
+                  enum:
+                    [
+                      phase_run_cap,
+                      resume_loop,
+                      gate_first_fail,
+                      gate_tooling_errors,
+                    ],
+                }
+              title: { type: string }
+              evidence: { type: string }
+              action: { type: string }
+    MetricsCount:
+      type: integer
+      minimum: 0
+    MetricsHalt:
+      type: object
+      additionalProperties: false
+      required:
+        [storyKey, at, reason, phase, runId, kind, actor, action, resumedAt]
+      properties:
+        storyKey: { $ref: '#/components/schemas/StoryKey' }
+        at: { type: string, format: date-time }
+        reason: { type: string }
+        phase: { type: [string, 'null'] }
+        runId: { type: [string, 'null'] }
+        kind: { $ref: '#/components/schemas/DiagnosisKind' }
+        actor: { type: string, enum: [story_owner, operator, agent_maintainer] }
+        action: { type: string }
+        resumedAt: { type: [string, 'null'], format: date-time }
+    MetricsError:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          source,
+          code,
+          signature,
+          phase,
+          agent,
+          times,
+          stories,
+          firstSeen,
+          lastSeen,
+          exampleStory,
+          exampleRunId,
+        ]
+      properties:
+        source: { type: string, enum: [halt, gate_fail, gate_error, run] }
+        code:
+          type: string
+          description: "The halt reason, the gate's name or the run's status."
+        signature:
+          type: string
+          description: The message with ids, numbers and hashes blanked, so that the same error groups (untrusted text).
+        phase: { type: [string, 'null'] }
+        agent: { type: [string, 'null'] }
+        times: { $ref: '#/components/schemas/MetricsCount' }
+        stories: { $ref: '#/components/schemas/MetricsCount' }
+        firstSeen: { type: string, format: date-time }
+        lastSeen: { type: string, format: date-time }
+        exampleStory: { $ref: '#/components/schemas/StoryKey' }
+        exampleRunId: { type: [string, 'null'] }

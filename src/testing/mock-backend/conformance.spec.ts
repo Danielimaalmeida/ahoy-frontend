@@ -282,6 +282,17 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   post('/stories/PROJ-118/agent-diagnoses/cancel', {
     reason: 'Nothing in progress',
   });
+
+  // The harness metrics and their rows, read-only; and the periods and tables the API refuses.
+  get('/metrics');
+  get(
+    '/metrics?from=2026-09-01T00:00:00Z&to=2026-10-01T00:00:00Z&model=sonnet'
+  );
+  get('/metrics?from=2026-10-02T00:00:00Z&to=2026-10-01T00:00:00Z');
+  for (const table of ['runs', 'halts', 'gates', 'errors'])
+    get(`/metrics/export?table=${table}`);
+  get('/metrics/export?table=halts&format=json');
+  get('/metrics/export?table=stories');
 }
 
 describe('the mock against openapi/ahoy-v1.yaml', () => {
@@ -322,6 +333,8 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'listAgentDiagnoses',
       'requestAgentDiagnosis',
       'cancelAgentDiagnosis',
+      'getMetrics',
+      'exportMetrics',
     ])
       expect(used.has(op), op).toBe(true);
     const statuses = new Set(exchanges.map((e) => e.response.status));
@@ -427,6 +440,33 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
         );
     }
     expect(problems).toEqual([]);
+  });
+
+  it('exports each metrics table as a CSV with a header line, named in Content-Disposition', () => {
+    const csv = exchanges.filter(
+      (e) =>
+        operationOf(e.request)?.operationId === 'exportMetrics' &&
+        e.response.status === 200 &&
+        e.response.kind === 'text'
+    );
+    expect(csv.map((e) => e.request.query.get('table'))).toEqual([
+      'runs',
+      'halts',
+      'gates',
+      'errors',
+    ]);
+    for (const { request, response } of csv) {
+      const table = request.query.get('table') ?? '';
+      expect(response.headers['Content-Type']).toBe('text/csv; charset=utf-8');
+      expect(response.headers['Content-Disposition']).toMatch(
+        new RegExp(
+          `^attachment; filename="ahoy-${table}-\\d{4}-\\d{2}-\\d{2}\\.csv"$`
+        )
+      );
+      const text = response.kind === 'text' ? response.body : '';
+      expect(text.endsWith('\r\n')).toBe(true);
+      expect(text.split('\r\n').length).toBeGreaterThan(2);
+    }
   });
 
   it('writes only events the Event schema accepts, and run.progress payloads RunProgressPayload accepts', () => {

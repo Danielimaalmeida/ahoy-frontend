@@ -27,6 +27,7 @@ import {
   isGateRecordList,
   isHealth,
   isJiraBacklog,
+  isMetricsReport,
   isModelPlan,
   isModelCatalog,
   isProblem,
@@ -57,6 +58,11 @@ import type {
   ListEventsQuery,
   ListStoriesQuery,
   JiraBacklog,
+  MetricsExport,
+  MetricsFormat,
+  MetricsQuery,
+  MetricsReport,
+  MetricsTable,
   ModelPlan,
   ModelCatalog,
   Question,
@@ -95,6 +101,16 @@ function errorBody(raw: unknown): unknown {
   } catch {
     return raw;
   }
+}
+
+/** The query parameters of `getMetrics` and `exportMetrics`, only those that are set. */
+function metricsParams(query: MetricsQuery): HttpParams {
+  let params = new HttpParams();
+  for (const name of ['from', 'to', 'owner', 'repo', 'model'] as const) {
+    const value = query[name];
+    if (value !== undefined) params = params.set(name, value);
+  }
+  return params;
 }
 
 /** Turns whatever a request threw into an `ApiError`. */
@@ -146,6 +162,48 @@ export class ApiClient {
   /** All Stories, Tasks and Bugs from the server's configured Jira backlog query, in Jira rank order. */
   listJiraBacklog(): Promise<ApiResult<JiraBacklog>> {
     return this.get('listJiraBacklog', '/jira/backlog', isJiraBacklog);
+  }
+
+  /** Where the harness spends AIU, where voyages halt and which errors repeat, for one period. Spends nothing. */
+  getMetrics(query: MetricsQuery = {}): Promise<ApiResult<MetricsReport>> {
+    return this.get(
+      'getMetrics',
+      '/metrics',
+      isMetricsReport,
+      metricsParams(query)
+    );
+  }
+
+  /** The rows behind the metrics, as a CSV or JSON file to save: its text and the name the API gives it. */
+  async exportMetrics(
+    table: MetricsTable,
+    format: MetricsFormat,
+    query: MetricsQuery = {}
+  ): Promise<ApiResult<MetricsExport>> {
+    const params = metricsParams(query)
+      .set('table', table)
+      .set('format', format);
+    try {
+      const response = await firstValueFrom(
+        this.http.get(this.url('/metrics/export'), {
+          observe: 'response',
+          responseType: 'text',
+          timeout: REQUEST_TIMEOUT_MS,
+          params,
+        })
+      );
+      const disposition = response.headers.get('Content-Disposition') ?? '';
+      const named = /filename="([^"/\\]+)"/.exec(disposition)?.[1];
+      return ok({
+        text: response.body ?? '',
+        filename: named ?? `ahoy-${table}.${format}`,
+        mediaType:
+          response.headers.get('Content-Type') ??
+          (format === 'json' ? 'application/json' : 'text/csv'),
+      });
+    } catch (thrown: unknown) {
+      return fail(toApiError('exportMetrics', thrown));
+    }
   }
 
   /** One page of stories, most recently updated first. Follow `nextCursor` until it is null. */

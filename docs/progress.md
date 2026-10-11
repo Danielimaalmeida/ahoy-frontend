@@ -1,7 +1,34 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-11 for the agent diagnosis on `claude/tender-johnson-pvbvmu`** (after the code-review fixes of PR #22
-of 2026-10-10). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-11 for the harness metrics on `claude/project-thread-rhd49t`** (after the agent diagnosis on
+`claude/tender-johnson-pvbvmu`). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real
+API was contacted; 0 AIU.
+
+## Harness metrics (2026-10-11)
+
+A read-only Metrics page: where the harness spends AIU, where voyages halt, which errors repeat and what the fixed rules
+suggest changing. The design is the four Metrics boards (approved by the user, copied to `docs/design/wireframes/`); the
+backend is `GET /metrics` and `GET /metrics/export` of `ahoy-hosted` (branch `claude/project-thread-rhd49t`, a D18
+exception the user approved).
+
+- **Contract:** vendored `getMetrics` and `exportMetrics` with `MetricsReport`, `MetricsCount`, `MetricsHalt` and
+  `MetricsError`. One description was fixed in both repos: it was a YAML flow mapping whose commas split it into keys.
+- **API layer:** `ApiClient.getMetrics` and `exportMetrics` (text, file name from `Content-Disposition`, refused when it
+  holds a path), `isMetricsReport`, `recordOf` in the guard kit, a fictional fixture (PROJ-1xx), the contract, guard and
+  client specs.
+- **Mock backend:** `getMetrics` answers the fixture over the asked period (`400` when it is inverted); `exportMetrics`
+  writes the world's runs and gate verdicts and the fixture's halts and errors as CSV (formula cells quoted, as the API
+  does) or JSON. Both are in the conformance walk.
+- **Screen:** `/metrics` (top bar "Metrics") with Overview, Cost, Halts & errors, and Gates & human wait. The shell holds
+  the period (7, 30 or 90 days), the Owner, Repository and Model filters, and the export of one table as CSV or JSON. It
+  reads the period before as well, for the "vs previous" lines. Messages are untrusted text, shown as plain text.
+- **Domain:** `domain/metrics.ts` (durations, percentages without floats, token counts, week labels, the weekly chart's
+  series with the sixth phase onwards folded into "Other", and the words for fixers, waits and error kinds).
+- **Ran on Node 24.21.0:** `api:types` (`schema.d.ts` and the JSON mirror regenerated), build, typecheck
+  (`check-boundaries: ok`), lint, **139 files / 2,528 tests passed** and `npm run format`, on the same sandbox install as
+  before (public registry, `--ignore-scripts`, the auth library stubbed in `node_modules`, nothing of that committed).
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real API or TEST. The pages
+  have met only the in-process mock.
 
 ## Agent diagnosis (2026-10-11)
 
@@ -566,6 +593,9 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+The harness metrics (2026-10-11) are on `claude/project-thread-rhd49t`: 139 files / 2,528 tests pass offline; they have
+met only the in-process mock.
+
 The agent diagnosis (Anchored banner, 2026-10-11) is committed on `claude/tender-johnson-pvbvmu` on top of the rest:
 137 files / 2,485 tests pass offline; it has met only the in-process mock.
 
@@ -675,6 +705,9 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+Review the metrics PR beside its `ahoy-hosted` PR, then check `/metrics` in a browser against a local `ahoy-hosted`
+(`npm run dev -- --simulate`, 0 AIU).
+
 Check the agent diagnosis, Refine, Back to intake and the diagnosis banner against a local `ahoy-hosted` started with
 `npm run dev -- --simulate` (0 AIU; its stub answers a diagnosis), once the `shipwright` profile exists in the content
 repo for anything beyond the stub. Squash the `4d4c8b3` WIP commit and give PR #22 a title and description. Check Refine, Back to intake and the diagnosis
@@ -691,7 +724,7 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
+The latest change adds the read-only Metrics page (139 test files / 2,528 tests pass on Node 24.21.0) (see "Harness metrics"). Before it, a change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
 Node 24.21.0). Before it, a change fixes PR #22's code review (see "Review fixes of PR #22"; 136 test
 files / 2,439 tests pass on Node 24.21.0). Before it, a change shows a halted voyage's diagnosis
 (`getStoryDiagnosis`) in the Anchored banner and in "Needs you". Before it, the Backlog's Refine action (row button or

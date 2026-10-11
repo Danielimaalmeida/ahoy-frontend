@@ -72,6 +72,11 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Harness metrics (2026-10-11, `claude/project-thread-rhd49t`):** `/metrics` shows where the harness spends AIU (by phase,
+  week, agent and model), why voyages halt and which Resumes did not fix them, the errors grouped by message, how each
+  gate judged, how long people took, and the patterns the API's fixed rules found; one table at a time exports as CSV or
+  JSON. Contract, client, guard, fixture, mock and specs included. Offline build, typecheck, lint, 139 files / 2,528
+  tests and formatting passed on Node 24.21.0. Fictional data only; no browser, real API, `--simulate` or TEST check.
 - **PR #8 unit-test workflow fix (2026-10-11, `feature/auto-diagnosis`):** restored the JSON Schema `oneOf`
   keyword in the contract and mock checker, supplied a fake auth service in interceptor tests, and excluded environment
   configurations from test discovery. Offline build, typecheck, lint, formatting and the exact `test:coverage` command

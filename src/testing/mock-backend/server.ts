@@ -58,6 +58,7 @@ import {
 } from './voyage';
 import { World } from './world';
 import listModels from '@testing/fixtures/listModels.json';
+import getMetrics from '@testing/fixtures/getMetrics.json';
 
 const jiraBacklog: JiraBacklog = {
   items: [
@@ -637,6 +638,12 @@ export class MockAhoyServer {
         return this.listStoryEvents(call);
       case 'streamEvents':
         return this.streamEvents(call);
+      case 'getMetrics':
+        return jsonResponse(200, this.metrics(call), {
+          'Cache-Control': 'no-store',
+        });
+      case 'exportMetrics':
+        return this.exportMetrics(call);
       default:
         throw new MockProblem(
           'internal_error',
@@ -1093,6 +1100,87 @@ export class MockAhoyServer {
     return { kind: 'text', status: 200, headers, body: file.text };
   }
 
+  /** The metrics of the period: the design's fictional figures (the fixture), over the period the query names. */
+  private metrics(call: Call): typeof getMetrics {
+    const to =
+      typeof call.query['to'] === 'string'
+        ? call.query['to']
+        : new Date(this.clock.now()).toISOString();
+    const from =
+      typeof call.query['from'] === 'string'
+        ? call.query['from']
+        : new Date(
+            Date.parse(to) - METRICS_DEFAULT_DAYS * DAY_MS
+          ).toISOString();
+    if (Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to)))
+      throw new MockProblem(
+        'validation_failed',
+        'from and to must be date-times'
+      );
+    if (from >= to)
+      throw new MockProblem('validation_failed', 'from must be before to');
+    return { ...getMetrics, from, to };
+  }
+
+  /** One metrics table as a file to save: runs and gate records of this world, halts and errors of the fixture. */
+  private exportMetrics(call: Call): MockResponse {
+    const report = this.metrics(call);
+    const table = String(call.query['table']);
+    const format = call.query['format'] === 'json' ? 'json' : 'csv';
+    const voyages = [...this.world.voyages.values()];
+    const rows: readonly Readonly<Record<string, Cell>>[] =
+      table === 'runs'
+        ? voyages.flatMap((v) =>
+            v.runDtos().map((r) => ({
+              id: r.id,
+              storyKey: r.storyKey,
+              phase: r.phase,
+              agent: r.agent,
+              model: r.model,
+              status: r.status,
+              exitReason: r.exitReason,
+              nanoAiu: r.usage.nanoAiu,
+              budgetNanoAiu: r.budgetNanoAiu,
+              inputTokens: r.usage.inputTokens,
+              outputTokens: r.usage.outputTokens,
+              createdAt: r.createdAt,
+              startedAt: r.startedAt,
+              endedAt: r.endedAt,
+              gate: r.gate?.gate ?? null,
+              gateResult: r.gate?.result ?? null,
+            }))
+          )
+        : table === 'gates'
+          ? voyages.flatMap((v) =>
+              v.gates
+                .filter((g) => g.source === 'gate')
+                .map((g) => ({
+                  storyKey: v.story.key,
+                  gate: g.gate,
+                  phase: g.phase,
+                  outcome: g.outcome,
+                  message: g.message,
+                  runId: g.runId,
+                  at: g.createdAt,
+                }))
+            )
+          : table === 'halts'
+            ? report.halts
+            : report.errors;
+    const date = report.to.slice(0, 10);
+    const headers = {
+      'Content-Type':
+        format === 'json'
+          ? 'application/json; charset=utf-8'
+          : 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="ahoy-${table}-${date}.${format}"`,
+      'Cache-Control': 'no-store',
+    };
+    return format === 'json'
+      ? jsonResponse(200, rows, headers)
+      : { kind: 'text', status: 200, headers, body: toCsv(rows) };
+  }
+
   private listStoryEvents(call: Call): MockResponse {
     const voyage = this.voyage(call);
     const afterParam = call.query['after'];
@@ -1138,6 +1226,29 @@ export class MockAhoyServer {
 
 /** The schema of an undeclared `500`: the contract's `Problem`. */
 const PROBLEM_SCHEMA = { $ref: '#/components/schemas/Problem' };
+
+const DAY_MS = 86_400_000;
+/** The period `GET /metrics` reads when the query names none, as on the real server. */
+const METRICS_DEFAULT_DAYS = 30;
+
+type Cell = string | number | boolean | null;
+
+const csvCell = (value: Cell | undefined): string => {
+  if (value === null || value === undefined) return '';
+  const s = String(value);
+  // As on the real server: a leading =, +, - or @ would run as a formula in a spreadsheet.
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return /[",\n\r]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+};
+
+/** Rows as RFC 4180 CSV with a header line, as `toCsv` in `ahoy-hosted` writes them. */
+function toCsv(rows: readonly Readonly<Record<string, Cell>>[]): string {
+  const header = rows[0] ? Object.keys(rows[0]) : [];
+  const lines = [header.map(csvCell).join(',')];
+  for (const row of rows)
+    lines.push(header.map((c) => csvCell(row[c])).join(','));
+  return `${lines.join('\r\n')}\r\n`;
+}
 
 /** The answer for anything thrown while answering: its problem, or `500 internal_error`. */
 function toProblem(error: unknown): MockResponse {

@@ -77,6 +77,14 @@ let nextMenuId = 0;
           [routerLinkActiveOptions]="prefix"
           >Backlog</a
         >
+        <a
+          class="ah-nav__item"
+          routerLink="/metrics"
+          routerLinkActive
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="prefix"
+          >Metrics</a
+        >
       </nav>
       <input
         class="ah-search"

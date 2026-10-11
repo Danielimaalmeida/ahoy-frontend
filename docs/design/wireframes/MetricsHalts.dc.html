@@ -1,0 +1,1039 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · Metrics halts</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #1b2733;
+          }
+          a {
+            color: #1a64d6;
+          }
+          a:hover {
+            color: #1747a6;
+          }
+          .top {
+            background: #fff;
+            border-bottom: 1px solid #e3e8ee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 24px;
+            box-sizing: border-box;
+          }
+          .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 17px;
+            color: #1b2733;
+            text-decoration: none;
+            margin-right: 12px;
+          }
+          .logo:hover {
+            color: #1b2733;
+          }
+          .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            color: #5b6b7a;
+            font-weight: 500;
+            text-decoration: none;
+          }
+          .tab:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .tab.on {
+            background: #e7effc;
+            color: #1747a6;
+            font-weight: 600;
+          }
+          .cnt {
+            background: #1a64d6;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0 6px;
+            font-size: 11px;
+            line-height: 17px;
+            font-weight: 600;
+          }
+          .soon {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #5b6b7a;
+            background: #eef2f5;
+            border-radius: 999px;
+            padding: 1px 6px;
+          }
+          .search {
+            flex: 0 1 300px;
+            height: 34px;
+            border: 1px solid #e3e8ee;
+            border-radius: 999px;
+            padding: 0 14px;
+            font: inherit;
+            background: #f6f8fa;
+            box-sizing: border-box;
+            margin-left: auto;
+            color: #1b2733;
+          }
+          .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #1c6337;
+            font-weight: 500;
+            margin: 0 6px;
+          }
+          .live i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #2e9b5b;
+            box-shadow: 0 0 0 3px #ddf3e6;
+          }
+          .av {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e7effc;
+            color: #1747a6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            flex: none;
+          }
+          .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #1b2733;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            box-sizing: border-box;
+          }
+          .btn:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .btn.primary {
+            background: #1a64d6;
+            border-color: #1a64d6;
+            color: #fff;
+          }
+          .btn.primary:hover {
+            background: #1755b8;
+            color: #fff;
+          }
+          .btn.sm {
+            height: 28px;
+            padding: 0 11px;
+            font-size: 12px;
+            border-radius: 9px;
+          }
+          .page {
+            padding: 22px 24px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 1360px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+          }
+          h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+          }
+          h2 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .sub {
+            color: #5b6b7a;
+          }
+          .panel {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            min-width: 0;
+            overflow: hidden;
+          }
+          .ph {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #eef2f5;
+          }
+          .pb {
+            padding: 14px 16px;
+          }
+          .scroll {
+            overflow-x: auto;
+          }
+          table.t {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .t th {
+            text-align: left;
+            font-size: 11px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #5b6b7a;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-bottom: 1px solid #e3e8ee;
+            background: #fafbfc;
+            white-space: nowrap;
+          }
+          .t th.n,
+          .t td.n {
+            text-align: right;
+          }
+          .t td {
+            padding: 7px 14px;
+            border-bottom: 1px solid #eef2f5;
+            vertical-align: middle;
+            height: 24px;
+          }
+          .t tr:last-child td {
+            border-bottom: 0;
+          }
+          .t tbody tr:hover td {
+            background: #f7fafe;
+          }
+          .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 500;
+          }
+          .key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: #1747a6;
+            text-decoration: none;
+            margin-right: 6px;
+          }
+          .chip {
+            display: inline-flex;
+            align-items: center;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 999px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #3d4b59;
+            font: inherit;
+            font-weight: 500;
+            cursor: pointer;
+          }
+          .chip.on {
+            background: #1b2733;
+            border-color: #1b2733;
+            color: #fff;
+            font-weight: 600;
+          }
+          .sel {
+            height: 30px;
+            border: 1px solid #d5dce3;
+            border-radius: 9px;
+            background: #fff;
+            font: inherit;
+            color: #1b2733;
+            padding: 0 8px;
+          }
+          .flbl {
+            font-size: 12px;
+            color: #5b6b7a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+          }
+          .kpi {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+          }
+          .kpi .lbl {
+            font-size: 12px;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .kpi b {
+            font-size: 28px;
+            line-height: 1.1;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+          }
+          .kpi b small {
+            font-size: 14px;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .delta {
+            font-size: 12px;
+            color: #5b6b7a;
+          }
+          .delta.up {
+            color: #8a3a00;
+          }
+          .delta.good {
+            color: #1c6337;
+          }
+          .two {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+            gap: 16px;
+          }
+          .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+            color: #3d4b59;
+          }
+          .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .sw {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: inline-block;
+          }
+          .c1 {
+            background: #2a78d6;
+          }
+          .c2 {
+            background: #eb6834;
+          }
+          .c3 {
+            background: #1baf7a;
+          }
+          .c4 {
+            background: #eda100;
+          }
+          .c5 {
+            background: #8f9ba8;
+          }
+          .chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 28px;
+            height: 240px;
+            padding: 8px 8px 0 44px;
+            border-bottom: 1px solid #c9d2db;
+            position: relative;
+            box-sizing: border-box;
+            background-image: linear-gradient(#eef2f5 1px, transparent 1px);
+            background-size: 100% 60px;
+            background-position: 0 0;
+          }
+          .yax {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #5b6b7a;
+            padding-bottom: 2px;
+          }
+          .col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+          }
+          .stack {
+            width: 56px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 2px;
+          }
+          .stack i {
+            display: block;
+            width: 100%;
+          }
+          .stack i:last-child {
+            border-radius: 4px 4px 0 0;
+          }
+          .tot {
+            font-size: 12px;
+            font-weight: 600;
+          }
+          .xax {
+            display: flex;
+            gap: 28px;
+            padding: 6px 8px 0 44px;
+            font-size: 11.5px;
+            color: #5b6b7a;
+          }
+          .xax span {
+            flex: 1;
+            text-align: center;
+          }
+          .hb {
+            display: grid;
+            grid-template-columns: 150px minmax(0, 1fr) 36px;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+          }
+          .hb .bar {
+            height: 12px;
+            background: #eef2f5;
+            border-radius: 999px;
+            overflow: hidden;
+          }
+          .hb .bar i {
+            display: block;
+            height: 100%;
+            background: #c23b3b;
+            border-radius: 0 4px 4px 0;
+          }
+          .hb .who {
+            font-size: 11px;
+            color: #5b6b7a;
+          }
+          .tag {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .t-owner {
+            background: #e7effc;
+            color: #1747a6;
+          }
+          .t-op {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .t-agent {
+            background: #eee8fb;
+            color: #4e3290;
+          }
+          .ins {
+            display: flex;
+            flex-direction: column;
+          }
+          .in {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr) auto;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eef2f5;
+            align-items: start;
+          }
+          .in:last-child {
+            border-bottom: 0;
+          }
+          .in .ic {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #fff1d6;
+            color: #7a4b00;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .in b {
+            display: block;
+          }
+          .in .ev {
+            color: #5b6b7a;
+            font-size: 12.5px;
+            margin-top: 2px;
+          }
+          .in .fix {
+            margin-top: 4px;
+            font-size: 12.5px;
+          }
+          .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 22px;
+            padding: 0 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .b-halt {
+            background: #fde3e3;
+            color: #962020;
+          }
+          .b-fail {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .b-err {
+            background: #2b3a47;
+            color: #fff;
+          }
+          @media (max-width: 900px) {
+            .kpis {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .two {
+              grid-template-columns: minmax(0, 1fr);
+            }
+          }
+        </style>
+      </helmet>
+      <header class="top">
+        <a class="logo" href="Main.dc.html"
+          ><svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1A64D6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="1.8"></circle>
+            <path
+              d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+            ></path></svg
+          >Ahoy</a
+        >
+        <nav style="display: flex; flex-wrap: wrap; gap: 4px" aria-label="Main">
+          <a class="tab" href="Main.dc.html"
+            >Needs you <span class="cnt">4</span></a
+          >
+          <a class="tab" href="Ideas.dc.html">Ideas</a>
+          <a class="tab" href="Voyages.dc.html">Voyages</a>
+          <a class="tab" href="Docks.dc.html"
+            >Backlog <span class="soon">planned</span></a
+          >
+          <a class="tab on" href="Metrics.dc.html">Metrics</a>
+        </nav>
+        <label for="q" style="position: absolute; left: -9999px"
+          >Search voyages</label
+        >
+        <input
+          id="q"
+          class="search"
+          type="search"
+          placeholder="Search by key or title"
+        />
+        <span class="live"><i></i>Live</span>
+        <a class="btn primary" href="SetSail.dc.html"
+          ><svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"
+            ></path></svg
+          >Start voyage</a
+        >
+        <span class="av" title="alex@example.com (SSO)">AL</span>
+      </header>
+      <main class="page">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 12px;
+          "
+        >
+          <div style="flex: 1 1 420px">
+            <h1>Metrics</h1>
+            <div class="sub">
+              Where the harness spends AIU, where voyages stop and which errors
+              repeat. Read-only, built from runs, gates and events.
+            </div>
+          </div>
+          <a class="btn" href="#export"
+            ><svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg
+            >Export CSV</a
+          >
+          <a class="btn" href="#export">Export JSON</a>
+        </div>
+
+        <div
+          style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"
+        >
+          <sc-for list="{{periods}}" as="p" hint-placeholder-count="3">
+            <button type="button" class="{{p.cls}}" onClick="{{p.pick}}">
+              {{p.label}}
+            </button>
+          </sc-for>
+          <span style="width: 12px"></span>
+          <label class="flbl" for="f-owner"
+            >Owner
+            <select id="f-owner" class="sel">
+              <option>Everyone</option>
+              <option>alex@example.com</option>
+              <option>sam@example.com</option>
+            </select></label
+          >
+          <label class="flbl" for="f-repo"
+            >Repository
+            <select id="f-repo" class="sel">
+              <option>All</option>
+              <option>billing-web</option>
+              <option>orders-api</option>
+            </select></label
+          >
+          <label class="flbl" for="f-model"
+            >Model
+            <select id="f-model" class="sel">
+              <option>All</option>
+              <option>claude-sonnet-5</option>
+              <option>claude-opus-5</option>
+            </select></label
+          >
+          <span class="sub" style="margin-left: auto; font-size: 12px"
+            >{{periodNote}}</span
+          >
+        </div>
+
+        <nav
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            border-bottom: 1px solid #e3e8ee;
+          "
+          aria-label="Metrics sections"
+        >
+          <a class="tab" href="Metrics.dc.html">Overview</a>
+          <a class="tab" href="MetricsCost.dc.html">Cost</a>
+          <a class="tab on" href="MetricsHalts.dc.html">Halts &amp; errors</a>
+          <a class="tab" href="MetricsGates.dc.html">Gates &amp; human wait</a>
+        </nav>
+        <div class="kpis">
+          <div class="kpi">
+            <span class="lbl">Halts</span><b>23 <small>in 17 voyages</small></b
+            ><span class="delta up">+6 vs previous 30 days</span>
+          </div>
+          <div class="kpi">
+            <span class="lbl">Halted until resumed (median)</span><b>2 h 15 m</b
+            ><span class="delta">p90 19 h · 3 still halted</span>
+          </div>
+          <div class="kpi">
+            <span class="lbl">Fixed by the first Resume</span><b>61%</b
+            ><span class="delta">the rest halted again or were stopped</span>
+          </div>
+          <div class="kpi">
+            <span class="lbl">Halted again, same cause</span
+            ><b>4 <small>voyages</small></b
+            ><span class="delta up">9 halts · 7.9 AIU spent between them</span>
+          </div>
+        </div>
+
+        <section class="panel" aria-labelledby="reason-t">
+          <div class="ph">
+            <h2 id="reason-t">Halts by reason</h2>
+            <span class="sub"
+              >Cause and fix come from the same rules as the voyage's Diagnosis
+              tab</span
+            >
+          </div>
+          <div class="scroll">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Halt reason</th>
+                  <th>Diagnosis</th>
+                  <th class="n">Halts</th>
+                  <th class="n">Voyages</th>
+                  <th class="n">Fixed by 1st Resume</th>
+                  <th class="n">Median halted</th>
+                  <th>Who fixes it</th>
+                  <th>What fixes it</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge b-halt">budget_exhausted</span></td>
+                  <td class="mono">budget_exhausted</td>
+                  <td class="n mono">7</td>
+                  <td class="n mono">6</td>
+                  <td class="n mono">57%</td>
+                  <td class="n">1 h 40 m</td>
+                  <td><span class="tag t-owner">Owner</span></td>
+                  <td>Raise the budget, then resume</td>
+                </tr>
+                <tr>
+                  <td><span class="badge b-halt">package_stuck</span></td>
+                  <td class="mono">package_stuck</td>
+                  <td class="n mono">5</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono" style="color: #962020; font-weight: 700">
+                    0%
+                  </td>
+                  <td class="n">6 h 05 m</td>
+                  <td><span class="tag t-owner">Owner</span></td>
+                  <td>Accept or reopen the work package</td>
+                </tr>
+                <tr>
+                  <td><span class="badge b-halt">run_failed</span></td>
+                  <td class="mono">configuration</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">50%</td>
+                  <td class="n">3 h 30 m</td>
+                  <td><span class="tag t-op">Operator</span></td>
+                  <td>Give the worker access to the model</td>
+                </tr>
+                <tr>
+                  <td><span class="badge b-halt">run_failed</span></td>
+                  <td class="mono">agent_failed</td>
+                  <td class="n mono">1</td>
+                  <td class="n mono">1</td>
+                  <td class="n mono">100%</td>
+                  <td class="n">25 m</td>
+                  <td><span class="tag t-agent">Agent instructions</span></td>
+                  <td>Read the run log; resume</td>
+                </tr>
+                <tr>
+                  <td><span class="badge b-halt">gate_rejected</span></td>
+                  <td class="mono">gate_rejected</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">67%</td>
+                  <td class="n">4 h 50 m</td>
+                  <td><span class="tag t-agent">Agent instructions</span></td>
+                  <td>Fix what the gate names; resume</td>
+                </tr>
+                <tr>
+                  <td><span class="badge b-halt">run_timed_out</span></td>
+                  <td class="mono">run_timed_out</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">100%</td>
+                  <td class="n">40 m</td>
+                  <td><span class="tag t-op">Operator</span></td>
+                  <td>Raise the run timeout or split the work</td>
+                </tr>
+                <tr>
+                  <td><span class="badge b-halt">stopped_by_user</span></td>
+                  <td class="mono">stopped_by_user</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">100%</td>
+                  <td class="n">18 h</td>
+                  <td><span class="tag t-owner">Owner</span></td>
+                  <td>Resume when ready</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="loops">
+          <div class="ph">
+            <h2 id="loops">Halted again after Resume</h2>
+            <span class="sub"
+              >Same diagnosis twice or more in a row: the Resume did not fix the
+              cause</span
+            >
+          </div>
+          <div class="scroll">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Voyage</th>
+                  <th>Diagnosis</th>
+                  <th class="n">Halts</th>
+                  <th class="n">Resumes</th>
+                  <th class="n">AIU between halts</th>
+                  <th>Progress between halts</th>
+                  <th>Now</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <a class="key" href="Halted.dc.html">PROJ-151</a>Export
+                    invoices to the accounting system
+                  </td>
+                  <td class="mono">package_stuck · WP-2</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">4.20</td>
+                  <td>No new commit on WP-2</td>
+                  <td><span class="badge b-halt">Halted</span></td>
+                  <td><a class="btn sm" href="Halted.dc.html">Open</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <a class="key" href="Halted.dc.html">PROJ-158</a>Bulk-edit
+                    product prices
+                  </td>
+                  <td class="mono">package_stuck · WP-1</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">1</td>
+                  <td class="n mono">1.10</td>
+                  <td>No new commit on WP-1</td>
+                  <td><span class="badge b-halt">Halted</span></td>
+                  <td><a class="btn sm" href="Halted.dc.html">Open</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <a class="key" href="Halted.dc.html">PROJ-144</a>Retry
+                    failed webhooks with backoff
+                  </td>
+                  <td class="mono">budget_exhausted</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">1</td>
+                  <td class="n mono">2.60</td>
+                  <td>Budget raised 30 → 40; review run hit its cap again</td>
+                  <td>
+                    <span
+                      class="badge"
+                      style="background: #ddf3f7; color: #0b5c6b"
+                      >Running</span
+                    >
+                  </td>
+                  <td><a class="btn sm" href="Running.dc.html">Open</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    <a class="key" href="Halted.dc.html">PROJ-118</a>Rate-limit
+                    the public search endpoint
+                  </td>
+                  <td class="mono">configuration</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">1</td>
+                  <td class="n mono">0.00</td>
+                  <td>Same model refused twice</td>
+                  <td><span class="badge b-halt">Halted</span></td>
+                  <td><a class="btn sm" href="Halted.dc.html">Open</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="err-t">
+          <div class="ph">
+            <h2 id="err-t">Common errors</h2>
+            <span style="flex: 1"></span>
+            <button type="button" class="chip on">All 34</button>
+            <button type="button" class="chip">Halts 23</button>
+            <button type="button" class="chip">Gate failures 9</button>
+            <button type="button" class="chip">Tooling errors 2</button>
+          </div>
+          <div class="scroll">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Error (grouped by message)</th>
+                  <th>Kind</th>
+                  <th>Phase</th>
+                  <th>Agent</th>
+                  <th class="n">Times</th>
+                  <th class="n">Voyages</th>
+                  <th>First seen</th>
+                  <th>Last seen</th>
+                  <th>Example</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>plan_schema: acceptance criterion has no test_ids</td>
+                  <td><span class="badge b-fail">gate fail</span></td>
+                  <td class="mono">planning</td>
+                  <td>Cartographer</td>
+                  <td class="n mono">9</td>
+                  <td class="n mono">7</td>
+                  <td>16 Sep</td>
+                  <td>yesterday</td>
+                  <td><a class="key" href="RunDetail.dc.html">PROJ-160</a></td>
+                </tr>
+                <tr>
+                  <td>
+                    Review run reached its 5 AIU run cap before the verdict
+                  </td>
+                  <td><span class="badge b-halt">budget_exhausted</span></td>
+                  <td class="mono">pr_review</td>
+                  <td>Lookout</td>
+                  <td class="n mono">6</td>
+                  <td class="n mono">5</td>
+                  <td>19 Sep</td>
+                  <td>2 h ago</td>
+                  <td><a class="key" href="RunDetail.dc.html">PROJ-144</a></td>
+                </tr>
+                <tr>
+                  <td>Work package stays in_progress after 3 rounds</td>
+                  <td><span class="badge b-halt">package_stuck</span></td>
+                  <td class="mono">implementation</td>
+                  <td>Backend implementer</td>
+                  <td class="n mono">5</td>
+                  <td class="n mono">2</td>
+                  <td>2 Oct</td>
+                  <td>40 m ago</td>
+                  <td><a class="key" href="RunDetail.dc.html">PROJ-151</a></td>
+                </tr>
+                <tr>
+                  <td>Worker exited 1: model not available for this token</td>
+                  <td><span class="badge b-halt">run_failed</span></td>
+                  <td class="mono">planning</td>
+                  <td>Cartographer</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">2</td>
+                  <td>24 Sep</td>
+                  <td>3 days ago</td>
+                  <td><a class="key" href="RunDetail.dc.html">PROJ-118</a></td>
+                </tr>
+                <tr>
+                  <td>review: medium finding left unresolved after rework</td>
+                  <td><span class="badge b-halt">gate_rejected</span></td>
+                  <td class="mono">pr_review</td>
+                  <td>Lookout</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">3</td>
+                  <td>21 Sep</td>
+                  <td>4 days ago</td>
+                  <td><a class="key" href="RunDetail.dc.html">PROJ-137</a></td>
+                </tr>
+                <tr>
+                  <td>Gate tool crashed reading result.json</td>
+                  <td><span class="badge b-err">gate error</span></td>
+                  <td class="mono">pr_review</td>
+                  <td>Lookout</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">2</td>
+                  <td>30 Sep</td>
+                  <td>5 days ago</td>
+                  <td><a class="key" href="RunDetail.dc.html">PROJ-149</a></td>
+                </tr>
+                <tr>
+                  <td>Run passed its 30 min deadline</td>
+                  <td><span class="badge b-halt">run_timed_out</span></td>
+                  <td class="mono">implementation</td>
+                  <td>Frontend implementer</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">2</td>
+                  <td>27 Sep</td>
+                  <td>6 days ago</td>
+                  <td><a class="key" href="RunDetail.dc.html">PROJ-142</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div
+            class="pb sub"
+            style="font-size: 12px; border-top: 1px solid #eef2f5"
+          >
+            A tooling error is never counted as a gate failure. Messages are
+            agent and tool text, shown as plain text.
+          </div>
+        </section>
+      </main>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1440,"height":1600}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          const period = (this.state && this.state.period) || '30';
+          const labels = { '7': 'Last 7 days', '30': 'Last 30 days', '90': 'Last 90 days' };
+          const periods = ['7', '30', '90'].map((p) => ({
+            label: labels[p],
+            cls: p === period ? 'chip on' : 'chip',
+            pick: () => this.setState({ period: p }),
+          }));
+          return { periods, periodNote: labels[period] + ' · 14 Sep–11 Oct 2026 · fictional data' };
+        }
+      }
+    </script>
+  </body>
+</html>
