@@ -235,6 +235,10 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   get('/refinements');
   get('/refinements/PROJ-145');
   get('/refinements/PROJ-999');
+  post('/refinements/PROJ-153', {
+    confirmSpend: true,
+    budgetNanoAiu: 100_000_000_001,
+  });
   post('/refinements/PROJ-150', { confirmSpend: true });
   post('/refinements/PROJ-150/cancel', { reason: 'Asked for the wrong story' });
   get('/refinements/PROJ-150');
@@ -273,7 +277,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   post('/stories/PROJ-118/agent-diagnoses', { confirmSpend: false });
   post('/stories/PROJ-118/agent-diagnoses', {
     confirmSpend: true,
-    budgetNanoAiu: 20_000_000_001,
+    budgetNanoAiu: 100_000_000_001,
   });
   post('/stories/PROJ-118/agent-diagnoses/cancel', {
     reason: 'Nothing in progress',

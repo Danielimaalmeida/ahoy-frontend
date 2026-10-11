@@ -358,7 +358,7 @@ export type CancelRefinementRequest = Schemas['CancelRefinementRequest'];
 /** Answer of `listAgentDiagnoses`: every agent diagnosis of one story, newest first. Each has the shape of a refinement. */
 export type AgentDiagnosisList = Schemas['AgentDiagnosisList'];
 
-/** Body of `requestAgentDiagnosis`. May spend AIU: `confirmSpend` must be true; the cap is at most 20 AIU. */
+/** Body of `requestAgentDiagnosis`. May spend AIU: `confirmSpend` must be true; the cap is at most 100 AIU. */
 export type AgentDiagnosisRequest = Schemas['AgentDiagnosisRequest'];
 
 /** Body of `setStoryBudget`. The new cap includes what is already spent. */

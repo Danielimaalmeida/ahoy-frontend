@@ -1,7 +1,7 @@
 import type { RefinementStatus } from './types';
 
-/** The most a refinement may be capped at, in nano-AIU: 20 AIU, as the contract says. */
-export const REFINEMENT_MAX_NANO_AIU = 20_000_000_000;
+/** The most a refinement may be capped at, in nano-AIU: 100 AIU, as the contract says. */
+export const REFINEMENT_MAX_NANO_AIU = 100_000_000_000;
 
 /** The most an agent diagnosis may be capped at, in nano-AIU: 100 AIU, as the contract says. */
 export const AGENT_DIAGNOSIS_MAX_NANO_AIU = 100_000_000_000;

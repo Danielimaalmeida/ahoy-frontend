@@ -1242,8 +1242,8 @@ components:
         budgetNanoAiu:
           type: integer
           minimum: 1
-          maximum: 20000000000
-          description: The run's AIU cap, at most 20 AIU; the server's refinement cap when absent.
+          maximum: 100000000000
+          description: The run's AIU cap, at most 100 AIU; the server's refinement cap when absent.
     AgentDiagnosisList:
       type: object
       required: [key, items]

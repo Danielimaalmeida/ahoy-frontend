@@ -8,17 +8,21 @@ of 2026-10-10). Committed and pushed with the user's approval, from a cloud sess
 An agent that diagnoses what the fixed rules of the halt diagnosis cannot, on a person's request. It is "point 3" of the
 `ahoy-hosted` design (§5, "Agent diagnosis", approved by the user as a D18 exception); its backend is in PR #30
 (`ahoy-hosted`, head `48b14b4`). The backend runs it as a `kind = 'diagnosis'` row of `refinements`, read-only, capped
-at 10 AIU by default and 100 AIU at most (20 AIU at most for a refinement), charged to no voyage.
+at 10 AIU by default and 100 AIU at most (a refinement too since 2026-10-11), charged to no voyage.
 
 - **Contract:** vendored `listAgentDiagnoses`, `requestAgentDiagnosis` and `cancelAgentDiagnosis`
   (`/stories/{key}/agent-diagnoses[/cancel]`) with `AgentDiagnosisList` and `AgentDiagnosisRequest`; an agent diagnosis
   is typed as a `Refinement`. `schema.d.ts` and the JSON mirror regenerated; the redacted JQL example is kept.
+- **Limits (user's choice, 2026-10-11):** `ahoy-hosted` now caps both a refinement and an agent diagnosis at 100 AIU
+  (`maximum: 100000000000`; the defaults are unchanged). Vendored with only that change; the Refine and diagnosis dialogs
+  refuse more with "The limit may be at most 100 AIU.", and a spec ties each constant to its schema. The 20 AIU mentioned
+  under "Review fixes of PR #22" was true on 2026-10-10.
 - **API layer:** `ApiClient.listAgentDiagnoses/requestAgentDiagnosis/cancelAgentDiagnosis`, `isAgentDiagnosisList`, three
   fictional fixtures (key PROJ-118, agent `shipwright`), the fake API and the conformance walk.
 - **Mock backend:** `RefinementDesk` is now generic by kind: a diagnosis queues, runs for two ticks, then succeeds with
   Markdown that follows the halt reason; `409 invalid_state` if the voyage is not halted or has one in progress, `404`
   for an unknown voyage.
-- **Domain and shared code:** `REFINEMENT_MAX_NANO_AIU` (20 AIU), `AGENT_DIAGNOSIS_MAX_NANO_AIU` (100 AIU), `isActiveRefinement`, `refinementLabel`,
+- **Domain and shared code:** `REFINEMENT_MAX_NANO_AIU` and `AGENT_DIAGNOSIS_MAX_NANO_AIU` (both 100 AIU), `isActiveRefinement`, `refinementLabel`,
   `refinementStateLabel` moved to `domain/refinement.ts` (a feature may not import another), `checkAiuLimit` to
   `domain/aiu.ts`, and `agentRunErrorView` to `core/commands/command-error.ts`, which the Backlog's dialogs now use too.
 - **Screen:** the Anchored banner of a halted voyage has an "Agent diagnosis" section. `AgentDiagnoses` (provided by the

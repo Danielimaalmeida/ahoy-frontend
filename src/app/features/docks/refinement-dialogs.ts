@@ -90,7 +90,7 @@ export interface RefineDialogData {
           label="AIU limit"
           optional
           unit="AIU"
-          hint="At most 20 AIU. Leave empty for the server's refinement cap."
+          hint="At most 100 AIU. Leave empty for the server's refinement cap."
           [errorMessages]="capMessages"
           [errorText]="capServerError()"
         >
@@ -119,7 +119,7 @@ export class RefineDialog {
   protected readonly capMessages = {
     amount: 'Type an amount in AIU, such as 5 or 2.5.',
     positive: 'The limit must be above 0 AIU.',
-    maximum: 'The limit may be at most 20 AIU.',
+    maximum: 'The limit may be at most 100 AIU.',
   };
   protected readonly form = new FormGroup({
     notes: new FormControl('', {
