@@ -22,6 +22,7 @@ import {
   isAnswerAccepted,
   isArtifactList,
   isDecisionAccepted,
+  isAgentDiagnosisList,
   isEventPage,
   isGateRecordList,
   isHealth,
@@ -30,6 +31,10 @@ import {
   isModelCatalog,
   isProblem,
   isQuestionList,
+  isDiagnosis,
+  isRefinement,
+  isRefinementList,
+  isRefinementSummaryList,
   isRun,
   isRunList,
   isStory,
@@ -37,6 +42,8 @@ import {
   isStoryStateDocument,
 } from './guards';
 import type {
+  AgentDiagnosisList,
+  AgentDiagnosisRequest,
   AnswerAccepted,
   AnswerRequest,
   ArtifactContent,
@@ -53,6 +60,13 @@ import type {
   ModelPlan,
   ModelCatalog,
   Question,
+  CancelRefinementRequest,
+  Diagnosis,
+  Refinement,
+  RefinementList,
+  RefinementRequest,
+  RefinementSummary,
+  RefreshIntakeRequest,
   ResumeStoryRequest,
   Run,
   SetStoryBudgetRequest,
@@ -187,6 +201,111 @@ export class ApiClient {
       `/stories/${segment(key)}/budget`,
       body,
       isStory
+    );
+  }
+
+  /**
+   * Sends a story in planning or plan review back to intake, after Jira was updated: the plan, its approvals and open
+   * questions become history, and intake and planning run again. May spend AIU. The answer (202) is the story.
+   */
+  refreshIntake(
+    key: string,
+    body: RefreshIntakeRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'refreshIntake',
+      `/stories/${segment(key)}/refresh-intake`,
+      body,
+      isStory
+    );
+  }
+
+  /** Why the story stands where it stands, and what fixes it; no findings unless it is halted. Spends nothing. */
+  getStoryDiagnosis(key: string): Promise<ApiResult<Diagnosis>> {
+    return this.get(
+      'getStoryDiagnosis',
+      `/stories/${segment(key)}/diagnosis`,
+      isDiagnosis
+    );
+  }
+
+  /** The newest refinement of every refined backlog item, without content. */
+  async listRefinements(): Promise<ApiResult<readonly RefinementSummary[]>> {
+    const result = await this.get(
+      'listRefinements',
+      '/refinements',
+      isRefinementSummaryList
+    );
+    return mapResult(result, (list) => list.items);
+  }
+
+  /** Every refinement of one backlog item, newest first, with the agent's Markdown. */
+  getRefinements(key: string): Promise<ApiResult<RefinementList>> {
+    return this.get(
+      'getRefinements',
+      `/refinements/${segment(key)}`,
+      isRefinementList
+    );
+  }
+
+  /** Asks an agent to pre-refine a backlog item. May spend AIU. The answer (202) is the queued refinement. */
+  requestRefinement(
+    key: string,
+    body: RefinementRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'requestRefinement',
+      `/refinements/${segment(key)}`,
+      body,
+      isRefinement
+    );
+  }
+
+  /** Stops the item's refinement in progress. The answer (202) is the refinement, cancelled or being cancelled. */
+  cancelRefinement(
+    key: string,
+    body: CancelRefinementRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'cancelRefinement',
+      `/refinements/${segment(key)}/cancel`,
+      body,
+      isRefinement
+    );
+  }
+
+  /** Every agent diagnosis of one halted story, newest first, with the agent's Markdown. */
+  listAgentDiagnoses(key: string): Promise<ApiResult<AgentDiagnosisList>> {
+    return this.get(
+      'listAgentDiagnoses',
+      `/stories/${segment(key)}/agent-diagnoses`,
+      isAgentDiagnosisList
+    );
+  }
+
+  /** Asks an agent to diagnose a halted story. May spend AIU. The answer (202) is the queued diagnosis. */
+  requestAgentDiagnosis(
+    key: string,
+    body: AgentDiagnosisRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'requestAgentDiagnosis',
+      `/stories/${segment(key)}/agent-diagnoses`,
+      body,
+      isRefinement
+    );
+  }
+
+  /** Stops the story's agent diagnosis in progress. The answer (202) is it, cancelled or being cancelled. */
+  cancelAgentDiagnosis(
+    key: string,
+    body: CancelRefinementRequest
+  ): Promise<ApiResult<Refinement>> {
+    return this.post(
+      'cancelAgentDiagnosis',
+      `/stories/${segment(key)}/agent-diagnoses/cancel`,
+      body,
+      isRefinement
     );
   }
 

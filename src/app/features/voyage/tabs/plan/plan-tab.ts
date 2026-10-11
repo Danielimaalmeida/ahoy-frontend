@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { apiErrorView } from '@core/commands/command-error';
 import { crewLabel } from '@domain/models';
+import { currentQuestions } from '@domain/questions';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
@@ -211,9 +212,9 @@ export class PlanTab {
   /** The last send-back and the answers before this plan, for "Earlier round"; null when there is neither. */
   protected readonly earlier = computed(() => {
     const record = earlierSendBack(this.decision.records(), PLAN_GATE);
-    const answered = (this.context.handle()?.questions.value() ?? []).filter(
-      (q) => q.answer !== null
-    ).length;
+    const answered = currentQuestions(
+      this.context.handle()?.questions.value() ?? []
+    ).filter((q) => q.answer !== null).length;
     return record === null && answered === 0 ? null : { record, answered };
   });
 }

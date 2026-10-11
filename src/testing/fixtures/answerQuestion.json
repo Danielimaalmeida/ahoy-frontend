@@ -23,6 +23,7 @@
     "answer": "Receipt page only for now; bulk download needs a background job and is better as its own story. Also add the button to the order confirmation email link target.",
     "answeredBy": "alex@example.com",
     "answeredAt": "2026-10-06T09:20:31.000Z",
-    "consumed": false
+    "consumed": false,
+    "supersededAt": null
   }
 }

@@ -1,0 +1,21 @@
+{
+  "key": "PROJ-118",
+  "status": "halted",
+  "phase": "planning",
+  "haltReason": "run_result_invalid",
+  "findings": [
+    {
+      "kind": "cluster_capacity",
+      "title": "The cluster found no node for the run's pod before the Job's deadline, so it never started.",
+      "evidence": [
+        "Pod/ahoy-proj-118-planning-002-4c1d-x7k2p FailedScheduling (×14): 0/3 nodes are available: 3 Insufficient cpu.",
+        "Pod/ahoy-proj-118-planning-002-4c1d-x7k2p NotTriggerScaleUp: pod didn't trigger scale-up: 1 max node group size reached",
+        "job: DeadlineExceeded: Job was active longer than specified deadline"
+      ],
+      "action": "Ask the platform team for capacity (the node pool's maximum size or the autoscaler), or lower the worker's requests; then resume the story. The run had not started, so it spent nothing.",
+      "actor": "operator",
+      "resumable": false,
+      "runId": "proj-118-planning-002-4c1d"
+    }
+  ]
+}

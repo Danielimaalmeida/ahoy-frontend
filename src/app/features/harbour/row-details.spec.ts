@@ -1,7 +1,13 @@
 import { EnvironmentInjector, createEnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ok } from '@core/api/api-error';
-import type { AhoyEvent, Question, Run, Story } from '@core/api/types';
+import { fail, ok, type ApiResult } from '@core/api/api-error';
+import type {
+  AhoyEvent,
+  Diagnosis,
+  Question,
+  Run,
+  Story,
+} from '@core/api/types';
 import { EventBus } from '@core/realtime/event-bus';
 import { aStory, anEvent } from '@core/realtime/testing/events';
 import { FakeApi } from '@core/realtime/testing/fake-api';
@@ -21,6 +27,7 @@ function question(id: string, answered: boolean): Question {
     answeredBy: answered ? 'sam@example.com' : null,
     answeredAt: answered ? '2026-10-06T09:30:00.000Z' : null,
     consumed: false,
+    supersededAt: null,
   };
 }
 
@@ -142,6 +149,7 @@ describe('RowDetails (All hands)', () => {
       state: null,
       gate: null,
       halt: null,
+      diagnosis: null,
     });
     details.sync([asking, anchored]);
     await settle();
@@ -225,5 +233,90 @@ describe('RowDetails (All hands)', () => {
     await settle();
     await clock.advance(300);
     expect(api.callsOf('getStoryState')).toHaveLength(2);
+  });
+});
+
+describe('RowDetails: the diagnosis of a halted voyage', () => {
+  const diagnosisOf = (key: string, title: string): Diagnosis => ({
+    key,
+    status: 'halted',
+    phase: 'planning',
+    haltReason: 'run_failed',
+    findings: [
+      {
+        kind: 'agent_failed',
+        title,
+        evidence: [],
+        action: 'Resume it.',
+        actor: 'story_owner',
+        resumable: true,
+        runId: null,
+      },
+    ],
+  });
+
+  it('reads it for the halted voyages on screen only, once per version', async () => {
+    const { api, details } = rig();
+    api.on('getStoryDiagnosis', (key) =>
+      Promise.resolve(ok(diagnosisOf(key, 'First.')))
+    );
+    details.sync([asking, anchored, running]);
+    await settle();
+    expect(api.callsOf('getStoryDiagnosis').map((c) => c.args)).toEqual([
+      ['PROJ-118'],
+    ]);
+    expect(details.detail('PROJ-118').diagnosis?.findings[0]?.title).toBe(
+      'First.'
+    );
+    details.sync([asking, anchored, running]);
+    await settle();
+    expect(api.callsOf('getStoryDiagnosis')).toHaveLength(1);
+
+    api.on('getStoryDiagnosis', (key) =>
+      Promise.resolve(ok(diagnosisOf(key, 'Second.')))
+    );
+    details.sync([{ ...anchored, version: anchored.version + 1 }]);
+    await settle();
+    expect(api.callsOf('getStoryDiagnosis')).toHaveLength(2);
+    expect(details.detail('PROJ-118').diagnosis?.findings[0]?.title).toBe(
+      'Second.'
+    );
+  });
+
+  it('forgets it when the voyage leaves the list or is no longer halted, and reads it again when it comes back', async () => {
+    const { api, details } = rig();
+    api.on('getStoryDiagnosis', (key) =>
+      Promise.resolve(ok(diagnosisOf(key, 'Cause.')))
+    );
+    details.sync([anchored]);
+    await settle();
+    details.sync([{ ...anchored, status: 'ready', haltReason: null }]);
+    await settle();
+    expect(details.detail('PROJ-118').diagnosis).toBeNull();
+    details.sync([anchored]);
+    await settle();
+    expect(api.callsOf('getStoryDiagnosis')).toHaveLength(2);
+    expect(details.detail('PROJ-118').diagnosis).not.toBeNull();
+  });
+
+  it('shows nothing when it cannot be read, and drops an answer that comes after the page went', async () => {
+    const { api, details, page } = rig();
+    api.on('getStoryDiagnosis', () =>
+      Promise.resolve(fail({ kind: 'network' }))
+    );
+    details.sync([anchored]);
+    await settle();
+    expect(details.detail('PROJ-118').diagnosis).toBeNull();
+
+    let release: (value: ApiResult<Diagnosis>) => void = () => undefined;
+    api.on(
+      'getStoryDiagnosis',
+      () => new Promise((resolve) => (release = resolve))
+    );
+    details.sync([{ ...anchored, version: anchored.version + 1 }]);
+    page.destroy();
+    release(ok(diagnosisOf('PROJ-118', 'Late.')));
+    await settle();
+    expect(details.detail('PROJ-118').diagnosis).toBeNull();
   });
 });

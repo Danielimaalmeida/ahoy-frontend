@@ -14,6 +14,14 @@ export type FakeApiOps = Pick<
   | 'listGateRecords'
   | 'getStoryModels'
   | 'listArtifacts'
+  | 'listRefinements'
+  | 'getRefinements'
+  | 'requestRefinement'
+  | 'cancelRefinement'
+  | 'listAgentDiagnoses'
+  | 'requestAgentDiagnosis'
+  | 'cancelAgentDiagnosis'
+  | 'getStoryDiagnosis'
 >;
 
 /** A call the fake saw. */
@@ -93,5 +101,45 @@ export class FakeApi implements FakeApiOps {
   listArtifacts: FakeApiOps['listArtifacts'] = (key) => {
     this.calls.push({ op: 'listArtifacts', args: [key] });
     return this.handlers.listArtifacts?.(key) ?? unreachable();
+  };
+
+  listRefinements: FakeApiOps['listRefinements'] = () => {
+    this.calls.push({ op: 'listRefinements', args: [] });
+    return this.handlers.listRefinements?.() ?? unreachable();
+  };
+
+  getRefinements: FakeApiOps['getRefinements'] = (key) => {
+    this.calls.push({ op: 'getRefinements', args: [key] });
+    return this.handlers.getRefinements?.(key) ?? unreachable();
+  };
+
+  requestRefinement: FakeApiOps['requestRefinement'] = (key, body) => {
+    this.calls.push({ op: 'requestRefinement', args: [key, body] });
+    return this.handlers.requestRefinement?.(key, body) ?? unreachable();
+  };
+
+  cancelRefinement: FakeApiOps['cancelRefinement'] = (key, body) => {
+    this.calls.push({ op: 'cancelRefinement', args: [key, body] });
+    return this.handlers.cancelRefinement?.(key, body) ?? unreachable();
+  };
+
+  listAgentDiagnoses: FakeApiOps['listAgentDiagnoses'] = (key) => {
+    this.calls.push({ op: 'listAgentDiagnoses', args: [key] });
+    return this.handlers.listAgentDiagnoses?.(key) ?? unreachable();
+  };
+
+  requestAgentDiagnosis: FakeApiOps['requestAgentDiagnosis'] = (key, body) => {
+    this.calls.push({ op: 'requestAgentDiagnosis', args: [key, body] });
+    return this.handlers.requestAgentDiagnosis?.(key, body) ?? unreachable();
+  };
+
+  cancelAgentDiagnosis: FakeApiOps['cancelAgentDiagnosis'] = (key, body) => {
+    this.calls.push({ op: 'cancelAgentDiagnosis', args: [key, body] });
+    return this.handlers.cancelAgentDiagnosis?.(key, body) ?? unreachable();
+  };
+
+  getStoryDiagnosis: FakeApiOps['getStoryDiagnosis'] = (key) => {
+    this.calls.push({ op: 'getStoryDiagnosis', args: [key] });
+    return this.handlers.getStoryDiagnosis?.(key) ?? unreachable();
   };
 }

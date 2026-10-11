@@ -24,6 +24,7 @@ function question(
     answeredBy: answer === null ? null : 'alex@example.com',
     answeredAt: answer === null ? null : '2026-10-07T09:12:00Z',
     consumed: false,
+    supersededAt: null,
   };
 }
 

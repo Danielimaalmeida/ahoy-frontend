@@ -43,6 +43,7 @@ const TITLES: Readonly<Record<string, string>> = {
   'story.started': 'Voyage started',
   'story.halted': 'Halted',
   'story.resumed': 'Resumed',
+  'story.intake_refreshed': 'Sent back to intake',
   'story.budget_changed': 'Budget changed',
   'story.models_changed': 'Models changed',
   'story.phase_changed': 'Phase changed',
@@ -161,6 +162,23 @@ function confirmedDetails(
       const gate = str(payload, 'gate');
       if (gate === null) return '';
       return context.round === null ? gate : `${gate}, round ${context.round}`;
+    }
+    case 'story.intake_refreshed': {
+      const from = str(payload, 'from');
+      const reason = str(payload, 'reason');
+      const superseded = payload['supersededQuestions'];
+      const count = Array.isArray(superseded) ? superseded.length : null;
+      return clip(
+        [
+          from === null ? null : `${from} → intake`,
+          reason,
+          count === null || count === 0
+            ? null
+            : `${count} ${count === 1 ? 'question' : 'questions'} kept as history`,
+        ]
+          .filter((part) => part !== null)
+          .join(' · ')
+      );
     }
     case 'story.phase_changed': {
       const from = str(payload, 'from');

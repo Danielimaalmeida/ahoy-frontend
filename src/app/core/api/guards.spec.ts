@@ -1,19 +1,28 @@
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
+import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
+import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getHealth from '@testing/fixtures/getHealth.json';
+import getRefinements from '@testing/fixtures/getRefinements.json';
+import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
+import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
 import listQuestions from '@testing/fixtures/listQuestions.json';
+import listRefinements from '@testing/fixtures/listRefinements.json';
 import listStories from '@testing/fixtures/listStories.json';
 import listStoryEvents from '@testing/fixtures/listStoryEvents.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
+import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
+import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
@@ -21,6 +30,7 @@ import startStory from '@testing/fixtures/startStory.json';
 import stopStory from '@testing/fixtures/stopStory.json';
 import type { Guard } from './guard-kit';
 import {
+  isAgentDiagnosisList,
   isAnswerAccepted,
   isArtifact,
   isArtifactList,
@@ -35,6 +45,10 @@ import {
   isProblem,
   isQuestion,
   isQuestionList,
+  isRefinement,
+  isDiagnosis,
+  isRefinementList,
+  isRefinementSummaryList,
   isRun,
   isRunList,
   isStory,
@@ -76,6 +90,15 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['getStoryState', isStoryStateDocument, getStoryState],
     ['listArtifacts', isArtifactList, listArtifacts],
     ['listStoryEvents', isEventPage, listStoryEvents],
+    ['refreshIntake', isStory, refreshIntake],
+    ['listRefinements', isRefinementSummaryList, listRefinements],
+    ['getRefinements', isRefinementList, getRefinements],
+    ['getStoryDiagnosis', isDiagnosis, getStoryDiagnosis],
+    ['requestRefinement', isRefinement, requestRefinement],
+    ['cancelRefinement', isRefinement, cancelRefinement],
+    ['listAgentDiagnoses', isAgentDiagnosisList, listAgentDiagnoses],
+    ['requestAgentDiagnosis', isRefinement, requestAgentDiagnosis],
+    ['cancelAgentDiagnosis', isRefinement, cancelAgentDiagnosis],
   ];
 
   it.each(cases)('%s', (_name, accepts, fixture) => {
@@ -333,6 +356,58 @@ describe('isQuestion', () => {
     expect(isQuestion(withField(pending!, 'round', 0))).toBe(false);
     expect(isQuestion(withField(pending!, 'consumed', 'no'))).toBe(false);
   });
+
+  it('accepts a question an intake refresh superseded, and requires supersededAt to be null or a timestamp', () => {
+    expect(
+      isQuestion(withField(pending!, 'supersededAt', '2026-10-06T10:05:00Z'))
+    ).toBe(true);
+    expect(isQuestion(withoutField(pending!, 'supersededAt'))).toBe(false);
+    expect(isQuestion(withField(pending!, 'supersededAt', 'yesterday'))).toBe(
+      false
+    );
+  });
+});
+
+describe('isRefinement', () => {
+  const [succeeded, cancelled] = getRefinements.items;
+
+  it('accepts a succeeded refinement with its Markdown and a cancelled one without', () => {
+    expect(isRefinement(succeeded)).toBe(true);
+    expect(isRefinement(cancelled)).toBe(true);
+  });
+
+  it('refuses content on a refinement that did not succeed, and none on one that did', () => {
+    expect(isRefinement.explain(withField(cancelled!, 'content', '# x'))).toBe(
+      'Refinement.content must be set exactly when the status is succeeded'
+    );
+    expect(isRefinement(withField(succeeded!, 'content', null))).toBe(false);
+  });
+
+  it('refuses an unknown status, a fractional amount and a key that is not a Jira key', () => {
+    expect(isRefinement(withField(cancelled!, 'status', 'waiting'))).toBe(
+      false
+    );
+    expect(isRefinement(withField(cancelled!, 'budgetNanoAiu', 0.5))).toBe(
+      false
+    );
+    expect(isRefinement(withField(cancelled!, 'key', 'proj-145'))).toBe(false);
+  });
+
+  it('names the item of a list that is wrong', () => {
+    const list = withField(getRefinements, 'items', [
+      succeeded,
+      withField(cancelled!, 'cancelRequested', 'yes'),
+    ]);
+    expect(isRefinementList.explain(list)).toBe(
+      'RefinementList.items[1].cancelRequested must be true or false (got "yes")'
+    );
+  });
+
+  it('lists summaries without content', () => {
+    expect(
+      listRefinements.items.every((item) => !Object.hasOwn(item, 'content'))
+    ).toBe(true);
+  });
 });
 
 describe('isGateRecord', () => {
@@ -513,5 +588,70 @@ describe('isProblem', () => {
     ).toBe(true);
     expect(isProblem({ ...base, errors: [{ path: '/a' }] })).toBe(false);
     expect(isProblem({ ...base, errors: 'none' })).toBe(false);
+  });
+});
+
+describe('isDiagnosis', () => {
+  const [finding] = getStoryDiagnosis.findings;
+
+  it('accepts a story with no findings, as one that is not halted has', () => {
+    expect(
+      isDiagnosis({
+        key: 'PROJ-140',
+        status: 'running',
+        phase: 'planning',
+        haltReason: null,
+        findings: [],
+      })
+    ).toBe(true);
+  });
+
+  it('refuses a cause, an actor or a run id the contract does not have', () => {
+    const withFinding = (changes: Record<string, unknown>) => ({
+      ...getStoryDiagnosis,
+      findings: [{ ...finding, ...changes }],
+    });
+    expect(isDiagnosis.explain(withFinding({ kind: 'gremlins' }))).toContain(
+      'findings[0].kind'
+    );
+    expect(isDiagnosis(withFinding({ actor: 'everyone' }))).toBe(false);
+    expect(isDiagnosis(withFinding({ runId: 'no spaces allowed' }))).toBe(
+      false
+    );
+    expect(isDiagnosis(withFinding({ evidence: 'one line' }))).toBe(false);
+    expect(isDiagnosis(withFinding({ resumable: 'yes' }))).toBe(false);
+  });
+});
+
+describe('isAgentDiagnosisList', () => {
+  const [succeeded, cancelled] = listAgentDiagnoses.items;
+
+  it('accepts the diagnoses of a story, newest first, with content only where one succeeded', () => {
+    expect(isAgentDiagnosisList(listAgentDiagnoses)).toBe(true);
+    expect(
+      isAgentDiagnosisList(withField(listAgentDiagnoses, 'items', []))
+    ).toBe(true);
+  });
+
+  it('refuses content on one that did not succeed, none on one that did, and a key that is not a Jira key', () => {
+    expect(
+      isAgentDiagnosisList.explain(
+        withField(listAgentDiagnoses, 'items', [
+          withField(cancelled!, 'content', '# x'),
+        ])
+      )
+    ).toBe(
+      'AgentDiagnosisList.items[0].content must be set exactly when the status is succeeded'
+    );
+    expect(
+      isAgentDiagnosisList(
+        withField(listAgentDiagnoses, 'items', [
+          withField(succeeded!, 'content', null),
+        ])
+      )
+    ).toBe(false);
+    expect(
+      isAgentDiagnosisList(withField(listAgentDiagnoses, 'key', 'proj-118'))
+    ).toBe(false);
   });
 });

@@ -1,8 +1,16 @@
 import type { StoryStateView } from '@core/api/story-state';
-import type { AhoyEvent, Question, Run, Story } from '@core/api/types';
+import type {
+  AhoyEvent,
+  Diagnosis,
+  Question,
+  Run,
+  Story,
+} from '@core/api/types';
 import { GATE_FOR_PHASE } from '@domain/phases';
 import { crewLabel } from '@domain/models';
+import { diagnosisLine } from '@domain/diagnosis';
 import { explainHalt, isHaltReason } from '@domain/halt';
+import { currentQuestions } from '@domain/questions';
 
 /** What the last `story.halted` event says (G7): the code and the person's or the worker's words. */
 export interface HaltInfo {
@@ -20,12 +28,16 @@ export interface RowDetail {
   readonly gate: string | null;
   /** The last `story.halted` event, for Anchored. */
   readonly halt: HaltInfo | null;
+  /** The diagnosis of a halted voyage (`getStoryDiagnosis`), for Anchored. */
+  readonly diagnosis: Diagnosis | null;
 }
 
 /** The "What's needed" cell: the sentence, and the small line under it. */
 export interface Needed {
   readonly headline: string;
   readonly sub: string | null;
+  /** For a halted voyage, once its diagnosis is read: the cause and who acts on it, in one line. */
+  readonly diagnosis?: string;
 }
 
 /** The action that ends a row: its label, how it looks and where it goes. */
@@ -88,10 +100,11 @@ function questionsNeeded(
   questions: readonly Question[] | null
 ): Needed {
   const crew = crewOfPhase(story.phase);
-  if (questions === null || questions.length === 0)
+  const asked = questions === null ? [] : currentQuestions(questions);
+  if (asked.length === 0)
     return { headline: `${crew} is waiting for answers`, sub: null };
-  const round = Math.max(...questions.map((question) => question.round));
-  const current = questions.filter((question) => question.round === round);
+  const round = Math.max(...asked.map((question) => question.round));
+  const current = asked.filter((question) => question.round === round);
   const answered = current.filter(
     (question) => question.answer !== null
   ).length;
@@ -119,7 +132,18 @@ function decisionNeeded(story: Story, detail: RowDetail): Needed {
   };
 }
 
-function haltNeeded(story: Story, halt: HaltInfo | null): Needed {
+/** What a halted voyage needs, with the line of its diagnosis once it is read. */
+function neededWithDiagnosis(
+  story: Story,
+  halt: HaltInfo | null,
+  diagnosis: Diagnosis | null
+): Needed {
+  const needed = neededByHaltReason(story, halt);
+  const line = diagnosis === null ? null : diagnosisLine(diagnosis.findings);
+  return line === null ? needed : { ...needed, diagnosis: line };
+}
+
+function neededByHaltReason(story: Story, halt: HaltInfo | null): Needed {
   const reason = story.haltReason;
   if (reason === null) return { headline: 'The voyage is halted', sub: null };
   const detail = halt?.detail ?? null;
@@ -140,7 +164,7 @@ export function whatsNeeded(story: Story, detail: RowDetail): Needed {
     case 'awaiting_decision':
       return decisionNeeded(story, detail);
     case 'halted':
-      return haltNeeded(story, detail.halt);
+      return neededWithDiagnosis(story, detail.halt, detail.diagnosis);
     default:
       return { headline: story.status, sub: null };
   }

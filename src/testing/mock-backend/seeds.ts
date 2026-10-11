@@ -341,6 +341,7 @@ class SeedBuilder {
         answeredBy: null,
         answeredAt: null,
         consumed: false,
+        supersededAt: null,
       });
       this.event(voyage, 'question.asked', SYSTEM_ACTOR, minutes, {
         questionId: id,
@@ -365,7 +366,9 @@ class SeedBuilder {
     question.answer = text;
     question.answeredBy = actor;
     question.answeredAt = this.iso(minutes);
-    const pending = voyage.questions.filter((q) => q.answer === null).length;
+    const pending = voyage.questions.filter(
+      (q) => q.answer === null && q.supersededAt === null
+    ).length;
     this.event(voyage, 'question.answered', actor, minutes, {
       questionId: id,
       pending,

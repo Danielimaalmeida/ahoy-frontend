@@ -12,22 +12,31 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { throwError } from 'rxjs';
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
+import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
+import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import { operationNamed, requestViolations } from '@testing/fixtures/contract';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
+import getRefinements from '@testing/fixtures/getRefinements.json';
+import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
+import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
 import listQuestions from '@testing/fixtures/listQuestions.json';
+import listRefinements from '@testing/fixtures/listRefinements.json';
 import listStories from '@testing/fixtures/listStories.json';
 import listStoryEvents from '@testing/fixtures/listStoryEvents.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import problems from '@testing/fixtures/problems.json';
+import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
+import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
@@ -322,6 +331,120 @@ const CASES: readonly Case[] = [
     value: listStoryEvents,
     problem: 'not_found',
   },
+  {
+    op: 'refreshIntake',
+    call: (api) =>
+      api.refreshIntake('PROJ-123', {
+        expectedVersion: 9,
+        reason: 'Jira now has the export limits',
+        confirmSpend: true,
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-123/refresh-intake',
+    body: {
+      expectedVersion: 9,
+      reason: 'Jira now has the export limits',
+      confirmSpend: true,
+    },
+    reply: refreshIntake,
+    status: 202,
+    value: refreshIntake,
+    problem: 'invalid_state',
+  },
+  {
+    op: 'listRefinements',
+    call: (api) => api.listRefinements(),
+    method: 'GET',
+    url: '/api/v1/refinements',
+    reply: listRefinements,
+    status: 200,
+    value: listRefinements.items,
+    problem: 'unauthenticated',
+  },
+  {
+    op: 'getStoryDiagnosis',
+    call: (api) => api.getStoryDiagnosis('PROJ-118'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-118/diagnosis',
+    reply: getStoryDiagnosis,
+    status: 200,
+    value: getStoryDiagnosis,
+    problem: 'not_found',
+  },
+  {
+    op: 'getRefinements',
+    call: (api) => api.getRefinements('PROJ-145'),
+    method: 'GET',
+    url: '/api/v1/refinements/PROJ-145',
+    reply: getRefinements,
+    status: 200,
+    value: getRefinements,
+    problem: 'validation_failed',
+  },
+  {
+    op: 'requestRefinement',
+    call: (api) =>
+      api.requestRefinement('PROJ-145', {
+        confirmSpend: true,
+        notes: 'Check the CSV export limits',
+      }),
+    method: 'POST',
+    url: '/api/v1/refinements/PROJ-145',
+    body: { confirmSpend: true, notes: 'Check the CSV export limits' },
+    reply: requestRefinement,
+    status: 202,
+    value: requestRefinement,
+    problem: 'invalid_state',
+  },
+  {
+    op: 'cancelRefinement',
+    call: (api) =>
+      api.cancelRefinement('PROJ-145', { reason: 'Asked for the wrong story' }),
+    method: 'POST',
+    url: '/api/v1/refinements/PROJ-145/cancel',
+    body: { reason: 'Asked for the wrong story' },
+    reply: cancelRefinement,
+    status: 202,
+    value: cancelRefinement,
+    problem: 'invalid_state',
+  },
+  {
+    op: 'listAgentDiagnoses',
+    call: (api) => api.listAgentDiagnoses('PROJ-118'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-118/agent-diagnoses',
+    reply: listAgentDiagnoses,
+    status: 200,
+    value: listAgentDiagnoses,
+    problem: 'not_found',
+  },
+  {
+    op: 'requestAgentDiagnosis',
+    call: (api) =>
+      api.requestAgentDiagnosis('PROJ-118', {
+        confirmSpend: true,
+        notes: 'Is it the token or the cluster?',
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-118/agent-diagnoses',
+    body: { confirmSpend: true, notes: 'Is it the token or the cluster?' },
+    reply: requestAgentDiagnosis,
+    status: 202,
+    value: requestAgentDiagnosis,
+    problem: 'invalid_state',
+  },
+  {
+    op: 'cancelAgentDiagnosis',
+    call: (api) =>
+      api.cancelAgentDiagnosis('PROJ-118', { reason: 'Asked by mistake' }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-118/agent-diagnoses/cancel',
+    body: { reason: 'Asked by mistake' },
+    reply: cancelAgentDiagnosis,
+    status: 202,
+    value: cancelAgentDiagnosis,
+    problem: 'invalid_state',
+  },
 ];
 
 const STATUS_TEXT: Readonly<Record<number, string>> = {
@@ -461,6 +584,7 @@ describe('ApiClient', () => {
         'listStories',
         'startStory',
         'getStory',
+        'getStoryDiagnosis',
         'stopStory',
         'resumeStory',
         'setStoryBudget',
@@ -476,6 +600,14 @@ describe('ApiClient', () => {
         'listArtifacts',
         'getArtifactContent',
         'listStoryEvents',
+        'refreshIntake',
+        'listRefinements',
+        'getRefinements',
+        'requestRefinement',
+        'cancelRefinement',
+        'listAgentDiagnoses',
+        'requestAgentDiagnosis',
+        'cancelAgentDiagnosis',
       ].sort()
     );
   });

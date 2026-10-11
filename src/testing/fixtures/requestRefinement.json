@@ -1,0 +1,20 @@
+{
+  "id": "proj-145-refinement-001-3f2a",
+  "key": "PROJ-145",
+  "status": "queued",
+  "notes": "Check the CSV export limits",
+  "requestedBy": "alex@example.com",
+  "agent": null,
+  "model": null,
+  "reasoningEffort": null,
+  "runtime": null,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "budgetNanoAiu": 10000000000,
+  "usage": { "requests": 0, "nanoAiu": 0, "inputTokens": 0, "outputTokens": 0 },
+  "exitReason": null,
+  "cancelRequested": false,
+  "createdAt": "2026-10-06T10:00:00.000Z",
+  "startedAt": null,
+  "endedAt": null,
+  "content": null
+}

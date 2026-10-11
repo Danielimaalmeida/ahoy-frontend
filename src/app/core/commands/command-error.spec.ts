@@ -2,6 +2,7 @@ import type { ProblemError } from '@core/api/api-error';
 import {
   STALE_HEADING,
   UNREACHABLE_HEADING,
+  agentRunErrorView,
   apiErrorView,
   commandErrorView,
   techLine,
@@ -125,5 +126,75 @@ describe('apiErrorView', () => {
     expect(
       apiErrorView(problem(409, 'invalid_state', { detail: '  ' })).text
     ).toBe('It may have moved on. It has been refreshed.');
+  });
+});
+
+describe('agentRunErrorView', () => {
+  const conflict: ProblemError = problem(409, 'invalid_state', {
+    instance: 'req-7',
+  });
+
+  it('reads a conflict on a refinement request as one already in progress for the item', () => {
+    expect(agentRunErrorView(conflict, 'request', 'refinement')).toEqual({
+      variant: 'notice',
+      heading: 'This item already has a refinement in progress',
+      text: 'Its row has been refreshed: cancel that one first.',
+      tech: '409 · invalid_state · req-7',
+    });
+  });
+
+  it('reads a conflict on a diagnosis request as one in progress, or the voyage not halted, in the server’s words', () => {
+    expect(agentRunErrorView(conflict, 'request', 'diagnosis')).toEqual({
+      variant: 'notice',
+      heading: 'This voyage cannot be diagnosed by an agent now',
+      text: 'It already has a diagnosis in progress, or it is not halted any more. The page has been refreshed.',
+      tech: '409 · invalid_state · req-7',
+    });
+    expect(
+      agentRunErrorView(
+        { ...conflict, detail: 'Story PROJ-1 is running, not halted' },
+        'request',
+        'diagnosis'
+      )
+    ).toMatchObject({ text: 'Story PROJ-1 is running, not halted' });
+  });
+
+  it('reads a conflict on a cancel as nothing left to cancel, with the server’s words when it sent some', () => {
+    expect(
+      agentRunErrorView(
+        { ...conflict, detail: 'PROJ-1 has no refinement in progress' },
+        'cancel',
+        'refinement'
+      )
+    ).toMatchObject({
+      variant: 'notice',
+      heading: 'Nothing to cancel any more',
+      text: 'PROJ-1 has no refinement in progress',
+    });
+    expect(agentRunErrorView(conflict, 'cancel', 'diagnosis')).toMatchObject({
+      heading: 'Nothing to cancel any more',
+      text: 'The diagnosis ended meanwhile. The page has been refreshed.',
+    });
+  });
+
+  it('says the feature is not available on a 503 problem, by name', () => {
+    expect(
+      agentRunErrorView(problem(503, 'unavailable'), 'request', 'refinement')
+    ).toMatchObject({
+      variant: 'error',
+      heading: "Refinement isn't available",
+    });
+    expect(
+      agentRunErrorView(problem(503, 'unavailable'), 'request', 'diagnosis')
+    ).toMatchObject({
+      variant: 'error',
+      heading: "Agent diagnosis isn't available",
+    });
+  });
+
+  it('reads a network failure as Ahoy not answering, not as a verdict on the run', () => {
+    expect(
+      agentRunErrorView({ kind: 'network' }, 'request', 'diagnosis')
+    ).toMatchObject({ variant: 'error', heading: "Can't reach Ahoy" });
   });
 });

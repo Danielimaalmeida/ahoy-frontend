@@ -1,6 +1,5 @@
 import { computed, signal } from '@angular/core';
-import type { AbstractControl, ValidationErrors } from '@angular/forms';
-import { fieldErrors } from '@core/api/api-error';
+import { fieldMessage } from '@core/api/api-error';
 import { commandErrorView } from '@core/commands/command-error';
 import type { CommandOutcome } from '@core/commands/command-runner';
 import type { VoyageContext } from '../context/voyage-context';
@@ -19,25 +18,6 @@ export const REASON_MESSAGES: Readonly<Record<string, string>> = {
   maxlength: `At most ${REASON_MAX} characters.`,
 };
 
-/** Requires text that is not only spaces (`Validators.required` takes "   "); the API trims nothing and wants 1 char. */
-export function requiredText(
-  control: AbstractControl<string>
-): ValidationErrors | null {
-  return control.value.trim() === '' ? { required: true } : null;
-}
-
-/** Limits the trimmed text to `max` characters: what is sent is trimmed, so trailing spaces do not count. */
-export function maxTrimmed(
-  max: number
-): (control: AbstractControl<string>) => ValidationErrors | null {
-  return (control) => {
-    const length = control.value.trim().length;
-    return length > max
-      ? { maxlength: { requiredLength: max, actualLength: length } }
-      : null;
-  };
-}
-
 /**
  * The server's message for one field of the request, from a `400 validation_failed` (`errors[].path` such as
  * `body/reason` or `/budgetNanoAiu`); "" when there is none.
@@ -46,11 +26,7 @@ export function serverFieldError(
   outcome: CommandOutcome<unknown> | null,
   field: string
 ): string {
-  if (outcome?.kind !== 'other') return '';
-  return fieldErrors(outcome.error)
-    .filter((error) => error.path?.[0] === field)
-    .map((error) => error.message)
-    .join(' ');
+  return fieldMessage(outcome?.kind === 'other' ? outcome.error : null, field);
 }
 
 /**

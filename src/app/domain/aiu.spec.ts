@@ -1,6 +1,7 @@
 import {
   budgetPercent,
   capCoversSpent,
+  checkAiuLimit,
   formatAiu,
   parseAiu,
   remainingNano,
@@ -156,5 +157,36 @@ describe('capCoversSpent', () => {
 
   it('rejects a cap below what was spent', () => {
     expect(capCoversSpent(10 * AIU, 12 * AIU + 400_000_000)).toBe(false);
+  });
+});
+
+describe('checkAiuLimit', () => {
+  const MAX = 20 * AIU;
+
+  it('reads an empty limit as none, so the server cap applies', () => {
+    expect(checkAiuLimit('', MAX)).toEqual({ cap: null });
+    expect(checkAiuLimit('   ', MAX)).toEqual({ cap: null });
+  });
+
+  it('reads an amount in AIU as nano-AIU without floats', () => {
+    expect(checkAiuLimit('5', MAX)).toEqual({ cap: 5 * AIU });
+    expect(checkAiuLimit(' 2.5 ', MAX)).toEqual({ cap: 2_500_000_000 });
+    expect(checkAiuLimit('0.000000001', MAX)).toEqual({ cap: 1 });
+  });
+
+  it('takes up to the maximum it is given, and refuses more', () => {
+    expect(checkAiuLimit('20', MAX)).toEqual({ cap: MAX });
+    expect(checkAiuLimit('19.999999999', MAX)).toEqual({ cap: MAX - 1 });
+    expect(checkAiuLimit('20.000000001', MAX)).toEqual({ error: 'maximum' });
+    expect(checkAiuLimit('500', MAX)).toEqual({ error: 'maximum' });
+    expect(checkAiuLimit('5', 3 * AIU)).toEqual({ error: 'maximum' });
+  });
+
+  it('refuses what is not an amount, and zero', () => {
+    expect(checkAiuLimit('1e3', MAX)).toEqual({ error: 'amount' });
+    expect(checkAiuLimit('-1', MAX)).toEqual({ error: 'amount' });
+    expect(checkAiuLimit('1,5', MAX)).toEqual({ error: 'amount' });
+    expect(checkAiuLimit('0', MAX)).toEqual({ error: 'positive' });
+    expect(checkAiuLimit('0.0', MAX)).toEqual({ error: 'positive' });
   });
 });

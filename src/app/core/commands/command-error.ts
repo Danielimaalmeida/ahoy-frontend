@@ -188,3 +188,63 @@ export function commandErrorView(
       return apiErrorView(outcome.error);
   }
 }
+
+/** An agent run that is not a story phase: a backlog item's refinement or a halted story's agent diagnosis. */
+export type AgentRunNoun = 'refinement' | 'diagnosis';
+
+/**
+ * What a dialog shows for an API error of a refinement or an agent diagnosis. `409 invalid_state` means the item or the
+ * voyage moved on meanwhile (one is already in progress, none is any more, or the voyage is not halted) and
+ * `503 unavailable` that the server has it not configured; everything else reads as any other API error.
+ */
+export function agentRunErrorView(
+  error: ApiError,
+  action: 'request' | 'cancel',
+  noun: AgentRunNoun
+): CommandErrorView {
+  if (error.kind !== 'problem') return apiErrorView(error);
+  const detail = error.detail?.trim() ?? '';
+  const tech = techLine(error);
+  if (error.status === 503) {
+    return {
+      variant: 'error',
+      heading:
+        noun === 'refinement'
+          ? "Refinement isn't available"
+          : "Agent diagnosis isn't available",
+      text:
+        detail ||
+        (noun === 'refinement'
+          ? "Ahoy has no refinement agent configured, or can't read its control repository."
+          : "Ahoy has no diagnosis agent configured, or can't read its control repository."),
+      tech,
+    };
+  }
+  if (!isInvalidState(error)) return apiErrorView(error);
+  if (action === 'cancel')
+    return {
+      variant: 'notice',
+      heading: 'Nothing to cancel any more',
+      text:
+        detail ||
+        (noun === 'refinement'
+          ? 'The refinement ended meanwhile. Its row has been refreshed.'
+          : 'The diagnosis ended meanwhile. The page has been refreshed.'),
+      tech,
+    };
+  return noun === 'refinement'
+    ? {
+        variant: 'notice',
+        heading: 'This item already has a refinement in progress',
+        text: detail || 'Its row has been refreshed: cancel that one first.',
+        tech,
+      }
+    : {
+        variant: 'notice',
+        heading: 'This voyage cannot be diagnosed by an agent now',
+        text:
+          detail ||
+          'It already has a diagnosis in progress, or it is not halted any more. The page has been refreshed.',
+        tech,
+      };
+}

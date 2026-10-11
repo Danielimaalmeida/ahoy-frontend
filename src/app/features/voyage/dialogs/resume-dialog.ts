@@ -10,11 +10,11 @@ import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { ToastService } from '@ui/toast/toast';
 import { modelLabel, slotsForPhase } from '../context/crew';
+import { maxTrimmed } from '@ui/field/text-validators';
 import {
   CommandState,
   REASON_MAX,
   REASON_MESSAGES,
-  maxTrimmed,
   type VoyageDialogData,
 } from './dialog-support';
 

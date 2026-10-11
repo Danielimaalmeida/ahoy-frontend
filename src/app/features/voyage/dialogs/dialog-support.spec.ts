@@ -1,38 +1,4 @@
-import { FormControl } from '@angular/forms';
-import {
-  REASON_MAX,
-  maxTrimmed,
-  requiredText,
-  serverFieldError,
-} from './dialog-support';
-
-describe('requiredText', () => {
-  it('refuses empty and blank text', () => {
-    expect(requiredText(new FormControl('', { nonNullable: true }))).toEqual({
-      required: true,
-    });
-    expect(
-      requiredText(new FormControl('  \n ', { nonNullable: true }))
-    ).toEqual({ required: true });
-    expect(
-      requiredText(new FormControl('Wrong repo', { nonNullable: true }))
-    ).toBeNull();
-  });
-});
-
-describe('maxTrimmed', () => {
-  it("allows the API's 2000 characters, not counting spaces around them", () => {
-    const check = maxTrimmed(REASON_MAX);
-    expect(
-      check(new FormControl(`  ${'a'.repeat(2000)}  `, { nonNullable: true }))
-    ).toBeNull();
-    expect(
-      check(new FormControl('a'.repeat(2001), { nonNullable: true }))
-    ).toEqual({
-      maxlength: { requiredLength: 2000, actualLength: 2001 },
-    });
-  });
-});
+import { serverFieldError } from './dialog-support';
 
 describe('serverFieldError', () => {
   it('picks the messages of a 400 for one field, in either path form', () => {

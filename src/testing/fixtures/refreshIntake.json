@@ -1,0 +1,15 @@
+{
+  "key": "PROJ-123",
+  "title": "Show invoice due date on the billing page",
+  "owner": "alex@example.com",
+  "phase": "intake",
+  "status": "ready",
+  "haltReason": null,
+  "budgetNanoAiu": 30000000000,
+  "spentNanoAiu": 12400000000,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "currentRunId": null,
+  "version": 10,
+  "createdAt": "2026-10-05T10:02:11.000Z",
+  "updatedAt": "2026-10-06T10:05:00.000Z"
+}

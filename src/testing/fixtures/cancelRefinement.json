@@ -1,0 +1,20 @@
+{
+  "id": "proj-145-refinement-001-3f2a",
+  "key": "PROJ-145",
+  "status": "cancelled",
+  "notes": "Check the CSV export limits",
+  "requestedBy": "alex@example.com",
+  "agent": null,
+  "model": null,
+  "reasoningEffort": null,
+  "runtime": null,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "budgetNanoAiu": 10000000000,
+  "usage": { "requests": 0, "nanoAiu": 0, "inputTokens": 0, "outputTokens": 0 },
+  "exitReason": "cancelled by sam@example.com: Asked for the wrong story",
+  "cancelRequested": true,
+  "createdAt": "2026-10-06T10:00:00.000Z",
+  "startedAt": null,
+  "endedAt": "2026-10-06T10:01:00.000Z",
+  "content": null
+}

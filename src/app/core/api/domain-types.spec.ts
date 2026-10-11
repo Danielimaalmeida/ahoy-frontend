@@ -5,7 +5,12 @@ import {
   EFFORT_SOURCE_LABELS,
   MODEL_SOURCE_LABELS,
 } from '@domain/models';
+import {
+  AGENT_DIAGNOSIS_MAX_NANO_AIU,
+  REFINEMENT_MAX_NANO_AIU,
+} from '@domain/refinement';
 import type * as Domain from '@domain/types';
+import contract from '@testing/fixtures/openapi.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import { isModelPlan } from './guards';
 import * as Api from './types';
@@ -23,6 +28,9 @@ describe('@domain/types is the contract', () => {
     expectTypeOf<Domain.ReasoningEffort>().toEqualTypeOf<Api.ReasoningEffort>();
     expectTypeOf<Domain.ModelSource>().toEqualTypeOf<Api.ModelSource>();
     expectTypeOf<Domain.EffortSource>().toEqualTypeOf<Api.EffortSource>();
+    expectTypeOf<Domain.DiagnosisActor>().toEqualTypeOf<Api.DiagnosisActor>();
+    expectTypeOf<Domain.DiagnosisKind>().toEqualTypeOf<Api.DiagnosisKind>();
+    expectTypeOf<Domain.RefinementStatus>().toEqualTypeOf<Api.RefinementStatus>();
   });
 
   it('has the same resources as the generated types, field for field', () => {
@@ -88,5 +96,19 @@ describe('the domain functions take real API values', () => {
       [...Api.EFFORT_SOURCES].sort()
     );
     expect(IN_PORT).toBe('terminal');
+  });
+});
+
+describe('the domain limits that the contract states', () => {
+  it('keeps the most a refinement and an agent diagnosis may be capped at equal to the contract’s maximum for each', () => {
+    const schemas = contract.components.schemas;
+    const maximum = (schema: {
+      properties: { budgetNanoAiu: unknown };
+    }): unknown =>
+      (schema.properties.budgetNanoAiu as { maximum: number }).maximum;
+    expect(maximum(schemas.RefinementRequest)).toBe(REFINEMENT_MAX_NANO_AIU);
+    expect(maximum(schemas.AgentDiagnosisRequest)).toBe(
+      AGENT_DIAGNOSIS_MAX_NANO_AIU
+    );
   });
 });

@@ -1,0 +1,55 @@
+{
+  "key": "PROJ-145",
+  "items": [
+    {
+      "id": "proj-145-refinement-002-9c1d",
+      "key": "PROJ-145",
+      "status": "succeeded",
+      "notes": null,
+      "requestedBy": "alex@example.com",
+      "agent": "quartermaster",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null,
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 6,
+        "nanoAiu": 2400000000,
+        "inputTokens": 48210,
+        "outputTokens": 3120
+      },
+      "exitReason": null,
+      "cancelRequested": false,
+      "createdAt": "2026-10-06T10:02:00.000Z",
+      "startedAt": "2026-10-06T10:02:05.000Z",
+      "endedAt": "2026-10-06T10:06:41.000Z",
+      "content": "## Verdict\nNEEDS WORK. The story has no failure case and no limit on export size.\n\n## Acceptance criteria\n1. Given an admin on the invoices page, when they choose Export as CSV, then a file with every listed invoice downloads. (from Jira)\n2. Given more than 10,000 invoices, when they export, then the file is generated in the background and they are told by e-mail. (new)\n\n## Open questions\n1. Which columns does finance need?"
+    },
+    {
+      "id": "proj-145-refinement-001-3f2a",
+      "key": "PROJ-145",
+      "status": "cancelled",
+      "notes": "Check the CSV export limits",
+      "requestedBy": "alex@example.com",
+      "agent": null,
+      "model": null,
+      "reasoningEffort": null,
+      "runtime": null,
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 0,
+        "nanoAiu": 0,
+        "inputTokens": 0,
+        "outputTokens": 0
+      },
+      "exitReason": "cancelled by sam@example.com: Asked for the wrong story",
+      "cancelRequested": true,
+      "createdAt": "2026-10-06T10:00:00.000Z",
+      "startedAt": null,
+      "endedAt": "2026-10-06T10:01:00.000Z",
+      "content": null
+    }
+  ]
+}

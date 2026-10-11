@@ -4,6 +4,7 @@ import { explainHalt } from '@domain/halt';
 import { crewLabel } from '@domain/models';
 import { GATE_FOR_PHASE } from '@domain/phases';
 import { actorLabel } from '@domain/identifiers';
+import { openQuestions } from '@domain/questions';
 
 /** Who anchored a voyage, from the last `story.halted` event (G7). */
 export interface HaltNote {
@@ -69,9 +70,7 @@ export function noteFor(story: Story, detail: NoteDetail): string {
       return `${crewOfPhase(story.phase)} goes next`;
     case 'awaiting_input': {
       if (detail.questions === null) return 'Waiting for answers';
-      const open = detail.questions.filter(
-        (question) => question.answer === null
-      ).length;
+      const open = openQuestions(detail.questions).length;
       return `${open} open ${open === 1 ? 'question' : 'questions'}`;
     }
     case 'awaiting_decision':
