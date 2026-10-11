@@ -1,7 +1,43 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-10 for the code-review fixes of PR #22 on `claude/tender-johnson-pvbvmu`.** Committed and pushed with
-the user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-11 for the agent diagnosis on `claude/tender-johnson-pvbvmu`** (after the code-review fixes of PR #22
+of 2026-10-10). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Agent diagnosis (2026-10-11)
+
+An agent that diagnoses what the fixed rules of the halt diagnosis cannot, on a person's request. It is "point 3" of the
+`ahoy-hosted` design (§5, "Agent diagnosis", approved by the user as a D18 exception); its backend is in PR #30
+(`ahoy-hosted`, head `48b14b4`). The backend runs it as a `kind = 'diagnosis'` row of `refinements`, read-only, capped
+at 10 AIU by default and 20 AIU at most, charged to no voyage.
+
+- **Contract:** vendored `listAgentDiagnoses`, `requestAgentDiagnosis` and `cancelAgentDiagnosis`
+  (`/stories/{key}/agent-diagnoses[/cancel]`) with `AgentDiagnosisList` and `AgentDiagnosisRequest`; an agent diagnosis
+  is typed as a `Refinement`. `schema.d.ts` and the JSON mirror regenerated; the redacted JQL example is kept.
+- **API layer:** `ApiClient.listAgentDiagnoses/requestAgentDiagnosis/cancelAgentDiagnosis`, `isAgentDiagnosisList`, three
+  fictional fixtures (key PROJ-118, agent `shipwright`), the fake API and the conformance walk.
+- **Mock backend:** `RefinementDesk` is now generic by kind: a diagnosis queues, runs for two ticks, then succeeds with
+  Markdown that follows the halt reason; `409 invalid_state` if the voyage is not halted or has one in progress, `404`
+  for an unknown voyage.
+- **Domain and shared code:** `AGENT_RUN_MAX_NANO_AIU`, `isActiveRefinement`, `refinementLabel`,
+  `refinementStateLabel` moved to `domain/refinement.ts` (a feature may not import another), `checkAiuLimit` to
+  `domain/aiu.ts`, and `agentRunErrorView` to `core/commands/command-error.ts`, which the Backlog's dialogs now use too.
+- **Screen:** the Anchored banner of a halted voyage has an "Agent diagnosis" section. `AgentDiagnoses` (provided by the
+  banner) reads the list when the voyage is halted and again only when its version moves, polls every 5 s while the
+  newest is queued or running, and drops a read that a request or cancel answered after. The section shows the state
+  ("Waiting for a run slot", "The agent is diagnosing it", "Diagnosed", "Cancelled", "Failed" and the exit reason), who
+  asked and when, and the agent's Markdown through `ah-markdown`. "Ask an agent to diagnose" opens a dialog with
+  optional notes and an AIU limit (at most 20 AIU, refused in the field), the spend warning and `confirmSpend: true`;
+  "Cancel diagnosis" needs a reason.
+- **Tests:** `agent-diagnoses.spec.ts` (10, written first), `command-error.spec.ts`, the contract, guard, client,
+  conformance and mock specs, and five shell specs on the mock backend (offer, ask and follow to Markdown, notes and
+  limit in nano-AIU with the 20 AIU refusal, cancel, `409`). Build, typecheck (`check-boundaries: ok`), lint,
+  **137 files / 2,485 tests passed** and `npm run format` on Node 24.21.0 (same sandbox install as below).
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real agent, a real API or
+  TEST. Nothing has seen a real diagnosis.
+- **Needs from other lanes / rollout:** the backend needs migration `0006` and a `shipwright` agent profile in the
+  content repo (`agents-github-repository`, read-only from here); until then `requestAgentDiagnosis` answers `503
+unavailable`, which the dialog words as "Agent diagnosis isn't available". The names of the read-only Jira and
+  Confluence tools for the refinement allowlist are still the user's to give.
 
 ## Review fixes of PR #22 (2026-10-10)
 
@@ -526,6 +562,9 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+The agent diagnosis (Anchored banner, 2026-10-11) is committed on `claude/tender-johnson-pvbvmu` on top of the rest:
+137 files / 2,485 tests pass offline; it has met only the in-process mock.
+
 The halt diagnosis, the Backlog's Refine action, Back to intake and the refinement contract are committed on
 `claude/tender-johnson-pvbvmu` (above), with the fixes of PR #22's code review on top: 2,439 tests pass offline, and the
 Refine flow was clicked through on the in-browser mock. None has met a real or `--simulate` API.
@@ -632,7 +671,9 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-Squash the `4d4c8b3` WIP commit and give PR #22 a title and description. Check Refine, Back to intake and the diagnosis
+Check the agent diagnosis, Refine, Back to intake and the diagnosis banner against a local `ahoy-hosted` started with
+`npm run dev -- --simulate` (0 AIU; its stub answers a diagnosis), once the `shipwright` profile exists in the content
+repo for anything beyond the stub. Squash the `4d4c8b3` WIP commit and give PR #22 a title and description. Check Refine, Back to intake and the diagnosis
 banner against a local `ahoy-hosted` started with `npm run dev -- --simulate` (0 AIU), and decide whether to restore a
 `start:mock` script with a mock bootstrap, and whether to make `node scripts/mock-api.mjs` run again (see "Found" in
 "Review fixes of PR #22"). Then review Back to intake in a browser.
@@ -646,7 +687,8 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest change, on `claude/tender-johnson-pvbvmu`, fixes PR #22's code review (see "Review fixes of PR #22"; 136 test
+The latest change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
+Node 24.21.0). Before it, a change fixes PR #22's code review (see "Review fixes of PR #22"; 136 test
 files / 2,439 tests pass on Node 24.21.0). Before it, a change shows a halted voyage's diagnosis
 (`getStoryDiagnosis`) in the Anchored banner and in "Needs you". Before it, the Backlog's Refine action (row button or
 "Refinement · <state>" toggle, detail row with Cancel refinement and Refine again, Markdown via `ah-markdown`, polling

@@ -72,6 +72,12 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Agent diagnosis (2026-10-11, `claude/tender-johnson-pvbvmu`):** a halted voyage's Anchored banner can ask a
+  read-only agent to diagnose what the fixed rules cannot ("Ask an agent to diagnose": optional notes, an AIU limit up to
+  20 AIU, spend warning, `confirmSpend: true`; "Cancel diagnosis" with a reason). The newest diagnosis shows its state and
+  the agent's Markdown, and is read again every 5 s only while it is in progress. Contract, client, guard, fixtures and
+  mock included. Offline build, typecheck, lint, 137 files / 2,485 tests and formatting passed on Node 24.21.0. The
+  backend needs migration `0006` and a `shipwright` profile; no browser, `--simulate`, real agent, real API or TEST check.
 - **Review fixes of PR #22 (2026-10-10, `claude/tender-johnson-pvbvmu`):** the refinement list no longer loses a refinement
   just asked for when an older read answers later, the halt diagnosis is read again only when the voyage's version moves,
   Back to intake waits for the runs, the Refinement buttons are named by their item, the dialogs share their text
