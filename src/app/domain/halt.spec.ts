@@ -1,4 +1,9 @@
-import { HALT_REASONS, explainHalt, isHaltReason } from './halt';
+import {
+  HALT_REASONS,
+  explainHalt,
+  isHaltReason,
+  resumeRetriesPackages,
+} from './halt';
 import type { HaltReason } from './types';
 
 /** The nine texts of `docs/design/design-system/vocabulary.md`, copied here so a rewrite fails the test. */
@@ -89,5 +94,20 @@ describe('explainHalt', () => {
       text: 'some_new_reason',
       detail: 'detail',
     });
+  });
+});
+
+describe('resumeRetriesPackages', () => {
+  it('is true for a package halt in implementation, where a resume retries the stuck packages', () => {
+    expect(resumeRetriesPackages('package_stuck', 'implementation')).toBe(true);
+    expect(
+      resumeRetriesPackages('package_needs_decision', 'implementation')
+    ).toBe(true);
+  });
+
+  it('is false for any other halt, or a package halt outside implementation', () => {
+    expect(resumeRetriesPackages('run_failed', 'implementation')).toBe(false);
+    expect(resumeRetriesPackages(null, 'implementation')).toBe(false);
+    expect(resumeRetriesPackages('package_stuck', 'pr_review')).toBe(false);
   });
 });

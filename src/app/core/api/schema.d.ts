@@ -65,7 +65,7 @@ export interface paths {
      *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
      *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
      *     `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-     *     AND "Feature Team" = aaa AND Team in (34115) ORDER BY Rank ASC`.
+     *     AND "Feature Team" = MY_COMPANY AND Team in (34115) ORDER BY Rank ASC`.
      *
      *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
      *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
@@ -159,7 +159,13 @@ export interface paths {
     };
     readonly get?: never;
     readonly put?: never;
-    /** Clear a halt so the reconciler retries the current phase. May spend AIU. */
+    /**
+     * Clear a halt so the reconciler retries the current phase. May spend AIU.
+     * @description On an implementation halted package_stuck or package_needs_decision, every failed, stalled,
+     *     blocked or unverified work package is retried, as the package decision `retry` does, with the
+     *     reason as its rework note; the reason is then required (400 without it). The event
+     *     story.resumed names them in retriedPackages. Any other halt is resumed as it stands.
+     */
     readonly post: operations['resumeStory'];
     readonly delete?: never;
     readonly options?: never;
@@ -1111,6 +1117,7 @@ export interface components {
       | 'run_lost'
       | 'agent_failed'
       | 'revision_ceiling'
+      | 'package_stuck'
       | 'reconciler_error'
       | 'stopped_by_user'
       | 'other';
