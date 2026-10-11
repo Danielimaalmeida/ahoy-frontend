@@ -1,4 +1,8 @@
-import { headerActions, primaryAction } from './primary-action';
+import {
+  canRefreshIntake,
+  headerActions,
+  primaryAction,
+} from './primary-action';
 
 describe('primaryAction', () => {
   it('sends a voyage whose crew asks to the Questions tab', () => {
@@ -59,5 +63,45 @@ describe('headerActions', () => {
 
   it('offers neither for a voyage that is done', () => {
     expect(headerActions('terminal')).toEqual({ stop: false, budget: false });
+  });
+});
+
+describe('canRefreshIntake', () => {
+  const planning = {
+    phase: 'planning',
+    status: 'awaiting_decision',
+    currentRunId: null,
+  } as const;
+
+  it('offers Back to intake in planning and plan review once the runs are read and none is an implementation', () => {
+    expect(canRefreshIntake(planning, [])).toBe(true);
+    expect(
+      canRefreshIntake({ ...planning, phase: 'plan_review' }, [
+        { phase: 'intake' },
+        { phase: 'planning' },
+      ])
+    ).toBe(true);
+  });
+
+  it('offers nothing while the runs are not read, because an implementation run may be among them', () => {
+    expect(canRefreshIntake(planning, null)).toBe(false);
+  });
+
+  it('refuses a voyage that ever implemented, one under way or done, and the other phases', () => {
+    expect(canRefreshIntake(planning, [{ phase: 'implementation' }])).toBe(
+      false
+    );
+    expect(canRefreshIntake({ ...planning, status: 'running' }, [])).toBe(
+      false
+    );
+    expect(canRefreshIntake({ ...planning, status: 'terminal' }, [])).toBe(
+      false
+    );
+    expect(canRefreshIntake({ ...planning, currentRunId: 'run-1' }, [])).toBe(
+      false
+    );
+    expect(canRefreshIntake({ ...planning, phase: 'implementation' }, [])).toBe(
+      false
+    );
   });
 });

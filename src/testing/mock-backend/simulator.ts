@@ -446,6 +446,7 @@ export class Simulator {
           answeredBy: null,
           answeredAt: null,
           consumed: false,
+          supersededAt: null,
         });
         return id;
       });

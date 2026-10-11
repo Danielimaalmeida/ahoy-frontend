@@ -1,0 +1,20 @@
+{
+  "id": "proj-118-diagnosis-001-1a9d",
+  "key": "PROJ-118",
+  "status": "queued",
+  "notes": "Is it the token or the cluster?",
+  "requestedBy": "alex@example.com",
+  "agent": null,
+  "model": null,
+  "reasoningEffort": null,
+  "runtime": null,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "budgetNanoAiu": 10000000000,
+  "usage": { "requests": 0, "nanoAiu": 0, "inputTokens": 0, "outputTokens": 0 },
+  "exitReason": null,
+  "cancelRequested": false,
+  "createdAt": "2026-10-06T10:10:00.000Z",
+  "startedAt": null,
+  "endedAt": null,
+  "content": null
+}

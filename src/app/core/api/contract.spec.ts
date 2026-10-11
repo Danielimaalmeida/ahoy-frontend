@@ -1,20 +1,29 @@
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
+import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
+import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
+import getRefinements from '@testing/fixtures/getRefinements.json';
+import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
+import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
 import listQuestions from '@testing/fixtures/listQuestions.json';
+import listRefinements from '@testing/fixtures/listRefinements.json';
 import listStories from '@testing/fixtures/listStories.json';
 import listStoryEvents from '@testing/fixtures/listStoryEvents.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
+import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
+import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
@@ -52,6 +61,8 @@ import {
   GATE_SOURCES,
   HUMAN_DECISIONS,
   MODEL_SLOTS,
+  DIAGNOSIS_ACTORS,
+  DIAGNOSIS_KINDS,
   MODEL_SOURCES,
   PROBLEM_CODES,
   REASONING_EFFORTS,
@@ -70,6 +81,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['stopStory', stopStory],
   ['resumeStory', resumeStory],
   ['setStoryBudget', setStoryBudget],
+  ['refreshIntake', refreshIntake],
   ['getStoryModels', getStoryModels],
   ['setStoryModels', setStoryModels],
   ['listStoryRuns', listStoryRuns],
@@ -79,8 +91,16 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['listGateRecords', listGateRecords],
   ['decideHumanGate', decideHumanGate],
   ['getStoryState', getStoryState],
+  ['getStoryDiagnosis', getStoryDiagnosis],
   ['listArtifacts', listArtifacts],
   ['listStoryEvents', listStoryEvents],
+  ['listRefinements', listRefinements],
+  ['getRefinements', getRefinements],
+  ['requestRefinement', requestRefinement],
+  ['cancelRefinement', cancelRefinement],
+  ['listAgentDiagnoses', listAgentDiagnoses],
+  ['requestAgentDiagnosis', requestAgentDiagnosis],
+  ['cancelAgentDiagnosis', cancelAgentDiagnosis],
 ];
 
 /** In the contract, not in the client yet: phase 7 (`resolveReview`...) and the live stream (lane 2B). */
@@ -105,7 +125,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 1).toBe(21);
+    expect(CLIENT_OPERATIONS.length + 1).toBe(30);
   });
 
   it('has no operation id twice', () => {
@@ -144,6 +164,11 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'setStoryModels',
       'answerQuestion',
       'decideHumanGate',
+      'refreshIntake',
+      'requestRefinement',
+      'cancelRefinement',
+      'requestAgentDiagnosis',
+      'cancelAgentDiagnosis',
     ])
       expect(statusOf(id)).toEqual(['202']);
     expect(
@@ -184,6 +209,65 @@ describe('the request bodies the client sends', () => {
       },
     };
     expect(requestViolations('startStory', body)).toEqual([]);
+  });
+
+  it('are valid for refreshIntake, requestRefinement and cancelRefinement as the client sends them', () => {
+    expect(
+      requestViolations('refreshIntake', {
+        expectedVersion: 9,
+        reason: 'Jira now has the export limits',
+        confirmSpend: true,
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestRefinement', { confirmSpend: true })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestRefinement', {
+        confirmSpend: true,
+        notes: 'Check the CSV export limits',
+        budgetNanoAiu: 5_000_000_000,
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('cancelRefinement', { reason: 'Wrong story' })
+    ).toEqual([]);
+  });
+
+  it('are valid for requestAgentDiagnosis and cancelAgentDiagnosis as the client sends them, up to 20 AIU', () => {
+    expect(
+      requestViolations('requestAgentDiagnosis', { confirmSpend: true })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestAgentDiagnosis', {
+        confirmSpend: true,
+        notes: 'Is it the token or the cluster?',
+        budgetNanoAiu: 20_000_000_000,
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestAgentDiagnosis', {
+        confirmSpend: true,
+        budgetNanoAiu: 20_000_000_001,
+      })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('requestAgentDiagnosis', { confirmSpend: false })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('cancelAgentDiagnosis', { reason: 'Asked by mistake' })
+    ).toEqual([]);
+  });
+
+  it('refuse a refresh or a refinement without the spend confirmation', () => {
+    expect(
+      requestViolations('refreshIntake', {
+        expectedVersion: 9,
+        reason: 'x',
+        confirmSpend: false,
+      })
+    ).not.toEqual([]);
+    expect(requestViolations('requestRefinement', {})).not.toEqual([]);
   });
 
   it('are valid for setStoryModels with a null that gives a slot back to the defaults', () => {
@@ -355,6 +439,8 @@ describe('the check itself', () => {
 describe("the lists of values in types.ts are the contract's enums", () => {
   it.each([
     ['STORY_STATUSES', STORY_STATUSES, enumOf('StoryStatus')],
+    ['DIAGNOSIS_KINDS', DIAGNOSIS_KINDS, enumOf('DiagnosisKind')],
+    ['DIAGNOSIS_ACTORS', DIAGNOSIS_ACTORS, enumOf('DiagnosisFinding', 'actor')],
     ['RUN_STATUSES', RUN_STATUSES, enumOf('RunStatus')],
     ['REASONING_EFFORTS', REASONING_EFFORTS, enumOf('ReasoningEffort')],
     ['MODEL_SLOTS', MODEL_SLOTS, enumOf('ModelSlot')],

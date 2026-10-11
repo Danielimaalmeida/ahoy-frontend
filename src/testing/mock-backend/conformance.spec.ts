@@ -82,6 +82,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     get(`/stories/${key}/gates`);
     get(`/stories/${key}/models`);
     get(`/stories/${key}/state`);
+    get(`/stories/${key}/diagnosis`);
     const artifacts = get(`/stories/${key}/artifacts`).body as {
       items: { path: string }[];
     };
@@ -154,6 +155,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   for (const key of ['DEMO-1', 'PROJ-140', 'PROJ-109']) {
     get(`/stories/${key}/runs`);
     get(`/stories/${key}/state`);
+    get(`/stories/${key}/diagnosis`);
     get(`/stories/${key}/events?limit=500`);
     const artifacts = get(`/stories/${key}/artifacts`).body as {
       items: { path: string }[];
@@ -210,6 +212,72 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   get('/health');
   server.switches.conflictNext = 'stale_version';
   post('/stories/PROJ-131/resume', { expectedVersion: version('PROJ-131') });
+
+  // Back to intake from planning: the questions become history and the planner asks afresh.
+  post('/stories', { key: 'DEMO-3', budgetNanoAiu: 40 * AIU });
+  advance(12_000);
+  post('/stories/DEMO-3/refresh-intake', {
+    expectedVersion: version('DEMO-3'),
+    reason: 'Jira now names the export limits',
+    confirmSpend: true,
+  });
+  advance(12_000);
+  get('/stories/DEMO-3/questions');
+  get('/stories/DEMO-3/events?limit=500');
+
+  // A backlog item's refinement: queued, run, read; then one cancelled.
+  post('/refinements/PROJ-145', {
+    confirmSpend: true,
+    notes: 'Check the CSV export limits',
+  });
+  get('/refinements');
+  advance(10_000);
+  get('/refinements');
+  get('/refinements/PROJ-145');
+  get('/refinements/PROJ-999');
+  post('/refinements/PROJ-150', { confirmSpend: true });
+  post('/refinements/PROJ-150/cancel', { reason: 'Asked for the wrong story' });
+  get('/refinements/PROJ-150');
+
+  post('/stories/PROJ-140/refresh-intake', {
+    expectedVersion: version('PROJ-140'),
+    reason: 'Not in planning',
+    confirmSpend: true,
+  });
+  post('/stories/DEMO-3/refresh-intake', {
+    expectedVersion: version('DEMO-3'),
+    reason: 'x',
+    confirmSpend: false,
+  });
+  post('/refinements/PROJ-151', { confirmSpend: true });
+  post('/refinements/PROJ-151', { confirmSpend: true });
+  post('/refinements/PROJ-145/cancel', { reason: 'Nothing in progress' });
+  post('/refinements/PROJ-152', {});
+
+  // An agent's diagnosis of a halted story: queued, run, read; one cancelled; and every way to be refused.
+  post('/stories/PROJ-118/agent-diagnoses', {
+    confirmSpend: true,
+    notes: 'Is it the token or the cluster?',
+  });
+  get('/stories/PROJ-118/agent-diagnoses');
+  advance(10_000);
+  get('/stories/PROJ-118/agent-diagnoses');
+  post('/stories/PROJ-126/agent-diagnoses', { confirmSpend: true });
+  post('/stories/PROJ-126/agent-diagnoses/cancel', {
+    reason: 'Asked by mistake',
+  });
+  get('/stories/PROJ-126/agent-diagnoses');
+  post('/stories/PROJ-140/agent-diagnoses', { confirmSpend: true });
+  post('/stories/PROJ-999/agent-diagnoses', { confirmSpend: true });
+  get('/stories/PROJ-999/agent-diagnoses');
+  post('/stories/PROJ-118/agent-diagnoses', { confirmSpend: false });
+  post('/stories/PROJ-118/agent-diagnoses', {
+    confirmSpend: true,
+    budgetNanoAiu: 20_000_000_001,
+  });
+  post('/stories/PROJ-118/agent-diagnoses/cancel', {
+    reason: 'Nothing in progress',
+  });
 }
 
 describe('the mock against openapi/ahoy-v1.yaml', () => {
@@ -241,6 +309,15 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'listArtifacts',
       'getArtifactContent',
       'listStoryEvents',
+      'getStoryDiagnosis',
+      'refreshIntake',
+      'listRefinements',
+      'getRefinements',
+      'requestRefinement',
+      'cancelRefinement',
+      'listAgentDiagnoses',
+      'requestAgentDiagnosis',
+      'cancelAgentDiagnosis',
     ])
       expect(used.has(op), op).toBe(true);
     const statuses = new Set(exchanges.map((e) => e.response.status));

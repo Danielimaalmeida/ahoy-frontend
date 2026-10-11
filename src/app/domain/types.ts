@@ -76,6 +76,42 @@ export type HaltReason =
   | 'revision_ceiling_reached'
   | 'reconciler_error';
 
+/** Where an agent run that is not a story phase stands: a refinement of a backlog item or an agent diagnosis of a story. */
+export type RefinementStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'budget_exceeded'
+  | 'timed_out'
+  | 'cancelled'
+  | 'output_violation'
+  | 'auth_failed'
+  | 'lost';
+
+/** The causes the diagnosis of a halted story knows; `other` is a halt no rule explains. */
+export type DiagnosisKind =
+  | 'copilot_auth'
+  | 'gate_rejected'
+  | 'configuration'
+  | 'cluster_capacity'
+  | 'pod_evicted'
+  | 'out_of_memory'
+  | 'image_pull'
+  | 'runtime_deadline'
+  | 'budget_exhausted'
+  | 'run_timed_out'
+  | 'output_violation'
+  | 'run_lost'
+  | 'agent_failed'
+  | 'revision_ceiling'
+  | 'reconciler_error'
+  | 'stopped_by_user'
+  | 'other';
+
+/** Who a diagnosis finding asks to act: the story's owner, the operator or the maintainer of the agents' instructions. */
+export type DiagnosisActor = 'story_owner' | 'operator' | 'agent_maintainer';
+
 /** What a run or a story has used so far. */
 export interface Usage {
   readonly requests: number;
@@ -142,6 +178,8 @@ export interface Question {
   readonly answeredBy: string | null;
   readonly answeredAt: string | null;
   readonly consumed: boolean;
+  /** Set when an intake refresh made the question history: shown, never answered, never counted as waiting. */
+  readonly supersededAt: string | null;
 }
 
 /** An automated gate verdict or a person's decision. */

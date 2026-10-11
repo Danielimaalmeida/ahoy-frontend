@@ -9,7 +9,8 @@
       "answer": "Include the VAT number and the full address block, same as the emailed receipt.",
       "answeredBy": "sam@example.com",
       "answeredAt": "2026-10-06T09:12:00.000Z",
-      "consumed": false
+      "consumed": false,
+      "supersededAt": null
     },
     {
       "id": "Q2",
@@ -20,7 +21,8 @@
       "answer": null,
       "answeredBy": null,
       "answeredAt": null,
-      "consumed": false
+      "consumed": false,
+      "supersededAt": null
     },
     {
       "id": "Q3",
@@ -31,7 +33,8 @@
       "answer": null,
       "answeredBy": null,
       "answeredAt": null,
-      "consumed": false
+      "consumed": false,
+      "supersededAt": null
     }
   ]
 }

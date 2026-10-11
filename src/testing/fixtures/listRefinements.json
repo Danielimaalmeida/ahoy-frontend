@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "id": "proj-131-refinement-001-77b0",
+      "key": "PROJ-131",
+      "status": "running",
+      "notes": null,
+      "requestedBy": "priya@example.com",
+      "agent": "quartermaster",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null,
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 2,
+        "nanoAiu": 600000000,
+        "inputTokens": 12040,
+        "outputTokens": 410
+      },
+      "exitReason": null,
+      "cancelRequested": false,
+      "createdAt": "2026-10-06T10:04:00.000Z",
+      "startedAt": "2026-10-06T10:04:03.000Z",
+      "endedAt": null
+    },
+    {
+      "id": "proj-145-refinement-002-9c1d",
+      "key": "PROJ-145",
+      "status": "succeeded",
+      "notes": null,
+      "requestedBy": "alex@example.com",
+      "agent": "quartermaster",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null,
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 6,
+        "nanoAiu": 2400000000,
+        "inputTokens": 48210,
+        "outputTokens": 3120
+      },
+      "exitReason": null,
+      "cancelRequested": false,
+      "createdAt": "2026-10-06T10:02:00.000Z",
+      "startedAt": "2026-10-06T10:02:05.000Z",
+      "endedAt": "2026-10-06T10:06:41.000Z"
+    }
+  ]
+}

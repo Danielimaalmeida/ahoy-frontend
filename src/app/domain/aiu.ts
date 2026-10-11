@@ -38,6 +38,25 @@ export function parseAiu(text: string): number | null {
   return Number.isSafeInteger(nanoAiu) ? nanoAiu : null;
 }
 
+/** Why an "AIU limit" text is refused: not an amount, not above zero, or above the most the API takes. */
+export type AiuLimitError = 'amount' | 'positive' | 'maximum';
+
+/**
+ * Reads an optional "AIU limit" text: empty is no limit (`cap: null`, the server's own cap applies), otherwise an amount
+ * in AIU read without floats by {@link parseAiu}, above zero and at most `maxNanoAiu`. Gives the cap in nano-AIU, or why
+ * it is refused.
+ */
+export function checkAiuLimit(
+  text: string,
+  maxNanoAiu: number
+): { readonly cap: number | null } | { readonly error: AiuLimitError } {
+  if (text.trim() === '') return { cap: null };
+  const cap = parseAiu(text);
+  if (cap === null) return { error: 'amount' };
+  if (cap < 1) return { error: 'positive' };
+  return cap > maxNanoAiu ? { error: 'maximum' } : { cap };
+}
+
 /** Budget left (`cap − spent`), never below zero: "This may spend up to X AIU". */
 export function remainingNano(
   capNanoAiu: number,

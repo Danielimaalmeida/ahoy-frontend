@@ -21,6 +21,7 @@ import { CurrentUser } from '@core/auth/current-user';
 import { StoryStore } from '@core/stores/story-store';
 import { formatAiu } from '@domain/aiu';
 import { actorLabel } from '@domain/identifiers';
+import { currentQuestions, isSuperseded } from '@domain/questions';
 import { crewLabel } from '@domain/models';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -138,7 +139,7 @@ export class RoundContext {
           </div>
         </ah-panel>
       }
-    } @else if (rounds().length === 0) {
+    } @else if (rounds().length === 0 && history().length === 0) {
       <ah-panel>
         <ah-empty-state heading="No questions" icon="compass"
           >The crew hasn't asked anything on this voyage. If it does, the
@@ -148,6 +149,14 @@ export class RoundContext {
     } @else {
       <div class="questions">
         <div class="questions__main">
+          @if (rounds().length === 0) {
+            <ah-panel>
+              <ah-empty-state heading="No new questions" icon="compass"
+                >The intake was refreshed, and the crew hasn't asked anything
+                since. If it does, the questions show up here.</ah-empty-state
+              >
+            </ah-panel>
+          }
           @for (view of rounds(); track view.round.round; let first = $first) {
             @if (first) {
               <section
@@ -179,6 +188,26 @@ export class RoundContext {
                 />
               </details>
             }
+          }
+          @if (history().length > 0) {
+            <details
+              class="questions__round questions__round--folded questions__history"
+            >
+              <summary class="questions__head">
+                <h2 class="questions__title" id="questions-history">
+                  Before the intake refresh
+                </h2>
+                <span class="ah-muted"
+                  >{{ history().length }}
+                  {{ history().length === 1 ? 'question' : 'questions' }} kept
+                  as history, not answerable</span
+                >
+              </summary>
+              <ng-container
+                [ngTemplateOutlet]="body"
+                [ngTemplateOutletContext]="{ $implicit: historyView() }"
+              />
+            </details>
           }
         </div>
         <aside class="questions__side" aria-label="What happens next">
@@ -334,12 +363,35 @@ export class QuestionsTab {
   );
 
   protected readonly rounds = computed((): readonly RoundView[] =>
-    groupRounds(this.questions() ?? []).map((round) => ({
+    groupRounds(currentQuestions(this.questions() ?? [])).map((round) => ({
       round,
       crew: this.crewOf(round.questions[0]),
       questions: round.questions.map((question) => this.viewOf(question)),
     }))
   );
+
+  /** The questions an intake refresh superseded: shown folded, read-only, after the current rounds. */
+  protected readonly history = computed((): readonly Question[] =>
+    (this.questions() ?? []).filter(isSuperseded)
+  );
+  /** The superseded questions as one read-only group for the card template. */
+  protected readonly historyView = computed((): RoundView => {
+    const questions = this.history();
+    const answered = questions.filter(isAnswered).length;
+    return {
+      round: {
+        round: 0,
+        questions,
+        answered,
+        percent:
+          questions.length === 0
+            ? 0
+            : Math.round((answered / questions.length) * 100),
+      },
+      crew: this.crewOf(questions[0]),
+      questions: questions.map((question) => this.viewOf(question)),
+    };
+  });
 
   /** Whether some question still needs an answer. */
   protected readonly open = computed(
@@ -432,8 +484,9 @@ export class QuestionsTab {
         recommendation === ''
           ? null
           : { agent: this.crewOf(question), text: recommendation },
-      disabledReason:
-        !answered && !this.isAwaitingInput()
+      disabledReason: isSuperseded(question)
+        ? 'An intake refresh superseded this question: it is kept as history and cannot be answered.'
+        : !answered && !this.isAwaitingInput()
           ? "This voyage isn't waiting for answers right now."
           : '',
       keptText: answered && typed.trim() !== '' ? typed : '',

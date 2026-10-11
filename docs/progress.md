@@ -1,8 +1,191 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-10 for the local TEST startup path on `feature/update-labels`.** The sprint-grouped Backlog is
-committed and pushed; the TEST startup path is local, documented configuration work. No TEST or remote environment was
-contacted by this session.
+**Updated 2026-10-11 for the agent diagnosis on `claude/tender-johnson-pvbvmu`** (after the code-review fixes of PR #22
+of 2026-10-10). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Agent diagnosis (2026-10-11)
+
+An agent that diagnoses what the fixed rules of the halt diagnosis cannot, on a person's request. It is "point 3" of the
+`ahoy-hosted` design (§5, "Agent diagnosis", approved by the user as a D18 exception); its backend is in PR #30
+(`ahoy-hosted`, head `48b14b4`). The backend runs it as a `kind = 'diagnosis'` row of `refinements`, read-only, capped
+at 10 AIU by default and 20 AIU at most, charged to no voyage.
+
+- **Contract:** vendored `listAgentDiagnoses`, `requestAgentDiagnosis` and `cancelAgentDiagnosis`
+  (`/stories/{key}/agent-diagnoses[/cancel]`) with `AgentDiagnosisList` and `AgentDiagnosisRequest`; an agent diagnosis
+  is typed as a `Refinement`. `schema.d.ts` and the JSON mirror regenerated; the redacted JQL example is kept.
+- **API layer:** `ApiClient.listAgentDiagnoses/requestAgentDiagnosis/cancelAgentDiagnosis`, `isAgentDiagnosisList`, three
+  fictional fixtures (key PROJ-118, agent `shipwright`), the fake API and the conformance walk.
+- **Mock backend:** `RefinementDesk` is now generic by kind: a diagnosis queues, runs for two ticks, then succeeds with
+  Markdown that follows the halt reason; `409 invalid_state` if the voyage is not halted or has one in progress, `404`
+  for an unknown voyage.
+- **Domain and shared code:** `AGENT_RUN_MAX_NANO_AIU`, `isActiveRefinement`, `refinementLabel`,
+  `refinementStateLabel` moved to `domain/refinement.ts` (a feature may not import another), `checkAiuLimit` to
+  `domain/aiu.ts`, and `agentRunErrorView` to `core/commands/command-error.ts`, which the Backlog's dialogs now use too.
+- **Screen:** the Anchored banner of a halted voyage has an "Agent diagnosis" section. `AgentDiagnoses` (provided by the
+  banner) reads the list when the voyage is halted and again only when its version moves, polls every 5 s while the
+  newest is queued or running, and drops a read that a request or cancel answered after. The section shows the state
+  ("Waiting for a run slot", "The agent is diagnosing it", "Diagnosed", "Cancelled", "Failed" and the exit reason), who
+  asked and when, and the agent's Markdown through `ah-markdown`. "Ask an agent to diagnose" opens a dialog with
+  optional notes and an AIU limit (at most 20 AIU, refused in the field), the spend warning and `confirmSpend: true`;
+  "Cancel diagnosis" needs a reason.
+- **Tests:** `agent-diagnoses.spec.ts` (10, written first), `command-error.spec.ts`, the contract, guard, client,
+  conformance and mock specs, and five shell specs on the mock backend (offer, ask and follow to Markdown, notes and
+  limit in nano-AIU with the 20 AIU refusal, cancel, `409`). Build, typecheck (`check-boundaries: ok`), lint,
+  **137 files / 2,485 tests passed** and `npm run format` on Node 24.21.0 (same sandbox install as below).
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real agent, a real API or
+  TEST. Nothing has seen a real diagnosis.
+- **Needs from other lanes / rollout:** the backend needs migration `0006` and a `shipwright` agent profile in the
+  content repo (`agents-github-repository`, read-only from here); until then `requestAgentDiagnosis` answers `503
+unavailable`, which the dialog words as "Agent diagnosis isn't available". The names of the read-only Jira and
+  Confluence tools for the refinement allowlist are still the user's to give.
+
+## Review fixes of PR #22 (2026-10-10)
+
+The review is `docs/reviews/2026-10-10-pr22-code-review.md` on `claude/tender-johnson-pvbvmu-ovnjb2`; its sibling for
+the backend is PR #30 of `ahoy-hosted`. Each fix is its own commit; the two that change behaviour had their failing
+spec written first.
+
+- **Fixed, test first:** `BacklogRefinements.load()` no longer erases a refinement just asked for (or a cancel just
+  answered) when a read of the list that began earlier answers later, which also stopped its polling: `accept()` counts
+  what the API answered and `load()` and `readHistory()` read again when that moved. `HaltDiagnosis` reads again only
+  when the halted voyage's key or version moves (it had no spec; it has five).
+- **Fixed:** the "Refinement · <state>" button is named by its item (`Refinement · Refined for PROJ-3`); Back to
+  intake waits for the runs to be read (`canRefreshIntake(story, null)` offers nothing); `requiredText` and
+  `maxTrimmed` moved to `@ui/field/text-validators` and `fieldMessage` to `@core/api/api-error`, used by the voyage and
+  refinement dialogs; `getStoryDiagnosis` is in the conformance walk's required list; over-long comments wrapped.
+- **Smells done:** `FindingSummary.kind` is a `DiagnosisKind` (mirrored in the domain and checked against the generated
+  type); Docks no longer has the method that only delegated to `refinementStateLabel`; the Needs helpers are
+  `neededByHaltReason` and `neededWithDiagnosis`; one table per `RefinementStatus` gives its word and whether it is active.
+- **Smells left, on purpose:** `REFRESHABLE_PHASES` and the mock's per-halt-reason table stay keyed by `string` (the
+  API's `phase` and `haltReason` are open strings); the `round: 0` sentinel of the Questions tab's history view, the
+  services passed in `DIALOG_DATA` and moving `checkRefinementCap` to `@domain/aiu` are redesigns, not fixes.
+- **Contract:** `ahoy-hosted` caps a refinement's `budgetNanoAiu` at 20 AIU (`maximum: 20000000000`, its commit
+  `b8907e9`, user's choice). Vendored with only that change; the Refine dialog refuses more with "The limit may be at
+  most 20 AIU."; a spec ties its constant to the contract.
+- **Not done (yours):** squashing the `4d4c8b3` WIP commit, and the PR's title and description. The PR has neither; a
+  proposal is in this session's report.
+- **Found, not fixed:** (1) there is no `start:mock` script and no `environment.mock.ts`: the user's commit `f49c7da`
+  ("Updated UI") removed them with `mock:api`, `ng serve` defaults to the `mock` configuration without installing the
+  mock, and `CLAUDE.md` and `.github/instructions.md` still name `npm run start:mock`. (2) The standalone mock server,
+  `node scripts/mock-api.mjs`, does not start on Node 24: `RefinementDesk` (this branch) uses constructor parameter
+  properties, which type stripping refuses, and then `src/testing/fixtures/listModels.json` is imported as
+  `listModels.json.ts`. The user chose not to fix it. Specs use the mock in process (`MockAhoyServer`), which works. (3)
+  `npm run format:check`, which `CLAUDE.md` asks for, does not exist: `npm run format` is the Prettier check and
+  `format:fix` writes.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **136 files / 2,439 tests passed** and
+  `npm run format`, before every commit. The PR head had 134 files / 2,420 tests (previous report); no clean-head run was
+  repeated in this session.
+- **Dependencies:** `npm ci` cannot run in this sandbox (the lockfile has damaged integrity hashes and `resolved` URLs
+  at the company Nexus, which the egress proxy refuses). With the user's approval a scratch copy of the lockfile, without
+  the two `@company-name-fedev` packages, without integrity fields and with the Nexus URLs pointed at registry.npmjs.org,
+  was installed with `--ignore-scripts` into a scratch directory and moved to `node_modules`; `@company-name-fedev/auth`
+  is a local stub there. `package.json` and `package-lock.json` are unchanged and nothing of it is committed. Repeat the
+  checks locally with the real registry before release.
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, real API or TEST. `api:check`
+  still reports the raw generator/Prettier difference it had before; `openapi-mirror --check` passes.
+- **Needs from other lanes:** none. `ahoy-hosted` serves this contract from its branch `claude/tender-johnson-pvbvmu`.
+
+## Halt diagnosis (2026-10-10)
+
+- **Contract:** vendored `ahoy-hosted`'s `getStoryDiagnosis` (`GET /stories/{key}/diagnosis`, commit `5fe131b`) with
+  `Diagnosis`, `DiagnosisFinding` and `DiagnosisKind`, keeping the redacted JQL example. The YAML was formatted with
+  this repository's Prettier; `schema.d.ts` and the JSON mirror were regenerated (additive only; `openapi-mirror
+--check` passes).
+- **API layer:** `ApiClient.getStoryDiagnosis`, `isDiagnosis` (kinds and actors from `DIAGNOSIS_KINDS` and
+  `DIAGNOSIS_ACTORS`, checked against the contract's enums), a fictional `getStoryDiagnosis.json` fixture; the contract,
+  guard and client specs cover it.
+- **Anchored banner:** a halted voyage reads its diagnosis (`HaltDiagnosis`, provided by the banner; read again when
+  the story changes while halted, never while it is not halted) and shows a "Diagnosis" block under "To continue":
+  each cause, its action, who takes it ("For the voyage's owner", "For the Ahoy operators", "For whoever maintains the
+  agents' instructions") and the evidence as plain text in a disclosure. A person's stop alone adds nothing (the
+  banner already quotes it); a failed read leaves the banner as it was.
+- **Mock backend:** `getStoryDiagnosis` simulates a finding per halt reason from the voyage's last `story.halted`
+  event and last run; the conformance walk calls it on every seeded voyage.
+- **Needs you (All hands):** each halted voyage's "What's needed" cell adds a line "Diagnosis: <cause> · <who acts>"
+  (and "(+N more)" when there are several causes). `RowDetails` reads the diagnosis of the halted voyages on screen only,
+  again when a voyage's version moves, and forgets it when the voyage leaves the list or is no longer halted; a failed
+  read adds nothing. The labels and the one-line summary moved to `@domain/diagnosis`, shared by the banner and the
+  list. A headless Chromium pass on the in-browser mock (a throwaway copy, external hosts blocked) was reported when
+  it was built.
+- **Hosted follow-up (`ahoy-hosted` `b58551a`):** a run whose agent profile is missing or needs an MCP server its
+  phase does not give halts `preflight_failed` before dispatch; the mock simulates its diagnosis. The banner's title
+  reads the raw `preflight_failed` until `docs/design/` (a synced copy, not edited here) gives it vocabulary; its
+  diagnosis explains it.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **134 files / 2,420 tests passed** and
+  `npm run format`. Before the diagnosis: 132 files / 2,389.
+- **Not run:** a browser session on the repository itself (the Chromium pass above used a throwaway copy), Playwright/e2e,
+  a local `--simulate` API, real API or TEST.
+- **Needs from other lanes:** none. `ahoy-hosted` serves `getStoryDiagnosis` from its commit `5fe131b` and the refusal
+  before dispatch (`preflight_failed`) from `b58551a`, both in PR #30.
+
+## Backlog Refine (2026-10-10)
+
+- **Rows:** every Backlog row offers "Refine" (labelled "Refine PROJ-…") once `listRefinements` answered, or
+  "Refinement · Queued / Refining / Cancelling / Refined / Cancelled / Failed" for an item that has one. The toggle
+  (`aria-expanded`, `aria-controls`) opens and closes a detail row (`<td colspan="9">`) under the item. Nothing is
+  offered while the list is still loading, so a refinement in progress is never hidden behind a "Refine"; if the list
+  fails, a banner with Try again appears and "Refine" stays available (the server answers `409` if one is running).
+- **Detail row (`refinement-details.ts`):** state (label and API word), requester and when, spend of cap, notes, exit
+  reason; Cancel refinement while queued or running (hidden once a cancel was asked for, "Stopping the agent"),
+  Refine again once it ended; the agent's Markdown through `ah-markdown` once it succeeded, a skeleton while it is read
+  and an error with Try again if the read fails.
+- **Dialogs (`refinement-dialogs.ts`):** "Refine PROJ-…?" with optional notes (max 2,000 after trimming) and an
+  optional AIU limit read by `parseAiu` (no floats, above 0), a cost banner ("up to X AIU", or "up to the server's
+  refinement cap", not charged to any voyage's budget) and `confirmSpend: true`; empty notes and limit are left out of
+  the body. "Cancel the refinement of PROJ-…?" requires a reason. `409 invalid_state` reads as a notice ("already has a
+  refinement in progress" / "Nothing to cancel any more") and refreshes the row; `503` reads "Refinement isn't
+  available"; other errors use `apiErrorView`. Validators are feature-local, as in Set sail (no import from `voyage`).
+- **Store (`backlog-refinements.ts`, provided by `Docks`):** reads the list once with the page, the history when a row
+  opens, and polls the list every 5 s only while some refinement is queued or running; on each poll it reads again only
+  the open rows whose newest refinement moved. The timer is dropped when nothing is in progress and when the page
+  closes.
+- **Tests:** `backlog-refinements.spec.ts` (16), `refinement-dialogs.spec.ts` (7) and 17 new `docks.spec.ts` tests;
+  four existing Docks assertions now include the "Refine" button in the Actions cell.
+- **Ran on Node 24.21.0:** build (no budget warning), typecheck (`check-boundaries: ok`), lint, **132 files / 2,389
+  tests passed** and `npm run format` (Prettier check: all files pass). Baseline on the WIP commit in the same session:
+  130 files / 2,349. Dependencies came from the same approved sandbox install as below (public registry, direct
+  dependencies pinned to the lockfile, `@company-name-fedev/auth` stubbed in `node_modules`; nothing of it committed).
+- **Browser (mock only):** a throwaway copy of the repository in the session's scratch directory installed
+  `installMockBackend()` in `main.ts`; headless Chromium with every non-localhost request aborted clicked through
+  Refine (notes and a 2.5 AIU limit), the queued row, polling to Refined with the Markdown, Refine again, Cancel
+  refinement and the toggle, at 1440px and 390px (no horizontal overflow). Not part of the repository.
+- **Found:** this repository has no `start:mock` script and no `environment.mock.ts`, so `ng serve` no longer installs
+  the mock backend although `CLAUDE.md` and the plan refer to `npm run start:mock`. Not changed here; see "Review fixes
+  of PR #22" for why and what works instead.
+- **Not run:** Playwright/e2e suite, screen reader, a local `ahoy-hosted --simulate` API, real API or TEST.
+- **Needs from other lanes:** none.
+
+## Back to intake and the refinement contract (2026-10-10)
+
+- **Contract:** vendored `ahoy-hosted`'s `openapi/ahoy-v1.yaml` (refresh intake, `Question.supersededAt`,
+  `story.intake_refreshed`, and the backlog refinement operations `listRefinements`, `getRefinements`,
+  `requestRefinement`, `cancelRefinement`) keeping this repository's redacted JQL example. `schema.d.ts` was regenerated
+  with `openapi-typescript` 7.13.0 plus Prettier (the same pipeline reproduces the previous file byte for byte) and the
+  JSON mirror with `scripts/openapi-mirror.mjs`'s logic plus Prettier. `api:check` still reports the pre-existing raw
+  generator/Prettier formatting difference; `openapi-mirror --check` passes.
+- **API layer:** `ApiClient.refreshIntake`, `listRefinements`, `getRefinements`, `requestRefinement`,
+  `cancelRefinement`; guards for refinements (content must be set exactly when `succeeded`) and `supersededAt`;
+  fictional fixtures for every new operation; the contract, guard and client specs cover them.
+- **Back to intake:** a "Back to intake" button in the voyage header during `planning` and `plan_review`, with no run
+  queued or running and no implementation run ever (`canRefreshIntake`). Its dialog asks what changed in Jira
+  (required), shows what it may spend from the remaining budget (refused with nothing left) and sends
+  `confirmSpend: true`. `story.intake_refreshed` refreshes the story, state, questions, gates and artifacts and reads
+  "Sent back to intake" in Activity.
+- **Superseded questions:** `@domain/questions` (`isSuperseded`, `currentQuestions`, `openQuestions`) is used by the
+  Voyages notes, Needs you, the Plan tab's earlier-round count and the Questions tab. Superseded questions never count as
+  open; the Questions tab shows them folded under "Before the intake refresh", read-only, after the current rounds.
+- **Mock backend:** `refreshIntake` (supersedes questions, the planner asks afresh with new ids, refuses answers to
+  superseded questions) and a simulated refinement lifecycle (`RefinementDesk`: queued, running, succeeded; cancel).
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **130 files / 2,349 tests passed** and
+  `npm run format`. The clean-HEAD baseline in the same session was 128 files / 2,290 tests.
+- **How dependencies were installed in that session (never committed):** the company registry is not reachable from
+  the cloud sandbox and this repository's lockfile has a few redaction-damaged integrity hashes, so the user approved a
+  fresh install from the public npm registry in a scratch directory, with every direct dependency pinned to its
+  lockfile version and the two `@company-name-fedev` packages left out; `@company-name-fedev/auth` was replaced by a
+  local stub inside `node_modules`. `package.json` and `package-lock.json` are unchanged. Run the checks again locally
+  with the real registry before release.
+- **Not run:** a browser session, Playwright/e2e, screen reader, local `--simulate` API, real API or TEST.
+- **Needs from other lanes:** none. `ahoy-hosted` serves these operations from its commit `e31f6ea` (PR #30).
 
 ## Local TEST startup path (2026-10-10)
 
@@ -379,7 +562,14 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-The active, uncommitted change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
+The agent diagnosis (Anchored banner, 2026-10-11) is committed on `claude/tender-johnson-pvbvmu` on top of the rest:
+137 files / 2,485 tests pass offline; it has met only the in-process mock.
+
+The halt diagnosis, the Backlog's Refine action, Back to intake and the refinement contract are committed on
+`claude/tender-johnson-pvbvmu` (above), with the fixes of PR #22's code review on top: 2,439 tests pass offline, and the
+Refine flow was clicked through on the in-browser mock. None has met a real or `--simulate` API.
+
+The earlier change on `feature/update-labels` matches the updated Backlog wireframe with sprint groups,
 a sprint filter and native disclosure controls, plus a user-approved responsive layout without horizontal scrolling.
 Offline validation passes with 2,290 tests; a mock-only browser
 preview was checked at desktop/mobile sizes. Repository formatting reports only the untouched new design source.
@@ -481,8 +671,15 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+Check the agent diagnosis, Refine, Back to intake and the diagnosis banner against a local `ahoy-hosted` started with
+`npm run dev -- --simulate` (0 AIU; its stub answers a diagnosis), once the `shipwright` profile exists in the content
+repo for anything beyond the stub. Squash the `4d4c8b3` WIP commit and give PR #22 a title and description. Check Refine, Back to intake and the diagnosis
+banner against a local `ahoy-hosted` started with `npm run dev -- --simulate` (0 AIU), and decide whether to restore a
+`start:mock` script with a mock bootstrap, and whether to make `node scripts/mock-api.mjs` run again (see "Found" in
+"Review fixes of PR #22"). Then review Back to intake in a browser.
+
 Review the sprint-grouped Backlog implementation and the contract limits documented above. Commit, push and release
-need new explicit user approval. Keep the user's `Backlog.html` intact; it is the only formatting failure.
+need new explicit user approval. Keep the user's `Backlog.html` intact.
 Browser verification must use a proven offline setup, not the current authentication/proxy paths. Extending catalogue
 selection to the existing Models dialog and halted-review resolution (`resolveReview`) remain separate scope.
 The next release must retain the corrected NGINX document root; remote image startup/probes remain unverified.
@@ -490,7 +687,16 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest uncommitted change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls
+The latest change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
+Node 24.21.0). Before it, a change fixes PR #22's code review (see "Review fixes of PR #22"; 136 test
+files / 2,439 tests pass on Node 24.21.0). Before it, a change shows a halted voyage's diagnosis
+(`getStoryDiagnosis`) in the Anchored banner and in "Needs you". Before it, the Backlog's Refine action (row button or
+"Refinement · <state>" toggle, detail row with Cancel refinement and Refine again, Markdown via `ah-markdown`, polling
+only while one is in progress). Before it on the same branch: the vendored hosted contract, Back to intake and
+superseded questions. 134 test files / 2,420 tests pass on Node 24.21.0. Next is "Start here next". Do not contact
+TEST or a live API.
+
+The earlier change on `feature/update-labels` implements sprint grouping/filtering and disclosure controls
 from the user's `docs/design/wireframes/Backlog.html`. Jira sprint data now reaches `BacklogItem`; the mock response
 matches the contract. Global 25-item pagination remains, with displayed-group counts marked "shown" on partial pages.
 Build, typecheck and lint passed on Node 24.21.0; 128 test files / 2,290 tests passed. A mock-only desktop/mobile browser

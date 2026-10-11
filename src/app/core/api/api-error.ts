@@ -182,6 +182,15 @@ export interface FieldError {
   readonly message: string;
 }
 
+/** The server's messages for one field of the request, joined; "" when there are none (or there is no error). */
+export function fieldMessage(error: ApiError | null, field: string): string {
+  if (error === null) return '';
+  return fieldErrors(error)
+    .filter((e) => e.path?.[0] === field)
+    .map((e) => e.message)
+    .join(' ');
+}
+
 /** The `errors` of a problem as field errors; none for an error that is not a problem or has no `errors`. */
 export function fieldErrors(error: ApiError): readonly FieldError[] {
   if (error.kind !== 'problem') return [];

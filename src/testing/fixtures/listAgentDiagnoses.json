@@ -1,0 +1,55 @@
+{
+  "key": "PROJ-118",
+  "items": [
+    {
+      "id": "proj-118-diagnosis-002-7b3e",
+      "key": "PROJ-118",
+      "status": "succeeded",
+      "notes": "Is it the token or the cluster?",
+      "requestedBy": "alex@example.com",
+      "agent": "shipwright",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null,
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 3,
+        "nanoAiu": 640000000,
+        "inputTokens": 18420,
+        "outputTokens": 1210
+      },
+      "exitReason": null,
+      "cancelRequested": false,
+      "createdAt": "2026-10-06T10:20:00.000Z",
+      "startedAt": "2026-10-06T10:20:04.000Z",
+      "endedAt": "2026-10-06T10:21:12.000Z",
+      "content": "## Cause\nThe cluster had no node for the planner's pod; likely, not certain.\n\n## Evidence\n- Pod FailedScheduling (x14): 0/3 nodes are available: 3 Insufficient cpu. (run proj-118-planning-002-4c1d)\n\n## What fixes it\n1. Ask the platform team for capacity.\n2. Resume the story.\n\n## Who acts\nThe Ahoy operators.\n\n## What is still unknown\nWhether the node pool is at its maximum size."
+    },
+    {
+      "id": "proj-118-diagnosis-001-1a9d",
+      "key": "PROJ-118",
+      "status": "cancelled",
+      "notes": null,
+      "requestedBy": "alex@example.com",
+      "agent": null,
+      "model": null,
+      "reasoningEffort": null,
+      "runtime": null,
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 0,
+        "nanoAiu": 0,
+        "inputTokens": 0,
+        "outputTokens": 0
+      },
+      "exitReason": "cancelled by sam@example.com: Asked by mistake",
+      "cancelRequested": true,
+      "createdAt": "2026-10-06T10:10:00.000Z",
+      "startedAt": null,
+      "endedAt": "2026-10-06T10:10:30.000Z",
+      "content": null
+    }
+  ]
+}

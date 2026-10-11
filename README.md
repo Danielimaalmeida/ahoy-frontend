@@ -39,7 +39,7 @@ docs/design/                                  copies of the wireframes and the d
 | Command                    | What it does                                                                                                          |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `npm start`                | `ng serve` on <http://localhost:4200> with the API proxy (`proxy.conf.mjs`).                                          |
-| `npm run start:mock`       | `ng serve` with the `mock` configuration (the mock backend arrives with lane 2D).                                     |
+| `npm run start:mock`       | Does not exist since commit `f49c7da`; see "Found" in `docs/progress.md` for what works instead.                      |
 | `npm run start:test`       | `ng serve` with the `test` configuration and the checked-in TEST API proxy (`src/proxy.conf.test.json`).              |
 | `npm run build`            | Production build into `dist/ahoy-frontend/`.                                                                          |
 | `npm test`                 | Unit and component tests (Vitest through `ng test`, jsdom), once.                                                     |
@@ -47,9 +47,9 @@ docs/design/                                  copies of the wireframes and the d
 | `npm run lint`             | ESLint (TypeScript, templates and accessibility rules).                                                               |
 | `npm run typecheck`        | `tsc --noEmit` for app and specs, then `scripts/check-boundaries.mjs`.                                                |
 | `npm run check:boundaries` | Only the layer rules.                                                                                                 |
-| `npm run format`           | Prettier on the whole repository (`format:check` only checks).                                                        |
+| `npm run format`           | Prettier check on the whole repository (writes nothing); `npm run format:fix` writes.                                 |
 
-Before calling work done: `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check`.
+Before calling work done: `npm run build && npm run typecheck && npm run lint && npm test && npm run format`.
 
 ## Running against the hosted API (local, 0 AIU)
 
@@ -72,6 +72,38 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Agent diagnosis (2026-10-11, `claude/tender-johnson-pvbvmu`):** a halted voyage's Anchored banner can ask a
+  read-only agent to diagnose what the fixed rules cannot ("Ask an agent to diagnose": optional notes, an AIU limit up to
+  20 AIU, spend warning, `confirmSpend: true`; "Cancel diagnosis" with a reason). The newest diagnosis shows its state and
+  the agent's Markdown, and is read again every 5 s only while it is in progress. Contract, client, guard, fixtures and
+  mock included. Offline build, typecheck, lint, 137 files / 2,485 tests and formatting passed on Node 24.21.0. The
+  backend needs migration `0006` and a `shipwright` profile; no browser, `--simulate`, real agent, real API or TEST check.
+- **Review fixes of PR #22 (2026-10-10, `claude/tender-johnson-pvbvmu`):** the refinement list no longer loses a refinement
+  just asked for when an older read answers later, the halt diagnosis is read again only when the voyage's version moves,
+  Back to intake waits for the runs, the Refinement buttons are named by their item, the dialogs share their text
+  validators, and the Refine dialog stops at the 20 AIU cap the API now has. Offline build, typecheck, lint, 136 files /
+  2,439 tests and formatting passed on Node 24.21.0 (public-registry install, auth library stubbed, nothing of that
+  committed). The standalone mock server (`node scripts/mock-api.mjs`) does not start and `start:mock` does not exist
+  (`docs/progress.md`). No browser, real API, `--simulate` or TEST check.
+- **Halt diagnosis (2026-10-10, `claude/tender-johnson-pvbvmu`):** a halted voyage's Anchored banner adds the
+  diagnosis from `GET /stories/{key}/diagnosis` (cause, action, who takes it, evidence as plain text), and "Needs you"
+  adds its cause and who acts in one line per halted voyage. Contract, client, guard, fixture and mock included.
+  Offline build, typecheck, lint, 134 files / 2,420 tests and formatting passed on Node 24.21.0 (same sandbox
+  install); checked on the in-browser mock. No real API, `--simulate` or TEST check.
+- **Backlog Refine (2026-10-10, `claude/tender-johnson-pvbvmu`):** each Backlog row offers "Refine" (optional notes,
+  optional AIU limit, spend warning, `confirmSpend: true`) or "Refinement · <state>", which opens a detail row with the
+  newest refinement's state, requester, spend, notes and exit reason, Cancel refinement (reason required) while it is
+  queued or running, Refine again once it ended, and the agent's Markdown through `ah-markdown` when it succeeded. The
+  list is read once with the page and polled every 5 s only while a refinement is in progress. Offline build,
+  typecheck, lint, 132 files / 2,389 tests and formatting passed on Node 24.21.0 (same sandbox install as below); the
+  flow was also clicked through in headless Chromium against the in-browser mock backend (a throwaway copy, external
+  hosts blocked). No real API, `--simulate` API or TEST check was run.
+- **Back to intake and the refinement contract (2026-10-10, `claude/tender-johnson-pvbvmu`):** vendored the hosted
+  contract (refresh intake, superseded questions, backlog refinements), added the voyage header's Back to intake dialog
+  (planning and plan review only, with the spend warning), read-only "Before the intake refresh" questions, the
+  `ApiClient` refinement operations and their mock. Offline build, typecheck, lint, 130 files / 2,349 tests and
+  formatting passed on Node 24.21.0 in a cloud sandbox (public-registry install, auth library stubbed, nothing of that
+  committed). The Backlog's Refine action is not built yet; no browser, real API or TEST check was run.
 - **Coverage summary workflow fix (2026-10-10):** `test:coverage` now generates both the JSON coverage report and
   `coverage/coverage-summary.md`. The converter is compatible with the repository's ESM package configuration and
   resolves paths independently of the runner's working directory.

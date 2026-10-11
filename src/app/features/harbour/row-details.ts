@@ -6,8 +6,9 @@ import {
   untracked,
   type WritableSignal,
 } from '@angular/core';
+import { ApiClient } from '@core/api/api-client';
 import { readStoryState } from '@core/api/story-state';
-import type { Story } from '@core/api/types';
+import type { Diagnosis, Story } from '@core/api/types';
 import type { StoryEventsHandle } from '@core/stores/story-events-feed';
 import { StoryStore, type StoryHandle } from '@core/stores/story-store';
 import { gateOpen, haltOf, type RowDetail, type RunModel } from './needs';
@@ -20,6 +21,7 @@ const UNREAD: RowDetail = {
   state: null,
   gate: null,
   halt: null,
+  diagnosis: null,
 };
 
 /** What the row of a voyage needs: the questions of one that asks, the state and events of one that waits, and so on. */
@@ -47,16 +49,25 @@ interface Held {
 
 /**
  * Holds open the voyages whose row needs more than its story, and only those (G7, G10, G11): "What's needed" is read for
- * the voyages on screen and for no others. The stores keep what it reads up to date from the stream. Provide it in the
- * page that uses it: it lets go of every voyage when the page goes.
+ * the voyages on screen and for no others. The stores keep what it reads up to date from the stream. A halted voyage on
+ * screen also has its diagnosis read (`getStoryDiagnosis`), again whenever its version moves. Provide it in the page that
+ * uses it: it lets go of every voyage when the page goes.
  */
 @Injectable()
 export class RowDetails {
   private readonly stories = inject(StoryStore);
+  private readonly api = inject(ApiClient);
   private readonly held = signal<ReadonlyMap<string, Held>>(new Map());
+  private readonly diagnoses = signal<ReadonlyMap<string, Diagnosis>>(
+    new Map()
+  );
+  /** The version of each halted voyage on screen whose diagnosis was last asked for. */
+  private readonly asked = new Map<string, number>();
+  private disposed = false;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
+      this.disposed = true;
       for (const held of this.held().values()) held.handle.release();
     });
   }
@@ -101,6 +112,7 @@ export class RowDetails {
         [...next].some(([key, held]) => current.get(key) !== held)
       )
         this.held.set(next);
+      this.syncDiagnoses(shown);
     });
   }
 
@@ -115,6 +127,7 @@ export class RowDetails {
       state: state === undefined ? null : readStoryState(state.state),
       gate: events === null ? null : gateOpen(events),
       halt: events === null ? null : haltOf(events),
+      diagnosis: this.diagnoses().get(key) ?? null,
     };
   }
 
@@ -122,6 +135,34 @@ export class RowDetails {
   runOf(story: Story): RunModel | null {
     const runs = this.held().get(story.key)?.handle.runs.value();
     return runs?.find((run) => run.id === story.currentRunId) ?? null;
+  }
+
+  /** Reads the diagnosis of each halted voyage on screen whose version moved, and forgets the others. */
+  private syncDiagnoses(shown: readonly Story[]): void {
+    const halted = new Map(
+      shown
+        .filter((story) => story.status === 'halted')
+        .map((story) => [story.key, story.version] as const)
+    );
+    for (const key of [...this.asked.keys()])
+      if (!halted.has(key)) this.asked.delete(key);
+    const kept = [...this.diagnoses()].filter(([key]) => halted.has(key));
+    if (kept.length !== this.diagnoses().size)
+      this.diagnoses.set(new Map(kept));
+    for (const [key, version] of halted) {
+      if (this.asked.get(key) === version) continue;
+      this.asked.set(key, version);
+      void this.readDiagnosis(key, version);
+    }
+  }
+
+  /**
+   * One read; an answer for a version no longer on screen, or after the page went, is dropped. A failure shows nothing.
+   */
+  private async readDiagnosis(key: string, version: number): Promise<void> {
+    const result = await this.api.getStoryDiagnosis(key);
+    if (this.disposed || this.asked.get(key) !== version || !result.ok) return;
+    this.diagnoses.update((map) => new Map(map).set(key, result.value));
   }
 
   private open(key: string): Held {
