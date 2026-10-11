@@ -1,8 +1,12 @@
-import type { HttpInterceptorFn } from '@angular/common/http';
+import type {
+  HttpErrorResponse,
+  HttpInterceptorFn,
+} from '@angular/common/http';
 import { inject } from '@angular/core';
-import { from, switchMap } from 'rxjs';
+import { catchError, from, switchMap, throwError } from 'rxjs';
 import { API_BASE, trimBase } from '@core/api/api-base';
 import { AUTH_STRATEGY } from './auth-strategy';
+import { FedevAuthService } from '@company-name-fedev/auth';
 
 /**
  * Adds the headers of the `AuthStrategy` to requests to the API, and only to those: a request to anything else, such as
@@ -12,6 +16,7 @@ import { AUTH_STRATEGY } from './auth-strategy';
  * `invalid_response`: a tooling failure, not a verdict.
  */
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
+  const authService = inject(FedevAuthService);
   const base = trimBase(inject(API_BASE));
   if (request.url !== base && !request.url.startsWith(`${base}/`))
     return next(request);
@@ -23,6 +28,13 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
           ? request.clone({ setHeaders: headers })
           : request
       )
-    )
+    ),
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) {
+        authService.logout();
+        location.reload();
+      }
+      return throwError(() => error);
+    })
   );
 };

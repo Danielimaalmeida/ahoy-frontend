@@ -37,6 +37,7 @@ export const appConfig: ApplicationConfig = {
         config: { ...environment },
       },
     },
+    provideHttpClient(withInterceptors([authInterceptor])),
     provideAppInitializer(initAppConfig),
     provideFedevAuthInitializer(),
     {

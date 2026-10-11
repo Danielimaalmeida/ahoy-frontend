@@ -81,8 +81,8 @@ spec written first.
   repeated in this session.
 - **Dependencies:** `npm ci` cannot run in this sandbox (the lockfile has damaged integrity hashes and `resolved` URLs
   at the company Nexus, which the egress proxy refuses). With the user's approval a scratch copy of the lockfile, without
-  the two `@company-name-fedev` packages, without integrity fields and with the Nexus URLs pointed at registry.npmjs.org,
-  was installed with `--ignore-scripts` into a scratch directory and moved to `node_modules`; `@company-name-fedev/auth`
+  the two `@bmw-fedev` packages, without integrity fields and with the Nexus URLs pointed at registry.npmjs.org,
+  was installed with `--ignore-scripts` into a scratch directory and moved to `node_modules`; `@bmw-fedev/auth`
   is a local stub there. `package.json` and `package-lock.json` are unchanged and nothing of it is committed. Repeat the
   checks locally with the real registry before release.
 - **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, real API or TEST. `api:check`
@@ -148,7 +148,7 @@ spec written first.
 - **Ran on Node 24.21.0:** build (no budget warning), typecheck (`check-boundaries: ok`), lint, **132 files / 2,389
   tests passed** and `npm run format` (Prettier check: all files pass). Baseline on the WIP commit in the same session:
   130 files / 2,349. Dependencies came from the same approved sandbox install as below (public registry, direct
-  dependencies pinned to the lockfile, `@company-name-fedev/auth` stubbed in `node_modules`; nothing of it committed).
+  dependencies pinned to the lockfile, `@bmw-fedev/auth` stubbed in `node_modules`; nothing of it committed).
 - **Browser (mock only):** a throwaway copy of the repository in the session's scratch directory installed
   `installMockBackend()` in `main.ts`; headless Chromium with every non-localhost request aborted clicked through
   Refine (notes and a 2.5 AIU limit), the queued row, polling to Refined with the Markdown, Refine again, Cancel
@@ -185,7 +185,7 @@ spec written first.
 - **How dependencies were installed in that session (never committed):** the company registry is not reachable from
   the cloud sandbox and this repository's lockfile has a few redaction-damaged integrity hashes, so the user approved a
   fresh install from the public npm registry in a scratch directory, with every direct dependency pinned to its
-  lockfile version and the two `@company-name-fedev` packages left out; `@company-name-fedev/auth` was replaced by a
+  lockfile version and the two `@bmw-fedev` packages left out; `@bmw-fedev/auth` was replaced by a
   local stub inside `node_modules`. `package.json` and `package-lock.json` are unchanged. Run the checks again locally
   with the real registry before release.
 - **Not run:** a browser session, Playwright/e2e, screen reader, local `--simulate` API, real API or TEST.
@@ -248,7 +248,7 @@ spec written first.
 ## Event stream authentication (2026-10-10)
 
 - **Problem:** `GET /api/v1/events/stream` answered `401` on TEST while every other API call succeeded. The
-  `@company-name-fedev/auth` resource-server interceptor only decorates Angular `HttpClient` requests; the event stream reads
+  `@bmw-fedev/auth` resource-server interceptor only decorates Angular `HttpClient` requests; the event stream reads
   `fetch` directly (F6) and took its headers from `AUTH_STRATEGY`, which was still bound to `NoAuthStrategy`.
 - **Changed:** added `core/auth/fedev-auth-strategy.ts`, which reads `FedevAuthService.accessToken` on every call and
   returns `Authorization: Bearer …` (nothing when there is no token yet), and bound `AUTH_STRATEGY` to it in
@@ -331,7 +331,7 @@ no remote environment, real API, commit or push was used for this fix.
 - **Changed:** `nginx.conf` now serves `/opt/app-root/src/ahoy-frontend`, matching `docker/Dockerfile`, rather than
   the stale `/opt/app-root/src/r3da-cdm-frontend`. Error and access logs go to stderr/stdout for container diagnostics.
   The Dockerfile's non-root `USER 1001` is unchanged.
-- **Runtime proof:** a local smoke check used the already cached `neo-frontend:latest` image (NGINX 1.29.4, UID 1001)
+- **Runtime proof:** a local smoke check used the already cached `fio-frontend:latest` image (NGINX 1.29.4, UID 1001)
   with the production build and this repository's server configuration mounted read-only, then repeated with a local
   `npm run build:test` build. With the old document root
   absent, `/` returned HTTP 500; with the corrected root, `/`, `/index.html`, `/voyages/PROJ-123` and the JavaScript asset

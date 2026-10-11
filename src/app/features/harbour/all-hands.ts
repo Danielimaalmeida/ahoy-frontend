@@ -162,7 +162,7 @@ function describeFailure(error: ApiError): Failure {
     }
     /* A key never breaks across lines, and the title gets room to wrap beside it. */
     .voyage {
-      min-width: 240px;
+      min-width: 120px;
     }
     .voyage a {
       white-space: nowrap;

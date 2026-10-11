@@ -59,6 +59,17 @@
                 }
               ]
             },
+            "local-test": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local.test.ts"
+                }
+              ]
+            },
             "mock": {
               "optimization": false,
               "extractLicenses": false,
@@ -75,9 +86,9 @@
             "port": 4200
           },
           "configurations": {
-            "test": {
-              "buildTarget": "ahoy-frontend:build:test",
-              "proxyConfig": "src/proxy.conf.test.json"
+            "local-test": {
+              "buildTarget": "ahoy-frontend:build:local-test",
+              "proxyConfig": "src/proxy.conf.local.test.json"
             },
             "mock": {
               "buildTarget": "ahoy-frontend:build:mock"
@@ -91,7 +102,7 @@
             "buildTarget": "ahoy-frontend:build:mock",
             "tsConfig": "tsconfig.spec.json",
             "runnerConfig": "vitest.config.ts",
-            "exclude": ["src/environments/environment.test.ts"]
+            "exclude": ["src/environments/**/*.test.ts"]
           }
         }
       }

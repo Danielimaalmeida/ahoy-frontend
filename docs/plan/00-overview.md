@@ -336,7 +336,7 @@ Onda 6   P7 fases de entrega (precisa de wireframes novos)
 | 5    | 6D   | Release: imagem, config, CSP                     | S    | P0               | quase tudo                  |
 | 6    | 7    | Fases de entrega                                 | —    | wireframes novos | —                           |
 
-Máximo de agentes em simultâneo: 4 (Onda 2), 4 (Onda 3), **6** (Onda 4). Se preferires menos, junta lanes da mesma onda
+Máximo de agentes em simultâfio: 4 (Onda 2), 4 (Onda 3), **6** (Onda 4). Se preferires menos, junta lanes da mesma onda
 na ordem da tabela. Não juntes lanes de ondas diferentes.
 
 ### 8.1 Modelo sugerido por lane

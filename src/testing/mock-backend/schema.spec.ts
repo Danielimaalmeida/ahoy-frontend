@@ -109,6 +109,17 @@ const BODIES: Readonly<Record<string, readonly unknown[]>> = {
 };
 
 describe('SchemaChecker', () => {
+  it('requires exactly one matching branch for the JSON Schema oneOf keyword', () => {
+    const schema = { oneOf: [{ type: 'number' }, { type: 'integer' }] };
+    expect(checker.check(schema, 1.5, 'body')).toEqual([]);
+    expect(checker.check(schema, 1, 'body')).toEqual([
+      { path: 'body', message: 'must match exactly one schema in oneOf' },
+    ]);
+    expect(checker.check(schema, '1', 'body')).toEqual([
+      { path: 'body', message: 'must match exactly one schema in oneOf' },
+    ]);
+  });
+
   for (const [operationId, bodies] of Object.entries(BODIES)) {
     it(`judges ${operationId} bodies as Ajv does against the contract`, () => {
       const op = operations().find((o) => o.operationId === operationId);

@@ -1,6 +1,6 @@
 {
   "/auth/oauth2/realms/root/realms/alpha": {
-    "target": "https://emea.int.alpha.sso.company-namegroup.com",
+    "target": "https://emea.int.alpha.sso.bmwgroup.com",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

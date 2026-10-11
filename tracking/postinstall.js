@@ -52,7 +52,7 @@ setTimeout(() => req.destroy(), requestTimeout);
 
 // Handle errors and response from the request
 const trackingDocumentationURL =
-  'https://developer-home.company-namegroup.net/docs/fedev-documentation/5_faq/_1_analytics-tracking/';
+  'https://developer-home.bmwgroup.net/docs/fedev-documentation/5_faq/_1_analytics-tracking/';
 
 req.on('error', (error) => {
   let errorString =

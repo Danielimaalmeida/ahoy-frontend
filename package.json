@@ -9,7 +9,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "start:test": "ng serve --configuration test",
+    "start:test": "ng serve --configuration local-test",
     "build": "ng build",
     "build:test": "ng build --configuration test",
     "build:stats": "ng build --stats-json && npm run analyze",

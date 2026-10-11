@@ -72,6 +72,11 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **PR #8 unit-test workflow fix (2026-10-11, `feature/auto-diagnosis`):** restored the JSON Schema `oneOf`
+  keyword in the contract and mock checker, supplied a fake auth service in interceptor tests, and excluded environment
+  configurations from test discovery. Offline build, typecheck, lint, formatting and the exact `test:coverage` command
+  pass on Node 24.21.0: 137 files / 2,486 tests, with JSON, HTML, LCOV and Markdown coverage reports. No API or TEST
+  environment was contacted; the remote workflow has not been rerun.
 - **Agent diagnosis (2026-10-11, `claude/tender-johnson-pvbvmu`):** a halted voyage's Anchored banner can ask a
   read-only agent to diagnose what the fixed rules cannot ("Ask an agent to diagnose": optional notes, an AIU limit up to
   100 AIU, spend warning, `confirmSpend: true`; "Cancel diagnosis" with a reason). The newest diagnosis shows its state and
@@ -240,8 +245,8 @@ do not use it for unit/e2e validation or mutating actions without approval.
   (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).
 
-# r3da_neo_ahoy_frontend
+# r3da_fio_ahoy_frontend
 
-# r3da_neo_ahoy_frontend
+# r3da_fio_ahoy_frontend
 
-# r3da_neo_ahoy_frontend
+# r3da_fio_ahoy_frontend

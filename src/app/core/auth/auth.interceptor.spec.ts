@@ -9,6 +9,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { FedevAuthService } from '@company-name-fedev/auth';
 import { API_BASE } from '@core/api/api-base';
 import {
   AUTH_STRATEGY,
@@ -25,6 +26,7 @@ function configure(strategy?: AuthStrategy, base = '/api/v1'): void {
     providers: [
       provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
+      { provide: FedevAuthService, useValue: { logout: vi.fn() } },
       { provide: API_BASE, useValue: base },
       ...(strategy ? [{ provide: AUTH_STRATEGY, useValue: strategy }] : []),
     ],
