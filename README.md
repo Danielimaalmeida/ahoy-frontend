@@ -72,6 +72,11 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Resume on a stuck work package (2026-10-11, `claude/project-thread-xadeak`):** on a voyage halted `package_stuck`
+  or `package_needs_decision` in implementation, the Resume dialog requires a reason ("How the blocker was resolved"),
+  which `ahoy-hosted` PR #32 uses as the rework note of the packages it retries; the banner says so, and the contract
+  gains the `package_stuck` diagnosis finding. Offline build, typecheck, lint, 137 files / 2,489 tests and formatting
+  passed on Node 24.21.0; no browser, `--simulate`, real API or TEST check.
 - **PR #8 unit-test workflow fix (2026-10-11, `feature/auto-diagnosis`):** restored the JSON Schema `oneOf`
   keyword in the contract and mock checker, supplied a fake auth service in interceptor tests, and excluded environment
   configurations from test discovery. Offline build, typecheck, lint, formatting and the exact `test:coverage` command

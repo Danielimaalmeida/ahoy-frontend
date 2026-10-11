@@ -3,6 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { Story } from '@core/api/types';
 import { formatAiu } from '@domain/aiu';
+import { resumeRetriesPackages } from '@domain/halt';
 import { CREW } from '@domain/models';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
@@ -10,7 +11,7 @@ import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { ToastService } from '@ui/toast/toast';
 import { modelLabel, slotsForPhase } from '../context/crew';
-import { maxTrimmed } from '@ui/field/text-validators';
+import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import {
   CommandState,
   REASON_MAX,
@@ -27,7 +28,8 @@ interface ResumeCrew {
 /**
  * "Weigh anchor and resume?" (wireframe `Dialogs`): says which phase is retried, by whom and on which model, and how much
  * it may spend (what is left of the budget, billed to the owner). With nothing left it cannot be confirmed: the budget
- * must be raised first. The reason is optional and sent only when there is one.
+ * must be raised first. The reason is optional and sent only when there is one, except on a halt on a stuck work
+ * package: the resume retries those packages with the reason as their rework note, so it is required.
  */
 @Component({
   selector: 'ah-resume-dialog',
@@ -49,8 +51,12 @@ interface ResumeCrew {
           {{ $first ? 'with' : 'and' }} {{ member.crew }} on
           <span class="ah-mono">{{ member.model }}</span>
         }
-        .</span
-      >
+        .
+        @if (retriesPackages()) {
+          The blocked work packages run again, with your reason as their rework
+          note.
+        }
+      </span>
       @if (noBudget()) {
         <ah-banner
           ahDialogCost
@@ -69,8 +75,9 @@ interface ResumeCrew {
         >
       }
       <ah-field
-        label="Reason"
-        optional
+        [label]="retriesPackages() ? 'How the blocker was resolved' : 'Reason'"
+        [optional]="!retriesPackages()"
+        [required]="retriesPackages()"
         [errorMessages]="messages"
         [errorText]="serverError()"
       >
@@ -92,6 +99,13 @@ export class ResumeDialog {
     validators: [maxTrimmed(REASON_MAX)],
   });
   protected readonly phase = computed(() => this.context.story()?.phase ?? '');
+  /** The halt is on a stuck work package: the resume retries it, and the reason is its rework note. */
+  protected readonly retriesPackages = computed(() =>
+    resumeRetriesPackages(
+      this.context.story()?.haltReason ?? null,
+      this.phase()
+    )
+  );
   protected readonly owner = computed(() => this.context.story()?.owner ?? '');
   protected readonly budget = computed(() =>
     formatCap(this.context.story()?.budgetNanoAiu ?? 0, 1)
@@ -117,6 +131,10 @@ export class ResumeDialog {
   protected async submit(): Promise<void> {
     this.reason.markAsTouched();
     if (this.reason.invalid || this.noBudget()) return;
+    if (this.retriesPackages() && requiredText(this.reason) !== null) {
+      this.reason.setErrors({ required: true });
+      return;
+    }
     const phase = this.phase();
     const story = this.command.settle(
       await this.context.resume(this.reason.value.trim())

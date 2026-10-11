@@ -304,6 +304,7 @@
         "operationId": "resumeStory",
         "tags": ["stories"],
         "summary": "Clear a halt so the reconciler retries the current phase. May spend AIU.",
+        "description": "On an implementation halted package_stuck or package_needs_decision, every failed, stalled,\nblocked or unverified work package is retried, as the package decision `retry` does, with the\nreason as its rework note; the reason is then required (400 without it). The event\nstory.resumed names them in retriedPackages. Any other halt is resumed as it stands.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2720,6 +2721,7 @@
           "run_lost",
           "agent_failed",
           "revision_ceiling",
+          "package_stuck",
           "reconciler_error",
           "stopped_by_user",
           "other"

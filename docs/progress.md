@@ -1,7 +1,32 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-11 for the agent diagnosis on `claude/tender-johnson-pvbvmu`** (after the code-review fixes of PR #22
-of 2026-10-10). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-11 for Resume on a stuck work package on `claude/project-thread-xadeak`.** Committed and pushed with
+the user's approval, from a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Resume on a stuck work package (2026-10-11)
+
+`ahoy-hosted` PR #32 (head `be68c6c`) makes a resume of a voyage halted `package_stuck` or `package_needs_decision` in
+`implementation` retry its blocked, failed, stalled or unverified work packages, with the reason as their rework note;
+the reason is then required (`400` without it). Its rule-based diagnosis gains the `package_stuck` finding, which quotes
+the package's blocker question.
+
+- **Contract:** vendored with only those two changes (`DiagnosisKind` gains `package_stuck`; `resumeStory` gets its
+  description). `schema.d.ts` and the JSON mirror regenerated; `DiagnosisKind` and `DIAGNOSIS_KINDS` updated in the
+  domain and the API types.
+- **Domain:** `PACKAGE_HALTS` and `resumeRetriesPackages(reason, phase)` in `domain/halt.ts`. The nine reasons of
+  `vocabulary.md` are unchanged; a package halt keeps showing its API code as the banner title.
+- **Screen:** the Resume dialog on such a halt says the blocked packages run again with the reason as their rework
+  note, labels the field "How the blocker was resolved", marks it required and refuses an empty one before any request.
+  The Anchored banner's "To continue" line says to settle what blocks the package (the diagnosis quotes its question),
+  then resume with a reason that says how.
+- **Tests:** 3 new specs (`resumeRetriesPackages`, the package guidance). Build, typecheck (`check-boundaries: ok`), lint,
+  **137 files / 2,489 tests passed** and `npm run format:check` on Node 24.21.0.
+- **Dependencies:** installed as in "Review fixes of PR #22": a scratch copy of the lockfile without the two
+  `@company-name-fedev` packages, without integrity fields and pointed at registry.npmjs.org, with `--ignore-scripts`;
+  `@company-name-fedev/auth` is a local stub inside `node_modules`. Nothing of it is committed.
+- **Not run:** a shell or component spec of the Resume dialog on a package halt (no mock seed halts on a package; the
+  mock's resume does not require the reason), a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API,
+  a real API or TEST.
 
 ## Agent diagnosis (2026-10-11)
 
@@ -565,6 +590,10 @@ will carry the lane and the merge together, once the user approves it.**
 - **Phase 0:** see "Lane P0" below.
 
 ## Where we are
+
+Resume on a stuck work package (2026-10-11) is committed on `claude/project-thread-xadeak`: the Resume dialog requires
+a reason on a package halt and the banner says what to do; 137 files / 2,489 tests pass offline. It needs `ahoy-hosted`
+PR #32 and has met only the in-process mock.
 
 The agent diagnosis (Anchored banner, 2026-10-11) is committed on `claude/tender-johnson-pvbvmu` on top of the rest:
 137 files / 2,485 tests pass offline; it has met only the in-process mock.
