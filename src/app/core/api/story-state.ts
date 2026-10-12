@@ -40,10 +40,23 @@ export interface StoryGate {
   readonly reason?: string;
 }
 
+/** A pull request the harness opened and verified for a child repository (`child_repos[].pr_url`). */
+export interface StoryPullRequest {
+  /** The plan alias of the repository. */
+  readonly repo: string;
+  /** An absolute `http(s)` URL, normalised by `URL`. */
+  readonly url: string;
+  readonly number?: number;
+  /** GitHub's word, such as `OPEN` or `MERGED`, as the gate last read it. */
+  readonly state?: string;
+}
+
 /** What the UI reads of a story's state. */
 export interface StoryStateView {
   readonly criteria: readonly StoryCriterion[];
   readonly packages: readonly StoryPackage[];
+  /** The child repositories' pull requests, in plan order; a repository without a recorded pull request has none. */
+  readonly pullRequests: readonly StoryPullRequest[];
   /** By human gate key, such as `plan_accepted`. */
   readonly humanGates: ReadonlyMap<string, StoryGate>;
   /** Send-back rounds counted so far, by human gate key. */
@@ -110,6 +123,35 @@ function readPackage(raw: Record<string, unknown>): StoryPackage | null {
   };
 }
 
+/** The URL if it is an absolute `http(s)` URL, normalised by `URL`; anything else gives `null`. */
+function httpUrl(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  return url.protocol === 'https:' || url.protocol === 'http:'
+    ? url.href
+    : null;
+}
+
+function readPullRequest(
+  raw: Record<string, unknown>
+): StoryPullRequest | null {
+  const url = httpUrl(str(raw['pr_url']));
+  if (url === null) return null;
+  const number = raw['pr_number'];
+  const state = str(raw['pr_state']);
+  return {
+    repo: str(raw['repo']) ?? '',
+    url,
+    ...(isWholeNumber(number) && number > 0 ? { number } : {}),
+    ...(state !== undefined && state !== '' ? { state } : {}),
+  };
+}
+
 function readGate(raw: unknown): StoryGate | null {
   if (!isRecord(raw)) return null;
   const status = str(raw['status']);
@@ -136,6 +178,7 @@ export function readStoryState(state: unknown): StoryStateView {
   return {
     criteria: readList(doc['acceptance_criteria'], readCriterion),
     packages: readList(doc['work_packages'], readPackage),
+    pullRequests: readList(doc['child_repos'], readPullRequest),
     humanGates: readMap(doc['human_gates'], readGate),
     revisions: readMap(doc['revisions'], readRevision),
     revisionCeiling:

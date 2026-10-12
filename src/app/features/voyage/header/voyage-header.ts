@@ -5,6 +5,7 @@ import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { PhaseStepper } from '@ui/phase-stepper/phase-stepper';
 import { StatusBadge } from '@ui/status-badge/status-badge';
+import type { StoryPullRequest } from '@core/api/story-state';
 import { currentRunView } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
@@ -14,11 +15,17 @@ import {
   primaryAction,
 } from './primary-action';
 
+/** "billing-api #7": the repository alias and the pull request number, or the URL when the state names neither. */
+export function pullRequestLabel(pr: StoryPullRequest): string {
+  const name = pr.repo !== '' ? pr.repo : pr.url;
+  return pr.number !== undefined ? `${name} #${pr.number}` : name;
+}
+
 /**
  * The voyage header (wireframes `PlanReview` and `Halted`): key, status badge with the API words (`awaiting_decision ·
  * plan_accepted`, `halted · run_failed`), title, the primary action for the status with Budget, Models, Back to intake
  * (in planning and plan review) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
- * round, agent config). Shown once the story is read.
+ * round, the pull requests the harness opened, agent config). Shown once the story is read.
  */
 @Component({
   selector: 'ah-voyage-header',
@@ -130,6 +137,28 @@ import {
                 <dd>{{ round }}</dd>
               </div>
             }
+            @if (v.pullRequests.length > 0) {
+              <div>
+                <dt>Pull requests</dt>
+                <dd>
+                  <ul class="header__prs">
+                    @for (pr of v.pullRequests; track pr.url) {
+                      <li>
+                        <a
+                          [href]="pr.url"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          >{{ pr.label }}</a
+                        >
+                        @if (pr.state) {
+                          <span class="ah-muted">{{ pr.state }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                </dd>
+              </div>
+            }
             <div>
               <dt>Agent config</dt>
               <dd>
@@ -172,6 +201,11 @@ export class VoyageHeader {
       ),
       run: currentRunView(story.currentRunId, this.context.runs()),
       round: this.roundText(),
+      pullRequests: (this.context.state()?.pullRequests ?? []).map((pr) => ({
+        url: pr.url,
+        label: pullRequestLabel(pr),
+        state: pr.state?.toLowerCase() ?? null,
+      })),
       sha: shortSha(story.controlSha),
     };
   });

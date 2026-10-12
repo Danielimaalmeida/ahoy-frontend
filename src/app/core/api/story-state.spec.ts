@@ -107,10 +107,60 @@ describe('readStoryState', () => {
     });
   });
 
+  it('reads the pull requests recorded on the child repositories, in plan order', () => {
+    const view = readStoryState({
+      child_repos: [
+        {
+          repo: 'billing-api',
+          pr_url: 'https://github.example/acme/billing-api/pull/7',
+          pr_number: 7,
+          pr_state: 'MERGED',
+        },
+        { repo: 'billing-web', branch: 'feature/PROJ-123' },
+        {
+          repo: 'billing-docs',
+          pr_url: 'https://github.example/acme/billing-docs/pull/2',
+        },
+      ],
+    });
+    expect(view.pullRequests).toEqual([
+      {
+        repo: 'billing-api',
+        url: 'https://github.example/acme/billing-api/pull/7',
+        number: 7,
+        state: 'MERGED',
+      },
+      {
+        repo: 'billing-docs',
+        url: 'https://github.example/acme/billing-docs/pull/2',
+      },
+    ]);
+  });
+
+  it('keeps only absolute http(s) pull request links and drops a number or state of the wrong type', () => {
+    const view = readStoryState({
+      child_repos: [
+        { repo: 'a', pr_url: 'javascript:alert(1)' },
+        { repo: 'b', pr_url: '/acme/b/pull/1' },
+        { repo: 'c', pr_url: 42 },
+        {
+          repo: 'd',
+          pr_url: ' https://h.example/o/d/pull/3 ',
+          pr_number: -3,
+          pr_state: 7,
+        },
+      ],
+    });
+    expect(view.pullRequests).toEqual([
+      { repo: 'd', url: 'https://h.example/o/d/pull/3' },
+    ]);
+  });
+
   describe('on a state it cannot trust', () => {
     const EMPTY = {
       criteria: [],
       packages: [],
+      pullRequests: [],
       humanGates: new Map(),
       revisions: new Map(),
       revisionCeiling: DEFAULT_REVISION_CEILING,

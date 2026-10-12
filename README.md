@@ -72,6 +72,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Pull request links (2026-10-12):** the voyage header links the pull requests the harness recorded in the state
+  (`child_repos[].pr_url`), once the `child_ready` gate verified them. Offline only; see
+  [docs/progress.md](docs/progress.md).
+
 - **R3DA-14787 API state names (2026-10-12):** active contract examples use `intake_analyst` and
   `reviewer_reviews`; the API description names the intake analyst. The vendored OpenAPI, generated TypeScript and
   JSON mirror were updated. No old-story migration or compatibility alias was added. The frontend reader does not

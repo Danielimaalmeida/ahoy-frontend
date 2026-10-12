@@ -77,3 +77,19 @@
 .header__budget {
   min-width: 200px;
 }
+
+.header__prs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1\.5);
+    align-items: baseline;
+  }
+}
