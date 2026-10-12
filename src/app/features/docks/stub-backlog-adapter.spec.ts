@@ -53,6 +53,7 @@ describe('StubBacklogAdapter', () => {
       assignee: null,
       updatedAt: '2026-10-06T08:00:00.000Z',
       sprint: null,
+      readiness: null,
     });
   });
 

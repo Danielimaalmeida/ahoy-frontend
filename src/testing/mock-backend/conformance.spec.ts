@@ -83,6 +83,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     get(`/stories/${key}/models`);
     get(`/stories/${key}/state`);
     get(`/stories/${key}/diagnosis`);
+    get(`/stories/${key}/plan-fit`);
     const artifacts = get(`/stories/${key}/artifacts`).body as {
       items: { path: string }[];
     };
@@ -156,6 +157,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     get(`/stories/${key}/runs`);
     get(`/stories/${key}/state`);
     get(`/stories/${key}/diagnosis`);
+    get(`/stories/${key}/plan-fit`);
     get(`/stories/${key}/events?limit=500`);
     const artifacts = get(`/stories/${key}/artifacts`).body as {
       items: { path: string }[];
@@ -325,6 +327,7 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'getArtifactContent',
       'listStoryEvents',
       'getStoryDiagnosis',
+      'getStoryPlanFit',
       'refreshIntake',
       'listRefinements',
       'getRefinements',

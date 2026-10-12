@@ -33,6 +33,7 @@ function anItem(key: string, changes: Partial<BacklogItem> = {}): BacklogItem {
     assignee: null,
     updatedAt: '2026-10-06T09:00:00.000Z',
     sprint: null,
+    readiness: null,
     ...changes,
   };
 }
@@ -299,6 +300,7 @@ describe('Docks', () => {
         'Assignee',
         'Updated',
         'Refinement',
+        'Harness',
         'Ahoy',
         'Actions',
       ]);
@@ -320,25 +322,25 @@ describe('Docks', () => {
 
     it('joins the Ahoy column with the real voyages: not started, under way, and docked', async () => {
       const f = await mount();
-      expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('Not started');
-      const underWay = cell(rowOf(f, 'PROJ-140'), 7);
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Not started');
+      const underWay = cell(rowOf(f, 'PROJ-140'), 8);
       expect(text(underWay)).toBe('Running planning');
       expect(underWay.querySelector('a')?.getAttribute('href')).toBe(
         '/voyages/PROJ-140'
       );
-      expect(text(cell(rowOf(f, 'PROJ-131'), 7))).toBe(
+      expect(text(cell(rowOf(f, 'PROJ-131'), 8))).toBe(
         'Needs answers planning'
       );
-      expect(text(cell(rowOf(f, 'PROJ-123'), 7))).toBe(
+      expect(text(cell(rowOf(f, 'PROJ-123'), 8))).toBe(
         'Needs decision plan_review'
       );
-      expect(text(cell(rowOf(f, 'PROJ-118'), 7))).toBe('Halted planning');
-      expect(text(cell(rowOf(f, 'PROJ-097'), 7))).toBe('Done done');
+      expect(text(cell(rowOf(f, 'PROJ-118'), 8))).toBe('Halted planning');
+      expect(text(cell(rowOf(f, 'PROJ-097'), 8))).toBe('Done done');
     });
 
     it('offers Set sail with the key and the summary for a story that is not started', async () => {
       const f = await mount();
-      const link = cell(rowOf(f, 'PROJ-145'), 8).querySelector(
+      const link = cell(rowOf(f, 'PROJ-145'), 9).querySelector(
         'a.ah-btn--primary'
       )!;
       expect(text(link)).toBe('Start voyage');
@@ -349,7 +351,7 @@ describe('Docks', () => {
 
     it('offers Open voyage, not Set sail, for a story that already has a voyage', async () => {
       const f = await mount();
-      const actions = cell(rowOf(f, 'PROJ-123'), 8);
+      const actions = cell(rowOf(f, 'PROJ-123'), 9);
       expect(
         [...actions.querySelectorAll('a')].map((link) => text(link))
       ).toEqual(['Jira ↗', 'Open voyage']);
@@ -371,14 +373,14 @@ describe('Docks', () => {
 
     it('follows the voyages as they change, without reading the backlog again', async () => {
       const f = await mount();
-      expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('Not started');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Not started');
       TestBed.inject(StoriesStore).upsert(
         aStory('PROJ-145', { status: 'running', phase: 'planning' })
       );
       await refresh(f);
-      expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('Running planning');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Running planning');
       expect(
-        [...cell(rowOf(f, 'PROJ-145'), 8).querySelectorAll('a')].map((link) =>
+        [...cell(rowOf(f, 'PROJ-145'), 9).querySelectorAll('a')].map((link) =>
           text(link)
         )
       ).toEqual(['Jira ↗', 'Open voyage']);
@@ -513,11 +515,12 @@ describe('Docks', () => {
           'Assignee',
           'Updated',
           'Refinement',
+          'Harness',
           'Ahoy',
         ]);
-        expect(row.cells).toHaveLength(9);
+        expect(row.cells).toHaveLength(10);
         expect(
-          [...row.cells[8]!.querySelectorAll('a')].map((link) => text(link))
+          [...row.cells[9]!.querySelectorAll('a')].map((link) => text(link))
         ).toEqual(['Jira ↗', 'Start voyage']);
       });
 
@@ -677,6 +680,60 @@ describe('Docks', () => {
       expect(text(root(f))).not.toContain('Planned screen.');
     });
 
+    it("shows each item's harness readiness with its reasons, and a dash where the source does not judge", async () => {
+      const f = await mount(
+        new FakeBacklog(
+          [
+            anItem('PROJ-1', { readiness: { verdict: 'ready', reasons: [] } }),
+            anItem('PROJ-2', {
+              readiness: {
+                verdict: 'missing',
+                reasons: [
+                  {
+                    code: 'blocked',
+                    message: 'Blocked by unresolved PROJ-9.',
+                  },
+                ],
+              },
+            }),
+            anItem('PROJ-3', {
+              readiness: {
+                verdict: 'attention',
+                reasons: [{ code: 'spike', message: 'It reads as a spike.' }],
+              },
+            }),
+            anItem('PROJ-4'),
+          ],
+          false
+        )
+      );
+      const harness = (key: string): HTMLTableCellElement =>
+        cell(rowOf(f, key), 7);
+      expect(text(harness('PROJ-1'))).toBe('Ready');
+      expect(text(harness('PROJ-2'))).toBe('Not ready');
+      expect(text(harness('PROJ-3'))).toBe('Check fit');
+      expect(text(harness('PROJ-4'))).toBe('—');
+      const tag = harness('PROJ-2').querySelector('.ah-tag')!;
+      expect(tag.classList).toContain('docks__fit--bad');
+      expect(tag.getAttribute('aria-label')).toBe(
+        'Not ready: Blocked by unresolved PROJ-9.'
+      );
+      expect(tag.getAttribute('title')).toBe(tag.getAttribute('aria-label'));
+    });
+
+    it('asks for one readiness verdict when the person filters by it, and clears it with the other filters', async () => {
+      const backlog = new FakeBacklog([anItem('PROJ-1')]);
+      const f = await mount(backlog);
+      await choose(f, 'Harness readiness', 'missing');
+      expect(backlog.queries.at(-1)).toEqual({
+        readiness: 'missing',
+        scope: 'all',
+        limit: 25,
+      });
+      await choose(f, 'Harness readiness', '');
+      expect(backlog.queries.at(-1)).toEqual({ scope: 'all', limit: 25 });
+    });
+
     it('asks for the first page, with the page size and the scope, and no empty filters', async () => {
       const backlog = new FakeBacklog([anItem('PROJ-1')]);
       await mount(backlog);
@@ -782,11 +839,11 @@ describe('Docks', () => {
     it('does not claim that a story is not started, and offers no Set sail, until the voyages are read', async () => {
       storiesAnswer = () => new Promise(() => undefined);
       const f = await mount(new FakeBacklog([anItem('PROJ-145')]));
-      expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('');
       expect(root(f).querySelector('tbody ah-skeleton')).not.toBeNull();
       // Refining does not need a voyage, so only the voyage actions wait.
       expect(text(cell(rowOf(f, 'PROJ-145'), 6))).toBe('Refine');
-      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Jira ↗');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 9))).toBe('Jira ↗');
     });
 
     it('does not read the backlog for Not started or In Ahoy until the voyages are read', async () => {
@@ -805,9 +862,9 @@ describe('Docks', () => {
       storiesAnswer = () => Promise.resolve(fail({ kind: 'network' }));
       const f = await mount(new FakeBacklog([anItem('PROJ-145')]));
       expect(text(root(f))).toContain('Could not read the voyages in Ahoy');
-      expect(text(cell(rowOf(f, 'PROJ-145'), 7))).toBe('Unknown');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Unknown');
       expect(text(cell(rowOf(f, 'PROJ-145'), 6))).toBe('Refine');
-      expect(text(cell(rowOf(f, 'PROJ-145'), 8))).toBe('Jira ↗');
+      expect(text(cell(rowOf(f, 'PROJ-145'), 9))).toBe('Jira ↗');
       pill(f, 'In Ahoy').click();
       await refresh(f);
       expect(text(root(f))).toContain(
@@ -1133,7 +1190,7 @@ describe('Docks', () => {
       expect(button.getAttribute('aria-controls')).toBe('refinement-PROJ-1');
       const row = detail(f, 'PROJ-1')!;
       expect(row.previousElementSibling).toBe(rowOf(f, 'PROJ-1'));
-      expect(row.querySelector('td')?.getAttribute('colspan')).toBe('9');
+      expect(row.querySelector('td')?.getAttribute('colspan')).toBe('10');
       expect(fact(row, 'State')).toBe('Refined succeeded');
       expect(fact(row, 'Requested by')).toBe('alex@example.com · 30 m ago');
       expect(fact(row, 'Spent')).toBe('2.4 of 10 AIU');

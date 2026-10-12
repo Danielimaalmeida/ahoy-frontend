@@ -69,6 +69,7 @@ function toBacklogItem(item: JiraBacklogIssue): BacklogItem {
     assignee: null,
     updatedAt: item.updatedAt,
     sprint: item.sprint,
+    readiness: item.readiness,
   };
 }
 
@@ -88,6 +89,11 @@ function matches(item: BacklogItem, query: BacklogQuery): boolean {
   )
     return false;
   if (query.assignee !== undefined && item.assignee !== query.assignee)
+    return false;
+  if (
+    query.readiness !== undefined &&
+    item.readiness?.verdict !== query.readiness
+  )
     return false;
   if (query.scope === 'not_started')
     return !(query.ahoyKeys ?? []).includes(item.key);

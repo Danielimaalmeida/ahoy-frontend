@@ -10,7 +10,12 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { RefinementSummary } from '@core/api/types';
+import type { BacklogReadiness, RefinementSummary } from '@core/api/types';
+import {
+  readinessPresentation,
+  readinessSummary,
+  type FitPresentation,
+} from '@domain/harness-fit';
 import { AppConfigStore } from '@core/config/app-config';
 import { StoriesStore } from '@core/stores/stories-store';
 import { Banner } from '@ui/banner/banner';
@@ -85,6 +90,7 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
   { track: '130px' },
   { track: '60px' },
   { track: '110px', height: 20 },
+  { track: '90px', height: 20 },
   { track: '110px', height: 20 },
 ];
 
@@ -337,6 +343,18 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
     .docks__refinement-toggle:hover {
       text-decoration: underline;
     }
+    .docks__fit--good {
+      background: var(--status-done-bg);
+      color: var(--status-done-fg);
+    }
+    .docks__fit--warn {
+      background: var(--status-input-bg);
+      color: var(--status-input-fg);
+    }
+    .docks__fit--bad {
+      background: var(--status-halted-bg);
+      color: var(--status-halted-fg);
+    }
     .docks__refinement-toggle--refined {
       background: var(--status-done-bg);
       color: var(--status-done-fg);
@@ -537,6 +555,16 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
           <option value="failed">Failed</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <select
+          class="ah-input docks__select"
+          aria-label="Harness readiness"
+          [formControl]="readiness"
+        >
+          <option value="">Harness: any</option>
+          <option value="ready">Ready</option>
+          <option value="attention">Check fit</option>
+          <option value="missing">Not ready</option>
+        </select>
         <ah-section-tabs
           variant="pill"
           label="Ahoy state"
@@ -687,6 +715,7 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                       <th>Assignee</th>
                       <th>Updated</th>
                       <th>Refinement</th>
+                      <th>Harness</th>
                       <th>Ahoy</th>
                       <th class="docks__actions">Actions</th>
                     </tr>
@@ -800,6 +829,20 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                             <ah-skeleton width="80px" [height]="20" />
                           }
                         </td>
+                        <td ahNowrap data-label="Harness">
+                          @if (item.readiness; as readiness) {
+                            <span
+                              class="ah-tag docks__fit--{{
+                                readinessOf(readiness).tone
+                              }}"
+                              [attr.title]="readinessText(readiness)"
+                              [attr.aria-label]="readinessText(readiness)"
+                              >{{ readinessOf(readiness).label }}</span
+                            >
+                          } @else {
+                            <span class="ah-muted">—</span>
+                          }
+                        </td>
                         <td ahNowrap data-label="Ahoy">
                           @if (store.find(item.key); as story) {
                             <a
@@ -863,7 +906,7 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                           class="docks__refinement"
                           [id]="refinementRowId(item.key)"
                         >
-                          <td colspan="9">
+                          <td colspan="10">
                             <ah-refinement-details
                               [summary]="refinement"
                               [refinement]="refinements.newest(item.key)"
@@ -921,6 +964,7 @@ export class Docks {
   protected readonly assignee = new FormControl('', { nonNullable: true });
   protected readonly sprint = new FormControl('', { nonNullable: true });
   protected readonly refinement = new FormControl('', { nonNullable: true });
+  protected readonly readiness = new FormControl('', { nonNullable: true });
   /** The id of the selected pill; a button tab sets it. */
   protected readonly scopeId = signal<string | null>('all');
 
@@ -938,6 +982,10 @@ export class Docks {
   });
   protected readonly refinementValue = toSignal(this.refinement.valueChanges, {
     initialValue: this.refinement.value,
+  });
+
+  private readonly readinessValue = toSignal(this.readiness.valueChanges, {
+    initialValue: this.readiness.value,
   });
 
   private readonly itemsSignal = signal<readonly BacklogItem[]>([]);
@@ -1036,6 +1084,7 @@ export class Docks {
     const jiraStatus = this.jiraStatusValue();
     const assignee = this.assigneeValue();
     const sprint = this.sprintValue();
+    const readiness = this.readinessValue();
     const parsedSprint = /^\d+$/.test(sprint) ? Number(sprint) : NaN;
     const sprintId = Number.isSafeInteger(parsedSprint)
       ? parsedSprint
@@ -1050,6 +1099,11 @@ export class Docks {
           : {}),
       ...(assignee !== ''
         ? { assignee: assignee === UNASSIGNED ? null : assignee }
+        : {}),
+      ...(readiness === 'ready' ||
+      readiness === 'attention' ||
+      readiness === 'missing'
+        ? { readiness }
         : {}),
       scope,
       ...(scope !== 'all'
@@ -1082,6 +1136,7 @@ export class Docks {
       this.assigneeValue() !== '' ||
       this.sprintValue() !== '' ||
       this.refinementValue() !== '' ||
+      this.readinessValue() !== '' ||
       this.scope() !== 'all'
   );
 
@@ -1138,7 +1193,8 @@ export class Docks {
   /** The team's Jira issue page, with an optional runtime override for another Jira. */
   protected jiraUrl(key: string): string {
     const base =
-      this.config.config().jiraBaseUrl ?? 'https://atc.company-namegroup.net/jira';
+      this.config.config().jiraBaseUrl ??
+      'https://atc.company-namegroup.net/jira';
     return `${base}/browse/${encodeURIComponent(key)}`;
   }
 
@@ -1193,6 +1249,16 @@ export class Docks {
     });
   }
 
+  /** The words and tone of an item's readiness for the harness. */
+  protected readinessOf(readiness: BacklogReadiness): FitPresentation {
+    return readinessPresentation(readiness.verdict);
+  }
+
+  /** The verdict with its reasons, for the tag's tooltip and screen readers. */
+  protected readinessText(readiness: BacklogReadiness): string {
+    return readinessSummary(readiness);
+  }
+
   /** Reads the refinements again after they failed. */
   protected retryRefinements(): void {
     void this.refinements.load();
@@ -1205,6 +1271,7 @@ export class Docks {
     this.assignee.setValue('');
     this.sprint.setValue('');
     this.refinement.setValue('');
+    this.readiness.setValue('');
     this.scopeId.set('all');
   }
 

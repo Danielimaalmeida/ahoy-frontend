@@ -77,6 +77,12 @@ export interface paths {
      *     Missing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout
      *     errors, malformed responses or pagination inconsistencies return `503 unavailable`.
      *     This lookup never starts a delivery or spends AIU.
+     *
+     *     Each item carries `readiness`, fixed rules over its description, labels and "is blocked by" links (the
+     *     description itself is not returned): `missing` when intake would stop it (no description, no acceptance
+     *     criteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when
+     *     the harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is
+     *     worth running through the harness is told from its plan (`getStoryPlanFit`).
      */
     readonly get: operations['listJiraBacklog'];
     readonly put?: never;
@@ -582,6 +588,32 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/plan-fit': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * Whether the story's plan suits the harness, for the person deciding `plan_accepted`.
+     * @description Fixed rules over the planned work packages and acceptance criteria; it spends nothing and changes nothing.
+     *     `poor` when a criterion needs CI or pipeline changes, which the implementation workflow may not make.
+     *     `attention` when work waits across repositories, the plan changes more than 2 repositories, has more than 6
+     *     work packages or a `depends_on` chain longer than 3, or a criterion names a repository no package changes.
+     *     Else `fits`. `fit` is null until the planner has written work packages.
+     */
+    readonly get: operations['getStoryPlanFit'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/diagnosis': {
     readonly parameters: {
       readonly query?: never;
@@ -665,6 +697,73 @@ export interface paths {
      *     `409 invalid_state` when nothing is in progress.
      */
     readonly post: operations['cancelAgentDiagnosis'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/knowledge-reviews': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * Every knowledge review of one story, newest first, with the proposed business rules.
+     * @description When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs
+     *     them (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
+     *     the approved plan, the answers people gave and their decisions at the human gates) and proposes changes to the
+     *     content repository's `knowledge/business-context.md`. Its summary is `content`; the whole proposed file is
+     *     `proposal` and its unified diff against the file at `controlSha` is `patch` (for `git apply`). Both are null when
+     *     the agent proposed no change. Ahoy changes nothing in the content repository: a person opens the pull request
+     *     there with the patch, and the rules are approved in that pull request. A story without one answers `200` with no
+     *     items. `404` when the story does not exist.
+     */
+    readonly get: operations['listKnowledgeReviews'];
+    readonly put?: never;
+    /**
+     * Ask an agent again to review a delivered story's business rules. May spend AIU.
+     * @description For a review that failed, was cancelled or should look again with the requester's notes. Queues one worker run of
+     *     the server's knowledge agent for the story, pinned to the control repo's HEAD now. The agent reads the evidence
+     *     Ahoy seeds (untrusted text) and the content repository, and may change only `knowledge/business-context.md` in
+     *     its own copy; it has no MCP server and no shell. It changes nothing about the story.
+     *
+     *     The story must be `done` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
+     *     `budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the
+     *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for
+     *     the outcome. One knowledge review per story is in progress at a time: another request answers
+     *     `409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be
+     *     read.
+     */
+    readonly post: operations['requestKnowledgeReview'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/knowledge-reviews/cancel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Stop the story's knowledge review in progress.
+     * @description A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
+     *     reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
+     *     `409 invalid_state` when nothing is in progress.
+     */
+    readonly post: operations['cancelKnowledgeReview'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -852,6 +951,39 @@ export interface components {
        *     sprint ID breaks ties. Null when unassigned. Supports Jira Server's legacy sprint strings.
        */
       readonly sprint: components['schemas']['JiraSprint'] | null;
+      readonly readiness: components['schemas']['BacklogReadiness'];
+    };
+    readonly FitReason: {
+      /**
+       * @description Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,
+       *     `short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,
+       *     `many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.
+       */
+      readonly code: string;
+      /** @description English explanation with the evidence. */
+      readonly message: string;
+    };
+    readonly BacklogReadiness: {
+      /** @enum {string} */
+      readonly verdict: 'ready' | 'attention' | 'missing';
+      /** @description Reasons for `missing` first, then those for `attention`. Empty when `ready`. */
+      readonly reasons: readonly components['schemas']['FitReason'][];
+    };
+    readonly PlanFit: {
+      /** @enum {string} */
+      readonly verdict: 'fits' | 'attention' | 'poor';
+      /** @description Reasons for `poor` first, then those for `attention`. Empty when `fits`. */
+      readonly reasons: readonly components['schemas']['FitReason'][];
+      readonly repositories: number;
+      readonly packages: number;
+      readonly criteria: number;
+      /** @description Work packages in the longest depends_on chain. */
+      readonly longestChain: number;
+    };
+    readonly StoryPlanFit: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly phase: components['schemas']['Phase'];
+      readonly fit: components['schemas']['PlanFit'] | null;
     };
     readonly JiraBacklog: {
       readonly items: readonly components['schemas']['JiraBacklogIssue'][];
@@ -1254,13 +1386,13 @@ export interface components {
       readonly id: components['schemas']['RunId'];
       readonly key: components['schemas']['StoryKey'];
       readonly status: components['schemas']['RefinementStatus'];
+      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
       readonly notes: string | null;
       readonly requestedBy: components['schemas']['Actor'];
       readonly agent: string | null;
       readonly model: string | null;
       readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
       readonly runtime: string | null;
-      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
       readonly controlSha: string;
       readonly budgetNanoAiu: components['schemas']['NanoAiu'];
       readonly usage: components['schemas']['Usage'];
@@ -1272,6 +1404,44 @@ export interface components {
       /** @description The agent's pre-refinement, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
       readonly content: string | null;
     };
+    readonly KnowledgeReview: {
+      readonly id: components['schemas']['RunId'];
+      readonly key: components['schemas']['StoryKey'];
+      readonly status: components['schemas']['RefinementStatus'];
+      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
+      readonly notes: string | null;
+      readonly requestedBy: components['schemas']['Actor'];
+      readonly agent: string | null;
+      readonly model: string | null;
+      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
+      readonly runtime: string | null;
+      readonly controlSha: string;
+      readonly budgetNanoAiu: components['schemas']['NanoAiu'];
+      readonly usage: components['schemas']['Usage'];
+      readonly exitReason: string | null;
+      readonly cancelRequested: boolean;
+      readonly createdAt: components['schemas']['Timestamp'];
+      readonly startedAt: components['schemas']['Timestamp'] | null;
+      readonly endedAt: components['schemas']['Timestamp'] | null;
+      /** @description The agent's summary of the rules it added, changed or left out, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
+      readonly content: string | null;
+      /** @description The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
+      readonly proposal: string | null;
+      /** @description The proposal as a unified diff against `knowledge/business-context.md` at `controlSha`, for `git apply` in the content repository; null exactly when `proposal` is. */
+      readonly patch: string | null;
+    };
+    readonly KnowledgeReviewList: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly items: readonly components['schemas']['KnowledgeReview'][];
+    };
+    readonly KnowledgeReviewRequest: {
+      /** @constant */
+      readonly confirmSpend: true;
+      /** @description What the agent should look at, given to it as the requester's notes. */
+      readonly notes?: string;
+      /** @description The run's AIU cap, at most 100 AIU; the server's knowledge cap when absent. */
+      readonly budgetNanoAiu?: number;
+    };
     readonly RefinementSummaryList: {
       readonly items: readonly components['schemas']['RefinementSummary'][];
     };
@@ -1282,7 +1452,7 @@ export interface components {
     readonly StoryState: {
       readonly key: components['schemas']['StoryKey'];
       readonly version: components['schemas']['Version'];
-      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `intake_analyst`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. */
+      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. */
       readonly state: Record<string, never>;
     };
     readonly GateVerdict: {
@@ -1393,6 +1563,8 @@ export interface components {
      * @example story.routed
      * @example run.progress
      * @example run.waiting
+     * @example knowledge_review.queued
+     * @example knowledge_review.skipped
      */
     readonly EventType: string;
     readonly Event: {
@@ -2491,6 +2663,33 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly getStoryPlanFit: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The plan fit. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['StoryPlanFit'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly getStoryDiagnosis: {
     readonly parameters: {
       readonly query?: never;
@@ -2597,6 +2796,94 @@ export interface operations {
         };
         content: {
           readonly 'application/json': components['schemas']['Refinement'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly listKnowledgeReviews: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The story's knowledge reviews, newest first. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['KnowledgeReviewList'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly requestKnowledgeReview: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['KnowledgeReviewRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The knowledge review, queued. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['KnowledgeReview'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly cancelKnowledgeReview: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CancelRefinementRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The knowledge review, cancelled or being cancelled. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['KnowledgeReview'];
         };
       };
       readonly 400: components['responses']['Problem'];

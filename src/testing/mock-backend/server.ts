@@ -32,6 +32,7 @@ import type {
 } from '@core/api/types';
 import { realClock, type MockClock } from './clock';
 import { diagnosisOf } from './diagnosis';
+import { planFitOf } from './plan-fit';
 import { KEEPALIVE_MS, StreamHub } from './event-stream';
 import {
   isRecord,
@@ -70,6 +71,7 @@ const jiraBacklog: JiraBacklog = {
       priority: 'High',
       updatedAt: '2026-10-06T08:00:00.000Z',
       sprint: null,
+      readiness: { verdict: 'ready', reasons: [] },
     },
     {
       key: 'PROJ-146',
@@ -79,6 +81,15 @@ const jiraBacklog: JiraBacklog = {
       priority: 'Medium',
       updatedAt: '2026-10-05T15:30:00.000Z',
       sprint: { id: 12, name: 'Sprint 12', state: 'active' },
+      readiness: {
+        verdict: 'missing',
+        reasons: [
+          {
+            code: 'no_acceptance_criteria',
+            message: 'The description has no acceptance criteria section.',
+          },
+        ],
+      },
     },
     {
       key: 'PROJ-147',
@@ -88,6 +99,16 @@ const jiraBacklog: JiraBacklog = {
       priority: null,
       updatedAt: '2026-10-04T11:15:00.000Z',
       sprint: { id: 13, name: 'Sprint 13', state: 'future' },
+      readiness: {
+        verdict: 'attention',
+        reasons: [
+          {
+            code: 'spike',
+            message:
+              'It reads as a spike or investigation; the harness delivers code, not findings.',
+          },
+        ],
+      },
     },
   ],
   total: 3,
@@ -608,6 +629,14 @@ export class MockAhoyServer {
         return jsonResponse(200, { items: this.voyage(call).gates });
       case 'decideHumanGate':
         return this.decide(call);
+      case 'getStoryPlanFit': {
+        const voyage = this.voyage(call);
+        return jsonResponse(200, {
+          key: voyage.story.key,
+          phase: voyage.story.phase,
+          fit: planFitOf(voyage.plan),
+        });
+      }
       case 'getStoryDiagnosis': {
         const voyage = this.voyage(call);
         const halted = this.world.events

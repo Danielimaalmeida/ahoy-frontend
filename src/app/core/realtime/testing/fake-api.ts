@@ -22,6 +22,7 @@ export type FakeApiOps = Pick<
   | 'requestAgentDiagnosis'
   | 'cancelAgentDiagnosis'
   | 'getStoryDiagnosis'
+  | 'getStoryPlanFit'
 >;
 
 /** A call the fake saw. */
@@ -141,5 +142,10 @@ export class FakeApi implements FakeApiOps {
   getStoryDiagnosis: FakeApiOps['getStoryDiagnosis'] = (key) => {
     this.calls.push({ op: 'getStoryDiagnosis', args: [key] });
     return this.handlers.getStoryDiagnosis?.(key) ?? unreachable();
+  };
+
+  getStoryPlanFit: FakeApiOps['getStoryPlanFit'] = (key) => {
+    this.calls.push({ op: 'getStoryPlanFit', args: [key] });
+    return this.handlers.getStoryPlanFit?.(key) ?? unreachable();
   };
 }
