@@ -1,0 +1,28 @@
+{
+  "id": "proj-097-knowledge-002-9a41",
+  "key": "PROJ-097",
+  "status": "queued",
+  "notes": "Look again at the refund rules",
+  "requestedBy": "alex@example.com",
+  "agent": null,
+  "model": null,
+  "reasoningEffort": null,
+  "runtime": null,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "budgetNanoAiu": 10000000000,
+  "usage": {
+    "requests": 0,
+    "nanoAiu": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  },
+  "exitReason": null,
+  "cancelRequested": false,
+  "createdAt": "2026-10-07T09:00:00.000Z",
+  "startedAt": null,
+  "endedAt": null,
+  "content": null,
+  "proposal": null,
+  "lessons": null,
+  "patch": null
+}

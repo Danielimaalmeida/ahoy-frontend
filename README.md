@@ -72,6 +72,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Knowledge review and lessons (2026-10-12):** a done or halted voyage shows the knowledge curator's proposed
+  lessons, rules and patch, with Ask, Review again and Cancel; Metrics › Halts & errors charts repeated halts per
+  week. Offline only; see [docs/progress.md](docs/progress.md).
+
 - **Pull request links (2026-10-12):** the voyage header links the pull requests the harness recorded in the state
   (`child_repos[].pr_url`), once the `child_ready` gate verified them. Offline only; see
   [docs/progress.md](docs/progress.md).

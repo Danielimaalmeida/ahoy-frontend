@@ -960,4 +960,107 @@ describe('VoyageShell on the mock backend', () => {
       );
     });
   });
+  describe('Knowledge review', () => {
+    function knowledgePanel(page: Page): HTMLElement {
+      const element =
+        page.root.querySelector<HTMLElement>('ah-knowledge-panel');
+      if (element === null) throw new Error('no knowledge panel');
+      return element;
+    }
+
+    it('is offered on a done voyage and a halted one, and absent on one under way', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      expect(
+        page.requests.filter((r) => r.path.endsWith('/knowledge-reviews'))
+      ).toHaveLength(1);
+      expect(text(knowledgePanel(page))).toContain(
+        'business rules and lessons'
+      );
+      expect(buttonNamed(knowledgePanel(page), 'Ask for lessons')).toBeTruthy();
+      TestBed.resetTestingModule();
+      const halted = await open('/voyages/PROJ-118/models');
+      expect(text(knowledgePanel(halted))).toContain('What this halt taught');
+      TestBed.resetTestingModule();
+      const running = await open('/voyages/PROJ-140/models');
+      expect(
+        running.requests.some((r) => r.path.endsWith('/knowledge-reviews'))
+      ).toBe(false);
+      expect(
+        running.root.querySelector('ah-knowledge-panel .knowledge')
+      ).toBeNull();
+    });
+
+    it('asks with the spend confirmation, follows it to the end and shows the proposed lessons, rules and patch', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-097/models', { mock });
+      click(buttonNamed(knowledgePanel(page), 'Ask for lessons'));
+      await flush(page);
+      const d = dialog();
+      expect(text(d.querySelector('.ah-dialog__title'))).toBe(
+        'Ask for the rules and lessons of PROJ-097?'
+      );
+      expect(text(d.querySelector('.ah-cost'))).toContain(
+        "This may spend AIU, up to the server's knowledge cap"
+      );
+      click(buttonNamed(d, 'Review'));
+      await flush(page);
+      expect(commands(page).map((r) => [r.path, r.body])).toEqual([
+        ['/stories/PROJ-097/knowledge-reviews', { confirmSpend: true }],
+      ]);
+      expect(hasDialog()).toBe(false);
+      expect(text(knowledgePanel(page))).toContain('Waiting for a run slot');
+      expect(buttonNamed(knowledgePanel(page), 'Cancel review')).toBeTruthy();
+      mock.clock.advance(1_000);
+      mock.clock.advance(5_000);
+      await flush(page);
+      const panel = knowledgePanel(page);
+      expect(text(panel)).toContain('Reviewed');
+      expect(panel.querySelector('ah-markdown')).not.toBeNull();
+      expect(
+        [...panel.querySelectorAll('.knowledge__file summary')].map((e) =>
+          text(e)
+        )
+      ).toEqual([
+        'Proposed lessons (knowledge/lessons.md)',
+        'Proposed rules (knowledge/business-context.md)',
+        'Patch for the content repository',
+      ]);
+      expect(text(panel.querySelector('.knowledge__file pre'))).toContain(
+        'Simulated lesson'
+      );
+      expect(buttonNamed(panel, 'Review again')).toBeTruthy();
+    });
+
+    it('asks a halted voyage for its lessons only, and cancels one in progress with a required reason', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      click(buttonNamed(knowledgePanel(page), 'Ask for lessons'));
+      await flush(page);
+      expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
+        'Ask for the lessons of PROJ-118?'
+      );
+      type(dialog().querySelector('textarea'), '  Why did it halt twice?  ');
+      type(dialog().querySelector('input'), '2.5');
+      await flush(page);
+      click(buttonNamed(dialog(), 'Review · up to 2.5 AIU'));
+      await flush(page);
+      expect(commands(page)[0]?.body).toEqual({
+        confirmSpend: true,
+        notes: 'Why did it halt twice?',
+        budgetNanoAiu: 2_500_000_000,
+      });
+      click(buttonNamed(knowledgePanel(page), 'Cancel review'));
+      await flush(page);
+      click(buttonNamed(dialog(), 'Cancel review'));
+      await flush(page);
+      expect(text(dialog())).toContain('A reason is required.');
+      type(dialog().querySelector('textarea'), 'Not needed.');
+      click(buttonNamed(dialog(), 'Cancel review'));
+      await flush(page);
+      expect(commands(page)[1]).toMatchObject({
+        path: '/stories/PROJ-118/knowledge-reviews/cancel',
+        body: { reason: 'Not needed.' },
+      });
+      expect(text(knowledgePanel(page))).toContain('Cancelled');
+    });
+  });
 });

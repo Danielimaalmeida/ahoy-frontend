@@ -198,6 +198,28 @@ describe('Metrics', () => {
     expect(rows(page.root, 'Halted again after Resume').length).toBe(4);
   });
 
+  it('charts the halts per week that repeated a known diagnosis, with each week by diagnosis in a table', async () => {
+    const page = await open('/metrics/halts');
+    const weeks = panel(page.root, 'Repeated halts per week');
+    expect(weeks.querySelectorAll('.week')).toHaveLength(4);
+    expect(
+      Array.from(weeks.querySelectorAll('.week')).map((w) =>
+        w.getAttribute('title')
+      )
+    ).toEqual([
+      '14–20 Sep: 1 of 4 halts repeated',
+      '21–27 Sep: 3 of 5 halts repeated',
+      '28 Sep–4 Oct: 5 of 6 halts repeated',
+      '5–11 Oct: 7 of 8 halts repeated',
+    ]);
+    expect(text(weeks.querySelector('.note'))).toBe(
+      '16 of 23 halts repeated a known diagnosis; 7 of 8 in the last week (5–11 Oct).'
+    );
+    const table = rows(page.root, 'Repeated halts per week');
+    expect(table).toHaveLength(17);
+    expect(table[0]).toEqual(['14–20 Sep', 'budget_exhausted', '2', '2', '1']);
+  });
+
   it('filters the common errors by kind, with a count on each kind', async () => {
     const page = await open('/metrics/halts');
     const all = rows(page.root, 'Common errors').length;

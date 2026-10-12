@@ -5,12 +5,13 @@
  */
 import type {
   AgentDiagnosisRequest,
+  KnowledgeReviewRequest,
   Refinement,
   RefinementRequest,
   RefinementSummary,
 } from '@core/api/types';
 import { iso, type Cancel, type MockClock } from './clock';
-import { agentDiagnosisMarkdown, refinementMarkdown } from './content';
+import { refinementMarkdown } from './content';
 import { MockProblem } from './http';
 import { sha256Hex } from './sha256';
 import type { SimulationTiming } from './simulator';
@@ -29,20 +30,31 @@ function summary(item: Refinement): RefinementSummary {
   ) as RefinementSummary; // every field of a refinement but `content` is a summary's
 }
 
-/** What a desk holds: a backlog item's refinements, or the agent diagnoses of halted stories (same shape, other words). */
-export type DeskKind = 'refinement' | 'diagnosis';
+/**
+ * What a desk holds: a backlog item's refinements, the agent diagnoses of halted stories or the knowledge reviews of done
+ * and halted stories (same shape, other words).
+ */
+export type DeskKind = 'refinement' | 'diagnosis' | 'knowledge';
+
+/** The agent profile each kind of desk runs, as the server's settings name them. */
+const AGENT_OF: Readonly<Record<DeskKind, string>> = {
+  refinement: 'quartermaster',
+  diagnosis: 'shipwright',
+  knowledge: 'knowledge-curator',
+};
 
 /** The refinements of a mock world, newest first per Jira key, and the timers that move them on. */
 export class RefinementDesk {
   private readonly byKey = new Map<string, Writable<Refinement>[]>();
   private readonly timers = new Map<string, Cancel>();
 
-  /** `haltReasonOf` gives the diagnosing agent's simulated reply the halt reason of a story (null for an unknown key). */
+  /** `reply` writes the agent's simulated Markdown for a refinement that succeeds. */
   constructor(
     private readonly clock: MockClock,
     private readonly timing: SimulationTiming,
     private readonly kind: DeskKind = 'refinement',
-    private readonly haltReasonOf: (key: string) => string | null = () => null
+    private readonly reply: (refinement: Refinement) => string = (r) =>
+      refinementMarkdown(r.key, r.notes)
   ) {}
 
   /** The newest refinement of every refined key, newest first, without content. */
@@ -70,7 +82,7 @@ export class RefinementDesk {
   request(
     key: string,
     actor: string,
-    body: RefinementRequest | AgentDiagnosisRequest
+    body: RefinementRequest | AgentDiagnosisRequest | KnowledgeReviewRequest
   ): Refinement {
     const items = this.byKey.get(key) ?? [];
     if (
@@ -154,8 +166,7 @@ export class RefinementDesk {
 
   private start(refinement: Writable<Refinement>): void {
     refinement.status = 'running';
-    refinement.agent =
-      this.kind === 'diagnosis' ? 'shipwright' : 'quartermaster';
+    refinement.agent = AGENT_OF[this.kind];
     refinement.model = 'claude-sonnet-5';
     refinement.runtime = 'mock';
     refinement.startedAt = this.now();
@@ -167,14 +178,7 @@ export class RefinementDesk {
         inputTokens: 21_400,
         outputTokens: 1_850,
       };
-      refinement.content =
-        this.kind === 'diagnosis'
-          ? agentDiagnosisMarkdown(
-              refinement.key,
-              this.haltReasonOf(refinement.key),
-              refinement.notes
-            )
-          : refinementMarkdown(refinement.key, refinement.notes);
+      refinement.content = this.reply({ ...refinement });
       refinement.endedAt = this.now();
     });
   }

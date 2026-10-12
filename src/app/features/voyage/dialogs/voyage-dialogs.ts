@@ -1,6 +1,6 @@
 import type { DialogRef } from '@angular/cdk/dialog';
 import { Injectable, inject } from '@angular/core';
-import type { Refinement, Story } from '@core/api/types';
+import type { KnowledgeReview, Refinement, Story } from '@core/api/types';
 import { DialogService } from '@ui/dialog/dialog';
 import type { VoyageContext } from '../context/voyage-context';
 import {
@@ -10,15 +10,21 @@ import {
   type CancelAgentDiagnosisDialogData,
 } from './agent-diagnosis-dialogs';
 import { BudgetDialog } from './budget-dialog';
+import {
+  CancelKnowledgeReviewDialog,
+  KnowledgeReviewDialog,
+  type CancelKnowledgeReviewDialogData,
+  type KnowledgeReviewDialogData,
+} from './knowledge-review-dialogs';
 import type { VoyageDialogData } from './dialog-support';
 import { RefreshIntakeDialog } from './refresh-intake-dialog';
 import { ResumeDialog } from './resume-dialog';
 import { StopDialog } from './stop-dialog';
 
 /**
- * Opens the voyage's Stop, Resume, Back to intake, Budget and agent diagnosis dialogs over the page. The first four
- * close with the story the API answered, the diagnosis ones with the diagnosis, or `undefined` when cancelled; the page
- * needs nothing from the result, since the store already holds the new story.
+ * Opens the voyage's Stop, Resume, Back to intake, Budget, agent diagnosis and knowledge review dialogs over the page.
+ * The first four close with the story the API answered, the others with the diagnosis or the review, or `undefined` when
+ * cancelled; the page needs nothing from the result, since the stores already hold it.
  */
 @Injectable({ providedIn: 'root' })
 export class VoyageDialogs {
@@ -75,5 +81,27 @@ export class VoyageDialogs {
       CancelAgentDiagnosisDialogData,
       CancelAgentDiagnosisDialog
     >(CancelAgentDiagnosisDialog, { data });
+  }
+
+  /** "Ask for the lessons of PROJ-097?" Closes with the queued review. */
+  reviewKnowledge(
+    data: KnowledgeReviewDialogData
+  ): DialogRef<KnowledgeReview, KnowledgeReviewDialog> {
+    return this.dialogs.open<
+      KnowledgeReview,
+      KnowledgeReviewDialogData,
+      KnowledgeReviewDialog
+    >(KnowledgeReviewDialog, { data });
+  }
+
+  /** "Cancel the knowledge review of PROJ-097?" Closes with the review, cancelled or being cancelled. */
+  cancelKnowledgeReview(
+    data: CancelKnowledgeReviewDialogData
+  ): DialogRef<KnowledgeReview, CancelKnowledgeReviewDialog> {
+    return this.dialogs.open<
+      KnowledgeReview,
+      CancelKnowledgeReviewDialogData,
+      CancelKnowledgeReviewDialog
+    >(CancelKnowledgeReviewDialog, { data });
   }
 }

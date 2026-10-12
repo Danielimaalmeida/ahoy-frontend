@@ -28,7 +28,7 @@ function capValidator(
 }
 
 /** The server's message for one field of the request, from a result that failed ("" when there is none). */
-function resultFieldError(
+export function resultFieldError(
   result: ApiResult<unknown> | null,
   field: string
 ): string {

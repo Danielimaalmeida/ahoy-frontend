@@ -269,3 +269,51 @@ export function stackWeeks(
   });
   return { series, columns };
 }
+
+/** One week of the halts-per-week chart: its halts, how many repeated a known diagnosis, and its rows by diagnosis. */
+export interface HaltWeek {
+  readonly weekStart: string;
+  readonly label: string;
+  readonly halts: number;
+  readonly repeated: number;
+  readonly kinds: readonly {
+    readonly kind: string;
+    readonly halts: number;
+    readonly stories: number;
+    readonly repeated: number;
+  }[];
+}
+
+/**
+ * The report's `haltWeeks` grouped by week, oldest first, each week's diagnoses most halts first. `repeated` counts the
+ * halts whose diagnosis an earlier halt in the period already had: the lessons of earlier voyages should make it fall.
+ */
+export function groupHaltWeeks(
+  rows: readonly {
+    readonly weekStart: string;
+    readonly kind: string;
+    readonly halts: number;
+    readonly stories: number;
+    readonly repeated: number;
+  }[]
+): readonly HaltWeek[] {
+  const byWeek = new Map<string, (typeof rows)[number][]>();
+  for (const row of rows)
+    byWeek.set(row.weekStart, [...(byWeek.get(row.weekStart) ?? []), row]);
+  return [...byWeek]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekStart, kinds]) => ({
+      weekStart,
+      label: weekLabel(weekStart),
+      halts: kinds.reduce((sum, k) => sum + k.halts, 0),
+      repeated: kinds.reduce((sum, k) => sum + k.repeated, 0),
+      kinds: [...kinds]
+        .sort((a, b) => b.halts - a.halts || a.kind.localeCompare(b.kind))
+        .map(({ kind, halts, stories, repeated }) => ({
+          kind,
+          halts,
+          stories,
+          repeated,
+        })),
+    }));
+}

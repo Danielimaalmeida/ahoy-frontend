@@ -61,6 +61,8 @@ import {
   type ItemList,
   type JiraBacklog,
   type JiraBacklogIssue,
+  type KnowledgeReview,
+  type KnowledgeReviewList,
   type ModelChoice,
   type CatalogModel,
   type ModelCatalog,
@@ -404,6 +406,42 @@ export const isAgentDiagnosisList = guard<AgentDiagnosisList>(
   shape<AgentDiagnosisList>({ key: storyKey, items: arrayOf(refinement) })
 );
 
+/**
+ * A knowledge review. Besides the refinement's rule for `content`, the contract says each proposed file is null until the
+ * review succeeds, and `patch` is null exactly when both files are: a review that breaks either is refused, so the screen
+ * never offers a patch for nothing or proposed files without their patch.
+ */
+const knowledgeReview: Check = (value, at) => {
+  const why = shape<KnowledgeReview>({
+    ...refinementFields,
+    content: nullable(text),
+    proposal: nullable(text),
+    lessons: nullable(text),
+    patch: nullable(text),
+  })(value, at);
+  if (why !== null || !isRecord(value)) return why;
+  if ((value['status'] === 'succeeded') !== (value['content'] !== null))
+    return `${at}.content must be set exactly when the status is succeeded`;
+  const proposed = value['proposal'] !== null || value['lessons'] !== null;
+  if (proposed && value['status'] !== 'succeeded')
+    return `${at}.proposal and ${at}.lessons must be null until the review succeeds`;
+  return proposed === (value['patch'] !== null)
+    ? null
+    : `${at}.patch must be null exactly when both proposal and lessons are`;
+};
+
+/** A knowledge review, as `requestKnowledgeReview` and `cancelKnowledgeReview` answer it. */
+export const isKnowledgeReview = guard<KnowledgeReview>(
+  'KnowledgeReview',
+  knowledgeReview
+);
+
+/** Every knowledge review of one story, newest first. */
+export const isKnowledgeReviewList = guard<KnowledgeReviewList>(
+  'KnowledgeReviewList',
+  shape<KnowledgeReviewList>({ key: storyKey, items: arrayOf(knowledgeReview) })
+);
+
 /** The newest refinement of each refined issue, without content. */
 export const isRefinementSummaryList = guard<ItemList<RefinementSummary>>(
   'RefinementSummaryList',
@@ -473,6 +511,7 @@ export const isProblem = guard<Problem>(
 );
 
 const nullableCount = nullable(count);
+const isoDate = patterned('a date like 2026-10-05', /^\d{4}-\d{2}-\d{2}$/, 10);
 const diagnosisActor = oneOf(DIAGNOSIS_ACTORS);
 const diagnosisKind = oneOf(DIAGNOSIS_KINDS);
 type Item<List> = List extends readonly (infer T)[] ? T : never;
@@ -528,11 +567,7 @@ export const isMetricsReport = guard<MetricsReport>(
     }),
     weeks: arrayOf(
       shape<Item<MetricsReport['weeks']>>({
-        weekStart: patterned(
-          'a date like 2026-10-05',
-          /^\d{4}-\d{2}-\d{2}$/,
-          10
-        ),
+        weekStart: isoDate,
         byPhase: recordOf(nanoAiu),
       })
     ),
@@ -589,6 +624,15 @@ export const isMetricsReport = guard<MetricsReport>(
         resumed: count,
         fixedByFirstResume: count,
         medianHaltedSeconds: nullableCount,
+      })
+    ),
+    haltWeeks: arrayOf(
+      shape<Item<MetricsReport['haltWeeks']>>({
+        weekStart: isoDate,
+        kind: diagnosisKind,
+        halts: count,
+        stories: count,
+        repeated: count,
       })
     ),
     repeatHalts: arrayOf(

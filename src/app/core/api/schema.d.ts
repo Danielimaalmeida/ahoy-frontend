@@ -671,6 +671,77 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/knowledge-reviews': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * Every knowledge review of one story, newest first, with the proposed business rules and lessons.
+     * @description When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs
+     *     them (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
+     *     the approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its
+     *     halts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content
+     *     repository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is
+     *     `content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files
+     *     at `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`
+     *     when it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request
+     *     there with the patch, and the rules are approved in that pull request. A story without one answers `200` with no
+     *     items. `404` when the story does not exist.
+     */
+    readonly get: operations['listKnowledgeReviews'];
+    readonly put?: never;
+    /**
+     * Ask an agent for a delivered story's rules and lessons, or a halted story's lessons. May spend AIU.
+     * @description For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a
+     *     halted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for
+     *     the story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the
+     *     content repository, and may change only `knowledge/business-context.md` and `knowledge/lessons.md` in its own
+     *     copy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It
+     *     changes nothing about the story.
+     *
+     *     The story must be `done` or `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
+     *     `budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the
+     *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for
+     *     the outcome. One knowledge review per story is in progress at a time: another request answers
+     *     `409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be
+     *     read.
+     */
+    readonly post: operations['requestKnowledgeReview'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/knowledge-reviews/cancel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Stop the story's knowledge review in progress.
+     * @description A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
+     *     reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
+     *     `409 invalid_state` when nothing is in progress.
+     */
+    readonly post: operations['cancelKnowledgeReview'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/events': {
     readonly parameters: {
       readonly query?: never;
@@ -1254,13 +1325,13 @@ export interface components {
       readonly id: components['schemas']['RunId'];
       readonly key: components['schemas']['StoryKey'];
       readonly status: components['schemas']['RefinementStatus'];
+      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
       readonly notes: string | null;
       readonly requestedBy: components['schemas']['Actor'];
       readonly agent: string | null;
       readonly model: string | null;
       readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
       readonly runtime: string | null;
-      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
       readonly controlSha: string;
       readonly budgetNanoAiu: components['schemas']['NanoAiu'];
       readonly usage: components['schemas']['Usage'];
@@ -1272,6 +1343,46 @@ export interface components {
       /** @description The agent's pre-refinement, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
       readonly content: string | null;
     };
+    readonly KnowledgeReview: {
+      readonly id: components['schemas']['RunId'];
+      readonly key: components['schemas']['StoryKey'];
+      readonly status: components['schemas']['RefinementStatus'];
+      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
+      readonly notes: string | null;
+      readonly requestedBy: components['schemas']['Actor'];
+      readonly agent: string | null;
+      readonly model: string | null;
+      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
+      readonly runtime: string | null;
+      readonly controlSha: string;
+      readonly budgetNanoAiu: components['schemas']['NanoAiu'];
+      readonly usage: components['schemas']['Usage'];
+      readonly exitReason: string | null;
+      readonly cancelRequested: boolean;
+      readonly createdAt: components['schemas']['Timestamp'];
+      readonly startedAt: components['schemas']['Timestamp'] | null;
+      readonly endedAt: components['schemas']['Timestamp'] | null;
+      /** @description The agent's summary of the rules and lessons it added, changed or left out, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
+      readonly content: string | null;
+      /** @description The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
+      readonly proposal: string | null;
+      /** @description The whole proposed `knowledge/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
+      readonly lessons: string | null;
+      /** @description Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content repository; null exactly when both `proposal` and `lessons` are. */
+      readonly patch: string | null;
+    };
+    readonly KnowledgeReviewList: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly items: readonly components['schemas']['KnowledgeReview'][];
+    };
+    readonly KnowledgeReviewRequest: {
+      /** @constant */
+      readonly confirmSpend: true;
+      /** @description What the agent should look at, given to it as the requester's notes. */
+      readonly notes?: string;
+      /** @description The run's AIU cap, at most 100 AIU; the server's knowledge cap when absent. */
+      readonly budgetNanoAiu?: number;
+    };
     readonly RefinementSummaryList: {
       readonly items: readonly components['schemas']['RefinementSummary'][];
     };
@@ -1282,7 +1393,7 @@ export interface components {
     readonly StoryState: {
       readonly key: components['schemas']['StoryKey'];
       readonly version: components['schemas']['Version'];
-      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `intake_analyst`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. */
+      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. */
       readonly state: Record<string, never>;
     };
     readonly GateVerdict: {
@@ -1393,6 +1504,8 @@ export interface components {
      * @example story.routed
      * @example run.progress
      * @example run.waiting
+     * @example knowledge_review.queued
+     * @example knowledge_review.skipped
      */
     readonly EventType: string;
     readonly Event: {
@@ -1556,6 +1669,15 @@ export interface components {
         /** @description Resumed halts not followed by another halt with the same diagnosis. */
         readonly fixedByFirstResume: components['schemas']['MetricsCount'];
         readonly medianHaltedSeconds: number | null;
+      }[];
+      /** @description Halts per week (starting Monday, UTC) and diagnosis, oldest week first. `repeated` counts the halts whose diagnosis an earlier halt in the period already had, in any story: the lessons from earlier stories should make it fall. */
+      readonly haltWeeks: readonly {
+        /** Format: date */
+        readonly weekStart: string;
+        readonly kind: components['schemas']['DiagnosisKind'];
+        readonly halts: components['schemas']['MetricsCount'];
+        readonly stories: components['schemas']['MetricsCount'];
+        readonly repeated: components['schemas']['MetricsCount'];
       }[];
       /** @description Stories that halted with the same diagnosis twice or more in a row. */
       readonly repeatHalts: readonly {
@@ -2597,6 +2719,94 @@ export interface operations {
         };
         content: {
           readonly 'application/json': components['schemas']['Refinement'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly listKnowledgeReviews: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The story's knowledge reviews, newest first. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['KnowledgeReviewList'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly requestKnowledgeReview: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['KnowledgeReviewRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The knowledge review, queued. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['KnowledgeReview'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly cancelKnowledgeReview: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CancelRefinementRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The knowledge review, cancelled or being cancelled. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['KnowledgeReview'];
         };
       };
       readonly 400: components['responses']['Problem'];

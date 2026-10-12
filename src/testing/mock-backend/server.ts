@@ -16,6 +16,7 @@ import type {
   AgentDiagnosisRequest,
   CancelRefinementRequest,
   DecisionRequest,
+  KnowledgeReviewRequest,
   ModelChoice,
   ModelSlot,
   ProblemCode,
@@ -31,6 +32,7 @@ import type {
   JiraBacklog,
 } from '@core/api/types';
 import { realClock, type MockClock } from './clock';
+import { agentDiagnosisMarkdown } from './content';
 import { diagnosisOf } from './diagnosis';
 import { KEEPALIVE_MS, StreamHub } from './event-stream';
 import {
@@ -42,6 +44,7 @@ import {
   type MockRequest,
   type MockResponse,
 } from './http';
+import { KnowledgeDesk } from './knowledge';
 import { RefinementDesk } from './refinements';
 import { SchemaChecker, unstorableText } from './schema';
 import { seedVoyages } from './seeds';
@@ -185,6 +188,7 @@ export class MockAhoyServer {
   private simulator: Simulator;
   private refinements: RefinementDesk;
   private agentDiagnoses: RefinementDesk;
+  private knowledgeReviews: KnowledgeDesk;
 
   constructor(options: MockServerOptions) {
     if (!isRecord(options.contract) || !isRecord(options.contract['paths']))
@@ -205,6 +209,10 @@ export class MockAhoyServer {
       options.timing ?? LIVE_TIMING
     );
     this.agentDiagnoses = this.newAgentDiagnoses();
+    this.knowledgeReviews = new KnowledgeDesk(
+      this.clock,
+      options.timing ?? LIVE_TIMING
+    );
     this.load();
   }
 
@@ -223,6 +231,11 @@ export class MockAhoyServer {
     return this.agentDiagnoses;
   }
 
+  /** The knowledge reviews of done and halted stories, for specs that look inside. */
+  get knowledgeDesk(): KnowledgeDesk {
+    return this.knowledgeReviews;
+  }
+
   /** The refinements of backlog items, for specs that look inside. */
   get refinementDesk(): RefinementDesk {
     return this.refinements;
@@ -234,7 +247,12 @@ export class MockAhoyServer {
       this.clock,
       this.options.timing ?? LIVE_TIMING,
       'diagnosis',
-      (key) => this.world.voyages.get(key)?.story.haltReason ?? null
+      (r) =>
+        agentDiagnosisMarkdown(
+          r.key,
+          this.world.voyages.get(r.key)?.story.haltReason ?? null,
+          r.notes
+        )
     );
   }
 
@@ -243,6 +261,7 @@ export class MockAhoyServer {
     this.simulator.stopAll();
     this.refinements.stopAll();
     this.agentDiagnoses.stopAll();
+    this.knowledgeReviews.stopAll();
     this.world.hub.closeAll();
     this.world = new World(
       this.clock,
@@ -257,6 +276,10 @@ export class MockAhoyServer {
       this.options.timing ?? LIVE_TIMING
     );
     this.agentDiagnoses = this.newAgentDiagnoses();
+    this.knowledgeReviews = new KnowledgeDesk(
+      this.clock,
+      this.options.timing ?? LIVE_TIMING
+    );
     Object.assign(this.switches, {
       latencyMs: 0,
       failNext: null,
@@ -270,6 +293,7 @@ export class MockAhoyServer {
     this.simulator.stopAll();
     this.refinements.stopAll();
     this.agentDiagnoses.stopAll();
+    this.knowledgeReviews.stopAll();
     this.world.hub.closeAll();
   }
 
@@ -565,6 +589,38 @@ export class MockAhoyServer {
         return jsonResponse(
           202,
           this.agentDiagnoses.cancel(
+            this.voyage(call).story.key,
+            call.actor,
+            body.reason
+          )
+        );
+      }
+      case 'listKnowledgeReviews': {
+        const key = this.voyage(call).story.key;
+        return jsonResponse(200, {
+          key,
+          items: this.knowledgeReviews.of(key),
+        });
+      }
+      case 'requestKnowledgeReview': {
+        const { story } = this.voyage(call);
+        const done = story.status === 'terminal' && story.phase === 'done';
+        if (!done && story.status !== 'halted')
+          throw new MockProblem(
+            'invalid_state',
+            `Story ${story.key} is ${story.status} in ${story.phase}: only a done or halted story has a knowledge review`
+          );
+        const body = call.body as KnowledgeReviewRequest; // validated
+        return jsonResponse(
+          202,
+          this.knowledgeReviews.request(story.key, call.actor, body, done)
+        );
+      }
+      case 'cancelKnowledgeReview': {
+        const body = call.body as CancelRefinementRequest; // validated
+        return jsonResponse(
+          202,
+          this.knowledgeReviews.cancel(
             this.voyage(call).story.key,
             call.actor,
             body.reason

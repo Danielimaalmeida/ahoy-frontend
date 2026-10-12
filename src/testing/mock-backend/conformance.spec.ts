@@ -283,6 +283,29 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     reason: 'Nothing in progress',
   });
 
+  // A knowledge review of a done story (rules and lessons) and of a halted one (lessons only); one cancelled; refusals.
+  post('/stories/PROJ-097/knowledge-reviews', {
+    confirmSpend: true,
+    notes: 'Look again at the refund rules',
+  });
+  post('/stories/PROJ-118/knowledge-reviews', { confirmSpend: true });
+  get('/stories/PROJ-097/knowledge-reviews');
+  advance(10_000);
+  get('/stories/PROJ-097/knowledge-reviews');
+  get('/stories/PROJ-118/knowledge-reviews');
+  post('/stories/PROJ-126/knowledge-reviews', { confirmSpend: true });
+  post('/stories/PROJ-126/knowledge-reviews/cancel', {
+    reason: 'Asked by mistake',
+  });
+  get('/stories/PROJ-126/knowledge-reviews');
+  post('/stories/PROJ-140/knowledge-reviews', { confirmSpend: true });
+  post('/stories/PROJ-999/knowledge-reviews', { confirmSpend: true });
+  get('/stories/PROJ-999/knowledge-reviews');
+  post('/stories/PROJ-097/knowledge-reviews', { confirmSpend: false });
+  post('/stories/PROJ-097/knowledge-reviews/cancel', {
+    reason: 'Nothing in progress',
+  });
+
   // The harness metrics and their rows, read-only; and the periods and tables the API refuses.
   get('/metrics');
   get(
@@ -333,6 +356,9 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'listAgentDiagnoses',
       'requestAgentDiagnosis',
       'cancelAgentDiagnosis',
+      'listKnowledgeReviews',
+      'requestKnowledgeReview',
+      'cancelKnowledgeReview',
       'getMetrics',
       'exportMetrics',
     ])

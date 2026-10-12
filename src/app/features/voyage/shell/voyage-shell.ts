@@ -14,11 +14,13 @@ import {
 } from '../context/default-tab';
 import { VoyageContext } from '../context/voyage-context';
 import { AnchoredBanner } from '../header/anchored-banner';
+import { KnowledgePanel } from '../header/knowledge-panel';
 import { VoyageHeader } from '../header/voyage-header';
 
 /**
- * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the Anchored banner when halted, the section
- * tabs (one URL each, with the counts) and the outlet the tabs render in. It provides the page's {@link VoyageContext},
+ * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the Anchored banner when halted, the
+ * Knowledge panel when done or halted, the section tabs (one URL each, with the counts) and the outlet the tabs render
+ * in. It provides the page's {@link VoyageContext},
  * which every tab injects. Until the story is read it shows the header's skeleton; a 404 shows "This voyage doesn't
  * exist" and any other failure "Can't reach Ahoy" with Try again.
  */
@@ -26,6 +28,7 @@ import { VoyageHeader } from '../header/voyage-header';
   selector: 'ah-voyage-shell',
   imports: [
     AnchoredBanner,
+    KnowledgePanel,
     Banner,
     Button,
     EmptyState,
@@ -48,6 +51,7 @@ import { VoyageHeader } from '../header/voyage-header';
         @case ('ready') {
           <ah-voyage-header />
           <ah-anchored-banner />
+          <ah-knowledge-panel />
           <ah-section-tabs label="Voyage sections" [items]="tabs()" />
           <router-outlet />
         }

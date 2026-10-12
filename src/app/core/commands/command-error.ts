@@ -189,13 +189,55 @@ export function commandErrorView(
   }
 }
 
-/** An agent run that is not a story phase: a backlog item's refinement or a halted story's agent diagnosis. */
-export type AgentRunNoun = 'refinement' | 'diagnosis';
+/** An agent run that is not a story phase: a backlog item's refinement, a halted story's agent diagnosis or a knowledge review. */
+export type AgentRunNoun = 'refinement' | 'diagnosis' | 'knowledge';
+
+/** The words of each agent run when the server refuses it. */
+const AGENT_RUN_WORDS: Readonly<
+  Record<
+    AgentRunNoun,
+    {
+      readonly unavailable: string;
+      readonly unconfigured: string;
+      readonly ended: string;
+      readonly busyHeading: string;
+      readonly busyText: string;
+    }
+  >
+> = {
+  refinement: {
+    unavailable: "Refinement isn't available",
+    unconfigured:
+      "Ahoy has no refinement agent configured, or can't read its control repository.",
+    ended: 'The refinement ended meanwhile. Its row has been refreshed.',
+    busyHeading: 'This item already has a refinement in progress',
+    busyText: 'Its row has been refreshed: cancel that one first.',
+  },
+  diagnosis: {
+    unavailable: "Agent diagnosis isn't available",
+    unconfigured:
+      "Ahoy has no diagnosis agent configured, or can't read its control repository.",
+    ended: 'The diagnosis ended meanwhile. The page has been refreshed.',
+    busyHeading: 'This voyage cannot be diagnosed by an agent now',
+    busyText:
+      'It already has a diagnosis in progress, or it is not halted any more. The page has been refreshed.',
+  },
+  knowledge: {
+    unavailable: "Knowledge review isn't available",
+    unconfigured:
+      "Ahoy has no knowledge agent configured, or can't read its control repository.",
+    ended: 'The knowledge review ended meanwhile. The page has been refreshed.',
+    busyHeading: 'This voyage cannot be reviewed now',
+    busyText:
+      'It already has a knowledge review in progress, or it is neither done nor halted any more. The page has been refreshed.',
+  },
+};
 
 /**
- * What a dialog shows for an API error of a refinement or an agent diagnosis. `409 invalid_state` means the item or the
- * voyage moved on meanwhile (one is already in progress, none is any more, or the voyage is not halted) and
- * `503 unavailable` that the server has it not configured; everything else reads as any other API error.
+ * What a dialog shows for an API error of a refinement, an agent diagnosis or a knowledge review. `409 invalid_state`
+ * means the item or the voyage moved on meanwhile (one is already in progress, none is any more, or the voyage is not
+ * in a state that allows it) and `503 unavailable` that the server has it not configured; everything else reads as any
+ * other API error.
  */
 export function agentRunErrorView(
   error: ApiError,
@@ -203,48 +245,28 @@ export function agentRunErrorView(
   noun: AgentRunNoun
 ): CommandErrorView {
   if (error.kind !== 'problem') return apiErrorView(error);
+  const words = AGENT_RUN_WORDS[noun];
   const detail = error.detail?.trim() ?? '';
   const tech = techLine(error);
-  if (error.status === 503) {
+  if (error.status === 503)
     return {
       variant: 'error',
-      heading:
-        noun === 'refinement'
-          ? "Refinement isn't available"
-          : "Agent diagnosis isn't available",
-      text:
-        detail ||
-        (noun === 'refinement'
-          ? "Ahoy has no refinement agent configured, or can't read its control repository."
-          : "Ahoy has no diagnosis agent configured, or can't read its control repository."),
+      heading: words.unavailable,
+      text: detail || words.unconfigured,
       tech,
     };
-  }
   if (!isInvalidState(error)) return apiErrorView(error);
   if (action === 'cancel')
     return {
       variant: 'notice',
       heading: 'Nothing to cancel any more',
-      text:
-        detail ||
-        (noun === 'refinement'
-          ? 'The refinement ended meanwhile. Its row has been refreshed.'
-          : 'The diagnosis ended meanwhile. The page has been refreshed.'),
+      text: detail || words.ended,
       tech,
     };
-  return noun === 'refinement'
-    ? {
-        variant: 'notice',
-        heading: 'This item already has a refinement in progress',
-        text: detail || 'Its row has been refreshed: cancel that one first.',
-        tech,
-      }
-    : {
-        variant: 'notice',
-        heading: 'This voyage cannot be diagnosed by an agent now',
-        text:
-          detail ||
-          'It already has a diagnosis in progress, or it is not halted any more. The page has been refreshed.',
-        tech,
-      };
+  return {
+    variant: 'notice',
+    heading: words.busyHeading,
+    text: detail || words.busyText,
+    tech,
+  };
 }

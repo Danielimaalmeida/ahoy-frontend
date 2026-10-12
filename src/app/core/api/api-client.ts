@@ -27,6 +27,8 @@ import {
   isGateRecordList,
   isHealth,
   isJiraBacklog,
+  isKnowledgeReview,
+  isKnowledgeReviewList,
   isMetricsReport,
   isModelPlan,
   isModelCatalog,
@@ -53,6 +55,9 @@ import type {
   DecisionAccepted,
   DecisionRequest,
   EventPage,
+  KnowledgeReview,
+  KnowledgeReviewList,
+  KnowledgeReviewRequest,
   GateRecord,
   Health,
   ListEventsQuery,
@@ -364,6 +369,41 @@ export class ApiClient {
       `/stories/${segment(key)}/agent-diagnoses/cancel`,
       body,
       isRefinement
+    );
+  }
+
+  /** Every knowledge review of a story, newest first, with the proposed rules, lessons and patch. */
+  listKnowledgeReviews(key: string): Promise<ApiResult<KnowledgeReviewList>> {
+    return this.get(
+      'listKnowledgeReviews',
+      `/stories/${segment(key)}/knowledge-reviews`,
+      isKnowledgeReviewList
+    );
+  }
+
+  /** Asks an agent for a done story's rules and lessons, or a halted story's lessons. May spend AIU. The answer (202) is the queued review. */
+  requestKnowledgeReview(
+    key: string,
+    body: KnowledgeReviewRequest
+  ): Promise<ApiResult<KnowledgeReview>> {
+    return this.post(
+      'requestKnowledgeReview',
+      `/stories/${segment(key)}/knowledge-reviews`,
+      body,
+      isKnowledgeReview
+    );
+  }
+
+  /** Stops the story's knowledge review in progress. The answer (202) is it, cancelled or being cancelled. */
+  cancelKnowledgeReview(
+    key: string,
+    body: CancelRefinementRequest
+  ): Promise<ApiResult<KnowledgeReview>> {
+    return this.post(
+      'cancelKnowledgeReview',
+      `/stories/${segment(key)}/knowledge-reviews/cancel`,
+      body,
+      isKnowledgeReview
     );
   }
 

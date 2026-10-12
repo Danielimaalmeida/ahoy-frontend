@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: d0bf528b9d8dd740b974f3867f2674b42af93a7a
+# Commit: 7214c402cfc4b6affce52ed00abc6fd2869b2e5e
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -867,6 +867,95 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/knowledge-reviews:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    get:
+      operationId: listKnowledgeReviews
+      tags: [stories]
+      summary: Every knowledge review of one story, newest first, with the proposed business rules and lessons.
+      description: |
+        When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs
+        them (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
+        the approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its
+        halts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content
+        repository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is
+        `content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files
+        at `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`
+        when it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request
+        there with the patch, and the rules are approved in that pull request. A story without one answers `200` with no
+        items. `404` when the story does not exist.
+      responses:
+        '200':
+          description: The story's knowledge reviews, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeReviewList' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: requestKnowledgeReview
+      tags: [stories]
+      summary: Ask an agent for a delivered story's rules and lessons, or a halted story's lessons. May spend AIU.
+      description: |
+        For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a
+        halted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for
+        the story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the
+        content repository, and may change only `knowledge/business-context.md` and `knowledge/lessons.md` in its own
+        copy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It
+        changes nothing about the story.
+
+        The story must be `done` or `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
+        `budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the
+        story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for
+        the outcome. One knowledge review per story is in progress at a time: another request answers
+        `409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be
+        read.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KnowledgeReviewRequest' }
+      responses:
+        '202':
+          description: The knowledge review, queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeReview' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/knowledge-reviews/cancel:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: cancelKnowledgeReview
+      tags: [stories]
+      summary: Stop the story's knowledge review in progress.
+      description: |
+        A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
+        reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
+        `409 invalid_state` when nothing is in progress.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelRefinementRequest' }
+      responses:
+        '202':
+          description: The knowledge review, cancelled or being cancelled.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeReview' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/events:
     parameters:
       - $ref: '#/components/parameters/StoryKey'
@@ -1626,11 +1715,11 @@ components:
     RuntimeStatus:
       type: [object, 'null']
       description: >-
-        Latest worker observation, checked on each active poll and persisted when it changes or at least every ten
-        seconds. Separate from the run lifecycle: a dispatched run is `running` even while its worker is starting.
-        Null before an observation, for runtimes without observations, and after cancellation or completion.
-        `observedAt` is collection time, not the worker's start time. Clients should show unavailable status rather
-        than an old wait when stale.
+        Latest worker observation, checked on each active poll and persisted when it changes or at least every ten seconds.
+        Separate from the run
+        lifecycle: a dispatched run is `running` even while its worker is starting. Null before an observation,
+        for runtimes without observations, and after cancellation or completion. `observedAt` is collection time,
+        not the worker's start time. Clients should show unavailable status rather than an old wait when stale.
       required: [state, reason, message, observedAt]
       additionalProperties: false
       properties:
@@ -1891,6 +1980,7 @@ components:
         id: { $ref: '#/components/schemas/RunId' }
         key: { $ref: '#/components/schemas/StoryKey' }
         status: { $ref: '#/components/schemas/RefinementStatus' }
+        runtimeStatus: { $ref: '#/components/schemas/RuntimeStatus' }
         notes: { type: [string, 'null'] }
         requestedBy: { $ref: '#/components/schemas/Actor' }
         agent: { type: [string, 'null'] }
@@ -1900,7 +1990,6 @@ components:
             - $ref: '#/components/schemas/ReasoningEffort'
             - type: 'null'
         runtime: { type: [string, 'null'] }
-        runtimeStatus: { $ref: '#/components/schemas/RuntimeStatus' }
         controlSha: { type: string, pattern: '^[0-9a-f]{40}$' }
         budgetNanoAiu: { $ref: '#/components/schemas/NanoAiu' }
         usage: { $ref: '#/components/schemas/Usage' }
@@ -1920,6 +2009,109 @@ components:
         content:
           type: [string, 'null']
           description: The agent's pre-refinement, as Markdown (untrusted agent text); non-null exactly when `succeeded`.
+    KnowledgeReview:
+      type: object
+      required:
+        [
+          id,
+          key,
+          status,
+          notes,
+          requestedBy,
+          agent,
+          model,
+          reasoningEffort,
+          runtime,
+          controlSha,
+          budgetNanoAiu,
+          usage,
+          exitReason,
+          cancelRequested,
+          createdAt,
+          startedAt,
+          endedAt,
+          content,
+          proposal,
+          lessons,
+          patch,
+        ]
+      additionalProperties: false
+      properties:
+        id: { $ref: '#/components/schemas/RunId' }
+        key: { $ref: '#/components/schemas/StoryKey' }
+        status: { $ref: '#/components/schemas/RefinementStatus' }
+        runtimeStatus: { $ref: '#/components/schemas/RuntimeStatus' }
+        notes: { type: [string, 'null'] }
+        requestedBy: { $ref: '#/components/schemas/Actor' }
+        agent: { type: [string, 'null'] }
+        model: { type: [string, 'null'] }
+        reasoningEffort:
+          oneOf:
+            - $ref: '#/components/schemas/ReasoningEffort'
+            - type: 'null'
+        runtime: { type: [string, 'null'] }
+        controlSha: { type: string, pattern: '^[0-9a-f]{40}$' }
+        budgetNanoAiu: { $ref: '#/components/schemas/NanoAiu' }
+        usage: { $ref: '#/components/schemas/Usage' }
+        exitReason: { type: [string, 'null'] }
+        cancelRequested: { type: boolean }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        startedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
+        endedAt:
+          {
+            oneOf:
+              [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
+          }
+        content:
+          type: [string, 'null']
+          description: >-
+            The agent's summary of the rules and lessons it added, changed or left out, as Markdown (untrusted agent text); non-null
+            exactly when `succeeded`.
+        proposal:
+          type: [string, 'null']
+          description: >-
+            The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no
+            change, and until the review succeeds.
+        lessons:
+          type: [string, 'null']
+          description: >-
+            The whole proposed `knowledge/lessons.md` (untrusted agent text); null when the agent proposed no change,
+            and until the review succeeds.
+        patch:
+          type: [string, 'null']
+          description: >-
+            Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content
+            repository; null exactly when both `proposal` and `lessons` are.
+    KnowledgeReviewList:
+      type: object
+      required: [key, items]
+      additionalProperties: false
+      properties:
+        key: { $ref: '#/components/schemas/StoryKey' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeReview' }
+    KnowledgeReviewRequest:
+      type: object
+      required: [confirmSpend]
+      additionalProperties: false
+      properties:
+        confirmSpend: { type: boolean, const: true }
+        notes:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          pattern: "\\S"
+          description: What the agent should look at, given to it as the requester's notes.
+        budgetNanoAiu:
+          type: integer
+          minimum: 1
+          maximum: 100000000000
+          description: The run's AIU cap, at most 100 AIU; the server's knowledge cap when absent.
     RefinementSummaryList:
       type: object
       required: [items]
@@ -1948,7 +2140,7 @@ components:
           type: object
           description: >-
             The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`,
-            `child_repos`, `intake_analyst`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`.
+            `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`.
     GateVerdict:
       type: object
       required: [gate, code, result, message]
@@ -2103,6 +2295,8 @@ components:
         - story.routed
         - run.progress
         - run.waiting
+        - knowledge_review.queued
+        - knowledge_review.skipped
     Event:
       type: object
       required: [id, storyKey, type, actor, payload, createdAt]
@@ -2262,6 +2456,7 @@ components:
           topStories,
           halts,
           haltReasons,
+          haltWeeks,
           repeatHalts,
           errors,
           gates,
@@ -2445,6 +2640,22 @@ components:
                 $ref: '#/components/schemas/MetricsCount'
                 description: Resumed halts not followed by another halt with the same diagnosis.
               medianHaltedSeconds: { type: [integer, 'null'], minimum: 0 }
+        haltWeeks:
+          type: array
+          description: >-
+            Halts per week (starting Monday, UTC) and diagnosis, oldest week first. `repeated` counts the halts whose
+            diagnosis an earlier halt in the period already had, in any story: the lessons from earlier stories should
+            make it fall.
+          items:
+            type: object
+            additionalProperties: false
+            required: [weekStart, kind, halts, stories, repeated]
+            properties:
+              weekStart: { type: string, format: date }
+              kind: { $ref: '#/components/schemas/DiagnosisKind' }
+              halts: { $ref: '#/components/schemas/MetricsCount' }
+              stories: { $ref: '#/components/schemas/MetricsCount' }
+              repeated: { $ref: '#/components/schemas/MetricsCount' }
         repeatHalts:
           type: array
           description: Stories that halted with the same diagnosis twice or more in a row.

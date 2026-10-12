@@ -1,7 +1,31 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-12 for the pull request links on `claude/project-thread-4exgug`** (after the qnumber allow-list on
-`claude/project-thread-xtrbj5`). From a cloud session. No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-12 for the knowledge review and lessons on `claude/project-thread-4kgkxo`** (after the pull request
+links on `claude/project-thread-4exgug`). From a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Knowledge review and lessons (2026-10-12)
+
+`ahoy-hosted` PR #37 (merged) has the knowledge curator propose one to three lessons for `knowledge/lessons.md` when a
+story is done or halted, seeds the planner and the implementer with the lessons for their repositories, and counts
+halts per week and diagnosis. This is its screen.
+
+- **Contract:** vendored from `ahoy-hosted` `7214c40` (redaction kept): `listKnowledgeReviews`,
+  `requestKnowledgeReview`, `cancelKnowledgeReview` and `MetricsReport.haltWeeks`.
+- **Core:** types, guards (`content` only when succeeded; `proposal` and `lessons` only then; `patch` null exactly when
+  both files are) and the three client calls.
+- **Voyage page:** a "Lessons and rules" panel on a done or halted voyage shows the newest review: its state, the
+  agent's summary, the proposed lessons, the proposed rules (done only) and the patch as plain text, with Ask, Review
+  again and Cancel. Asking confirms the spend, with an optional cap of at most 100 AIU. Ahoy applies nothing; a person
+  opens the pull request in the content repository.
+- **Metrics, Halts & errors:** "Repeated halts per week" charts each week's halts, first versus repeated diagnosis,
+  with a table by diagnosis.
+- **Mock backend:** a knowledge desk (rules and lessons for a done voyage, lessons only for a halted one) and
+  `haltWeeks` in the metrics fixture; all text fictional.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint and **146 files / 2,630 tests passed** (from 2,589),
+  with the auth library stubbed in `node_modules` as before (nothing of that committed). `format:check` reports only
+  `src/app/features/docks/docks.ts`, which this change does not touch; the build's only warning is that file's style
+  budget.
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real API or TEST.
 
 ## Pull request links (2026-10-12)
 

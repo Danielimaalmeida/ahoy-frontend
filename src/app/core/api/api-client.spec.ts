@@ -13,6 +13,7 @@ import { TestBed } from '@angular/core/testing';
 import { throwError } from 'rxjs';
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
 import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
+import cancelKnowledgeReview from '@testing/fixtures/cancelKnowledgeReview.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import { operationNamed, requestViolations } from '@testing/fixtures/contract';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
@@ -26,6 +27,7 @@ import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
 import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
+import listKnowledgeReviews from '@testing/fixtures/listKnowledgeReviews.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
@@ -37,6 +39,7 @@ import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
+import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -461,6 +464,43 @@ const CASES: readonly Case[] = [
     value: cancelAgentDiagnosis,
     problem: 'invalid_state',
   },
+  {
+    op: 'listKnowledgeReviews',
+    call: (api) => api.listKnowledgeReviews('PROJ-097'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-097/knowledge-reviews',
+    reply: listKnowledgeReviews,
+    status: 200,
+    value: listKnowledgeReviews,
+    problem: 'not_found',
+  },
+  {
+    op: 'requestKnowledgeReview',
+    call: (api) =>
+      api.requestKnowledgeReview('PROJ-097', {
+        confirmSpend: true,
+        notes: 'Look again at the refund rules',
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-097/knowledge-reviews',
+    body: { confirmSpend: true, notes: 'Look again at the refund rules' },
+    reply: requestKnowledgeReview,
+    status: 202,
+    value: requestKnowledgeReview,
+    problem: 'invalid_state',
+  },
+  {
+    op: 'cancelKnowledgeReview',
+    call: (api) =>
+      api.cancelKnowledgeReview('PROJ-097', { reason: 'Asked by mistake' }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-097/knowledge-reviews/cancel',
+    body: { reason: 'Asked by mistake' },
+    reply: cancelKnowledgeReview,
+    status: 202,
+    value: cancelKnowledgeReview,
+    problem: 'invalid_state',
+  },
 ];
 
 const STATUS_TEXT: Readonly<Record<number, string>> = {
@@ -626,6 +666,9 @@ describe('ApiClient', () => {
         'listAgentDiagnoses',
         'requestAgentDiagnosis',
         'cancelAgentDiagnosis',
+        'listKnowledgeReviews',
+        'requestKnowledgeReview',
+        'cancelKnowledgeReview',
         'getMetrics',
         'exportMetrics',
       ].sort()

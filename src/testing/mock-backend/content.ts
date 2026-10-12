@@ -251,3 +251,73 @@ export function agentDiagnosisMarkdown(
     ...(notes !== null ? ['', "## Requester's notes", notes] : []),
   ].join('\n');
 }
+
+/** The files a simulated knowledge review proposes: the rules only for a done story, the lessons for both. */
+export interface KnowledgeFiles {
+  readonly proposal: string | null;
+  readonly lessons: string;
+  readonly patch: string;
+}
+
+/** A unified diff that creates `path` with `text`, as `git diff` writes one for a new file. */
+function newFileDiff(path: string, text: string): string {
+  const lines = text.replace(/\n$/, '').split('\n');
+  return [
+    `diff --git a/${path} b/${path}`,
+    'new file mode 100644',
+    '--- /dev/null',
+    `+++ b/${path}`,
+    `@@ -0,0 +1,${lines.length} @@`,
+    ...lines.map((line) => `+${line}`),
+    '',
+  ].join('\n');
+}
+
+/**
+ * What the simulated knowledge curator proposes for `key`, as `apps/reconciler/src/stub.ts` of `ahoy-hosted` does: one
+ * lesson for every repository, and a business rule only when the story is done (`rules`).
+ */
+export function knowledgeFiles(key: string, rules: boolean): KnowledgeFiles {
+  const lessons = [
+    '# Lessons',
+    '',
+    '## All repositories',
+    `- (${key}) Simulated lesson: name the child repository in the Jira issue.`,
+    '',
+  ].join('\n');
+  const proposal = rules
+    ? [
+        '# Business context',
+        '',
+        '## Simulated',
+        `- (${key}) Simulated rule: the mock read no evidence and called no model.`,
+        '',
+      ].join('\n')
+    : null;
+  const patch =
+    (proposal !== null
+      ? newFileDiff('knowledge/business-context.md', proposal)
+      : '') + newFileDiff('knowledge/lessons.md', lessons);
+  return { proposal, lessons, patch };
+}
+
+/** The summary the simulated knowledge curator replies with: what it added, changed or left out. */
+export function knowledgeMarkdown(
+  key: string,
+  rules: boolean,
+  notes: string | null
+): string {
+  return [
+    '## Rules',
+    rules
+      ? `- Added: one simulated rule for ${key}; the mock read no evidence and called no model.`
+      : 'None: a halted story gets lessons only.',
+    '',
+    '## Lessons',
+    '- All repositories: name the child repository in the Jira issue (simulated).',
+    '',
+    '## Left out',
+    'Nothing (simulated).',
+    ...(notes !== null ? ['', "## Requester's notes", notes] : []),
+  ].join('\n');
+}

@@ -1,0 +1,61 @@
+{
+  "key": "PROJ-097",
+  "items": [
+    {
+      "id": "proj-097-knowledge-002-9a41",
+      "key": "PROJ-097",
+      "status": "cancelled",
+      "notes": "Look again at the refund rules",
+      "requestedBy": "alex@example.com",
+      "agent": null,
+      "model": null,
+      "reasoningEffort": null,
+      "runtime": null,
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 0,
+        "nanoAiu": 0,
+        "inputTokens": 0,
+        "outputTokens": 0
+      },
+      "exitReason": "cancelled by alex@example.com: Asked by mistake",
+      "cancelRequested": true,
+      "createdAt": "2026-10-07T09:00:00.000Z",
+      "startedAt": null,
+      "endedAt": "2026-10-07T09:00:20.000Z",
+      "content": null,
+      "proposal": null,
+      "lessons": null,
+      "patch": null
+    },
+    {
+      "id": "proj-097-knowledge-001-5c2e",
+      "key": "PROJ-097",
+      "status": "succeeded",
+      "notes": null,
+      "requestedBy": "system",
+      "agent": "knowledge-curator",
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null,
+      "runtime": "k8s",
+      "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+      "budgetNanoAiu": 10000000000,
+      "usage": {
+        "requests": 5,
+        "nanoAiu": 1450000000,
+        "inputTokens": 32600,
+        "outputTokens": 2480
+      },
+      "exitReason": null,
+      "cancelRequested": false,
+      "createdAt": "2026-10-06T12:00:00.000Z",
+      "startedAt": "2026-10-06T12:00:05.000Z",
+      "endedAt": "2026-10-06T12:02:40.000Z",
+      "content": "## Rules\n- Added: the mobile app shows an order's status only after payment is confirmed (from the plan gate).\n\n## Lessons\n- All repositories: name the child repository in the Jira issue (the plan gate sent the plan back once).\n- orders-api: its tests need Docker on the runner (the story halted once in implementation).\n\n## Left out\nNothing.",
+      "proposal": "# Business context\n\n## Orders\n- The mobile app shows an order's status only after payment is confirmed. (PROJ-097, decided at the plan gate by sam@example.com)\n",
+      "lessons": "# Lessons\n\n## All repositories\n- (PROJ-097) Name the child repository in the Jira issue: the planner guessed it and the plan gate sent it back.\n\n## orders-api\n- (PROJ-097) The orders-api tests need Docker on the runner; say so in the plan's validation commands.\n",
+      "patch": "diff --git a/knowledge/business-context.md b/knowledge/business-context.md\n--- a/knowledge/business-context.md\n+++ b/knowledge/business-context.md\n@@ -1,2 +1,5 @@\n # Business context\n \n+## Orders\n+- The mobile app shows an order's status only after payment is confirmed. (PROJ-097, decided at the plan gate by sam@example.com)\ndiff --git a/knowledge/lessons.md b/knowledge/lessons.md\nnew file mode 100644\n--- /dev/null\n+++ b/knowledge/lessons.md\n@@ -0,0 +1,7 @@\n+# Lessons\n+\n+## All repositories\n+- (PROJ-097) Name the child repository in the Jira issue: the planner guessed it and the plan gate sent it back.\n+\n+## orders-api\n+- (PROJ-097) The orders-api tests need Docker on the runner; say so in the plan's validation commands.\n"
+    }
+  ]
+}

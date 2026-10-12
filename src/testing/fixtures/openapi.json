@@ -1517,6 +1517,136 @@
         }
       }
     },
+    "/stories/{key}/knowledge-reviews": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "get": {
+        "operationId": "listKnowledgeReviews",
+        "tags": ["stories"],
+        "summary": "Every knowledge review of one story, newest first, with the proposed business rules and lessons.",
+        "description": "When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs\nthem (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,\nthe approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its\nhalts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content\nrepository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is\n`content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files\nat `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`\nwhen it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request\nthere with the patch, and the rules are approved in that pull request. A story without one answers `200` with no\nitems. `404` when the story does not exist.\n",
+        "responses": {
+          "200": {
+            "description": "The story's knowledge reviews, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeReviewList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "operationId": "requestKnowledgeReview",
+        "tags": ["stories"],
+        "summary": "Ask an agent for a delivered story's rules and lessons, or a halted story's lessons. May spend AIU.",
+        "description": "For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a\nhalted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for\nthe story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the\ncontent repository, and may change only `knowledge/business-context.md` and `knowledge/lessons.md` in its own\ncopy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It\nchanges nothing about the story.\n\nThe story must be `done` or `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for\nthe outcome. One knowledge review per story is in progress at a time: another request answers\n`409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be\nread.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The knowledge review, queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/knowledge-reviews/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "cancelKnowledgeReview",
+        "tags": ["stories"],
+        "summary": "Stop the story's knowledge review in progress.",
+        "description": "A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the\nreconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.\n`409 invalid_state` when nothing is in progress.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRefinementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The knowledge review, cancelled or being cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories/{key}/events": {
       "parameters": [
         {
@@ -3268,6 +3398,9 @@
           "status": {
             "$ref": "#/components/schemas/RefinementStatus"
           },
+          "runtimeStatus": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          },
           "notes": {
             "type": ["string", "null"]
           },
@@ -3292,9 +3425,6 @@
           },
           "runtime": {
             "type": ["string", "null"]
-          },
-          "runtimeStatus": {
-            "$ref": "#/components/schemas/RuntimeStatus"
           },
           "controlSha": {
             "type": "string",
@@ -3341,6 +3471,167 @@
           }
         }
       },
+      "KnowledgeReview": {
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "status",
+          "notes",
+          "requestedBy",
+          "agent",
+          "model",
+          "reasoningEffort",
+          "runtime",
+          "controlSha",
+          "budgetNanoAiu",
+          "usage",
+          "exitReason",
+          "cancelRequested",
+          "createdAt",
+          "startedAt",
+          "endedAt",
+          "content",
+          "proposal",
+          "lessons",
+          "patch"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RefinementStatus"
+          },
+          "runtimeStatus": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          },
+          "notes": {
+            "type": ["string", "null"]
+          },
+          "requestedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "agent": {
+            "type": ["string", "null"]
+          },
+          "model": {
+            "type": ["string", "null"]
+          },
+          "reasoningEffort": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningEffort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime": {
+            "type": ["string", "null"]
+          },
+          "controlSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "budgetNanoAiu": {
+            "$ref": "#/components/schemas/NanoAiu"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "exitReason": {
+            "type": ["string", "null"]
+          },
+          "cancelRequested": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "startedAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endedAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "type": ["string", "null"],
+            "description": "The agent's summary of the rules and lessons it added, changed or left out, as Markdown (untrusted agent text); non-null exactly when `succeeded`."
+          },
+          "proposal": {
+            "type": ["string", "null"],
+            "description": "The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds."
+          },
+          "lessons": {
+            "type": ["string", "null"],
+            "description": "The whole proposed `knowledge/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds."
+          },
+          "patch": {
+            "type": ["string", "null"],
+            "description": "Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content repository; null exactly when both `proposal` and `lessons` are."
+          }
+        }
+      },
+      "KnowledgeReviewList": {
+        "type": "object",
+        "required": ["key", "items"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeReview"
+            }
+          }
+        }
+      },
+      "KnowledgeReviewRequest": {
+        "type": "object",
+        "required": ["confirmSpend"],
+        "additionalProperties": false,
+        "properties": {
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S",
+            "description": "What the agent should look at, given to it as the requester's notes."
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000000000,
+            "description": "The run's AIU cap, at most 100 AIU; the server's knowledge cap when absent."
+          }
+        }
+      },
       "RefinementSummaryList": {
         "type": "object",
         "required": ["items"],
@@ -3383,7 +3674,7 @@
           },
           "state": {
             "type": "object",
-            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `intake_analyst`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`."
+            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`."
           }
         }
       },
@@ -3687,7 +3978,9 @@
           "review.reported",
           "story.routed",
           "run.progress",
-          "run.waiting"
+          "run.waiting",
+          "knowledge_review.queued",
+          "knowledge_review.skipped"
         ]
       },
       "Event": {
@@ -3881,6 +4174,7 @@
           "topStories",
           "halts",
           "haltReasons",
+          "haltWeeks",
           "repeatHalts",
           "errors",
           "gates",
@@ -4198,6 +4492,33 @@
                 "medianHaltedSeconds": {
                   "type": ["integer", "null"],
                   "minimum": 0
+                }
+              }
+            }
+          },
+          "haltWeeks": {
+            "type": "array",
+            "description": "Halts per week (starting Monday, UTC) and diagnosis, oldest week first. `repeated` counts the halts whose diagnosis an earlier halt in the period already had, in any story: the lessons from earlier stories should make it fall.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["weekStart", "kind", "halts", "stories", "repeated"],
+              "properties": {
+                "weekStart": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "kind": {
+                  "$ref": "#/components/schemas/DiagnosisKind"
+                },
+                "halts": {
+                  "$ref": "#/components/schemas/MetricsCount"
+                },
+                "stories": {
+                  "$ref": "#/components/schemas/MetricsCount"
+                },
+                "repeated": {
+                  "$ref": "#/components/schemas/MetricsCount"
                 }
               }
             }
