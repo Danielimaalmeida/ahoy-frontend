@@ -46,6 +46,9 @@ describe('@domain/types is the contract', () => {
     expectTypeOf<Domain.ModelChoice>().toEqualTypeOf<Api.ModelChoice>();
     expectTypeOf<Domain.SlotModel>().toEqualTypeOf<Api.SlotModel>();
     expectTypeOf<Domain.ModelPlan>().toEqualTypeOf<Api.ModelPlan>();
+    expectTypeOf<Domain.FitReason>().toEqualTypeOf<Api.FitReason>();
+    expectTypeOf<Domain.BacklogReadiness>().toEqualTypeOf<Api.BacklogReadiness>();
+    expectTypeOf<Domain.PlanFit>().toEqualTypeOf<Api.PlanFit>();
   });
 
   it('takes a phase as the contract does: any string', () => {

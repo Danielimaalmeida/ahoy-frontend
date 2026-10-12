@@ -255,3 +255,25 @@ export interface ModelPlan {
   readonly version: number;
   readonly slots: readonly SlotModel[];
 }
+
+/** One reason behind a harness-fit verdict: a stable code and an English message with the evidence. */
+export interface FitReason {
+  readonly code: string;
+  readonly message: string;
+}
+
+/** A backlog item's readiness for the harness, by fixed rules over its Jira text. */
+export interface BacklogReadiness {
+  readonly verdict: 'ready' | 'attention' | 'missing';
+  readonly reasons: readonly FitReason[];
+}
+
+/** A planned story's fit for the harness, by fixed rules over its work packages and criteria. */
+export interface PlanFit {
+  readonly verdict: 'fits' | 'attention' | 'poor';
+  readonly reasons: readonly FitReason[];
+  readonly repositories: number;
+  readonly packages: number;
+  readonly criteria: number;
+  readonly longestChain: number;
+}

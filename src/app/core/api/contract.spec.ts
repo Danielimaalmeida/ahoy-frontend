@@ -8,6 +8,7 @@ import getHealth from '@testing/fixtures/getHealth.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
 import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
+import getStoryPlanFit from '@testing/fixtures/getStoryPlanFit.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
@@ -44,6 +45,15 @@ const jiraBacklog = {
       priority: 'High',
       updatedAt: '2026-10-06T08:00:00.000Z',
       sprint: null,
+      readiness: {
+        verdict: 'missing',
+        reasons: [
+          {
+            code: 'no_acceptance_criteria',
+            message: 'The description has no acceptance criteria section.',
+          },
+        ],
+      },
     },
   ],
   total: 1,
@@ -97,6 +107,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['decideHumanGate', decideHumanGate],
   ['getStoryState', getStoryState],
   ['getStoryDiagnosis', getStoryDiagnosis],
+  ['getStoryPlanFit', getStoryPlanFit],
   ['listArtifacts', listArtifacts],
   ['listStoryEvents', listStoryEvents],
   ['listRefinements', listRefinements],
@@ -111,7 +122,10 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['cancelKnowledgeReview', cancelKnowledgeReview],
 ];
 
-/** In the contract, not in the client yet: phase 7 (`resolveReview`...) and the live stream (lane 2B). */
+/**
+ * In the contract, not in the client yet: phase 7 (`resolveReview`...), the live stream (lane 2B) and the knowledge
+ * review of a delivered story.
+ */
 const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'resolveReview',
   'decideWorkPackage',
@@ -134,7 +148,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 2).toBe(35);
+    expect(CLIENT_OPERATIONS.length + 2).toBe(36);
   });
 
   it('has no operation id twice', () => {

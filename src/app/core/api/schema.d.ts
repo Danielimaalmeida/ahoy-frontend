@@ -77,6 +77,12 @@ export interface paths {
      *     Missing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout
      *     errors, malformed responses or pagination inconsistencies return `503 unavailable`.
      *     This lookup never starts a delivery or spends AIU.
+     *
+     *     Each item carries `readiness`, fixed rules over its description, labels and "is blocked by" links (the
+     *     description itself is not returned): `missing` when intake would stop it (no description, no acceptance
+     *     criteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when
+     *     the harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is
+     *     worth running through the harness is told from its plan (`getStoryPlanFit`).
      */
     readonly get: operations['listJiraBacklog'];
     readonly put?: never;
@@ -582,6 +588,32 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/plan-fit': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * Whether the story's plan suits the harness, for the person deciding `plan_accepted`.
+     * @description Fixed rules over the planned work packages and acceptance criteria; it spends nothing and changes nothing.
+     *     `poor` when a criterion needs CI or pipeline changes, which the implementation workflow may not make.
+     *     `attention` when work waits across repositories, the plan changes more than 2 repositories, has more than 6
+     *     work packages or a `depends_on` chain longer than 3, or a criterion names a repository no package changes.
+     *     Else `fits`. `fit` is null until the planner has written work packages.
+     */
+    readonly get: operations['getStoryPlanFit'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/diagnosis': {
     readonly parameters: {
       readonly query?: never;
@@ -923,6 +955,39 @@ export interface components {
        *     sprint ID breaks ties. Null when unassigned. Supports Jira Server's legacy sprint strings.
        */
       readonly sprint: components['schemas']['JiraSprint'] | null;
+      readonly readiness: components['schemas']['BacklogReadiness'];
+    };
+    readonly FitReason: {
+      /**
+       * @description Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,
+       *     `short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,
+       *     `many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.
+       */
+      readonly code: string;
+      /** @description English explanation with the evidence. */
+      readonly message: string;
+    };
+    readonly BacklogReadiness: {
+      /** @enum {string} */
+      readonly verdict: 'ready' | 'attention' | 'missing';
+      /** @description Reasons for `missing` first, then those for `attention`. Empty when `ready`. */
+      readonly reasons: readonly components['schemas']['FitReason'][];
+    };
+    readonly PlanFit: {
+      /** @enum {string} */
+      readonly verdict: 'fits' | 'attention' | 'poor';
+      /** @description Reasons for `poor` first, then those for `attention`. Empty when `fits`. */
+      readonly reasons: readonly components['schemas']['FitReason'][];
+      readonly repositories: number;
+      readonly packages: number;
+      readonly criteria: number;
+      /** @description Work packages in the longest depends_on chain. */
+      readonly longestChain: number;
+    };
+    readonly StoryPlanFit: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly phase: components['schemas']['Phase'];
+      readonly fit: components['schemas']['PlanFit'] | null;
     };
     readonly JiraBacklog: {
       readonly items: readonly components['schemas']['JiraBacklogIssue'][];
@@ -2605,6 +2670,33 @@ export interface operations {
           readonly [name: string]: unknown;
         };
         content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getStoryPlanFit: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The plan fit. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['StoryPlanFit'];
+        };
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];

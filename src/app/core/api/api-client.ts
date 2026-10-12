@@ -42,6 +42,7 @@ import {
   isRunList,
   isStory,
   isStoryPage,
+  isStoryPlanFit,
   isStoryStateDocument,
 } from './guards';
 import type {
@@ -86,6 +87,7 @@ import type {
   StopStoryRequest,
   Story,
   StoryPage,
+  StoryPlanFit,
   StoryStateDocument,
 } from './types';
 
@@ -289,6 +291,15 @@ export class ApiClient {
       'getStoryDiagnosis',
       `/stories/${segment(key)}/diagnosis`,
       isDiagnosis
+    );
+  }
+
+  /** Whether the story's plan suits the harness, by fixed rules; `fit` is null before the plan. Spends nothing. */
+  getStoryPlanFit(key: string): Promise<ApiResult<StoryPlanFit>> {
+    return this.get(
+      'getStoryPlanFit',
+      `/stories/${segment(key)}/plan-fit`,
+      isStoryPlanFit
     );
   }
 

@@ -37,6 +37,8 @@ import {
   GATE_SOURCES,
   MODEL_SLOTS,
   MODEL_SOURCES,
+  PLAN_FIT_VERDICTS,
+  READINESS_VERDICTS,
   REASONING_EFFORTS,
   REFINEMENT_STATUSES,
   RUN_STATUSES,
@@ -44,6 +46,10 @@ import {
   type RuntimeStatus,
   STORY_STATUSES,
   type AgentDiagnosisList,
+  type BacklogReadiness,
+  type FitReason,
+  type PlanFit,
+  type StoryPlanFit,
   type AhoyEvent,
   type Diagnosis,
   type MetricsError,
@@ -154,6 +160,16 @@ const jiraSprint = shape<
   state: oneOf(['active', 'future', 'closed']),
 });
 
+const fitReason = shape<FitReason>({
+  code: nonEmptyText,
+  message: nonEmptyText,
+});
+
+const backlogReadiness = shape<BacklogReadiness>({
+  verdict: oneOf(READINESS_VERDICTS),
+  reasons: arrayOf(fitReason),
+});
+
 const jiraBacklogIssue = shape<JiraBacklogIssue>({
   key: patterned('a Jira issue key', /^[A-Z][A-Z0-9_]*-[1-9][0-9]*$/, 40),
   issueType: oneOf(['Story', 'Task', 'Bug']),
@@ -162,6 +178,7 @@ const jiraBacklogIssue = shape<JiraBacklogIssue>({
   priority: nullable(nonEmptyText),
   updatedAt: timestamp,
   sprint: nullable(jiraSprint),
+  readiness: backlogReadiness,
 });
 
 /** The complete Jira backlog. */
@@ -349,6 +366,25 @@ export const isDiagnosis = guard<Diagnosis>(
     phase: nonEmptyText,
     haltReason: nullable(text),
     findings: arrayOf(diagnosisFinding),
+  })
+);
+
+const planFit = shape<PlanFit>({
+  verdict: oneOf(PLAN_FIT_VERDICTS),
+  reasons: arrayOf(fitReason),
+  repositories: positive,
+  packages: positive,
+  criteria: count,
+  longestChain: positive,
+});
+
+/** Whether a planned story suits the harness; `fit` is null before the plan. */
+export const isStoryPlanFit = guard<StoryPlanFit>(
+  'StoryPlanFit',
+  shape<StoryPlanFit>({
+    key: storyKey,
+    phase: nonEmptyText,
+    fit: nullable(planFit),
   })
 );
 

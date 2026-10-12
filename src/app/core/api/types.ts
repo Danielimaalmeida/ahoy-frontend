@@ -39,6 +39,15 @@ export type JiraBacklogIssue = Schemas['JiraBacklogIssue'];
 /** The complete Jira backlog returned by `listJiraBacklog`. */
 export type JiraBacklog = Schemas['JiraBacklog'];
 
+/** One reason behind a harness-fit verdict: a stable code to translate and an English message with the evidence. */
+export type FitReason = Schemas['FitReason'];
+/** A backlog item's readiness for the harness, by fixed rules over its Jira text (`ready`, `attention`, `missing`). */
+export type BacklogReadiness = Schemas['BacklogReadiness'];
+/** A planned story's fit for the harness, by fixed rules over its work packages and criteria. */
+export type PlanFit = Schemas['PlanFit'];
+/** Answer of `getStoryPlanFit`; `fit` is null until the planner has written work packages. */
+export type StoryPlanFit = Schemas['StoryPlanFit'];
+
 /** `List` itself when it holds exactly the members of the generated union `Union`; otherwise a type that says what differs. */
 type Exactly<Union extends string, List extends readonly string[]> = [
   Exclude<Union, List[number]>,
@@ -97,6 +106,20 @@ export const REFINEMENT_STATUSES = listOf<RefinementStatus>()([
   'output_violation',
   'auth_failed',
   'lost',
+]);
+
+/** The readiness verdicts of a backlog item. */
+export const READINESS_VERDICTS = listOf<BacklogReadiness['verdict']>()([
+  'ready',
+  'attention',
+  'missing',
+]);
+
+/** The fit verdicts of a planned story. */
+export const PLAN_FIT_VERDICTS = listOf<PlanFit['verdict']>()([
+  'fits',
+  'attention',
+  'poor',
 ]);
 
 /** The causes the diagnosis of a halted story knows (`DiagnosisKind`); `other` is a halt no rule explains. */

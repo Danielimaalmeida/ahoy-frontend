@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 7214c402cfc4b6affce52ed00abc6fd2869b2e5e
+# Commit: 53077dca4b6f6b68b7b4264dd2e46ab6429c5329
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -112,6 +112,12 @@ paths:
         Missing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout
         errors, malformed responses or pagination inconsistencies return `503 unavailable`.
         This lookup never starts a delivery or spends AIU.
+
+        Each item carries `readiness`, fixed rules over its description, labels and "is blocked by" links (the
+        description itself is not returned): `missing` when intake would stop it (no description, no acceptance
+        criteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when
+        the harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is
+        worth running through the harness is told from its plan (`getStoryPlanFit`).
       responses:
         '200':
           description: Complete backlog in Jira rank order.
@@ -763,6 +769,30 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/plan-fit:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    get:
+      operationId: getStoryPlanFit
+      tags: [stories]
+      summary: Whether the story's plan suits the harness, for the person deciding `plan_accepted`.
+      description: |
+        Fixed rules over the planned work packages and acceptance criteria; it spends nothing and changes nothing.
+        `poor` when a criterion needs CI or pipeline changes, which the implementation workflow may not make.
+        `attention` when work waits across repositories, the plan changes more than 2 repositories, has more than 6
+        work packages or a `depends_on` chain longer than 3, or a criterion names a repository no package changes.
+        Else `fits`. `fit` is null until the planner has written work packages.
+      responses:
+        '200':
+          description: The plan fit.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoryPlanFit' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/diagnosis:
     parameters:
       - $ref: '#/components/parameters/StoryKey'
@@ -1221,7 +1251,17 @@ components:
     JiraBacklogIssue:
       type: object
       additionalProperties: false
-      required: [key, issueType, summary, status, priority, updatedAt, sprint]
+      required:
+        [
+          key,
+          issueType,
+          summary,
+          status,
+          priority,
+          updatedAt,
+          sprint,
+          readiness,
+        ]
       properties:
         key: { type: string, pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$' }
         issueType: { type: string, enum: [Story, Task, Bug] }
@@ -1235,6 +1275,66 @@ components:
             sprint ID breaks ties. Null when unassigned. Supports Jira Server's legacy sprint strings.
           oneOf:
             - $ref: '#/components/schemas/JiraSprint'
+            - type: 'null'
+        readiness: { $ref: '#/components/schemas/BacklogReadiness' }
+    FitReason:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: |
+            Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,
+            `short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,
+            `many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.
+        message:
+          {
+            type: string,
+            minLength: 1,
+            description: English explanation with the evidence.,
+          }
+    BacklogReadiness:
+      type: object
+      additionalProperties: false
+      required: [verdict, reasons]
+      properties:
+        verdict: { type: string, enum: [ready, attention, missing] }
+        reasons:
+          type: array
+          description: Reasons for `missing` first, then those for `attention`. Empty when `ready`.
+          items: { $ref: '#/components/schemas/FitReason' }
+    PlanFit:
+      type: object
+      additionalProperties: false
+      required:
+        [verdict, reasons, repositories, packages, criteria, longestChain]
+      properties:
+        verdict: { type: string, enum: [fits, attention, poor] }
+        reasons:
+          type: array
+          description: Reasons for `poor` first, then those for `attention`. Empty when `fits`.
+          items: { $ref: '#/components/schemas/FitReason' }
+        repositories: { type: integer, minimum: 1 }
+        packages: { type: integer, minimum: 1 }
+        criteria: { type: integer, minimum: 0 }
+        longestChain:
+          {
+            type: integer,
+            minimum: 1,
+            description: Work packages in the longest depends_on chain.,
+          }
+    StoryPlanFit:
+      type: object
+      additionalProperties: false
+      required: [key, phase, fit]
+      properties:
+        key: { $ref: '#/components/schemas/StoryKey' }
+        phase: { $ref: '#/components/schemas/Phase' }
+        fit:
+          oneOf:
+            - $ref: '#/components/schemas/PlanFit'
             - type: 'null'
     JiraBacklog:
       type: object

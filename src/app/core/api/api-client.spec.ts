@@ -22,6 +22,7 @@ import getHealth from '@testing/fixtures/getHealth.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
 import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
+import getStoryPlanFit from '@testing/fixtures/getStoryPlanFit.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
@@ -79,6 +80,7 @@ const jiraBacklog = {
       priority: 'High',
       updatedAt: '2026-10-06T08:00:00.000Z',
       sprint: null,
+      readiness: { verdict: 'ready', reasons: [] },
     },
   ],
   total: 1,
@@ -391,6 +393,16 @@ const CASES: readonly Case[] = [
     problem: 'not_found',
   },
   {
+    op: 'getStoryPlanFit',
+    call: (api) => api.getStoryPlanFit('PROJ-123'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-123/plan-fit',
+    reply: getStoryPlanFit,
+    status: 200,
+    value: getStoryPlanFit,
+    problem: 'legacy_story',
+  },
+  {
     op: 'getRefinements',
     call: (api) => api.getRefinements('PROJ-145'),
     method: 'GET',
@@ -643,6 +655,7 @@ describe('ApiClient', () => {
         'startStory',
         'getStory',
         'getStoryDiagnosis',
+        'getStoryPlanFit',
         'stopStory',
         'resumeStory',
         'setStoryBudget',
