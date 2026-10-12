@@ -374,6 +374,29 @@ describe('VoyageShell on the mock backend', () => {
       expect(h.querySelectorAll('.ah-step--done')).toHaveLength(7);
     });
 
+    it('PROJ-097 links the pull requests its child_ready gate recorded, opening in a new tab', async () => {
+      const page = await open('/voyages/PROJ-097/plan');
+      const links = [
+        ...header(page).querySelectorAll<HTMLAnchorElement>('.header__prs a'),
+      ];
+      expect(links.map((a) => [text(a), a.getAttribute('href')])).toEqual([
+        ['api #1', 'https://github.example.test/acme/api/pull/1'],
+        ['web #2', 'https://github.example.test/acme/web/pull/2'],
+      ]);
+      expect(links.every((a) => a.target === '_blank')).toBe(true);
+      expect(links.every((a) => a.rel === 'noopener noreferrer')).toBe(true);
+      expect(text(header(page).querySelector('.header__prs li'))).toBe(
+        'api #1 open'
+      );
+    });
+
+    it('PROJ-123 has no pull request yet: the header has no Pull requests entry', async () => {
+      const page = await open('/voyages/PROJ-123/plan');
+      expect(text(header(page).querySelector('.header__meta'))).not.toContain(
+        'Pull requests'
+      );
+    });
+
     it('PROJ-102 ran aground: the stepper stops at the phase it was in', async () => {
       const page = await open('/voyages/PROJ-102/plan');
       const h = header(page);

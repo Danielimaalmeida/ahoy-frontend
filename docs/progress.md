@@ -1,8 +1,24 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-12 for the qnumber allow-list on `claude/project-thread-xtrbj5`** (after the harness metrics on
-`claude/project-thread-rhd49t`). Committed and pushed with the user's approval, from a cloud session. No TEST environment
-or real API was contacted; 0 AIU.
+**Updated 2026-10-12 for the pull request links on `claude/project-thread-4exgug`** (after the qnumber allow-list on
+`claude/project-thread-xtrbj5`). From a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Pull request links (2026-10-12)
+
+The user asked to see in the UI the pull requests the harness created. `ahoy-hosted` needs no change: its `child_ready`
+gate records each child repository's verified pull request in the state (`child_repos[].pr_url`, `pr_number`,
+`pr_state`), which `GET /stories/{key}/state` already returns.
+
+- **Core:** `readStoryState` gains `pullRequests` (repository alias, URL, number, state). Only absolute `http(s)` URLs
+  are kept; a number or state of the wrong type is dropped.
+- **Screen:** the voyage header's meta line shows "Pull requests" with one link per repository ("billing-api #7", and
+  GitHub's state in lower case), opening in a new tab without an opener. Absent until a pull request is recorded.
+- **Mock backend:** once a voyage's `child_ready` gate passed, its state carries a fictional pull request per repository.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **144 files / 2,589 tests passed**, with the
+  auth library stubbed in `node_modules` as before (nothing of that committed). `format:check` reports only
+  `src/app/features/docks/docks.ts`, which this change does not touch.
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real API or TEST. A pull
+  request the worker opened but whose gate has not passed yet appears only in the run's notes, not in these links.
 
 ## Qnumber allow-list (2026-10-12)
 

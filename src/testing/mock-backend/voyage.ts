@@ -317,6 +317,10 @@ export class Voyage {
   /** The state document, as `getStoryState` renders it from the story's tables. */
   stateDocument(): Readonly<Record<string, unknown>> {
     const key = this.story.key;
+    // The child_ready gate records each repository's verified pull request, as the hosted gate does.
+    const childReady = this.gates.some(
+      (g) => g.gate === 'child_ready' && g.outcome === 'pass'
+    );
     const models: Record<string, unknown> = {};
     for (const slot of SLOTS) {
       const choice = this.chosen[slot];
@@ -341,7 +345,16 @@ export class Voyage {
       models,
       acceptance_criteria: structuredClone(this.plan.criteria),
       work_packages: structuredClone(this.plan.packages),
-      child_repos: this.plan.repos.map((repo) => ({ repo })),
+      child_repos: this.plan.repos.map((repo, index) =>
+        childReady
+          ? {
+              repo,
+              pr_number: index + 1,
+              pr_url: `https://github.example.test/acme/${repo}/pull/${index + 1}`,
+              pr_state: 'OPEN',
+            }
+          : { repo }
+      ),
       reviewer_reviews: [],
       gate_results: this.gates
         .filter((g) => g.source === 'gate')
