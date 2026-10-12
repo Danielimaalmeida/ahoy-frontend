@@ -15,6 +15,39 @@ import {
 } from './app-config';
 
 describe('parseAppConfig', () => {
+  describe('allowedQnumbers', () => {
+    it('reads an array of qnumbers, lower-cased', () => {
+      const result = parseAppConfig({ allowedQnumbers: ['Q123456', 'q7'] });
+      expect(result.config.allowedQnumbers).toEqual(['q123456', 'q7']);
+      expect(result.problems).toEqual([]);
+    });
+
+    it('reads a text with qnumbers separated by commas or spaces', () => {
+      expect(
+        parseAppConfig({ allowedQnumbers: ' q1, Q2\nq3 ' }).config
+          .allowedQnumbers
+      ).toEqual(['q1', 'q2', 'q3']);
+    });
+
+    it('leaves the list out when it is not set, so the app does not check', () => {
+      expect('allowedQnumbers' in parseAppConfig({}).config).toBe(false);
+      expect(
+        'allowedQnumbers' in parseAppConfig({ allowedQnumbers: null }).config
+      ).toBe(false);
+    });
+
+    it.each([[['q1', 'alex@example.com']], [42], [{ q1: true }]])(
+      'allows nobody, with a complaint, when the list is invalid: %j',
+      (value) => {
+        const result = parseAppConfig({ allowedQnumbers: value });
+        expect(result.config.allowedQnumbers).toEqual([]);
+        expect(result.problems).toEqual([
+          expect.stringContaining('allowedQnumbers must be qnumbers'),
+        ]);
+      }
+    );
+  });
+
   it('reads a complete document', () => {
     const result = parseAppConfig({
       apiBase: '/ahoy/api/v1',

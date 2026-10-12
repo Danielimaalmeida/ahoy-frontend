@@ -8,6 +8,7 @@ import {
   withComponentInputBinding,
 } from '@angular/router';
 import { ok } from '@core/api/api-error';
+import { AppConfigStore, DEFAULT_APP_CONFIG } from '@core/config/app-config';
 import { parseAiu } from '@domain/aiu';
 import type { Story } from '@core/api/types';
 import { aStory, anEvent } from '@core/realtime/testing/events';
@@ -77,6 +78,7 @@ interface Shell {
   readonly api: FakeApi;
   readonly clock: FakeClock;
   readonly stream: SseBody;
+  readonly net: FakeFetch;
   go(url: string): Promise<void>;
   flush(): Promise<void>;
   /** Types into the search box, then pauses long enough for the search to go. */
@@ -89,6 +91,8 @@ interface Shell {
 interface ShellOptions {
   readonly storedTheme?: string | null;
   readonly hang?: boolean;
+  /** The `allowedQnumbers` of the configuration; without it the app does not check. */
+  readonly allowedQnumbers?: readonly string[];
 }
 
 /** Renders the shell over fakes at `url`, with the real routes. */
@@ -126,6 +130,11 @@ async function shell(url = '/', options: ShellOptions = {}): Promise<Shell> {
       },
     ],
   });
+  if (options.allowedQnumbers !== undefined)
+    TestBed.inject(AppConfigStore).set({
+      ...DEFAULT_APP_CONFIG,
+      allowedQnumbers: options.allowedQnumbers,
+    });
   const fixture = TestBed.createComponent(App);
   const router = TestBed.inject(Router);
   const flush = async (): Promise<void> => {
@@ -161,6 +170,7 @@ async function shell(url = '/', options: ShellOptions = {}): Promise<Shell> {
     api,
     clock,
     stream,
+    net,
     go,
     flush,
     type,
@@ -185,6 +195,40 @@ describe('App shell', () => {
       Array.from(root.children).map((child) => child.tagName.toLowerCase())
     ).toEqual(['ah-top-bar', 'main', 'ah-toast-host']);
     expect(root.querySelector('main ah-all-hands')).not.toBeNull();
+  });
+
+  describe('access', () => {
+    it('shows only "Access denied" to a user whose qnumber is not on the list, and calls nothing', async () => {
+      profile.set({ sub: 'Q654321', email: 'alex@example.com' });
+      const { root, api, net } = await shell('/', {
+        allowedQnumbers: ['q123456'],
+      });
+      expect(
+        Array.from(root.children).map((child) => child.tagName.toLowerCase())
+      ).toEqual(['main']);
+      expect(text(root.querySelector('h1'))).toBe('Access denied');
+      expect(text(root)).toContain('You are signed in as q654321');
+      expect(root.querySelector('ah-top-bar')).toBeNull();
+      expect(api.calls).toEqual([]);
+      expect(net.requests).toEqual([]);
+    });
+
+    it('signs out from the "Access denied" page', async () => {
+      profile.set({ sub: 'q654321' });
+      const { root } = await shell('/', { allowedQnumbers: ['q123456'] });
+      root.querySelector<HTMLButtonElement>('ah-access-denied button')!.click();
+      expect(logout).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens the app for a user on the list', async () => {
+      profile.set({ sub: 'Q123456', email: 'alex@example.com' });
+      const { root, api } = await shell('/', {
+        allowedQnumbers: ['q123456'],
+      });
+      expect(root.querySelector('ah-access-denied')).toBeNull();
+      expect(root.querySelector('ah-top-bar')).not.toBeNull();
+      expect(api.callsOf('listStories').length).toBeGreaterThan(0);
+    });
   });
 
   describe('top bar', () => {

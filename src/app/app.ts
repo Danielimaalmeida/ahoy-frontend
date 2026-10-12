@@ -1,4 +1,12 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   NavigationEnd,
@@ -7,11 +15,13 @@ import {
   type UrlTree,
 } from '@angular/router';
 import { filter } from 'rxjs';
+import { AccessControl } from '@core/auth/access-control';
 import { initialsOf } from '@core/auth/current-user';
 import { CLOCK as CORE_CLOCK, type Timer } from '@core/realtime/clock';
 import { EventBus } from '@core/realtime/event-bus';
 import type { StreamStatus } from '@core/realtime/event-stream-client';
 import { StoriesStore } from '@core/stores/stories-store';
+import { AccessDenied } from '@ui/access-denied/access-denied';
 import { CLOCK as UI_CLOCK, type Clock } from '@ui/pipes/clock';
 import { ThemeService } from '@ui/theme/theme.service';
 import { ToastHost } from '@ui/toast/toast';
@@ -75,10 +85,13 @@ function isVoyagesList(tree: UrlTree): boolean {
  * The shell: the top bar on every screen (the count of voyages that need a person, the Live indicator, who is signed
  * in, and the search that leads to `/voyages?q=`), the page in one `main`, and the toasts. It keeps the voyage list
  * alive for the whole session, which holds the event stream open, so the count and the pages follow the stream.
+ *
+ * A user who may not use Ahoy ({@link AccessControl}) sees only "Access denied": no top bar, no page, and no call to the
+ * API from the shell.
  */
 @Component({
   selector: 'ah-root',
-  imports: [RouterOutlet, ToastHost, TopBar],
+  imports: [AccessDenied, RouterOutlet, ToastHost, TopBar],
   providers: [{ provide: UI_CLOCK, useFactory: tickingClock }],
   styles: `
     :host {
@@ -101,16 +114,25 @@ function isVoyagesList(tree: UrlTree): boolean {
     }
   `,
   template: `
-    <ah-top-bar
-      [needsYou]="needsYou()"
-      [live]="live()"
-      [user]="user()"
-      [query]="query()"
-      (queryChange)="search($event)"
-      (logout)="auth.logout()"
-    />
-    <main class="page"><router-outlet /></main>
-    <ah-toast-host />
+    @if (access.denied()) {
+      <main>
+        <ah-access-denied
+          [qnumber]="access.qnumber()"
+          (signOut)="auth.logout()"
+        />
+      </main>
+    } @else {
+      <ah-top-bar
+        [needsYou]="needsYou()"
+        [live]="live()"
+        [user]="user()"
+        [query]="query()"
+        (queryChange)="search($event)"
+        (logout)="auth.logout()"
+      />
+      <main class="page"><router-outlet /></main>
+      <ah-toast-host />
+    }
   `,
 })
 export class App {
@@ -120,6 +142,7 @@ export class App {
   private readonly clock = inject(CORE_CLOCK);
   private pendingSearch: Timer | undefined;
   protected readonly auth = inject(FedevAuthService);
+  protected readonly access = inject(AccessControl);
 
   /** The text in the search box: that of the `?q=` of the page, if it has one. */
   protected readonly query = signal('');
@@ -147,7 +170,13 @@ export class App {
     // The theme chosen in the kit gallery applies from the first page, not only once the gallery is opened.
     inject(ThemeService);
     const destroyRef = inject(DestroyRef);
-    this.stories.use(destroyRef);
+    // The voyage list (and its event stream) opens once the user is allowed, which the sign-in may only settle later.
+    let using = false;
+    effect(() => {
+      if (using || this.access.denied()) return;
+      using = true;
+      untracked(() => this.stories.use(destroyRef));
+    });
     destroyRef.onDestroy(() => this.pendingSearch?.cancel());
     this.router.events
       .pipe(

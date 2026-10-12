@@ -1,3 +1,6 @@
+# Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
+# Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
+# Commit: d0bf528b9d8dd740b974f3867f2674b42af93a7a
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -28,8 +31,9 @@ info:
     Every request except `/health` must carry a WebEAM (ForgeRock AM, Alpha realm) access token in
     `Authorization: Bearer <jwt>`. The API introspects the token at WebEAM (RFC 7662) with its client ID and
     secret; the token's `sub` is the acting user. A missing or invalid
-    token answers `401 unauthenticated`. The `X-Ahoy-Actor` header is accepted only when the
-    server runs with `AHOY_AUTH=dev` (local POC).
+    token answers `401 unauthenticated`. Only the users named in the server's `AHOY_ALLOWED_QNUMBERS` may use the
+    API: an authenticated user whose qnumber is not on that list answers `403 forbidden`. The `X-Ahoy-Actor` header
+    is accepted only when the server runs with `AHOY_AUTH=dev` (local POC), where the list is optional.
 servers:
   - url: /api/v1
 security:
@@ -85,6 +89,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ModelCatalog' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /jira/backlog:
     get:
       operationId: listJiraBacklog
@@ -94,8 +99,8 @@ paths:
         Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
         WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
         `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-        `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-        AND "Feature Team" = MY_COMPANY AND Team in (34115) ORDER BY Rank ASC`.
+        `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
+        AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
 
         The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
         board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
@@ -118,6 +123,7 @@ paths:
               schema: { $ref: '#/components/schemas/JiraBacklog' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
   /metrics:
     get:
@@ -144,6 +150,7 @@ paths:
               schema: { $ref: '#/components/schemas/MetricsReport' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /metrics/export:
     get:
       operationId: exportMetrics
@@ -181,6 +188,7 @@ paths:
                 items: { type: object }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /stories:
     get:
       operationId: listStories
@@ -200,6 +208,7 @@ paths:
               schema: { $ref: '#/components/schemas/StoryPage' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
     post:
       operationId: startStory
       tags: [stories]
@@ -226,6 +235,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
   /stories/{key}:
@@ -242,6 +252,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/stop:
     parameters:
@@ -263,6 +274,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/resume:
@@ -290,6 +302,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/refresh-intake:
@@ -321,6 +334,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/budget:
@@ -347,6 +361,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/models:
@@ -372,6 +387,7 @@ paths:
               schema: { $ref: '#/components/schemas/ModelPlan' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
     post:
@@ -395,6 +411,7 @@ paths:
               schema: { $ref: '#/components/schemas/ModelPlan' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/runs:
@@ -418,6 +435,7 @@ paths:
                     items: { $ref: '#/components/schemas/Run' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /runs/{runId}:
     parameters:
@@ -436,6 +454,7 @@ paths:
               schema: { $ref: '#/components/schemas/Run' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/questions:
     parameters:
@@ -458,6 +477,7 @@ paths:
                     items: { $ref: '#/components/schemas/Question' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/questions/{questionId}/answer:
     parameters:
@@ -485,6 +505,7 @@ paths:
               schema: { $ref: '#/components/schemas/AnswerAccepted' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/gates:
@@ -509,6 +530,7 @@ paths:
                     items: { $ref: '#/components/schemas/GateRecord' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/decisions:
     parameters:
@@ -530,6 +552,7 @@ paths:
               schema: { $ref: '#/components/schemas/DecisionAccepted' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
@@ -557,6 +580,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
@@ -585,6 +609,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
@@ -612,6 +637,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
@@ -639,6 +665,7 @@ paths:
               schema: { $ref: '#/components/schemas/Story' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
@@ -664,6 +691,7 @@ paths:
               schema: { $ref: '#/components/schemas/StoryState' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/artifacts:
@@ -691,6 +719,7 @@ paths:
                     items: { $ref: '#/components/schemas/Artifact' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/artifacts/content:
     parameters:
@@ -731,6 +760,7 @@ paths:
               schema: { type: string }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/diagnosis:
@@ -755,6 +785,7 @@ paths:
               schema: { $ref: '#/components/schemas/Diagnosis' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/agent-diagnoses:
     parameters:
@@ -774,6 +805,7 @@ paths:
               schema: { $ref: '#/components/schemas/AgentDiagnosisList' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
     post:
       operationId: requestAgentDiagnosis
@@ -805,6 +837,7 @@ paths:
               schema: { $ref: '#/components/schemas/Refinement' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
@@ -832,6 +865,7 @@ paths:
               schema: { $ref: '#/components/schemas/Refinement' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/events:
     parameters:
@@ -850,6 +884,7 @@ paths:
               schema: { $ref: '#/components/schemas/EventPage' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
   /events/stream:
     get:
@@ -882,6 +917,7 @@ paths:
               schema: { type: string }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /refinements:
     get:
       operationId: listRefinements
@@ -897,6 +933,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RefinementSummaryList' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /refinements/{key}:
     parameters:
       - $ref: '#/components/parameters/StoryKey'
@@ -913,6 +950,7 @@ paths:
               schema: { $ref: '#/components/schemas/RefinementList' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
     post:
       operationId: requestRefinement
       tags: [refinements]
@@ -943,6 +981,7 @@ paths:
               schema: { $ref: '#/components/schemas/Refinement' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
   /refinements/{key}/cancel:
@@ -969,6 +1008,7 @@ paths:
               schema: { $ref: '#/components/schemas/Refinement' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:

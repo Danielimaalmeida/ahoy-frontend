@@ -4,7 +4,7 @@
     "title": "Ahoy control plane API",
     "version": "1.0.0-poc",
     "summary": "UI-independent HTTP/JSON contract for hosted Ahoy story deliveries.",
-    "description": "The public boundary for any Ahoy client (Angular UI, CLI, scripts). Clients never\ncall the SDK worker, read run directories or see Copilot tokens.\n\nConventions:\n- Every mutation records the authenticated actor and is rejected when stale\n  (`expectedVersion` does not match the story's `version`) or a duplicate\n  (for example a second decision at the same gate). Nothing is silently advanced.\n- Commands that the reconciler completes asynchronously return `202` with the\n  updated story; watch `/events/stream` or poll the read endpoints for the outcome.\n- Costs are integers in nano-AIU (1 AIU = 1_000_000_000 nano-AIU).\n- Errors use RFC 9457 problem details (`application/problem+json`) with a stable `code`.\n  Requests are validated against this document: unknown or repeated query parameters and\n  invalid path, query, header or body values answer `400 validation_failed` with `errors`, as does body\n  text Postgres cannot store (a NUL character or an unpaired surrogate);\n  a method the path does not support answers `400 bad_request` with an `Allow` header. Any\n  operation may answer `500 internal_error`.\n- Incompatible changes require a new major version (`/api/v2`).\n- A story's state lives in Postgres (`getStoryState`); artifacts are the files its agents wrote. A story created\n  before the relational state model (migration 0002) can still be read, but every change, its state and any\n  artifact whose bytes are not in Postgres answer `409 legacy_story`.\n\nEvery request except `/health` must carry a WebEAM (ForgeRock AM, Alpha realm) access token in\n`Authorization: Bearer <jwt>`. The API introspects the token at WebEAM (RFC 7662) with its client ID and\nsecret; the token's `sub` is the acting user. A missing or invalid\ntoken answers `401 unauthenticated`. The `X-Ahoy-Actor` header is accepted only when the\nserver runs with `AHOY_AUTH=dev` (local POC).\n"
+    "description": "The public boundary for any Ahoy client (Angular UI, CLI, scripts). Clients never\ncall the SDK worker, read run directories or see Copilot tokens.\n\nConventions:\n- Every mutation records the authenticated actor and is rejected when stale\n  (`expectedVersion` does not match the story's `version`) or a duplicate\n  (for example a second decision at the same gate). Nothing is silently advanced.\n- Commands that the reconciler completes asynchronously return `202` with the\n  updated story; watch `/events/stream` or poll the read endpoints for the outcome.\n- Costs are integers in nano-AIU (1 AIU = 1_000_000_000 nano-AIU).\n- Errors use RFC 9457 problem details (`application/problem+json`) with a stable `code`.\n  Requests are validated against this document: unknown or repeated query parameters and\n  invalid path, query, header or body values answer `400 validation_failed` with `errors`, as does body\n  text Postgres cannot store (a NUL character or an unpaired surrogate);\n  a method the path does not support answers `400 bad_request` with an `Allow` header. Any\n  operation may answer `500 internal_error`.\n- Incompatible changes require a new major version (`/api/v2`).\n- A story's state lives in Postgres (`getStoryState`); artifacts are the files its agents wrote. A story created\n  before the relational state model (migration 0002) can still be read, but every change, its state and any\n  artifact whose bytes are not in Postgres answer `409 legacy_story`.\n\nEvery request except `/health` must carry a WebEAM (ForgeRock AM, Alpha realm) access token in\n`Authorization: Bearer <jwt>`. The API introspects the token at WebEAM (RFC 7662) with its client ID and\nsecret; the token's `sub` is the acting user. A missing or invalid\ntoken answers `401 unauthenticated`. Only the users named in the server's `AHOY_ALLOWED_QNUMBERS` may use the\nAPI: an authenticated user whose qnumber is not on that list answers `403 forbidden`. The `X-Ahoy-Actor` header\nis accepted only when the server runs with `AHOY_AUTH=dev` (local POC), where the list is optional.\n"
   },
   "servers": [
     {
@@ -91,6 +91,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
           }
         }
       }
@@ -100,7 +103,7 @@
         "operationId": "listJiraBacklog",
         "tags": ["jira"],
         "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
-        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = MY_COMPANY AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n",
+        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = CTW AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n",
         "responses": {
           "200": {
             "description": "Complete backlog in Jira rank order.",
@@ -124,6 +127,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "503": {
@@ -170,6 +176,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           }
         }
@@ -247,6 +256,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
           }
         }
       }
@@ -286,6 +298,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           }
         }
@@ -329,6 +344,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "409": {
             "$ref": "#/components/responses/Problem"
           },
@@ -362,6 +380,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -405,6 +426,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -454,6 +478,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           },
@@ -499,6 +526,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -548,6 +578,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           },
@@ -583,6 +616,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -623,6 +659,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -670,6 +709,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           }
@@ -705,6 +747,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -747,6 +792,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -801,6 +849,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           },
@@ -847,6 +898,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           }
@@ -888,6 +942,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -938,6 +995,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -993,6 +1053,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           },
@@ -1041,6 +1104,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -1093,6 +1159,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           },
@@ -1131,6 +1200,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -1181,6 +1253,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -1263,6 +1338,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           },
@@ -1300,6 +1378,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "404": {
             "$ref": "#/components/responses/Problem"
           }
@@ -1332,6 +1413,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -1369,6 +1453,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -1421,6 +1508,9 @@
           "401": {
             "$ref": "#/components/responses/Problem"
           },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
           "409": {
             "$ref": "#/components/responses/Problem"
           }
@@ -1459,6 +1549,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "404": {
@@ -1514,6 +1607,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
           }
         }
       }
@@ -1536,6 +1632,9 @@
             }
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           }
         }
@@ -1567,6 +1666,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           }
         }
@@ -1601,6 +1703,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "409": {
@@ -1648,6 +1753,9 @@
             "$ref": "#/components/responses/Problem"
           },
           "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           },
           "409": {

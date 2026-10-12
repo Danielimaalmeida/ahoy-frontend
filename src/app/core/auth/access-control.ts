@@ -1,0 +1,44 @@
+import {
+  Injectable,
+  computed,
+  inject,
+  signal,
+  type Signal,
+} from '@angular/core';
+import { FedevAuthService } from '@company-name-fedev/auth';
+import { AppConfigStore } from '@core/config/app-config';
+import { isAllowedUser, qnumberOf } from '@domain/access';
+
+/**
+ * Whether the signed-in user may use Ahoy. Two checks, either of which refuses: the `allowedQnumbers` of `/config.json`
+ * against the user's qnumber (read before any call to the API), and the API's own list, which answers `403 forbidden`
+ * ({@link AccessControl.refuseByApi}, called by `authInterceptor`). The shell shows "Access denied" instead of the app.
+ */
+@Injectable({ providedIn: 'root' })
+export class AccessControl {
+  private readonly auth = inject(FedevAuthService);
+  private readonly config = inject(AppConfigStore).config;
+  private readonly refusedByApi = signal(false);
+
+  /** The user's qnumber, lower-cased: the token's `sub`, else its `uid`, else the auth library's current user. */
+  readonly qnumber: Signal<string | null> = computed(() => {
+    const profile = this.auth.userProfile();
+    return qnumberOf([
+      profile?.['sub'],
+      profile?.['uid'],
+      this.auth.currentUser(),
+    ]);
+  });
+
+  /** True when the user may not use the app. */
+  readonly denied: Signal<boolean> = computed(
+    () =>
+      this.refusedByApi() ||
+      !isAllowedUser(this.qnumber(), this.config().allowedQnumbers)
+  );
+
+  /** Records that the API refused the user (`403 forbidden`). It lasts until the page is loaded again. */
+  refuseByApi(): void {
+    this.refusedByApi.set(true);
+  }
+}
