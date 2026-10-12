@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · Metrics</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #1b2733;
+          }
+          a {
+            color: #1a64d6;
+          }
+          a:hover {
+            color: #1747a6;
+          }
+          .top {
+            background: #fff;
+            border-bottom: 1px solid #e3e8ee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 24px;
+            box-sizing: border-box;
+          }
+          .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 17px;
+            color: #1b2733;
+            text-decoration: none;
+            margin-right: 12px;
+          }
+          .logo:hover {
+            color: #1b2733;
+          }
+          .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            color: #5b6b7a;
+            font-weight: 500;
+            text-decoration: none;
+          }
+          .tab:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .tab.on {
+            background: #e7effc;
+            color: #1747a6;
+            font-weight: 600;
+          }
+          .cnt {
+            background: #1a64d6;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0 6px;
+            font-size: 11px;
+            line-height: 17px;
+            font-weight: 600;
+          }
+          .soon {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #5b6b7a;
+            background: #eef2f5;
+            border-radius: 999px;
+            padding: 1px 6px;
+          }
+          .search {
+            flex: 0 1 300px;
+            height: 34px;
+            border: 1px solid #e3e8ee;
+            border-radius: 999px;
+            padding: 0 14px;
+            font: inherit;
+            background: #f6f8fa;
+            box-sizing: border-box;
+            margin-left: auto;
+            color: #1b2733;
+          }
+          .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #1c6337;
+            font-weight: 500;
+            margin: 0 6px;
+          }
+          .live i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #2e9b5b;
+            box-shadow: 0 0 0 3px #ddf3e6;
+          }
+          .av {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e7effc;
+            color: #1747a6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            flex: none;
+          }
+          .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #1b2733;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            box-sizing: border-box;
+          }
+          .btn:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .btn.primary {
+            background: #1a64d6;
+            border-color: #1a64d6;
+            color: #fff;
+          }
+          .btn.primary:hover {
+            background: #1755b8;
+            color: #fff;
+          }
+          .btn.sm {
+            height: 28px;
+            padding: 0 11px;
+            font-size: 12px;
+            border-radius: 9px;
+          }
+          .page {
+            padding: 22px 24px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 1360px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+          }
+          h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+          }
+          h2 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .sub {
+            color: #5b6b7a;
+          }
+          .panel {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            min-width: 0;
+            overflow: hidden;
+          }
+          .ph {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #eef2f5;
+          }
+          .pb {
+            padding: 14px 16px;
+          }
+          .scroll {
+            overflow-x: auto;
+          }
+          table.t {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .t th {
+            text-align: left;
+            font-size: 11px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #5b6b7a;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-bottom: 1px solid #e3e8ee;
+            background: #fafbfc;
+            white-space: nowrap;
+          }
+          .t th.n,
+          .t td.n {
+            text-align: right;
+          }
+          .t td {
+            padding: 7px 14px;
+            border-bottom: 1px solid #eef2f5;
+            vertical-align: middle;
+            height: 24px;
+          }
+          .t tr:last-child td {
+            border-bottom: 0;
+          }
+          .t tbody tr:hover td {
+            background: #f7fafe;
+          }
+          .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 500;
+          }
+          .key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: #1747a6;
+            text-decoration: none;
+            margin-right: 6px;
+          }
+          .chip {
+            display: inline-flex;
+            align-items: center;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 999px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #3d4b59;
+            font: inherit;
+            font-weight: 500;
+            cursor: pointer;
+          }
+          .chip.on {
+            background: #1b2733;
+            border-color: #1b2733;
+            color: #fff;
+            font-weight: 600;
+          }
+          .sel {
+            height: 30px;
+            border: 1px solid #d5dce3;
+            border-radius: 9px;
+            background: #fff;
+            font: inherit;
+            color: #1b2733;
+            padding: 0 8px;
+          }
+          .flbl {
+            font-size: 12px;
+            color: #5b6b7a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+          }
+          .kpi {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+          }
+          .kpi .lbl {
+            font-size: 12px;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .kpi b {
+            font-size: 28px;
+            line-height: 1.1;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+          }
+          .kpi b small {
+            font-size: 14px;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .delta {
+            font-size: 12px;
+            color: #5b6b7a;
+          }
+          .delta.up {
+            color: #8a3a00;
+          }
+          .delta.good {
+            color: #1c6337;
+          }
+          .two {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+            gap: 16px;
+          }
+          .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+            color: #3d4b59;
+          }
+          .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .sw {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: inline-block;
+          }
+          .c1 {
+            background: #2a78d6;
+          }
+          .c2 {
+            background: #eb6834;
+          }
+          .c3 {
+            background: #1baf7a;
+          }
+          .c4 {
+            background: #eda100;
+          }
+          .c5 {
+            background: #8f9ba8;
+          }
+          .chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 28px;
+            height: 240px;
+            padding: 8px 8px 0 44px;
+            border-bottom: 1px solid #c9d2db;
+            position: relative;
+            box-sizing: border-box;
+            background-image: linear-gradient(#eef2f5 1px, transparent 1px);
+            background-size: 100% 60px;
+            background-position: 0 0;
+          }
+          .yax {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #5b6b7a;
+            padding-bottom: 2px;
+          }
+          .col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+          }
+          .stack {
+            width: 56px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 2px;
+          }
+          .stack i {
+            display: block;
+            width: 100%;
+          }
+          .stack i:last-child {
+            border-radius: 4px 4px 0 0;
+          }
+          .tot {
+            font-size: 12px;
+            font-weight: 600;
+          }
+          .xax {
+            display: flex;
+            gap: 28px;
+            padding: 6px 8px 0 44px;
+            font-size: 11.5px;
+            color: #5b6b7a;
+          }
+          .xax span {
+            flex: 1;
+            text-align: center;
+          }
+          .hb {
+            display: grid;
+            grid-template-columns: 150px minmax(0, 1fr) 36px;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+          }
+          .hb .bar {
+            height: 12px;
+            background: #eef2f5;
+            border-radius: 999px;
+            overflow: hidden;
+          }
+          .hb .bar i {
+            display: block;
+            height: 100%;
+            background: #c23b3b;
+            border-radius: 0 4px 4px 0;
+          }
+          .hb .who {
+            font-size: 11px;
+            color: #5b6b7a;
+          }
+          .tag {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .t-owner {
+            background: #e7effc;
+            color: #1747a6;
+          }
+          .t-op {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .t-agent {
+            background: #eee8fb;
+            color: #4e3290;
+          }
+          .ins {
+            display: flex;
+            flex-direction: column;
+          }
+          .in {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr) auto;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eef2f5;
+            align-items: start;
+          }
+          .in:last-child {
+            border-bottom: 0;
+          }
+          .in .ic {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #fff1d6;
+            color: #7a4b00;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .in b {
+            display: block;
+          }
+          .in .ev {
+            color: #5b6b7a;
+            font-size: 12.5px;
+            margin-top: 2px;
+          }
+          .in .fix {
+            margin-top: 4px;
+            font-size: 12.5px;
+          }
+          .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 22px;
+            padding: 0 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .b-halt {
+            background: #fde3e3;
+            color: #962020;
+          }
+          .b-fail {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .b-err {
+            background: #2b3a47;
+            color: #fff;
+          }
+          @media (max-width: 900px) {
+            .kpis {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .two {
+              grid-template-columns: minmax(0, 1fr);
+            }
+          }
+        </style>
+      </helmet>
+      <header class="top">
+        <a class="logo" href="Main.dc.html"
+          ><svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1A64D6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="1.8"></circle>
+            <path
+              d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+            ></path></svg
+          >Ahoy</a
+        >
+        <nav style="display: flex; flex-wrap: wrap; gap: 4px" aria-label="Main">
+          <a class="tab" href="Main.dc.html"
+            >Needs you <span class="cnt">4</span></a
+          >
+          <a class="tab" href="Ideas.dc.html">Ideas</a>
+          <a class="tab" href="Voyages.dc.html">Voyages</a>
+          <a class="tab" href="Docks.dc.html"
+            >Backlog <span class="soon">planned</span></a
+          >
+          <a class="tab on" href="Metrics.dc.html">Metrics</a>
+        </nav>
+        <label for="q" style="position: absolute; left: -9999px"
+          >Search voyages</label
+        >
+        <input
+          id="q"
+          class="search"
+          type="search"
+          placeholder="Search by key or title"
+        />
+        <span class="live"><i></i>Live</span>
+        <a class="btn primary" href="SetSail.dc.html"
+          ><svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"
+            ></path></svg
+          >Start voyage</a
+        >
+        <span class="av" title="alex@example.com (SSO)">AL</span>
+      </header>
+      <main class="page">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 12px;
+          "
+        >
+          <div style="flex: 1 1 420px">
+            <h1>Metrics</h1>
+            <div class="sub">
+              Where the harness spends AIU, where voyages stop and which errors
+              repeat. Read-only, built from runs, gates and events.
+            </div>
+          </div>
+          <a class="btn" href="#export"
+            ><svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg
+            >Export CSV</a
+          >
+          <a class="btn" href="#export">Export JSON</a>
+        </div>
+
+        <div
+          style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"
+        >
+          <sc-for list="{{periods}}" as="p" hint-placeholder-count="3">
+            <button type="button" class="{{p.cls}}" onClick="{{p.pick}}">
+              {{p.label}}
+            </button>
+          </sc-for>
+          <span style="width: 12px"></span>
+          <label class="flbl" for="f-owner"
+            >Owner
+            <select id="f-owner" class="sel">
+              <option>Everyone</option>
+              <option>alex@example.com</option>
+              <option>sam@example.com</option>
+            </select></label
+          >
+          <label class="flbl" for="f-repo"
+            >Repository
+            <select id="f-repo" class="sel">
+              <option>All</option>
+              <option>billing-web</option>
+              <option>orders-api</option>
+            </select></label
+          >
+          <label class="flbl" for="f-model"
+            >Model
+            <select id="f-model" class="sel">
+              <option>All</option>
+              <option>claude-sonnet-5</option>
+              <option>claude-opus-5</option>
+            </select></label
+          >
+          <span class="sub" style="margin-left: auto; font-size: 12px"
+            >{{periodNote}}</span
+          >
+        </div>
+
+        <nav
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            border-bottom: 1px solid #e3e8ee;
+          "
+          aria-label="Metrics sections"
+        >
+          <a class="tab on" href="Metrics.dc.html">Overview</a>
+          <a class="tab" href="MetricsCost.dc.html">Cost</a>
+          <a class="tab" href="MetricsHalts.dc.html">Halts &amp; errors</a>
+          <a class="tab" href="MetricsGates.dc.html">Gates &amp; human wait</a>
+        </nav>
+
+        <div class="kpis">
+          <a
+            class="kpi"
+            href="MetricsCost.dc.html"
+            style="text-decoration: none; color: #1b2733"
+          >
+            <span class="lbl">AIU spent</span>
+            <b>412.80</b>
+            <span class="delta up">+12% vs previous 30 days (368.10)</span>
+          </a>
+          <a
+            class="kpi"
+            href="MetricsCost.dc.html"
+            style="text-decoration: none; color: #1b2733"
+          >
+            <span class="lbl">AIU per finished voyage (median)</span>
+            <b>26.40 <small>/ 30 cap</small></b>
+            <span class="delta">14 finished · 11 done · 3 blocked</span>
+          </a>
+          <a
+            class="kpi"
+            href="MetricsHalts.dc.html"
+            style="text-decoration: none; color: #1b2733"
+          >
+            <span class="lbl">Halts</span>
+            <b>23 <small>in 17 voyages</small></b>
+            <span class="delta up">4 voyages halted again after Resume</span>
+          </a>
+          <a
+            class="kpi"
+            href="MetricsGates.dc.html"
+            style="text-decoration: none; color: #1b2733"
+          >
+            <span class="lbl">Gate pass on first run</span>
+            <b>78%</b>
+            <span class="delta good">+5 pts · 186 runs, 2 tooling errors</span>
+          </a>
+        </div>
+
+        <div class="two">
+          <section class="panel" aria-labelledby="by-phase">
+            <div class="ph">
+              <h2 id="by-phase">AIU by phase, per week</h2>
+              <span style="flex: 1"></span
+              ><a href="MetricsCost.dc.html">Cost detail</a>
+            </div>
+            <div
+              class="pb"
+              style="display: flex; flex-direction: column; gap: 12px"
+            >
+              <div class="legend" aria-label="Legend">
+                <span><i class="sw c1"></i>intake</span
+                ><span><i class="sw c2"></i>planning</span
+                ><span><i class="sw c3"></i>implementation</span
+                ><span><i class="sw c4"></i>pr_review</span
+                ><span><i class="sw c5"></i>rework &amp; diagnosis</span>
+              </div>
+              <div
+                class="chart"
+                role="img"
+                aria-label="Stacked bars of AIU per phase for four weeks: 88.2, 97.5, 109.6 and 117.5 AIU. pr_review grows from 21.0 to 31.3."
+              >
+                <div class="yax" aria-hidden="true">
+                  <span>160</span><span>120</span><span>80</span><span>40</span
+                  ><span>0</span>
+                </div>
+                <sc-for list="{{weeks}}" as="w" hint-placeholder-count="4">
+                  <div class="col">
+                    <span class="tot">{{w.total}}</span>
+                    <div class="stack">
+                      <i
+                        class="c1"
+                        style="height:{{w.h1}}"
+                        title="intake {{w.v1}} AIU"
+                      ></i>
+                      <i
+                        class="c2"
+                        style="height:{{w.h2}}"
+                        title="planning {{w.v2}} AIU"
+                      ></i>
+                      <i
+                        class="c3"
+                        style="height:{{w.h3}}"
+                        title="implementation {{w.v3}} AIU"
+                      ></i>
+                      <i
+                        class="c4"
+                        style="height:{{w.h4}}"
+                        title="pr_review {{w.v4}} AIU"
+                      ></i>
+                      <i
+                        class="c5"
+                        style="height:{{w.h5}}"
+                        title="rework &amp; diagnosis {{w.v5}} AIU"
+                      ></i>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div class="xax" aria-hidden="true">
+                <span>14–20 Sep</span><span>21–27 Sep</span
+                ><span>28 Sep–4 Oct</span><span>5–11 Oct</span>
+              </div>
+              <a href="MetricsCost.dc.html" style="font-size: 12px"
+                >View as table</a
+              >
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="halts">
+            <div class="ph">
+              <h2 id="halts">Halts by reason</h2>
+              <span class="sub">23 halts</span><span style="flex: 1"></span
+              ><a href="MetricsHalts.dc.html">All halts</a>
+            </div>
+            <div class="pb">
+              <div class="hb">
+                <span class="mono">budget_exhausted</span
+                ><span class="bar"><i style="width: 100%"></i></span
+                ><span class="mono" style="text-align: right">7</span>
+              </div>
+              <div class="hb">
+                <span class="mono">package_stuck</span
+                ><span class="bar"><i style="width: 71%"></i></span
+                ><span class="mono" style="text-align: right">5</span>
+              </div>
+              <div class="hb">
+                <span class="mono">run_failed</span
+                ><span class="bar"><i style="width: 57%"></i></span
+                ><span class="mono" style="text-align: right">4</span>
+              </div>
+              <div class="hb">
+                <span class="mono">gate_rejected</span
+                ><span class="bar"><i style="width: 43%"></i></span
+                ><span class="mono" style="text-align: right">3</span>
+              </div>
+              <div class="hb">
+                <span class="mono">run_timed_out</span
+                ><span class="bar"><i style="width: 29%"></i></span
+                ><span class="mono" style="text-align: right">2</span>
+              </div>
+              <div class="hb">
+                <span class="mono">stopped_by_user</span
+                ><span class="bar"><i style="width: 29%"></i></span
+                ><span class="mono" style="text-align: right">2</span>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 8px;
+                  margin-top: 12px;
+                  font-size: 12px;
+                  color: #5b6b7a;
+                  align-items: center;
+                "
+              >
+                Who can fix them: <span class="tag t-owner">Owner 9</span
+                ><span class="tag t-op">Operator 5</span
+                ><span class="tag t-agent">Agent instructions 9</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel" aria-labelledby="improve">
+          <div class="ph">
+            <h2 id="improve">Where to improve the harness</h2>
+            <span class="sub"
+              >Patterns found by fixed rules over the last 30 days. Each one
+              links to its evidence.</span
+            >
+          </div>
+          <div class="ins">
+            <div class="in">
+              <span class="ic" aria-hidden="true"
+                ><svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path
+                    d="M12 8v5M12 16.5v.5M10.3 3.9 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
+                  ></path></svg
+              ></span>
+              <div>
+                <b>pr_review runs outgrow their cap</b>
+                <div class="ev">
+                  6 of 31 review runs reached the 5 AIU run cap before a
+                  verdict; 6 of the 7 budget halts were in pr_review.
+                </div>
+                <div class="fix">
+                  Raise the pr_review run cap, or review fewer lenses per run.
+                </div>
+              </div>
+              <a class="btn sm" href="MetricsCost.dc.html">Evidence</a>
+            </div>
+            <div class="in">
+              <span class="ic" aria-hidden="true"
+                ><svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path
+                    d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"
+                  ></path></svg
+              ></span>
+              <div>
+                <b>Resume loops on a stuck work package</b>
+                <div class="ev">
+                  PROJ-151 halted 3 times with package_stuck; each Resume re-ran
+                  WP-2 with no new commit.
+                </div>
+                <div class="fix">
+                  Ask for the package decision (accept or reopen) instead of
+                  offering a plain Resume.
+                </div>
+              </div>
+              <a class="btn sm" href="MetricsHalts.dc.html">Evidence</a>
+            </div>
+            <div class="in">
+              <span class="ic" aria-hidden="true"
+                ><svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path
+                    d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"
+                  ></path></svg
+              ></span>
+              <div>
+                <b>Plans fail the schema gate on their first try</b>
+                <div class="ev">
+                  13 of 41 planning runs (32%) failed plan_schema first; 9 of
+                  the 13 say an acceptance criterion has no test_ids.
+                </div>
+                <div class="fix">
+                  Tighten the Cartographer's instructions on test_ids.
+                </div>
+              </div>
+              <a class="btn sm" href="MetricsGates.dc.html">Evidence</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="errors">
+          <div class="ph">
+            <h2 id="errors">Most common errors</h2>
+            <span class="sub"
+              >Run exits, gate failures and halts grouped by message</span
+            ><span style="flex: 1"></span
+            ><a href="MetricsHalts.dc.html">All errors</a>
+          </div>
+          <div class="scroll">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Error</th>
+                  <th>Kind</th>
+                  <th>Phase</th>
+                  <th class="n">Times</th>
+                  <th class="n">Voyages</th>
+                  <th>Last seen</th>
+                  <th>Who fixes it</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    Review run reached its 5 AIU run cap before the verdict
+                  </td>
+                  <td><span class="badge b-halt">budget_exhausted</span></td>
+                  <td class="mono">pr_review</td>
+                  <td class="n mono">6</td>
+                  <td class="n mono">5</td>
+                  <td>2 h ago</td>
+                  <td><span class="tag t-agent">Agent instructions</span></td>
+                </tr>
+                <tr>
+                  <td>plan_schema: acceptance criterion has no test_ids</td>
+                  <td><span class="badge b-fail">gate fail</span></td>
+                  <td class="mono">planning</td>
+                  <td class="n mono">9</td>
+                  <td class="n mono">7</td>
+                  <td>yesterday</td>
+                  <td><span class="tag t-agent">Agent instructions</span></td>
+                </tr>
+                <tr>
+                  <td>Work package stays in_progress after 3 rounds</td>
+                  <td><span class="badge b-halt">package_stuck</span></td>
+                  <td class="mono">implementation</td>
+                  <td class="n mono">5</td>
+                  <td class="n mono">2</td>
+                  <td>40 m ago</td>
+                  <td><span class="tag t-owner">Owner</span></td>
+                </tr>
+                <tr>
+                  <td>Worker exited 1: model not available for this token</td>
+                  <td><span class="badge b-halt">run_failed</span></td>
+                  <td class="mono">planning</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">2</td>
+                  <td>3 days ago</td>
+                  <td><span class="tag t-op">Operator</span></td>
+                </tr>
+                <tr>
+                  <td>Gate tool crashed reading result.json</td>
+                  <td><span class="badge b-err">gate error</span></td>
+                  <td class="mono">pr_review</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">2</td>
+                  <td>5 days ago</td>
+                  <td><span class="tag t-op">Operator</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <div id="export" class="sub" style="font-size: 12px">
+          Export downloads the rows behind this page for the chosen period and
+          filters: runs.csv, halts.csv, gates.csv, errors.csv (or one JSON
+          file). Story text and agent output are not included.
+        </div>
+      </main>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1440,"height":1700}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          const period = (this.state && this.state.period) || '30';
+          const labels = { '7': 'Last 7 days', '30': 'Last 30 days', '90': 'Last 90 days' };
+          const periods = ['7', '30', '90'].map((p) => ({
+            label: labels[p],
+            cls: p === period ? 'chip on' : 'chip',
+            pick: () => this.setState({ period: p }),
+          }));
+          const raw = [
+            [4.2, 22.0, 36.5, 21.0, 4.5],
+            [4.8, 23.4, 41.0, 23.1, 5.2],
+            [4.6, 24.1, 45.2, 29.5, 6.2],
+            [5.0, 22.9, 48.6, 31.3, 9.7],
+          ];
+          const weeks = raw.map((r) => {
+            const w = { total: r.reduce((a, b) => a + b, 0).toFixed(1) };
+            r.forEach((v, i) => {
+              w['v' + (i + 1)] = v.toFixed(1);
+              w['h' + (i + 1)] = Math.round(v * 1.5) + 'px';
+            });
+            return w;
+          });
+          return { periods, weeks, periodNote: labels[period] + ' · 14 Sep–11 Oct 2026 · fictional data' };
+        }
+      }
+    </script>
+  </body>
+</html>

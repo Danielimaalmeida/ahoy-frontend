@@ -150,6 +150,18 @@ export function arrayOf(item: Check): Check {
   };
 }
 
+/** A JSON object used as a map: every value passes `item`, whatever its key. */
+export function recordOf(item: Check): Check {
+  return (value, at) => {
+    if (!isRecord(value)) return refuse(at, 'an object', value);
+    for (const [key, element] of Object.entries(value)) {
+      const why = item(element, `${at}.${key}`);
+      if (why !== null) return why;
+    }
+    return null;
+  };
+}
+
 /** An object whose fields pass their checks, in the order given. Fields that have no check are tolerated. */
 export function shape<T>(checks: Shape<T>): Check {
   const entries = Object.entries<Check>(checks);

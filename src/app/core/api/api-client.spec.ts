@@ -18,6 +18,7 @@ import { operationNamed, requestViolations } from '@testing/fixtures/contract';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
+import getMetrics from '@testing/fixtures/getMetrics.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
 import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
@@ -362,6 +363,21 @@ const CASES: readonly Case[] = [
     problem: 'unauthenticated',
   },
   {
+    op: 'getMetrics',
+    call: (api) =>
+      api.getMetrics({
+        from: '2026-09-11T09:00:00.000Z',
+        to: '2026-10-11T09:00:00.000Z',
+        model: 'claude-sonnet-5',
+      }),
+    method: 'GET',
+    url: '/api/v1/metrics?from=2026-09-11T09:00:00.000Z&to=2026-10-11T09:00:00.000Z&model=claude-sonnet-5',
+    reply: getMetrics,
+    status: 200,
+    value: getMetrics,
+    problem: 'validation_failed',
+  },
+  {
     op: 'getStoryDiagnosis',
     call: (api) => api.getStoryDiagnosis('PROJ-118'),
     method: 'GET',
@@ -576,7 +592,9 @@ describe('ApiClient', () => {
   });
 
   it('covers the implemented operations, including the Jira backlog and model catalogue', () => {
-    expect([...CASES.map((c) => c.op), 'getArtifactContent'].sort()).toEqual(
+    expect(
+      [...CASES.map((c) => c.op), 'getArtifactContent', 'exportMetrics'].sort()
+    ).toEqual(
       [
         'getHealth',
         'listModels',
@@ -608,6 +626,8 @@ describe('ApiClient', () => {
         'listAgentDiagnoses',
         'requestAgentDiagnosis',
         'cancelAgentDiagnosis',
+        'getMetrics',
+        'exportMetrics',
       ].sort()
     );
   });
@@ -858,6 +878,67 @@ describe('ApiClient', () => {
       const result = api.getHealth();
       reply(http.expectOne('/ahoy/api/v1/health'), getHealth, 200);
       expect(await result).toEqual({ ok: true, value: getHealth });
+    });
+  });
+
+  describe('exportMetrics', () => {
+    it('asks for one table as text and gives it with the file name the API chose', async () => {
+      const result = api.exportMetrics('halts', 'csv', {
+        from: '2026-09-11T09:00:00.000Z',
+        to: '2026-10-11T09:00:00.000Z',
+      });
+      const request = http.expectOne(
+        '/api/v1/metrics/export?from=2026-09-11T09:00:00.000Z&to=2026-10-11T09:00:00.000Z&table=halts&format=csv'
+      );
+      expect(request.request.method).toBe('GET');
+      expect(request.request.responseType).toBe('text');
+      expect(request.request.headers.has('Authorization')).toBe(false);
+      reply(
+        request,
+        'storyKey,at\r\nPROJ-151,2026-10-11T08:20:00.000Z\r\n',
+        200,
+        {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition':
+            'attachment; filename="ahoy-halts-2026-10-11.csv"',
+        }
+      );
+      expect(await result).toEqual({
+        ok: true,
+        value: {
+          text: 'storyKey,at\r\nPROJ-151,2026-10-11T08:20:00.000Z\r\n',
+          filename: 'ahoy-halts-2026-10-11.csv',
+          mediaType: 'text/csv; charset=utf-8',
+        },
+      });
+    });
+
+    it('names the file itself when the API names none, or names one with a path in it', async () => {
+      const result = api.exportMetrics('runs', 'json');
+      reply(
+        http.expectOne('/api/v1/metrics/export?table=runs&format=json'),
+        '[]',
+        200,
+        { 'Content-Disposition': 'attachment; filename="../../etc/passwd"' }
+      );
+      const outcome = await result;
+      expect(outcome.ok && outcome.value.filename).toBe('ahoy-runs.json');
+    });
+
+    it('reads the problem details of an error although the body was asked for as text', async () => {
+      const result = api.exportMetrics('errors', 'csv', {
+        from: '2026-10-02T00:00:00.000Z',
+        to: '2026-10-01T00:00:00.000Z',
+      });
+      reply(
+        http.expectOne((r) => r.url === '/api/v1/metrics/export'),
+        JSON.stringify(problemFor('validation_failed')),
+        400,
+        { 'Content-Type': 'application/problem+json' }
+      );
+      const outcome = await result;
+      expect(outcome.ok).toBe(false);
+      if (!outcome.ok) expect(outcome.error.kind).toBe('problem');
     });
   });
 

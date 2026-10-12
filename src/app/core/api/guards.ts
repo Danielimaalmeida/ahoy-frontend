@@ -21,6 +21,7 @@ import {
   optional,
   patterned,
   record,
+  recordOf,
   shape,
   text,
   timestamp,
@@ -43,6 +44,9 @@ import {
   type AgentDiagnosisList,
   type AhoyEvent,
   type Diagnosis,
+  type MetricsError,
+  type MetricsHalt,
+  type MetricsReport,
   type DiagnosisFinding,
   type AnswerAccepted,
   type Artifact,
@@ -452,5 +456,189 @@ export const isProblem = guard<Problem>(
     instance: optional(text),
     errors: optional(arrayOf(problemFieldError)),
     currentVersion: optional(positive),
+  })
+);
+
+const nullableCount = nullable(count);
+const diagnosisActor = oneOf(DIAGNOSIS_ACTORS);
+const diagnosisKind = oneOf(DIAGNOSIS_KINDS);
+type Item<List> = List extends readonly (infer T)[] ? T : never;
+
+const metricsHalt = shape<MetricsHalt>({
+  storyKey,
+  at: timestamp,
+  reason: text,
+  phase: nullable(text),
+  runId: nullable(runId),
+  kind: diagnosisKind,
+  actor: diagnosisActor,
+  action: text,
+  resumedAt: nullable(timestamp),
+});
+
+const metricsError = shape<MetricsError>({
+  source: oneOf(['halt', 'gate_fail', 'gate_error', 'run']),
+  code: text,
+  signature: text,
+  phase: nullable(text),
+  agent: nullable(text),
+  times: count,
+  stories: count,
+  firstSeen: timestamp,
+  lastSeen: timestamp,
+  exampleStory: storyKey,
+  exampleRunId: nullable(runId),
+});
+
+/** The metrics of one period: every number a whole number, every list of the shape the contract gives it. */
+export const isMetricsReport = guard<MetricsReport>(
+  'MetricsReport',
+  shape<MetricsReport>({
+    from: timestamp,
+    to: timestamp,
+    totals: shape<MetricsReport['totals']>({
+      nanoAiu,
+      runs: count,
+      runsSucceeded: count,
+      inputTokens: count,
+      outputTokens: count,
+      storiesFinished: count,
+      storiesDone: count,
+      storiesBlocked: count,
+      medianNanoAiuPerDoneStory: nullable(nanoAiu),
+      halts: count,
+      haltedStories: count,
+      repeatHaltStories: count,
+      gateEvaluations: count,
+      gatePasses: count,
+      gateErrors: count,
+    }),
+    weeks: arrayOf(
+      shape<Item<MetricsReport['weeks']>>({
+        weekStart: patterned(
+          'a date like 2026-10-05',
+          /^\d{4}-\d{2}-\d{2}$/,
+          10
+        ),
+        byPhase: recordOf(nanoAiu),
+      })
+    ),
+    phases: arrayOf(
+      shape<Item<MetricsReport['phases']>>({
+        phase: nonEmptyText,
+        runs: count,
+        nanoAiu,
+        medianNanoAiu: nanoAiu,
+        p90NanoAiu: nanoAiu,
+        runCapNanoAiu: nanoAiu,
+        runsAtCap: count,
+        medianDurationSeconds: nullableCount,
+        inputTokens: count,
+        outputTokens: count,
+      })
+    ),
+    agents: arrayOf(
+      shape<Item<MetricsReport['agents']>>({
+        agent: text,
+        model: nullable(text),
+        runs: count,
+        nanoAiu,
+        medianNanoAiu: nanoAiu,
+        notSucceeded: count,
+      })
+    ),
+    runOutcomes: arrayOf(
+      shape<Item<MetricsReport['runOutcomes']>>({ status: text, runs: count })
+    ),
+    topStories: arrayOf(
+      shape<Item<MetricsReport['topStories']>>({
+        key: storyKey,
+        phase: nonEmptyText,
+        status: oneOf(STORY_STATUSES),
+        spentNanoAiu: nanoAiu,
+        budgetNanoAiu: nanoAiu,
+        periodNanoAiu: nanoAiu,
+        runs: count,
+        halts: count,
+        topPhase: nonEmptyText,
+        topPhaseNanoAiu: nanoAiu,
+      })
+    ),
+    halts: arrayOf(metricsHalt),
+    haltReasons: arrayOf(
+      shape<Item<MetricsReport['haltReasons']>>({
+        reason: text,
+        kind: diagnosisKind,
+        actor: diagnosisActor,
+        action: text,
+        halts: count,
+        stories: count,
+        resumed: count,
+        fixedByFirstResume: count,
+        medianHaltedSeconds: nullableCount,
+      })
+    ),
+    repeatHalts: arrayOf(
+      shape<Item<MetricsReport['repeatHalts']>>({
+        storyKey,
+        kind: diagnosisKind,
+        halts: count,
+        resumes: count,
+        nanoAiuBetween: nanoAiu,
+        status: text,
+      })
+    ),
+    errors: arrayOf(metricsError),
+    gates: arrayOf(
+      shape<Item<MetricsReport['gates']>>({
+        gate: text,
+        phase: nonEmptyText,
+        runs: count,
+        pass: count,
+        fail: count,
+        rejectOrHalt: count,
+        error: count,
+        topFailure: nullable(
+          shape<{ signature: string; times: number }>({
+            signature: text,
+            times: count,
+          })
+        ),
+      })
+    ),
+    findings: arrayOf(
+      shape<Item<MetricsReport['findings']>>({ severity: text, count })
+    ),
+    reworkRounds: arrayOf(
+      shape<Item<MetricsReport['reworkRounds']>>({
+        rounds: count,
+        stories: count,
+      })
+    ),
+    waits: arrayOf(
+      shape<Item<MetricsReport['waits']>>({
+        kind: oneOf(['answers', 'decision', 'resume']),
+        gate: nullable(text),
+        times: count,
+        outcomes: recordOf(count),
+        medianSeconds: nullableCount,
+        p90Seconds: nullableCount,
+        waitingNow: count,
+        longestNowSeconds: nullableCount,
+      })
+    ),
+    insights: arrayOf(
+      shape<Item<MetricsReport['insights']>>({
+        rule: oneOf([
+          'phase_run_cap',
+          'resume_loop',
+          'gate_first_fail',
+          'gate_tooling_errors',
+        ]),
+        title: text,
+        evidence: text,
+        action: text,
+      })
+    ),
   })
 );

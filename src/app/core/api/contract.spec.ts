@@ -5,6 +5,7 @@ import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
+import getMetrics from '@testing/fixtures/getMetrics.json';
 import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
@@ -74,6 +75,7 @@ import {
 const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['listModels', listModels],
   ['listJiraBacklog', jiraBacklog],
+  ['getMetrics', getMetrics],
   ['getHealth', getHealth],
   ['listStories', listStories],
   ['startStory', startStory],
@@ -122,10 +124,11 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     const expected = [
       ...CLIENT_OPERATIONS.map(([id]) => id),
       'getArtifactContent',
+      'exportMetrics',
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 1).toBe(30);
+    expect(CLIENT_OPERATIONS.length + 2).toBe(32);
   });
 
   it('has no operation id twice', () => {
@@ -151,6 +154,15 @@ describe('each fixture is a valid successful answer of its operation', () => {
     );
     expect(listed).toBeDefined();
     expect(getArtifactContent.etag).toBe(`"${listed!.sha256}"`);
+  });
+
+  it('exportMetrics: the contract answers a CSV or JSON file to save, named in Content-Disposition', () => {
+    const op = operationNamed('exportMetrics');
+    expect(members(op.successMediaTypes)).toEqual([
+      'application/json',
+      'text/csv',
+    ]);
+    expect(op.successStatuses).toEqual(['200']);
   });
 
   it('the 2xx statuses the client tests use are the ones the contract documents for each command', () => {

@@ -8,6 +8,10 @@ are references, not code: they are excluded from lint, format, `tsc` and the bui
 | `wireframes/`    | "Ahoy UI wireframes", <https://claude.ai/artifact/LTbtxVqPbLAodmy4Vr44dY>   | `1791303315-8e37` | Design        |
 | `design-system/` | "Ahoy" (design system), <https://claude.ai/artifact/LAzfVgbze8zdoaShrSabtf> | `1791303933-1d4d` | Design System |
 
+The four Metrics boards (`Metrics`, `MetricsCost`, `MetricsHalts`, `MetricsGates`) were copied on **2026-10-11** from
+the copy of the wireframes the metrics design was made in, <https://claude.ai/artifact/HS3s2BFGctCdHQByyyu5JF>. The other
+boards here were not re-synced from it.
+
 ## What is here
 
 - `wireframes/`: the 12 boards (`Main`, `Voyages`, `Docks`, `SetSail`, `PlanReview`, `Questions`, `Running`, `Halted`,

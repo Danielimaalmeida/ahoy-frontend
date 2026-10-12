@@ -1,0 +1,352 @@
+// The Metrics pages (docs/design: Metrics, MetricsCost, MetricsHalts, MetricsGates). Shared by the shell and its
+// sections; the series colours follow the design's order and are restepped for the dark theme.
+:host {
+  display: block;
+  --metrics-s1: #2a78d6;
+  --metrics-s2: #eb6834;
+  --metrics-s3: #1baf7a;
+  --metrics-s4: #eda100;
+  --metrics-s5: #8f9ba8;
+  --metrics-pass: #1c6337;
+  --metrics-fail: #eda100;
+  --metrics-reject: #c23b3b;
+  --metrics-error: #2b3a47;
+}
+
+:host-context([data-theme='dark']) {
+  --metrics-s1: #5b9cf0;
+  --metrics-s2: #f08a5d;
+  --metrics-s3: #3cc795;
+  --metrics-s4: #f2b631;
+  --metrics-s5: #a7b2bd;
+  --metrics-pass: #3cb46b;
+  --metrics-fail: #f2b631;
+  --metrics-reject: #e06464;
+  --metrics-error: #a7b2bd;
+}
+
+.metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.metrics__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.metrics__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.metrics__lede {
+  margin: 4px 0 0;
+  max-width: 70ch;
+}
+
+.metrics__export,
+.metrics__filters,
+.metrics__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.metrics__filters {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.metrics__select,
+.metrics__text {
+  width: auto;
+  max-width: 100%;
+}
+
+.metrics__text {
+  flex: 1 1 160px;
+  max-width: 220px;
+}
+
+.metrics__status {
+  margin: 0;
+  min-height: 1.2em;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+}
+
+.metrics__loading,
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.kpi__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.kpi__value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.kpi__unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.kpi__note {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.strong {
+  font-weight: 700;
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+// Horizontal bars: label, bar, value.
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hbar {
+  display: grid;
+  grid-template-columns: minmax(110px, 38%) minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 10px;
+}
+
+.hbar__track {
+  height: 12px;
+  background: var(--surface-sunken);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hbar__fill {
+  display: block;
+  height: 100%;
+  background: var(--metrics-s1);
+  border-radius: 0 4px 4px 0;
+}
+
+// A 100% bar of outcomes; each segment carries its own colour and a 2px gap.
+.outcomes {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  min-width: 120px;
+}
+
+.outcomes__part {
+  display: block;
+  min-width: 2px;
+}
+
+.outcomes__part:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.outcomes__part:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.outcomes__part:only-child {
+  border-radius: 4px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.s1 {
+  background: var(--metrics-s1);
+}
+
+.s2 {
+  background: var(--metrics-s2);
+}
+
+.s3 {
+  background: var(--metrics-s3);
+}
+
+.s4 {
+  background: var(--metrics-s4);
+}
+
+.s5 {
+  background: var(--metrics-s5);
+}
+
+.pass {
+  background: var(--metrics-pass);
+}
+
+.fail {
+  background: var(--metrics-fail);
+}
+
+.reject {
+  background: var(--metrics-reject);
+}
+
+.error {
+  background: var(--metrics-error);
+}
+
+// The weekly stacked columns.
+.weeks {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  height: 180px;
+  padding: 8px 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.week {
+  display: flex;
+  flex: 1;
+  flex-direction: column-reverse;
+  gap: 2px;
+  height: 100%;
+  min-width: 24px;
+  justify-content: flex-start;
+}
+
+.week__part {
+  display: block;
+  width: 100%;
+}
+
+.week__part:last-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.week-labels {
+  display: flex;
+  gap: 18px;
+  padding: 6px 4px 0;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+
+.week-labels span {
+  flex: 1;
+  min-width: 24px;
+  text-align: center;
+}
+
+.insights {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insight {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.insight:last-child {
+  border-bottom: 0;
+}
+
+.insight__evidence {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.insight__action {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+}
+
+@media (max-width: 900px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

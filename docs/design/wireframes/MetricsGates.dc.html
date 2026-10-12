@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · Metrics gates</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+            color: #1b2733;
+          }
+          a {
+            color: #1a64d6;
+          }
+          a:hover {
+            color: #1747a6;
+          }
+          .top {
+            background: #fff;
+            border-bottom: 1px solid #e3e8ee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 24px;
+            box-sizing: border-box;
+          }
+          .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 17px;
+            color: #1b2733;
+            text-decoration: none;
+            margin-right: 12px;
+          }
+          .logo:hover {
+            color: #1b2733;
+          }
+          .tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            color: #5b6b7a;
+            font-weight: 500;
+            text-decoration: none;
+          }
+          .tab:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .tab.on {
+            background: #e7effc;
+            color: #1747a6;
+            font-weight: 600;
+          }
+          .cnt {
+            background: #1a64d6;
+            color: #fff;
+            border-radius: 999px;
+            padding: 0 6px;
+            font-size: 11px;
+            line-height: 17px;
+            font-weight: 600;
+          }
+          .soon {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #5b6b7a;
+            background: #eef2f5;
+            border-radius: 999px;
+            padding: 1px 6px;
+          }
+          .search {
+            flex: 0 1 300px;
+            height: 34px;
+            border: 1px solid #e3e8ee;
+            border-radius: 999px;
+            padding: 0 14px;
+            font: inherit;
+            background: #f6f8fa;
+            box-sizing: border-box;
+            margin-left: auto;
+            color: #1b2733;
+          }
+          .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #1c6337;
+            font-weight: 500;
+            margin: 0 6px;
+          }
+          .live i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #2e9b5b;
+            box-shadow: 0 0 0 3px #ddf3e6;
+          }
+          .av {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e7effc;
+            color: #1747a6;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+            flex: none;
+          }
+          .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #1b2733;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            box-sizing: border-box;
+          }
+          .btn:hover {
+            background: #f1f4f7;
+            color: #1b2733;
+          }
+          .btn.primary {
+            background: #1a64d6;
+            border-color: #1a64d6;
+            color: #fff;
+          }
+          .btn.primary:hover {
+            background: #1755b8;
+            color: #fff;
+          }
+          .btn.sm {
+            height: 28px;
+            padding: 0 11px;
+            font-size: 12px;
+            border-radius: 9px;
+          }
+          .page {
+            padding: 22px 24px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 1360px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+          }
+          h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+          }
+          h2 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+          }
+          .sub {
+            color: #5b6b7a;
+          }
+          .panel {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            min-width: 0;
+            overflow: hidden;
+          }
+          .ph {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #eef2f5;
+          }
+          .pb {
+            padding: 14px 16px;
+          }
+          .scroll {
+            overflow-x: auto;
+          }
+          table.t {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .t th {
+            text-align: left;
+            font-size: 11px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #5b6b7a;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-bottom: 1px solid #e3e8ee;
+            background: #fafbfc;
+            white-space: nowrap;
+          }
+          .t th.n,
+          .t td.n {
+            text-align: right;
+          }
+          .t td {
+            padding: 7px 14px;
+            border-bottom: 1px solid #eef2f5;
+            vertical-align: middle;
+            height: 24px;
+          }
+          .t tr:last-child td {
+            border-bottom: 0;
+          }
+          .t tbody tr:hover td {
+            background: #f7fafe;
+          }
+          .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 500;
+          }
+          .key {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: #1747a6;
+            text-decoration: none;
+            margin-right: 6px;
+          }
+          .chip {
+            display: inline-flex;
+            align-items: center;
+            height: 30px;
+            padding: 0 12px;
+            border-radius: 999px;
+            border: 1px solid #d5dce3;
+            background: #fff;
+            color: #3d4b59;
+            font: inherit;
+            font-weight: 500;
+            cursor: pointer;
+          }
+          .chip.on {
+            background: #1b2733;
+            border-color: #1b2733;
+            color: #fff;
+            font-weight: 600;
+          }
+          .sel {
+            height: 30px;
+            border: 1px solid #d5dce3;
+            border-radius: 9px;
+            background: #fff;
+            font: inherit;
+            color: #1b2733;
+            padding: 0 8px;
+          }
+          .flbl {
+            font-size: 12px;
+            color: #5b6b7a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .kpis {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+          }
+          .kpi {
+            background: #fff;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+          }
+          .kpi .lbl {
+            font-size: 12px;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .kpi b {
+            font-size: 28px;
+            line-height: 1.1;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+          }
+          .kpi b small {
+            font-size: 14px;
+            color: #5b6b7a;
+            font-weight: 600;
+          }
+          .delta {
+            font-size: 12px;
+            color: #5b6b7a;
+          }
+          .delta.up {
+            color: #8a3a00;
+          }
+          .delta.good {
+            color: #1c6337;
+          }
+          .two {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+            gap: 16px;
+          }
+          .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+            color: #3d4b59;
+          }
+          .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .sw {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: inline-block;
+          }
+          .c1 {
+            background: #2a78d6;
+          }
+          .c2 {
+            background: #eb6834;
+          }
+          .c3 {
+            background: #1baf7a;
+          }
+          .c4 {
+            background: #eda100;
+          }
+          .c5 {
+            background: #8f9ba8;
+          }
+          .chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 28px;
+            height: 240px;
+            padding: 8px 8px 0 44px;
+            border-bottom: 1px solid #c9d2db;
+            position: relative;
+            box-sizing: border-box;
+            background-image: linear-gradient(#eef2f5 1px, transparent 1px);
+            background-size: 100% 60px;
+            background-position: 0 0;
+          }
+          .yax {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #5b6b7a;
+            padding-bottom: 2px;
+          }
+          .col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+          }
+          .stack {
+            width: 56px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 2px;
+          }
+          .stack i {
+            display: block;
+            width: 100%;
+          }
+          .stack i:last-child {
+            border-radius: 4px 4px 0 0;
+          }
+          .tot {
+            font-size: 12px;
+            font-weight: 600;
+          }
+          .xax {
+            display: flex;
+            gap: 28px;
+            padding: 6px 8px 0 44px;
+            font-size: 11.5px;
+            color: #5b6b7a;
+          }
+          .xax span {
+            flex: 1;
+            text-align: center;
+          }
+          .hb {
+            display: grid;
+            grid-template-columns: 150px minmax(0, 1fr) 36px;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+          }
+          .hb .bar {
+            height: 12px;
+            background: #eef2f5;
+            border-radius: 999px;
+            overflow: hidden;
+          }
+          .hb .bar i {
+            display: block;
+            height: 100%;
+            background: #c23b3b;
+            border-radius: 0 4px 4px 0;
+          }
+          .hb .who {
+            font-size: 11px;
+            color: #5b6b7a;
+          }
+          .tag {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .t-owner {
+            background: #e7effc;
+            color: #1747a6;
+          }
+          .t-op {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .t-agent {
+            background: #eee8fb;
+            color: #4e3290;
+          }
+          .ins {
+            display: flex;
+            flex-direction: column;
+          }
+          .in {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr) auto;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eef2f5;
+            align-items: start;
+          }
+          .in:last-child {
+            border-bottom: 0;
+          }
+          .in .ic {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #fff1d6;
+            color: #7a4b00;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .in b {
+            display: block;
+          }
+          .in .ev {
+            color: #5b6b7a;
+            font-size: 12.5px;
+            margin-top: 2px;
+          }
+          .in .fix {
+            margin-top: 4px;
+            font-size: 12.5px;
+          }
+          .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            height: 22px;
+            padding: 0 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .b-halt {
+            background: #fde3e3;
+            color: #962020;
+          }
+          .b-fail {
+            background: #fff1d6;
+            color: #7a4b00;
+          }
+          .b-err {
+            background: #2b3a47;
+            color: #fff;
+          }
+          @media (max-width: 900px) {
+            .kpis {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .two {
+              grid-template-columns: minmax(0, 1fr);
+            }
+          }
+        </style>
+      </helmet>
+      <header class="top">
+        <a class="logo" href="Main.dc.html"
+          ><svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1A64D6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="1.8"></circle>
+            <path
+              d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+            ></path></svg
+          >Ahoy</a
+        >
+        <nav style="display: flex; flex-wrap: wrap; gap: 4px" aria-label="Main">
+          <a class="tab" href="Main.dc.html"
+            >Needs you <span class="cnt">4</span></a
+          >
+          <a class="tab" href="Ideas.dc.html">Ideas</a>
+          <a class="tab" href="Voyages.dc.html">Voyages</a>
+          <a class="tab" href="Docks.dc.html"
+            >Backlog <span class="soon">planned</span></a
+          >
+          <a class="tab on" href="Metrics.dc.html">Metrics</a>
+        </nav>
+        <label for="q" style="position: absolute; left: -9999px"
+          >Search voyages</label
+        >
+        <input
+          id="q"
+          class="search"
+          type="search"
+          placeholder="Search by key or title"
+        />
+        <span class="live"><i></i>Live</span>
+        <a class="btn primary" href="SetSail.dc.html"
+          ><svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 3v14M12 4l7 12h-7M11 7l-6 9h6M3 19h18l-2 2H5z"
+            ></path></svg
+          >Start voyage</a
+        >
+        <span class="av" title="alex@example.com (SSO)">AL</span>
+      </header>
+      <main class="page">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 12px;
+          "
+        >
+          <div style="flex: 1 1 420px">
+            <h1>Metrics</h1>
+            <div class="sub">
+              Where the harness spends AIU, where voyages stop and which errors
+              repeat. Read-only, built from runs, gates and events.
+            </div>
+          </div>
+          <a class="btn" href="#export"
+            ><svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg
+            >Export CSV</a
+          >
+          <a class="btn" href="#export">Export JSON</a>
+        </div>
+
+        <div
+          style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"
+        >
+          <sc-for list="{{periods}}" as="p" hint-placeholder-count="3">
+            <button type="button" class="{{p.cls}}" onClick="{{p.pick}}">
+              {{p.label}}
+            </button>
+          </sc-for>
+          <span style="width: 12px"></span>
+          <label class="flbl" for="f-owner"
+            >Owner
+            <select id="f-owner" class="sel">
+              <option>Everyone</option>
+              <option>alex@example.com</option>
+              <option>sam@example.com</option>
+            </select></label
+          >
+          <label class="flbl" for="f-repo"
+            >Repository
+            <select id="f-repo" class="sel">
+              <option>All</option>
+              <option>billing-web</option>
+              <option>orders-api</option>
+            </select></label
+          >
+          <label class="flbl" for="f-model"
+            >Model
+            <select id="f-model" class="sel">
+              <option>All</option>
+              <option>claude-sonnet-5</option>
+              <option>claude-opus-5</option>
+            </select></label
+          >
+          <span class="sub" style="margin-left: auto; font-size: 12px"
+            >{{periodNote}}</span
+          >
+        </div>
+
+        <nav
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            border-bottom: 1px solid #e3e8ee;
+          "
+          aria-label="Metrics sections"
+        >
+          <a class="tab" href="Metrics.dc.html">Overview</a>
+          <a class="tab" href="MetricsCost.dc.html">Cost</a>
+          <a class="tab" href="MetricsHalts.dc.html">Halts &amp; errors</a>
+          <a class="tab on" href="MetricsGates.dc.html"
+            >Gates &amp; human wait</a
+          >
+        </nav>
+        <div class="kpis">
+          <div class="kpi">
+            <span class="lbl">Gate pass on first run</span><b>78%</b
+            ><span class="delta good">146 of 186 runs · +5 pts</span>
+          </div>
+          <div class="kpi">
+            <span class="lbl">Rework rounds per finished voyage</span
+            ><b>1 <small>median</small></b
+            ><span class="delta">max 3 · ceiling 3</span>
+          </div>
+          <div class="kpi">
+            <span class="lbl">Waiting on a person (median)</span><b>2 h 50 m</b
+            ><span class="delta up">plan review is the slowest: 3 h 40 m</span>
+          </div>
+          <div class="kpi">
+            <span class="lbl">Tooling errors</span><b>2</b
+            ><span class="delta">never counted as a failure</span>
+          </div>
+        </div>
+
+        <section class="panel" aria-labelledby="gate-t">
+          <div class="ph">
+            <h2 id="gate-t">Automated gates</h2>
+            <span class="sub">One evaluation per agent run</span>
+            <span style="flex: 1"></span>
+            <span class="legend"
+              ><span><i class="sw" style="background: #1c6337"></i>pass</span
+              ><span
+                ><i class="sw" style="background: #eda100"></i>fail or
+                rework</span
+              ><span
+                ><i class="sw" style="background: #c23b3b"></i>reject or
+                halt</span
+              ><span
+                ><i class="sw" style="background: #2b3a47"></i>error</span
+              ></span
+            >
+          </div>
+          <div class="scroll">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Gate</th>
+                  <th>Phase</th>
+                  <th class="n">Runs</th>
+                  <th style="width: 34%">Outcomes</th>
+                  <th class="n">Pass</th>
+                  <th class="n">Fail / rework</th>
+                  <th class="n">Reject / halt</th>
+                  <th class="n">Error</th>
+                  <th>Top failure</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono">intake</td>
+                  <td class="mono">intake</td>
+                  <td class="n mono">28</td>
+                  <td>
+                    <div style="display: flex; gap: 2px; height: 12px">
+                      <i
+                        style="
+                          flex: 27;
+                          background: #1c6337;
+                          border-radius: 4px 0 0 4px;
+                        "
+                      ></i
+                      ><i
+                        style="
+                          flex: 1;
+                          background: #eda100;
+                          border-radius: 0 4px 4px 0;
+                        "
+                      ></i>
+                    </div>
+                  </td>
+                  <td class="n mono">27</td>
+                  <td class="n mono">1</td>
+                  <td class="n mono">0</td>
+                  <td class="n mono">0</td>
+                  <td>Snapshot misses the Jira description</td>
+                </tr>
+                <tr>
+                  <td class="mono">plan_schema</td>
+                  <td class="mono">planning</td>
+                  <td class="n mono">41</td>
+                  <td>
+                    <div style="display: flex; gap: 2px; height: 12px">
+                      <i
+                        style="
+                          flex: 28;
+                          background: #1c6337;
+                          border-radius: 4px 0 0 4px;
+                        "
+                      ></i
+                      ><i
+                        style="
+                          flex: 13;
+                          background: #eda100;
+                          border-radius: 0 4px 4px 0;
+                        "
+                      ></i>
+                    </div>
+                  </td>
+                  <td class="n mono">28</td>
+                  <td class="n mono" style="color: #7a4b00; font-weight: 700">
+                    13
+                  </td>
+                  <td class="n mono">0</td>
+                  <td class="n mono">0</td>
+                  <td>Criterion has no test_ids (9)</td>
+                </tr>
+                <tr>
+                  <td class="mono">implementation</td>
+                  <td class="mono">implementation</td>
+                  <td class="n mono">52</td>
+                  <td>
+                    <div style="display: flex; gap: 2px; height: 12px">
+                      <i
+                        style="
+                          flex: 41;
+                          background: #1c6337;
+                          border-radius: 4px 0 0 4px;
+                        "
+                      ></i
+                      ><i style="flex: 9; background: #eda100"></i
+                      ><i
+                        style="
+                          flex: 2;
+                          background: #c23b3b;
+                          border-radius: 0 4px 4px 0;
+                        "
+                      ></i>
+                    </div>
+                  </td>
+                  <td class="n mono">41</td>
+                  <td class="n mono">9</td>
+                  <td class="n mono">2</td>
+                  <td class="n mono">0</td>
+                  <td>Tests named in the plan not run (5)</td>
+                </tr>
+                <tr>
+                  <td class="mono">review</td>
+                  <td class="mono">pr_review</td>
+                  <td class="n mono">31</td>
+                  <td>
+                    <div style="display: flex; gap: 2px; height: 12px">
+                      <i
+                        style="
+                          flex: 17;
+                          background: #1c6337;
+                          border-radius: 4px 0 0 4px;
+                        "
+                      ></i
+                      ><i style="flex: 9; background: #eda100"></i
+                      ><i style="flex: 3; background: #c23b3b"></i
+                      ><i
+                        style="
+                          flex: 2;
+                          background: #2b3a47;
+                          border-radius: 0 4px 4px 0;
+                        "
+                      ></i>
+                    </div>
+                  </td>
+                  <td class="n mono">17</td>
+                  <td class="n mono">9</td>
+                  <td class="n mono">3</td>
+                  <td class="n mono">2</td>
+                  <td>Medium finding sent to rework (7)</td>
+                </tr>
+                <tr>
+                  <td class="mono">rework</td>
+                  <td class="mono">implementation</td>
+                  <td class="n mono">34</td>
+                  <td>
+                    <div style="display: flex; gap: 2px; height: 12px">
+                      <i
+                        style="
+                          flex: 33;
+                          background: #1c6337;
+                          border-radius: 4px 0 0 4px;
+                        "
+                      ></i
+                      ><i
+                        style="
+                          flex: 1;
+                          background: #eda100;
+                          border-radius: 0 4px 4px 0;
+                        "
+                      ></i>
+                    </div>
+                  </td>
+                  <td class="n mono">33</td>
+                  <td class="n mono">1</td>
+                  <td class="n mono">0</td>
+                  <td class="n mono">0</td>
+                  <td>Rework note not addressed</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="two">
+          <section class="panel" aria-labelledby="find-t">
+            <div class="ph">
+              <h2 id="find-t">Review findings by severity</h2>
+              <span class="sub">43 findings in 31 reviews</span>
+            </div>
+            <div class="pb">
+              <div class="hb">
+                <span class="mono">critical</span
+                ><span class="bar"><i style="width: 5%"></i></span
+                ><span class="mono" style="text-align: right">1</span>
+              </div>
+              <div class="hb">
+                <span class="mono">major</span
+                ><span class="bar"
+                  ><i style="width: 27%; background: #b5560f"></i></span
+                ><span class="mono" style="text-align: right">6</span>
+              </div>
+              <div class="hb">
+                <span class="mono">medium</span
+                ><span class="bar"
+                  ><i style="width: 64%; background: #eda100"></i></span
+                ><span class="mono" style="text-align: right">14</span>
+              </div>
+              <div class="hb">
+                <span class="mono">minor</span
+                ><span class="bar"
+                  ><i style="width: 100%; background: #8f9ba8"></i></span
+                ><span class="mono" style="text-align: right">22</span>
+              </div>
+              <div class="sub" style="font-size: 12px; margin-top: 8px">
+                medium and above send the work to rework.
+              </div>
+            </div>
+          </section>
+          <section class="panel" aria-labelledby="rw-t">
+            <div class="ph">
+              <h2 id="rw-t">Rework rounds per finished voyage</h2>
+              <span class="sub">14 voyages</span>
+            </div>
+            <div class="pb">
+              <div class="hb">
+                <span class="mono">0 rounds</span
+                ><span class="bar"
+                  ><i style="width: 100%; background: #1a64d6"></i></span
+                ><span class="mono" style="text-align: right">6</span>
+              </div>
+              <div class="hb">
+                <span class="mono">1 round</span
+                ><span class="bar"
+                  ><i style="width: 83%; background: #1a64d6"></i></span
+                ><span class="mono" style="text-align: right">5</span>
+              </div>
+              <div class="hb">
+                <span class="mono">2 rounds</span
+                ><span class="bar"
+                  ><i style="width: 33%; background: #1a64d6"></i></span
+                ><span class="mono" style="text-align: right">2</span>
+              </div>
+              <div class="hb">
+                <span class="mono">3 rounds (ceiling)</span
+                ><span class="bar"
+                  ><i style="width: 17%; background: #1a64d6"></i></span
+                ><span class="mono" style="text-align: right">1</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel" aria-labelledby="wait-t">
+          <div class="ph">
+            <h2 id="wait-t">Human gates and waiting time</h2>
+            <span class="sub"
+              >From the moment a voyage needs a person until someone acts</span
+            >
+          </div>
+          <div class="scroll">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Waiting for</th>
+                  <th class="n">Times</th>
+                  <th>Outcome</th>
+                  <th class="n">Median wait</th>
+                  <th class="n">p90 wait</th>
+                  <th class="n">Waiting now</th>
+                  <th class="n">Longest now</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Answers to agent questions</td>
+                  <td class="n mono">19</td>
+                  <td>52 questions answered</td>
+                  <td class="n">1 h 20 m</td>
+                  <td class="n">9 h</td>
+                  <td class="n mono">1</td>
+                  <td class="n">48 m</td>
+                </tr>
+                <tr>
+                  <td>Plan review <span class="mono">plan_accepted</span></td>
+                  <td class="n mono">12</td>
+                  <td>8 approved · 3 sent back · 1 rejected</td>
+                  <td class="n">3 h 40 m</td>
+                  <td class="n">22 h</td>
+                  <td class="n mono">1</td>
+                  <td class="n">22 m</td>
+                </tr>
+                <tr>
+                  <td>Delivery <span class="mono">delivery_accepted</span></td>
+                  <td class="n mono">6</td>
+                  <td>5 approved · 1 sent back</td>
+                  <td class="n">2 h 50 m</td>
+                  <td class="n">7 h</td>
+                  <td class="n mono">0</td>
+                  <td class="n">–</td>
+                </tr>
+                <tr>
+                  <td>Resume after a halt</td>
+                  <td class="n mono">23</td>
+                  <td>20 resumed · 3 still halted</td>
+                  <td class="n">2 h 15 m</td>
+                  <td class="n">19 h</td>
+                  <td class="n mono">3</td>
+                  <td class="n">2 h 10 m</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":1440,"height":1450}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          const period = (this.state && this.state.period) || '30';
+          const labels = { '7': 'Last 7 days', '30': 'Last 30 days', '90': 'Last 90 days' };
+          const periods = ['7', '30', '90'].map((p) => ({
+            label: labels[p],
+            cls: p === period ? 'chip on' : 'chip',
+            pick: () => this.setState({ period: p }),
+          }));
+          return { periods, periodNote: labels[period] + ' · 14 Sep–11 Oct 2026 · fictional data' };
+        }
+      }
+    </script>
+  </body>
+</html>

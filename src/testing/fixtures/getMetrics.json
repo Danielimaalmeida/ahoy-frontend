@@ -1,0 +1,666 @@
+{
+  "from": "2026-09-11T09:00:00.000Z",
+  "to": "2026-10-11T09:00:00.000Z",
+  "totals": {
+    "nanoAiu": 412800000000,
+    "runs": 186,
+    "runsSucceeded": 161,
+    "inputTokens": 48200000,
+    "outputTokens": 3100000,
+    "storiesFinished": 14,
+    "storiesDone": 11,
+    "storiesBlocked": 3,
+    "medianNanoAiuPerDoneStory": 26400000000,
+    "halts": 23,
+    "haltedStories": 17,
+    "repeatHaltStories": 4,
+    "gateEvaluations": 186,
+    "gatePasses": 146,
+    "gateErrors": 2
+  },
+  "weeks": [
+    {
+      "weekStart": "2026-09-14",
+      "byPhase": {
+        "intake": 4200000000,
+        "planning": 22000000000,
+        "implementation": 36500000000,
+        "pr_review": 21000000000,
+        "rework": 4500000000
+      }
+    },
+    {
+      "weekStart": "2026-09-21",
+      "byPhase": {
+        "intake": 4800000000,
+        "planning": 23400000000,
+        "implementation": 41000000000,
+        "pr_review": 23100000000,
+        "rework": 5200000000
+      }
+    },
+    {
+      "weekStart": "2026-09-28",
+      "byPhase": {
+        "intake": 4600000000,
+        "planning": 24100000000,
+        "implementation": 45200000000,
+        "pr_review": 29500000000,
+        "rework": 6200000000
+      }
+    },
+    {
+      "weekStart": "2026-10-05",
+      "byPhase": {
+        "intake": 5000000000,
+        "planning": 22900000000,
+        "implementation": 48600000000,
+        "pr_review": 31300000000,
+        "rework": 9700000000
+      }
+    }
+  ],
+  "phases": [
+    {
+      "phase": "implementation",
+      "runs": 52,
+      "nanoAiu": 171300000000,
+      "medianNanoAiu": 3050000000,
+      "p90NanoAiu": 5600000000,
+      "runCapNanoAiu": 10000000000,
+      "runsAtCap": 0,
+      "medianDurationSeconds": 1440,
+      "inputTokens": 21000000,
+      "outputTokens": 1400000
+    },
+    {
+      "phase": "pr_review",
+      "runs": 31,
+      "nanoAiu": 104900000000,
+      "medianNanoAiu": 3100000000,
+      "p90NanoAiu": 5000000000,
+      "runCapNanoAiu": 5000000000,
+      "runsAtCap": 6,
+      "medianDurationSeconds": 840,
+      "inputTokens": 12500000,
+      "outputTokens": 700000
+    },
+    {
+      "phase": "planning",
+      "runs": 41,
+      "nanoAiu": 92400000000,
+      "medianNanoAiu": 2100000000,
+      "p90NanoAiu": 3900000000,
+      "runCapNanoAiu": 6000000000,
+      "runsAtCap": 1,
+      "medianDurationSeconds": 660,
+      "inputTokens": 9800000,
+      "outputTokens": 650000
+    },
+    {
+      "phase": "rework",
+      "runs": 34,
+      "nanoAiu": 25600000000,
+      "medianNanoAiu": 600000000,
+      "p90NanoAiu": 1600000000,
+      "runCapNanoAiu": 3000000000,
+      "runsAtCap": 0,
+      "medianDurationSeconds": 360,
+      "inputTokens": 3100000,
+      "outputTokens": 250000
+    },
+    {
+      "phase": "intake",
+      "runs": 28,
+      "nanoAiu": 18600000000,
+      "medianNanoAiu": 620000000,
+      "p90NanoAiu": 950000000,
+      "runCapNanoAiu": 2000000000,
+      "runsAtCap": 0,
+      "medianDurationSeconds": 180,
+      "inputTokens": 1800000,
+      "outputTokens": 100000
+    }
+  ],
+  "agents": [
+    {
+      "agent": "backend-implementer",
+      "model": "claude-sonnet-5",
+      "runs": 34,
+      "nanoAiu": 108100000000,
+      "medianNanoAiu": 3000000000,
+      "notSucceeded": 2
+    },
+    {
+      "agent": "lookout",
+      "model": "claude-sonnet-5",
+      "runs": 31,
+      "nanoAiu": 104900000000,
+      "medianNanoAiu": 3100000000,
+      "notSucceeded": 6
+    },
+    {
+      "agent": "frontend-implementer",
+      "model": "claude-sonnet-5",
+      "runs": 18,
+      "nanoAiu": 63200000000,
+      "medianNanoAiu": 3400000000,
+      "notSucceeded": 2
+    },
+    {
+      "agent": "cartographer",
+      "model": "claude-sonnet-5",
+      "runs": 30,
+      "nanoAiu": 61200000000,
+      "medianNanoAiu": 1900000000,
+      "notSucceeded": 2
+    },
+    {
+      "agent": "cartographer",
+      "model": "claude-opus-5",
+      "runs": 11,
+      "nanoAiu": 31200000000,
+      "medianNanoAiu": 2600000000,
+      "notSucceeded": 1
+    },
+    {
+      "agent": "rework",
+      "model": null,
+      "runs": 34,
+      "nanoAiu": 25600000000,
+      "medianNanoAiu": 600000000,
+      "notSucceeded": 1
+    },
+    {
+      "agent": "navigator",
+      "model": "claude-sonnet-5",
+      "runs": 28,
+      "nanoAiu": 18600000000,
+      "medianNanoAiu": 620000000,
+      "notSucceeded": 0
+    }
+  ],
+  "runOutcomes": [
+    {
+      "status": "succeeded",
+      "runs": 161
+    },
+    {
+      "status": "budget_exceeded",
+      "runs": 7
+    },
+    {
+      "status": "failed",
+      "runs": 6
+    },
+    {
+      "status": "awaiting_input",
+      "runs": 5
+    },
+    {
+      "status": "cancelled",
+      "runs": 3
+    },
+    {
+      "status": "lost",
+      "runs": 2
+    },
+    {
+      "status": "timed_out",
+      "runs": 2
+    }
+  ],
+  "topStories": [
+    {
+      "key": "PROJ-151",
+      "phase": "implementation",
+      "status": "halted",
+      "spentNanoAiu": 28900000000,
+      "budgetNanoAiu": 30000000000,
+      "periodNanoAiu": 28900000000,
+      "runs": 17,
+      "halts": 3,
+      "topPhase": "implementation",
+      "topPhaseNanoAiu": 17200000000
+    },
+    {
+      "key": "PROJ-144",
+      "phase": "pr_review",
+      "status": "running",
+      "spentNanoAiu": 37600000000,
+      "budgetNanoAiu": 40000000000,
+      "periodNanoAiu": 37600000000,
+      "runs": 14,
+      "halts": 2,
+      "topPhase": "pr_review",
+      "topPhaseNanoAiu": 15000000000
+    },
+    {
+      "key": "PROJ-160",
+      "phase": "delivery_gate",
+      "status": "awaiting_decision",
+      "spentNanoAiu": 27300000000,
+      "budgetNanoAiu": 30000000000,
+      "periodNanoAiu": 27300000000,
+      "runs": 12,
+      "halts": 0,
+      "topPhase": "implementation",
+      "topPhaseNanoAiu": 11800000000
+    },
+    {
+      "key": "PROJ-123",
+      "phase": "done",
+      "status": "terminal",
+      "spentNanoAiu": 26400000000,
+      "budgetNanoAiu": 30000000000,
+      "periodNanoAiu": 26400000000,
+      "runs": 11,
+      "halts": 1,
+      "topPhase": "implementation",
+      "topPhaseNanoAiu": 10100000000
+    },
+    {
+      "key": "PROJ-131",
+      "phase": "done",
+      "status": "terminal",
+      "spentNanoAiu": 21000000000,
+      "budgetNanoAiu": 25000000000,
+      "periodNanoAiu": 21000000000,
+      "runs": 9,
+      "halts": 0,
+      "topPhase": "pr_review",
+      "topPhaseNanoAiu": 7400000000
+    }
+  ],
+  "halts": [
+    {
+      "storyKey": "PROJ-151",
+      "at": "2026-10-11T08:20:00.000Z",
+      "reason": "package_stuck",
+      "phase": "implementation",
+      "runId": "proj-151-implementation-007-ab12",
+      "kind": "other",
+      "actor": "story_owner",
+      "action": "Accept or reopen the work package, then resume.",
+      "resumedAt": null
+    },
+    {
+      "storyKey": "PROJ-144",
+      "at": "2026-10-11T07:00:00.000Z",
+      "reason": "budget_exhausted",
+      "phase": "pr_review",
+      "runId": "proj-144-pr_review-004-cd34",
+      "kind": "budget_exhausted",
+      "actor": "story_owner",
+      "action": "Raise the story's budget, then resume it.",
+      "resumedAt": "2026-10-11T08:10:00.000Z"
+    },
+    {
+      "storyKey": "PROJ-118",
+      "at": "2026-10-08T10:00:00.000Z",
+      "reason": "run_failed",
+      "phase": "planning",
+      "runId": "proj-118-planning-002-ef56",
+      "kind": "configuration",
+      "actor": "operator",
+      "action": "Give the worker access to the model, then resume.",
+      "resumedAt": null
+    }
+  ],
+  "haltReasons": [
+    {
+      "reason": "budget_exhausted",
+      "kind": "budget_exhausted",
+      "actor": "story_owner",
+      "action": "Raise the story's budget, then resume it.",
+      "halts": 7,
+      "stories": 6,
+      "resumed": 7,
+      "fixedByFirstResume": 4,
+      "medianHaltedSeconds": 6000
+    },
+    {
+      "reason": "package_stuck",
+      "kind": "other",
+      "actor": "story_owner",
+      "action": "Accept or reopen the work package, then resume.",
+      "halts": 5,
+      "stories": 2,
+      "resumed": 3,
+      "fixedByFirstResume": 0,
+      "medianHaltedSeconds": 21900
+    },
+    {
+      "reason": "run_failed",
+      "kind": "configuration",
+      "actor": "operator",
+      "action": "Give the worker access to the model, then resume.",
+      "halts": 3,
+      "stories": 2,
+      "resumed": 2,
+      "fixedByFirstResume": 1,
+      "medianHaltedSeconds": 12600
+    },
+    {
+      "reason": "gate_rejected",
+      "kind": "gate_rejected",
+      "actor": "story_owner",
+      "action": "Resume the story: the agent runs again and is told why the gate refused its output.",
+      "halts": 3,
+      "stories": 3,
+      "resumed": 3,
+      "fixedByFirstResume": 2,
+      "medianHaltedSeconds": 17400
+    },
+    {
+      "reason": "run_timed_out",
+      "kind": "run_timed_out",
+      "actor": "story_owner",
+      "action": "Resume the story to try again.",
+      "halts": 2,
+      "stories": 2,
+      "resumed": 2,
+      "fixedByFirstResume": 2,
+      "medianHaltedSeconds": 2400
+    },
+    {
+      "reason": "stopped_by_user",
+      "kind": "stopped_by_user",
+      "actor": "story_owner",
+      "action": "Resume it when the reason no longer holds.",
+      "halts": 2,
+      "stories": 2,
+      "resumed": 2,
+      "fixedByFirstResume": 2,
+      "medianHaltedSeconds": 64800
+    },
+    {
+      "reason": "run_failed",
+      "kind": "agent_failed",
+      "actor": "story_owner",
+      "action": "Resume the story to try again.",
+      "halts": 1,
+      "stories": 1,
+      "resumed": 1,
+      "fixedByFirstResume": 1,
+      "medianHaltedSeconds": 1500
+    }
+  ],
+  "repeatHalts": [
+    {
+      "storyKey": "PROJ-151",
+      "kind": "other",
+      "halts": 3,
+      "resumes": 2,
+      "nanoAiuBetween": 4200000000,
+      "status": "halted"
+    },
+    {
+      "storyKey": "PROJ-144",
+      "kind": "budget_exhausted",
+      "halts": 2,
+      "resumes": 1,
+      "nanoAiuBetween": 2600000000,
+      "status": "running"
+    },
+    {
+      "storyKey": "PROJ-158",
+      "kind": "other",
+      "halts": 2,
+      "resumes": 1,
+      "nanoAiuBetween": 1100000000,
+      "status": "halted"
+    },
+    {
+      "storyKey": "PROJ-118",
+      "kind": "configuration",
+      "halts": 2,
+      "resumes": 1,
+      "nanoAiuBetween": 0,
+      "status": "halted"
+    }
+  ],
+  "errors": [
+    {
+      "source": "gate_fail",
+      "code": "plan",
+      "signature": "AC-# has no test_ids",
+      "phase": "planning",
+      "agent": "cartographer",
+      "times": 9,
+      "stories": 7,
+      "firstSeen": "2026-09-16T10:00:00.000Z",
+      "lastSeen": "2026-10-10T15:00:00.000Z",
+      "exampleStory": "PROJ-160",
+      "exampleRunId": "proj-160-planning-001-aa11"
+    },
+    {
+      "source": "halt",
+      "code": "budget_exhausted",
+      "signature": "The run used its whole AIU cap before it finished",
+      "phase": "pr_review",
+      "agent": "lookout",
+      "times": 6,
+      "stories": 5,
+      "firstSeen": "2026-09-19T10:00:00.000Z",
+      "lastSeen": "2026-10-11T07:00:00.000Z",
+      "exampleStory": "PROJ-144",
+      "exampleRunId": "proj-144-pr_review-004-cd34"
+    },
+    {
+      "source": "halt",
+      "code": "package_stuck",
+      "signature": "Work package WP-# stays in_progress after # rounds",
+      "phase": "implementation",
+      "agent": "backend-implementer",
+      "times": 5,
+      "stories": 2,
+      "firstSeen": "2026-10-02T10:00:00.000Z",
+      "lastSeen": "2026-10-11T08:20:00.000Z",
+      "exampleStory": "PROJ-151",
+      "exampleRunId": "proj-151-implementation-007-ab12"
+    },
+    {
+      "source": "run",
+      "code": "failed",
+      "signature": "Worker exited #: model not available for this token",
+      "phase": "planning",
+      "agent": "cartographer",
+      "times": 3,
+      "stories": 2,
+      "firstSeen": "2026-09-24T10:00:00.000Z",
+      "lastSeen": "2026-10-08T10:00:00.000Z",
+      "exampleStory": "PROJ-118",
+      "exampleRunId": "proj-118-planning-002-ef56"
+    },
+    {
+      "source": "gate_error",
+      "code": "review",
+      "signature": "cannot read result.json",
+      "phase": "pr_review",
+      "agent": "lookout",
+      "times": 2,
+      "stories": 2,
+      "firstSeen": "2026-09-30T10:00:00.000Z",
+      "lastSeen": "2026-10-06T10:00:00.000Z",
+      "exampleStory": "PROJ-149",
+      "exampleRunId": "proj-149-pr_review-002-bb22"
+    }
+  ],
+  "gates": [
+    {
+      "gate": "implementation",
+      "phase": "implementation",
+      "runs": 52,
+      "pass": 41,
+      "fail": 9,
+      "rejectOrHalt": 2,
+      "error": 0,
+      "topFailure": {
+        "signature": "Tests named in the plan were not run",
+        "times": 5
+      }
+    },
+    {
+      "gate": "plan",
+      "phase": "planning",
+      "runs": 41,
+      "pass": 28,
+      "fail": 13,
+      "rejectOrHalt": 0,
+      "error": 0,
+      "topFailure": {
+        "signature": "AC-# has no test_ids",
+        "times": 9
+      }
+    },
+    {
+      "gate": "rework",
+      "phase": "rework",
+      "runs": 34,
+      "pass": 33,
+      "fail": 1,
+      "rejectOrHalt": 0,
+      "error": 0,
+      "topFailure": {
+        "signature": "Rework note not addressed",
+        "times": 1
+      }
+    },
+    {
+      "gate": "review",
+      "phase": "pr_review",
+      "runs": 31,
+      "pass": 17,
+      "fail": 9,
+      "rejectOrHalt": 3,
+      "error": 2,
+      "topFailure": {
+        "signature": "Medium finding sent to rework",
+        "times": 7
+      }
+    },
+    {
+      "gate": "intake",
+      "phase": "intake",
+      "runs": 28,
+      "pass": 27,
+      "fail": 1,
+      "rejectOrHalt": 0,
+      "error": 0,
+      "topFailure": {
+        "signature": "Snapshot misses the Jira description",
+        "times": 1
+      }
+    }
+  ],
+  "findings": [
+    {
+      "severity": "minor",
+      "count": 22
+    },
+    {
+      "severity": "medium",
+      "count": 14
+    },
+    {
+      "severity": "major",
+      "count": 6
+    },
+    {
+      "severity": "critical",
+      "count": 1
+    }
+  ],
+  "reworkRounds": [
+    {
+      "rounds": 0,
+      "stories": 6
+    },
+    {
+      "rounds": 1,
+      "stories": 5
+    },
+    {
+      "rounds": 2,
+      "stories": 2
+    },
+    {
+      "rounds": 3,
+      "stories": 1
+    }
+  ],
+  "waits": [
+    {
+      "kind": "answers",
+      "gate": null,
+      "times": 19,
+      "outcomes": {
+        "answered": 18
+      },
+      "medianSeconds": 4800,
+      "p90Seconds": 32400,
+      "waitingNow": 1,
+      "longestNowSeconds": 2880
+    },
+    {
+      "kind": "decision",
+      "gate": "delivery_accepted",
+      "times": 6,
+      "outcomes": {
+        "approve": 5,
+        "send_back": 1
+      },
+      "medianSeconds": 10200,
+      "p90Seconds": 25200,
+      "waitingNow": 0,
+      "longestNowSeconds": null
+    },
+    {
+      "kind": "decision",
+      "gate": "plan_accepted",
+      "times": 13,
+      "outcomes": {
+        "approve": 8,
+        "send_back": 3,
+        "reject": 1
+      },
+      "medianSeconds": 13200,
+      "p90Seconds": 79200,
+      "waitingNow": 1,
+      "longestNowSeconds": 1320
+    },
+    {
+      "kind": "resume",
+      "gate": null,
+      "times": 23,
+      "outcomes": {
+        "resumed": 20
+      },
+      "medianSeconds": 8100,
+      "p90Seconds": 68400,
+      "waitingNow": 3,
+      "longestNowSeconds": 7800
+    }
+  ],
+  "insights": [
+    {
+      "rule": "phase_run_cap",
+      "title": "pr_review runs outgrow their cap",
+      "evidence": "6 of 31 pr_review runs used their whole 5.00 AIU run cap before they finished.",
+      "action": "Raise the pr_review run cap in the phase configuration, or give the agent less to do per run."
+    },
+    {
+      "rule": "resume_loop",
+      "title": "PROJ-151 halted 3 times with other",
+      "evidence": "2 Resumes did not fix the cause; 4.20 AIU were spent between the halts.",
+      "action": "Fix the cause the diagnosis names before resuming again."
+    },
+    {
+      "rule": "gate_first_fail",
+      "title": "The plan gate fails often",
+      "evidence": "13 of 41 plan evaluations failed; 9 of them say: AC-# has no test_ids",
+      "action": "Make the agent's instructions in agents-github-repository ask for what the plan gate checks."
+    }
+  ]
+}

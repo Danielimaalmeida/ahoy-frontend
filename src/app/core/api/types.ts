@@ -393,3 +393,43 @@ export type ArtifactContentQuery =
   operations['getArtifactContent']['parameters']['query'] & {
     readonly ifNoneMatch?: string;
   };
+
+/**
+ * Answer of `getMetrics`: where the harness spends AIU, where voyages halt, which errors repeat and how long people keep
+ * voyages waiting, for one period. AIU in integer nano-AIU, durations in whole seconds; error signatures and gate
+ * messages are untrusted text.
+ */
+export type MetricsReport = Schemas['MetricsReport'];
+
+/** One halt in the period, explained by the same rules as the voyage's diagnosis. */
+export type MetricsHalt = Schemas['MetricsHalt'];
+
+/** One error that repeats: runs, gates and halts grouped by kind and message. */
+export type MetricsError = Schemas['MetricsError'];
+
+/** Query of `getMetrics` and `exportMetrics`: the period `[from, to)` (30 days before now by default) and filters. */
+export type MetricsQuery = NonNullable<
+  operations['getMetrics']['parameters']['query']
+>;
+
+/** The tables `exportMetrics` serves (`table`). */
+export type MetricsTable =
+  operations['exportMetrics']['parameters']['query']['table'];
+export const METRICS_TABLES = listOf<MetricsTable>()([
+  'runs',
+  'halts',
+  'gates',
+  'errors',
+]);
+
+/** The file formats `exportMetrics` serves (`format`). */
+export type MetricsFormat = NonNullable<
+  operations['exportMetrics']['parameters']['query']['format']
+>;
+
+/** What `exportMetrics` hands over: the file's text and the name the API gives it. Client-side, not in the contract. */
+export interface MetricsExport {
+  readonly text: string;
+  readonly filename: string;
+  readonly mediaType: string;
+}
