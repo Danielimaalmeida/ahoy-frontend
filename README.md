@@ -75,7 +75,7 @@ do not use it for unit/e2e validation or mutating actions without approval.
 - **Harness metrics (2026-10-11, `claude/project-thread-rhd49t`):** `/metrics` shows where the harness spends AIU (by phase,
   week, agent and model), why voyages halt and which Resumes did not fix them, the errors grouped by message, how each
   gate judged, how long people took, and the patterns the API's fixed rules found; one table at a time exports as CSV or
-  JSON. Contract, client, guard, fixture, mock and specs included. Offline build, typecheck, lint, 139 files / 2,528
+  JSON. Contract, client, guard, fixture, mock and specs included. Offline build, typecheck, lint, 139 files / 2,531
   tests and formatting passed on Node 24.21.0. Fictional data only; no browser, real API, `--simulate` or TEST check.
 - **Resume on a stuck work package (2026-10-11, `claude/project-thread-xadeak`):** on a voyage halted `package_stuck`
   or `package_needs_decision` in implementation, the Resume dialog requires a reason ("How the blocker was resolved"),
