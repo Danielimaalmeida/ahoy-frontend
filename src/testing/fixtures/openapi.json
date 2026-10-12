@@ -103,7 +103,7 @@
         "operationId": "listJiraBacklog",
         "tags": ["jira"],
         "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
-        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = OTHER-COMPANY AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n",
+        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = OTHER-COMPANY AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
         "responses": {
           "200": {
             "description": "Complete backlog in Jira rank order.",
@@ -1350,6 +1350,46 @@
         }
       }
     },
+    "/stories/{key}/plan-fit": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "get": {
+        "operationId": "getStoryPlanFit",
+        "tags": ["stories"],
+        "summary": "Whether the story's plan suits the harness, for the person deciding `plan_accepted`.",
+        "description": "Fixed rules over the planned work packages and acceptance criteria; it spends nothing and changes nothing.\n`poor` when a criterion needs CI or pipeline changes, which the implementation workflow may not make.\n`attention` when work waits across repositories, the plan changes more than 2 repositories, has more than 6\nwork packages or a `depends_on` chain longer than 3, or a criterion names a repository no package changes.\nElse `fits`. `fit` is null until the planner has written work packages.\n",
+        "responses": {
+          "200": {
+            "description": "The plan fit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryPlanFit"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories/{key}/diagnosis": {
       "parameters": [
         {
@@ -1498,6 +1538,136 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Refinement"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/knowledge-reviews": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "get": {
+        "operationId": "listKnowledgeReviews",
+        "tags": ["stories"],
+        "summary": "Every knowledge review of one story, newest first, with the proposed business rules.",
+        "description": "When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs\nthem (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,\nthe approved plan, the answers people gave and their decisions at the human gates) and proposes changes to the\ncontent repository's `knowledge/business-context.md`. Its summary is `content`; the whole proposed file is\n`proposal` and its unified diff against the file at `controlSha` is `patch` (for `git apply`). Both are null when\nthe agent proposed no change. Ahoy changes nothing in the content repository: a person opens the pull request\nthere with the patch, and the rules are approved in that pull request. A story without one answers `200` with no\nitems. `404` when the story does not exist.\n",
+        "responses": {
+          "200": {
+            "description": "The story's knowledge reviews, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeReviewList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "operationId": "requestKnowledgeReview",
+        "tags": ["stories"],
+        "summary": "Ask an agent again to review a delivered story's business rules. May spend AIU.",
+        "description": "For a review that failed, was cancelled or should look again with the requester's notes. Queues one worker run of\nthe server's knowledge agent for the story, pinned to the control repo's HEAD now. The agent reads the evidence\nAhoy seeds (untrusted text) and the content repository, and may change only `knowledge/business-context.md` in\nits own copy; it has no MCP server and no shell. It changes nothing about the story.\n\nThe story must be `done` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for\nthe outcome. One knowledge review per story is in progress at a time: another request answers\n`409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be\nread.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The knowledge review, queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/knowledge-reviews/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "cancelKnowledgeReview",
+        "tags": ["stories"],
+        "summary": "Stop the story's knowledge review in progress.",
+        "description": "A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the\nreconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.\n`409 invalid_state` when nothing is in progress.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRefinementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The knowledge review, cancelled or being cancelled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeReview"
                 }
               }
             }
@@ -1977,7 +2147,8 @@
           "status",
           "priority",
           "updatedAt",
-          "sprint"
+          "sprint",
+          "readiness"
         ],
         "properties": {
           "key": {
@@ -2009,6 +2180,109 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/JiraSprint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/BacklogReadiness"
+          }
+        }
+      },
+      "FitReason": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,\n`short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,\n`many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.\n"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "English explanation with the evidence."
+          }
+        }
+      },
+      "BacklogReadiness": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["verdict", "reasons"],
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": ["ready", "attention", "missing"]
+          },
+          "reasons": {
+            "type": "array",
+            "description": "Reasons for `missing` first, then those for `attention`. Empty when `ready`.",
+            "items": {
+              "$ref": "#/components/schemas/FitReason"
+            }
+          }
+        }
+      },
+      "PlanFit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "verdict",
+          "reasons",
+          "repositories",
+          "packages",
+          "criteria",
+          "longestChain"
+        ],
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": ["fits", "attention", "poor"]
+          },
+          "reasons": {
+            "type": "array",
+            "description": "Reasons for `poor` first, then those for `attention`. Empty when `fits`.",
+            "items": {
+              "$ref": "#/components/schemas/FitReason"
+            }
+          },
+          "repositories": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "packages": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "criteria": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "longestChain": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Work packages in the longest depends_on chain."
+          }
+        }
+      },
+      "StoryPlanFit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "phase", "fit"],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/Phase"
+          },
+          "fit": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlanFit"
               },
               {
                 "type": "null"
@@ -3268,6 +3542,9 @@
           "status": {
             "$ref": "#/components/schemas/RefinementStatus"
           },
+          "runtimeStatus": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          },
           "notes": {
             "type": ["string", "null"]
           },
@@ -3292,9 +3569,6 @@
           },
           "runtime": {
             "type": ["string", "null"]
-          },
-          "runtimeStatus": {
-            "$ref": "#/components/schemas/RuntimeStatus"
           },
           "controlSha": {
             "type": "string",
@@ -3341,6 +3615,162 @@
           }
         }
       },
+      "KnowledgeReview": {
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "status",
+          "notes",
+          "requestedBy",
+          "agent",
+          "model",
+          "reasoningEffort",
+          "runtime",
+          "controlSha",
+          "budgetNanoAiu",
+          "usage",
+          "exitReason",
+          "cancelRequested",
+          "createdAt",
+          "startedAt",
+          "endedAt",
+          "content",
+          "proposal",
+          "patch"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RefinementStatus"
+          },
+          "runtimeStatus": {
+            "$ref": "#/components/schemas/RuntimeStatus"
+          },
+          "notes": {
+            "type": ["string", "null"]
+          },
+          "requestedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "agent": {
+            "type": ["string", "null"]
+          },
+          "model": {
+            "type": ["string", "null"]
+          },
+          "reasoningEffort": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningEffort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "runtime": {
+            "type": ["string", "null"]
+          },
+          "controlSha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "budgetNanoAiu": {
+            "$ref": "#/components/schemas/NanoAiu"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "exitReason": {
+            "type": ["string", "null"]
+          },
+          "cancelRequested": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "startedAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "endedAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content": {
+            "type": ["string", "null"],
+            "description": "The agent's summary of the rules it added, changed or left out, as Markdown (untrusted agent text); non-null exactly when `succeeded`."
+          },
+          "proposal": {
+            "type": ["string", "null"],
+            "description": "The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds."
+          },
+          "patch": {
+            "type": ["string", "null"],
+            "description": "The proposal as a unified diff against `knowledge/business-context.md` at `controlSha`, for `git apply` in the content repository; null exactly when `proposal` is."
+          }
+        }
+      },
+      "KnowledgeReviewList": {
+        "type": "object",
+        "required": ["key", "items"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeReview"
+            }
+          }
+        }
+      },
+      "KnowledgeReviewRequest": {
+        "type": "object",
+        "required": ["confirmSpend"],
+        "additionalProperties": false,
+        "properties": {
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S",
+            "description": "What the agent should look at, given to it as the requester's notes."
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000000000,
+            "description": "The run's AIU cap, at most 100 AIU; the server's knowledge cap when absent."
+          }
+        }
+      },
       "RefinementSummaryList": {
         "type": "object",
         "required": ["items"],
@@ -3383,7 +3813,7 @@
           },
           "state": {
             "type": "object",
-            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `intake_analyst`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`."
+            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`."
           }
         }
       },
@@ -3687,7 +4117,9 @@
           "review.reported",
           "story.routed",
           "run.progress",
-          "run.waiting"
+          "run.waiting",
+          "knowledge_review.queued",
+          "knowledge_review.skipped"
         ]
       },
       "Event": {

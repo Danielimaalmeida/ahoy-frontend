@@ -1,0 +1,17 @@
+{
+  "key": "PROJ-123",
+  "phase": "plan_review",
+  "fit": {
+    "verdict": "attention",
+    "reasons": [
+      {
+        "code": "cross_repo_dependency",
+        "message": "Work waits across repositories: WP2 (web) on WP1 (api). Packages run one at a time per story."
+      }
+    ],
+    "repositories": 2,
+    "packages": 2,
+    "criteria": 2,
+    "longestChain": 2
+  }
+}

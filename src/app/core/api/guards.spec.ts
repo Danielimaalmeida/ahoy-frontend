@@ -2,6 +2,7 @@ import answerQuestion from '@testing/fixtures/answerQuestion.json';
 import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
+import getStoryPlanFit from '@testing/fixtures/getStoryPlanFit.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
@@ -49,6 +50,7 @@ import {
   isQuestionList,
   isRefinement,
   isDiagnosis,
+  isStoryPlanFit,
   isRefinementList,
   isRefinementSummaryList,
   isRun,
@@ -131,6 +133,7 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['listRefinements', isRefinementSummaryList, listRefinements],
     ['getRefinements', isRefinementList, getRefinements],
     ['getStoryDiagnosis', isDiagnosis, getStoryDiagnosis],
+    ['getStoryPlanFit', isStoryPlanFit, getStoryPlanFit],
     ['requestRefinement', isRefinement, requestRefinement],
     ['cancelRefinement', isRefinement, cancelRefinement],
     ['listAgentDiagnoses', isAgentDiagnosisList, listAgentDiagnoses],

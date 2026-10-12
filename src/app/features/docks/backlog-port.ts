@@ -1,6 +1,6 @@
 import { InjectionToken } from '@angular/core';
 import type { ApiResult } from '@core/api/api-error';
-import type { JiraBacklogIssue } from '@core/api/types';
+import type { BacklogReadiness, JiraBacklogIssue } from '@core/api/types';
 import { JiraBacklogAdapter } from './jira-backlog-adapter';
 
 /** The sprint selected by Jira for a backlog item. */
@@ -23,6 +23,8 @@ export interface BacklogItem {
   readonly updatedAt: string;
   /** The selected Jira sprint, or `null` when not assigned to one. */
   readonly sprint: BacklogSprint | null;
+  /** Whether the harness could take it, by the API's fixed rules; `null` when the source does not judge it. */
+  readonly readiness: BacklogReadiness | null;
 }
 
 /** Which backlog items to list: all of them, the ones with no voyage in Ahoy, or the ones that have one. */
@@ -38,6 +40,8 @@ export interface BacklogQuery {
   /** An assignee's e-mail; `null` lists the unassigned ones. */
   readonly assignee?: string | null;
   readonly scope?: BacklogScope;
+  /** Only items with this readiness verdict; an item the source does not judge never matches. */
+  readonly readiness?: BacklogReadiness['verdict'];
   /**
    * The keys of the voyages that exist in Ahoy, sent with `not_started` and `in_ahoy` so that an adapter that cannot
    * know Ahoy's state can still filter by scope. A backend that tracks it may ignore this.

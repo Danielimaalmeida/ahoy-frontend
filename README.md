@@ -72,6 +72,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Harness fit (2026-10-12):** the Backlog's "Harness" column and filter say whether the harness could take each item
+  (`readiness` from `ahoy-hosted`'s fixed rules), and the Plan tab shows in plan review whether the plan suits the
+  harness (`getStoryPlanFit`). Offline only; see [docs/progress.md](docs/progress.md).
+
 - **Pull request links (2026-10-12):** the voyage header links the pull requests the harness recorded in the state
   (`child_repos[].pr_url`), once the `child_ready` gate verified them. Offline only; see
   [docs/progress.md](docs/progress.md).

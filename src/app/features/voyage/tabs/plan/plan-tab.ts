@@ -18,6 +18,7 @@ import { PLAN_GATE, earlierSendBack } from './decision-view';
 import { criteriaOf } from './plan-criteria';
 import { PlanDecision } from './plan-decision';
 import { PlanDocument } from './plan-document';
+import { PlanFitPanel } from './plan-fit';
 
 /**
  * The Plan tab (plan, lane 4B; wireframe `PlanReview`): the plan the Cartographer wrote, with the blocks that changed
@@ -36,6 +37,7 @@ import { PlanDocument } from './plan-document';
     Panel,
     PanelBody,
     PanelHead,
+    PlanFitPanel,
     RelativePipe,
     RouterLink,
     Skeleton,
@@ -128,6 +130,7 @@ import { PlanDocument } from './plan-document';
       <aside class="plan__side" aria-label="Decision and criteria">
         <ah-decision-conflict />
         <ah-decision-panel />
+        <ah-plan-fit />
 
         <ah-panel>
           <ah-panel-head

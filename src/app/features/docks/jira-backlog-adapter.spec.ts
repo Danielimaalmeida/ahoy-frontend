@@ -16,6 +16,7 @@ const BACKLOG: JiraBacklog = {
       priority: 'High',
       updatedAt: '2026-10-06T08:00:00.000Z',
       sprint: null,
+      readiness: { verdict: 'ready', reasons: [] },
     },
     {
       key: 'PROJ-140',
@@ -25,6 +26,15 @@ const BACKLOG: JiraBacklog = {
       priority: null,
       updatedAt: '2026-10-06T07:00:00.000Z',
       sprint: { id: 12, name: 'Sprint 12', state: 'active' },
+      readiness: {
+        verdict: 'missing',
+        reasons: [
+          {
+            code: 'no_description',
+            message: 'The issue has no description.',
+          },
+        ],
+      },
     },
   ],
   total: 2,
@@ -64,6 +74,7 @@ describe('JiraBacklogAdapter', () => {
         assignee: null,
         updatedAt: '2026-10-06T08:00:00.000Z',
         sprint: null,
+        readiness: { verdict: 'ready', reasons: [] },
       },
       {
         key: 'PROJ-140',
@@ -74,6 +85,7 @@ describe('JiraBacklogAdapter', () => {
         assignee: null,
         updatedAt: '2026-10-06T07:00:00.000Z',
         sprint: { id: 12, name: 'Sprint 12', state: 'active' },
+        readiness: BACKLOG.items[1]!.readiness,
       },
     ]);
     await page(adapter, { q: 'audit' });
@@ -90,6 +102,17 @@ describe('JiraBacklogAdapter', () => {
       assignees: [],
       sprints: [{ id: 12, name: 'Sprint 12', state: 'active' }],
     });
+  });
+
+  it('filters by readiness verdict on the client', async () => {
+    const adapter = new JiraBacklogAdapter(new FakeJiraApi());
+    expect(
+      (await page(adapter, { readiness: 'missing' })).items.map((i) => i.key)
+    ).toEqual(['PROJ-140']);
+    expect(
+      (await page(adapter, { readiness: 'ready' })).items.map((i) => i.key)
+    ).toEqual(['PROJ-145']);
+    expect((await page(adapter, { readiness: 'attention' })).total).toBe(0);
   });
 
   it('returns the API failure and can retry after a failed request', async () => {

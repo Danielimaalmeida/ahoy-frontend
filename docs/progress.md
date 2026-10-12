@@ -1,7 +1,33 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-12 for the pull request links on `claude/project-thread-4exgug`** (after the qnumber allow-list on
-`claude/project-thread-xtrbj5`). From a cloud session. No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-12 for the harness fit on `claude/project-thread-c6a2m7`** (after the pull request links on
+`claude/project-thread-4exgug`). From a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Harness fit (2026-10-12)
+
+The user asked to classify backlog stories by whether the harness suits them. Agreed with them: before a plan only
+readiness can be told from the issue's text, so the backlog shows readiness, and the plan review shows whether the plan
+suits the harness. Both are fixed rules in `ahoy-hosted` (PR #36, design §4, a D18 exception), 0 AIU.
+
+- **Contract:** vendored from `ahoy-hosted` `6d3f94f` (the redacted JQL team name kept as before). `JiraBacklogIssue`
+  gains `readiness`; new `getStoryPlanFit` with `FitReason`, `BacklogReadiness`, `PlanFit` and `StoryPlanFit`. The
+  vendored copy also brings the knowledge-review operations already on `ahoy-hosted` `main`, listed as not in the
+  client yet. `schema.d.ts` and the JSON mirror regenerated.
+- **API layer:** guards for readiness and plan fit, `ApiClient.getStoryPlanFit`, a fixture, contract, guard and client
+  specs; `FakeApi` gains the operation.
+- **Domain:** `domain/harness-fit.ts` words and tones each verdict ("Ready", "Check fit", "Not ready"; "Fits the
+  harness", "Weigh before accepting", "Poor fit for the harness") and joins the reasons for a tooltip.
+- **Screens:** the Backlog gains a "Harness" column (a tag whose tooltip and accessible name carry the reasons; "—"
+  when the source does not judge, as the planned stub) and a "Harness: any / Ready / Check fit / Not ready" filter that
+  the adapters apply. The Plan tab shows a "Harness fit" panel in plan review, under the decision, read again when the
+  voyage's version moves; it shows nothing before a plan or when the read fails.
+- **Mock backend:** fictional readiness on its three backlog items, and `getStoryPlanFit` from a port of the plan rules
+  over the simulated plan (its API-then-web plan reads "Weigh before accepting"). In the conformance walk.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **146 files / 2,607 tests passed** and
+  `format:check` (which now passes for `docks.ts` too), with the auth library stubbed in `node_modules` as before
+  (nothing of that committed).
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real API or TEST. No real
+  Jira description has been judged.
 
 ## Pull request links (2026-10-12)
 
@@ -652,6 +678,9 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+The harness fit (2026-10-12) is on `claude/project-thread-c6a2m7`, with `ahoy-hosted` PR #36: 146 files / 2,607 tests
+pass offline; it has met only the in-process mock.
+
 The harness metrics (2026-10-11) are on `claude/project-thread-rhd49t`: 139 files / 2,531 tests pass offline; they have
 met only the in-process mock.
 
@@ -767,6 +796,9 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 `/voyages/:key/runs/:runId` replace their placeholders. See "Lane 5A" below.
 
 ## Start here next
+
+Review the harness-fit PR beside `ahoy-hosted` PR #36, then check the Backlog's Harness column against the real Jira
+backlog once the API has `JIRA_PAT`, and tune the rules in `ahoy-hosted` where they misjudge.
 
 Review the metrics PR beside its `ahoy-hosted` PR, then check `/metrics` in a browser against a local `ahoy-hosted`
 (`npm run dev -- --simulate`, 0 AIU).
