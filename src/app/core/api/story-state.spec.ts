@@ -186,7 +186,8 @@ describe('readStoryState', () => {
       expect(
         readStoryState({
           child_repos: [{ repo: 'svc' }],
-          lookout_reviews: [],
+          intake_analyst: {},
+          reviewer_reviews: [],
           gate_results: [],
           extra: 1,
         })

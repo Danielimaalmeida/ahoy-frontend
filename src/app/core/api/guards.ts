@@ -40,6 +40,8 @@ import {
   REASONING_EFFORTS,
   REFINEMENT_STATUSES,
   RUN_STATUSES,
+  RUNTIME_STATES,
+  type RuntimeStatus,
   STORY_STATUSES,
   type AgentDiagnosisList,
   type AhoyEvent,
@@ -115,6 +117,15 @@ const usage = shape<Usage>({
   outputTokens: count,
 });
 
+const runtimeStatus = shape<RuntimeStatus>({
+  state: oneOf(RUNTIME_STATES),
+  reason: nullable(boundedText('runtime reason up to 300 characters', 0, 300)),
+  message: nullable(
+    boundedText('runtime message up to 300 characters', 0, 300)
+  ),
+  observedAt: timestamp,
+});
+
 const story = shape<Story>({
   key: storyKey,
   title: nullable(text),
@@ -184,6 +195,7 @@ const run = shape<Run>({
   model: nullable(text),
   reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
   status: oneOf(RUN_STATUSES),
+  runtimeStatus: optional(nullable(runtimeStatus)),
   runtime: text,
   controlSha: sha1,
   budgetNanoAiu: nanoAiu,
@@ -343,6 +355,7 @@ const refinementFields = {
   id: runId,
   key: storyKey,
   status: oneOf(REFINEMENT_STATUSES),
+  runtimeStatus: optional(nullable(runtimeStatus)),
   notes: nullable(text),
   requestedBy: actor,
   agent: nullable(text),

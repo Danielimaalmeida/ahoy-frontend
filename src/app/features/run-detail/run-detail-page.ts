@@ -27,6 +27,7 @@ import { Panel, PanelHead } from '@ui/panel/panel';
 import { CLOCK } from '@ui/pipes/clock';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { Source } from '@ui/tags/source';
+import { WorkerStartupNotice } from '@ui/worker-startup/worker-startup';
 import {
   effortSourceLabel,
   momentLabel,
@@ -65,6 +66,7 @@ type PageStatus = 'loading' | 'ready' | 'notFound' | 'error';
     RouterLink,
     Skeleton,
     Source,
+    WorkerStartupNotice,
   ],
   styleUrl: './run-detail-page.scss',
   template: `
@@ -118,6 +120,8 @@ type PageStatus = 'loading' | 'ready' | 'notFound' | 'error';
                 }
               </div>
             </header>
+
+            <ah-worker-startup [run]="r" />
 
             @if (tiles(); as t) {
               <div class="run__tiles">
@@ -429,6 +433,10 @@ function changed(loaded: Run, listed: Run): boolean {
   return (
     loaded.status !== listed.status ||
     loaded.endedAt !== listed.endedAt ||
+    loaded.runtimeStatus?.state !== listed.runtimeStatus?.state ||
+    loaded.runtimeStatus?.reason !== listed.runtimeStatus?.reason ||
+    loaded.runtimeStatus?.message !== listed.runtimeStatus?.message ||
+    loaded.runtimeStatus?.observedAt !== listed.runtimeStatus?.observedAt ||
     loaded.usage.nanoAiu !== listed.usage.nanoAiu ||
     loaded.gate?.result !== listed.gate?.result
   );

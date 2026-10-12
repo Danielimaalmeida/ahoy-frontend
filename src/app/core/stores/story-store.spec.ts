@@ -13,8 +13,12 @@ import { FakeFetch, type SseBody } from '@core/realtime/testing/fake-fetch';
 import { aStory, anEvent } from '@core/realtime/testing/events';
 import { provideFakes } from '@core/realtime/testing/providers';
 import { StoriesStore } from './stories-store';
+import getRun from '@testing/fixtures/getRun.json';
+import { isRun } from '@core/api/guards';
+import type { Run } from '@core/api/types';
 import {
   RESOURCE_REFRESH_DEBOUNCE_MS,
+  RUN_POLL_MS,
   STALE_AFTER,
   STORY_RESOURCES,
   StoryStore,
@@ -61,6 +65,54 @@ describe('StoryStore', () => {
     for (const call of api.calls) counts[call.op] = (counts[call.op] ?? 0) + 1;
     return counts;
   }
+
+  it('polls runtime transitions without events, stopping on terminal status and release', async () => {
+    if (!isRun(getRun)) throw new Error('Invalid run fixture');
+    let run: Run = {
+      ...getRun,
+      status: 'running',
+      runtimeStatus: {
+        state: 'waiting_for_node',
+        reason: 'TriggeredScaleUp',
+        message: null,
+        observedAt: '2026-10-12T08:00:00.000Z',
+      },
+    };
+    api.on('listStoryRuns', () => Promise.resolve(ok([run])));
+    const voyage = TestBed.inject(StoryStore).for('PROJ-123', {
+      watch: ['runs'],
+    });
+    await settle();
+    expect(voyage.runs.value()?.[0]?.runtimeStatus?.state).toBe(
+      'waiting_for_node'
+    );
+    run = {
+      ...run,
+      runtimeStatus: { ...run.runtimeStatus!, state: 'running' },
+    };
+    await clock.advance(RUN_POLL_MS);
+    expect(voyage.runs.value()?.[0]?.runtimeStatus?.state).toBe('running');
+    run = { ...run, status: 'succeeded', runtimeStatus: null };
+    await clock.advance(RUN_POLL_MS);
+    const count = reads()['listStoryRuns'];
+    await clock.advance(RUN_POLL_MS * 2);
+    expect(reads()['listStoryRuns']).toBe(count);
+    voyage.release();
+  });
+
+  it('does not continue active-run polling after the last observer leaves', async () => {
+    if (!isRun(getRun)) throw new Error('Invalid run fixture');
+    const run: Run = { ...getRun, status: 'running' };
+    api.on('listStoryRuns', () => Promise.resolve(ok([run])));
+    const store = TestBed.inject(StoryStore);
+    const shell = store.for('PROJ-123', { watch: ['story'] });
+    const runs = store.for('PROJ-123', { watch: ['runs'] });
+    await settle();
+    runs.release();
+    await clock.advance(RUN_POLL_MS * 2);
+    expect(reads()['listStoryRuns']).toBe(1);
+    shell.release();
+  });
 
   it('says which resources every known event type touches', () => {
     expect(Object.keys(STALE_AFTER).sort()).toEqual(

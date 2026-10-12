@@ -22,7 +22,7 @@ if (url.protocol !== 'http:' && url.protocol !== 'https:') {
 
 export default {
   '/auth/oauth2/realms/root/realms/alpha': {
-    target: 'https://emea.int.alpha.sso.bmwgroup.com',
+    target: 'https://emea.int.alpha.sso.company-namegroup.com',
     secure: false,
     changeOrigin: true,
   },

@@ -1,12 +1,15 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import type { Refinement, RefinementSummary } from '@core/api/types';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { Markdown } from '@ui/markdown/markdown';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
+import { CLOCK } from '@ui/pipes/clock';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { Api } from '@ui/table/table';
+import { WorkerStartupNotice } from '@ui/worker-startup/worker-startup';
+import { workerStartup } from '@domain/worker-startup';
 import { isActiveRefinement, refinementStateLabel } from '@domain/refinement';
 import { REFINEMENT_POLL_MS } from './backlog-refinements';
 
@@ -17,7 +20,15 @@ import { REFINEMENT_POLL_MS } from './backlog-refinements';
  */
 @Component({
   selector: 'ah-refinement-details',
-  imports: [Api, Banner, Button, Markdown, RelativePipe, Skeleton],
+  imports: [
+    Api,
+    Banner,
+    Button,
+    Markdown,
+    RelativePipe,
+    Skeleton,
+    WorkerStartupNotice,
+  ],
   styles: `
     :host {
       display: flex;
@@ -73,6 +84,7 @@ import { REFINEMENT_POLL_MS } from './backlog-refinements';
             <span ahApi>{{ summary().status }}</span>
           </dd>
         </div>
+        <ah-worker-startup [run]="summary()" />
         <div>
           <dt>Requested by</dt>
           <dd>
@@ -125,6 +137,8 @@ import { REFINEMENT_POLL_MS } from './backlog-refinements';
       <span class="ah-muted" role="status">
         @if (summary().cancelRequested) {
           Stopping the agent; checked again every {{ pollSeconds }} s.
+        } @else if (startup()) {
+          Checked again every {{ pollSeconds }} s.
         } @else if (summary().status === 'queued') {
           Waiting for a run slot; checked again every {{ pollSeconds }} s.
         } @else {
@@ -160,6 +174,7 @@ import { REFINEMENT_POLL_MS } from './backlog-refinements';
   `,
 })
 export class RefinementDetails {
+  private readonly clock = inject(CLOCK);
   /** The newest refinement, as the backlog's list shows it. */
   readonly summary = input.required<RefinementSummary>();
   /** The same refinement with its Markdown, once the item's refinements were read; null before. */
@@ -175,8 +190,11 @@ export class RefinementDetails {
   readonly retry = output();
 
   protected readonly pollSeconds = REFINEMENT_POLL_MS / 1000;
+  protected readonly startup = computed(() =>
+    workerStartup(this.summary(), this.clock())
+  );
   protected readonly label = computed(() =>
-    refinementStateLabel(this.summary())
+    refinementStateLabel(this.summary(), this.clock())
   );
   protected readonly active = computed(() =>
     isActiveRefinement(this.summary().status)

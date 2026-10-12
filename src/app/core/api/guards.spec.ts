@@ -71,6 +71,41 @@ const BAD_AMOUNTS: readonly unknown[] = [
   2 ** 53,
 ];
 
+describe('runtime observations on run and refinement DTOs', () => {
+  const observation = {
+    state: 'waiting_for_node',
+    reason: 'TriggeredScaleUp',
+    message: 'A new node is being provisioned',
+    observedAt: '2026-10-12T08:00:00.000Z',
+  };
+  it.each([
+    [isRun, getRun],
+    [isRefinement, requestRefinement],
+  ] as const)(
+    'accepts absent, null and valid runtime observations',
+    (accepts, fixture) => {
+      expect(accepts(fixture)).toBe(true);
+      expect(accepts({ ...fixture, runtimeStatus: null })).toBe(true);
+      expect(accepts({ ...fixture, runtimeStatus: observation })).toBe(true);
+      expect(
+        accepts({
+          ...fixture,
+          runtimeStatus: { ...observation, state: 'Pending' },
+        })
+      ).toBe(false);
+      expect(
+        accepts({
+          ...fixture,
+          runtimeStatus: { ...observation, observedAt: 'yesterday' },
+        })
+      ).toBe(false);
+      expect(
+        accepts({ ...fixture, runtimeStatus: { state: 'waiting_for_node' } })
+      ).toBe(false);
+    }
+  );
+});
+
 describe('guards accept what the API sends (the fixtures)', () => {
   const cases: readonly (readonly [string, Guard<unknown>, unknown])[] = [
     ['listModels', isModelCatalog, listModels],

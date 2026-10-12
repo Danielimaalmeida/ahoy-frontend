@@ -76,7 +76,7 @@
         "repo": "billing-web"
       }
     ],
-    "lookout_reviews": [],
+    "reviewer_reviews": [],
     "gate_results": [
       {
         "gate": "plan",

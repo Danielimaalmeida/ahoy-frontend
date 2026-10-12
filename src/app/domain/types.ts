@@ -36,6 +36,20 @@ export type RunStatus =
   | 'auth_failed'
   | 'lost';
 
+/** The latest runtime observation, independent of the run's lifecycle status. */
+export interface RuntimeStatus {
+  readonly state:
+    | 'starting'
+    | 'scheduling'
+    | 'waiting_for_node'
+    | 'blocked'
+    | 'running'
+    | 'unknown';
+  readonly reason: string | null;
+  readonly message: string | null;
+  readonly observedAt: string;
+}
+
 /**
  * What a gate record says: an automated result or a person's decision. `waiting` is not one of them: the API has no
  * record for a human gate nobody has decided yet (see `outcomePresentation`).
@@ -156,6 +170,7 @@ export interface Run {
   readonly reasoningEffort: ReasoningEffort | null;
   readonly status: RunStatus;
   readonly runtime: string;
+  readonly runtimeStatus?: RuntimeStatus | null;
   readonly controlSha: string;
   readonly budgetNanoAiu: number;
   readonly usage: Usage;

@@ -33,7 +33,11 @@ import {
   type BacklogScope,
   type BacklogSprint,
 } from './backlog-port';
-import { refinementStateLabel } from '@domain/refinement';
+import {
+  isActiveRefinement,
+  refinementLabel,
+  refinementStateLabel,
+} from '@domain/refinement';
 import { BacklogRefinements } from './backlog-refinements';
 import { RefinementDetails } from './refinement-details';
 import { RefinementDialogs } from './refinement-dialogs';
@@ -76,11 +80,11 @@ const SCOPE_TABS: readonly SectionTab[] = [
 const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
   { track: '80px' },
   { track: 'minmax(0, 1fr)' },
-  { track: '60px' },
   { track: '90px', height: 20 },
   { track: '70px' },
   { track: '130px' },
   { track: '60px' },
+  { track: '110px', height: 20 },
   { track: '110px', height: 20 },
 ];
 
@@ -155,8 +159,11 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
       width: auto;
       max-width: 100%;
     }
-    .docks__spacer {
-      flex: 1;
+    .docks__summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
     }
     .docks__table {
       min-width: 0;
@@ -182,31 +189,31 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
       white-space: normal;
     }
     .docks__table th:nth-child(1) {
-      width: 9%;
+      width: 8%;
     }
     .docks__table th:nth-child(2) {
-      width: 21%;
+      width: 17%;
     }
     .docks__table th:nth-child(3) {
-      width: 6%;
-    }
-    .docks__table th:nth-child(4) {
-      width: 10%;
-    }
-    .docks__table th:nth-child(5) {
       width: 9%;
     }
-    .docks__table th:nth-child(6) {
-      width: 11%;
-    }
-    .docks__table th:nth-child(7) {
+    .docks__table th:nth-child(4) {
       width: 7%;
     }
+    .docks__table th:nth-child(5) {
+      width: 11%;
+    }
+    .docks__table th:nth-child(6) {
+      width: 6%;
+    }
+    .docks__table th:nth-child(7) {
+      width: 11%;
+    }
     .docks__table th:nth-child(8) {
-      width: 15%;
+      width: 14%;
     }
     .docks__table th:nth-child(9) {
-      width: 12%;
+      width: 17%;
     }
     .docks__table .ah-tag {
       max-width: 100%;
@@ -317,6 +324,34 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
     .docks__table .docks__actions {
       text-align: right;
     }
+    .docks__refinement-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .docks__refinement-toggle:hover {
+      text-decoration: underline;
+    }
+    .docks__refinement-toggle--refined {
+      background: var(--status-done-bg);
+      color: var(--status-done-fg);
+    }
+    .docks__refinement-toggle--active {
+      background: var(--status-running-bg);
+      color: var(--status-running-fg);
+    }
+    .docks__refinement-toggle--failed {
+      background: var(--status-halted-bg);
+      color: var(--status-halted-fg);
+    }
+    .docks__table .docks__refinement > td {
+      padding: 16px;
+    }
     .docks__actions > * {
       max-width: 100%;
       margin-block: 2px;
@@ -324,6 +359,9 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
       min-height: 28px;
       white-space: normal;
       text-align: center;
+    }
+    .docks__actions > * + * {
+      margin-inline-start: 6px;
     }
     @media (max-width: 1279px) {
       .docks__table table,
@@ -347,6 +385,10 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
       }
       .docks__table tbody tr:last-child {
         border-bottom: 0;
+      }
+      .docks__table tbody tr.docks__refinement {
+        display: block;
+        padding: 0;
       }
       .docks__table td {
         display: block;
@@ -380,6 +422,9 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
       .docks__actions > * {
         min-height: 44px;
         margin: 0;
+      }
+      .docks__actions > * + * {
+        margin-inline-start: 0;
       }
     }
     @media (max-width: 600px) {
@@ -480,13 +525,26 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
           }
           <option [value]="unassigned">Unassigned</option>
         </select>
+        <select
+          class="ah-input docks__select"
+          aria-label="Refinement"
+          [formControl]="refinement"
+        >
+          <option value="">Refinement: any</option>
+          <option value="refined">Refined</option>
+          <option value="not_refined">Not refined</option>
+          <option value="in_progress">In progress</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
         <ah-section-tabs
           variant="pill"
           label="Ahoy state"
           [items]="scopeTabs"
           [(selected)]="scopeId"
         />
-        <span class="docks__spacer"></span>
+      </div>
+      <div class="docks__summary">
         <span class="ah-muted" aria-live="polite">{{ summary() }}</span>
         @if (groups().length > 0) {
           <button
@@ -516,10 +574,22 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
           </div>
         } @else if (blocked()) {
           <ah-empty-state
-            heading="These filters need the voyages from Ahoy"
+            [heading]="
+              refinementValue() !== '' && refinements.status() === 'error'
+                ? 'These filters need the refinements'
+                : 'These filters need the voyages from Ahoy'
+            "
             icon="offline"
           >
-            Try again above, or switch to "All".
+            Try again above, or clear the filters.
+            <button
+              ahButton
+              ahEmptyAction
+              type="button"
+              (click)="clearFilters()"
+            >
+              Clear filters
+            </button>
           </ah-empty-state>
         } @else if (!loaded()) {
           <div class="ah-panel ah-panel__body">
@@ -577,7 +647,9 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                       sprint.state === 'active'
                         ? 'Active'
                         : sprint.state === 'future'
-                          ? 'Future'
+                          ? sprint.id === nextSprintId()
+                            ? 'Next'
+                            : 'Future'
                           : 'Closed'
                     }}
                   </span>
@@ -593,6 +665,9 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                   @if (nextCursor() !== null) {
                     shown
                   }
+                  @if (refinements.status() === 'ready') {
+                    · <b>{{ refinedCount(group.items) }}</b> refined
+                  }
                   @if (storeSettled()) {
                     · <b>{{ inAhoy(group) }}</b> in Ahoy
                   }
@@ -607,11 +682,11 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                     <tr>
                       <th>Key</th>
                       <th>Summary</th>
-                      <th>Type</th>
                       <th>Jira status</th>
                       <th>Priority</th>
                       <th>Assignee</th>
                       <th>Updated</th>
+                      <th>Refinement</th>
                       <th>Ahoy</th>
                       <th class="docks__actions">Actions</th>
                     </tr>
@@ -623,7 +698,6 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                           <span ahKey>{{ item.key }}</span>
                         </td>
                         <td>{{ item.summary }}</td>
-                        <td data-label="Type">{{ item.type }}</td>
                         <td ahNowrap data-label="Jira status">
                           <span class="ah-tag">{{ item.jiraStatus }}</span>
                         </td>
@@ -676,6 +750,56 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                         <td ahNowrap data-label="Updated">
                           {{ item.updatedAt | ahRelative }}
                         </td>
+                        <td data-label="Refinement">
+                          @if (refinements.latest(item.key); as refinement) {
+                            <button
+                              class="ah-tag docks__refinement-toggle"
+                              [class.docks__refinement-toggle--refined]="
+                                refinement.status === 'succeeded'
+                              "
+                              [class.docks__refinement-toggle--active]="
+                                activeRefinement(refinement.status)
+                              "
+                              [class.docks__refinement-toggle--failed]="
+                                refinementLabel(refinement.status) === 'Failed'
+                              "
+                              type="button"
+                              [attr.aria-expanded]="
+                                refinements.isOpen(item.key)
+                              "
+                              [attr.aria-controls]="
+                                refinements.isOpen(item.key)
+                                  ? refinementRowId(item.key)
+                                  : null
+                              "
+                              [attr.aria-label]="
+                                refinementStateLabel(refinement) +
+                                ' for ' +
+                                item.key
+                              "
+                              (click)="refinements.toggle(item.key)"
+                            >
+                              @if (refinement.status === 'succeeded') {
+                                <span aria-hidden="true">✓</span>
+                              }
+                              {{ refinementStateLabel(refinement) }}
+                            </button>
+                          } @else if (refinements.status() === 'ready') {
+                            <button
+                              ahButton
+                              size="sm"
+                              type="button"
+                              [attr.aria-label]="'Refine ' + item.key"
+                              (click)="refine(item)"
+                            >
+                              Refine
+                            </button>
+                          } @else if (refinements.status() === 'error') {
+                            <span class="ah-muted">Unknown</span>
+                          } @else {
+                            <ah-skeleton width="80px" [height]="20" />
+                          }
+                        </td>
                         <td ahNowrap data-label="Ahoy">
                           @if (store.find(item.key); as story) {
                             <a
@@ -699,41 +823,6 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                           }
                         </td>
                         <td ahNowrap class="docks__actions">
-                          @if (refinements.latest(item.key); as refinement) {
-                            <button
-                              ahButton="ghost"
-                              size="sm"
-                              type="button"
-                              [attr.aria-expanded]="
-                                refinements.isOpen(item.key)
-                              "
-                              [attr.aria-controls]="
-                                refinements.isOpen(item.key)
-                                  ? refinementRowId(item.key)
-                                  : null
-                              "
-                              [attr.aria-label]="
-                                'Refinement · ' +
-                                refinementStateLabel(refinement) +
-                                ' for ' +
-                                item.key
-                              "
-                              (click)="refinements.toggle(item.key)"
-                            >
-                              Refinement ·
-                              {{ refinementStateLabel(refinement) }}
-                            </button>
-                          } @else if (refinements.status() !== 'loading') {
-                            <button
-                              ahButton="ghost"
-                              size="sm"
-                              type="button"
-                              [attr.aria-label]="'Refine ' + item.key"
-                              (click)="refine(item)"
-                            >
-                              Refine
-                            </button>
-                          }
                           @if (jiraUrl(item.key); as url) {
                             <a
                               ahButton="ghost"
@@ -741,6 +830,9 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
                               title="Open in Jira"
                               target="_blank"
                               rel="noopener noreferrer"
+                              [attr.aria-label]="
+                                'Open ' + item.key + ' in Jira (new tab)'
+                              "
                               [href]="url"
                               >Jira ↗</a
                             >
@@ -828,6 +920,7 @@ export class Docks {
   protected readonly jiraStatus = new FormControl('', { nonNullable: true });
   protected readonly assignee = new FormControl('', { nonNullable: true });
   protected readonly sprint = new FormControl('', { nonNullable: true });
+  protected readonly refinement = new FormControl('', { nonNullable: true });
   /** The id of the selected pill; a button tab sets it. */
   protected readonly scopeId = signal<string | null>('all');
 
@@ -843,6 +936,9 @@ export class Docks {
   private readonly sprintValue = toSignal(this.sprint.valueChanges, {
     initialValue: this.sprint.value,
   });
+  protected readonly refinementValue = toSignal(this.refinement.valueChanges, {
+    initialValue: this.refinement.value,
+  });
 
   private readonly itemsSignal = signal<readonly BacklogItem[]>([]);
   private readonly totalSignal = signal(0);
@@ -853,8 +949,12 @@ export class Docks {
   private readonly loadingSignal = signal(false);
   private readonly loadingMoreSignal = signal(false);
 
-  protected readonly items = this.itemsSignal.asReadonly();
-  protected readonly total = this.totalSignal.asReadonly();
+  protected readonly items = computed(() =>
+    this.itemsSignal().filter((item) => this.matchesRefinement(item.key))
+  );
+  protected readonly total = computed(() =>
+    this.refinementValue() === '' ? this.totalSignal() : this.items().length
+  );
   protected readonly nextCursor = this.nextCursorSignal.asReadonly();
   protected readonly facets = this.facetsSignal.asReadonly();
   protected readonly failed = this.failedSignal.asReadonly();
@@ -865,6 +965,9 @@ export class Docks {
     [...this.facets().sprints].sort(
       (a, b) => SPRINT_ORDER[a.state] - SPRINT_ORDER[b.state] || a.id - b.id
     )
+  );
+  protected readonly nextSprintId = computed(
+    () => this.sprintOptions().find((sprint) => sprint.state === 'future')?.id
   );
   protected readonly groups = computed(() => {
     const groups = new Map<string, SprintGroup>();
@@ -905,7 +1008,9 @@ export class Docks {
 
   /** The "Not started" and "In Ahoy" filters cannot be applied while the voyages could not be read. */
   protected readonly blocked = computed(
-    () => this.scope() !== 'all' && this.store.status() === 'error'
+    () =>
+      (this.scope() !== 'all' && this.store.status() === 'error') ||
+      (this.refinementValue() !== '' && this.refinements.status() === 'error')
   );
 
   /** The keys of the voyages in Ahoy as one string, so that a status change in the store does not read the backlog again. */
@@ -923,6 +1028,8 @@ export class Docks {
    */
   private readonly query = computed<BacklogQuery | null>(() => {
     const scope = this.scope();
+    if (this.refinementValue() !== '' && this.refinements.status() !== 'ready')
+      return null;
     const keys = this.ahoyKeys();
     if (scope !== 'all' && !this.storeSettled()) return null;
     const q = this.searchText().trim();
@@ -955,11 +1062,16 @@ export class Docks {
   /** "9 stories · 5 in Ahoy": the matches of the filters, and how many voyages Ahoy has. */
   protected readonly summary = computed(() => {
     if (!this.loadedSignal()) return '';
-    const total = this.totalSignal();
+    const total = this.total();
     const stories = `${total} ${total === 1 ? 'story' : 'stories'}`;
+    const shown = this.nextCursor() !== null ? ' shown' : '';
+    const refined =
+      this.refinements.status() === 'ready'
+        ? ` · ${this.refinedCount(this.items())} refined${shown}`
+        : '';
     return this.storeSettled()
-      ? `${stories} · ${this.store.stories().length} in Ahoy`
-      : stories;
+      ? `${stories}${refined} · ${this.items().filter((item) => this.store.find(item.key) !== undefined).length} in Ahoy${shown}`
+      : `${stories}${refined}`;
   });
 
   /** Whether any filter is on, which tells "no matches" from "empty". */
@@ -969,6 +1081,7 @@ export class Docks {
       this.jiraStatusValue() !== '' ||
       this.assigneeValue() !== '' ||
       this.sprintValue() !== '' ||
+      this.refinementValue() !== '' ||
       this.scope() !== 'all'
   );
 
@@ -995,8 +1108,7 @@ export class Docks {
       this.openAll() ??
       (group.sprint === null ||
         group.sprint.state === 'active' ||
-        group.sprint.id ===
-          this.sprintOptions().find((sprint) => sprint.state === 'future')?.id)
+        group.sprint.id === this.nextSprintId())
     );
   }
 
@@ -1023,12 +1135,32 @@ export class Docks {
     ).length;
   }
 
-  /** The Jira page of a story, or `null` when no Jira is configured (G13): the button is not shown then. */
-  protected jiraUrl(key: string): string | null {
-    const base = this.config.config().jiraBaseUrl;
-    return base === undefined
-      ? null
-      : `${base}/browse/${encodeURIComponent(key)}`;
+  /** The team's Jira issue page, with an optional runtime override for another Jira. */
+  protected jiraUrl(key: string): string {
+    const base =
+      this.config.config().jiraBaseUrl ?? 'https://atc.company-namegroup.net/jira';
+    return `${base}/browse/${encodeURIComponent(key)}`;
+  }
+
+  protected readonly activeRefinement = isActiveRefinement;
+  protected readonly refinementLabel = refinementLabel;
+
+  protected refinedCount(items: readonly BacklogItem[]): number {
+    return items.filter(
+      (item) => this.refinements.latest(item.key)?.status === 'succeeded'
+    ).length;
+  }
+
+  private matchesRefinement(key: string): boolean {
+    const filter = this.refinementValue();
+    if (filter === '') return true;
+    const latest = this.refinements.latest(key);
+    if (filter === 'not_refined') return latest === null;
+    if (latest === null) return false;
+    if (filter === 'refined') return latest.status === 'succeeded';
+    if (filter === 'in_progress') return isActiveRefinement(latest.status);
+    if (filter === 'failed') return refinementLabel(latest.status) === 'Failed';
+    return filter === 'cancelled' && latest.status === 'cancelled';
   }
 
   /** The words of a row's refinement button: "Refined", "Refining", "Cancelling"… */
@@ -1072,6 +1204,7 @@ export class Docks {
     this.jiraStatus.setValue('');
     this.assignee.setValue('');
     this.sprint.setValue('');
+    this.refinement.setValue('');
     this.scopeId.set('all');
   }
 
@@ -1118,7 +1251,20 @@ export class Docks {
       return;
     }
     this.loadingSignal.set(true);
-    const result = await this.port.list(query);
+    this.loadedSignal.set(false);
+    let result = await this.port.list(query);
+    const items: BacklogItem[] = [];
+    // Refinements are joined locally: read all matching pages before filtering, not just the first 25 rows.
+    while (result.ok) {
+      items.push(...result.value.items);
+      if (this.refinementValue() === '' || result.value.nextCursor === null)
+        break;
+      if (generation !== this.generation) return;
+      result = await this.port.list({
+        ...query,
+        cursor: result.value.nextCursor,
+      });
+    }
     if (generation !== this.generation) return;
     this.loadingSignal.set(false);
     if (!result.ok) {
@@ -1128,7 +1274,7 @@ export class Docks {
       this.failedSignal.set(true);
       return;
     }
-    this.itemsSignal.set(result.value.items);
+    this.itemsSignal.set(items);
     this.totalSignal.set(result.value.total);
     this.nextCursorSignal.set(result.value.nextCursor);
     this.facetsSignal.set(result.value.facets);

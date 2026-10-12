@@ -36,6 +36,7 @@ describe('@domain/types is the contract', () => {
   it('has the same resources as the generated types, field for field', () => {
     expectTypeOf<Domain.Story>().toEqualTypeOf<Api.Story>();
     expectTypeOf<Domain.Usage>().toEqualTypeOf<Api.Usage>();
+    expectTypeOf<Domain.RuntimeStatus>().toEqualTypeOf<Api.RuntimeStatus>();
     expectTypeOf<Domain.GateVerdict>().toEqualTypeOf<Api.GateVerdict>();
     expectTypeOf<Domain.Run>().toEqualTypeOf<Api.Run>();
     expectTypeOf<Domain.Question>().toEqualTypeOf<Api.Question>();

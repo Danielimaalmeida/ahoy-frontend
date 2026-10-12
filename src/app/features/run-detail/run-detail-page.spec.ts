@@ -8,6 +8,8 @@ import {
   provideMockBackend,
 } from '@core/mock/mock-backend';
 import { CLOCK, type Clock } from '@core/realtime/clock';
+import { isRun, isRunList } from '@core/api/guards';
+import type { RuntimeStatus } from '@core/api/types';
 import type { ManualClock } from '@testing/mock-backend/clock';
 import type { MockRequest, MockResponse } from '@testing/mock-backend/http';
 import type { MockAhoyServer } from '@testing/mock-backend/server';
@@ -139,6 +141,59 @@ function steps(p: Page): string[] {
 }
 
 describe('RunDetailPage on the mock backend', () => {
+  it('follows runtime changes without lifecycle events and clears a confirmed node wait', async () => {
+    const { server } = testServer();
+    const id = runIds(server, 'PROJ-140').at(-1)!;
+    let state: RuntimeStatus['state'] = 'waiting_for_node';
+    const p = await open(`/voyages/PROJ-140/runs/${id}`, {
+      rewrite: (request, response) => {
+        if (response.kind !== 'json' || request.method !== 'GET')
+          return response;
+        const runtimeStatus: RuntimeStatus = {
+          state,
+          reason: state === 'waiting_for_node' ? 'TriggeredScaleUp' : null,
+          message: null,
+          observedAt: TestBed.inject(CLOCK).now().toISOString(),
+        };
+        if (request.path === `/runs/${id}` && isRun(response.body))
+          return {
+            ...response,
+            body: {
+              ...response.body,
+              status: 'running',
+              endedAt: null,
+              runtimeStatus,
+            },
+          };
+        if (
+          request.path === '/stories/PROJ-140/runs' &&
+          isRunList(response.body)
+        )
+          return {
+            ...response,
+            body: {
+              items: response.body.items.map((run) =>
+                run.id === id
+                  ? { ...run, status: 'running', endedAt: null, runtimeStatus }
+                  : run
+              ),
+            },
+          };
+        return response;
+      },
+    });
+    expect(text(page(p))).toContain('Waiting for a new node');
+    state = 'scheduling';
+    await advance(p, 5_000);
+    expect(text(page(p))).not.toContain('Waiting for a new node');
+    expect(text(page(p))).toContain(
+      'Waiting for a node to schedule the worker'
+    );
+    state = 'running';
+    await advance(p, 5_000);
+    expect(page(p).querySelector('ah-worker-startup [role=status]')).toBeNull();
+  });
+
   describe('a run that ended (PROJ-123, the last one)', () => {
     async function openLast(): Promise<{ p: Page; id: string; ids: string[] }> {
       const { server } = testServer();

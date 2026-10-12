@@ -342,7 +342,7 @@ export class Voyage {
       acceptance_criteria: structuredClone(this.plan.criteria),
       work_packages: structuredClone(this.plan.packages),
       child_repos: this.plan.repos.map((repo) => ({ repo })),
-      lookout_reviews: [],
+      reviewer_reviews: [],
       gate_results: this.gates
         .filter((g) => g.source === 'gate')
         .map((g) => ({

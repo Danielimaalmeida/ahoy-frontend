@@ -37,6 +37,9 @@ export type StoryResourceName = (typeof STORY_RESOURCES)[number];
 /** How long events are gathered before the resources they touch are read again (F5). */
 export const RESOURCE_REFRESH_DEBOUNCE_MS = 300;
 
+/** Runtime observations can change without a voyage event; active runs are checked every five seconds. */
+export const RUN_POLL_MS = 5_000;
+
 /**
  * Which resources each known event makes stale (F5: refetch, never patch). `run.progress` touches none: it goes to the
  * `RunProgressBuffer`. Types this version does not know touch none either, as the contract asks.
@@ -122,6 +125,8 @@ class StoryEntry implements Disposable {
   /** Touched by an event and observed: read again when the debounce ends. */
   private readonly dirty = new Set<StoryResourceName>();
   private timer: Timer | null = null;
+  private runTimer: Timer | null = null;
+  private disposed = false;
   private readonly subscription: Subscription;
   private readonly unwatchStory: () => void;
 
@@ -139,7 +144,11 @@ class StoryEntry implements Disposable {
       return result;
     }, newestVersion);
     this.state = new StoreResource(() => api.getStoryState(key), newestVersion);
-    this.runs = new StoreResource(() => api.listStoryRuns(key));
+    this.runs = new StoreResource(async () => {
+      const result = await api.listStoryRuns(key);
+      this.scheduleRunPoll(result.ok ? result.value : this.runs.value());
+      return result;
+    });
     this.questions = new StoreResource(() => api.listQuestions(key));
     this.gates = new StoreResource(() => api.listGateRecords(key));
     this.models = new StoreResource(
@@ -166,6 +175,7 @@ class StoryEntry implements Disposable {
     const count = (this.watchers.get(name) ?? 0) + 1;
     this.watchers.set(name, count);
     const resource = this.byName[name];
+    if (name === 'runs') this.scheduleRunPoll(this.runs.value());
     if (count === 1 && (resource.status() === 'idle' || this.stale.has(name))) {
       this.stale.delete(name);
       void resource.refresh();
@@ -175,10 +185,19 @@ class StoryEntry implements Disposable {
   unwatch(name: StoryResourceName): void {
     const count = (this.watchers.get(name) ?? 0) - 1;
     if (count > 0) this.watchers.set(name, count);
-    else this.watchers.delete(name);
+    else {
+      this.watchers.delete(name);
+      if (name === 'runs') {
+        this.runTimer?.cancel();
+        this.runTimer = null;
+      }
+    }
   }
 
   dispose(): void {
+    this.disposed = true;
+    this.runTimer?.cancel();
+    this.runTimer = null;
     this.subscription.unsubscribe();
     this.unwatchStory();
     this.timer?.cancel();
@@ -192,11 +211,27 @@ class StoryEntry implements Disposable {
       if (this.watchers.has(name)) this.dirty.add(name);
       else if (this.byName[name].status() !== 'idle') this.stale.add(name);
     }
+
     if (this.dirty.size > 0 && this.timer === null) {
       this.timer = this.clock.schedule(RESOURCE_REFRESH_DEBOUNCE_MS, () =>
         this.flush()
       );
     }
+  }
+
+  private scheduleRunPoll(runs: readonly Run[] | undefined): void {
+    this.runTimer?.cancel();
+    this.runTimer = null;
+    if (
+      this.disposed ||
+      !this.watchers.has('runs') ||
+      !runs?.some((run) => run.status === 'queued' || run.status === 'running')
+    )
+      return;
+    this.runTimer = this.clock.schedule(RUN_POLL_MS, () => {
+      this.runTimer = null;
+      void this.runs.refresh();
+    });
   }
 
   private flush(): void {

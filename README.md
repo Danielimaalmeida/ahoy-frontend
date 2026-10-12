@@ -72,6 +72,28 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **R3DA-14787 API state names (2026-10-12):** active contract examples use `intake_analyst` and
+  `reviewer_reviews`; the API description names the intake analyst. The vendored OpenAPI, generated TypeScript and
+  JSON mirror were updated. No old-story migration or compatibility alias was added. The frontend reader does not
+  consume either state entry, and `haltReason` remains an open string; `lookout_no_report` was not present in the
+  active frontend contract or source. `api:types`, typecheck, 117 targeted tests, formatting and the JSON mirror check
+  passed offline. `api:check` reports generated types out of date after formatting; its raw generator output conflicts
+  with the repository's Prettier formatting. See [docs/progress.md](docs/progress.md). No API or database was contacted.
+
+- **Backlog refinement layout (2026-10-12, `feature/metrics-screen`):** the screenshot supplied with the Backlog
+  wireframe adds a dedicated refinement column/filter, sprint and page refinement counts, a "Next" sprint label and
+  separate summary controls. Jira links default to `https://atc.company-namegroup.net/jira/browse/{key}`, open in a new tab and
+  retain the optional `jiraBaseUrl` runtime override. Refinement filtering reads all matching backlog pages before
+  calculating matches; partial-page counts are labelled "shown". Sprint dates/goals are not supplied by the API.
+  Offline build, typecheck, lint, 144 files / 2,585 tests and repository formatting passed on Node 24.21.0.
+  Build has a non-blocking Backlog component-style warning (4.70 kB versus the 4 kB warning threshold).
+  No browser, Playwright/e2e, `--simulate`, real API or TEST verification.
+- **Worker startup visibility (2026-10-12, `feature/metrics-screen`):** Runs and run detail, Backlog refinements and
+  agent diagnoses explain worker startup, distinguish confirmed autoscaler scale-up from ordinary scheduling, flag
+  blocked or unavailable observations, and stop showing stale observations after 30 seconds. Active runs are refreshed
+  every 5 seconds while their Runs resource is observed; refinements and diagnoses use existing polling. Optional
+  `runtimeStatus` keeps compatibility with older API responses. Offline build, typecheck, lint, 144 files / 2,579 tests
+  and repository formatting passed on Node 24.21.0. No browser, `--simulate`, real API or TEST verification.
 - **Qnumber allow-list (2026-10-12, `claude/project-thread-xtrbj5`):** a user whose qnumber is not allowed sees only
   "Access denied" (with Sign out): either `allowedQnumbers` in `/config.json` leaves them out, or the API answered
   `403 forbidden` (`AHOY_ALLOWED_QNUMBERS` in `ahoy-hosted`). Offline build, typecheck, lint, 142 files / 2,566 tests
@@ -259,8 +281,8 @@ do not use it for unit/e2e validation or mutating actions without approval.
   (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).
 
-# r3da_fio_ahoy_frontend
+# r3da_nio_ahoy_frontend
 
-# r3da_fio_ahoy_frontend
+# r3da_nio_ahoy_frontend
 
-# r3da_fio_ahoy_frontend
+# r3da_nio_ahoy_frontend

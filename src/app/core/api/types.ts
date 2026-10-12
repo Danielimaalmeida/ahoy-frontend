@@ -16,6 +16,17 @@ import type { components, operations } from './schema';
 
 type Schemas = components['schemas'];
 
+/** The latest worker observation, separate from the run lifecycle. */
+export type RuntimeStatus = NonNullable<Schemas['RuntimeStatus']>;
+export const RUNTIME_STATES = listOf<RuntimeStatus['state']>()([
+  'starting',
+  'scheduling',
+  'waiting_for_node',
+  'blocked',
+  'running',
+  'unknown',
+]);
+
 /** One model in the server's catalogue, not an account entitlement. */
 export type CatalogModel = Schemas['CatalogModel'];
 /** The effective default for a slot of a new story. */

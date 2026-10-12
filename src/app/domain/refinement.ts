@@ -1,4 +1,5 @@
-import type { RefinementStatus } from './types';
+import type { RefinementStatus, RuntimeStatus } from './types';
+import { workerStartup } from './worker-startup';
 
 /** The most a refinement may be capped at, in nano-AIU: 100 AIU, as the contract says. */
 export const REFINEMENT_MAX_NANO_AIU = 100_000_000_000;
@@ -33,11 +34,16 @@ export function refinementLabel(status: RefinementStatus): string {
 }
 
 /** The word for a run as it stands: "Cancelling" once a cancel was asked for and the run has not ended yet. */
-export function refinementStateLabel(refinement: {
-  readonly status: RefinementStatus;
-  readonly cancelRequested: boolean;
-}): string {
+export function refinementStateLabel(
+  refinement: {
+    readonly status: RefinementStatus;
+    readonly cancelRequested: boolean;
+    readonly runtimeStatus?: RuntimeStatus | null;
+  },
+  now = new Date()
+): string {
   return refinement.cancelRequested && isActiveRefinement(refinement.status)
     ? 'Cancelling'
-    : refinementLabel(refinement.status);
+    : (workerStartup(refinement, now)?.heading ??
+        refinementLabel(refinement.status));
 }

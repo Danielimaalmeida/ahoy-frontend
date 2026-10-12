@@ -65,7 +65,7 @@ export interface paths {
      *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
      *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
      *     `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-     *     AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
+     *     AND "Feature Team" = OTHER-COMPANY AND Team in (34115) ORDER BY Rank ASC`.
      *
      *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
      *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
@@ -1122,6 +1122,24 @@ export interface components {
       | 'output_violation'
       | 'auth_failed'
       | 'lost';
+    /** @description Latest worker observation, checked on each active poll and persisted when it changes or at least every ten seconds. Separate from the run lifecycle: a dispatched run is `running` even while its worker is starting. Null before an observation, for runtimes without observations, and after cancellation or completion. `observedAt` is collection time, not the worker's start time. Clients should show unavailable status rather than an old wait when stale. */
+    readonly RuntimeStatus: {
+      /**
+       * @description `waiting_for_node` requires a Pending, unscheduled pod whose latest autoscaler decision is `TriggeredScaleUp`; Pending alone means `scheduling`, never confirmed node creation. `starting` includes a scheduled pod preparing its containers. `blocked` means a container startup error or `NotTriggerScaleUp`. `running` means the worker container started and startup messages should disappear. `unknown` explicitly means observation failed.
+       * @enum {string}
+       */
+      readonly state:
+        | 'starting'
+        | 'scheduling'
+        | 'waiting_for_node'
+        | 'blocked'
+        | 'running'
+        | 'unknown';
+      readonly reason: string | null;
+      /** @description Bounded, credential-redacted runtime evidence; untrusted plain text, not HTML. */
+      readonly message: string | null;
+      readonly observedAt: components['schemas']['Timestamp'];
+    } | null;
     readonly Run: {
       readonly id: components['schemas']['RunId'];
       readonly storyKey: components['schemas']['StoryKey'];
@@ -1132,6 +1150,7 @@ export interface components {
       /** @description The reasoning effort the run was started with; null is the model's own default. */
       readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
       readonly status: components['schemas']['RunStatus'];
+      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
       /** @description Where the worker ran, e.g. `docker`, `k8s` (one Kubernetes Job), `replay` (offline re-use of recorded evidence) or `fake`. */
       readonly runtime: string;
       readonly controlSha: string;
@@ -1212,6 +1231,7 @@ export interface components {
       readonly id: components['schemas']['RunId'];
       readonly key: components['schemas']['StoryKey'];
       readonly status: components['schemas']['RefinementStatus'];
+      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
       readonly notes: string | null;
       readonly requestedBy: components['schemas']['Actor'];
       /** @description The agent profile; null until the run takes a slot. */
@@ -1240,6 +1260,7 @@ export interface components {
       readonly model: string | null;
       readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
       readonly runtime: string | null;
+      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
       readonly controlSha: string;
       readonly budgetNanoAiu: components['schemas']['NanoAiu'];
       readonly usage: components['schemas']['Usage'];
@@ -1261,7 +1282,7 @@ export interface components {
     readonly StoryState: {
       readonly key: components['schemas']['StoryKey'];
       readonly version: components['schemas']['Version'];
-      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `lookout_reviews`, `gate_results`, `decision_log`, ...), at `version`. */
+      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `intake_analyst`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. */
       readonly state: Record<string, never>;
     };
     readonly GateVerdict: {
@@ -1837,7 +1858,7 @@ export interface operations {
       };
     };
     readonly responses: {
-      /** @description The story was created in phase `intake`; the reconciler will dispatch Navigator. */
+      /** @description The story was created in phase `intake`; the reconciler will dispatch the intake analyst. */
       readonly 201: {
         headers: {
           readonly Location?: string;

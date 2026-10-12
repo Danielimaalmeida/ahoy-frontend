@@ -1,6 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ModelSlot, RefinementStatus } from '@core/api/types';
+import type {
+  ModelSlot,
+  RefinementStatus,
+  RuntimeStatus,
+} from '@core/api/types';
+import { workerStartup } from '@domain/worker-startup';
+import { WorkerStartupNotice } from '@ui/worker-startup/worker-startup';
 import { DIAGNOSIS_ACTOR_LABELS, shownFindings } from '@domain/diagnosis';
 import { explainHalt } from '@domain/halt';
 import { isActiveRefinement } from '@domain/refinement';
@@ -10,6 +16,7 @@ import { Button } from '@ui/button/button';
 import { Icon } from '@ui/icon/icon';
 import { Markdown } from '@ui/markdown/markdown';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
+import { CLOCK } from '@ui/pipes/clock';
 import { runById, slotsForPhase } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import type { HaltRecord } from '../context/voyage-events';
@@ -19,12 +26,18 @@ import { HaltDiagnosis } from './halt-diagnosis';
 import { haltGuidance } from './halt-guidance';
 
 /** The words for an agent diagnosis as it stands ("Waiting for a run slot", "Cancelling", "Failed"). */
-export function diagnosisStateLabel(diagnosis: {
-  readonly status: RefinementStatus;
-  readonly cancelRequested: boolean;
-}): string {
+export function diagnosisStateLabel(
+  diagnosis: {
+    readonly status: RefinementStatus;
+    readonly cancelRequested: boolean;
+    readonly runtimeStatus?: RuntimeStatus | null;
+  },
+  now = new Date()
+): string {
   if (isActiveRefinement(diagnosis.status)) {
     if (diagnosis.cancelRequested) return 'Stopping the agent';
+    const startup = workerStartup(diagnosis, now);
+    if (startup !== null) return startup.heading;
     return diagnosis.status === 'queued'
       ? 'Waiting for a run slot'
       : 'The agent is diagnosing it';
@@ -61,7 +74,14 @@ export function slotToChange(
  */
 @Component({
   selector: 'ah-anchored-banner',
-  imports: [Button, Icon, Markdown, RelativePipe, RouterLink],
+  imports: [
+    Button,
+    Icon,
+    Markdown,
+    RelativePipe,
+    RouterLink,
+    WorkerStartupNotice,
+  ],
   providers: [HaltDiagnosis, AgentDiagnoses],
   styleUrl: './anchored-banner.scss',
   template: `
@@ -122,6 +142,9 @@ export function slotToChange(
                   {{ a.createdAt | ahRelative }}</span
                 >
               </p>
+              @if (diagnoses.newest(); as newest) {
+                <ah-worker-startup [run]="newest" />
+              }
               @if (a.active) {
                 <p class="ah-muted" role="status">
                   Checked again every {{ pollSeconds }} s.
@@ -211,6 +234,7 @@ export function slotToChange(
 })
 export class AnchoredBanner {
   private readonly context = inject(VoyageContext);
+  private readonly clock = inject(CLOCK);
   private readonly dialogs = inject(VoyageDialogs);
   private readonly diagnosis = inject(HaltDiagnosis);
   protected readonly diagnoses = inject(AgentDiagnoses);
@@ -224,7 +248,7 @@ export class AnchoredBanner {
     return {
       active,
       cancelRequested: newest.cancelRequested,
-      state: diagnosisStateLabel(newest),
+      state: diagnosisStateLabel(newest, this.clock()),
       requestedBy: actorLabel(newest.requestedBy),
       createdAt: newest.createdAt,
       exitReason: newest.exitReason ?? '',

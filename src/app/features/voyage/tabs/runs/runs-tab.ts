@@ -4,6 +4,8 @@ import type { Run } from '@core/api/types';
 import { apiErrorView } from '@core/commands/command-error';
 import { RunProgressBuffer } from '@core/stores/run-progress-buffer';
 import { budgetPercent, formatAiu } from '@domain/aiu';
+import { workerStartup } from '@domain/worker-startup';
+import { WorkerStartupNotice } from '@ui/worker-startup/worker-startup';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import { EmptyState } from '@ui/empty-state/empty-state';
@@ -14,6 +16,7 @@ import { ActorPipe } from '@ui/pipes/actor.pipe';
 import { AiuPipe } from '@ui/pipes/aiu.pipe';
 import { DateTimePipe } from '@ui/pipes/date-time.pipe';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
+import { CLOCK } from '@ui/pipes/clock';
 import { SkeletonRows, type SkeletonColumn } from '@ui/skeleton/skeleton';
 import { Key, Nowrap, Table } from '@ui/table/table';
 import { runById, runCrew } from '../../context/crew';
@@ -93,6 +96,7 @@ interface LiveView {
     RouterLink,
     SkeletonRows,
     Table,
+    WorkerStartupNotice,
   ],
   styleUrl: './runs-tab.scss',
   template: `
@@ -106,11 +110,14 @@ interface LiveView {
             <span class="ah-mono ah-muted">{{ l.run.id }} · {{ l.model }}</span>
             <span class="runs__spacer"></span>
             <span class="ah-hint">{{
-              l.active
-                ? 'Live, a few seconds behind the agent'
-                : 'Ended. The steps below are kept as history.'
+              workerStarting()
+                ? 'Checked again every 5 s'
+                : l.active
+                  ? 'Live, a few seconds behind the agent'
+                  : 'Ended. The steps below are kept as history.'
             }}</span>
           </ah-panel-head>
+          <ah-worker-startup [run]="l.run" />
           <div class="runs__spend">
             <span class="ah-hint runs__spend-label">{{
               l.active ? 'Run spend' : 'Run spent'
@@ -254,6 +261,7 @@ interface LiveView {
 export class RunsTab {
   protected readonly context = inject(VoyageContext);
   private readonly progress = inject(RunProgressBuffer);
+  private readonly clock = inject(CLOCK);
 
   protected readonly columns = RUN_COLUMNS;
   protected readonly key = this.context.key;
@@ -290,7 +298,9 @@ export class RunsTab {
     return {
       run,
       crew,
-      heading: active ? `${crew} is at work` : `${crew}'s run has ended`,
+      heading:
+        workerStartup(run, this.clock())?.heading ??
+        (active ? `${crew} is at work` : `${crew}'s run has ended`),
       model: runModelLabel(run),
       active,
       spent: formatAiu(nanoAiu, 2),
@@ -299,6 +309,11 @@ export class RunsTab {
       requests: runRequests(run, spend),
       startedTime: stepTime(run.startedAt ?? undefined),
     };
+  });
+
+  protected readonly workerStarting = computed(() => {
+    const run = this.watchedRun();
+    return run !== null && workerStartup(run, this.clock()) !== null;
   });
 
   protected readonly steps = computed(() =>
