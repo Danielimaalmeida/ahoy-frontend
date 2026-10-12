@@ -1,5 +1,5 @@
 import { formatAiu } from '@domain/aiu';
-import { isHaltReason } from '@domain/halt';
+import { isHaltReason, resumeRetriesPackages } from '@domain/halt';
 import type { HaltReason } from '@domain/types';
 
 /** What the guidance needs to know about the voyage. */
@@ -48,5 +48,10 @@ export function haltGuidance(
   context: HaltGuidanceContext
 ): string {
   if (isHaltReason(reason)) return STEPS[reason](context);
+  if (resumeRetriesPackages(reason, context.phase))
+    return (
+      'settle what blocks the work package (the diagnosis below quotes its question), then resume with a reason that ' +
+      `says how: the stuck packages run again with it as their rework note. ${retries(context)}`
+    );
   return `check the technical line below and the Activity, then resume when it's safe. ${retries(context)}`;
 }

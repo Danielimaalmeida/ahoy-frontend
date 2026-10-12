@@ -105,6 +105,7 @@ export type DiagnosisKind =
   | 'run_lost'
   | 'agent_failed'
   | 'revision_ceiling'
+  | 'package_stuck'
   | 'reconciler_error'
   | 'stopped_by_user'
   | 'other';

@@ -67,4 +67,16 @@ describe('haltGuidance', () => {
     expect(text).toMatch(/^check the technical line below and the Activity/);
     expect(text).not.toContain('worker_on_fire');
   });
+
+  it('asks for a reason on a stuck work package, since the resume retries it with that note', () => {
+    const text = haltGuidance('package_stuck', {
+      phase: 'implementation',
+      remainingNanoAiu: 3 * AIU,
+    });
+    expect(text).toMatch(/^settle what blocks the work package/);
+    expect(text).toContain('resume with a reason that says how');
+    expect(text).toContain(
+      'Resuming retries implementation and may spend from the remaining 3.0 AIU.'
+    );
+  });
 });

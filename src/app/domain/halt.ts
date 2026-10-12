@@ -63,6 +63,28 @@ export const HALT_REASONS: Readonly<Record<HaltReason, HaltReasonInfo>> = {
   },
 };
 
+/**
+ * The halts of an implementation phase on a work package nothing outside will move (blocked, failed, stalled or
+ * unverified). `ahoy-hosted` retries those packages on a resume, with the reason as their rework note, so a resume of
+ * one needs a reason.
+ */
+export const PACKAGE_HALTS = [
+  'package_stuck',
+  'package_needs_decision',
+] as const;
+
+/** True when a resume of a voyage halted with `reason` in `phase` retries its stuck work packages. */
+export function resumeRetriesPackages(
+  reason: string | null,
+  phase: string
+): boolean {
+  return (
+    phase === 'implementation' &&
+    reason !== null &&
+    (PACKAGE_HALTS as readonly string[]).includes(reason)
+  );
+}
+
 /** True when the API value is one of the nine known halt reasons. */
 export function isHaltReason(value: string): value is HaltReason {
   return Object.hasOwn(HALT_REASONS, value);

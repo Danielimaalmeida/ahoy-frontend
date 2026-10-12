@@ -205,7 +205,13 @@ export interface paths {
     };
     readonly get?: never;
     readonly put?: never;
-    /** Clear a halt so the reconciler retries the current phase. May spend AIU. */
+    /**
+     * Clear a halt so the reconciler retries the current phase. May spend AIU.
+     * @description On an implementation halted package_stuck or package_needs_decision, every failed, stalled,
+     *     blocked or unverified work package is retried, as the package decision `retry` does, with the
+     *     reason as its rework note; the reason is then required (400 without it). The event
+     *     story.resumed names them in retriedPackages. Any other halt is resumed as it stands.
+     */
     readonly post: operations['resumeStory'];
     readonly delete?: never;
     readonly options?: never;
@@ -1157,6 +1163,7 @@ export interface components {
       | 'run_lost'
       | 'agent_failed'
       | 'revision_ceiling'
+      | 'package_stuck'
       | 'reconciler_error'
       | 'stopped_by_user'
       | 'other';

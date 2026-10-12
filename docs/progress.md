@@ -1,7 +1,7 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-11 for the harness metrics on `claude/project-thread-rhd49t`** (after the agent diagnosis on
-`claude/tender-johnson-pvbvmu`). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real
+**Updated 2026-10-11 for the harness metrics on `claude/project-thread-rhd49t`** (after Resume on a stuck work package on
+`claude/project-thread-xadeak`). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real
 API was contacted; 0 AIU.
 
 ## Harness metrics (2026-10-11)
@@ -25,10 +25,35 @@ exception the user approved).
 - **Domain:** `domain/metrics.ts` (durations, percentages without floats, token counts, week labels, the weekly chart's
   series with the sixth phase onwards folded into "Other", and the words for fixers, waits and error kinds).
 - **Ran on Node 24.21.0:** `api:types` (`schema.d.ts` and the JSON mirror regenerated), build, typecheck
-  (`check-boundaries: ok`), lint, **139 files / 2,528 tests passed** and `npm run format`, on the same sandbox install as
+  (`check-boundaries: ok`), lint, **139 files / 2,531 tests passed** and `npm run format`, on the same sandbox install as
   before (public registry, `--ignore-scripts`, the auth library stubbed in `node_modules`, nothing of that committed).
 - **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real API or TEST. The pages
   have met only the in-process mock.
+
+## Resume on a stuck work package (2026-10-11)
+
+`ahoy-hosted` PR #32 (head `be68c6c`) makes a resume of a voyage halted `package_stuck` or `package_needs_decision` in
+`implementation` retry its blocked, failed, stalled or unverified work packages, with the reason as their rework note;
+the reason is then required (`400` without it). Its rule-based diagnosis gains the `package_stuck` finding, which quotes
+the package's blocker question.
+
+- **Contract:** vendored with only those two changes (`DiagnosisKind` gains `package_stuck`; `resumeStory` gets its
+  description). `schema.d.ts` and the JSON mirror regenerated; `DiagnosisKind` and `DIAGNOSIS_KINDS` updated in the
+  domain and the API types.
+- **Domain:** `PACKAGE_HALTS` and `resumeRetriesPackages(reason, phase)` in `domain/halt.ts`. The nine reasons of
+  `vocabulary.md` are unchanged; a package halt keeps showing its API code as the banner title.
+- **Screen:** the Resume dialog on such a halt says the blocked packages run again with the reason as their rework
+  note, labels the field "How the blocker was resolved", marks it required and refuses an empty one before any request.
+  The Anchored banner's "To continue" line says to settle what blocks the package (the diagnosis quotes its question),
+  then resume with a reason that says how.
+- **Tests:** 3 new specs (`resumeRetriesPackages`, the package guidance). Build, typecheck (`check-boundaries: ok`), lint,
+  **137 files / 2,489 tests passed** and `npm run format:check` on Node 24.21.0.
+- **Dependencies:** installed as in "Review fixes of PR #22": a scratch copy of the lockfile without the two
+  `@company-name-fedev` packages, without integrity fields and pointed at registry.npmjs.org, with `--ignore-scripts`;
+  `@company-name-fedev/auth` is a local stub inside `node_modules`. Nothing of it is committed.
+- **Not run:** a shell or component spec of the Resume dialog on a package halt (no mock seed halts on a package; the
+  mock's resume does not require the reason), a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API,
+  a real API or TEST.
 
 ## Agent diagnosis (2026-10-11)
 
@@ -593,8 +618,12 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-The harness metrics (2026-10-11) are on `claude/project-thread-rhd49t`: 139 files / 2,528 tests pass offline; they have
+The harness metrics (2026-10-11) are on `claude/project-thread-rhd49t`: 139 files / 2,531 tests pass offline; they have
 met only the in-process mock.
+
+Resume on a stuck work package (2026-10-11) is committed on `claude/project-thread-xadeak`: the Resume dialog requires
+a reason on a package halt and the banner says what to do; 137 files / 2,489 tests pass offline. It needs `ahoy-hosted`
+PR #32 and has met only the in-process mock.
 
 The agent diagnosis (Anchored banner, 2026-10-11) is committed on `claude/tender-johnson-pvbvmu` on top of the rest:
 137 files / 2,485 tests pass offline; it has met only the in-process mock.
@@ -724,7 +753,7 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest change adds the read-only Metrics page (139 test files / 2,528 tests pass on Node 24.21.0) (see "Harness metrics"). Before it, a change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
+The latest change adds the read-only Metrics page (139 test files / 2,531 tests pass on Node 24.21.0) (see "Harness metrics"). Before it, a change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
 Node 24.21.0). Before it, a change fixes PR #22's code review (see "Review fixes of PR #22"; 136 test
 files / 2,439 tests pass on Node 24.21.0). Before it, a change shows a halted voyage's diagnosis
 (`getStoryDiagnosis`) in the Anchored banner and in "Needs you". Before it, the Backlog's Refine action (row button or
