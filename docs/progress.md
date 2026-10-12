@@ -1,8 +1,26 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-11 for the harness metrics on `claude/project-thread-rhd49t`** (after Resume on a stuck work package on
-`claude/project-thread-xadeak`). Committed and pushed with the user's approval, from a cloud session. No TEST environment or real
-API was contacted; 0 AIU.
+**Updated 2026-10-12 for the qnumber allow-list on `claude/project-thread-xtrbj5`** (after the harness metrics on
+`claude/project-thread-rhd49t`). Committed and pushed with the user's approval, from a cloud session. No TEST environment
+or real API was contacted; 0 AIU.
+
+## Qnumber allow-list (2026-10-12)
+
+The user asked that Ahoy work only for a list of qnumbers, in both repositories. `ahoy-hosted` (same branch name) refuses
+anyone else with `403 forbidden` (`AHOY_ALLOWED_QNUMBERS`, required with WebEAM).
+
+- **Contract:** vendored from `ahoy-hosted` `d0bf528`: every authenticated operation documents `403`, and the
+  description names the list. `schema.d.ts` and the JSON mirror regenerated.
+- **Domain:** `domain/access.ts` (`normalizeQnumber`, `qnumberOf`, `isAllowedUser`).
+- **Core:** `allowedQnumbers` in `/config.json` (an array or a comma-separated text; optional; an invalid list allows
+  nobody). `core/auth/access-control.ts` reads the user's qnumber (profile `sub`, then `uid`, then `currentUser()`)
+  and is denied when the list leaves them out or once the API answered `403 forbidden`, which `authInterceptor` reports.
+- **Screen:** the shell shows only "Access denied" (who they are signed in as, who to ask, Sign out), with no top bar and
+  no call to the API; the voyage list and its event stream open only for an allowed user.
+- **Ran on Node 24.21.0:** build, typecheck (`check-boundaries: ok`), lint, **142 files / 2,566 tests passed** and
+  `format:check`, with the auth library stubbed in `node_modules` as before (nothing of that committed).
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real API or TEST. Production
+  serves no `/config.json` today, so there the API's `403` alone shows the screen.
 
 ## Harness metrics (2026-10-11)
 

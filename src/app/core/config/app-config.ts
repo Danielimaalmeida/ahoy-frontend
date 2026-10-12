@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal, type Signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { isRecord } from '@core/api/guard-kit';
+import { normalizeQnumber } from '@domain/access';
 
 /**
  * Runtime configuration, read from `/config.json` at start-up. In production whatever serves the app (the nginx of the
@@ -18,6 +19,11 @@ export interface AppConfig {
   readonly actor: string;
   /** Base URL for "Open in Jira"; without it the button stays hidden (G13). */
   readonly jiraBaseUrl?: string;
+  /**
+   * The qnumbers allowed to use the app, lower-cased. Anyone else sees "Access denied". Without it the app does not
+   * check and the API's `AHOY_ALLOWED_QNUMBERS` decides (it answers `403 forbidden`, which shows the same screen).
+   */
+  readonly allowedQnumbers?: readonly string[];
 }
 
 /** Values used when `/config.json` is missing or invalid. */
@@ -84,6 +90,27 @@ function readJiraBaseUrl(value: unknown): string | null {
   }
 }
 
+/**
+ * The `allowedQnumbers` for a document value: an array of qnumbers, or a text with them separated by commas or spaces.
+ * Lower-cased; null when it is neither, or when any entry is not a qnumber (one typo must not open or close the app
+ * unnoticed).
+ */
+function readAllowedQnumbers(value: unknown): string[] | null {
+  const entries = Array.isArray(value)
+    ? (value as readonly unknown[])
+    : typeof value === 'string'
+      ? value.split(/[\s,]+/).filter((entry) => entry !== '')
+      : null;
+  if (entries === null) return null;
+  const qnumbers: string[] = [];
+  for (const entry of entries) {
+    const qnumber = normalizeQnumber(entry);
+    if (qnumber === null) return null;
+    qnumbers.push(qnumber);
+  }
+  return qnumbers;
+}
+
 /** Whether a document sets a field: a missing field and a `null` both mean "not set". */
 const isSet = (value: unknown): boolean =>
   value !== undefined && value !== null;
@@ -125,11 +152,23 @@ export function parseAppConfig(document: unknown): ParsedAppConfig {
     );
   }
 
+  // An invalid list allows nobody rather than everybody: the app fails closed, as the API does.
+  let allowedQnumbers: readonly string[] | undefined;
+  if (isSet(document['allowedQnumbers'])) {
+    const read = readAllowedQnumbers(document['allowedQnumbers']);
+    allowedQnumbers = read ?? [];
+    if (read === null)
+      problems.push(
+        'allowedQnumbers must be qnumbers (q then letters or digits), as an array or separated by commas (an invalid list allows nobody)'
+      );
+  }
+
   return {
     config: {
       apiBase: apiBase ?? DEFAULT_APP_CONFIG.apiBase,
       actor: actor ?? DEFAULT_APP_CONFIG.actor,
       ...(jiraBaseUrl !== null ? { jiraBaseUrl } : {}),
+      ...(allowedQnumbers !== undefined ? { allowedQnumbers } : {}),
     },
     problems,
   };

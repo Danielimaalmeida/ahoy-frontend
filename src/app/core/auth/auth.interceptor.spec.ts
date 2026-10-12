@@ -16,6 +16,7 @@ import {
   NoAuthStrategy,
   type AuthStrategy,
 } from './auth-strategy';
+import { AccessControl } from './access-control';
 import { authInterceptor } from './auth.interceptor';
 
 /** Lets the interceptor's promise settle: it asks the strategy before the request reaches the backend. */
@@ -26,7 +27,14 @@ function configure(strategy?: AuthStrategy, base = '/api/v1'): void {
     providers: [
       provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
-      { provide: FedevAuthService, useValue: { logout: vi.fn() } },
+      {
+        provide: FedevAuthService,
+        useValue: {
+          logout: vi.fn(),
+          userProfile: () => ({ sub: 'q123456' }),
+          currentUser: () => null,
+        },
+      },
       { provide: API_BASE, useValue: base },
       ...(strategy ? [{ provide: AUTH_STRATEGY, useValue: strategy }] : []),
     ],
@@ -180,6 +188,38 @@ describe('authInterceptor', () => {
       expect(errors[0]).toBeInstanceOf(Error);
       expect((errors[0] as Error).message).toBe('token refresh failed');
       TestBed.inject(HttpTestingController).expectNone('/api/v1/stories');
+    });
+  });
+
+  describe('when the API refuses the user', () => {
+    const refuse = async (body: object | string, status = 403) => {
+      configure();
+      const errors: unknown[] = [];
+      TestBed.inject(HttpClient)
+        .get('/api/v1/stories')
+        .subscribe({ error: (e: unknown) => errors.push(e) });
+      await settle();
+      TestBed.inject(HttpTestingController)
+        .expectOne('/api/v1/stories')
+        .flush(body, { status, statusText: 'x' });
+      expect(errors).toHaveLength(1);
+      return TestBed.inject(AccessControl).denied();
+    };
+
+    it('marks the user denied on 403 forbidden, and still fails the request', async () => {
+      expect(await refuse({ code: 'forbidden', status: 403 })).toBe(true);
+    });
+
+    it('reads the problem from a text body too', async () => {
+      expect(await refuse(JSON.stringify({ code: 'forbidden' }))).toBe(true);
+    });
+
+    it('leaves the user allowed on another 403 or another error', async () => {
+      expect(await refuse({ code: 'something_else' })).toBe(false);
+      TestBed.resetTestingModule();
+      expect(await refuse('not json')).toBe(false);
+      TestBed.resetTestingModule();
+      expect(await refuse({ code: 'forbidden' }, 409)).toBe(false);
     });
   });
 });

@@ -72,6 +72,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Qnumber allow-list (2026-10-12, `claude/project-thread-xtrbj5`):** a user whose qnumber is not allowed sees only
+  "Access denied" (with Sign out): either `allowedQnumbers` in `/config.json` leaves them out, or the API answered
+  `403 forbidden` (`AHOY_ALLOWED_QNUMBERS` in `ahoy-hosted`). Offline build, typecheck, lint, 142 files / 2,566 tests
+  and formatting passed on Node 24.21.0; no browser, `--simulate`, real API or TEST check.
 - **Harness metrics (2026-10-11, `claude/project-thread-rhd49t`):** `/metrics` shows where the harness spends AIU (by phase,
   week, agent and model), why voyages halt and which Resumes did not fix them, the errors grouped by message, how each
   gate judged, how long people took, and the patterns the API's fixed rules found; one table at a time exports as CSV or

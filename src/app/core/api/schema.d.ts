@@ -64,8 +64,8 @@ export interface paths {
      * @description Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
      *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
      *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-     *     `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-     *     AND "Feature Team" = MY_COMPANY AND Team in (34115) ORDER BY Rank ASC`.
+     *     `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
+     *     AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
      *
      *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
      *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
@@ -1702,6 +1702,7 @@ export interface operations {
         };
       };
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly listJiraBacklog: {
@@ -1725,6 +1726,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
     };
   };
@@ -1756,6 +1758,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly exportMetrics: {
@@ -1790,6 +1793,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly listStories: {
@@ -1817,6 +1821,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly startStory: {
@@ -1844,6 +1849,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 422: components['responses']['Problem'];
     };
@@ -1870,6 +1876,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -1899,6 +1906,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -1929,6 +1937,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -1959,6 +1968,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -1989,6 +1999,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -2015,6 +2026,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -2045,6 +2057,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -2073,6 +2086,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2098,6 +2112,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2125,6 +2140,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2158,6 +2174,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -2186,6 +2203,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2215,6 +2233,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 422: components['responses']['Problem'];
@@ -2246,6 +2265,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 422: components['responses']['Problem'];
@@ -2278,6 +2298,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 422: components['responses']['Problem'];
@@ -2309,6 +2330,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 422: components['responses']['Problem'];
@@ -2340,6 +2362,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 422: components['responses']['Problem'];
@@ -2367,6 +2390,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -2396,6 +2420,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2440,6 +2465,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
@@ -2466,6 +2492,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2491,6 +2518,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2520,6 +2548,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
@@ -2551,6 +2580,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
   };
@@ -2580,6 +2610,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
     };
   };
@@ -2610,6 +2641,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly listRefinements: {
@@ -2631,6 +2663,7 @@ export interface operations {
         };
       };
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly getRefinements: {
@@ -2655,6 +2688,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly requestRefinement: {
@@ -2683,6 +2717,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
     };
@@ -2713,6 +2748,7 @@ export interface operations {
       };
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
     };
   };
