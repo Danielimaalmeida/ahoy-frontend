@@ -386,6 +386,127 @@
       "medianHaltedSeconds": 1500
     }
   ],
+  "haltWeeks": [
+    {
+      "weekStart": "2026-09-14",
+      "kind": "budget_exhausted",
+      "halts": 2,
+      "stories": 2,
+      "repeated": 1
+    },
+    {
+      "weekStart": "2026-09-14",
+      "kind": "configuration",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 0
+    },
+    {
+      "weekStart": "2026-09-14",
+      "kind": "other",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 0
+    },
+    {
+      "weekStart": "2026-09-21",
+      "kind": "budget_exhausted",
+      "halts": 2,
+      "stories": 2,
+      "repeated": 2
+    },
+    {
+      "weekStart": "2026-09-21",
+      "kind": "gate_rejected",
+      "halts": 2,
+      "stories": 2,
+      "repeated": 1
+    },
+    {
+      "weekStart": "2026-09-21",
+      "kind": "run_timed_out",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 0
+    },
+    {
+      "weekStart": "2026-09-28",
+      "kind": "other",
+      "halts": 2,
+      "stories": 1,
+      "repeated": 2
+    },
+    {
+      "weekStart": "2026-09-28",
+      "kind": "budget_exhausted",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 1
+    },
+    {
+      "weekStart": "2026-09-28",
+      "kind": "configuration",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 1
+    },
+    {
+      "weekStart": "2026-09-28",
+      "kind": "gate_rejected",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 1
+    },
+    {
+      "weekStart": "2026-09-28",
+      "kind": "stopped_by_user",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 0
+    },
+    {
+      "weekStart": "2026-10-05",
+      "kind": "budget_exhausted",
+      "halts": 2,
+      "stories": 2,
+      "repeated": 2
+    },
+    {
+      "weekStart": "2026-10-05",
+      "kind": "other",
+      "halts": 2,
+      "stories": 2,
+      "repeated": 2
+    },
+    {
+      "weekStart": "2026-10-05",
+      "kind": "agent_failed",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 0
+    },
+    {
+      "weekStart": "2026-10-05",
+      "kind": "configuration",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 1
+    },
+    {
+      "weekStart": "2026-10-05",
+      "kind": "run_timed_out",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 1
+    },
+    {
+      "weekStart": "2026-10-05",
+      "kind": "stopped_by_user",
+      "halts": 1,
+      "stories": 1,
+      "repeated": 1
+    }
+  ],
   "repeatHalts": [
     {
       "storyKey": "PROJ-151",

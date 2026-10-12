@@ -21,6 +21,9 @@ export type FakeApiOps = Pick<
   | 'listAgentDiagnoses'
   | 'requestAgentDiagnosis'
   | 'cancelAgentDiagnosis'
+  | 'listKnowledgeReviews'
+  | 'requestKnowledgeReview'
+  | 'cancelKnowledgeReview'
   | 'getStoryDiagnosis'
   | 'getStoryPlanFit'
 >;
@@ -137,6 +140,24 @@ export class FakeApi implements FakeApiOps {
   cancelAgentDiagnosis: FakeApiOps['cancelAgentDiagnosis'] = (key, body) => {
     this.calls.push({ op: 'cancelAgentDiagnosis', args: [key, body] });
     return this.handlers.cancelAgentDiagnosis?.(key, body) ?? unreachable();
+  };
+
+  listKnowledgeReviews: FakeApiOps['listKnowledgeReviews'] = (key) => {
+    this.calls.push({ op: 'listKnowledgeReviews', args: [key] });
+    return this.handlers.listKnowledgeReviews?.(key) ?? unreachable();
+  };
+
+  requestKnowledgeReview: FakeApiOps['requestKnowledgeReview'] = (
+    key,
+    body
+  ) => {
+    this.calls.push({ op: 'requestKnowledgeReview', args: [key, body] });
+    return this.handlers.requestKnowledgeReview?.(key, body) ?? unreachable();
+  };
+
+  cancelKnowledgeReview: FakeApiOps['cancelKnowledgeReview'] = (key, body) => {
+    this.calls.push({ op: 'cancelKnowledgeReview', args: [key, body] });
+    return this.handlers.cancelKnowledgeReview?.(key, body) ?? unreachable();
   };
 
   getStoryDiagnosis: FakeApiOps['getStoryDiagnosis'] = (key) => {

@@ -7,6 +7,9 @@ export const REFINEMENT_MAX_NANO_AIU = 100_000_000_000;
 /** The most an agent diagnosis may be capped at, in nano-AIU: 100 AIU, as the contract says. */
 export const AGENT_DIAGNOSIS_MAX_NANO_AIU = 100_000_000_000;
 
+/** The most a knowledge review may be capped at, in nano-AIU: 100 AIU, as the contract says. */
+export const KNOWLEDGE_REVIEW_MAX_NANO_AIU = 100_000_000_000;
+
 /** What each status means for the screens: the word they show, and whether the run is still in progress. */
 const STATUSES: Readonly<
   Record<RefinementStatus, { readonly label: string; readonly active: boolean }>

@@ -167,12 +167,12 @@ describe('ModelsTab on the mock backend', () => {
     ]);
     expect(text(row(page, 'planning').children[1])).toBe('Cartographer');
     expect(text(row(page, 'planning').children[2])).toMatch(/^\S+ · \S+$/);
-    expect(text(page.root.querySelector('ah-panel-head'))).toContain(
-      'Models per phase'
-    );
-    expect(text(page.root.querySelector('ah-panel-foot'))).not.toContain(
-      'must use different models'
-    );
+    expect(
+      text(page.root.querySelector('ah-models-tab ah-panel-head'))
+    ).toContain('Models per phase');
+    expect(
+      text(page.root.querySelector('ah-models-tab ah-panel-foot'))
+    ).not.toContain('must use different models');
     // Nothing is chosen on this voyage: no Change or Reset on the rows.
     expect(page.root.querySelectorAll('tbody button')).toHaveLength(0);
   });
@@ -323,9 +323,9 @@ describe('ModelsTab on the mock backend', () => {
         server.switches.failNext = 500;
       }
     });
-    expect(text(page.root.querySelector('ah-panel-body ah-banner'))).toContain(
-      'Try again'
-    );
+    expect(
+      text(page.root.querySelector('ah-models-tab ah-panel-body ah-banner'))
+    ).toContain('Try again');
     expect(page.root.querySelector('table')).toBeNull();
     buttonNamed(page.root, 'Try again').click();
     await flush(page);

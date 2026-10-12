@@ -1,7 +1,30 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-12 for the harness fit on `claude/project-thread-c6a2m7`** (after the pull request links on
-`claude/project-thread-4exgug`). From a cloud session. No TEST environment or real API was contacted; 0 AIU.
+**Updated 2026-10-12 for the knowledge review and lessons on `claude/project-thread-4kgkxo`** (after the harness
+fit on `claude/project-thread-c6a2m7`). From a cloud session. No TEST environment or real API was contacted; 0 AIU.
+
+## Knowledge review and lessons (2026-10-12)
+
+`ahoy-hosted` PR #37 (merged) has the knowledge curator propose one to three lessons for `knowledge/lessons.md` when a
+story is done or halted, seeds the planner and the implementer with the lessons for their repositories, and counts
+halts per week and diagnosis. This is its screen.
+
+- **Contract:** vendored from `ahoy-hosted` `53077dc`, its `main` after PRs #36 and #37 (redaction kept): `listKnowledgeReviews`,
+  `requestKnowledgeReview`, `cancelKnowledgeReview` and `MetricsReport.haltWeeks`.
+- **Core:** types, guards (`content` only when succeeded; `proposal` and `lessons` only then; `patch` null exactly when
+  both files are) and the three client calls.
+- **Voyage page:** a "Lessons and rules" panel on a done or halted voyage shows the newest review: its state, the
+  agent's summary, the proposed lessons, the proposed rules (done only) and the patch as plain text, with Ask, Review
+  again and Cancel. Asking confirms the spend, with an optional cap of at most 100 AIU. Ahoy applies nothing; a person
+  opens the pull request in the content repository.
+- **Metrics, Halts & errors:** "Repeated halts per week" charts each week's halts, first versus repeated diagnosis,
+  with a table by diagnosis.
+- **Mock backend:** a knowledge desk (rules and lessons for a done voyage, lessons only for a halted one) and
+  `haltWeeks` in the metrics fixture; all text fictional.
+- **Ran on Node 24.21.0** after merging `main` (harness fit): build, typecheck (`check-boundaries: ok`), lint,
+  **148 files / 2,648 tests passed** (from 2,607 on `main`) and `format:check`, with the auth library stubbed in
+  `node_modules` as before (nothing of that committed). The build's only warning is `docks.ts`'s style budget.
+- **Not run:** a browser session, Playwright/e2e, a local `ahoy-hosted --simulate` API, a real API or TEST.
 
 ## Harness fit (2026-10-12)
 

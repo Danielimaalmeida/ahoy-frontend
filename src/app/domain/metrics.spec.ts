@@ -1,4 +1,5 @@
 import {
+  groupHaltWeeks,
   barWidth,
   changeVsPrevious,
   fixerLabel,
@@ -147,5 +148,39 @@ describe('words for people', () => {
       outcomesLine({ send_back: 3, approve: 8, reject: 1, cancel: 0 })
     ).toBe('8 approve · 3 send back · 1 reject');
     expect(outcomesLine({})).toBe('—');
+  });
+});
+
+describe('groupHaltWeeks', () => {
+  it('groups the rows by week, oldest first, adding up halts and repeats, each week most halts first', () => {
+    const weeks = groupHaltWeeks([
+      {
+        weekStart: '2026-10-05',
+        kind: 'other',
+        halts: 1,
+        stories: 1,
+        repeated: 1,
+      },
+      {
+        weekStart: '2026-09-28',
+        kind: 'auth',
+        halts: 1,
+        stories: 1,
+        repeated: 0,
+      },
+      {
+        weekStart: '2026-10-05',
+        kind: 'auth',
+        halts: 3,
+        stories: 2,
+        repeated: 3,
+      },
+    ]);
+    expect(weeks.map((w) => [w.label, w.halts, w.repeated])).toEqual([
+      ['28 Sep–4 Oct', 1, 0],
+      ['5–11 Oct', 4, 4],
+    ]);
+    expect(weeks[1]?.kinds.map((k) => k.kind)).toEqual(['auth', 'other']);
+    expect(groupHaltWeeks([])).toEqual([]);
   });
 });

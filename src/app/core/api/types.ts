@@ -396,6 +396,18 @@ export type AgentDiagnosisList = Schemas['AgentDiagnosisList'];
 /** Body of `requestAgentDiagnosis`. May spend AIU: `confirmSpend` must be true; the cap is at most 100 AIU. */
 export type AgentDiagnosisRequest = Schemas['AgentDiagnosisRequest'];
 
+/**
+ * A knowledge review: the shape of a refinement, plus the proposed `knowledge/business-context.md` (`proposal`), the
+ * proposed `knowledge/lessons.md` (`lessons`) and one patch of both against `controlSha`.
+ */
+export type KnowledgeReview = Schemas['KnowledgeReview'];
+
+/** Answer of `listKnowledgeReviews`: every knowledge review of one story, newest first. */
+export type KnowledgeReviewList = Schemas['KnowledgeReviewList'];
+
+/** Body of `requestKnowledgeReview`. May spend AIU: `confirmSpend` must be true; the cap is at most 100 AIU. */
+export type KnowledgeReviewRequest = Schemas['KnowledgeReviewRequest'];
+
 /** Body of `setStoryBudget`. The new cap includes what is already spent. */
 export type SetStoryBudgetRequest = Schemas['SetStoryBudgetRequest'];
 

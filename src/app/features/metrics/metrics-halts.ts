@@ -8,6 +8,7 @@ import {
   formatMetricsAiu,
   formatPercent,
   formatSeconds,
+  groupHaltWeeks,
   type ErrorSource,
 } from '@domain/metrics';
 import { EmptyState } from '@ui/empty-state/empty-state';
@@ -17,7 +18,10 @@ import { SectionTabs, type SectionTab } from '@ui/section-tabs/section-tabs';
 import { Api, Key, Table } from '@ui/table/table';
 import { MetricsStore } from './metrics-store';
 
-/** Halts & errors: why voyages halted, which halts a Resume did not fix, and the errors grouped by message. */
+/**
+ * Halts & errors: why voyages halted, which halts a Resume did not fix, the halts per week that repeated a known
+ * diagnosis (which the lessons of earlier voyages should make fall) and the errors grouped by message.
+ */
 @Component({
   selector: 'ah-metrics-halts',
   imports: [
@@ -175,6 +179,96 @@ import { MetricsStore } from './metrics-store';
         </ah-panel>
 
         <ah-panel>
+          <ah-panel-head
+            heading="Repeated halts per week"
+            subtitle="A halt repeats when an earlier halt in the period had the same diagnosis, in any voyage: the lessons should make it fall"
+          />
+          <ah-panel-body>
+            @if (haltWeeks().length === 0) {
+              <ah-empty-state heading="No halts in this period" />
+            } @else {
+              <ul class="legend" aria-label="Halts">
+                <li class="legend__item">
+                  <i class="swatch s5"></i>First of its diagnosis
+                </li>
+                <li class="legend__item">
+                  <i class="swatch reject"></i>Repeated
+                </li>
+              </ul>
+              <div class="weeks" aria-hidden="true">
+                @for (w of haltWeeks(); track w.weekStart) {
+                  <div
+                    class="week"
+                    [title]="
+                      w.label +
+                      ': ' +
+                      w.repeated +
+                      ' of ' +
+                      w.halts +
+                      ' halts repeated'
+                    "
+                  >
+                    @if (w.halts - w.repeated > 0) {
+                      <i
+                        class="week__part s5"
+                        [style.height.%]="
+                          ((w.halts - w.repeated) / haltWeekMax()) * 100
+                        "
+                      ></i>
+                    }
+                    @if (w.repeated > 0) {
+                      <i
+                        class="week__part reject"
+                        [style.height.%]="(w.repeated / haltWeekMax()) * 100"
+                      ></i>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="week-labels" aria-hidden="true">
+                @for (w of haltWeeks(); track w.weekStart) {
+                  <span>{{ w.label }}</span>
+                }
+              </div>
+              <p class="note">{{ repeatedNote() }}</p>
+              <details>
+                <summary class="ah-link">View as table</summary>
+                <div class="scroll">
+                  <table ahTable>
+                    <thead>
+                      <tr>
+                        <th scope="col">Week</th>
+                        <th scope="col">Diagnosis</th>
+                        <th scope="col" class="num">Halts</th>
+                        <th scope="col" class="num">Voyages</th>
+                        <th scope="col" class="num">Repeated</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (w of haltWeeks(); track w.weekStart) {
+                        @for (k of w.kinds; track k.kind) {
+                          <tr>
+                            <th scope="row">{{ w.label }}</th>
+                            <td>
+                              <span ahApi>{{ k.kind }}</span>
+                            </td>
+                            <td class="num">{{ k.halts }}</td>
+                            <td class="num">{{ k.stories }}</td>
+                            <td class="num" [class.strong]="k.repeated > 0">
+                              {{ k.repeated }}
+                            </td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            }
+          </ah-panel-body>
+        </ah-panel>
+
+        <ah-panel>
           <ah-panel-head heading="Common errors">
             <ah-section-tabs
               variant="pill"
@@ -295,6 +389,28 @@ export class MetricsHalts {
     const halts = repeats.reduce((sum, h) => sum + h.halts, 0);
     const between = repeats.reduce((sum, h) => sum + h.nanoAiuBetween, 0);
     return `${halts} halts · ${formatMetricsAiu(between)} AIU spent between them`;
+  });
+
+  /** The halts of each week, oldest first, with how many repeated a known diagnosis. */
+  protected readonly haltWeeks = computed(() =>
+    groupHaltWeeks(this.store.report()?.haltWeeks ?? [])
+  );
+  protected readonly haltWeekMax = computed(() =>
+    Math.max(1, ...this.haltWeeks().map((w) => w.halts))
+  );
+
+  /** "16 of 23 halts repeated a known diagnosis; 4 of 10 in the last week." */
+  protected readonly repeatedNote = computed(() => {
+    const weeks = this.haltWeeks();
+    const halts = weeks.reduce((sum, w) => sum + w.halts, 0);
+    const repeated = weeks.reduce((sum, w) => sum + w.repeated, 0);
+    const last = weeks.at(-1);
+    return (
+      `${repeated} of ${halts} halts repeated a known diagnosis` +
+      (last !== undefined && weeks.length > 1
+        ? `; ${last.repeated} of ${last.halts} in the last week (${last.label}).`
+        : '.')
+    );
   });
 
   protected readonly sourceTabs = computed((): readonly SectionTab[] => {

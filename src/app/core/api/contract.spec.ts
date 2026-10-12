@@ -1,5 +1,6 @@
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
 import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
+import cancelKnowledgeReview from '@testing/fixtures/cancelKnowledgeReview.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
@@ -13,6 +14,7 @@ import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
 import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
+import listKnowledgeReviews from '@testing/fixtures/listKnowledgeReviews.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
@@ -25,6 +27,7 @@ import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
+import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -114,6 +117,9 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['listAgentDiagnoses', listAgentDiagnoses],
   ['requestAgentDiagnosis', requestAgentDiagnosis],
   ['cancelAgentDiagnosis', cancelAgentDiagnosis],
+  ['listKnowledgeReviews', listKnowledgeReviews],
+  ['requestKnowledgeReview', requestKnowledgeReview],
+  ['cancelKnowledgeReview', cancelKnowledgeReview],
 ];
 
 /**
@@ -126,9 +132,6 @@ const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'reopenWork',
   'unblockStory',
   'streamEvents',
-  'listKnowledgeReviews',
-  'requestKnowledgeReview',
-  'cancelKnowledgeReview',
 ];
 
 /** The members of a list, sorted, so that the order the contract lists enum values in does not matter. */
@@ -145,7 +148,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 2).toBe(33);
+    expect(CLIENT_OPERATIONS.length + 2).toBe(36);
   });
 
   it('has no operation id twice', () => {
@@ -198,6 +201,8 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'cancelRefinement',
       'requestAgentDiagnosis',
       'cancelAgentDiagnosis',
+      'requestKnowledgeReview',
+      'cancelKnowledgeReview',
     ])
       expect(statusOf(id)).toEqual(['202']);
     expect(
@@ -285,6 +290,28 @@ describe('the request bodies the client sends', () => {
     ).not.toEqual([]);
     expect(
       requestViolations('cancelAgentDiagnosis', { reason: 'Asked by mistake' })
+    ).toEqual([]);
+  });
+
+  it('are valid for requestKnowledgeReview and cancelKnowledgeReview as the client sends them, up to 100 AIU', () => {
+    expect(
+      requestViolations('requestKnowledgeReview', {
+        confirmSpend: true,
+        notes: 'Look again at the refund rules',
+        budgetNanoAiu: 100_000_000_000,
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestKnowledgeReview', {
+        confirmSpend: true,
+        budgetNanoAiu: 100_000_000_001,
+      })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('requestKnowledgeReview', { confirmSpend: false })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('cancelKnowledgeReview', { reason: 'Asked by mistake' })
     ).toEqual([]);
   });
 

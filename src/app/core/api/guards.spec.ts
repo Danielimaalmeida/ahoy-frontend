@@ -1,5 +1,6 @@
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
 import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
+import cancelKnowledgeReview from '@testing/fixtures/cancelKnowledgeReview.json';
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getStoryPlanFit from '@testing/fixtures/getStoryPlanFit.json';
@@ -12,6 +13,7 @@ import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
 import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
+import listKnowledgeReviews from '@testing/fixtures/listKnowledgeReviews.json';
 import listArtifacts from '@testing/fixtures/listArtifacts.json';
 import listModels from '@testing/fixtures/listModels.json';
 import listGateRecords from '@testing/fixtures/listGateRecords.json';
@@ -24,6 +26,7 @@ import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
+import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -33,6 +36,8 @@ import stopStory from '@testing/fixtures/stopStory.json';
 import type { Guard } from './guard-kit';
 import {
   isAgentDiagnosisList,
+  isKnowledgeReview,
+  isKnowledgeReviewList,
   isAnswerAccepted,
   isArtifact,
   isArtifactList,
@@ -139,6 +144,9 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['listAgentDiagnoses', isAgentDiagnosisList, listAgentDiagnoses],
     ['requestAgentDiagnosis', isRefinement, requestAgentDiagnosis],
     ['cancelAgentDiagnosis', isRefinement, cancelAgentDiagnosis],
+    ['listKnowledgeReviews', isKnowledgeReviewList, listKnowledgeReviews],
+    ['requestKnowledgeReview', isKnowledgeReview, requestKnowledgeReview],
+    ['cancelKnowledgeReview', isKnowledgeReview, cancelKnowledgeReview],
     ['getMetrics', isMetricsReport, getMetrics],
   ];
 
@@ -697,6 +705,51 @@ describe('isAgentDiagnosisList', () => {
   });
 });
 
+describe('isKnowledgeReviewList', () => {
+  const [cancelled, succeeded] = listKnowledgeReviews.items;
+
+  it('accepts the reviews of a story, with proposed files and a patch only where one succeeded', () => {
+    expect(isKnowledgeReviewList(listKnowledgeReviews)).toBe(true);
+    expect(isKnowledgeReview(withField(succeeded!, 'proposal', null))).toBe(
+      true
+    );
+    expect(isKnowledgeReview(withField(succeeded!, 'lessons', null))).toBe(
+      true
+    );
+  });
+
+  it('refuses a patch without proposed files, proposed files without a patch, and files before the review succeeded', () => {
+    expect(
+      isKnowledgeReview.explain({
+        ...succeeded!,
+        proposal: null,
+        lessons: null,
+      })
+    ).toBe(
+      'KnowledgeReview.patch must be null exactly when both proposal and lessons are'
+    );
+    expect(
+      isKnowledgeReview.explain(withField(succeeded!, 'patch', null))
+    ).toBe(
+      'KnowledgeReview.patch must be null exactly when both proposal and lessons are'
+    );
+    expect(
+      isKnowledgeReview.explain({
+        ...cancelled!,
+        lessons: '# Lessons',
+        patch: 'x',
+      })
+    ).toBe(
+      'KnowledgeReview.proposal and KnowledgeReview.lessons must be null until the review succeeds'
+    );
+    expect(
+      isKnowledgeReview.explain(withField(cancelled!, 'content', '# x'))
+    ).toBe(
+      'KnowledgeReview.content must be set exactly when the status is succeeded'
+    );
+  });
+});
+
 describe('isMetricsReport', () => {
   const [halt] = getMetrics.halts;
   const [error] = getMetrics.errors;
@@ -713,6 +766,7 @@ describe('isMetricsReport', () => {
         topStories: [],
         halts: [],
         haltReasons: [],
+        haltWeeks: [],
         repeatHalts: [],
         errors: [],
         gates: [],

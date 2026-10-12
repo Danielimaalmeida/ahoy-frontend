@@ -72,6 +72,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Knowledge review and lessons (2026-10-12):** a done or halted voyage shows the knowledge curator's proposed
+  lessons, rules and patch, with Ask, Review again and Cancel; Metrics › Halts & errors charts repeated halts per
+  week. Offline only; see [docs/progress.md](docs/progress.md).
+
 - **Harness fit (2026-10-12):** the Backlog's "Harness" column and filter say whether the harness could take each item
   (`readiness` from `ahoy-hosted`'s fixed rules), and the Plan tab shows in plan review whether the plan suits the
   harness (`getStoryPlanFit`). Offline only; see [docs/progress.md](docs/progress.md).
