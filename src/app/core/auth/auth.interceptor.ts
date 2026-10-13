@@ -8,7 +8,7 @@ import { API_BASE, trimBase } from '@core/api/api-base';
 import { isRecord } from '@core/api/guard-kit';
 import { AUTH_STRATEGY } from './auth-strategy';
 import { AccessControl } from './access-control';
-import { FedevAuthService } from '@company-name-fedev/auth';
+import { FedevAuthService } from '@acme-fedev/auth';
 
 /** Whether an error body is the API's `forbidden` problem: parsed JSON, or its text for a `responseType: 'text'` call. */
 function isForbiddenProblem(body: unknown): boolean {

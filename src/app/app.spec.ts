@@ -1,6 +1,6 @@
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { FedevAuthService } from '@company-name-fedev/auth';
+import { FedevAuthService } from '@acme-fedev/auth';
 import {
   NavigationEnd,
   Router,

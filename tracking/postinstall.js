@@ -14,7 +14,7 @@ try {
 
 // Collect dependencies and other project information
 const { name, version, dependencies, devDependencies } = projectPackageJson;
-const packageName = '@company-name-fedev/boilerplate';
+const packageName = '@acme-fedev/boilerplate';
 
 const data = {
   projectName: name,
@@ -31,7 +31,7 @@ const jsonData = JSON.stringify(data);
 
 // Define the request options
 const options = {
-  host: 'analytics-api-fedevanalytics-prod-2y2i.scp.eu-central-1.aws.cloud.company-name',
+  host: 'analytics-api-fedevanalytics-prod-2y2i.scp.eu-central-1.aws.cloud.acme',
   path: '/api/v1/projects',
   method: 'POST',
   rejectUnauthorized: false,
@@ -52,7 +52,7 @@ setTimeout(() => req.destroy(), requestTimeout);
 
 // Handle errors and response from the request
 const trackingDocumentationURL =
-  'https://developer-home.company-namegroup.net/docs/fedev-documentation/5_faq/_1_analytics-tracking/';
+  'https://developer-home.acmegroup.net/docs/fedev-documentation/5_faq/_1_analytics-tracking/';
 
 req.on('error', (error) => {
   let errorString =

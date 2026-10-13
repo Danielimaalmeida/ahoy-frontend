@@ -22,7 +22,7 @@ import {
   FedevAuthService,
   provideFedevAuth,
   provideFedevAuthInitializer,
-} from '@company-name-fedev/auth';
+} from '@acme-fedev/auth';
 import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {

@@ -483,13 +483,13 @@ describe('Docks', () => {
   });
 
   describe('Jira links', () => {
-    it('uses the company-name Jira path when no runtime override is configured', async () => {
+    it('uses the acme Jira path when no runtime override is configured', async () => {
       const f = await mount(new FakeBacklog([anItem('PROJ-145')]));
       const link = root(f).querySelector<HTMLAnchorElement>(
         'a[title="Open in Jira"]'
       )!;
       expect(link.getAttribute('href')).toBe(
-        'https://atc.company-namegroup.net/jira/browse/PROJ-145'
+        'https://atc.acmegroup.net/jira/browse/PROJ-145'
       );
       expect(link.getAttribute('aria-label')).toBe(
         'Open PROJ-145 in Jira (new tab)'

@@ -17,7 +17,7 @@ export interface AppConfig {
    * or "(you)", the avatar and the owner checks will disagree with what the API records.
    */
   readonly actor: string;
-  /** Optional Jira base URL override; Backlog defaults to `https://atc.company-namegroup.net/jira`. */
+  /** Optional Jira base URL override; Backlog defaults to `https://atc.acmegroup.net/jira`. */
   readonly jiraBaseUrl?: string;
   /**
    * The qnumbers allowed to use the app, lower-cased. Anyone else sees "Access denied". Without it the app does not

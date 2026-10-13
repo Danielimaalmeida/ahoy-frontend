@@ -65,7 +65,7 @@ export interface paths {
      *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
      *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
      *     `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-     *     AND "Feature Team" = OTHER-COMPANY AND Team in (34115) ORDER BY Rank ASC`.
+     *     AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
      *
      *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
      *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug

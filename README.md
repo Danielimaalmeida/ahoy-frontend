@@ -84,7 +84,7 @@ do not use it for unit/e2e validation or mutating actions without approval.
   (`child_repos[].pr_url`), once the `child_ready` gate verified them. Offline only; see
   [docs/progress.md](docs/progress.md).
 
-- **R3DA-14787 API state names (2026-10-12):** active contract examples use `intake_analyst` and
+- **LUTA-14787 API state names (2026-10-12):** active contract examples use `intake_analyst` and
   `reviewer_reviews`; the API description names the intake analyst. The vendored OpenAPI, generated TypeScript and
   JSON mirror were updated. No old-story migration or compatibility alias was added. The frontend reader does not
   consume either state entry, and `haltReason` remains an open string; `lookout_no_report` was not present in the
@@ -94,7 +94,7 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 - **Backlog refinement layout (2026-10-12, `feature/metrics-screen`):** the screenshot supplied with the Backlog
   wireframe adds a dedicated refinement column/filter, sprint and page refinement counts, a "Next" sprint label and
-  separate summary controls. Jira links default to `https://atc.company-namegroup.net/jira/browse/{key}`, open in a new tab and
+  separate summary controls. Jira links default to `https://atc.acmegroup.net/jira/browse/{key}`, open in a new tab and
   retain the optional `jiraBaseUrl` runtime override. Refinement filtering reads all matching backlog pages before
   calculating matches; partial-page counts are labelled "shown". Sprint dates/goals are not supplied by the API.
   Offline build, typecheck, lint, 144 files / 2,585 tests and repository formatting passed on Node 24.21.0.
@@ -293,8 +293,8 @@ do not use it for unit/e2e validation or mutating actions without approval.
   (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).
 
-# r3da_nio_ahoy_frontend
+# luta_fio_ahoy_frontend
 
-# r3da_nio_ahoy_frontend
+# luta_fio_ahoy_frontend
 
-# r3da_nio_ahoy_frontend
+# luta_fio_ahoy_frontend

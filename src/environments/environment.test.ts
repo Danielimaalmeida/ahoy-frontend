@@ -1,5 +1,5 @@
-const host = 'https://nio-ahoy.apps.4wm-fpm-test.azure.cloud.company-name/';
-const oauth2Host = 'https://emea.int.alpha.sso.company-namegroup.com:443';
+const host = 'https://fio-ahoy.apps.4wm-fpm-test.azure.cloud.acme/';
+const oauth2Host = 'https://emea.int.alpha.sso.acmegroup.com:443';
 
 export const environment = {
   name: 'TEST',

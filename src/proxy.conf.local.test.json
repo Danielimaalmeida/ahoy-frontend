@@ -1,12 +1,12 @@
 {
   "/auth/oauth2/realms/root/realms/alpha": {
-    "target": "https://emea.int.alpha.sso.company-namegroup.com",
+    "target": "https://emea.int.alpha.sso.acmegroup.com",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/api": {
-    "target": "https://nio-ahoy.apps.4wm-fpm-test.azure.cloud.company-name",
+    "target": "https://fio-ahoy.apps.4wm-fpm-test.azure.cloud.acme",
     "secure": false,
     "changeOrigin": true,
     "headers": {

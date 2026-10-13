@@ -350,7 +350,7 @@ export class Voyage {
           ? {
               repo,
               pr_number: index + 1,
-              pr_url: `https://github.example.test/acme/${repo}/pull/${index + 1}`,
+              pr_url: `https://github.example.test/luta/${repo}/pull/${index + 1}`,
               pr_state: 'OPEN',
             }
           : { repo }

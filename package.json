@@ -13,9 +13,9 @@
     "build": "ng build",
     "build:test": "ng build --configuration test",
     "build:stats": "ng build --stats-json && npm run analyze",
-    "build:compress": "gzipper compress ./dist/r3da-nio-ahoy-frontend ./dist/r3da-nio-ahoy-frontend-gzip",
+    "build:compress": "gzipper compress ./dist/luta-fio-ahoy-frontend ./dist/luta-fio-ahoy-frontend-gzip",
     "watch": "ng build --watch --configuration development",
-    "analyze": "esbuild-visualizer --metadata ./dist/r3da-nio-ahoy-frontend/stats.json --filename dist/analysis/index.html",
+    "analyze": "esbuild-visualizer --metadata ./dist/luta-fio-ahoy-frontend/stats.json --filename dist/analysis/index.html",
     "test": "ng test",
     "test:coverage": "ng test --coverage --watch=false && npm run test:convert-coverage",
     "test:convert-coverage": "node .github/workflows/workflow-utils/convertJSONToMd.js",
@@ -36,7 +36,7 @@
     "playwright:ui": "npm run playwright -- --ui",
     "audit": "npm audit --registry=https://registry.npmjs.org",
     "audit:fix": "npm audit fix --registry=https://registry.npmjs.org",
-    "add-density": "ng add @company-name-fedev/density-components",
+    "add-designkit": "ng add @acme-fedev/designkit-components",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && node scripts/check-boundaries.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "api:sync": "node scripts/sync-openapi.mjs",
@@ -59,8 +59,8 @@
     "marked": "18.1.0",
     "rxjs": "7.8.2",
     "tslib": "2.8.1",
-    "@company-name-fedev/auth": "^8.0.0",
-    "@company-name-fedev/playwright-helpers": "^3.0.0"
+    "@acme-fedev/auth": "^8.0.0",
+    "@acme-fedev/playwright-helpers": "^3.0.0"
   },
   "overrides": {
     "openapi-typescript": {

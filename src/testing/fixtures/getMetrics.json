@@ -781,7 +781,7 @@
       "rule": "gate_first_fail",
       "title": "The plan gate fails often",
       "evidence": "13 of 41 plan evaluations failed; 9 of them say: AC-# has no test_ids",
-      "action": "Make the agent's instructions in agents-github-repository ask for what the plan gate checks."
+      "action": "Make the agent's instructions in agents-github-repository  ask for what the plan gate checks."
     }
   ]
 }

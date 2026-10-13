@@ -5,7 +5,7 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import { FedevAuthService } from '@company-name-fedev/auth';
+import { FedevAuthService } from '@acme-fedev/auth';
 import { AppConfigStore } from '@core/config/app-config';
 import { isAllowedUser, qnumberOf } from '@domain/access';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FedevAuthService } from '@company-name-fedev/auth';
+import type { FedevAuthService } from '@acme-fedev/auth';
 import { FedevAuthStrategy } from './fedev-auth-strategy';
 
 /** The slice of `FedevAuthService` the strategy reads. */

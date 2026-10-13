@@ -112,27 +112,27 @@ describe('readStoryState', () => {
       child_repos: [
         {
           repo: 'billing-api',
-          pr_url: 'https://github.example/acme/billing-api/pull/7',
+          pr_url: 'https://github.example/luta/billing-api/pull/7',
           pr_number: 7,
           pr_state: 'MERGED',
         },
         { repo: 'billing-web', branch: 'feature/PROJ-123' },
         {
           repo: 'billing-docs',
-          pr_url: 'https://github.example/acme/billing-docs/pull/2',
+          pr_url: 'https://github.example/luta/billing-docs/pull/2',
         },
       ],
     });
     expect(view.pullRequests).toEqual([
       {
         repo: 'billing-api',
-        url: 'https://github.example/acme/billing-api/pull/7',
+        url: 'https://github.example/luta/billing-api/pull/7',
         number: 7,
         state: 'MERGED',
       },
       {
         repo: 'billing-docs',
-        url: 'https://github.example/acme/billing-docs/pull/2',
+        url: 'https://github.example/luta/billing-docs/pull/2',
       },
     ]);
   });
@@ -141,7 +141,7 @@ describe('readStoryState', () => {
     const view = readStoryState({
       child_repos: [
         { repo: 'a', pr_url: 'javascript:alert(1)' },
-        { repo: 'b', pr_url: '/acme/b/pull/1' },
+        { repo: 'b', pr_url: '/luta/b/pull/1' },
         { repo: 'c', pr_url: 42 },
         {
           repo: 'd',

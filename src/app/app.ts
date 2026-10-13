@@ -26,7 +26,7 @@ import { CLOCK as UI_CLOCK, type Clock } from '@ui/pipes/clock';
 import { ThemeService } from '@ui/theme/theme.service';
 import { ToastHost } from '@ui/toast/toast';
 import { TopBar, type LiveState, type TopBarUser } from '@ui/top-bar/top-bar';
-import { FedevAuthService } from '@company-name-fedev/auth';
+import { FedevAuthService } from '@acme-fedev/auth';
 
 /** How often the relative times ("22 m ago", "Waiting 48 m") are read again. */
 const CLOCK_TICK_MS = 30_000;

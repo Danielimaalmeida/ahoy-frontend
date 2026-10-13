@@ -191,9 +191,10 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
     .docks__table td {
       padding-block: 6px;
       height: 24px;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
       white-space: normal;
     }
+    /* The ten widths add up to 100%: a column left without one collapses to ~0 under the fixed layout. */
     .docks__table th:nth-child(1) {
       width: 8%;
     }
@@ -201,25 +202,28 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
       width: 17%;
     }
     .docks__table th:nth-child(3) {
-      width: 9%;
+      width: 8%;
     }
     .docks__table th:nth-child(4) {
       width: 7%;
     }
     .docks__table th:nth-child(5) {
-      width: 11%;
+      width: 9%;
     }
     .docks__table th:nth-child(6) {
       width: 6%;
     }
     .docks__table th:nth-child(7) {
-      width: 11%;
+      width: 10%;
     }
     .docks__table th:nth-child(8) {
-      width: 14%;
+      width: 10%;
     }
     .docks__table th:nth-child(9) {
-      width: 17%;
+      width: 12%;
+    }
+    .docks__table th:nth-child(10) {
+      width: 13%;
     }
     .docks__table .ah-tag {
       max-width: 100%;
@@ -376,6 +380,7 @@ const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
       height: auto;
       min-height: 28px;
       white-space: normal;
+      overflow-wrap: normal;
       text-align: center;
     }
     .docks__actions > * + * {
@@ -1193,8 +1198,7 @@ export class Docks {
   /** The team's Jira issue page, with an optional runtime override for another Jira. */
   protected jiraUrl(key: string): string {
     const base =
-      this.config.config().jiraBaseUrl ??
-      'https://atc.company-namegroup.net/jira';
+      this.config.config().jiraBaseUrl ?? 'https://atc.acmegroup.net/jira';
     return `${base}/browse/${encodeURIComponent(key)}`;
   }
 

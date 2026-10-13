@@ -380,8 +380,8 @@ describe('VoyageShell on the mock backend', () => {
         ...header(page).querySelectorAll<HTMLAnchorElement>('.header__prs a'),
       ];
       expect(links.map((a) => [text(a), a.getAttribute('href')])).toEqual([
-        ['api #1', 'https://github.example.test/acme/api/pull/1'],
-        ['web #2', 'https://github.example.test/acme/web/pull/2'],
+        ['api #1', 'https://github.example.test/luta/api/pull/1'],
+        ['web #2', 'https://github.example.test/luta/web/pull/2'],
       ]);
       expect(links.every((a) => a.target === '_blank')).toBe(true);
       expect(links.every((a) => a.rel === 'noopener noreferrer')).toBe(true);

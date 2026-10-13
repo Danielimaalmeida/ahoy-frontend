@@ -9,7 +9,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { FedevAuthService } from '@company-name-fedev/auth';
+import { FedevAuthService } from '@acme-fedev/auth';
 import { API_BASE } from '@core/api/api-base';
 import {
   AUTH_STRATEGY,
