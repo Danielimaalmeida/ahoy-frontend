@@ -1,8 +1,8 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-13 for CI wait, work packages and package decisions** (uncommitted, in the working tree; after the
-knowledge review on `claude/project-thread-4kgkxo`). From a cloud session. No TEST environment or real API was
-contacted; 0 AIU.
+**Updated 2026-10-13 for CI wait, work packages and package decisions** (committed on `claude/project-thread-t6vqyj`,
+PR #30, with its review fixes; after the knowledge review on `claude/project-thread-4kgkxo`). From a cloud session. No
+TEST environment or real API was contacted; 0 AIU.
 
 ## CI wait, work packages and package decisions (2026-10-13)
 
@@ -14,7 +14,8 @@ their runs, and lets an owner retry or accept a stuck package.
 - **CI wait:** `ciWait` reads only the newest batch of step `gate.evaluated` verdicts at the end of the events (one
   transaction shares one `createdAt`), on a voyage `ready` in `implementation` with no current run, and only a
   `child_ready` fail whose message is the reconciler's "PR #N has K check(s) still running (…)". A banner under the
-  header names each pull request (linked when `child_repos` records exactly one with that number), the count and the
+  header names each pull request (linked when `child_repos` records exactly one with that number; when several record
+  it, "PR #7 in billing-api or billing-web" without a link, since the message names no repository), the count and the
   names. Any later run, halt, resume, decision or phase change, or a batch without that message, removes it. It follows
   the existing SSE refetch. No next-check time is shown: the API has none.
 - **Work packages:** a "Work packages" tab (before implementation too) shows each package's id, repository, agent,
@@ -40,6 +41,11 @@ their runs, and lets an owner retry or accept a stuck package.
   committed).
 - **Not run:** a browser session, Playwright/e2e, the mock backend (it still does not simulate `decideWorkPackage` and
   has no package-halt or CI-wait seed), a `--simulate` API, a real API or TEST.
+- **Review fixes (2026-10-13, second commit):** the CI-wait banner tracks its rows by position, not by pull request
+  number (two repositories can both have PR #7), and names the candidate repositories when the number is ambiguous; this
+  page and the README no longer call the work uncommitted. **Not run:** build, typecheck, lint, the tests (2 specs
+  changed: `ci-wait.spec.ts`, `ci-wait-banner.spec.ts`) and the format check; that session had no `node_modules` (the
+  lockfile's registry is unreachable from it). Only Prettier 3.9.9 was run, on the changed files.
 
 ## Knowledge review and lessons (2026-10-12)
 
@@ -739,8 +745,8 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-CI wait, work packages and package decisions (2026-10-13) are uncommitted in the working tree: 153 files / 2,706 tests
-pass offline; nothing has met an API.
+CI wait, work packages and package decisions (2026-10-13) are on `claude/project-thread-t6vqyj` (PR #30): 153 files /
+2,706 tests passed offline before its review-fix commit, which has not been run; nothing has met an API.
 
 The harness fit (2026-10-12) is on `claude/project-thread-c6a2m7`, with `ahoy-hosted` PR #36: 146 files / 2,607 tests
 pass offline; it has met only the in-process mock.
@@ -861,8 +867,9 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-Review and commit the CI-wait and work-package change, try Retry and Accept against a local `ahoy-hosted --simulate`
-(0 AIU), then ask `ahoy-hosted` for the three fields listed in its section.
+Run the full checks on PR #30 (its review-fix commit has not been built or tested), try Retry and Accept against a
+local `ahoy-hosted --simulate` (0 AIU), then ask `ahoy-hosted` for the three fields listed in its section; the
+structured CI-wait signal must name the repository, or a pull request number two repositories share stays unlinked.
 
 Review the harness-fit PR beside `ahoy-hosted` PR #36, then check the Backlog's Harness column against the real Jira
 backlog once the API has `JIRA_PAT`, and tune the rules in `ahoy-hosted` where they misjudge.
@@ -886,7 +893,11 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The latest change adds the read-only Metrics page (139 test files / 2,531 tests pass on Node 24.21.0) (see "Harness metrics"). Before it, a change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
+The latest change, on `claude/project-thread-t6vqyj` (PR #30), shows when Ahoy waits for a pull request's CI, adds a
+Work packages tab and lets an owner retry or accept a stuck package (see "CI wait, work packages and package
+decisions"). 153 test files / 2,706 tests passed on Node 24.21.0 before its review-fix commit, which has not been
+built, linted or tested yet: run `npm run build && npm run typecheck && npm run lint && npm test && npm run format`
+first. Before it, a change adds the read-only Metrics page (139 test files / 2,531 tests pass on Node 24.21.0) (see "Harness metrics"). Before it, a change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
 Node 24.21.0). Before it, a change fixes PR #22's code review (see "Review fixes of PR #22"; 136 test
 files / 2,439 tests pass on Node 24.21.0). Before it, a change shows a halted voyage's diagnosis
 (`getStoryDiagnosis`) in the Anchored banner and in "Needs you". Before it, the Backlog's Refine action (row button or

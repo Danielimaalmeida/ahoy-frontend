@@ -25,6 +25,11 @@ export interface CiPendingPullRequest {
   readonly pendingChecks: readonly string[];
   /** The repository's pull request in the state, when exactly one has this number; null otherwise. */
   readonly pullRequest: StoryPullRequest | null;
+  /**
+   * The repositories whose pull requests in the state all have this number, when there are several: the gate's message
+   * names no repository, so the wait could be on any of them. Empty otherwise.
+   */
+  readonly candidateRepos: readonly string[];
   /** The gate's message, plain text. */
   readonly message: string;
 }
@@ -147,6 +152,7 @@ export function ciWait(
     pending.push({
       ...running,
       pullRequest: matches.length === 1 ? (matches[0] ?? null) : null,
+      candidateRepos: matches.length > 1 ? matches.map((pr) => pr.repo) : [],
       message: verdict.message,
     });
   }

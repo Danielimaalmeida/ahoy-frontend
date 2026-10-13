@@ -63,9 +63,11 @@ const STATE = {
 describe('CiWaitBanner', () => {
   let story: Story;
   let events: readonly AhoyEvent[];
+  let state: Record<string, unknown>;
   let fixture: ComponentFixture<CiWaitBanner>;
 
   beforeEach(() => {
+    state = STATE;
     story = aStory('PROJ-131', {
       phase: 'implementation',
       status: 'ready',
@@ -78,7 +80,7 @@ describe('CiWaitBanner', () => {
     api
       .on('getStory', () => Promise.resolve(ok(story)))
       .on('getStoryState', (key) =>
-        Promise.resolve(ok({ key, version: story.version, state: STATE }))
+        Promise.resolve(ok({ key, version: story.version, state }))
       )
       .on('listStoryRuns', () => Promise.resolve(ok([])))
       .on('listQuestions', () => Promise.resolve(ok([])))
@@ -154,6 +156,40 @@ describe('CiWaitBanner', () => {
     await TestBed.inject(VoyageContext).refresh();
     await flush();
     expect(root.querySelector('ah-banner')).toBeNull();
+  });
+
+  it('names the repositories a pull request could be in, without a link, when two record its number', async () => {
+    state = {
+      ...STATE,
+      child_repos: [
+        ...STATE.child_repos,
+        {
+          repo: 'billing-web',
+          pr_url: 'https://github.example/luta/billing-web/pull/7',
+          pr_number: 7,
+          pr_state: 'OPEN',
+        },
+      ],
+    };
+    const second = {
+      ...anEvent(5, 'gate.evaluated', {
+        gate: 'child_ready',
+        code: 1,
+        result: 'fail',
+        message:
+          'PR #7 has 1 check(s) still running (lint); poll again rather than recording ready',
+      }),
+      storyKey: 'PROJ-131',
+      createdAt: '2026-10-06T10:00:00.000Z',
+    };
+    events = [...WAITING.slice(0, 3), second, ...WAITING.slice(3)];
+    const root = await render();
+    const items = [...root.querySelectorAll('ah-banner li')].map(text);
+    expect(items).toEqual([
+      'PR #7 in billing-api or billing-web · 2 checks still running: build, e2e',
+      'PR #7 in billing-api or billing-web · 1 check still running: lint',
+    ]);
+    expect(root.querySelector('ah-banner a')).toBeNull();
   });
 
   it('shows nothing for a ready voyage whose last verdict is not a CI wait', async () => {

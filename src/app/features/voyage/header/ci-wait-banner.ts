@@ -8,8 +8,8 @@ import { pullRequestLabel } from './voyage-header';
 /**
  * "Waiting for CI": shown while Ahoy waits for a pull request's checks, never while an agent runs. The implementer has
  * finished; the `child_ready` gate found checks still running and will be asked again. It names each pull request (a
- * link when the state records it), how many checks are still running and their names, as the gate listed them. The API
- * gives no time for the next check, so none is shown.
+ * link when the state records it, the repositories it could be in when several record its number), how many checks are
+ * still running and their names, as the gate listed them. The API gives no time for the next check, so none is shown.
  *
  * It follows the event stream through the page's context: the next gate verdict, a run, a halt, a resume, a decision
  * or a phase change replaces it or takes it away.
@@ -42,7 +42,7 @@ import { pullRequestLabel } from './voyage-header';
         >The implementer has finished; no agent is running. Ahoy is waiting for
         the pull request's checks to finish and checks again on its own.
         <ul class="ci-wait__list">
-          @for (pr of v.pullRequests; track pr.prNumber) {
+          @for (pr of v.pullRequests; track $index) {
             <li>
               @if (pr.url; as url) {
                 <a [href]="url" target="_blank" rel="noopener noreferrer">{{
@@ -73,12 +73,13 @@ export class CiWaitBanner {
     return {
       seenAt: wait.seenAt,
       pullRequests: wait.pullRequests.map((pending) => ({
-        prNumber: pending.prNumber,
         url: pending.pullRequest?.url ?? null,
         label:
           pending.pullRequest !== null
             ? pullRequestLabel(pending.pullRequest)
-            : `PR #${pending.prNumber}`,
+            : pending.candidateRepos.length > 0
+              ? `PR #${pending.prNumber} in ${pending.candidateRepos.join(' or ')}`
+              : `PR #${pending.prNumber}`,
         count:
           pending.pendingCount === 1
             ? '1 check still running'

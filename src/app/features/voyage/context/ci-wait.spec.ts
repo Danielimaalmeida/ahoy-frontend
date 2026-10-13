@@ -80,6 +80,7 @@ describe('ciWait', () => {
           pendingCount: 2,
           pendingChecks: ['build', 'e2e'],
           pullRequest: prs[0],
+          candidateRepos: [],
           message: running(),
         },
       ],
@@ -210,7 +211,7 @@ describe('ciWait', () => {
     expect(ciWait(waiting, events, prs)).not.toBeNull();
   });
 
-  it('links no pull request when two repositories record the same number', () => {
+  it('links no pull request when two repositories record the same number, and names both as candidates', () => {
     const twice: StoryPullRequest[] = [
       ...prs,
       {
@@ -225,5 +226,13 @@ describe('ciWait', () => {
       twice
     );
     expect(wait?.pullRequests[0]?.pullRequest).toBeNull();
+    expect(wait?.pullRequests[0]?.candidateRepos).toEqual([
+      'billing-api',
+      'billing-web',
+    ]);
+    expect(
+      ciWait(waiting, [verdict(1, 'child_ready', 'fail', running())], prs)
+        ?.pullRequests[0]?.candidateRepos
+    ).toEqual([]);
   });
 });
