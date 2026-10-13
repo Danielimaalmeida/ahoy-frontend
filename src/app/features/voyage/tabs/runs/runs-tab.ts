@@ -2,6 +2,10 @@ import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { Run } from '@core/api/types';
 import { apiErrorView } from '@core/commands/command-error';
+import {
+  packageRunLabel,
+  packageRunsById,
+} from '@core/api/work-package-events';
 import { RunProgressBuffer } from '@core/stores/run-progress-buffer';
 import { budgetPercent, formatAiu } from '@domain/aiu';
 import { workerStartup } from '@domain/worker-startup';
@@ -33,6 +37,7 @@ import {
 /** The columns of the Runs table, for its placeholder rows. */
 const RUN_COLUMNS: readonly SkeletonColumn[] = [
   { track: 'minmax(0, 1.4fr)' },
+  { track: 'minmax(0, 1fr)' },
   { track: '90px' },
   { track: '100px' },
   { track: 'minmax(0, 1.4fr)' },
@@ -47,6 +52,8 @@ const RUN_COLUMNS: readonly SkeletonColumn[] = [
 /** One row of the Runs table. */
 interface RunRow {
   readonly run: Run;
+  /** "WP2 — implementation", from the run's own `run.queued`; null for a run that names no work package. */
+  readonly workPackage: string | null;
   readonly crew: string;
   readonly model: string;
   /** Spent, in nano-AIU; for the active run, what its progress says now. */
@@ -59,6 +66,8 @@ interface RunRow {
 interface LiveView {
   readonly run: Run;
   readonly crew: string;
+  /** "WP2 — implementation" when the run's `run.queued` names a work package; null otherwise. */
+  readonly workPackage: string | null;
   /** "Cartographer is at work", or "Cartographer's run has ended". */
   readonly heading: string;
   readonly model: string;
@@ -151,6 +160,10 @@ interface LiveView {
             <dl class="runs__dl">
               <dt>Agent</dt>
               <dd>{{ l.crew }}</dd>
+              @if (l.workPackage; as wp) {
+                <dt>Work package</dt>
+                <dd>{{ wp }}</dd>
+              }
               <dt>Model</dt>
               <dd class="ah-mono">{{ l.run.model ?? "agent's own" }}</dd>
               <dt>Effort</dt>
@@ -206,6 +219,7 @@ interface LiveView {
           <thead>
             <tr>
               <th scope="col">Run</th>
+              <th scope="col">Work package</th>
               <th scope="col">Phase</th>
               <th scope="col">Agent</th>
               <th scope="col">Model · effort</th>
@@ -226,6 +240,13 @@ interface LiveView {
                     [routerLink]="['/voyages', key(), 'runs', row.run.id]"
                     >{{ row.run.id }}</a
                   >
+                </td>
+                <td ahNowrap>
+                  @if (row.workPackage; as wp) {
+                    {{ wp }}
+                  } @else {
+                    <span aria-label="No work package">—</span>
+                  }
                 </td>
                 <td class="ah-mono">{{ row.run.phase }}</td>
                 <td>{{ row.crew }}</td>
@@ -295,12 +316,17 @@ export class RunsTab {
     const crew = runCrew(run);
     const active = isRunActive(run);
     const nanoAiu = runSpendNanoAiu(run, spend);
+    const packages = packageRunsById(this.context.events());
+    const workPackage = packageRunLabel(packages, run.id);
+    const queued = packages.get(run.id);
+    const on = queued === undefined ? '' : ` on ${queued.workPackageId}`;
     return {
       run,
       crew,
+      workPackage,
       heading:
         workerStartup(run, this.clock())?.heading ??
-        (active ? `${crew} is at work` : `${crew}'s run has ended`),
+        (active ? `${crew} is at work${on}` : `${crew}'s run${on} has ended`),
       model: runModelLabel(run),
       active,
       spent: formatAiu(nanoAiu, 2),
@@ -320,11 +346,13 @@ export class RunsTab {
     toLiveSteps(this.view()?.entries ?? [])
   );
 
-  protected readonly rows = computed<readonly RunRow[]>(() =>
-    oldestFirst(this.context.runs()).map((run) => {
+  protected readonly rows = computed<readonly RunRow[]>(() => {
+    const packages = packageRunsById(this.context.events());
+    return oldestFirst(this.context.runs()).map((run) => {
       const live = isRunActive(run);
       return {
         run,
+        workPackage: packageRunLabel(packages, run.id),
         crew: runCrew(run),
         model: runModelLabel(run),
         nanoAiu: live
@@ -332,8 +360,8 @@ export class RunsTab {
           : run.usage.nanoAiu,
         live,
       };
-    })
-  );
+    });
+  });
 
   /** The runs are being read for the first time. */
   protected readonly loading = computed(() => {

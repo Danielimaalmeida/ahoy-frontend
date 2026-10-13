@@ -30,6 +30,7 @@ import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json'
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
+import decideWorkPackage from '@testing/fixtures/decideWorkPackage.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
 import startStory from '@testing/fixtures/startStory.json';
@@ -105,6 +106,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['answerQuestion', answerQuestion],
   ['listGateRecords', listGateRecords],
   ['decideHumanGate', decideHumanGate],
+  ['decideWorkPackage', decideWorkPackage],
   ['getStoryState', getStoryState],
   ['getStoryDiagnosis', getStoryDiagnosis],
   ['getStoryPlanFit', getStoryPlanFit],
@@ -122,13 +124,9 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['cancelKnowledgeReview', cancelKnowledgeReview],
 ];
 
-/**
- * In the contract, not in the client yet: phase 7 (`resolveReview`...), the live stream (lane 2B) and the knowledge
- * review of a delivered story.
- */
+/** In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...) and the live stream (lane 2B). */
 const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'resolveReview',
-  'decideWorkPackage',
   'reopenWork',
   'unblockStory',
   'streamEvents',
@@ -148,7 +146,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 2).toBe(36);
+    expect(CLIENT_OPERATIONS.length + 2).toBe(37);
   });
 
   it('has no operation id twice', () => {
@@ -196,6 +194,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'setStoryModels',
       'answerQuestion',
       'decideHumanGate',
+      'decideWorkPackage',
       'refreshIntake',
       'requestRefinement',
       'cancelRefinement',
@@ -374,6 +373,37 @@ describe('the request bodies the client sends', () => {
     ).not.toEqual([]);
     expect(
       requestViolations('answerQuestion', { answer: 5, expectedVersion: 1 })
+    ).not.toEqual([]);
+  });
+
+  it('are valid for decideWorkPackage with retry and accept, and refused without a reason or with another decision', () => {
+    for (const decision of ['retry', 'accept'])
+      expect(
+        requestViolations('decideWorkPackage', {
+          decision,
+          reason: 'The flaky e2e check is fixed on main.',
+          expectedVersion: 14,
+        })
+      ).toEqual([]);
+    expect(
+      requestViolations('decideWorkPackage', {
+        decision: 'retry',
+        reason: '',
+        expectedVersion: 14,
+      })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('decideWorkPackage', {
+        decision: 'skip',
+        reason: 'x',
+        expectedVersion: 14,
+      })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('decideWorkPackage', {
+        decision: 'accept',
+        reason: 'x',
+      })
     ).not.toEqual([]);
   });
 

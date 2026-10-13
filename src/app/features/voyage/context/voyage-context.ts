@@ -9,7 +9,13 @@ import { ApiClient } from '@core/api/api-client';
 import { isNotFound, type ApiError } from '@core/api/api-error';
 import { readStoryState, type StoryStateView } from '@core/api/story-state';
 import type { ApiResult } from '@core/api/api-error';
-import type { AhoyEvent, ModelPlan, Run, Story } from '@core/api/types';
+import type {
+  AhoyEvent,
+  ModelPlan,
+  Run,
+  Story,
+  WorkPackageDecision,
+} from '@core/api/types';
 import { CurrentUser } from '@core/auth/current-user';
 import {
   CommandRunner,
@@ -37,6 +43,7 @@ export type VoyageStatus = 'loading' | 'ready' | 'error' | 'notFound';
 /** The numbers on the section tabs; null until the list is read. */
 export interface VoyageCounts {
   readonly questions: number | null;
+  readonly packages: number | null;
   readonly runs: number | null;
   readonly gates: number | null;
 }
@@ -181,11 +188,12 @@ export class VoyageContext {
     lastHalt(this.events())
   );
 
-  /** The counts on the Questions, Runs and Gates tabs. */
+  /** The counts on the Questions, Work packages, Runs and Gates tabs. */
   readonly counts = computed<VoyageCounts>(() => {
     const handle = this.held()?.handle;
     return {
       questions: handle?.questions.value()?.length ?? null,
+      packages: this.state()?.packages.length ?? null,
       runs: handle?.runs.value()?.length ?? null,
       gates: handle?.gates.value()?.length ?? null,
     };
@@ -253,6 +261,29 @@ export class VoyageContext {
         confirmSpend: true,
       })
     );
+  }
+
+  /**
+   * Retries or accepts a stuck work package (`decideWorkPackage`) with the reason, as one command with the version the
+   * user saw. The `202` story goes to the store; then the story, the state (the packages) and the events are read again
+   * in the background, so the page shows the decision without waiting for the event stream. A conflict is never sent again on its own: the
+   * runner has read the voyage again, and the person confirms once more.
+   */
+  async decidePackage(
+    workPackageId: string,
+    decision: WorkPackageDecision,
+    reason: string
+  ): Promise<CommandOutcome<Story>> {
+    const outcome = await this.storyCommand((key, expectedVersion) =>
+      this.api.decideWorkPackage(key, workPackageId, {
+        decision,
+        reason,
+        expectedVersion,
+      })
+    );
+    // Not awaited: the dialog closes on the answer, and nothing can be sent twice meanwhile.
+    if (outcome.kind === 'ok') void this.refresh();
+    return outcome;
   }
 
   /** Sets the total cap: `setStoryBudget` with the new cap in nano-AIU and the reason. */

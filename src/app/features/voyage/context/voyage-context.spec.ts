@@ -78,16 +78,25 @@ describe('VoyageContext', () => {
     });
   });
 
-  it('counts the questions, runs and gate records for the tabs', async () => {
+  it('counts the questions, work packages, runs and gate records for the tabs', async () => {
     const { context } = setUp();
     expect(context.counts()).toEqual({
       questions: null,
+      packages: null,
       runs: null,
       gates: null,
     });
     context.open('PROJ-131');
     await settle();
-    expect(context.counts()).toEqual({ questions: 3, runs: 2, gates: 2 });
+    expect(context.counts()).toEqual({
+      questions: 3,
+      packages: 0,
+      runs: 2,
+      gates: 2,
+    });
+    context.open('PROJ-123');
+    await settle();
+    expect(context.counts().packages).toBe(2);
   });
 
   it('knows whether the user owns the voyage', async () => {

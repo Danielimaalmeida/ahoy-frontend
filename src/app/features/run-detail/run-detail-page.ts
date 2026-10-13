@@ -10,6 +10,12 @@ import {
 import { RouterLink } from '@angular/router';
 import { ApiClient } from '@core/api/api-client';
 import { isNotFound } from '@core/api/api-error';
+import {
+  packageReportsByRun,
+  packageRunsById,
+  type PackageReportEvent,
+  type PackageRun,
+} from '@core/api/work-package-events';
 import { apiErrorView } from '@core/commands/command-error';
 import { RunProgressBuffer } from '@core/stores/run-progress-buffer';
 import { StoreResource } from '@core/stores/resource';
@@ -166,6 +172,24 @@ type PageStatus = 'loading' | 'ready' | 'notFound' | 'error';
                   <dl class="run__dl">
                     <dt>Agent</dt>
                     <dd>{{ crew() }}</dd>
+                    @if (workPackage(); as wp) {
+                      <dt>Work package</dt>
+                      <dd>
+                        <a [routerLink]="['/voyages', key(), 'packages']"
+                          >{{ wp.run.workPackageId }} — {{ wp.run.phase }}</a
+                        >
+                        @if (wp.report; as report) {
+                          <span class="ah-hint"
+                            >· Ahoy routed its report as {{ report.status
+                            }}{{
+                              report.deliveryKind === 'verified_existing'
+                                ? ' (found done, only verified)'
+                                : ''
+                            }}</span
+                          >
+                        }
+                      </dd>
+                    }
                     <dt>Model</dt>
                     <dd class="ah-mono run__small">
                       {{ r.model ?? "agent's own" }}
@@ -376,6 +400,21 @@ export class RunDetailPage {
     return events === undefined
       ? null
       : effortSourceLabel(events, this.runId());
+  });
+
+  /** The work package this run worked on, from its own `run.queued`, and what Ahoy made of its report; null if none. */
+  protected readonly workPackage = computed<{
+    readonly run: PackageRun;
+    readonly report: PackageReportEvent | null;
+  } | null>(() => {
+    const events = this.held()?.events.events();
+    if (events === undefined) return null;
+    const run = packageRunsById(events).get(this.runId());
+    if (run === undefined) return null;
+    return {
+      run,
+      report: packageReportsByRun(events).get(this.runId()) ?? null,
+    };
   });
 
   protected readonly voyageLink = computed(() =>

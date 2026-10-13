@@ -20,6 +20,7 @@ import { CLOCK } from '@ui/pipes/clock';
 import { runById, slotsForPhase } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import type { HaltRecord } from '../context/voyage-events';
+import { canDecidePackage, packageStatusView } from '../context/work-packages';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
 import { AgentDiagnoses, AGENT_DIAGNOSIS_POLL_MS } from './agent-diagnoses';
 import { HaltDiagnosis } from './halt-diagnosis';
@@ -110,6 +111,17 @@ export function slotToChange(
             </p>
           }
           <p><b>To continue:</b> {{ v.guidance }}</p>
+          @if (stuckPackages().length > 0) {
+            <p class="anchored__packages">
+              <b>Work packages that need a decision:</b>
+              @for (p of stuckPackages(); track p.id) {
+                {{ p.id }} ({{ p.label }}){{ $last ? '.' : ',' }}
+              }
+              Retry or accept each one in
+              <a [routerLink]="['/voyages', v.key, 'packages']">Work packages</a
+              >.
+            </p>
+          }
           @if (findings().length > 0) {
             <div class="anchored__diagnosis">
               <h3 class="anchored__subtitle">Diagnosis</h3>
@@ -267,6 +279,17 @@ export class AnchoredBanner {
       })
     )
   );
+
+  /** The packages a person can retry or accept now; none unless the voyage is halted in implementation. */
+  protected readonly stuckPackages = computed(() => {
+    const story = this.context.story();
+    return (this.context.state()?.packages ?? [])
+      .filter((pkg) => canDecidePackage(story, pkg))
+      .map((pkg) => ({
+        id: pkg.id,
+        label: packageStatusView(pkg.status).label.toLowerCase(),
+      }));
+  });
 
   protected readonly view = computed(() => {
     const story = this.context.story();

@@ -17,13 +17,17 @@ import {
   type KnowledgeReviewDialogData,
 } from './knowledge-review-dialogs';
 import type { VoyageDialogData } from './dialog-support';
+import {
+  PackageDecisionDialog,
+  type PackageDecisionDialogData,
+} from './package-decision-dialog';
 import { RefreshIntakeDialog } from './refresh-intake-dialog';
 import { ResumeDialog } from './resume-dialog';
 import { StopDialog } from './stop-dialog';
 
 /**
- * Opens the voyage's Stop, Resume, Back to intake, Budget, agent diagnosis and knowledge review dialogs over the page.
- * The first four close with the story the API answered, the others with the diagnosis or the review, or `undefined` when
+ * Opens the voyage's Stop, Resume, Back to intake, Budget, work package decision, agent diagnosis and knowledge review
+ * dialogs over the page. The first five close with the story the API answered, the others with the diagnosis or the review, or `undefined` when
  * cancelled; the page needs nothing from the result, since the stores already hold it.
  */
 @Injectable({ providedIn: 'root' })
@@ -59,6 +63,17 @@ export class VoyageDialogs {
       BudgetDialog,
       { data: { context } }
     );
+  }
+
+  /** "Retry WP2?" or "Accept WP2 as it stands?" Closes with the story. */
+  decidePackage(
+    data: PackageDecisionDialogData
+  ): DialogRef<Story, PackageDecisionDialog> {
+    return this.dialogs.open<
+      Story,
+      PackageDecisionDialogData,
+      PackageDecisionDialog
+    >(PackageDecisionDialog, { data });
   }
 
   /** "Ask an agent to diagnose PROJ-118?" Closes with the queued diagnosis. */

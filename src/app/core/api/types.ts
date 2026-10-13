@@ -366,6 +366,12 @@ export type StopStoryRequest = Schemas['StopStoryRequest'];
 /** Body of `resumeStory`. */
 export type ResumeStoryRequest = Schemas['ResumeStoryRequest'];
 
+/** Body of `decideWorkPackage`: retry or accept a stuck work package, with the reason and the version the user saw. */
+export type WorkPackageDecisionRequest = Schemas['WorkPackageDecisionRequest'];
+
+/** What a person decides about a stuck work package (`WorkPackageDecisionRequest.decision`). */
+export type WorkPackageDecision = WorkPackageDecisionRequest['decision'];
+
 /** One cause of a halt: the evidence (untrusted text), the action that fixes it and who takes it. */
 export type DiagnosisFinding = Schemas['DiagnosisFinding'];
 

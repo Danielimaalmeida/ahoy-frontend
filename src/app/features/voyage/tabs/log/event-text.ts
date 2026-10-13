@@ -188,7 +188,9 @@ function confirmedDetails(
     case 'run.queued': {
       const phase = str(payload, 'phase') ?? '';
       const agent = str(payload, 'agent');
+      const workPackage = str(payload, 'workPackage');
       const parts: string[] = [];
+      if (workPackage !== null) parts.push(workPackage);
       if (agent !== null) parts.push(crewLabel(phase, agent));
       parts.push(
         modelEffort(str(payload, 'model'), str(payload, 'reasoningEffort'))

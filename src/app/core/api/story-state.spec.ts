@@ -107,6 +107,77 @@ describe('readStoryState', () => {
     });
   });
 
+  it('reads the rework note, the package it waits on and who accepted it, and drops an incomplete acceptance', () => {
+    const view = readStoryState({
+      work_packages: [
+        {
+          id: 'WP1',
+          repo: 'svc',
+          agent: 'implementer',
+          open_pr: true,
+          status: 'done',
+          rework_note: 'Cover the timezone edge case.',
+          accepted: {
+            by: 'alex@example.com',
+            reason: 'The missing check cannot run here.',
+            from_status: 'unverified',
+            at: '2026-10-06T10:00:00Z',
+          },
+        },
+        {
+          id: 'WP2',
+          repo: 'web',
+          agent: 'implementer',
+          open_pr: true,
+          status: 'waiting_on_handback',
+          handback_to: 'WP1',
+          rework_note: '   ',
+          accepted: { by: 'alex@example.com', reason: 'x' },
+        },
+      ],
+    });
+    expect(view.packages[0]).toEqual({
+      id: 'WP1',
+      repo: 'svc',
+      agent: 'implementer',
+      status: 'done',
+      openPr: true,
+      dependsOn: [],
+      reworkNote: 'Cover the timezone edge case.',
+      accepted: {
+        by: 'alex@example.com',
+        reason: 'The missing check cannot run here.',
+        fromStatus: 'unverified',
+        at: '2026-10-06T10:00:00Z',
+      },
+    });
+    expect(view.packages[1]).toEqual({
+      id: 'WP2',
+      repo: 'web',
+      agent: 'implementer',
+      status: 'waiting_on_handback',
+      openPr: true,
+      dependsOn: [],
+      handbackTo: 'WP1',
+    });
+  });
+
+  it('has no goal or description for a package, whatever the planner wrote beside it', () => {
+    const view = readStoryState({
+      work_packages: [
+        { id: 'WP1', repo: 'svc', agent: 'implementer', summary: 'Do X' },
+      ],
+    });
+    expect(Object.keys(view.packages[0]!).sort()).toEqual([
+      'agent',
+      'dependsOn',
+      'id',
+      'openPr',
+      'repo',
+      'status',
+    ]);
+  });
+
   it('reads the pull requests recorded on the child repositories, in plan order', () => {
     const view = readStoryState({
       child_repos: [

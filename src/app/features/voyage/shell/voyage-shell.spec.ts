@@ -423,7 +423,7 @@ describe('VoyageShell on the mock backend', () => {
       }
     });
 
-    it('shows the seven section tabs with the counts and the Plan tab (lane 4B) in the outlet', async () => {
+    it('shows the eight section tabs with the counts and the Plan tab (lane 4B) in the outlet', async () => {
       const page = await open('/voyages/PROJ-123/plan');
       const tabs = [
         ...page.root.querySelectorAll("nav[aria-label='Voyage sections'] a"),
@@ -431,6 +431,7 @@ describe('VoyageShell on the mock backend', () => {
       expect(tabs).toEqual([
         'Plan',
         'Questions 2',
+        'Work packages 2',
         'Runs 4',
         'Gates 5',
         'Artifacts',

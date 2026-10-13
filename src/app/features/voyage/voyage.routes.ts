@@ -25,6 +25,13 @@ export const VOYAGE_ROUTES: Routes = [
           ),
       },
       {
+        path: 'packages',
+        loadChildren: () =>
+          import('./tabs/packages/packages.routes').then(
+            (m) => m.PACKAGES_ROUTES
+          ),
+      },
+      {
         path: 'runs',
         loadChildren: () =>
           import('./tabs/runs/runs.routes').then((m) => m.RUNS_ROUTES),
