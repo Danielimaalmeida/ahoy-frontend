@@ -26,6 +26,7 @@ export type FakeApiOps = Pick<
   | 'cancelKnowledgeReview'
   | 'getStoryDiagnosis'
   | 'getStoryPlanFit'
+  | 'decideWorkPackage'
 >;
 
 /** A call the fake saw. */
@@ -168,5 +169,20 @@ export class FakeApi implements FakeApiOps {
   getStoryPlanFit: FakeApiOps['getStoryPlanFit'] = (key) => {
     this.calls.push({ op: 'getStoryPlanFit', args: [key] });
     return this.handlers.getStoryPlanFit?.(key) ?? unreachable();
+  };
+
+  decideWorkPackage: FakeApiOps['decideWorkPackage'] = (
+    key,
+    workPackageId,
+    body
+  ) => {
+    this.calls.push({
+      op: 'decideWorkPackage',
+      args: [key, workPackageId, body],
+    });
+    return (
+      this.handlers.decideWorkPackage?.(key, workPackageId, body) ??
+      unreachable()
+    );
   };
 }

@@ -29,6 +29,7 @@ import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json'
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
+import decideWorkPackage from '@testing/fixtures/decideWorkPackage.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
 import startStory from '@testing/fixtures/startStory.json';
@@ -121,6 +122,7 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['startStory', isStory, startStory],
     ['stopStory', isStory, stopStory],
     ['resumeStory', isStory, resumeStory],
+    ['decideWorkPackage', isStory, decideWorkPackage],
     ['setStoryBudget', isStory, setStoryBudget],
     ['listStories', isStoryPage, listStories],
     ['getStoryModels', isModelPlan, getStoryModels],

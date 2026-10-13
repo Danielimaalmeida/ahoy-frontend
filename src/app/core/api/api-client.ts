@@ -89,6 +89,7 @@ import type {
   StoryPage,
   StoryPlanFit,
   StoryStateDocument,
+  WorkPackageDecisionRequest,
 } from './types';
 
 /** How long a request may take before the call gives `{ kind: "network" }`: a hung request must not hang the screen. */
@@ -148,8 +149,8 @@ function toApiError(op: string, thrown: unknown): ApiError {
  * the guard of its type. The client never writes `Authorization`: who the user is comes from the dev proxy
  * (`X-Ahoy-Actor`) or, later, from `AuthStrategy` through `authInterceptor`.
  *
- * Operations of phase 7 (`resolveReview`, `decideWorkPackage`, `reopenWork`, `unblockStory`) and the event stream
- * (`streamEvents`, lane 2B) are not here.
+ * Of phase 7 only `decideWorkPackage` is here; `resolveReview`, `reopenWork`, `unblockStory` and the event stream
+ * (`streamEvents`, lane 2B) are not.
  */
 @Injectable({ providedIn: 'root' })
 export class ApiClient {
@@ -251,6 +252,24 @@ export class ApiClient {
     return this.post(
       'resumeStory',
       `/stories/${segment(key)}/resume`,
+      body,
+      isStory
+    );
+  }
+
+  /**
+   * Retries or accepts a work package nothing else will move (failed, stalled, blocked or unverified), only while the
+   * story is halted in implementation. `retry` may spend AIU; `accept` does not pass the pull request's gates. The answer
+   * (202) is the story.
+   */
+  decideWorkPackage(
+    key: string,
+    workPackageId: string,
+    body: WorkPackageDecisionRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'decideWorkPackage',
+      `/stories/${segment(key)}/work-packages/${segment(workPackageId)}/decision`,
       body,
       isStory
     );

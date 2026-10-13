@@ -72,6 +72,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **CI wait, work packages and package decisions (2026-10-13):** a banner says when Ahoy waits for a pull
+  request's CI, a Work packages tab lists the packages and their runs, and a stuck package can be retried or accepted.
+  On PR #30; offline only (2,707 tests pass); see [docs/progress.md](docs/progress.md).
+
 - **Knowledge review and lessons (2026-10-12):** a done or halted voyage shows the knowledge curator's proposed
   lessons, rules and patch, with Ask, Review again and Cancel; Metrics › Halts & errors charts repeated halts per
   week. Offline only; see [docs/progress.md](docs/progress.md).

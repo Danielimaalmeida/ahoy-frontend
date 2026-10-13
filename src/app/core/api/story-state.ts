@@ -20,7 +20,19 @@ export interface StoryCriterion {
   readonly repo?: string;
 }
 
-/** A work package of the plan (`work_packages[]`) and what the implementation phase has done with it. */
+/** Who accepted a stuck work package as it stood (`work_packages[].accepted`), why, and from which status. */
+export interface StoryPackageAcceptance {
+  readonly by: string;
+  readonly reason: string;
+  /** The status the package had when it was accepted, such as `unverified`. */
+  readonly fromStatus: string;
+  readonly at: string;
+}
+
+/**
+ * A work package of the plan (`work_packages[]`) and what the implementation phase has done with it. The state names no
+ * goal or description for a package: what it is for is only in the plan's prose (`implementation-plan.md`).
+ */
 export interface StoryPackage {
   readonly id: string;
   readonly repo: string;
@@ -30,6 +42,12 @@ export interface StoryPackage {
   /** Whether this package opens its repository's pull request. */
   readonly openPr: boolean;
   readonly dependsOn: readonly string[];
+  /** The note its next run gets (`rework_note`): a reviewer's findings, or the reason a person gave for a retry. */
+  readonly reworkNote?: string;
+  /** The package it waits on (`handback_to`) while `waiting_on_handback`. */
+  readonly handbackTo?: string;
+  /** Set once a person accepted it as it stood (`decideWorkPackage` with `accept`). */
+  readonly accepted?: StoryPackageAcceptance;
 }
 
 /** A human gate's entry (`human_gates[<gate>]`). All parts are optional: an undecided gate has none. */
@@ -111,6 +129,9 @@ function readPackage(raw: Record<string, unknown>): StoryPackage | null {
   const dependsOn: readonly unknown[] = Array.isArray(raw['depends_on'])
     ? raw['depends_on']
     : [];
+  const reworkNote = nonBlank(raw['rework_note']);
+  const handbackTo = nonBlank(raw['handback_to']);
+  const accepted = readAcceptance(raw['accepted']);
   return {
     id,
     repo: str(raw['repo']) ?? '',
@@ -120,7 +141,29 @@ function readPackage(raw: Record<string, unknown>): StoryPackage | null {
     dependsOn: dependsOn.filter(
       (dep): dep is string => typeof dep === 'string'
     ),
+    ...(reworkNote !== undefined ? { reworkNote } : {}),
+    ...(handbackTo !== undefined ? { handbackTo } : {}),
+    ...(accepted !== null ? { accepted } : {}),
   };
+}
+
+/** A string with something in it besides white space; anything else gives `undefined`. */
+const nonBlank = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() !== '' ? value : undefined;
+
+/** `accepted` when it names who, why, from which status and when; anything less gives `null`. */
+function readAcceptance(raw: unknown): StoryPackageAcceptance | null {
+  if (!isRecord(raw)) return null;
+  const by = nonBlank(raw['by']);
+  const reason = nonBlank(raw['reason']);
+  const fromStatus = nonBlank(raw['from_status']);
+  const at = nonBlank(raw['at']);
+  return by === undefined ||
+    reason === undefined ||
+    fromStatus === undefined ||
+    at === undefined
+    ? null
+    : { by, reason, fromStatus, at };
 }
 
 /** The URL if it is an absolute `http(s)` URL, normalised by `URL`; anything else gives `null`. */

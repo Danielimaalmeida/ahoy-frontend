@@ -43,6 +43,7 @@ import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json'
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
+import decideWorkPackage from '@testing/fixtures/decideWorkPackage.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
 import startStory from '@testing/fixtures/startStory.json';
@@ -183,6 +184,26 @@ const CASES: readonly Case[] = [
     status: 202,
     value: resumeStory,
     problem: 'invalid_state',
+  },
+  {
+    op: 'decideWorkPackage',
+    call: (api) =>
+      api.decideWorkPackage('PROJ-131', 'WP2', {
+        decision: 'retry',
+        reason: 'The e2e check is fixed on main.',
+        expectedVersion: 14,
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-131/work-packages/WP2/decision',
+    body: {
+      decision: 'retry',
+      reason: 'The e2e check is fixed on main.',
+      expectedVersion: 14,
+    },
+    reply: decideWorkPackage,
+    status: 202,
+    value: decideWorkPackage,
+    problem: 'stale_version',
   },
   {
     op: 'setStoryBudget',
@@ -658,6 +679,7 @@ describe('ApiClient', () => {
         'getStoryPlanFit',
         'stopStory',
         'resumeStory',
+        'decideWorkPackage',
         'setStoryBudget',
         'getStoryModels',
         'setStoryModels',

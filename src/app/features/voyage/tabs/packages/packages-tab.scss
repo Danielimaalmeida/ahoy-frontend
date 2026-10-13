@@ -1,0 +1,143 @@
+// The Work packages tab: one card per package, in plan order, stacked on any width.
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3\.5);
+  min-width: 0;
+}
+
+.packages__goal-note {
+  margin: 0;
+}
+
+.packages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.packages__card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2\.5);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.packages__head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.packages__id {
+  font-size: 14px;
+  margin: 0;
+}
+
+.packages__status--active {
+  background: var(--status-running-bg);
+  color: var(--status-running-fg);
+}
+
+.packages__status--ok {
+  background: var(--status-done-bg);
+  color: var(--status-done-fg);
+}
+
+.packages__status--warn {
+  background: var(--status-input-bg);
+  color: var(--status-input-fg);
+}
+
+.packages__status--bad {
+  background: var(--status-halted-bg);
+  color: var(--status-halted-fg);
+}
+
+.packages__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.packages__facts {
+  display: grid;
+  gap: var(--space-2) var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin: 0;
+
+  dt {
+    color: var(--ink-muted);
+    font-size: 12px;
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.packages__label {
+  color: var(--ink-muted);
+  display: block;
+  font-size: 12px;
+}
+
+.packages__text,
+.packages__accepted {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.packages__decisions {
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding-left: var(--space-4);
+}
+
+.packages__run-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1\.5);
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+}
+
+.packages__run {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1\.5) var(--space-3);
+  min-width: 0;
+
+  a {
+    overflow-wrap: anywhere;
+  }
+}
+
+.packages__run-part {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+@media (max-width: 600px) {
+  .packages {
+    padding: 0 var(--space-3) var(--space-3);
+  }
+
+  .packages__actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}

@@ -176,16 +176,18 @@ describe('RunsTab on the mock backend', () => {
       const page = await open('/voyages/PROJ-140/runs');
       const rows = tableRows(page);
       expect(rows.length).toBe(2);
-      expect(rows[0]?.[1]).toBe('intake');
-      expect(rows[0]?.[4]).toBe('succeeded');
-      expect(rows[0]?.[8]).toBe('pass');
+      // A planning run names no work package.
+      expect(rows[0]?.[1]).toBe('—');
+      expect(rows[0]?.[2]).toBe('intake');
+      expect(rows[0]?.[5]).toBe('succeeded');
+      expect(rows[0]?.[9]).toBe('pass');
       const active = rows[1] ?? [];
-      expect(active[1]).toBe('planning');
-      expect(active[2]).toBe('Cartographer');
-      expect(active[4]).toBe('running');
-      expect(active[6]).toBe('—');
-      expect(active[7]).toBe('0.60 live');
-      expect(active[8]).toBe('—');
+      expect(active[2]).toBe('planning');
+      expect(active[3]).toBe('Cartographer');
+      expect(active[5]).toBe('running');
+      expect(active[7]).toBe('—');
+      expect(active[8]).toBe('0.60 live');
+      expect(active[9]).toBe('—');
     });
 
     it('sees steps arrive and the spend rise, without a reload', async () => {
@@ -196,7 +198,7 @@ describe('RunsTab on the mock backend', () => {
       expect(text(tab(page).querySelector('.runs__spend'))).toBe(
         "Run spend 1.08 of this run's 8 AIU cap"
       );
-      expect(tableRows(page)[1]?.[7]).toBe('1.08 live');
+      expect(tableRows(page)[1]?.[8]).toBe('1.08 live');
     });
 
     it('when the run ends, swaps the live spend for the final one and keeps every step', async () => {
@@ -217,9 +219,9 @@ describe('RunsTab on the mock backend', () => {
       expect(after.slice(0, during.length)).toEqual(during);
       expect(after.length).toBeGreaterThanOrEqual(during.length);
       const row = tableRows(page)[1] ?? [];
-      expect(row[4]).toBe('succeeded');
-      expect(row[7]).toBe('1.80');
-      expect(row[8]).toBe('pass');
+      expect(row[5]).toBe('succeeded');
+      expect(row[8]).toBe('1.80');
+      expect(row[9]).toBe('pass');
       expect(
         text(
           tab(page).querySelector(
@@ -249,13 +251,13 @@ describe('RunsTab on the mock backend', () => {
     it('PROJ-123: oldest first, each run a link to its detail, who started it', async () => {
       const page = await open('/voyages/PROJ-123/runs');
       const rows = tableRows(page);
-      expect(rows.map((row) => row[1])).toEqual([
+      expect(rows.map((row) => row[2])).toEqual([
         'intake',
         'planning',
         'planning',
         'planning',
       ]);
-      expect(rows.map((row) => row[4]).at(-1)).toBe('succeeded');
+      expect(rows.map((row) => row[5]).at(-1)).toBe('succeeded');
       const starts = [...tab(page).querySelectorAll('tbody tr')].map((tr) =>
         tr.querySelector('a')?.getAttribute('href')
       );
@@ -264,7 +266,7 @@ describe('RunsTab on the mock backend', () => {
           /^\/voyages\/PROJ-123\/runs\/proj-123-/.test(href ?? '')
         )
       ).toBe(true);
-      expect(rows[0]?.[9]).toBe('alex@example.com');
+      expect(rows[0]?.[10]).toBe('alex@example.com');
       expect(tab(page).querySelector('.runs__live')).toBeNull();
     });
 

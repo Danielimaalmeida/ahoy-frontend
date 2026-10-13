@@ -7,6 +7,7 @@ import { VoyageContext } from './voyage-context';
 export const VOYAGE_TABS = [
   'plan',
   'questions',
+  'packages',
   'runs',
   'gates',
   'artifacts',
@@ -21,6 +22,7 @@ export type VoyageTab = (typeof VOYAGE_TABS)[number];
 export const VOYAGE_TAB_LABELS: Readonly<Record<VoyageTab, string>> = {
   plan: 'Plan',
   questions: 'Questions',
+  packages: 'Work packages',
   runs: 'Runs',
   gates: 'Gates',
   artifacts: 'Artifacts',
