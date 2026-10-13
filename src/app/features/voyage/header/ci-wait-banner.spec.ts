@@ -171,8 +171,9 @@ describe('CiWaitBanner', () => {
         },
       ],
     };
+    // One batch, as the reconciler writes it: both verdicts, then the routing note.
     const second = {
-      ...anEvent(5, 'gate.evaluated', {
+      ...anEvent(4, 'gate.evaluated', {
         gate: 'child_ready',
         code: 1,
         result: 'fail',
@@ -182,7 +183,12 @@ describe('CiWaitBanner', () => {
       storyKey: 'PROJ-131',
       createdAt: '2026-10-06T10:00:00.000Z',
     };
-    events = [...WAITING.slice(0, 3), second, ...WAITING.slice(3)];
+    const routed = {
+      ...anEvent(5, 'story.routed', { phase: 'implementation' }),
+      storyKey: 'PROJ-131',
+      createdAt: '2026-10-06T10:00:00.000Z',
+    };
+    events = [...WAITING.slice(0, 3), second, routed];
     const root = await render();
     const items = [...root.querySelectorAll('ah-banner li')].map(text);
     expect(items).toEqual([

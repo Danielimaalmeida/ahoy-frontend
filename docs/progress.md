@@ -43,9 +43,11 @@ their runs, and lets an owner retry or accept a stuck package.
   has no package-halt or CI-wait seed), a `--simulate` API, a real API or TEST.
 - **Review fixes (2026-10-13, second commit):** the CI-wait banner tracks its rows by position, not by pull request
   number (two repositories can both have PR #7), and names the candidate repositories when the number is ambiguous; this
-  page and the README no longer call the work uncommitted. **Not run:** build, typecheck, lint, the tests (2 specs
-  changed: `ci-wait.spec.ts`, `ci-wait-banner.spec.ts`) and the format check; that session had no `node_modules` (the
-  lockfile's registry is unreachable from it). Only Prettier 3.9.9 was run, on the changed files.
+  page and the README no longer call the work uncommitted. **Ran on Node 24.21.0** after the fix (third commit, which
+  corrects the new banner spec's event order): build (the `docks.ts` style-budget warning as before), typecheck
+  (`check-boundaries: ok`), lint, **153 files / 2,707 tests passed** and `npm run format`, which reports only
+  `docs/architecture.md` and `scripts/redact.mjs`, untouched here. Dependencies installed as before (with the user's
+  approval: public registry, `--ignore-scripts`, the auth library stubbed in `node_modules`, nothing of that committed).
 
 ## Knowledge review and lessons (2026-10-12)
 
@@ -745,8 +747,8 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-CI wait, work packages and package decisions (2026-10-13) are on `claude/project-thread-t6vqyj` (PR #30): 153 files /
-2,706 tests passed offline before its review-fix commit, which has not been run; nothing has met an API.
+CI wait, work packages and package decisions (2026-10-13) are on `claude/project-thread-t6vqyj` (PR #30), with their
+review fixes: 153 files / 2,707 tests pass offline; nothing has met an API.
 
 The harness fit (2026-10-12) is on `claude/project-thread-c6a2m7`, with `ahoy-hosted` PR #36: 146 files / 2,607 tests
 pass offline; it has met only the in-process mock.
@@ -867,8 +869,7 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-Run the full checks on PR #30 (its review-fix commit has not been built or tested), try Retry and Accept against a
-local `ahoy-hosted --simulate` (0 AIU), then ask `ahoy-hosted` for the three fields listed in its section; the
+Review PR #30, try Retry and Accept against a local `ahoy-hosted --simulate` (0 AIU), then ask `ahoy-hosted` for the three fields listed in its section; the
 structured CI-wait signal must name the repository, or a pull request number two repositories share stays unlinked.
 
 Review the harness-fit PR beside `ahoy-hosted` PR #36, then check the Backlog's Harness column against the real Jira
@@ -895,9 +896,7 @@ Do not use the live API or TEST without explicit approval.
 
 The latest change, on `claude/project-thread-t6vqyj` (PR #30), shows when Ahoy waits for a pull request's CI, adds a
 Work packages tab and lets an owner retry or accept a stuck package (see "CI wait, work packages and package
-decisions"). 153 test files / 2,706 tests passed on Node 24.21.0 before its review-fix commit, which has not been
-built, linted or tested yet: run `npm run build && npm run typecheck && npm run lint && npm test && npm run format`
-first. Before it, a change adds the read-only Metrics page (139 test files / 2,531 tests pass on Node 24.21.0) (see "Harness metrics"). Before it, a change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
+decisions"; 153 test files / 2,707 tests pass on Node 24.21.0, review fixes included). Before it, a change adds the read-only Metrics page (139 test files / 2,531 tests pass on Node 24.21.0) (see "Harness metrics"). Before it, a change adds the agent diagnosis to the Anchored banner (see "Agent diagnosis"; 137 test files / 2,485 tests pass on
 Node 24.21.0). Before it, a change fixes PR #22's code review (see "Review fixes of PR #22"; 136 test
 files / 2,439 tests pass on Node 24.21.0). Before it, a change shows a halted voyage's diagnosis
 (`getStoryDiagnosis`) in the Anchored banner and in "Needs you". Before it, the Backlog's Refine action (row button or
