@@ -298,7 +298,7 @@ describe('All hands', () => {
       ]);
     });
 
-    it('count a voyage that is terminal at phase blocked as Blocked, and list it in Needs you with Unblock', async () => {
+    it('count every voyage terminal at phase blocked as Blocked, but list in Needs you only one a person can unblock', async () => {
       const aground = aStory('PROJ-150', {
         title: 'Generate the API types from the contract',
         owner: 'jordan@example.com',
@@ -306,18 +306,56 @@ describe('All hands', () => {
         status: 'terminal',
         updatedAt: '2026-10-02T10:00:00.000Z',
       });
-      const { root } = await render([...EIGHT, aground]);
+      const rejected = aStory('PROJ-151', {
+        title: 'Archive old invoices',
+        owner: 'sam@example.com',
+        phase: 'blocked',
+        status: 'terminal',
+        updatedAt: '2026-10-01T10:00:00.000Z',
+      });
+      const blockedEvents: Readonly<Record<string, readonly AhoyEvent[]>> = {
+        'PROJ-150': [
+          anEvent(
+            40,
+            'story.phase_changed',
+            { from: 'implementation', to: 'blocked' },
+            'PROJ-150'
+          ),
+        ],
+        'PROJ-151': [
+          anEvent(
+            41,
+            'story.phase_changed',
+            { from: 'plan_review', to: 'blocked' },
+            'PROJ-151'
+          ),
+        ],
+      };
+      const { root } = await render([...EIGHT, aground, rejected], (api) =>
+        api.on('listStoryEvents', (key) =>
+          Promise.resolve(
+            ok({
+              items: blockedEvents[key] ?? EVENTS[key] ?? [],
+              lastEventId:
+                (blockedEvents[key] ?? EVENTS[key])?.at(-1)?.id ?? null,
+            })
+          )
+        )
+      );
       expect(
         Array.from(root.querySelectorAll('a.tile b')).map((b) => text(b))
-      ).toEqual(['1', '1', '2', '1']);
+      ).toEqual(['1', '1', '2', '2']);
       const needs = panel(root, 'Needs you');
+      const keys = rowsOf(needs).map((cells) => cells[1]?.split(' ')[0]);
+      expect(keys).toContain('PROJ-150');
+      expect(keys).not.toContain('PROJ-151');
       const first = rowsOf(needs)[0]!;
       expect(first[0]).toBe('Blocked');
       expect(first[1]).toBe(
         'PROJ-150 Generate the API types from the contract'
       );
       expect(first[3]).toBe(
-        'Out of rework rounds or CI fixes Unblock to grant more, or stop the voyage'
+        'Out of rework rounds or CI fixes Blocked in implementation · Unblock grants more rounds'
       );
       const action = needs.querySelector<HTMLAnchorElement>(
         'tbody tr:first-child td:last-child a'
@@ -587,7 +625,7 @@ describe('All hands', () => {
       const needs = panel(root, 'Needs you');
       expect(text(needs)).toContain('Calm seas');
       expect(text(needs)).toContain(
-        'Nothing needs you right now. Questions, decisions, halted and blocked voyages show up here.'
+        'Nothing needs you right now. Questions, decisions, halted voyages and blocked ones you can unblock show up here.'
       );
       expect(needs.querySelector('table')).toBeNull();
       const link = needs.querySelector<HTMLAnchorElement>('a');

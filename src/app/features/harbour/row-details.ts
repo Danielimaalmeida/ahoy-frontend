@@ -11,7 +11,14 @@ import { readStoryState } from '@core/api/story-state';
 import type { Diagnosis, Story } from '@core/api/types';
 import type { StoryEventsHandle } from '@core/stores/story-events-feed';
 import { StoryStore, type StoryHandle } from '@core/stores/story-store';
-import { gateOpen, haltOf, type RowDetail, type RunModel } from './needs';
+import { isAground } from '@domain/status';
+import {
+  blockedFromOf,
+  gateOpen,
+  haltOf,
+  type RowDetail,
+  type RunModel,
+} from './needs';
 
 /** What a row must read beyond its story: the questions, the state, the event history, or the runs. */
 type Need = 'questions' | 'state' | 'events' | 'runs';
@@ -22,10 +29,13 @@ const UNREAD: RowDetail = {
   gate: null,
   halt: null,
   diagnosis: null,
+  blockedFrom: null,
 };
 
 /** What the row of a voyage needs: the questions of one that asks, the state and events of one that waits, and so on. */
 function needsOf(story: Story): readonly Need[] {
+  // An aground voyage's events say where it was blocked from, so whether a person can Unblock it.
+  if (isAground(story)) return ['events'];
   switch (story.status) {
     case 'awaiting_input':
       return ['questions'];
@@ -128,6 +138,7 @@ export class RowDetails {
       gate: events === null ? null : gateOpen(events),
       halt: events === null ? null : haltOf(events),
       diagnosis: this.diagnoses().get(key) ?? null,
+      blockedFrom: events === null ? null : blockedFromOf(events),
     };
   }
 

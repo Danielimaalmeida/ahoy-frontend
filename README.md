@@ -72,10 +72,10 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
-- **Blocked is not Ended (2026-10-15):** a voyage that is `terminal` at phase `blocked` waits for a person, so it has
-  its own Blocked chip on Voyages (`?status=blocked`), a Blocked tile and a row with Unblock in Needs you, and counts
-  toward the top bar's Needs you badge. Ended now holds only Done voyages. Offline proof and limitations are in
-  [docs/progress.md](docs/progress.md).
+- **Blocked is not Ended (2026-10-15):** a voyage that is `terminal` at phase `blocked` has its own Blocked chip on
+  Voyages (`?status=blocked`) and tile in Needs you; Ended holds only Done voyages. Needs you lists a blocked voyage
+  with Unblock only when its events say a person can unblock it (not one rejected at a human gate). Offline proof and
+  limitations are in [docs/progress.md](docs/progress.md).
 - **Unblock (2026-10-15):** blocked voyages offer Unblock even when terminal, with an audited reason, 1–10 additional
   rework rounds and optional repository aliases. It warns about AIU and does not approve delivery or waive acceptance
   criteria. Conflicts refresh the page and require confirmation again. Offline proof and limitations are in

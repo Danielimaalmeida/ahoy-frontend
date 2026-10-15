@@ -134,6 +134,19 @@ describe('RowDetails (All hands)', () => {
     ).toEqual(['PROJ-118', 'PROJ-123']);
   });
 
+  it('reads the events of an aground voyage, which say where it was blocked from', async () => {
+    const { api, details } = rig();
+    const aground = aStory('PROJ-102', {
+      status: 'terminal',
+      phase: 'blocked',
+    });
+    details.sync([aground]);
+    await settle();
+    expect([
+      ...new Set(api.callsOf('listStoryEvents').map((c) => c.args[0])),
+    ]).toEqual(['PROJ-102']);
+  });
+
   it('does not open a voyage that needs nothing beyond its story', async () => {
     const { api, bus, details } = rig();
     details.sync([docked, aStory('PROJ-109', { status: 'ready' })]);
@@ -150,6 +163,7 @@ describe('RowDetails (All hands)', () => {
       gate: null,
       halt: null,
       diagnosis: null,
+      blockedFrom: null,
     });
     details.sync([asking, anchored]);
     await settle();
