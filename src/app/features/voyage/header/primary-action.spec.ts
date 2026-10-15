@@ -103,5 +103,6 @@ describe('canRefreshIntake', () => {
     expect(canRefreshIntake({ ...planning, phase: 'implementation' }, [])).toBe(
       false
     );
+    expect(canRefreshIntake({ ...planning, phase: 'design' }, [])).toBe(false);
   });
 });

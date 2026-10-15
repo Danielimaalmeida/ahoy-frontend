@@ -100,7 +100,7 @@ export class StoriesStore {
     return counts;
   });
 
-  /** The "In port" count: Docked and Aground together (`terminal`). */
+  /** The "Ended" count: Done and Blocked together (`terminal`), so not a count of delivered voyages. */
   readonly inPort = computed(() => this.counts()[IN_PORT]);
 
   /** Stories waiting on a person (`awaiting_input`, `awaiting_decision`, `halted`), longest waiting first. */

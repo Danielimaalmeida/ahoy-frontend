@@ -1,8 +1,9 @@
-/** The seven delivery phases, in order. `blocked` is a status, not a position (G12). */
+/** The eight delivery phases, in order. `blocked` is a status, not a position (G12). */
 export const PHASES = [
   'intake',
   'planning',
   'plan_review',
+  'design',
   'implementation',
   'pr_review',
   'delivery_gate',
@@ -16,7 +17,7 @@ export const GATE_FOR_PHASE = {
 } as const;
 
 /**
- * 1-based position of a phase in `PHASES` ("Phase 3 of 7"), or `null` for `blocked` and unknown phases: a blocked
+ * 1-based position of a phase in `PHASES` ("Phase 3 of 8"), or `null` for `blocked` and unknown phases: a blocked
  * voyage's position comes from the last `story.phase_changed` event instead (G12).
  */
 export function phaseIndex(phase: string): number | null {

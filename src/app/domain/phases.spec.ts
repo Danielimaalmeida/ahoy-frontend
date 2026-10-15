@@ -1,11 +1,12 @@
 import { GATE_FOR_PHASE, PHASES, phaseIndex } from './phases';
 
 describe('PHASES', () => {
-  it('lists the seven delivery phases in order', () => {
+  it('lists the eight delivery phases in order', () => {
     expect(PHASES).toEqual([
       'intake',
       'planning',
       'plan_review',
+      'design',
       'implementation',
       'pr_review',
       'delivery_gate',
@@ -19,10 +20,11 @@ describe('phaseIndex', () => {
     ['intake', 1],
     ['planning', 2],
     ['plan_review', 3],
-    ['implementation', 4],
-    ['pr_review', 5],
-    ['delivery_gate', 6],
-    ['done', 7],
+    ['design', 4],
+    ['implementation', 5],
+    ['pr_review', 6],
+    ['delivery_gate', 7],
+    ['done', 8],
   ];
 
   for (const [phase, index] of CASES) {

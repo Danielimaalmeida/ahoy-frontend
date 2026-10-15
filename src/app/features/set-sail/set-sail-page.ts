@@ -408,7 +408,7 @@ export class SetSailPage {
   readonly title = input<unknown>();
 
   protected readonly user = inject(CurrentUser);
-  /** The seven phases of a voyage, as the "How a voyage goes" card lists them. */
+  /** The eight phases of a voyage, as the "How a voyage goes" card lists them. */
   protected readonly phases = PHASES.join(' → ');
 
   private readonly api = inject(ApiClient);

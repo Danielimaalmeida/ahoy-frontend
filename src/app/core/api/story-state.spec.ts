@@ -5,6 +5,10 @@ describe('readStoryState', () => {
   describe('on the state the API sent for PROJ-123', () => {
     const view = readStoryState(getStoryState.state);
 
+    it('reads repository aliases even when they have no pull requests yet', () => {
+      expect(view.repositoryAliases).toEqual(['billing-api', 'billing-web']);
+    });
+
     it('reads the acceptance criteria with their repository', () => {
       expect(view.criteria.map((c) => c.id)).toEqual([
         'AC1',
@@ -183,27 +187,27 @@ describe('readStoryState', () => {
       child_repos: [
         {
           repo: 'billing-api',
-          pr_url: 'https://github.example/luta/billing-api/pull/7',
+          pr_url: 'https://github.example/r3da/billing-api/pull/7',
           pr_number: 7,
           pr_state: 'MERGED',
         },
         { repo: 'billing-web', branch: 'feature/PROJ-123' },
         {
           repo: 'billing-docs',
-          pr_url: 'https://github.example/luta/billing-docs/pull/2',
+          pr_url: 'https://github.example/r3da/billing-docs/pull/2',
         },
       ],
     });
     expect(view.pullRequests).toEqual([
       {
         repo: 'billing-api',
-        url: 'https://github.example/luta/billing-api/pull/7',
+        url: 'https://github.example/r3da/billing-api/pull/7',
         number: 7,
         state: 'MERGED',
       },
       {
         repo: 'billing-docs',
-        url: 'https://github.example/luta/billing-docs/pull/2',
+        url: 'https://github.example/r3da/billing-docs/pull/2',
       },
     ]);
   });
@@ -212,7 +216,7 @@ describe('readStoryState', () => {
     const view = readStoryState({
       child_repos: [
         { repo: 'a', pr_url: 'javascript:alert(1)' },
-        { repo: 'b', pr_url: '/luta/b/pull/1' },
+        { repo: 'b', pr_url: '/r3da/b/pull/1' },
         { repo: 'c', pr_url: 42 },
         {
           repo: 'd',
@@ -229,6 +233,7 @@ describe('readStoryState', () => {
 
   describe('on a state it cannot trust', () => {
     const EMPTY = {
+      repositoryAliases: [],
       criteria: [],
       packages: [],
       pullRequests: [],
@@ -306,13 +311,33 @@ describe('readStoryState', () => {
     it('ignores fields it does not know', () => {
       expect(
         readStoryState({
-          child_repos: [{ repo: 'svc' }],
           intake_analyst: {},
           reviewer_reviews: [],
           gate_results: [],
           extra: 1,
         })
       ).toEqual(EMPTY);
+    });
+
+    it('keeps distinct contract-valid aliases from child repositories only', () => {
+      expect(
+        readStoryState({
+          child_repos: [
+            { repo: 'frontend' },
+            { repo: 'frontend' },
+            { repo: 'API_1.v2-test' },
+            { repo: 'x'.repeat(64) },
+            { repo: 'x'.repeat(65) },
+            { repo: '' },
+            { repo: '-bad' },
+            { repo: 'bad repo' },
+            { repo: 'https://example.com/repo' },
+            { repo: 42 },
+            null,
+          ],
+          work_packages: [{ id: 'WP1', repo: 'not-a-child-alias' }],
+        }).repositoryAliases
+      ).toEqual(['frontend', 'API_1.v2-test', 'x'.repeat(64)]);
     });
   });
 });

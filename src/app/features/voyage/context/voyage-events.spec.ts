@@ -167,6 +167,7 @@ describe('revisingGateKey', () => {
   });
 
   it('gives null once the voyage has passed the gate, or if it never waited on one', () => {
+    expect(revisingGateKey([waited], 'design')).toBeNull();
     expect(revisingGateKey([waited], 'implementation')).toBeNull();
     expect(revisingGateKey([waited], 'blocked')).toBeNull();
     expect(revisingGateKey([event('run.queued', {})], 'planning')).toBeNull();
@@ -176,6 +177,14 @@ describe('revisingGateKey', () => {
         'planning'
       )
     ).toBeNull();
+  });
+
+  it('counts design as before the delivery gate when revising', () => {
+    const delivery = event('story.awaiting_decision', {
+      phase: 'delivery_gate',
+      gate: 'delivery_accepted',
+    });
+    expect(revisingGateKey([delivery], 'design')).toBe('delivery_accepted');
   });
 });
 

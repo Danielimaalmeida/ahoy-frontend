@@ -88,6 +88,7 @@ let nextRowId = 0;
     }
     .ah-model__source {
       display: flex;
+      flex-wrap: wrap;
       gap: 6px;
       align-items: center;
     }
@@ -97,14 +98,19 @@ let nextRowId = 0;
       gap: var(--space-2);
       min-width: 0;
     }
-    /* The bundle's four fixed columns are wider than a phone; there the phase and the source take their own lines. */
-    @media (max-width: 600px) {
+    /* A narrow dialog needs the same reflow as a phone, regardless of the viewport width. */
+    @container (max-width: 720px) {
       .ah-model {
         grid-template-columns: minmax(0, 1fr) 110px;
       }
       .ah-model__phase,
       .ah-model__source {
         grid-column: 1 / -1;
+      }
+    }
+    @container (max-width: 400px) {
+      .ah-model {
+        grid-template-columns: minmax(0, 1fr);
       }
     }
   `,
@@ -289,6 +295,7 @@ export class ModelChoiceRow {
       flex-direction: column;
       gap: var(--space-2);
       min-width: 0;
+      container-type: inline-size;
     }
   `,
   template: `

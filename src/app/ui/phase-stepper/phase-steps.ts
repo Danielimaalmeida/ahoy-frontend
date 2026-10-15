@@ -5,7 +5,7 @@ import type { StoryStatus } from '@domain/types';
 /** How one step of the stepper reads: passed, the one the voyage is in, where it stopped, or still ahead. */
 export type StepState = 'done' | 'current' | 'stopped' | 'upcoming';
 
-/** One of the seven phases as the stepper draws it. */
+/** One of the eight phases as the stepper draws it. */
 export interface PhaseStep {
   /** The API phase name, shown as the label. */
   readonly phase: string;
@@ -14,17 +14,17 @@ export interface PhaseStep {
   readonly state: StepState;
 }
 
-/** The stepper's content for one voyage: the seven steps and the sentence that names the position. */
+/** The stepper's content for one voyage: the eight steps and the sentence that names the position. */
 export interface PhaseProgress {
   readonly steps: readonly PhaseStep[];
   /** 1-based position of the current or stopped step; `null` when it is unknown or the voyage is Docked. */
   readonly position: number | null;
-  /** The accessible name of the compact bars: "Phase 3 of 7", "Stopped at phase 2", "Blocked at phase 3", "Done". */
+  /** The accessible name of the compact bars: "Phase 3 of 8", "Stopped at phase 2", "Blocked at phase 3", "Done". */
   readonly label: string;
 }
 
 /**
- * Works out the seven steps for a voyage (the vocabulary lives in `@domain`).
+ * Works out the eight steps for a voyage (the vocabulary lives in `@domain`).
  *
  * - Docked: every step is done, none is current.
  * - Anchored: the phase it is in is `stopped`, replacing `current`; the ones before are done.

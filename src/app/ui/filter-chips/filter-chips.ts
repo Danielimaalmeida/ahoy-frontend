@@ -8,10 +8,13 @@ export type StatusFilter = StoryStatus | 'all';
 /** How many voyages each chip holds; a missing entry shows no count (still loading). */
 export type StatusCounts = Readonly<Partial<Record<StatusFilter, number>>>;
 
-/** The filter that groups Done and Blocked; `statusPresentation` has no such badge. */
-export const IN_PORT_LABEL = 'Finished';
+/**
+ * The filter that groups Done and Blocked; `statusPresentation` has no such badge. It is neutral, not a success: a
+ * Blocked voyage ended without being delivered.
+ */
+export const IN_PORT_LABEL = 'Ended';
 
-/** The statuses that get a chip, in the order of the Voyages board. `terminal` is the "In port" chip. */
+/** The statuses that get a chip, in the order of the Voyages board. `terminal` is the "Ended" chip. */
 export const CHIP_STATUSES: readonly StoryStatus[] = [
   'ready',
   'running',
@@ -33,7 +36,7 @@ function chipFor(status: StoryStatus): Chip {
     return {
       value: status,
       label: IN_PORT_LABEL,
-      modifier: 'done',
+      modifier: 'queued',
       api: IN_PORT,
     };
   const { label, modifier, api } = statusPresentation(status);
@@ -42,7 +45,7 @@ function chipFor(status: StoryStatus): Chip {
 
 /**
  * Toggle chips that filter a list by status: "All", then one chip per status with its badge, the API word and the
- * count, so people learn the mapping by using it. "Finished" groups the two terminal outcomes. One chip is pressed at a
+ * count, so people learn the mapping by using it. "Ended" groups the two terminal outcomes. One chip is pressed at a
  * time (`aria-pressed`); pressing it again does nothing. `selected` is two-way, so the URL can own it.
  *
  * ```html
@@ -84,7 +87,7 @@ function chipFor(status: StoryStatus): Chip {
   `,
 })
 export class FilterChips {
-  /** The count of voyages per status; `all` is the total and `terminal` is "Finished". */
+  /** The count of voyages per status; `all` is the total and `terminal` is "Ended". */
   readonly counts = input<StatusCounts>({});
   /** The pressed chip. */
   readonly selected = model<StatusFilter>('all');

@@ -62,10 +62,7 @@ const NOTHING_BY_STATUS: Readonly<
   ],
   awaiting_decision: ['No orders waiting', 'No human gate is open.'],
   halted: ['No anchored voyages', 'Every voyage is moving or in port.'],
-  terminal: [
-    'No voyages in port',
-    'Nothing has been delivered or run aground yet.',
-  ],
+  terminal: ['No ended voyages', 'No voyage is done or blocked yet.'],
 };
 
 /** What the page says when the list cannot be read: the heading, the sentence and the technical line. */

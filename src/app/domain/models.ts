@@ -40,11 +40,12 @@ export function isModelSlot(value: string): value is ModelSlot {
 }
 
 /**
- * The crew name for a slot, falling back to the free-text agent the API sent (G14) and, when that is empty, to the
- * slot name itself.
+ * The crew name for a slot or the design phase, falling back to the free-text agent the API sent (G14) and, when
+ * that is empty, to the slot or phase name itself.
  */
 export function crewLabel(slotOrPhase: string, apiAgent?: string): string {
   if (isModelSlot(slotOrPhase)) return CREW[slotOrPhase];
+  if (slotOrPhase === 'design') return 'Designer';
   const agent = apiAgent?.trim() ?? '';
   return agent.length > 0 ? agent : slotOrPhase;
 }

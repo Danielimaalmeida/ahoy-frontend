@@ -53,7 +53,7 @@ const STATE = {
   child_repos: [
     {
       repo: 'billing-api',
-      pr_url: 'https://github.example/luta/billing-api/pull/7',
+      pr_url: 'https://github.example/r3da/billing-api/pull/7',
       pr_number: 7,
       pr_state: 'OPEN',
     },
@@ -126,7 +126,7 @@ describe('CiWaitBanner', () => {
     expect(text(banner)).toContain('no agent is running');
     const link = banner?.querySelector('a');
     expect(link?.getAttribute('href')).toBe(
-      'https://github.example/luta/billing-api/pull/7'
+      'https://github.example/r3da/billing-api/pull/7'
     );
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
     expect(text(banner?.querySelector('li') ?? null)).toContain(
@@ -165,7 +165,7 @@ describe('CiWaitBanner', () => {
         ...STATE.child_repos,
         {
           repo: 'billing-web',
-          pr_url: 'https://github.example/luta/billing-web/pull/7',
+          pr_url: 'https://github.example/r3da/billing-web/pull/7',
           pr_number: 7,
           pr_state: 'OPEN',
         },

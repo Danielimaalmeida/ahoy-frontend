@@ -64,11 +64,12 @@ class Page {
   ref: DialogRef<string, ExampleDialog> | null = null;
   results: (string | undefined)[] = [];
   data: ExampleData = { kind: 'default', withField: true };
+  width = '480px';
 
   open(): void {
     this.ref = this.dialogs.open<string, ExampleData, ExampleDialog>(
       ExampleDialog,
-      { data: this.data }
+      { data: this.data, width: this.width }
     );
     this.ref.closed.subscribe((r) => this.results.push(r));
   }
@@ -83,12 +84,14 @@ async function settle(): Promise<void> {
 }
 
 async function openDialog(
-  data?: ExampleData
+  data?: ExampleData,
+  width = '480px'
 ): Promise<{ page: Page; dialog: ExampleDialog; container: HTMLElement }> {
   fixture = TestBed.createComponent(Page);
   document.body.appendChild(fixture.nativeElement as HTMLElement);
   const page = fixture.componentInstance;
   if (data) page.data = data;
+  page.width = width;
   await settle();
   const opener = (
     fixture.nativeElement as HTMLElement
@@ -131,6 +134,17 @@ describe('ah-dialog on the CDK dialog', () => {
   afterEach(() => {
     fixture?.destroy();
     (fixture?.nativeElement as HTMLElement | undefined)?.remove();
+  });
+
+  it('lets the overlay size the frame beyond the default 480px while keeping viewport margins', async () => {
+    const { container } = await openDialog(undefined, '960px');
+    const pane = container.closest<HTMLElement>('.cdk-overlay-pane')!;
+    expect(pane.style.width).toBe('960px');
+    expect(pane.style.maxWidth).toBe('calc(100vw - 32px)');
+    const frame = container.querySelector<HTMLElement>('.ah-dialog')!;
+    expect(frame.classList.contains('ah-dialog--overlay')).toBe(true);
+    expect(getComputedStyle(frame).maxWidth).toBe('none');
+    expect(getComputedStyle(frame).width).toBe('100%');
   });
 
   it('opens a modal dialog labelled by its title, with the lead text first in the body', async () => {
@@ -320,6 +334,7 @@ describe('ah-dialog inline (gallery, no CDK)', () => {
     await f.whenStable();
     const root = f.nativeElement as HTMLElement;
     const frame = root.querySelector('.ah-dialog')!;
+    expect(frame.classList.contains('ah-dialog--overlay')).toBe(false);
     expect(frame.getAttribute('role')).toBe('dialog');
     expect(frame.getAttribute('aria-labelledby')).toBe(
       root.querySelector('h2')!.id

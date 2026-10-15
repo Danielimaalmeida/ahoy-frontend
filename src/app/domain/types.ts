@@ -18,7 +18,7 @@ export type StoryStatus =
 
 /**
  * A phase of the pinned `phases.tsv`, or `blocked` (G12). The API sends any string, so this is not a closed union: the
- * seven phases the UI knows are `PHASES` in `phases.ts`.
+ * eight phases the UI knows are `PHASES` in `phases.ts`.
  */
 export type Phase = string;
 

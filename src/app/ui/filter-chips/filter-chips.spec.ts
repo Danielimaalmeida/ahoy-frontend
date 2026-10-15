@@ -37,7 +37,7 @@ const CHIPS = [
   ['Needs answers', 'ah-badge--input', 'awaiting_input'],
   ['Needs decision', 'ah-badge--decision', 'awaiting_decision'],
   ['Halted', 'ah-badge--halted', 'halted'],
-  ['Finished', 'ah-badge--done', 'terminal'],
+  ['Ended', 'ah-badge--queued', 'terminal'],
 ] as const;
 
 describe('ah-filter-chips', () => {
@@ -131,7 +131,7 @@ describe('ah-filter-chips', () => {
     ]);
   });
 
-  it('maps the In port chip to the terminal status', () => {
+  it('maps the Ended chip to the terminal status', () => {
     const { fixture, chips } = render();
     chips()[6]!.click();
     fixture.detectChanges();

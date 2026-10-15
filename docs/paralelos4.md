@@ -1,7 +1,7 @@
 # Paralelos 4 · Onda 4
 
 **Seis sessões ao mesmo tempo, todas depois de a lane 4A estar fundida em `main`.** Vem depois de
-[paralelos3.md](paralelos3.md). Se preferires menos sessões em simultâfio, abre só algumas: são independentes.
+[paralelos3.md](paralelos3.md). Se preferires menos sessões em simultâcio, abre só algumas: são independentes.
 
 | Secção | Lane | O que é                                 | Modelo sugerido                  | Precisa de em `main` |
 | ------ | ---- | --------------------------------------- | -------------------------------- | -------------------- |

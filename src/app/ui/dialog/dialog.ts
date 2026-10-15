@@ -83,6 +83,19 @@ let nextDialogId = 0;
     .ah-dialog {
       position: relative;
     }
+    .ah-dialog--overlay {
+      width: 100%;
+      max-width: none;
+      max-height: calc(100dvh - 32px);
+    }
+    .ah-dialog--overlay .ah-dialog__head,
+    .ah-dialog--overlay .ah-dialog__foot {
+      flex-shrink: 0;
+    }
+    .ah-dialog--overlay .ah-dialog__body {
+      min-height: 0;
+      overflow-y: auto;
+    }
     .ah-dialog__icon--sendback {
       background: var(--status-sendback-bg);
       color: var(--status-sendback-fg);
@@ -91,6 +104,7 @@ let nextDialogId = 0;
   template: `
     <div
       class="ah ah-dialog"
+      [class.ah-dialog--overlay]="inOverlay"
       [attr.role]="inOverlay ? null : 'dialog'"
       [attr.aria-labelledby]="inOverlay ? null : titleId"
       [attr.aria-busy]="busy() ? 'true' : null"

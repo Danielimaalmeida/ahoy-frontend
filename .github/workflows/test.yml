@@ -5,7 +5,7 @@ on: [pull_request]
 jobs:
   unit-tests:
     name: unit tests
-    uses: ATC-GitHub/reusable-workflows/.github/workflows/vitest-coverage-reusable.yml@main
+    uses: ATC-GitHub/reusable-workflows/.github/workflows/vitest-coverage-reusable.yml@v1.3
     with:
       runner: "['atc-ubuntu-latest']"
       node-version: '24'

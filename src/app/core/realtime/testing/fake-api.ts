@@ -27,6 +27,7 @@ export type FakeApiOps = Pick<
   | 'getStoryDiagnosis'
   | 'getStoryPlanFit'
   | 'decideWorkPackage'
+  | 'unblockStory'
 >;
 
 /** A call the fake saw. */
@@ -184,5 +185,10 @@ export class FakeApi implements FakeApiOps {
       this.handlers.decideWorkPackage?.(key, workPackageId, body) ??
       unreachable()
     );
+  };
+
+  unblockStory: FakeApiOps['unblockStory'] = (key, body) => {
+    this.calls.push({ op: 'unblockStory', args: [key, body] });
+    return this.handlers.unblockStory?.(key, body) ?? unreachable();
   };
 }

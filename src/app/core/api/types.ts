@@ -366,6 +366,9 @@ export type StopStoryRequest = Schemas['StopStoryRequest'];
 /** Body of `resumeStory`. */
 export type ResumeStoryRequest = Schemas['ResumeStoryRequest'];
 
+/** Body of `unblockStory`: more rework rounds, optional repository aliases and an audited reason. */
+export type UnblockStoryRequest = Schemas['UnblockStoryRequest'];
+
 /** Body of `decideWorkPackage`: retry or accept a stuck work package, with the reason and the version the user saw. */
 export type WorkPackageDecisionRequest = Schemas['WorkPackageDecisionRequest'];
 

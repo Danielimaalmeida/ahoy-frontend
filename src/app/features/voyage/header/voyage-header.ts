@@ -51,6 +51,15 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
               </h1>
             </div>
             <div class="header__actions">
+              @if (v.story.phase === 'blocked') {
+                <button
+                  type="button"
+                  ahButton="primary"
+                  (click)="openUnblock()"
+                >
+                  Unblock
+                </button>
+              }
               @if (v.primary; as primary) {
                 @if (primary.kind === 'tab') {
                   <a
@@ -73,9 +82,14 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
                   Budget
                 </button>
               }
-              <a ahButton [routerLink]="['/voyages', v.story.key, 'models']">{{
-                v.story.status === 'halted' ? 'Change models' : 'Models'
-              }}</a>
+              <button
+                type="button"
+                ahButton
+                [disabled]="!modelsReady()"
+                (click)="openModels()"
+              >
+                {{ v.story.status === 'halted' ? 'Change models' : 'Models' }}
+              </button>
               @if (v.intake) {
                 <button type="button" ahButton (click)="openRefreshIntake()">
                   Back to intake
@@ -179,6 +193,9 @@ export class VoyageHeader {
 
   protected readonly stoppedAt = this.context.stoppedAt;
   protected readonly isOwner = this.context.isOwner;
+  protected readonly modelsReady = computed(
+    () => this.context.models() !== null
+  );
 
   protected readonly view = computed(() => {
     const story = this.context.story();
@@ -228,8 +245,16 @@ export class VoyageHeader {
     this.dialogs.resume(this.context);
   }
 
+  protected openUnblock(): void {
+    this.dialogs.unblock(this.context);
+  }
+
   protected openBudget(): void {
     this.dialogs.budget(this.context);
+  }
+
+  protected openModels(): void {
+    this.dialogs.models(this.context);
   }
 
   protected openRefreshIntake(): void {

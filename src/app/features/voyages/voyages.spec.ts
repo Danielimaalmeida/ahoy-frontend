@@ -260,6 +260,21 @@ async function open(
 }
 
 describe('Voyages', () => {
+  it('keeps a design voyage in the running filter with phase four of eight', async () => {
+    const { root, keys } = await open('/voyages?status=running', [
+      aStory('PROJ-150', { phase: 'design', status: 'running' }),
+    ]);
+    expect(keys()).toEqual(['PROJ-150']);
+    expect(text(root.querySelector('tbody tr'))).toContain('design');
+    expect(root.querySelectorAll('.ah-dots > span')).toHaveLength(8);
+    expect(root.querySelector('.ah-dots')!.getAttribute('aria-label')).toBe(
+      'Phase 4 of 8'
+    );
+    expect(root.querySelector('.ah-hint')!.textContent).toContain(
+      'plan_review · design · implementation'
+    );
+  });
+
   it('says what the list is', async () => {
     const { root } = await open('/voyages');
     expect(text(root.querySelector('h1'))).toBe('Voyages');
@@ -278,7 +293,7 @@ describe('Voyages', () => {
         'Needs answers awaiting_input 1',
         'Needs decision awaiting_decision 1',
         'Halted halted 2',
-        'Finished terminal 2',
+        'Ended terminal 2',
       ]);
     });
 
@@ -316,12 +331,30 @@ describe('Voyages', () => {
       await press('Needs answers');
       expect(router.url).toBe('/voyages?status=awaiting_input');
       expect(keys()).toEqual(['PROJ-131']);
-      await press('Finished');
+      await press('Ended');
       expect(router.url).toBe('/voyages?status=terminal');
       expect(keys()).toEqual(['PROJ-097', 'PROJ-102']);
       await press('All');
       expect(router.url).toBe('/voyages');
       expect(keys()).toHaveLength(8);
+    });
+
+    it('group a blocked terminal voyage under Ended, not as a success, and badge it Blocked', async () => {
+      const { root } = await open('/voyages?status=terminal');
+      const chip = Array.from(root.querySelectorAll('.ah-chip')).find(
+        (c) => c.getAttribute('aria-pressed') === 'true'
+      )!;
+      expect(chip.querySelector('.ah-badge')!.className).not.toContain(
+        'ah-badge--done'
+      );
+      const badges = Object.fromEntries(
+        Array.from(root.querySelectorAll('tbody tr')).map((tr) => [
+          text(tr.querySelector('a.ah-key')),
+          tr.querySelector('.ah-badge')!.className,
+        ])
+      );
+      expect(badges['PROJ-102']).toContain('ah-badge--blocked');
+      expect(badges['PROJ-097']).toContain('ah-badge--done');
     });
 
     it('keep the search in the address when a status is pressed', async () => {
@@ -379,7 +412,7 @@ describe('Voyages', () => {
         'Needs answers awaiting_input 0',
         'Needs decision awaiting_decision 0',
         'Halted halted 2',
-        'Finished terminal 0',
+        'Ended terminal 0',
       ]);
     });
 
@@ -462,7 +495,7 @@ describe('Voyages', () => {
       });
     });
 
-    it('draws the seven bars of progress, and where an aground voyage stopped from its event', async () => {
+    it('draws the eight bars of progress, and where an aground voyage stopped from its event', async () => {
       const { root } = await open('/voyages');
       const labels = Array.from(root.querySelectorAll('tbody tr')).map(
         (tr) => ({
@@ -472,16 +505,16 @@ describe('Voyages', () => {
         })
       );
       expect(labels.map((l) => [l.key, l.label])).toEqual([
-        ['PROJ-140', 'Phase 2 of 7'],
-        ['PROJ-109', 'Phase 1 of 7'],
+        ['PROJ-140', 'Phase 2 of 8'],
+        ['PROJ-109', 'Phase 1 of 8'],
         ['PROJ-126', 'Stopped at phase 1'],
-        ['PROJ-123', 'Phase 3 of 7'],
-        ['PROJ-131', 'Phase 2 of 7'],
+        ['PROJ-123', 'Phase 3 of 8'],
+        ['PROJ-131', 'Phase 2 of 8'],
         ['PROJ-118', 'Stopped at phase 2'],
         ['PROJ-097', 'Done'],
         ['PROJ-102', 'Blocked at phase 3'],
       ]);
-      expect(labels.every((l) => l.bars === 7)).toBe(true);
+      expect(labels.every((l) => l.bars === 8)).toBe(true);
     });
 
     it('reads events only for the voyages whose row needs them, and not for the others', async () => {
@@ -591,7 +624,7 @@ describe('Voyages', () => {
         'Needs answers awaiting_input',
         'Needs decision awaiting_decision',
         'Halted halted',
-        'Finished terminal',
+        'Ended terminal',
       ]);
       expect(root.querySelector('table')).toBeNull();
       expect(text(root)).not.toContain('No voyages');

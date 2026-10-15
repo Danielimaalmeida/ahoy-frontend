@@ -32,7 +32,7 @@ Ahoy is the internal tool where team members start Jira story deliveries, watch 
 
 **Layout.** A light top bar (no sidebar) with pill navigation. Content is centred up to `page-max` (1360px) with a 24px gutter (`space-6`), 16px on phones. Panels stack with 14–16px gaps. Detail pages: a header panel (key, status, title, stepper, meta), section tabs, then content with an optional right column of about 360px that wraps under it on narrow screens.
 
-**Designkit.** Table cells 7 × 14px, controls 34px (28px in rows), panel padding 14 × 16px. Keep this designkit in new screens rather than switching to large cards.
+**density.** Table cells 7 × 14px, controls 34px (28px in rows), panel padding 14 × 16px. Keep this density in new screens rather than switching to large cards.
 
 **Motion.** Minimal: hover fills and the live pulse. Respect `prefers-reduced-motion`.
 

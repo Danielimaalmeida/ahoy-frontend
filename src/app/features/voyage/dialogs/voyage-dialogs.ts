@@ -1,8 +1,18 @@
 import type { DialogRef } from '@angular/cdk/dialog';
 import { Injectable, inject } from '@angular/core';
-import type { KnowledgeReview, Refinement, Story } from '@core/api/types';
+import type {
+  KnowledgeReview,
+  ModelPlan,
+  ModelSlot,
+  Refinement,
+  Story,
+} from '@core/api/types';
 import { DialogService } from '@ui/dialog/dialog';
 import type { VoyageContext } from '../context/voyage-context';
+import {
+  ChangeModelsDialog,
+  type ChangeModelsData,
+} from '../tabs/models/change-models-dialog';
 import {
   AgentDiagnosisDialog,
   CancelAgentDiagnosisDialog,
@@ -24,10 +34,10 @@ import {
 import { RefreshIntakeDialog } from './refresh-intake-dialog';
 import { ResumeDialog } from './resume-dialog';
 import { StopDialog } from './stop-dialog';
+import { UnblockDialog } from './unblock-dialog';
 
 /**
- * Opens the voyage's Stop, Resume, Back to intake, Budget, work package decision, agent diagnosis and knowledge review
- * dialogs over the page. The first five close with the story the API answered, the others with the diagnosis or the review, or `undefined` when
+ * Opens voyage command dialogs over the page. They close with the resource the API answered, or `undefined` when
  * cancelled; the page needs nothing from the result, since the stores already hold it.
  */
 @Injectable({ providedIn: 'root' })
@@ -49,6 +59,14 @@ export class VoyageDialogs {
     );
   }
 
+  /** "Unblock PROJ-123?" */
+  unblock(context: VoyageContext): DialogRef<Story, UnblockDialog> {
+    return this.dialogs.open<Story, VoyageDialogData, UnblockDialog>(
+      UnblockDialog,
+      { data: { context }, width: '640px' }
+    );
+  }
+
   /** "Send PROJ-123 back to intake?" */
   refreshIntake(context: VoyageContext): DialogRef<Story, RefreshIntakeDialog> {
     return this.dialogs.open<Story, VoyageDialogData, RefreshIntakeDialog>(
@@ -62,6 +80,17 @@ export class VoyageDialogs {
     return this.dialogs.open<Story, VoyageDialogData, BudgetDialog>(
       BudgetDialog,
       { data: { context } }
+    );
+  }
+
+  /** "Models per phase", optionally focused on one slot. */
+  models(
+    context: VoyageContext,
+    slot: ModelSlot | null = null
+  ): DialogRef<ModelPlan, ChangeModelsDialog> {
+    return this.dialogs.open<ModelPlan, ChangeModelsData, ChangeModelsDialog>(
+      ChangeModelsDialog,
+      { data: { context, slot }, width: '960px' }
     );
   }
 

@@ -29,7 +29,7 @@ const waiting = aStory('PROJ-131', {
 const prs: readonly StoryPullRequest[] = [
   {
     repo: 'billing-api',
-    url: 'https://github.example/luta/billing-api/pull/7',
+    url: 'https://github.example/r3da/billing-api/pull/7',
     number: 7,
     state: 'OPEN',
   },
@@ -216,7 +216,7 @@ describe('ciWait', () => {
       ...prs,
       {
         repo: 'billing-web',
-        url: 'https://github.example/luta/billing-web/pull/7',
+        url: 'https://github.example/r3da/billing-web/pull/7',
         number: 7,
       },
     ];

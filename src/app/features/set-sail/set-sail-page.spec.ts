@@ -651,10 +651,10 @@ describe('the Set sail page', () => {
       );
     });
 
-    it('describes the seven phases of a voyage', async () => {
+    it('describes the eight phases of a voyage', async () => {
       const page = await openPage();
       expect(page.root.textContent).toContain(
-        'intake → planning → plan_review → implementation → pr_review → delivery_gate → done'
+        'intake → planning → plan_review → design → implementation → pr_review → delivery_gate → done'
       );
     });
   });

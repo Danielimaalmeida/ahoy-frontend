@@ -20,9 +20,9 @@ const STATE_WORDS: Readonly<Record<StepState, string>> = {
 };
 
 /**
- * Where a voyage is in intake → planning → plan_review → implementation → pr_review → delivery_gate → done. The full
- * form shows all seven phases (passed with ✓, the current one numbered, the one it stopped in with "!"); `compact` is
- * the seven bars for tables. For an Aground voyage the API phase is `blocked`, so pass `stoppedAt`, the phase it was
+ * Where a voyage is in intake → planning → plan_review → design → implementation → pr_review → delivery_gate → done.
+ * The full form shows all eight phases (passed with ✓, the current one numbered, the one it stopped in with "!");
+ * `compact` is the eight bars for tables. For an Aground voyage the API phase is `blocked`, so pass `stoppedAt`, the phase it was
  * in (G12); without it the stepper shows the final state with no position.
  *
  * ```html
@@ -71,7 +71,7 @@ export class PhaseStepper {
   readonly status = input.required<StoryStatus>();
   /** For an Aground voyage, the phase it was in when it stopped (the `from` of its last `story.phase_changed`). */
   readonly stoppedAt = input<string | null>(null);
-  /** The seven bars of the voyages table instead of the full stepper. */
+  /** The eight bars of the voyages table instead of the full stepper. */
   readonly compact = input(false, { transform: booleanAttribute });
 
   protected readonly progress = computed(() =>

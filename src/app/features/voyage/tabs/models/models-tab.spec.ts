@@ -198,6 +198,18 @@ describe('ModelsTab on the mock backend', () => {
   });
 
   describe('Change models', () => {
+    it('opens the same wide editor from the Models tab action', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      const tab = page.root.querySelector('ah-models-tab')!;
+      buttonNamed(tab, 'Change models').click();
+      await flush(page);
+      expect(hasDialog()).toBe(true);
+      expect(
+        dialog().closest<HTMLElement>('.cdk-overlay-pane')!.style.width
+      ).toBe('960px');
+      expect(dialog().querySelectorAll('ah-model-choice-row')).toHaveLength(4);
+    });
+
     it('sends only the slot that changed, with its model and effort, and shows it as chosen', async () => {
       const page = await open('/voyages/PROJ-118/models');
       buttonNamed(page.root, 'Change models').click();

@@ -89,6 +89,28 @@ const jiraBacklog = {
 
 const CASES: readonly Case[] = [
   {
+    op: 'unblockStory',
+    call: (api) =>
+      api.unblockStory('PROJ-123', {
+        expectedVersion: 73,
+        rounds: 2,
+        repos: ['billing-web'],
+        reason: 'The dependency is available for another rework round.',
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-123/unblock',
+    body: {
+      expectedVersion: 73,
+      rounds: 2,
+      repos: ['billing-web'],
+      reason: 'The dependency is available for another rework round.',
+    },
+    reply: resumeStory,
+    status: 202,
+    value: resumeStory,
+    problem: 'stale_version',
+  },
+  {
     op: 'listModels',
     call: (api) => api.listModels(),
     method: 'GET',
@@ -694,6 +716,7 @@ describe('ApiClient', () => {
         'getArtifactContent',
         'listStoryEvents',
         'refreshIntake',
+        'unblockStory',
         'listRefinements',
         'getRefinements',
         'requestRefinement',

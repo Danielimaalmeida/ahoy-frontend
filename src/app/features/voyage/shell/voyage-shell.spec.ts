@@ -183,6 +183,55 @@ afterEach(() => {
 });
 
 describe('VoyageShell on the mock backend', () => {
+  it.each([
+    ['/voyages/PROJ-140/runs', 'Models'],
+    ['/voyages/PROJ-118/models', 'Change models'],
+    ['/voyages/PROJ-109/runs', 'Models'],
+  ])(
+    'opens the model editor directly from the header at %s',
+    async (url, label) => {
+      const page = await open(url);
+      buttonNamed(header(page), label).click();
+      await flush(page);
+      expect(text(dialog().querySelector('h2'))).toBe('Models per phase');
+      expect(dialog().querySelectorAll('ah-model-choice-row')).toHaveLength(4);
+      expect(
+        dialog().closest<HTMLElement>('.cdk-overlay-pane')!.style.width
+      ).toBe('960px');
+      expect(TestBed.inject(Router).url).toBe(url);
+      expect(commands(page)).toHaveLength(0);
+
+      buttonNamed(dialog(), 'Cancel').click();
+      await flush(page);
+      expect(hasDialog()).toBe(false);
+      buttonNamed(header(page), label).click();
+      await flush(page);
+      expect(hasDialog()).toBe(true);
+    }
+  );
+
+  it('saves model changes opened from a running voyage header without navigating away', async () => {
+    const page = await open('/voyages/PROJ-140/runs');
+    buttonNamed(header(page), 'Models').click();
+    await flush(page);
+    type(
+      dialog().querySelector<HTMLInputElement>(
+        'input[aria-label="Planning model"]'
+      ),
+      'claude-sonnet-5'
+    );
+    await flush(page);
+    buttonNamed(dialog(), 'Save models').click();
+    await flush(page);
+    expect(hasDialog()).toBe(false);
+    expect(commands(page)).toHaveLength(1);
+    expect(commands(page)[0]?.path).toBe('/stories/PROJ-140/models');
+    expect(commands(page)[0]?.body).toMatchObject({
+      models: { planning: { model: 'claude-sonnet-5' } },
+    });
+    expect(TestBed.inject(Router).url).toBe('/voyages/PROJ-140/runs');
+  });
+
   describe('header, primary action and banner for the eight seeded voyages', () => {
     it('PROJ-123 waits on the plan decision: Your orders, plan_accepted, round 2 of 4, Decide on the plan', async () => {
       const page = await open('/voyages/PROJ-123/plan');
@@ -371,7 +420,7 @@ describe('VoyageShell on the mock backend', () => {
       const h = header(page);
       expect(text(h.querySelector('ah-status-badge'))).toBe('Done terminal');
       expect(buttonsIn(h)).toEqual(['Models']);
-      expect(h.querySelectorAll('.ah-step--done')).toHaveLength(7);
+      expect(h.querySelectorAll('.ah-step--done')).toHaveLength(8);
     });
 
     it('PROJ-097 links the pull requests its child_ready gate recorded, opening in a new tab', async () => {
@@ -380,8 +429,8 @@ describe('VoyageShell on the mock backend', () => {
         ...header(page).querySelectorAll<HTMLAnchorElement>('.header__prs a'),
       ];
       expect(links.map((a) => [text(a), a.getAttribute('href')])).toEqual([
-        ['api #1', 'https://github.example.test/luta/api/pull/1'],
-        ['web #2', 'https://github.example.test/luta/web/pull/2'],
+        ['api #1', 'https://github.example.test/r3da/api/pull/1'],
+        ['web #2', 'https://github.example.test/r3da/web/pull/2'],
       ]);
       expect(links.every((a) => a.target === '_blank')).toBe(true);
       expect(links.every((a) => a.rel === 'noopener noreferrer')).toBe(true);
@@ -401,9 +450,15 @@ describe('VoyageShell on the mock backend', () => {
       const page = await open('/voyages/PROJ-102/plan');
       const h = header(page);
       expect(text(h.querySelector('ah-status-badge'))).toBe('Blocked terminal');
-      expect(buttonsIn(h)).toEqual(['Models']);
+      expect(buttonsIn(h)).toEqual(['Unblock', 'Models']);
       expect(text(h.querySelector('.ah-step--stopped'))).toBe('! plan_review');
       expect(page.root.querySelector('ah-anchored-banner section')).toBeNull();
+      buttonNamed(h, 'Unblock').click();
+      await flush(page);
+      expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
+        'Unblock PROJ-102?'
+      );
+      expect(commands(page)).toEqual([]);
     });
   });
 

@@ -17,7 +17,6 @@ import {
 import { CREW } from '@domain/models';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
-import { DialogService } from '@ui/dialog/dialog';
 import { Panel, PanelBody, PanelFoot, PanelHead } from '@ui/panel/panel';
 import { SkeletonRows, type SkeletonColumn } from '@ui/skeleton/skeleton';
 import { Source } from '@ui/tags/source';
@@ -26,10 +25,7 @@ import { ToastService } from '@ui/toast/toast';
 import { map } from 'rxjs';
 import { modelLabel } from '../../context/crew';
 import { VoyageContext } from '../../context/voyage-context';
-import {
-  ChangeModelsDialog,
-  type ChangeModelsData,
-} from './change-models-dialog';
+import { VoyageDialogs } from '../../dialogs/voyage-dialogs';
 import {
   chosenLabel,
   parseChangeSlot,
@@ -238,7 +234,7 @@ export class ModelsTab {
   protected readonly context = inject(VoyageContext);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly dialogs = inject(DialogService);
+  private readonly dialogs = inject(VoyageDialogs);
   private readonly toasts = inject(ToastService);
   private readonly command = inject(ModelsCommand);
 
@@ -320,13 +316,7 @@ export class ModelsTab {
   /** Opens "Models per phase", with the focus on `slot` when there is one. */
   protected change(slot: ModelSlot | null): void {
     this.actionError.set(null);
-    this.dialogs.open<unknown, ChangeModelsData, ChangeModelsDialog>(
-      ChangeModelsDialog,
-      {
-        data: { context: this.context, slot },
-        width: '640px',
-      }
-    );
+    this.dialogs.models(this.context, slot);
   }
 
   /** Reads the model plan again after it could not be read. */

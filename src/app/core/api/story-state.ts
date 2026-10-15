@@ -71,6 +71,8 @@ export interface StoryPullRequest {
 
 /** What the UI reads of a story's state. */
 export interface StoryStateView {
+  /** Valid, distinct plan aliases from `child_repos`, including repositories without a pull request yet. */
+  readonly repositoryAliases: readonly string[];
   readonly criteria: readonly StoryCriterion[];
   readonly packages: readonly StoryPackage[];
   /** The child repositories' pull requests, in plan order; a repository without a recorded pull request has none. */
@@ -219,6 +221,18 @@ export function readStoryState(state: unknown): StoryStateView {
   const doc = isRecord(state) ? state : {};
   const ceiling = doc['revision_ceiling'];
   return {
+    repositoryAliases: [
+      ...new Set(
+        readList(doc['child_repos'], (entry) => {
+          const repo = entry['repo'];
+          return typeof repo === 'string' &&
+            repo.length <= 64 &&
+            /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(repo)
+            ? repo
+            : null;
+        })
+      ),
+    ],
     criteria: readList(doc['acceptance_criteria'], readCriterion),
     packages: readList(doc['work_packages'], readPackage),
     pullRequests: readList(doc['child_repos'], readPullRequest),

@@ -34,7 +34,7 @@ function render(phase: string, status: StoryStatus, options: Options = {}) {
   fixture.componentInstance.compact.set(options.compact ?? false);
   fixture.detectChanges();
   const root = fixture.nativeElement as HTMLElement;
-  /** The state of each of the seven steps, read from the bundle's classes. */
+  /** The state of each of the eight steps, read from the bundle's classes. */
   const states = Array.from(root.querySelectorAll('.ah-step')).map((step) =>
     step.classList.contains('ah-step--done')
       ? 'done'
@@ -80,12 +80,12 @@ describe('ah-phase-stepper: every status in every phase', () => {
         expect(states.filter((s) => s === 'current').length).toBe(1);
         expect(root.querySelectorAll('.ah-step--stopped').length).toBe(0);
         expect(root.querySelectorAll("[aria-current='step']").length).toBe(1);
-        // The compact form says the same in seven bars.
+        // The compact form says the same in eight bars.
         const compact = render(phase, status, { compact: true });
         expect(compact.dotStates).toEqual(expectedAt(index + 1, 'current'));
         expect(
           compact.root.querySelector('.ah-dots')!.getAttribute('aria-label')
-        ).toBe(`Phase ${index + 1} of 7`);
+        ).toBe(`Phase ${index + 1} of 8`);
         expect(dotStates).toEqual([]);
       })
     );
@@ -112,13 +112,13 @@ describe('ah-phase-stepper: every status in every phase', () => {
       ).toBe(0);
       fixture.componentInstance.compact.set(true);
       fixture.detectChanges();
-      expect(root.querySelectorAll('.ah-dots > .is-done').length).toBe(7);
+      expect(root.querySelectorAll('.ah-dots > .is-done').length).toBe(8);
       expect(root.querySelector('.ah-dots')!.getAttribute('aria-label')).toBe(
         'Done'
       );
     });
 
-  PHASES.slice(0, 6).forEach((stopped, index) =>
+  PHASES.slice(0, -1).forEach((stopped, index) =>
     it(`terminal in blocked, stopped at ${stopped}: Blocked, that step is stopped`, () => {
       const { states } = render('blocked', 'terminal', { stoppedAt: stopped });
       expect(states).toEqual(expectedAt(index + 1, 'stopped'));
@@ -163,13 +163,14 @@ describe('ah-phase-stepper: every status in every phase', () => {
 });
 
 describe('ah-phase-stepper, full form', () => {
-  it('shows the seven API phase names in order, with a separator between each pair', () => {
+  it('shows the eight API phase names in order, with a separator between each pair', () => {
     const { root } = render('plan_review', 'awaiting_decision');
     const steps = Array.from(root.querySelectorAll('.ah-step'));
     expect(steps.map((s) => s.textContent!.replace(/^\S/, '').trim())).toEqual([
       ...PHASES,
     ]);
-    expect(root.querySelectorAll('.ah-step__sep').length).toBe(6);
+    expect(steps).toHaveLength(8);
+    expect(root.querySelectorAll('.ah-step__sep').length).toBe(7);
     expect(
       root
         .querySelector('.ah-stepper')!
@@ -190,6 +191,7 @@ describe('ah-phase-stepper, full form', () => {
       '5',
       '6',
       '7',
+      '8',
     ]);
     expect(circles(render('planning', 'halted').root)).toEqual([
       '✓',
@@ -199,8 +201,10 @@ describe('ah-phase-stepper, full form', () => {
       '5',
       '6',
       '7',
+      '8',
     ]);
     expect(circles(render('done', 'terminal').root)).toEqual([
+      '✓',
       '✓',
       '✓',
       '✓',
@@ -221,6 +225,7 @@ describe('ah-phase-stepper, full form', () => {
       'intake, done',
       'planning, stopped',
       'plan_review, ahead',
+      'design, ahead',
       'implementation, ahead',
       'pr_review, ahead',
       'delivery_gate, ahead',
@@ -241,6 +246,24 @@ describe('ah-phase-stepper, full form', () => {
     );
   });
 
+  it('renders eight steps with design current at position four', () => {
+    const { root, states } = render('design', 'running');
+    expect(root.querySelectorAll('.ah-step')).toHaveLength(8);
+    expect(states).toEqual([
+      'done',
+      'done',
+      'done',
+      'current',
+      'upcoming',
+      'upcoming',
+      'upcoming',
+      'upcoming',
+    ]);
+    const current = root.querySelector("[aria-current='step']")!;
+    expect(current.getAttribute('aria-label')).toBe('design, current');
+    expect(current.querySelector('.ah-step__n')!.textContent).toBe('4');
+  });
+
   it('draws no compact bars', () => {
     expect(
       render('planning', 'running').root.querySelector('.ah-dots')
@@ -249,15 +272,24 @@ describe('ah-phase-stepper, full form', () => {
 });
 
 describe('ah-phase-stepper, compact form', () => {
-  it('draws seven bars, as an image named by the position', () => {
+  it('draws eight bars, as an image named by the position', () => {
     const { root } = render('plan_review', 'awaiting_decision', {
       compact: true,
     });
     const dots = root.querySelector('.ah-dots')!;
-    expect(dots.children.length).toBe(7);
+    expect(dots.children.length).toBe(8);
     expect(dots.getAttribute('role')).toBe('img');
-    expect(dots.getAttribute('aria-label')).toBe('Phase 3 of 7');
+    expect(dots.getAttribute('aria-label')).toBe('Phase 3 of 8');
     expect(root.querySelector('.ah-stepper')).toBeNull();
+  });
+
+  it('marks the fourth of eight bars current during design', () => {
+    const { root, dotStates } = render('design', 'running', { compact: true });
+    expect(dotStates).toHaveLength(8);
+    expect(dotStates).toEqual(expectedAt(4, 'current'));
+    expect(root.querySelector('.ah-dots')!.getAttribute('aria-label')).toBe(
+      'Phase 4 of 8'
+    );
   });
 
   it('follows its inputs', () => {
@@ -294,7 +326,7 @@ describe('phaseProgress', () => {
         }
   });
 
-  it("numbers the steps 1 to 7 in the order of the domain's phases", () => {
+  it("numbers the steps 1 to 8 in the order of the domain's phases", () => {
     const { steps } = phaseProgress('intake', 'ready');
     expect(steps.map((s) => [s.n, s.phase])).toEqual(
       PHASES.map((p, i) => [i + 1, p])

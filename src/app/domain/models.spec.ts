@@ -4,6 +4,7 @@ import {
   MODEL_SLOTS,
   MODEL_SOURCE_LABELS,
   crewLabel,
+  isModelSlot,
 } from './models';
 import type { ModelSlot } from './types';
 
@@ -64,6 +65,12 @@ describe('EFFORT_SOURCE_LABELS', () => {
 });
 
 describe('crewLabel', () => {
+  it('names the design crew member without adding a model slot', () => {
+    expect(crewLabel('design', 'density-reader')).toBe('Designer');
+    expect(crewLabel('design')).toBe('Designer');
+    expect(isModelSlot('design')).toBe(false);
+  });
+
   it('names the crew member of a slot', () => {
     expect(crewLabel('review')).toBe('Lookout');
   });

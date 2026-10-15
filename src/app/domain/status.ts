@@ -11,7 +11,7 @@ export interface StatusPresentation {
   readonly api: string;
 }
 
-/** The API status that groups Done and Blocked ("Finished" filter). */
+/** The API status that groups Done and Blocked ("Ended" filter). */
 export const IN_PORT: StoryStatus = 'terminal';
 
 const BY_STATUS: Readonly<

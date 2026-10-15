@@ -47,3 +47,5 @@ Thumbs.db
 
 # Playwright MCP scratch
 /.playwright-mcp/
+
+.work/

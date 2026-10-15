@@ -1,4 +1,4 @@
-FROM containers.enterprise.github.host/web/acme-nginx-minimal-community:NGINX1.29.4_OPENSSL3.5.2_UBI9.7
+FROM containers.atc-github.azure.cloud.acme/web/acme-nginx-minimal-community:NGINX1.29.4_OPENSSL3.5.2_UBI9.7
 
 ARG PROJECT_PATH
 

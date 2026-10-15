@@ -90,6 +90,7 @@ import type {
   StoryPlanFit,
   StoryStateDocument,
   WorkPackageDecisionRequest,
+  UnblockStoryRequest,
 } from './types';
 
 /** How long a request may take before the call gives `{ kind: "network" }`: a hung request must not hang the screen. */
@@ -149,7 +150,7 @@ function toApiError(op: string, thrown: unknown): ApiError {
  * the guard of its type. The client never writes `Authorization`: who the user is comes from the dev proxy
  * (`X-Ahoy-Actor`) or, later, from `AuthStrategy` through `authInterceptor`.
  *
- * Of phase 7 only `decideWorkPackage` is here; `resolveReview`, `reopenWork`, `unblockStory` and the event stream
+ * Of phase 7 `decideWorkPackage` and `unblockStory` are here; `resolveReview`, `reopenWork` and the event stream
  * (`streamEvents`, lane 2B) are not.
  */
 @Injectable({ providedIn: 'root' })
@@ -283,6 +284,19 @@ export class ApiClient {
     return this.post(
       'setStoryBudget',
       `/stories/${segment(key)}/budget`,
+      body,
+      isStory
+    );
+  }
+
+  /** Returns a blocked story to its previous phase with more rework rounds. May spend AIU; approves nothing. */
+  unblockStory(
+    key: string,
+    body: UnblockStoryRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'unblockStory',
+      `/stories/${segment(key)}/unblock`,
       body,
       isStory
     );

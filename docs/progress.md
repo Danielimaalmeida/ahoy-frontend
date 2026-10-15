@@ -1,5 +1,79 @@
 # Ahoy frontend · progress
 
+**Updated 2026-10-15 for Unblock** (on `feature/R3DA-14787-design`, alongside the model editor fixes).
+Offline only; no API or TEST environment contacted; 0 AIU.
+
+## Unblock (2026-10-15)
+
+- The voyage header offers Unblock whenever its phase is `blocked`, including `terminal` status. Resume stays
+  available for halted voyages. Existing API authorization and accessible CDK dialog conventions are unchanged.
+- The 640px confirmation dialog requires a nonblank reason (trimmed, at most 5,000 characters), 1–10 additional rework
+  rounds (default 1), and explicit acknowledgment of the AIU warning. Repository selection is optional, limited to 50
+  distinct aliases read defensively from `state.child_repos[].repo`; repositories do not need a pull request yet.
+- The warning states that unblocking permits more work and may spend AIU, does not approve delivery or waive acceptance
+  criteria, and records the reason in decision history rather than sending it as an implementation instruction.
+  Human-gate rejection remains a backend restriction; the UI does not hide Unblock based on status or guess eligibility.
+- `ApiClient.unblockStory` uses the existing `POST /stories/{key}/unblock` contract. The context supplies its current
+  story version and omits `repos` when none are selected. The vendored contract and generated schema are unchanged.
+- Duplicate submissions stay disabled through the response and success refresh. Success refreshes the story, state
+  (including decision history), gates and activity events. Any `409` refreshes, retains entries and unticks confirmation;
+  retry requires reviewing the new phase/status/version. A failed refresh or a phase no longer blocked prevents retry.
+  Other API errors and server field errors use the existing banners and field messages.
+- Ran on Node 24.22.0: build, typecheck (`check-boundaries: ok`), lint, **154 files / 2,765 tests passed**, formatting.
+  The existing `docks.ts` style-budget warning remains. New component specs cover blocked/terminal and halted actions,
+  contract limits, repository selection/omission, current versions, success/history refresh, duplicate clicks,
+  stale and other conflicts, changed eligibility, refresh failure and API/field errors.
+- Isolated browser layout check using current production tokens, bundle and component styles: no horizontal overflow
+  or clipped form controls at 320, 375, 600, 768 and 1440px; the body scrolls on phones and at 480px viewport height,
+  keeping the footer visible. The repository multi-select is not capped by the shared single-line input height.
+  The mechanical UI detector reported no findings.
+- Not run: the full app in a browser, Playwright/e2e, a standalone mock backend, a local `--simulate` API, a real API
+  or TEST. New interactions use `FakeApi`; the shell test opens the dialog on the in-process mock without submitting
+  its intentionally unimplemented Unblock operation. No backend changes. Needs from other lanes: none.
+  The user approved committing, pushing and opening a PR on 2026-10-15.
+
+**Updated 2026-10-15 for model editor usability** (on `feature/R3DA-14787-design`). Offline only; no API or
+TEST environment contacted; 0 AIU.
+
+## Model editor usability (2026-10-15)
+
+- Fixed the shared dialog frame's 480px cap overriding the overlay's requested width. Overlay frames now fill their
+  configured width, retaining 16px viewport margins; inline gallery frames retain their original sizing. Short screens
+  scroll the body while keeping the title and footer visible.
+- Both model-editing entry points use the same 960px editor. The voyage header's Models / Change models control opens
+  it directly instead of navigating to the Models tab (previously a no-op when already on that tab). It is disabled
+  until the model plan is available; the Models tab retains its loading/error/retry flow.
+- Model rows adapt to their container rather than the viewport: phase/source get separate lines in narrow containers,
+  and model/effort fields stack on phones. Existing model values, source tags, resets and save semantics are preserved.
+- Ran on Node 24.22.0: build, typecheck (`check-boundaries: ok`), lint, **153 files / 2,733 tests passed**, formatting.
+  The existing `docks.ts` style-budget warning remains. Regression tests open, close and reopen from running, queued
+  and halted voyage headers, save from the running header, and open from the tab; the dialog spec checks the width cap.
+- Isolated browser layout check using production tokens, bundle and current component styles: model fields stay over
+  180px wide and inside the dialog, with no horizontal overflow at 320, 375, 600, 768, 1024 and 1440px; the footer stays
+  visible at 480px viewport height. The mechanical UI detector reported no findings.
+- Not run: full-app browser or Playwright/e2e suite, a standalone mock backend, a local `--simulate` API, a real API or
+  TEST. Unit/component interactions used the in-process mock only. Needs from other lanes: none.
+
+**Updated 2026-10-15 for design phase support** (on `feature/R3DA-14787-design`). Offline only; no API or TEST
+environment contacted; 0 AIU.
+
+## Design phase support (2026-10-15)
+
+- `PHASES` now includes `design` at position 4, after `plan_review`; implementation moves to position 5. Full and
+  compact steppers, voyage-list progress and the Set sail phase line derive all eight phases from this list.
+- `crewLabel('design', 'density-reader')` reads "Designer". The four API model slots are unchanged. `schema.d.ts`
+  is generated by `openapi-typescript` and was left untouched.
+- Regression specs cover the phase positions, eight-step rendering with design current, the running-list filter,
+  gate-event ordering and the unchanged Back to intake restriction (planning and plan review only).
+- Ran on Node 24.22.0: build, typecheck (`check-boundaries: ok`), lint, **153 files / 2,727 tests passed**, and
+  `npm run format` (the formatting check). The build retains the existing `docks.ts` style-budget warning.
+  Restored lockfile dependencies with `npm ci --ignore-scripts`; no dependency manifests changed.
+- Isolated browser layout check with the production tokens and CSS: all eight steps fit without horizontal overflow
+  at 320, 375, 600, 768, 1024, 1280 and 1920px. Existing flex wrapping needs no style changes. The mechanical stepper
+  detector reported no findings.
+- Not run: the full app in a browser, the Playwright/e2e suite, a standalone mock backend, a `--simulate` API, a real
+  API or TEST. Needs from other lanes: none.
+
 **Updated 2026-10-13 for CI wait, work packages and package decisions** (committed on `claude/project-thread-t6vqyj`,
 PR #30, with its review fixes; after the knowledge review on `claude/project-thread-4kgkxo`). From a cloud session. No
 TEST environment or real API was contacted; 0 AIU.
@@ -510,9 +584,9 @@ no remote environment, real API, commit or push was used for this fix.
 ## NGINX container HTTP 500 fix (2026-10-09)
 
 - **Changed:** `nginx.conf` now serves `/opt/app-root/src/ahoy-frontend`, matching `docker/Dockerfile`, rather than
-  the stale `/opt/app-root/src/luta-appx-frontend`. Error and access logs go to stderr/stdout for container diagnostics.
+  the stale `/opt/app-root/src/r3da-cdm-frontend`. Error and access logs go to stderr/stdout for container diagnostics.
   The Dockerfile's non-root `USER 1001` is unchanged.
-- **Runtime proof:** a local smoke check used the already cached `fio-frontend:latest` image (NGINX 1.29.4, UID 1001)
+- **Runtime proof:** a local smoke check used the already cached `cio-frontend:latest` image (NGINX 1.29.4, UID 1001)
   with the production build and this repository's server configuration mounted read-only, then repeated with a local
   `npm run build:test` build. With the old document root
   absent, `/` returned HTTP 500; with the corrected root, `/`, `/index.html`, `/voyages/PROJ-123` and the JavaScript asset
@@ -747,6 +821,16 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+Unblock (2026-10-15) is on `feature/R3DA-14787-design` alongside the model editor fixes: blocked/terminal
+voyages can confirm more rework with an audited reason and optional repository selection; conflicts require review
+and confirmation again. All 2,765 tests pass offline. See its section above for proof and remaining integration work.
+
+Model editor usability fixes (2026-10-15) are on `feature/R3DA-14787-design`: a wider responsive editor and
+a header action that opens it directly; 2,733 tests pass offline. See its section above for scoped browser proof.
+
+Design phase support (2026-10-15) is on `feature/R3DA-14787-design`: all eight phases render, design has its
+crew label without a model slot, and 2,727 tests pass offline. See its section above for the scoped browser proof.
+
 CI wait, work packages and package decisions (2026-10-13) are on `claude/project-thread-t6vqyj` (PR #30), with their
 review fixes: 153 files / 2,707 tests pass offline; nothing has met an API.
 
@@ -869,6 +953,13 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+Review the Unblock and model editor fixes; full-app/backend integration is unproven. Check Unblock against
+a local `ahoy-hosted --simulate` (0 AIU) when available; the mock backend deliberately does not implement it. These new
+changes have not been committed or pushed and need fresh approval for that.
+
+Review the design-phase change on `feature/R3DA-14787-design`; full-app and backend integration verification remain
+unproven. The user approved committing, pushing and opening a pull request on 2026-10-15.
+
 Review PR #30, try Retry and Accept against a local `ahoy-hosted --simulate` (0 AIU), then ask `ahoy-hosted` for the three fields listed in its section; the
 structured CI-wait signal must name the repository, or a pull request number two repositories share stays unlinked.
 
@@ -893,6 +984,22 @@ The next release must retain the corrected NGINX document root; remote image sta
 Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
+
+The newest changes on `feature/R3DA-14787-design` add Unblock for the `blocked` phase even when terminal:
+required audited reason, 1–10 rounds (default 1), optional child repository aliases, exact AIU/acceptance warning,
+current-version requests, full success refresh and review/re-confirmation after every `409`. Build/typecheck/lint,
+all 2,765 tests and formatting pass on Node 24.22.0; browser layout proof is isolated, not full-app integration.
+See "Unblock". No backend or generated contract changes. The user approved committing, pushing and opening a PR.
+
+The newest changes on `feature/R3DA-14787-design` fix the model editor width and header action (2026-10-15):
+the overlay frame honors the configured 960px width, model rows reflow by container width, and the header opens the
+editor without navigating. Node 24 build/typecheck/lint, all 2,733 tests and formatting pass; only isolated layout was
+browser-checked. See "Model editor usability". The user approved committing, pushing and opening a PR.
+
+The newest change is design phase support on `feature/R3DA-14787-design` (2026-10-15): eight phases, design at
+position 4, "Designer" crew label, no new model slot or generated schema edits. Build, typecheck, lint, all 2,727 tests
+and formatting pass on Node 24.22.0; isolated production-CSS stepper layout fits 320–1920px. No full-app/API/e2e check
+ran. See its section above. Commit, push and pull request creation were approved for this change on 2026-10-15.
 
 The latest change, on `claude/project-thread-t6vqyj` (PR #30), shows when Ahoy waits for a pull request's CI, adds a
 Work packages tab and lets an owner retry or accept a stuck package (see "CI wait, work packages and package

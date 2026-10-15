@@ -72,6 +72,19 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Unblock (2026-10-15):** blocked voyages offer Unblock even when terminal, with an audited reason, 1–10 additional
+  rework rounds and optional repository aliases. It warns about AIU and does not approve delivery or waive acceptance
+  criteria. Conflicts refresh the page and require confirmation again. Offline proof and limitations are in
+  [docs/progress.md](docs/progress.md).
+
+- **Model editor usability (2026-10-15):** the voyage header's Models button opens the editor directly, including on
+  the Models tab. The editor uses a responsive 960px dialog, with stacked fields on narrow screens and a scrollable
+  body on short screens. Offline proof and limitations are in [docs/progress.md](docs/progress.md).
+
+- **Design phase (2026-10-15):** the eight-phase sequence includes `design` between plan review and implementation,
+  with the crew label "Designer" and the same four model slots. Lint and 2,727 tests pass offline; see
+  [docs/progress.md](docs/progress.md).
+
 - **CI wait, work packages and package decisions (2026-10-13):** a banner says when Ahoy waits for a pull
   request's CI, a Work packages tab lists the packages and their runs, and a stuck package can be retried or accepted.
   On PR #30; offline only (2,707 tests pass); see [docs/progress.md](docs/progress.md).
@@ -88,7 +101,7 @@ do not use it for unit/e2e validation or mutating actions without approval.
   (`child_repos[].pr_url`), once the `child_ready` gate verified them. Offline only; see
   [docs/progress.md](docs/progress.md).
 
-- **LUTA-14787 API state names (2026-10-12):** active contract examples use `intake_analyst` and
+- **R3DA-14787 API state names (2026-10-12):** active contract examples use `intake_analyst` and
   `reviewer_reviews`; the API description names the intake analyst. The vendored OpenAPI, generated TypeScript and
   JSON mirror were updated. No old-story migration or compatibility alias was added. The frontend reader does not
   consume either state entry, and `haltReason` remains an open string; `lookout_no_report` was not present in the
@@ -297,8 +310,8 @@ do not use it for unit/e2e validation or mutating actions without approval.
   (`docs/paralelos4.md`). Details in
   [docs/progress.md](docs/progress.md).
 
-# luta_fio_ahoy_frontend
+# r3da_cio_ahoy_frontend
 
-# luta_fio_ahoy_frontend
+# r3da_cio_ahoy_frontend
 
-# luta_fio_ahoy_frontend
+# r3da_cio_ahoy_frontend

@@ -249,6 +249,24 @@ export class VoyageContext {
     );
   }
 
+  /** Unblocks with the current version, then refreshes the story, decision state, gates and activity history. */
+  async unblock(
+    reason: string,
+    rounds: number,
+    repos: readonly string[]
+  ): Promise<CommandOutcome<Story>> {
+    const outcome = await this.storyCommand((key, expectedVersion) =>
+      this.api.unblockStory(key, {
+        expectedVersion,
+        reason,
+        rounds,
+        ...(repos.length > 0 ? { repos } : {}),
+      })
+    );
+    if (outcome.kind === 'ok') await this.refresh();
+    return outcome;
+  }
+
   /**
    * Sends the voyage back to intake (`refreshIntake`) with what changed in Jira, confirming that it may spend AIU. The
    * `202` story goes to the store; the questions, gates and artifacts follow with the `story.intake_refreshed` event.
