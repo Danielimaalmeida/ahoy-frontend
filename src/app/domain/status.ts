@@ -2,7 +2,13 @@ import type { Phase, StoryStatus } from './types';
 
 /** Badge modifiers of the design system (`ah-badge--<modifier>`). */
 export type StatusModifier =
-  'queued' | 'running' | 'input' | 'decision' | 'halted' | 'done' | 'blocked';
+  | 'queued'
+  | 'running'
+  | 'input'
+  | 'decision'
+  | 'halted'
+  | 'done'
+  | 'blocked';
 
 /** What a status badge shows: the crew's words, the CSS modifier and the API status word. */
 export interface StatusPresentation {
@@ -11,8 +17,34 @@ export interface StatusPresentation {
   readonly api: string;
 }
 
-/** The API status that groups Done and Blocked ("Ended" filter). */
+/** The API status of a voyage that is over; the "Ended" filter holds only the Done ones (see {@link boardStatus}). */
 export const IN_PORT: StoryStatus = 'terminal';
+
+/**
+ * Where a voyage stands on the boards: its API status, except that a `terminal` voyage in phase `blocked` is `blocked`.
+ * The API calls it terminal, but it is not over: it ran out of rework rounds or CI fixes and waits for a person to
+ * Unblock it (or stop it), so it is never counted with the Done ones.
+ */
+export type BoardStatus = StoryStatus | 'blocked';
+
+/** The board status of an aground voyage: terminal at phase `blocked`, waiting for a person. */
+export const AGROUND = 'blocked' satisfies BoardStatus;
+
+/** A voyage's board status, from its API status and phase. */
+export function boardStatus(
+  status: StoryStatus,
+  phase?: Phase | null
+): BoardStatus {
+  return status === 'terminal' && phase === 'blocked' ? AGROUND : status;
+}
+
+/** Whether a voyage is aground: blocked, not done, and waiting for a person to Unblock or stop it. */
+export function isAground(story: {
+  readonly status: StoryStatus;
+  readonly phase: Phase;
+}): boolean {
+  return boardStatus(story.status, story.phase) === AGROUND;
+}
 
 const BY_STATUS: Readonly<
   Record<Exclude<StoryStatus, 'terminal'>, StatusPresentation>

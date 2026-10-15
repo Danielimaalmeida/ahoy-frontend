@@ -1,5 +1,5 @@
 import { aStory } from '@core/realtime/testing/events';
-import { chipCounts, filterOf, matchesQuery } from './filters';
+import { chipCounts, filterOf, matchesFilter, matchesQuery } from './filters';
 
 describe('filterOf', () => {
   it('accepts the six statuses the API has', () => {
@@ -13,6 +13,10 @@ describe('filterOf', () => {
     ]) {
       expect(filterOf(status)).toBe(status);
     }
+  });
+
+  it('accepts blocked, the chip of the voyages aground', () => {
+    expect(filterOf('blocked')).toBe('blocked');
   });
 
   it('reads anything else, which comes from the address bar, as All', () => {
@@ -82,7 +86,7 @@ describe('chipCounts', () => {
     aStory('PROJ-5', { status: 'terminal', phase: 'blocked', title: 'Gamma' }),
   ];
 
-  it('counts all of them and each status, with In port as terminal', () => {
+  it('counts all of them and each status, a blocked voyage under Blocked and not under Ended', () => {
     expect(chipCounts(stories, '')).toEqual({
       all: 5,
       ready: 0,
@@ -90,7 +94,8 @@ describe('chipCounts', () => {
       awaiting_input: 0,
       awaiting_decision: 0,
       halted: 2,
-      terminal: 2,
+      blocked: 1,
+      terminal: 1,
     });
   });
 
@@ -102,7 +107,28 @@ describe('chipCounts', () => {
       awaiting_input: 0,
       awaiting_decision: 0,
       halted: 1,
+      blocked: 0,
       terminal: 1,
     });
+  });
+});
+
+describe('matchesFilter', () => {
+  const done = aStory('PROJ-1', { status: 'terminal', phase: 'done' });
+  const aground = aStory('PROJ-2', { status: 'terminal', phase: 'blocked' });
+  const halted = aStory('PROJ-3', { status: 'halted' });
+
+  it('puts a blocked voyage under Blocked and a done one under Ended, never both', () => {
+    expect(matchesFilter(aground, 'blocked')).toBe(true);
+    expect(matchesFilter(aground, 'terminal')).toBe(false);
+    expect(matchesFilter(done, 'terminal')).toBe(true);
+    expect(matchesFilter(done, 'blocked')).toBe(false);
+  });
+
+  it('matches every voyage for All, and the rest by their status', () => {
+    for (const story of [done, aground, halted])
+      expect(matchesFilter(story, 'all')).toBe(true);
+    expect(matchesFilter(halted, 'halted')).toBe(true);
+    expect(matchesFilter(halted, 'blocked')).toBe(false);
   });
 });

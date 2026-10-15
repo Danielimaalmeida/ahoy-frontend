@@ -22,7 +22,7 @@ import { RelativePipe } from '@ui/pipes/relative.pipe';
 import { SkeletonRows, type SkeletonColumn } from '@ui/skeleton/skeleton';
 import { StatusBadge } from '@ui/status-badge/status-badge';
 import { Key, Nowrap, Table } from '@ui/table/table';
-import { chipCounts, filterOf, matchesQuery } from './filters';
+import { chipCounts, filterOf, matchesFilter, matchesQuery } from './filters';
 import { noteFor } from './notes';
 import { RowDetails } from './row-details';
 
@@ -62,7 +62,11 @@ const NOTHING_BY_STATUS: Readonly<
   ],
   awaiting_decision: ['No orders waiting', 'No human gate is open.'],
   halted: ['No anchored voyages', 'Every voyage is moving or in port.'],
-  terminal: ['No ended voyages', 'No voyage is done or blocked yet.'],
+  blocked: [
+    'No blocked voyages',
+    'No voyage has run out of rework rounds or CI fixes.',
+  ],
+  terminal: ['No ended voyages', 'No voyage is done yet.'],
 };
 
 /** What the page says when the list cannot be read: the heading, the sentence and the technical line. */
@@ -109,8 +113,8 @@ function describeFailure(error: ApiError): Failure {
 
 /**
  * Voyages (`/voyages`): every story, most recently updated first. The address is the state: `?status=` is the chip that
- * is pressed (anything but the six statuses reads as All) and `?q=` filters by key or title on the client (deviation 3).
- * The `StoriesStore` has the whole list and follows the stream; the table shows it 50 rows at a time.
+ * is pressed (anything but the six statuses and `blocked` reads as All) and `?q=` filters by key or title on the client
+ * (deviation 3). The `StoriesStore` has the whole list and follows the stream; the table shows it 50 rows at a time.
  */
 @Component({
   selector: 'ah-voyages',
@@ -366,9 +370,7 @@ export class VoyagesPage {
     return this.store
       .stories()
       .filter(
-        (story) =>
-          (filter === 'all' || story.status === filter) &&
-          matchesQuery(story, query)
+        (story) => matchesFilter(story, filter) && matchesQuery(story, query)
       );
   });
 

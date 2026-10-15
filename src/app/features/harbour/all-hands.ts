@@ -2,7 +2,8 @@ import { Component, DestroyRef, computed, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import { StoriesStore } from '@core/stores/stories-store';
-import type { StoryStatus } from '@domain/types';
+import { AGROUND, type BoardStatus } from '@domain/status';
+import type { Phase, StoryStatus } from '@domain/types';
 import { Banner } from '@ui/banner/banner';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
@@ -19,14 +20,40 @@ import { CellSub, Key, Nowrap, Table } from '@ui/table/table';
 import { atSeaCrew, needsAction, whatsNeeded } from './needs';
 import { RowDetails } from './row-details';
 
-/** The three tiles: the statuses that wait on a person, each with what it means. */
+/**
+ * The four tiles: the board statuses that wait on a person, each with what it means. Each links to its chip on the
+ * Voyages board (`filter`); its badge is the API status and phase the voyages have.
+ */
 const TILES: readonly {
+  readonly filter: BoardStatus;
   readonly status: StoryStatus;
+  readonly phase: Phase | null;
   readonly hint: string;
 }[] = [
-  { status: 'awaiting_input', hint: 'Agent questions to answer' },
-  { status: 'awaiting_decision', hint: 'Human gates waiting on a decision' },
-  { status: 'halted', hint: 'Halted until someone resumes' },
+  {
+    filter: 'awaiting_input',
+    status: 'awaiting_input',
+    phase: null,
+    hint: 'Agent questions to answer',
+  },
+  {
+    filter: 'awaiting_decision',
+    status: 'awaiting_decision',
+    phase: null,
+    hint: 'Human gates waiting on a decision',
+  },
+  {
+    filter: 'halted',
+    status: 'halted',
+    phase: null,
+    hint: 'Halted until someone resumes',
+  },
+  {
+    filter: AGROUND,
+    status: 'terminal',
+    phase: 'blocked',
+    hint: 'Out of rework rounds until someone unblocks',
+  },
 ];
 
 /** The columns of the "Needs you" table, for its placeholder rows. */
@@ -126,7 +153,7 @@ function describeFailure(error: ApiError): Failure {
     }
     .tiles {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
     }
     .tile {
@@ -174,6 +201,11 @@ function describeFailure(error: ApiError): Failure {
     .retry {
       margin-top: 8px;
     }
+    @media (max-width: 1024px) {
+      .tiles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
     @media (max-width: 720px) {
       .tiles {
         grid-template-columns: minmax(0, 1fr);
@@ -208,19 +240,19 @@ function describeFailure(error: ApiError): Failure {
       </ah-banner>
     } @else {
       <div class="tiles">
-        @for (tile of tiles; track tile.status) {
+        @for (tile of tiles; track tile.filter) {
           <a
             class="tile"
             routerLink="/voyages"
-            [queryParams]="{ status: tile.status }"
+            [queryParams]="{ status: tile.filter }"
           >
             @if (loaded()) {
-              <b>{{ counts()[tile.status] }}</b>
+              <b>{{ counts()[tile.filter] }}</b>
             } @else {
               <ah-skeleton width="28px" [height]="28" />
             }
             <div>
-              <ah-status-badge [status]="tile.status" />
+              <ah-status-badge [status]="tile.status" [phase]="tile.phase" />
               <div class="ah-muted tile__hint">{{ tile.hint }}</div>
             </div>
           </a>
@@ -235,8 +267,8 @@ function describeFailure(error: ApiError): Failure {
           /></ah-panel-body>
         } @else if (needsYou().length === 0) {
           <ah-empty-state heading="Calm seas">
-            Nothing needs you right now. Questions, decisions and halted voyages
-            show up here.
+            Nothing needs you right now. Questions, decisions, halted and
+            blocked voyages show up here.
             <a ahButton ahEmptyAction routerLink="/voyages">See all voyages</a>
           </ah-empty-state>
         } @else {
@@ -401,7 +433,7 @@ export class AllHandsPage {
 
   protected readonly tiles = TILES;
   protected readonly needsColumns = NEEDS_COLUMNS;
-  protected readonly counts = this.store.counts;
+  protected readonly counts = this.store.boardCounts;
   protected readonly needsYou = this.store.needsYou;
   protected readonly atSea = this.store.atSea;
 

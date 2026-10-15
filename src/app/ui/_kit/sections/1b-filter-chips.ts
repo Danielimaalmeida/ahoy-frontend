@@ -16,7 +16,8 @@ export class KitFilterChips {
     awaiting_input: 1,
     awaiting_decision: 1,
     halted: 2,
-    terminal: 2,
+    blocked: 1,
+    terminal: 1,
   };
   protected readonly selected = signal<StatusFilter>('all');
 }

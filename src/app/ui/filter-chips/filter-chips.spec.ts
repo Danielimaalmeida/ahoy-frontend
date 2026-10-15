@@ -15,7 +15,8 @@ class Host {
     awaiting_input: 1,
     awaiting_decision: 1,
     halted: 2,
-    terminal: 2,
+    blocked: 1,
+    terminal: 1,
   });
   readonly selected = signal<StatusFilter>('all');
 }
@@ -37,16 +38,17 @@ const CHIPS = [
   ['Needs answers', 'ah-badge--input', 'awaiting_input'],
   ['Needs decision', 'ah-badge--decision', 'awaiting_decision'],
   ['Halted', 'ah-badge--halted', 'halted'],
+  ['Blocked', 'ah-badge--blocked', 'terminal · blocked'],
   ['Ended', 'ah-badge--queued', 'terminal'],
 ] as const;
 
 describe('ah-filter-chips', () => {
-  it('is a labelled group of seven chips: All, then the six statuses in the order of the board', () => {
+  it('is a labelled group of eight chips: All, then the six statuses and Blocked in the order of the board', () => {
     const { root, chips } = render();
     const group = root.querySelector('.ah-chips')!;
     expect(group.getAttribute('role')).toBe('group');
     expect(group.getAttribute('aria-label')).toBe('Filter by status');
-    expect(chips().length).toBe(7);
+    expect(chips().length).toBe(8);
     expect(
       chips().every((chip) => chip.getAttribute('type') === 'button')
     ).toBe(true);
@@ -56,6 +58,7 @@ describe('ah-filter-chips', () => {
       'awaiting_input',
       'awaiting_decision',
       'halted',
+      'blocked',
       'terminal',
     ]);
   });
@@ -69,7 +72,7 @@ describe('ah-filter-chips', () => {
       expect(badge.firstElementChild!.className).toBe('ah-badge__dot');
       expect(chip.querySelector('.ah-chip__api')!.textContent).toBe(api);
       expect(chip.querySelector('.ah-chip__count')!.textContent).toBe(
-        api === 'halted' || api === 'terminal' ? '2' : '1'
+        api === 'halted' ? '2' : '1'
       );
     })
   );
@@ -87,13 +90,14 @@ describe('ah-filter-chips', () => {
     const counts = chips().map(
       (chip) => chip.querySelector('.ah-chip__count')?.textContent ?? null
     );
-    expect(counts).toEqual([null, null, null, null, null, '0', null]);
+    expect(counts).toEqual([null, null, null, null, null, '0', null, null]);
   });
 
   it('presses exactly one chip at a time, starting with All', () => {
     const { pressed } = render();
     expect(pressed()).toEqual([
       'true',
+      'false',
       'false',
       'false',
       'false',
@@ -116,6 +120,7 @@ describe('ah-filter-chips', () => {
       'false',
       'true',
       'false',
+      'false',
     ]);
     chips()[0]!.click();
     fixture.detectChanges();
@@ -128,14 +133,18 @@ describe('ah-filter-chips', () => {
       'false',
       'false',
       'false',
+      'false',
     ]);
   });
 
-  it('maps the Ended chip to the terminal status', () => {
+  it('maps the Ended chip to the terminal status and the Blocked chip to blocked', () => {
     const { fixture, chips } = render();
-    chips()[6]!.click();
+    chips()[7]!.click();
     fixture.detectChanges();
     expect(fixture.componentInstance.selected()).toBe('terminal');
+    chips()[6]!.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.selected()).toBe('blocked');
   });
 
   it('does nothing when the pressed chip is clicked again: one chip stays pressed', () => {
@@ -158,6 +167,7 @@ describe('ah-filter-chips', () => {
       'false',
       'false',
       'true',
+      'false',
       'false',
       'false',
     ]);

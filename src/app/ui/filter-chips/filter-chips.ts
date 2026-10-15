@@ -1,37 +1,45 @@
 import { Component, computed, input, model } from '@angular/core';
-import { IN_PORT, statusPresentation } from '@domain/status';
-import type { StoryStatus } from '@domain/types';
+import {
+  AGROUND,
+  IN_PORT,
+  statusPresentation,
+  type BoardStatus,
+} from '@domain/status';
 
-/** What a list can be filtered by: one status, or everything. */
-export type StatusFilter = StoryStatus | 'all';
+/** What a list can be filtered by: one board status (an API status, or Blocked), or everything. */
+export type StatusFilter = BoardStatus | 'all';
 
 /** How many voyages each chip holds; a missing entry shows no count (still loading). */
 export type StatusCounts = Readonly<Partial<Record<StatusFilter, number>>>;
 
 /**
- * The filter that groups Done and Blocked; `statusPresentation` has no such badge. It is neutral, not a success: a
- * Blocked voyage ended without being delivered.
+ * The filter of the voyages that are over (`terminal`, Done). A Blocked voyage is not one of them: it has its own chip,
+ * beside Halted, because it waits for a person to Unblock it.
  */
 export const IN_PORT_LABEL = 'Ended';
 
-/** The statuses that get a chip, in the order of the Voyages board. `terminal` is the "Ended" chip. */
-export const CHIP_STATUSES: readonly StoryStatus[] = [
+/**
+ * The statuses that get a chip, in the order of the Voyages board: those that move, those that wait for a person
+ * (Blocked among them), then `terminal`, the "Ended" chip.
+ */
+export const CHIP_STATUSES: readonly BoardStatus[] = [
   'ready',
   'running',
   'awaiting_input',
   'awaiting_decision',
   'halted',
+  AGROUND,
   IN_PORT,
 ];
 
 interface Chip {
-  readonly value: StoryStatus;
+  readonly value: BoardStatus;
   readonly label: string;
   readonly modifier: string;
   readonly api: string;
 }
 
-function chipFor(status: StoryStatus): Chip {
+function chipFor(status: BoardStatus): Chip {
   if (status === IN_PORT)
     return {
       value: status,
@@ -39,13 +47,18 @@ function chipFor(status: StoryStatus): Chip {
       modifier: 'queued',
       api: IN_PORT,
     };
+  if (status === AGROUND) {
+    const { label, modifier } = statusPresentation('terminal', 'blocked');
+    return { value: status, label, modifier, api: 'terminal · blocked' };
+  }
   const { label, modifier, api } = statusPresentation(status);
   return { value: status, label, modifier, api };
 }
 
 /**
  * Toggle chips that filter a list by status: "All", then one chip per status with its badge, the API word and the
- * count, so people learn the mapping by using it. "Ended" groups the two terminal outcomes. One chip is pressed at a
+ * count, so people learn the mapping by using it. "Blocked" is the terminal voyages at phase `blocked`, which wait for a
+ * person; "Ended" is the rest of `terminal`, the Done ones. One chip is pressed at a
  * time (`aria-pressed`); pressing it again does nothing. `selected` is two-way, so the URL can own it.
  *
  * ```html
@@ -87,7 +100,7 @@ function chipFor(status: StoryStatus): Chip {
   `,
 })
 export class FilterChips {
-  /** The count of voyages per status; `all` is the total and `terminal` is "Ended". */
+  /** The count of voyages per board status; `all` is the total, `blocked` is "Blocked" and `terminal` is "Ended". */
   readonly counts = input<StatusCounts>({});
   /** The pressed chip. */
   readonly selected = model<StatusFilter>('all');

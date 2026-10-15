@@ -1,4 +1,10 @@
-import { IN_PORT, statusPresentation } from './status';
+import {
+  AGROUND,
+  boardStatus,
+  IN_PORT,
+  isAground,
+  statusPresentation,
+} from './status';
 import type { StatusModifier } from './status';
 import type { Phase, StoryStatus } from './types';
 
@@ -42,7 +48,23 @@ describe('statusPresentation', () => {
 });
 
 describe('IN_PORT', () => {
-  it('is the API status that groups Done and Blocked', () => {
+  it('is the API status of the voyages that are over', () => {
     expect(IN_PORT).toBe('terminal');
+  });
+});
+
+describe('boardStatus', () => {
+  it('sets a terminal voyage at phase blocked apart: it waits for a person, it is not over', () => {
+    expect(boardStatus('terminal', 'blocked')).toBe(AGROUND);
+    expect(AGROUND).toBe('blocked');
+    expect(isAground({ status: 'terminal', phase: 'blocked' })).toBe(true);
+  });
+
+  it('keeps every other status, a done voyage among them', () => {
+    expect(boardStatus('terminal', 'done')).toBe('terminal');
+    expect(boardStatus('terminal', null)).toBe('terminal');
+    expect(boardStatus('halted', 'blocked')).toBe('halted');
+    expect(boardStatus('running')).toBe('running');
+    expect(isAground({ status: 'terminal', phase: 'done' })).toBe(false);
   });
 });

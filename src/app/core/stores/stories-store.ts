@@ -17,7 +17,7 @@ import type { AhoyEvent, Story, StoryStatus } from '@core/api/types';
 import { CLOCK, type Timer } from '@core/realtime/clock';
 import { EventBus } from '@core/realtime/event-bus';
 import { RUN_PROGRESS, isKnownEventType } from '@core/realtime/event-types';
-import { IN_PORT } from '@domain/status';
+import { boardStatus, isAground, type BoardStatus } from '@domain/status';
 import { releaseOnDestroy } from './leases';
 import { newestVersion, type ResourceStatus } from './resource';
 
@@ -30,18 +30,26 @@ export const MAX_STORY_PAGES = 100;
 /** How long events of one story are gathered before its one `getStory` (F5). */
 export const STORY_REFRESH_DEBOUNCE_MS = 300;
 
-/** The statuses that wait on a person: the "Needs you" inbox. */
+/** The statuses that wait on a person: the "Needs you" inbox, with the aground voyages (see {@link isAground}). */
 export const NEEDS_YOU: readonly StoryStatus[] = [
   'awaiting_input',
   'awaiting_decision',
   'halted',
 ];
 
+/** Whether a voyage waits on a person: a status of {@link NEEDS_YOU}, or aground until someone unblocks it. */
+export function needsPerson(story: Story): boolean {
+  return NEEDS_YOU.includes(story.status) || isAground(story);
+}
+
 /** The statuses of a voyage at sea: running, or queued to run. */
 export const AT_SEA: readonly StoryStatus[] = ['running', 'ready'];
 
 /** How many stories there are in each status. */
 export type StoryCounts = Readonly<Record<StoryStatus, number>>;
+
+/** How many stories there are in each board status: `blocked` apart from `terminal`, which is then Done only. */
+export type BoardCounts = Readonly<Record<BoardStatus, number>>;
 
 /** Most recently updated first, as `listStories` orders them; the key breaks ties. */
 function byUpdatedDesc(a: Story, b: Story): number {
@@ -100,14 +108,31 @@ export class StoriesStore {
     return counts;
   });
 
-  /** The "Ended" count: Done and Blocked together (`terminal`), so not a count of delivered voyages. */
-  readonly inPort = computed(() => this.counts()[IN_PORT]);
+  /** How many stories are in each board status: an aground voyage counts as `blocked`, not `terminal`. */
+  readonly boardCounts = computed<BoardCounts>(() => {
+    const counts: Record<BoardStatus, number> = {
+      ready: 0,
+      running: 0,
+      awaiting_input: 0,
+      awaiting_decision: 0,
+      halted: 0,
+      blocked: 0,
+      terminal: 0,
+    };
+    for (const story of this.byKey().values())
+      counts[boardStatus(story.status, story.phase)]++;
+    return counts;
+  });
 
-  /** Stories waiting on a person (`awaiting_input`, `awaiting_decision`, `halted`), longest waiting first. */
+  /** The "Ended" count: the voyages that are over (Done). An aground voyage is not: it waits for a person. */
+  readonly inPort = computed(() => this.boardCounts().terminal);
+
+  /**
+   * Stories waiting on a person (`awaiting_input`, `awaiting_decision`, `halted`, and aground ones), longest waiting
+   * first.
+   */
   readonly needsYou = computed(() =>
-    [...this.byKey().values()]
-      .filter((s) => NEEDS_YOU.includes(s.status))
-      .sort(byUpdatedAsc)
+    [...this.byKey().values()].filter(needsPerson).sort(byUpdatedAsc)
   );
 
   /** Stories at sea (`running`, `ready`), most recently updated first. */
