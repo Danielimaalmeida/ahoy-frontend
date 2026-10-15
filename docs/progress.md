@@ -1,5 +1,28 @@
 # Ahoy frontend · progress
 
+**Updated 2026-10-15 for Blocked is not Ended** (on `fix/blocked-not-ended`). Offline only; no API or TEST environment
+contacted; 0 AIU.
+
+## Blocked is not Ended (2026-10-15)
+
+- The user reported blocked voyages shown as finished: the API reports a blocked voyage as `terminal` (phase `blocked`),
+  and the Voyages board grouped it with Done under Ended, while Needs you left it out. It is not over: it ran out of
+  rework rounds or CI fixes and waits for a person to Unblock or stop it.
+- `domain/status.ts` adds the board status (`boardStatus`, `isAground`): `blocked` for `terminal` at phase `blocked`,
+  the API status otherwise. Voyages gets a Blocked chip (`terminal · blocked`, between Halted and Ended,
+  `?status=blocked`); Ended counts and lists only Done. Needs you lists aground voyages (longest wait first) with
+  "Out of rework rounds or CI fixes" and a primary Unblock that opens the voyage, whose header has the Unblock dialog;
+  a fourth tile counts them. The top bar's Needs you count includes them. No API, contract or dependency change; the
+  status badge already said Blocked.
+- Budget stays off for a blocked voyage: the API refuses a budget change on a `terminal` story (`invalid_state`); after
+  Unblock the voyage is `ready` and Budget returns.
+- Not run: this session's sandbox had the npm registry blocked, so no `npm ci`, build, lint, Vitest or format check of
+  the repository's toolchain ran. A scratch TypeScript 6.0.2 check with stand-ins for Angular found no type error in
+  the changed files, and Prettier 3.8.1 formatted them. Specs were updated (filter chips, filters, status, stories
+  store, Needs you and its rows, Voyages) but did not run; the pull request's CI or a local
+  `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on Node 24 must run them.
+  Needs from other lanes: none.
+
 **Updated 2026-10-15 for Unblock** (on `feature/R3DA-14787-design`, alongside the model editor fixes).
 Offline only; no API or TEST environment contacted; 0 AIU.
 
@@ -2699,7 +2722,7 @@ first on `PATH`. Every command below ran on Node 24.21.0 with npm 10.9.4.
 ### What changed
 
 | Area          | Files                                                                                                                                 | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---- | ----- | ------ | ------------------------------------------ | --- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Tokens        | `scripts/build-tokens.mjs`, `src/styles/tokens.css` (generated), `package.json` scripts `tokens`, `tokens:check`                      | Every colour, spacing, radius, shadow and size token becomes `--<name>`; `.` is escaped (`--space-1\.5`); `type.families` → `--font-sans`, `--font-mono`. Light in `:root, [data-theme="light"]` (83 properties), dark in `[data-theme="dark"]` (59: the 56 colours and 3 shadows; the rest inherit light). Each block also sets `color-scheme`, so native controls follow the theme. Values are checked to be plain CSS (no `;`, `{`, `}`, `\`, comments). `--check` writes nothing and fails when `tokens.css` is missing or differs from what `tokens.json` produces, or when any `var(--x)` in `src/styles/` or `src/app/` names a property nothing defines. |
 | Styles        | `src/styles/ahoy-bundle.css`, `src/styles/_ahoy-angular.scss`, `src/styles.scss`                                                      | The bundle is a byte-for-byte copy of `components/bundle.css` under a header naming its source and version; its Google Fonts `@import` stays. `_ahoy-angular.scss` holds only what the bundle can't: `body { margin: 0 }`, `display: contents` for wrapper hosts, the link-button colour fix (below), `ah-panel__actions`, `ah-field__optional`, `ah-banner__body`; each rule says why.                                                                                                                                                                                                                                                                          |
 | Theme         | `src/app/ui/theme/theme.service.ts`                                                                                                   | `ThemeService` (`theme` signal, `set`, `toggle`): `data-theme` on `<html>`, light by default, remembered under `ahoy.theme` in `localStorage`. Every storage access is in `try/catch`; a stored value that is not a theme is ignored. `THEME_STORAGE` token so tests use a fake. No button in the app (F16).                                                                                                                                                                                                                                                                                                                                                     |

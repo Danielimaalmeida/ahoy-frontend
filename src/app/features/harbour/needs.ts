@@ -11,6 +11,7 @@ import { crewLabel } from '@domain/models';
 import { diagnosisLine } from '@domain/diagnosis';
 import { explainHalt, isHaltReason } from '@domain/halt';
 import { currentQuestions } from '@domain/questions';
+import { isAground } from '@domain/status';
 
 /** What the last `story.halted` event says (G7): the code and the person's or the worker's words. */
 export interface HaltInfo {
@@ -156,8 +157,15 @@ function neededByHaltReason(story: Story, halt: HaltInfo | null): Needed {
   };
 }
 
+/** What an aground voyage needs: a person to grant more rounds (Unblock) or to stop it. */
+const AGROUND_NEEDED: Needed = {
+  headline: 'Out of rework rounds or CI fixes',
+  sub: 'Unblock to grant more, or stop the voyage',
+};
+
 /** What a voyage of the inbox needs from a person, by status: the text of the "What's needed" column. */
 export function whatsNeeded(story: Story, detail: RowDetail): Needed {
+  if (isAground(story)) return AGROUND_NEEDED;
   switch (story.status) {
     case 'awaiting_input':
       return questionsNeeded(story, detail.questions);
@@ -173,6 +181,9 @@ export function whatsNeeded(story: Story, detail: RowDetail): Needed {
 /** The action that ends a row of the inbox, by status. `gate` is the open gate, if known (G11). */
 export function needsAction(story: Story, gate: string | null): NeedsAction {
   const voyage = ['/voyages', story.key] as const;
+  // The voyage's header offers Unblock (and Stop) whenever its phase is blocked.
+  if (isAground(story))
+    return { label: 'Unblock', variant: 'primary', link: voyage };
   switch (story.status) {
     case 'awaiting_input':
       return {

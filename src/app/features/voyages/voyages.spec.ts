@@ -284,7 +284,7 @@ describe('Voyages', () => {
   });
 
   describe('chips', () => {
-    it('show All and the six statuses with the API word and the count of each', async () => {
+    it('show All, the six statuses and Blocked with the API word and the count of each', async () => {
       const { chips } = await open('/voyages');
       expect(chips().map((chip) => chip.text)).toEqual([
         'All 8',
@@ -293,7 +293,8 @@ describe('Voyages', () => {
         'Needs answers awaiting_input 1',
         'Needs decision awaiting_decision 1',
         'Halted halted 2',
-        'Ended terminal 2',
+        'Blocked terminal · blocked 1',
+        'Ended terminal 1',
       ]);
     });
 
@@ -333,28 +334,33 @@ describe('Voyages', () => {
       expect(keys()).toEqual(['PROJ-131']);
       await press('Ended');
       expect(router.url).toBe('/voyages?status=terminal');
-      expect(keys()).toEqual(['PROJ-097', 'PROJ-102']);
+      expect(keys()).toEqual(['PROJ-097']);
+      await press('Blocked');
+      expect(router.url).toBe('/voyages?status=blocked');
+      expect(keys()).toEqual(['PROJ-102']);
       await press('All');
       expect(router.url).toBe('/voyages');
       expect(keys()).toHaveLength(8);
     });
 
-    it('group a blocked terminal voyage under Ended, not as a success, and badge it Blocked', async () => {
-      const { root } = await open('/voyages?status=terminal');
+    it('list a blocked voyage under Blocked, never under Ended with the done ones, and badge it Blocked', async () => {
+      const ended = await open('/voyages?status=terminal');
+      expect(ended.keys()).toEqual(['PROJ-097']);
+      expect(
+        ended.root.querySelector('tbody tr .ah-badge')!.className
+      ).toContain('ah-badge--done');
+
+      const { root, keys } = await open('/voyages?status=blocked');
+      expect(keys()).toEqual(['PROJ-102']);
       const chip = Array.from(root.querySelectorAll('.ah-chip')).find(
         (c) => c.getAttribute('aria-pressed') === 'true'
       )!;
-      expect(chip.querySelector('.ah-badge')!.className).not.toContain(
-        'ah-badge--done'
+      expect(chip.querySelector('.ah-badge')!.className).toContain(
+        'ah-badge--blocked'
       );
-      const badges = Object.fromEntries(
-        Array.from(root.querySelectorAll('tbody tr')).map((tr) => [
-          text(tr.querySelector('a.ah-key')),
-          tr.querySelector('.ah-badge')!.className,
-        ])
+      expect(root.querySelector('tbody tr .ah-badge')!.className).toContain(
+        'ah-badge--blocked'
       );
-      expect(badges['PROJ-102']).toContain('ah-badge--blocked');
-      expect(badges['PROJ-097']).toContain('ah-badge--done');
     });
 
     it('keep the search in the address when a status is pressed', async () => {
@@ -412,6 +418,7 @@ describe('Voyages', () => {
         'Needs answers awaiting_input 0',
         'Needs decision awaiting_decision 0',
         'Halted halted 2',
+        'Blocked terminal · blocked 0',
         'Ended terminal 0',
       ]);
     });
@@ -624,6 +631,7 @@ describe('Voyages', () => {
         'Needs answers awaiting_input',
         'Needs decision awaiting_decision',
         'Halted halted',
+        'Blocked terminal · blocked',
         'Ended terminal',
       ]);
       expect(root.querySelector('table')).toBeNull();

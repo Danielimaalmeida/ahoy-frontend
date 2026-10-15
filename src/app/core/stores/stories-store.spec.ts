@@ -110,7 +110,7 @@ describe('StoriesStore', () => {
     );
   });
 
-  it('counts the stories in each status, with In port as terminal', async () => {
+  it('counts the stories in each status, and on the boards a blocked voyage apart from the ended ones', async () => {
     api.on('listStories', pagesOf(SEVEN, 3));
     const store = TestBed.inject(StoriesStore);
     expect(store.counts()).toEqual({
@@ -130,14 +130,25 @@ describe('StoriesStore', () => {
       halted: 1,
       terminal: 2,
     });
-    expect(store.inPort()).toBe(2);
+    expect(store.boardCounts()).toEqual({
+      ready: 1,
+      running: 1,
+      awaiting_input: 1,
+      awaiting_decision: 1,
+      halted: 1,
+      blocked: 1,
+      terminal: 1,
+    });
+    expect(store.inPort()).toBe(1);
   });
 
-  it('lists what needs a person, longest waiting first, and what is at sea', async () => {
+  it('lists what needs a person, aground voyages among them, longest waiting first, and what is at sea', async () => {
     api.on('listStories', pagesOf(SEVEN, 500));
     const store = TestBed.inject(StoriesStore);
     await store.loadAll();
+    // PROJ-107 is terminal at phase blocked: it waits for someone to unblock it, so it needs a person.
     expect(store.needsYou().map((s) => s.key)).toEqual([
+      'PROJ-107',
       'PROJ-103',
       'PROJ-104',
       'PROJ-102',

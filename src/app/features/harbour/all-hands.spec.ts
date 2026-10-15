@@ -84,10 +84,11 @@ const EIGHT: readonly Story[] = [
     spentNanoAiu: aiu('27.1'),
     updatedAt: '2026-10-05T10:00:00.000Z',
   }),
+  // Done: a blocked voyage needs a person and is in its own test below.
   aStory('PROJ-102', {
     title: 'Remove the legacy coupon flow',
     owner: 'jordan@example.com',
-    phase: 'blocked',
+    phase: 'done',
     status: 'terminal',
     budgetNanoAiu: aiu('20'),
     spentNanoAiu: aiu('8.3'),
@@ -275,7 +276,7 @@ describe('All hands', () => {
   });
 
   describe('tiles', () => {
-    it('count Needs answers, Needs decision and Halted (1 / 1 / 2) and link to the voyages of that status', async () => {
+    it('count Needs answers, Needs decision, Halted and Blocked (1 / 1 / 2 / 0) and link to the voyages of that status', async () => {
       const { root } = await render();
       const tiles = Array.from(
         root.querySelectorAll<HTMLAnchorElement>('a.tile')
@@ -284,14 +285,46 @@ describe('All hands', () => {
         '1',
         '1',
         '2',
+        '0',
       ]);
       expect(
         tiles.map((tile) => text(tile.querySelector('.ah-badge')))
-      ).toEqual(['Needs answers', 'Needs decision', 'Halted']);
+      ).toEqual(['Needs answers', 'Needs decision', 'Halted', 'Blocked']);
       expect(tiles.map((tile) => tile.getAttribute('href'))).toEqual([
         '/voyages?status=awaiting_input',
         '/voyages?status=awaiting_decision',
         '/voyages?status=halted',
+        '/voyages?status=blocked',
+      ]);
+    });
+
+    it('count a voyage that is terminal at phase blocked as Blocked, and list it in Needs you with Unblock', async () => {
+      const aground = aStory('PROJ-150', {
+        title: 'Generate the API types from the contract',
+        owner: 'jordan@example.com',
+        phase: 'blocked',
+        status: 'terminal',
+        updatedAt: '2026-10-02T10:00:00.000Z',
+      });
+      const { root } = await render([...EIGHT, aground]);
+      expect(
+        Array.from(root.querySelectorAll('a.tile b')).map((b) => text(b))
+      ).toEqual(['1', '1', '2', '1']);
+      const needs = panel(root, 'Needs you');
+      const first = rowsOf(needs)[0]!;
+      expect(first[0]).toBe('Blocked');
+      expect(first[1]).toBe(
+        'PROJ-150 Generate the API types from the contract'
+      );
+      expect(first[3]).toBe(
+        'Out of rework rounds or CI fixes Unblock to grant more, or stop the voyage'
+      );
+      const action = needs.querySelector<HTMLAnchorElement>(
+        'tbody tr:first-child td:last-child a'
+      )!;
+      expect([text(action), action.getAttribute('href')]).toEqual([
+        'Unblock',
+        '/voyages/PROJ-150',
       ]);
     });
   });
@@ -554,7 +587,7 @@ describe('All hands', () => {
       const needs = panel(root, 'Needs you');
       expect(text(needs)).toContain('Calm seas');
       expect(text(needs)).toContain(
-        'Nothing needs you right now. Questions, decisions and halted voyages show up here.'
+        'Nothing needs you right now. Questions, decisions, halted and blocked voyages show up here.'
       );
       expect(needs.querySelector('table')).toBeNull();
       const link = needs.querySelector<HTMLAnchorElement>('a');
@@ -564,7 +597,7 @@ describe('All hands', () => {
       ]);
       expect(
         Array.from(root.querySelectorAll('a.tile b')).map((b) => text(b))
-      ).toEqual(['0', '0', '0']);
+      ).toEqual(['0', '0', '0', '0']);
     });
   });
 
@@ -576,7 +609,7 @@ describe('All hands', () => {
       );
       expect(root.querySelector('[aria-busy=true]')).not.toBeNull();
       expect(root.querySelectorAll('a.tile b')).toHaveLength(0);
-      expect(root.querySelectorAll('a.tile ah-skeleton')).toHaveLength(3);
+      expect(root.querySelectorAll('a.tile ah-skeleton')).toHaveLength(4);
       expect(text(root)).not.toContain('Calm seas');
     });
   });

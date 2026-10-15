@@ -312,6 +312,25 @@ describe('whatsNeeded: Anchored', () => {
   });
 });
 
+describe('whatsNeeded and needsAction: Aground', () => {
+  const aground = aStory('PROJ-102', { status: 'terminal', phase: 'blocked' });
+
+  it('says the voyage ran out of rounds and that Unblock or Stop ends the wait', () => {
+    expect(whatsNeeded(aground, NONE)).toEqual({
+      headline: 'Out of rework rounds or CI fixes',
+      sub: 'Unblock to grant more, or stop the voyage',
+    });
+  });
+
+  it('offers a primary Unblock that opens the voyage, whose header has the Unblock dialog', () => {
+    expect(needsAction(aground, null)).toEqual({
+      label: 'Unblock',
+      variant: 'primary',
+      link: ['/voyages', 'PROJ-102'],
+    });
+  });
+});
+
 describe('haltOf', () => {
   it('reads the reason and detail of the last story.halted event', () => {
     const events = [
