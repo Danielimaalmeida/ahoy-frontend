@@ -1,4 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { RaisedBy } from '@core/api/types';
 import { Button } from '@ui/button/button';
@@ -120,10 +127,19 @@ export class TopicComposer {
       : 'A topic to raise in this meeting'
   );
 
+  /** Which meeting is open; the same id while the answer to a command replaces the meeting with a fresh copy. */
+  private readonly meetingId = computed(() => this.store.meeting()?.id ?? null);
+
   constructor() {
     this.title.valueChanges.subscribe((value) => this.typed.set(value));
-    // Another meeting has other stakeholders: start again from its first one.
-    effect(() => this.who.setValue(this.stakeholders()[0] ?? SOMEONE_ELSE));
+    // Another meeting has other stakeholders: start again from its first one. Only a change of meeting does that: a
+    // topic moved up or down in the same meeting keeps the stakeholder that was picked.
+    effect(() => {
+      this.meetingId();
+      untracked(() =>
+        this.who.setValue(this.stakeholders()[0] ?? SOMEONE_ELSE)
+      );
+    });
   }
 
   /** Adds the topic; on success the title clears and the choice of Us or Them stays. */

@@ -200,6 +200,29 @@ describe('Meetings on the mock backend', () => {
     });
   });
 
+  it('keeps the stakeholder picked for the next topic when a topic is moved up in the same meeting', async () => {
+    const page = await open('/meetings');
+    const composer = page.root.querySelector<HTMLElement>('ah-topic-composer')!;
+    buttonNamed(composer, 'Them').click();
+    await flush(page);
+    const who = composer.querySelector<HTMLSelectElement>('#topic-who')!;
+    who.value = 'jordan@example.com';
+    who.dispatchEvent(new Event('change'));
+
+    const second = titles(page.root)[1]!;
+    page.root
+      .querySelector<HTMLButtonElement>(
+        `button[aria-label="Move ${second} up"]`
+      )!
+      .click();
+    await flush(page);
+
+    expect(titles(page.root)[0]).toBe(second);
+    expect(composer.querySelector<HTMLSelectElement>('#topic-who')!.value).toBe(
+      'jordan@example.com'
+    );
+  });
+
   it('adds a note under a topic and clears the line for the next one', async () => {
     const page = await open('/meetings');
     const topic = card(page.root, 'Tax ID validation for EU customers');
