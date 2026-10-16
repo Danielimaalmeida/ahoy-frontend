@@ -30,17 +30,15 @@ export const MAX_STORY_PAGES = 100;
 /** How long events of one story are gathered before its one `getStory` (F5). */
 export const STORY_REFRESH_DEBOUNCE_MS = 300;
 
-/** The statuses that wait on a person: the "Needs you" inbox, with the aground voyages (see {@link isAground}). */
+/**
+ * The API statuses that wait on a person: the "Needs you" inbox. An aground voyage may too, but only its events tell
+ * whether it can be unblocked (a rejected one cannot), so the inbox page adds those from {@link StoriesStore.aground}.
+ */
 export const NEEDS_YOU: readonly StoryStatus[] = [
   'awaiting_input',
   'awaiting_decision',
   'halted',
 ];
-
-/** Whether a voyage waits on a person: a status of {@link NEEDS_YOU}, or aground until someone unblocks it. */
-export function needsPerson(story: Story): boolean {
-  return NEEDS_YOU.includes(story.status) || isAground(story);
-}
 
 /** The statuses of a voyage at sea: running, or queued to run. */
 export const AT_SEA: readonly StoryStatus[] = ['running', 'ready'];
@@ -127,12 +125,16 @@ export class StoriesStore {
   /** The "Ended" count: the voyages that are over (Done). An aground voyage is not: it waits for a person. */
   readonly inPort = computed(() => this.boardCounts().terminal);
 
-  /**
-   * Stories waiting on a person (`awaiting_input`, `awaiting_decision`, `halted`, and aground ones), longest waiting
-   * first.
-   */
+  /** Stories waiting on a person (`awaiting_input`, `awaiting_decision`, `halted`), longest waiting first. */
   readonly needsYou = computed(() =>
-    [...this.byKey().values()].filter(needsPerson).sort(byUpdatedAsc)
+    [...this.byKey().values()]
+      .filter((s) => NEEDS_YOU.includes(s.status))
+      .sort(byUpdatedAsc)
+  );
+
+  /** Aground stories (terminal at phase `blocked`), longest waiting first: some can be unblocked, some were rejected. */
+  readonly aground = computed(() =>
+    [...this.byKey().values()].filter(isAground).sort(byUpdatedAsc)
   );
 
   /** Stories at sea (`running`, `ready`), most recently updated first. */

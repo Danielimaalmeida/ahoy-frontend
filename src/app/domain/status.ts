@@ -17,17 +17,20 @@ export interface StatusPresentation {
   readonly api: string;
 }
 
-/** The API status of a voyage that is over; the "Ended" filter holds only the Done ones (see {@link boardStatus}). */
+/**
+ * The API status `terminal`: a voyage that is done or blocked. The "Ended" filter is the Done part only; a blocked one
+ * has its own board status (see {@link boardStatus}).
+ */
 export const IN_PORT: StoryStatus = 'terminal';
 
 /**
  * Where a voyage stands on the boards: its API status, except that a `terminal` voyage in phase `blocked` is `blocked`.
- * The API calls it terminal, but it is not over: it ran out of rework rounds or CI fixes and waits for a person to
- * Unblock it (or stop it), so it is never counted with the Done ones.
+ * The API calls it terminal, but it is not delivered: it ran out of rework rounds or CI fixes (a person may Unblock it)
+ * or a person rejected it at a human gate (final), so it is never counted with the Done ones.
  */
 export type BoardStatus = StoryStatus | 'blocked';
 
-/** The board status of an aground voyage: terminal at phase `blocked`, waiting for a person. */
+/** The board status of an aground voyage: terminal at phase `blocked`. */
 export const AGROUND = 'blocked' satisfies BoardStatus;
 
 /** A voyage's board status, from its API status and phase. */
@@ -38,7 +41,7 @@ export function boardStatus(
   return status === 'terminal' && phase === 'blocked' ? AGROUND : status;
 }
 
-/** Whether a voyage is aground: blocked, not done, and waiting for a person to Unblock or stop it. */
+/** Whether a voyage is aground: terminal at phase `blocked`, not delivered. Whether it can be unblocked is in its events. */
 export function isAground(story: {
   readonly status: StoryStatus;
   readonly phase: Phase;

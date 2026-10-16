@@ -142,17 +142,17 @@ describe('StoriesStore', () => {
     expect(store.inPort()).toBe(1);
   });
 
-  it('lists what needs a person, aground voyages among them, longest waiting first, and what is at sea', async () => {
+  it('lists what needs a person, longest waiting first, what is aground, and what is at sea', async () => {
     api.on('listStories', pagesOf(SEVEN, 500));
     const store = TestBed.inject(StoriesStore);
     await store.loadAll();
-    // PROJ-107 is terminal at phase blocked: it waits for someone to unblock it, so it needs a person.
     expect(store.needsYou().map((s) => s.key)).toEqual([
-      'PROJ-107',
       'PROJ-103',
       'PROJ-104',
       'PROJ-102',
     ]);
+    // Terminal at phase blocked: only its events tell whether a person can unblock it, so it is listed apart.
+    expect(store.aground().map((s) => s.key)).toEqual(['PROJ-107']);
     expect(store.atSea().map((s) => s.key)).toEqual(['PROJ-105', 'PROJ-101']);
     expect(store.stories().map((s) => s.key)).toEqual([
       'PROJ-105',

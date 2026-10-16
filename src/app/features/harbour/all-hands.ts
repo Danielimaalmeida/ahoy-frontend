@@ -17,7 +17,7 @@ import {
 } from '@ui/skeleton/skeleton';
 import { StatusBadge } from '@ui/status-badge/status-badge';
 import { CellSub, Key, Nowrap, Table } from '@ui/table/table';
-import { atSeaCrew, needsAction, whatsNeeded } from './needs';
+import { atSeaCrew, canUnblock, needsAction, whatsNeeded } from './needs';
 import { RowDetails } from './row-details';
 
 /**
@@ -52,7 +52,7 @@ const TILES: readonly {
     filter: AGROUND,
     status: 'terminal',
     phase: 'blocked',
-    hint: 'Out of rework rounds until someone unblocks',
+    hint: 'Out of rework rounds, or rejected at a gate',
   },
 ];
 
@@ -267,8 +267,8 @@ function describeFailure(error: ApiError): Failure {
           /></ah-panel-body>
         } @else if (needsYou().length === 0) {
           <ah-empty-state heading="Calm seas">
-            Nothing needs you right now. Questions, decisions, halted and
-            blocked voyages show up here.
+            Nothing needs you right now. Questions, decisions, halted voyages
+            and blocked ones you can unblock show up here.
             <a ahButton ahEmptyAction routerLink="/voyages">See all voyages</a>
           </ah-empty-state>
         } @else {
@@ -434,7 +434,22 @@ export class AllHandsPage {
   protected readonly tiles = TILES;
   protected readonly needsColumns = NEEDS_COLUMNS;
   protected readonly counts = this.store.boardCounts;
-  protected readonly needsYou = this.store.needsYou;
+  /**
+   * The inbox: the statuses that wait on a person, and the aground voyages a person can Unblock (their events say so; a
+   * rejected one is final and stays on the board only), longest waiting first.
+   */
+  protected readonly needsYou = computed(() =>
+    [
+      ...this.store.needsYou(),
+      ...this.store
+        .aground()
+        .filter((story) => canUnblock(story, this.details.detail(story.key))),
+    ].sort(
+      (a, b) =>
+        Date.parse(a.updatedAt) - Date.parse(b.updatedAt) ||
+        a.key.localeCompare(b.key)
+    )
+  );
   protected readonly atSea = this.store.atSea;
 
   /** Whether there is something to show: the list was read, or an earlier read is still in hand. */
@@ -479,7 +494,13 @@ export class AllHandsPage {
 
   constructor() {
     this.store.use(inject(DestroyRef));
-    effect(() => this.details.sync([...this.needsYou(), ...this.atSea()]));
+    effect(() =>
+      this.details.sync([
+        ...this.store.needsYou(),
+        ...this.store.aground(),
+        ...this.atSea(),
+      ])
+    );
   }
 
   protected retry(): void {

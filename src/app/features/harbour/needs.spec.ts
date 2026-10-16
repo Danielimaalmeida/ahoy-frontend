@@ -3,6 +3,8 @@ import type { Question, Story } from '@core/api/types';
 import { aStory, anEvent } from '@core/realtime/testing/events';
 import {
   atSeaCrew,
+  blockedFromOf,
+  canUnblock,
   crewOfPhase,
   gateOpen,
   haltOf,
@@ -17,6 +19,7 @@ const NONE: RowDetail = {
   gate: null,
   halt: null,
   diagnosis: null,
+  blockedFrom: null,
 };
 
 function question(id: string, round: number, answered: boolean): Question {
@@ -315,11 +318,14 @@ describe('whatsNeeded: Anchored', () => {
 describe('whatsNeeded and needsAction: Aground', () => {
   const aground = aStory('PROJ-102', { status: 'terminal', phase: 'blocked' });
 
-  it('says the voyage ran out of rounds and that Unblock or Stop ends the wait', () => {
-    expect(whatsNeeded(aground, NONE)).toEqual({
+  it('says the voyage ran out of rounds, where it stopped, and that Unblock grants more', () => {
+    expect(
+      whatsNeeded(aground, { ...NONE, blockedFrom: 'implementation' })
+    ).toEqual({
       headline: 'Out of rework rounds or CI fixes',
-      sub: 'Unblock to grant more, or stop the voyage',
+      sub: 'Blocked in implementation · Unblock grants more rounds',
     });
+    expect(whatsNeeded(aground, NONE).sub).toBe('Unblock grants more rounds');
   });
 
   it('offers a primary Unblock that opens the voyage, whose header has the Unblock dialog', () => {
@@ -328,6 +334,46 @@ describe('whatsNeeded and needsAction: Aground', () => {
       variant: 'primary',
       link: ['/voyages', 'PROJ-102'],
     });
+  });
+});
+
+describe('canUnblock and blockedFromOf', () => {
+  const aground = aStory('PROJ-102', { status: 'terminal', phase: 'blocked' });
+  const from = (phase: string): RowDetail => ({ ...NONE, blockedFrom: phase });
+
+  it('reads the phase of the last move to blocked', () => {
+    const events = [
+      anEvent(1, 'story.phase_changed', {
+        from: 'planning',
+        to: 'plan_review',
+      }),
+      anEvent(2, 'story.phase_changed', {
+        from: 'implementation',
+        to: 'blocked',
+      }),
+      anEvent(3, 'story.phase_changed', { from: 'pr_review', to: 'blocked' }),
+    ];
+    expect(blockedFromOf(events)).toBe('pr_review');
+    expect(blockedFromOf(events.slice(0, 1))).toBeNull();
+    expect(
+      blockedFromOf([anEvent(4, 'story.phase_changed', { to: 'blocked' })])
+    ).toBeNull();
+  });
+
+  it('lets a person unblock a voyage blocked from a phase that runs work', () => {
+    expect(canUnblock(aground, from('implementation'))).toBe(true);
+    expect(canUnblock(aground, from('pr_review'))).toBe(true);
+  });
+
+  it('never offers Unblock for a rejection at a human gate, a final phase, an unread history or a voyage not aground', () => {
+    expect(canUnblock(aground, from('plan_review'))).toBe(false);
+    expect(canUnblock(aground, from('delivery_gate'))).toBe(false);
+    expect(canUnblock(aground, from('done'))).toBe(false);
+    expect(canUnblock(aground, from('blocked'))).toBe(false);
+    expect(canUnblock(aground, NONE)).toBe(false);
+    expect(
+      canUnblock(aStory('PROJ-1', { status: 'halted' }), from('implementation'))
+    ).toBe(false);
   });
 });
 

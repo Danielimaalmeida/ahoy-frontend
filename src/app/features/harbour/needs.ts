@@ -31,6 +31,8 @@ export interface RowDetail {
   readonly halt: HaltInfo | null;
   /** The diagnosis of a halted voyage (`getStoryDiagnosis`), for Anchored. */
   readonly diagnosis: Diagnosis | null;
+  /** For an aground voyage: the phase it was blocked from, from its last `story.phase_changed` to `blocked`. */
+  readonly blockedFrom: string | null;
 }
 
 /** The "What's needed" cell: the sentence, and the small line under it. */
@@ -88,6 +90,35 @@ export function haltOf(events: readonly AhoyEvent[]): HaltInfo | null {
     reason: typeof reason === 'string' ? reason : null,
     detail: trimmed !== '' ? trimmed : null,
   };
+}
+
+/** The phase the last `story.phase_changed` event to `blocked` came from; `null` when there is none. */
+export function blockedFromOf(events: readonly AhoyEvent[]): string | null {
+  const last = events
+    .filter(
+      (event) =>
+        event.type === 'story.phase_changed' &&
+        event.payload['to'] === 'blocked'
+    )
+    .at(-1);
+  const from = last?.payload['from'];
+  return typeof from === 'string' && from !== '' ? from : null;
+}
+
+/**
+ * Whether a person can Unblock an aground voyage, the way the API decides (`unblockStory`): it was blocked from a phase
+ * that runs work (it ran out of rework rounds or CI fixes), not rejected at a human gate or blocked from a final phase.
+ * `false` until its events are read, so a voyage is never offered an Unblock the API would refuse.
+ */
+export function canUnblock(story: Story, detail: RowDetail): boolean {
+  const from = detail.blockedFrom;
+  return (
+    isAground(story) &&
+    from !== null &&
+    from !== 'blocked' &&
+    from !== 'done' &&
+    !Object.hasOwn(GATE_FOR_PHASE, from)
+  );
 }
 
 /** The gate of the last `story.awaiting_decision` event (G11); `null` when there is none. */
@@ -157,15 +188,20 @@ function neededByHaltReason(story: Story, halt: HaltInfo | null): Needed {
   };
 }
 
-/** What an aground voyage needs: a person to grant more rounds (Unblock) or to stop it. */
-const AGROUND_NEEDED: Needed = {
-  headline: 'Out of rework rounds or CI fixes',
-  sub: 'Unblock to grant more, or stop the voyage',
-};
+/** What an aground voyage that can be unblocked needs: a person to grant more rounds, with where it stopped. */
+function agroundNeeded(detail: RowDetail): Needed {
+  return {
+    headline: 'Out of rework rounds or CI fixes',
+    sub:
+      detail.blockedFrom === null
+        ? 'Unblock grants more rounds'
+        : `Blocked in ${detail.blockedFrom} · Unblock grants more rounds`,
+  };
+}
 
 /** What a voyage of the inbox needs from a person, by status: the text of the "What's needed" column. */
 export function whatsNeeded(story: Story, detail: RowDetail): Needed {
-  if (isAground(story)) return AGROUND_NEEDED;
+  if (isAground(story)) return agroundNeeded(detail);
   switch (story.status) {
     case 'awaiting_input':
       return questionsNeeded(story, detail.questions);
@@ -181,7 +217,7 @@ export function whatsNeeded(story: Story, detail: RowDetail): Needed {
 /** The action that ends a row of the inbox, by status. `gate` is the open gate, if known (G11). */
 export function needsAction(story: Story, gate: string | null): NeedsAction {
   const voyage = ['/voyages', story.key] as const;
-  // The voyage's header offers Unblock (and Stop) whenever its phase is blocked.
+  // The voyage's header offers Unblock whenever its phase is blocked; the inbox lists only those that can be unblocked.
   if (isAground(story))
     return { label: 'Unblock', variant: 'primary', link: voyage };
   switch (story.status) {
