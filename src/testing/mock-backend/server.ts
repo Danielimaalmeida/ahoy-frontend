@@ -13,10 +13,17 @@
  * (`npm run mock:api`): never two mocks.
  */
 import type {
+  AddMeetingTopicRequest,
   AgentDiagnosisRequest,
   CancelRefinementRequest,
+  CreateMeetingRequest,
+  CreateMeetingSeriesRequest,
   DecisionRequest,
+  EndMeetingRequest,
   KnowledgeReviewRequest,
+  MeetingNoteRequest,
+  MeetingStatus,
+  MeetingTopicOrderRequest,
   ModelChoice,
   ModelSlot,
   ProblemCode,
@@ -28,6 +35,8 @@ import type {
   StartStoryRequest,
   StopStoryRequest,
   StoryPage,
+  UpdateMeetingRequest,
+  UpdateMeetingTopicRequest,
   AnswerRequest,
   JiraBacklog,
 } from '@core/api/types';
@@ -46,6 +55,7 @@ import {
   type MockResponse,
 } from './http';
 import { KnowledgeDesk } from './knowledge';
+import { MeetingDesk } from './meetings';
 import { RefinementDesk } from './refinements';
 import { SchemaChecker, unstorableText } from './schema';
 import { seedVoyages } from './seeds';
@@ -187,6 +197,7 @@ const BASE = '/api/v1';
 
 /** The operations the mock does not simulate (phase 7). They answer `500 internal_error`, which any operation may. */
 const NOT_SIMULATED = new Set([
+  'amendAnchors',
   'resolveReview',
   'decideWorkPackage',
   'reopenWork',
@@ -210,6 +221,7 @@ export class MockAhoyServer {
   private refinements: RefinementDesk;
   private agentDiagnoses: RefinementDesk;
   private knowledgeReviews: KnowledgeDesk;
+  private meetings: MeetingDesk;
 
   constructor(options: MockServerOptions) {
     if (!isRecord(options.contract) || !isRecord(options.contract['paths']))
@@ -234,6 +246,7 @@ export class MockAhoyServer {
       this.clock,
       options.timing ?? LIVE_TIMING
     );
+    this.meetings = new MeetingDesk(this.clock);
     this.load();
   }
 
@@ -255,6 +268,11 @@ export class MockAhoyServer {
   /** The knowledge reviews of done and halted stories, for specs that look inside. */
   get knowledgeDesk(): KnowledgeDesk {
     return this.knowledgeReviews;
+  }
+
+  /** The meetings with stakeholders, for specs that look inside. */
+  get meetingDesk(): MeetingDesk {
+    return this.meetings;
   }
 
   /** The refinements of backlog items, for specs that look inside. */
@@ -301,6 +319,7 @@ export class MockAhoyServer {
       this.clock,
       this.options.timing ?? LIVE_TIMING
     );
+    this.meetings = new MeetingDesk(this.clock);
     Object.assign(this.switches, {
       latencyMs: 0,
       failNext: null,
@@ -355,6 +374,7 @@ export class MockAhoyServer {
       this.simulator,
       this.options.seedAt ?? this.clock.now()
     );
+    this.meetings.seed(this.options.seedAt ?? this.clock.now());
   }
 
   private takeFailNext(request: MockRequest): MockResponse | null {
@@ -723,6 +743,109 @@ export class MockAhoyServer {
         return this.listStoryEvents(call);
       case 'streamEvents':
         return this.streamEvents(call);
+      case 'listMeetings': {
+        const status = call.query['status'] as MeetingStatus | undefined; // validated
+        return jsonResponse(200, { items: this.meetings.list(status) });
+      }
+      case 'createMeeting':
+        return jsonResponse(
+          201,
+          this.meetings.create(call.actor, call.body as CreateMeetingRequest) // validated
+        );
+      case 'getMeeting':
+        return jsonResponse(
+          200,
+          this.meetings.get(call.path['meetingId'] ?? '')
+        );
+      case 'updateMeeting':
+        return jsonResponse(
+          200,
+          this.meetings.update(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            call.body as UpdateMeetingRequest // validated
+          )
+        );
+      case 'startMeeting':
+        return jsonResponse(
+          200,
+          this.meetings.start(call.actor, call.path['meetingId'] ?? '')
+        );
+      case 'endMeeting':
+        return jsonResponse(
+          200,
+          this.meetings.end(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            (call.body as EndMeetingRequest).carryOver // validated
+          )
+        );
+      case 'addMeetingTopic':
+        return jsonResponse(
+          201,
+          this.meetings.addTopic(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            call.body as AddMeetingTopicRequest // validated
+          )
+        );
+      case 'setMeetingTopicOrder':
+        return jsonResponse(
+          200,
+          this.meetings.order(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            (call.body as MeetingTopicOrderRequest).topicIds // validated
+          )
+        );
+      case 'updateMeetingTopic':
+        return jsonResponse(
+          200,
+          this.meetings.updateTopic(
+            call.actor,
+            call.path['topicId'] ?? '',
+            call.body as UpdateMeetingTopicRequest // validated
+          )
+        );
+      case 'deleteMeetingTopic':
+        this.meetings.deleteTopic(call.path['topicId'] ?? '');
+        return { kind: 'empty', status: 204, headers: {} };
+      case 'moveMeetingTopic':
+        return jsonResponse(
+          200,
+          this.meetings.move(call.actor, call.path['topicId'] ?? '')
+        );
+      case 'addMeetingNote':
+        return jsonResponse(
+          201,
+          this.meetings.addNote(
+            call.actor,
+            call.path['topicId'] ?? '',
+            call.body as MeetingNoteRequest // validated
+          )
+        );
+      case 'updateMeetingNote':
+        return jsonResponse(
+          200,
+          this.meetings.updateNote(
+            call.actor,
+            call.path['noteId'] ?? '',
+            call.body as MeetingNoteRequest // validated
+          )
+        );
+      case 'deleteMeetingNote':
+        this.meetings.deleteNote(call.path['noteId'] ?? '');
+        return { kind: 'empty', status: 204, headers: {} };
+      case 'listMeetingSeries':
+        return jsonResponse(200, { items: this.meetings.listSeries() });
+      case 'createMeetingSeries':
+        return jsonResponse(
+          201,
+          this.meetings.createSeries(
+            call.actor,
+            call.body as CreateMeetingSeriesRequest // validated
+          )
+        );
       case 'getMetrics':
         return jsonResponse(200, this.metrics(call), {
           'Cache-Control': 'no-store',

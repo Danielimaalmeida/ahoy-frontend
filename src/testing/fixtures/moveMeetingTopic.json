@@ -1,0 +1,68 @@
+{
+  "topic": {
+    "id": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21",
+    "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+    "title": "Overdue invoice reminders",
+    "raisedBy": "us",
+    "raisedByEmail": null,
+    "origin": "planned",
+    "status": "moved",
+    "position": 0,
+    "carriedFrom": {
+      "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e20",
+      "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e50",
+      "meetingStartsAt": "2026-09-29T09:00:00.000Z"
+    },
+    "movedTo": {
+      "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e26",
+      "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e52",
+      "meetingStartsAt": "2026-10-13T09:00:00.000Z"
+    },
+    "notes": [
+      {
+        "id": "b2e1d4c3-1c2f-4d6e-8f9a-8b7c6d5e4f31",
+        "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21",
+        "text": "About 120 reminders a month are sent by hand.",
+        "createdBy": "alex@example.com",
+        "createdAt": "2026-10-06T10:06:00.000Z",
+        "updatedBy": "alex@example.com",
+        "updatedAt": "2026-10-06T10:06:00.000Z"
+      }
+    ],
+    "createdBy": "alex@example.com",
+    "createdAt": "2026-10-05T16:00:00.000Z",
+    "updatedBy": "alex@example.com",
+    "updatedAt": "2026-10-05T16:00:00.000Z"
+  },
+  "movedTo": {
+    "id": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e26",
+    "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e52",
+    "title": "Overdue invoice reminders",
+    "raisedBy": "us",
+    "raisedByEmail": null,
+    "origin": "planned",
+    "status": "open",
+    "position": 1,
+    "carriedFrom": {
+      "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21",
+      "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+      "meetingStartsAt": "2026-10-06T09:00:00.000Z"
+    },
+    "movedTo": null,
+    "notes": [
+      {
+        "id": "b2e1d4c3-1c2f-4d6e-8f9a-8b7c6d5e4f34",
+        "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e26",
+        "text": "About 120 reminders a month are sent by hand.",
+        "createdBy": "alex@example.com",
+        "createdAt": "2026-10-06T10:06:00.000Z",
+        "updatedBy": "alex@example.com",
+        "updatedAt": "2026-10-06T10:06:00.000Z"
+      }
+    ],
+    "createdBy": "alex@example.com",
+    "createdAt": "2026-10-06T10:40:00.000Z",
+    "updatedBy": "alex@example.com",
+    "updatedAt": "2026-10-06T10:40:00.000Z"
+  }
+}

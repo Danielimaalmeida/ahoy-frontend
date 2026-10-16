@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ahoy · Meeting in progress</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ahoy-tokens.css">
+<link rel="stylesheet" href="ds/ahoy/components/bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F8FA}
+a{color:#1747A6}a:hover{color:#1755B8}
+</style>
+</helmet>
+<div class="ah" style="min-height: 1150px; background: var(--bg); font-family: var(--font-sans); font-size: 13px; color: var(--ink)">
+
+<header class="ah-topbar">
+  <a class="ah-logo" href="Main.dc.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="1.8"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"></path></svg>Ahoy</a>
+  <nav class="ah-nav" aria-label="Main">
+    <a class="ah-nav__item" href="Main.dc.html">Needs you <span class="ah-count">4</span></a>
+    <a class="ah-nav__item" href="Ideas.dc.html">Ideas</a>
+    <a class="ah-nav__item" href="Meetings.dc.html" aria-current="page">Meetings</a>
+    <a class="ah-nav__item" href="Voyages.dc.html">Voyages</a>
+    <a class="ah-nav__item" href="Docks.dc.html">Backlog <span class="ah-soon">planned</span></a>
+  </nav>
+  <input class="ah-search" type="search" placeholder="Search topics and notes" aria-label="Search meetings">
+  <span class="ah-live">Live</span>
+  <a class="ah-btn ah-btn--primary" href="SetSail.dc.html">Start voyage</a>
+  <span class="ah-avatar" title="Alex Morgan · alex@example.com">AM</span>
+</header>
+
+<div style="max-width: 1360px; margin: 0 auto; padding: 20px 24px 36px; box-sizing: border-box; display: flex; gap: 16px; align-items: flex-start">
+
+  <aside class="ah-panel" style="width: 270px; flex: none" aria-labelledby="list-h">
+    <div class="ah-panel__head">
+      <h2 class="ah-panel__title" id="list-h">Meetings</h2>
+      <span style="flex: 1"></span>
+      <button class="ah-btn ah-btn--sm" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New</button>
+    </div>
+    <nav aria-label="Meetings" style="display: flex; flex-direction: column; padding: 6px">
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-muted); padding: 8px 10px 4px">Now</span>
+      <a href="Meetings.dc.html" aria-current="page" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-md); background: var(--accent-soft); color: var(--ink); text-decoration: none">
+        <span style="display: flex; align-items: center; gap: 6px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 50%; background: var(--live); flex: none"></span>Finance sync</span>
+        <span class="ah-hint">Today 10:00 · in progress</span>
+      </a>
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-muted); padding: 12px 10px 4px">Next</span>
+      <a href="MeetingNext.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-md); color: var(--ink); text-decoration: none">
+        <span style="font-weight: 600">Operations sync</span>
+        <span class="ah-hint">Mon 19 Oct 09:30 · 3 topics</span>
+      </a>
+      <a href="MeetingNext.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-md); color: var(--ink); text-decoration: none">
+        <span style="font-weight: 600">Finance sync</span>
+        <span class="ah-hint">Thu 22 Oct 10:00 · 1 topic</span>
+      </a>
+      <span style="font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-muted); padding: 12px 10px 4px">Past</span>
+      <a href="Meetings.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-md); color: var(--ink); text-decoration: none">
+        <span style="font-weight: 600">Operations sync</span>
+        <span class="ah-hint">Mon 12 Oct · 3 stories</span>
+      </a>
+      <a href="Meetings.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-md); color: var(--ink); text-decoration: none">
+        <span style="font-weight: 600">Finance sync</span>
+        <span class="ah-hint">Thu 8 Oct · 4 stories · in Confluence</span>
+      </a>
+      <a href="Meetings.dc.html" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-md); color: var(--ink); text-decoration: none">
+        <span style="font-weight: 600">Pricing review with Sales</span>
+        <span class="ah-hint">Tue 6 Oct · 1 story</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+
+    <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px">
+      <div style="flex: 1 1 420px; display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; gap: 8px; align-items: center"><span class="ah-badge ah-badge--running"><i class="ah-badge__dot"></i>In progress</span><span class="ah-hint">Thu 15 Oct · 10:00–11:00</span></div>
+        <h1 style="margin: 0; font-size: 24px; line-height: 29px; font-weight: 700; letter-spacing: -0.01em">Finance sync</h1>
+        <span class="ah-muted">With maria@example.com, joao@example.com, rita@example.com</span>
+      </div>
+      <div style="display: flex; gap: 8px">
+        <a class="ah-btn" href="Confluence.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"></path></svg>Export to Confluence</a>
+        <button class="ah-btn" type="button">End meeting</button>
+      </div>
+    </div>
+
+    <section class="ah-panel" aria-label="Add a topic" style="border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent)">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px">
+        <label for="t-new" class="ah-sr">New topic</label>
+        <input id="t-new" class="ah-input" type="text" value="Refund approvals take too long" style="flex: 1 1 320px; width: auto; border-color: transparent; font-size: 14px">
+        <span class="ah-hint" style="font-weight: 600">Raised by</span>
+        <div class="ah-tabs ah-tabs--pill" role="group" aria-label="Raised by">
+          <button class="ah-tabs__item" type="button" aria-selected="false">Us</button>
+          <button class="ah-tabs__item" type="button" aria-selected="true">Them</button>
+        </div>
+        <label for="t-who" class="ah-sr">Who</label>
+        <select id="t-who" class="ah-input" style="width: 170px"><option>maria@example.com</option><option>joao@example.com</option><option>rita@example.com</option></select>
+        <button class="ah-btn ah-btn--primary" type="button">Add topic</button>
+      </div>
+    </section>
+
+    <div style="display: flex; align-items: center; gap: 10px">
+      <h2 style="margin: 0; font-size: 15px; font-weight: 700">Topics</h2>
+      <span class="ah-tabs__count">5</span>
+      <span style="flex: 1"></span>
+      <span class="ah-hint">Topics you don't get to move to the next Finance sync.</span>
+    </div>
+
+    <article class="ah-panel" aria-labelledby="t1">
+      <div class="ah-panel__head">
+        <h3 id="t1" style="margin: 0; font-size: 14px; font-weight: 700">Overdue invoice reminders</h3>
+        <span class="ah-tag ah-tag--accent">Us</span>
+        <span class="ah-hint">planned</span>
+        <span style="flex: 1"></span>
+        <span class="ah-badge ah-badge--done"><i class="ah-badge__dot"></i>User story</span>
+        <a class="ah-key" href="Voyages.dc.html">PROJ-238</a>
+      </div>
+      <ul style="margin: 0; padding: 6px 16px 10px 34px; display: flex; flex-direction: column; gap: 6px">
+        <li>Finance sends about 120 reminders a month by hand from a spreadsheet.</li>
+        <li>Three reminders at most: +3, +10 and +20 days after the due date.</li>
+        <li>The last reminder copies the account manager.</li>
+      </ul>
+      <div style="padding: 0 16px 12px">
+        <label for="n1" class="ah-sr">Add a note</label>
+        <input id="n1" class="ah-input" type="text" placeholder="Add a note" style="height: 32px; background: var(--surface-raised); border-color: var(--line)">
+      </div>
+    </article>
+
+    <article class="ah-panel" aria-labelledby="t2" style="border-color: var(--accent)">
+      <div class="ah-panel__head">
+        <h3 id="t2" style="margin: 0; font-size: 14px; font-weight: 700">Late fees for enterprise accounts</h3>
+        <span class="ah-tag" style="background: var(--status-sendback-bg); color: var(--status-sendback-fg)">Them · maria@</span>
+        <span class="ah-hint">raised at 10:24</span>
+        <span style="flex: 1"></span>
+        <a class="ah-btn ah-btn--sm ah-btn--soft" href="UserStory.dc.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M13 7l5 5-5 5"></path></svg>Turn into user story</a>
+      </div>
+      <ul style="margin: 0; padding: 6px 16px 10px 34px; display: flex; flex-direction: column; gap: 4px">
+        <li style="padding: 2px 0">Only for the Enterprise plan; contract accounts have their own terms.</li>
+        <li style="padding: 2px 6px; margin-left: -6px; border-radius: var(--radius-xs); background: var(--row-hover)">
+          <span style="display: flex; align-items: center; gap: 8px">
+            <span style="flex: 1">1.5% per month on the overdue amount, capped at 10% of the invoice.</span>
+            <a class="ah-btn ah-btn--sm ah-btn--ghost" href="UserStory.dc.html" style="height: 24px">Note → user story</a>
+          </span>
+        </li>
+        <li style="padding: 2px 0">Open: does finance approve each fee, or is it automatic?</li>
+      </ul>
+      <div style="padding: 0 16px 12px">
+        <label for="n2" class="ah-sr">Add a note</label>
+        <input id="n2" class="ah-input" type="text" value="Maria will check with legal about the cap" style="height: 32px; border-color: var(--accent); outline: 2px solid var(--focus); outline-offset: 1px">
+        <span class="ah-hint" style="display: block; margin-top: 4px">Enter adds the note.</span>
+      </div>
+    </article>
+
+    <article class="ah-panel" aria-labelledby="t3">
+      <div class="ah-panel__head">
+        <h3 id="t3" style="margin: 0; font-size: 14px; font-weight: 700">Export payments to CSV</h3>
+        <span class="ah-tag" style="background: var(--status-sendback-bg); color: var(--status-sendback-fg)">Them · rita@</span>
+        <span class="ah-hint">planned</span>
+        <span style="flex: 1"></span>
+        <a class="ah-btn ah-btn--sm ah-btn--soft" href="UserStory.dc.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M13 7l5 5-5 5"></path></svg>Turn into user story</a>
+      </div>
+      <ul style="margin: 0; padding: 6px 16px 10px 34px; display: flex; flex-direction: column; gap: 6px">
+        <li>Needed for the monthly reconciliation in the accounting tool.</li>
+        <li>Should follow the filters on the payments list.</li>
+      </ul>
+      <div style="padding: 0 16px 12px">
+        <label for="n3" class="ah-sr">Add a note</label>
+        <input id="n3" class="ah-input" type="text" placeholder="Add a note" style="height: 32px; background: var(--surface-raised); border-color: var(--line)">
+      </div>
+    </article>
+
+    <article class="ah-panel" aria-labelledby="t4">
+      <div class="ah-panel__head">
+        <h3 id="t4" style="margin: 0; font-size: 14px; font-weight: 700">Dashboard is slow on Monday mornings</h3>
+        <span class="ah-tag ah-tag--accent">Us</span>
+        <span class="ah-hint">raised at 10:31</span>
+        <span style="flex: 1"></span>
+        <a class="ah-btn ah-btn--sm ah-btn--soft" href="UserStory.dc.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M13 7l5 5-5 5"></path></svg>Turn into user story</a>
+      </div>
+      <ul style="margin: 0; padding: 6px 16px 10px 34px">
+        <li>joao@ will send three examples with times.</li>
+      </ul>
+      <div style="padding: 0 16px 12px">
+        <label for="n4" class="ah-sr">Add a note</label>
+        <input id="n4" class="ah-input" type="text" placeholder="Add a note" style="height: 32px; background: var(--surface-raised); border-color: var(--line)">
+      </div>
+    </article>
+
+    <article class="ah-panel" aria-labelledby="t5" style="background: var(--surface-raised)">
+      <div class="ah-panel__head" style="border-bottom: 0">
+        <h3 id="t5" style="margin: 0; font-size: 14px; font-weight: 700; color: var(--ink-soft)">Tax ID validation for EU customers</h3>
+        <span class="ah-tag" style="background: var(--status-sendback-bg); color: var(--status-sendback-fg)">Them · joao@</span>
+        <span class="ah-hint">planned · no notes yet</span>
+        <span style="flex: 1"></span>
+        <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">Move to next meeting</button>
+        <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">Add note</button>
+      </div>
+    </article>
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -12,6 +12,12 @@ The four Metrics boards (`Metrics`, `MetricsCost`, `MetricsHalts`, `MetricsGates
 the copy of the wireframes the metrics design was made in, <https://claude.ai/artifact/HS3s2BFGctCdHQByyyu5JF>. The other
 boards here were not re-synced from it.
 
+The six Meetings boards (`Meetings`, `MeetingNext`, `UserStory`, `StoryGrill`, `StoryReview`, `Confluence`) and
+`ahoy-tokens.css`, which they link, were copied on **2026-10-16** from the wireframes artifact at version
+`1792136579-db86`. Slice 1 (meetings, topics, notes, carry-over) builds `Meetings` and `MeetingNext`; the other four are
+later slices and not built. `ahoy-tokens.css` carries the light tokens and a fix for `bundle.css` colouring link-buttons
+(`.ah a`); the app's own styles don't have that problem. `canvas.json` and the other boards were not re-synced.
+
 ## What is here
 
 - `wireframes/`: the 12 boards (`Main`, `Voyages`, `Docks`, `SetSail`, `PlanReview`, `Questions`, `Running`, `Halted`,

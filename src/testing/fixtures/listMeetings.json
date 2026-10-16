@@ -1,0 +1,58 @@
+{
+  "items": [
+    {
+      "id": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e52",
+      "seriesId": "5b0e2c1a-7f43-4c2e-9a51-0d3f6b8e2a10",
+      "seriesName": "Finance sync",
+      "title": "Finance sync",
+      "startsAt": "2026-10-13T09:00:00.000Z",
+      "endsAt": "2026-10-13T10:00:00.000Z",
+      "stakeholders": ["priya@example.com", "jordan@example.com"],
+      "status": "planned",
+      "startedAt": null,
+      "endedAt": null,
+      "topicCount": 1,
+      "openTopicCount": 1,
+      "createdBy": "alex@example.com",
+      "createdAt": "2026-10-01T08:00:00.000Z",
+      "updatedBy": "alex@example.com",
+      "updatedAt": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+      "seriesId": "5b0e2c1a-7f43-4c2e-9a51-0d3f6b8e2a10",
+      "seriesName": "Finance sync",
+      "title": "Finance sync",
+      "startsAt": "2026-10-06T09:00:00.000Z",
+      "endsAt": "2026-10-06T10:00:00.000Z",
+      "stakeholders": ["priya@example.com", "jordan@example.com"],
+      "status": "in_progress",
+      "startedAt": "2026-10-06T09:02:00.000Z",
+      "endedAt": null,
+      "topicCount": 3,
+      "openTopicCount": 2,
+      "createdBy": "alex@example.com",
+      "createdAt": "2026-10-01T08:00:00.000Z",
+      "updatedBy": "alex@example.com",
+      "updatedAt": "2026-10-06T09:02:00.000Z"
+    },
+    {
+      "id": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e50",
+      "seriesId": "5b0e2c1a-7f43-4c2e-9a51-0d3f6b8e2a10",
+      "seriesName": "Finance sync",
+      "title": "Finance sync",
+      "startsAt": "2026-09-29T09:00:00.000Z",
+      "endsAt": "2026-09-29T10:00:00.000Z",
+      "stakeholders": ["priya@example.com", "jordan@example.com"],
+      "status": "ended",
+      "startedAt": "2026-09-29T09:01:00.000Z",
+      "endedAt": "2026-09-29T09:58:00.000Z",
+      "topicCount": 4,
+      "openTopicCount": 2,
+      "createdBy": "alex@example.com",
+      "createdAt": "2026-10-01T08:00:00.000Z",
+      "updatedBy": "alex@example.com",
+      "updatedAt": "2026-09-29T09:01:00.000Z"
+    }
+  ]
+}

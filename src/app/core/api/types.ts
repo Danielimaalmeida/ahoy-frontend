@@ -140,6 +140,7 @@ export const DIAGNOSIS_KINDS = listOf<DiagnosisKind>()([
   'agent_failed',
   'revision_ceiling',
   'package_stuck',
+  'deferred_check',
   'reconciler_error',
   'stopped_by_user',
   'other',
@@ -488,3 +489,82 @@ export interface MetricsExport {
   readonly filename: string;
   readonly mediaType: string;
 }
+
+/** Where a meeting stands: `planned`, `in_progress` once started, then `ended` (read-only) (`MeetingStatus`). */
+export type MeetingStatus = Schemas['MeetingStatus'];
+export const MEETING_STATUSES = listOf<MeetingStatus>()([
+  'planned',
+  'in_progress',
+  'ended',
+]);
+
+/** Who brought a topic up: our side or a stakeholder (`RaisedBy`). */
+export type RaisedBy = Schemas['RaisedBy'];
+export const RAISED_BY = listOf<RaisedBy>()(['us', 'them']);
+
+/** Whether a topic was noted before the meeting started or raised during it (`TopicOrigin`). */
+export type TopicOrigin = Schemas['TopicOrigin'];
+export const TOPIC_ORIGINS = listOf<TopicOrigin>()(['planned', 'in_meeting']);
+
+/** An `open` topic can change; a `moved` one went to the next meeting and is read-only where it was (`TopicStatus`). */
+export type TopicStatus = Schemas['TopicStatus'];
+export const TOPIC_STATUSES = listOf<TopicStatus>()(['open', 'moved']);
+
+/** A recurring meeting (the weekly Finance sync); `cadenceDays` lets the API plan its next meeting itself. */
+export type MeetingSeries = Schemas['MeetingSeries'];
+
+/** Answer of `listMeetingSeries`. */
+export type MeetingSeriesList = Schemas['MeetingSeriesList'];
+
+/** A meeting without its topics, as `listMeetings` lists it. */
+export type MeetingSummary = Schemas['MeetingSummary'];
+
+/** Answer of `listMeetings`: latest start first. */
+export type MeetingList = Schemas['MeetingList'];
+
+/** A meeting with its topics in order, each with its notes oldest first. */
+export type Meeting = Schemas['Meeting'];
+
+/** One topic of a meeting, with who raised it, where it came from or went, and its notes. */
+export type MeetingTopic = Schemas['MeetingTopic'];
+
+/** Where a carried-over topic came from, or where a moved one went. */
+export type MeetingTopicLink = Schemas['MeetingTopicLink'];
+
+/** One note under a topic: plain text, untrusted. */
+export type MeetingNote = Schemas['MeetingNote'];
+
+/** Answer of `endMeeting`: the ended meeting and, when topics were carried over, the meeting that took them. */
+export type EndMeetingResult = Schemas['EndMeetingResult'];
+
+/** Answer of `moveMeetingTopic`: the moved topic and its copy in the next meeting. */
+export type MoveMeetingTopicResult = Schemas['MoveMeetingTopicResult'];
+
+/** Body of `createMeeting`; with `seriesId`, the title and stakeholders default to the series'. */
+export type CreateMeetingRequest = Schemas['CreateMeetingRequest'];
+
+/** Body of `updateMeeting`. */
+export type UpdateMeetingRequest = Schemas['UpdateMeetingRequest'];
+
+/** Body of `endMeeting`: the open topics to carry over to the next meeting. */
+export type EndMeetingRequest = Schemas['EndMeetingRequest'];
+
+/** Body of `addMeetingTopic`. */
+export type AddMeetingTopicRequest = Schemas['AddMeetingTopicRequest'];
+
+/** Body of `updateMeetingTopic`. */
+export type UpdateMeetingTopicRequest = Schemas['UpdateMeetingTopicRequest'];
+
+/** Body of `setMeetingTopicOrder`: every topic of the meeting, once each. */
+export type MeetingTopicOrderRequest = Schemas['MeetingTopicOrderRequest'];
+
+/** Body of `addMeetingNote` and `updateMeetingNote`. */
+export type MeetingNoteRequest = Schemas['MeetingNoteRequest'];
+
+/** Body of `createMeetingSeries`. */
+export type CreateMeetingSeriesRequest = Schemas['CreateMeetingSeriesRequest'];
+
+/** Query of `listMeetings`. */
+export type ListMeetingsQuery = NonNullable<
+  operations['listMeetings']['parameters']['query']
+>;

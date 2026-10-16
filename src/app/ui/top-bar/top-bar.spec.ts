@@ -80,12 +80,13 @@ describe('ah-top-bar', () => {
     ]);
   });
 
-  it('links the logo home and the destinations to Needs you, Voyages, Backlog and Metrics', async () => {
+  it('links the logo home and the destinations to Needs you, Meetings, Voyages, Backlog and Metrics', async () => {
     const { root, nav } = await render();
     expect(root.querySelector('a.ah-logo')!.getAttribute('href')).toBe('/');
     expect(root.querySelector('nav')!.getAttribute('aria-label')).toBe('Main');
     expect(nav().map((a) => a.getAttribute('href'))).toEqual([
       '/',
+      '/meetings',
       '/voyages',
       '/docks',
       '/metrics',
@@ -94,6 +95,8 @@ describe('ah-top-bar', () => {
 
   for (const [url, destination] of [
     ['/', 'Needs you 4'],
+    ['/meetings', 'Meetings'],
+    ['/meetings/0c1d2e3f-0000-4000-8000-000000000001', 'Meetings'],
     ['/voyages', 'Voyages'],
     ['/voyages?status=halted', 'Voyages'],
     ['/voyages/new', 'Voyages'],

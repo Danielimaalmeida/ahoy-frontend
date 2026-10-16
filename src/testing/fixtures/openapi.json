@@ -46,6 +46,9 @@
     },
     {
       "name": "metrics"
+    },
+    {
+      "name": "meetings"
     }
   ],
   "paths": {
@@ -103,7 +106,7 @@
         "operationId": "listJiraBacklog",
         "tags": ["jira"],
         "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
-        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = OTHER_COMPANY AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
+        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = CTW AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
         "responses": {
           "200": {
             "description": "Complete backlog in Jira rank order.",
@@ -309,7 +312,7 @@
         "operationId": "startStory",
         "tags": ["stories"],
         "summary": "Start a story at intake. The actor becomes its owner and runs bill the owner's token.",
-        "description": "`models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,\n`implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase\nconfiguration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows\nwhat each phase will get. A `models` that names an unknown slot, an empty choice, a model or effort no run can\ntake, or `null` answers `400 validation_failed`, and no story is created.\n",
+        "description": "`models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,\n`implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase\nconfiguration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows\nwhat each phase will get. Intake runs no model: the reconciler reads the issue from Jira over REST, so a choice\nfor `intake` is kept but unused. A `models` that names an unknown slot, an empty choice, a model or effort no\nrun can take, or `null` answers `400 validation_failed`, and no story is created.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -322,7 +325,7 @@
         },
         "responses": {
           "201": {
-            "description": "The story was created in phase `intake`; the reconciler will dispatch the intake analyst.",
+            "description": "The story was created in phase `intake`; the reconciler will read its issue from Jira (0 AIU).",
             "headers": {
               "Location": {
                 "schema": {
@@ -450,7 +453,7 @@
         "operationId": "resumeStory",
         "tags": ["stories"],
         "summary": "Clear a halt so the reconciler retries the current phase. May spend AIU.",
-        "description": "On an implementation halted package_stuck or package_needs_decision, every failed, stalled,\nblocked or unverified work package is retried, as the package decision `retry` does, with the\nreason as its rework note; the reason is then required (400 without it). The event\nstory.resumed names them in retriedPackages. Any other halt is resumed as it stands.\n",
+        "description": "On an implementation halted package_stuck or package_needs_decision, every failed, stalled,\nblocked or unverified work package is retried, as the package decision `retry` does, with the\nreason as its rework note; the reason is then required (400 without it). The event\nstory.resumed names them in retriedPackages. Any other halt is resumed as it stands. A package\n`awaiting_ci` is never retried by a resume: after child_ready halted on its deferred check, a resume\nruns child_ready again, which halts again while the check is still missing past the wait; retry or\naccept that package with its own decision instead.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -499,8 +502,8 @@
       "post": {
         "operationId": "refreshIntake",
         "tags": ["stories"],
-        "summary": "Refresh Jira intake and invalidate the old plan. May spend AIU.",
-        "description": "Human-triggered, during planning or plan_review only, with no active run and before\nimplementation has started. Update Jira first. Preserves the story identity, owner,\npinned control commit, model choices, total budget, cumulative spend and audit evidence.\nArchives current artifacts and state, supersedes all existing questions (still listed\nwith supersededAt), and clears the current plan, criteria, work packages and approvals.\nSchedules a new intake run followed by planning within the remaining story budget.\nconfirmSpend must be true; this does not increase the cap or guarantee a successful refresh.\nA failed intake does not restore the obsolete snapshot or plan.\n",
+        "summary": "Refresh Jira intake and invalidate the old plan. The planning that follows may spend AIU.",
+        "description": "Human-triggered, during planning or plan_review only, with no active run and before\nimplementation has started. Update Jira first. Preserves the story identity, owner,\npinned control commit, model choices, total budget, cumulative spend and audit evidence.\nArchives current artifacts and state, supersedes all existing questions (still listed\nwith supersededAt), and clears the current plan, criteria, work packages and approvals.\nSchedules a new intake, which reads Jira again and spends nothing, followed by planning within the remaining\nstory budget.\nconfirmSpend must be true; this does not increase the cap or guarantee a successful refresh.\nA failed intake does not restore the obsolete snapshot or plan.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -600,7 +603,7 @@
         "operationId": "getStoryModels",
         "tags": ["stories"],
         "summary": "The model and reasoning effort each phase of the story runs on, and where each comes from.",
-        "description": "One entry per slot of the story's model plan: `intake`, `planning`, `implementation`, and `review` (the one\nreviewer of `pr_review`). `chosen` is what a person chose for the story;\n`model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the\npinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another\nmodel is not carried onto a model a person chose, which then runs at its own default effort. Whether the\nowner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker\nbefore it sends a prompt (0 AIU); a run refused there fails and the story halts.\n",
+        "description": "One entry per slot of the story's model plan: `intake` (which runs no model: it reads Jira over REST),\n`planning`, `implementation`, and `review` (the one reviewer of `pr_review`). `chosen` is what a person chose\nfor the story;\n`model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the\npinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another\nmodel is not carried onto a model a person chose, which then runs at its own default effort. Whether the\nowner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker\nbefore it sends a prompt (0 AIU); a run refused there fails and the story halts.\n",
         "responses": {
           "200": {
             "description": "The story's model plan.",
@@ -1024,8 +1027,8 @@
       "post": {
         "operationId": "decideWorkPackage",
         "tags": ["decisions"],
-        "summary": "Retry or accept a work package nothing else will move (failed, stalled, blocked or unverified).",
-        "description": "Only while the story is halted in implementation. `retry` sends the package round again with `reason` as its\nrework note (may spend AIU); `accept` marks it done as it stands. The repository is still checked by\n`child_ready` before review.\n",
+        "summary": "Retry or accept a work package nothing else will move (failed, stalled, blocked or unverified), or one awaiting CI.",
+        "description": "Only while the story is halted in implementation. `retry` sends the package round again with `reason` as its\nrework note (may spend AIU); `accept` marks it done as it stands. The repository is still checked by\n`child_ready` before review. A package `awaiting_ci` (its verification delegated to a declared CI check) can\nbe decided when child_ready halted or rejected on that check: `accept` drops its deferred checks, so\nchild_ready no longer waits for them; `retry` delivers it again.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -1078,7 +1081,7 @@
         "operationId": "reopenWork",
         "tags": ["decisions"],
         "summary": "Send delivered work packages round again by hand, from a halted implementation or review.",
-        "description": "Reopens `packages` (even in a merged repository), or the delivered packages of `repos`, or all delivered\npackages, with `note` as their rework note, and moves the story to implementation. No rework round is charged.\nMay spend AIU. A delivery gate is sent back with a decision instead.\n",
+        "description": "Reopens `packages` (even in a merged repository), or the delivered packages of `repos`, or all delivered\npackages (`done`, or `awaiting_ci` with their deferred checks dropped), with `note` as their rework note, and\nmoves the story to implementation. No rework round is charged.\nMay spend AIU. A delivery gate is sent back with a decision instead.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -1121,6 +1124,59 @@
         }
       }
     },
+    "/stories/{key}/anchors": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "amendAnchors",
+        "tags": ["decisions"],
+        "summary": "Replace or waive verification anchors that child_ready rejected, on a halted implementation.",
+        "description": "Only while the story is halted `gate_rejected` in implementation, and only for anchors that the last\nchild_ready rejection names; all amendments apply or none. `replace` swaps an anchor for `replacement` (the new\none is checked on the pull request's added lines like a planned one). `waive` drops it, only when child_ready\nproved it unsatisfiable by design (it is on an unchanged or removed line of the pull request, never an added\none) and the repository keeps another anchor. Each change is kept in the decision log, and the event\ncriteria.anchors_amended records them; the story becomes ready and child_ready runs again. Spends nothing by\nitself.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AmendAnchorsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The anchor is amended and the story is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Story"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories/{key}/unblock": {
       "parameters": [
         {
@@ -1131,7 +1187,7 @@
         "operationId": "unblockStory",
         "tags": ["stories"],
         "summary": "Take a story out of `blocked`, back to the phase it was blocked from, with more rework rounds.",
-        "description": "Raises the rework ceiling of each repository at it (or of each of `repos`) by `rounds`, then returns the story\nto the phase that moved it to `blocked`, which evaluates its gate again. A story blocked by a person's\nrejection at a human gate cannot be unblocked. May spend AIU.\n",
+        "description": "Starts the CI fixes of each repository at the CI fix ceiling again; when none is, raises the rework ceiling of\neach repository at it by `rounds`. Named `repos` get both. Then returns the story to the phase that moved it to\n`blocked`, which evaluates its gate again. A story blocked by a person's\nrejection at a human gate cannot be unblocked. May spend AIU.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -1933,6 +1989,659 @@
           }
         }
       }
+    },
+    "/meetings": {
+      "get": {
+        "operationId": "listMeetings",
+        "tags": ["meetings"],
+        "summary": "Every meeting with stakeholders, latest start first, with its topic counts.",
+        "description": "Meetings keep the topics of business meetings with stakeholders and the notes taken under them (design §5\n\"Meetings\"). 0 AIU: no agent and no external call. A meeting is not a story; it sends no events.\n",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Only meetings with this status.",
+            "schema": {
+              "$ref": "#/components/schemas/MeetingStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The meetings, latest start first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createMeeting",
+        "tags": ["meetings"],
+        "summary": "Plan a meeting, alone or as the next one of a series.",
+        "description": "With `seriesId`, `title` and `stakeholders` default to the series'. Without it, the meeting is a one-off and\n`title` is required (`400 validation_failed`). `404 not_found` when the series does not exist. Stakeholders are\nkept trimmed, lower-cased and once each.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMeetingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The meeting, planned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meetings/{meetingId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "get": {
+        "operationId": "getMeeting",
+        "tags": ["meetings"],
+        "summary": "One meeting with its topics in order, each with its notes oldest first.",
+        "responses": {
+          "200": {
+            "description": "The meeting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateMeeting",
+        "tags": ["meetings"],
+        "summary": "Change a meeting's title, time or stakeholders.",
+        "description": "`409 invalid_state` once the meeting has ended: an ended meeting is read-only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeetingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The meeting, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meetings/{meetingId}/start": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "post": {
+        "operationId": "startMeeting",
+        "tags": ["meetings"],
+        "summary": "Start a planned meeting.",
+        "description": "From now on a topic added to the meeting was raised in it (`origin: in_meeting`). `409 invalid_state` unless the\nmeeting is `planned`.\n",
+        "responses": {
+          "200": {
+            "description": "The meeting, in progress.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meetings/{meetingId}/end": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "post": {
+        "operationId": "endMeeting",
+        "tags": ["meetings"],
+        "summary": "End a meeting in progress and carry the chosen open topics over to the series' next meeting.",
+        "description": "Each topic in `carryOver` is copied, with its notes (their authors and times kept), to the end of the series'\nnext planned meeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next\nmeeting is planned one cadence on (or at the first step in the future), with the same title, length and\nstakeholders. All or nothing: `409 invalid_state` when the meeting is not in progress, or when a topic is to be\ncarried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);\n`400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.\nThe meeting is read-only once ended.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndMeetingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The ended meeting and, when topics were carried over, the meeting that took them.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndMeetingResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meetings/{meetingId}/topics": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "post": {
+        "operationId": "addMeetingTopic",
+        "tags": ["meetings"],
+        "summary": "Add a topic at the end of the meeting's list.",
+        "description": "`origin` is `planned` before the meeting starts and `in_meeting` while it runs. `raisedByEmail` names the\nstakeholder of a topic raised by `them` (`400 validation_failed` with `raisedBy: us`). `409 invalid_state` once\nthe meeting has ended.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMeetingTopicRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The topic.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingTopic"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meetings/{meetingId}/topic-order": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "put": {
+        "operationId": "setMeetingTopicOrder",
+        "tags": ["meetings"],
+        "summary": "Put the meeting's topics in a new order.",
+        "description": "`topicIds` names every topic of the meeting exactly once, moved ones included (`400 validation_failed`\notherwise). `409 invalid_state` once the meeting has ended.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingTopicOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The meeting, its topics in the new order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-topics/{topicId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingTopicId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateMeetingTopic",
+        "tags": ["meetings"],
+        "summary": "Rename a topic or change who raised it.",
+        "description": "Choosing `raisedBy: us` clears the stakeholder's e-mail. `409 invalid_state` when the topic was moved to the\nnext meeting or its meeting has ended.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeetingTopicRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The topic, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingTopic"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMeetingTopic",
+        "tags": ["meetings"],
+        "summary": "Remove a topic and its notes.",
+        "description": "`409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.",
+        "responses": {
+          "204": {
+            "description": "The topic and its notes are gone."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-topics/{topicId}/move": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingTopicId"
+        }
+      ],
+      "post": {
+        "operationId": "moveMeetingTopic",
+        "tags": ["meetings"],
+        "summary": "Move one topic, with its notes, to the series' next meeting without ending this one.",
+        "description": "The next meeting is found or planned as for `endMeeting`. `409 invalid_state` when the topic was already moved,\nits meeting has ended, or there is no next meeting to take it.\n",
+        "responses": {
+          "200": {
+            "description": "The moved topic here and its copy in the next meeting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveMeetingTopicResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-topics/{topicId}/notes": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingTopicId"
+        }
+      ],
+      "post": {
+        "operationId": "addMeetingNote",
+        "tags": ["meetings"],
+        "summary": "Add a note under a topic.",
+        "description": "`409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The note.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-notes/{noteId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingNoteId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateMeetingNote",
+        "tags": ["meetings"],
+        "summary": "Rewrite a note.",
+        "description": "`409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The note, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMeetingNote",
+        "tags": ["meetings"],
+        "summary": "Remove a note.",
+        "description": "`409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.",
+        "responses": {
+          "204": {
+            "description": "The note is gone."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-series": {
+      "get": {
+        "operationId": "listMeetingSeries",
+        "tags": ["meetings"],
+        "summary": "Every meeting series, by name.",
+        "responses": {
+          "200": {
+            "description": "The series.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingSeriesList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createMeetingSeries",
+        "tags": ["meetings"],
+        "summary": "Add a meeting series.",
+        "description": "`cadenceDays` lets Ahoy plan the series' next meeting itself when topics are carried over and none is planned.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMeetingSeriesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The series.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingSeries"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2040,6 +2749,33 @@
         "description": "Return only events with a greater ID.",
         "schema": {
           "$ref": "#/components/schemas/EventId"
+        }
+      },
+      "MeetingId": {
+        "name": "meetingId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "MeetingTopicId": {
+        "name": "topicId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "MeetingNoteId": {
+        "name": "noteId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
         }
       }
     },
@@ -2625,6 +3361,59 @@
           },
           "expectedVersion": {
             "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "AmendAnchorsRequest": {
+        "type": "object",
+        "required": ["amendments", "reason", "expectedVersion"],
+        "additionalProperties": false,
+        "properties": {
+          "amendments": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/AnchorAmendment"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "AnchorAmendment": {
+        "type": "object",
+        "required": ["criterion", "anchor", "decision"],
+        "additionalProperties": false,
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "The acceptance criterion's id, e.g. `AC5`."
+          },
+          "anchor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "The anchor as the plan has it."
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["replace", "waive"]
+          },
+          "replacement": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 500,
+            "pattern": "\\S",
+            "description": "`replace` only: text the pull request adds, e.g. the bumped version `joi-18.2.9`."
           }
         }
       },
@@ -3306,10 +4095,12 @@
           "agent_failed",
           "revision_ceiling",
           "package_stuck",
+          "deferred_check",
           "reconciler_error",
           "stopped_by_user",
           "other"
-        ]
+        ],
+        "description": "`deferred_check`: child_ready halted because a check a work package's verification was delegated to did not report within the implementation phase's `ciWaitMinutes` (default 60) of the delivery, or rejected because it was skipped or neutral, or because the pull request's head no longer contains the delivered commit. Its evidence names the package, the check, the short commit and the packages that depend on it."
       },
       "DiagnosisFinding": {
         "type": "object",
@@ -3818,7 +4609,7 @@
           },
           "state": {
             "type": "object",
-            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`."
+            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. A work package's `status` is `pending`, `done`, `in_progress`, `waiting_on_handback`, `failed`, `stalled`, `blocked`, `unverified` or `awaiting_ci`. `awaiting_ci`: the implementer reported `unverified` with every gap in `deferred_checks` delegated to CI checks the repository declares, and the work was published; its dependents may start, and child_ready waits for each check. Such a package also has `deferred_checks` (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done` and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A work package may also have `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its answers to the findings its rework note numbered, kept until a review sends work back again. A review in `reviewer_reviews` gives, in `criteria_reasons`, `why` and `proof` (what would prove it) for each verdict other than `met`. Its `findings` may carry `previous_id`, `regression` and `new_argument` as the reviewer wrote them, and `follow_up` as the harness set it: in a re-review a medium finding that is not a regression the rework introduced and not a previous finding still open, or a disputed one upheld without a new argument, is a follow-up, recorded for the person at the delivery gate (a `review_follow_up` entry of `decision_log`) and not sent to rework."
           }
         }
       },
@@ -3989,7 +4780,8 @@
             ]
           },
           "message": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "description": "A child_ready `fail` while work packages are `awaiting_ci` is a wait, not a stuck package: one line per deferred check says what it waits on, e.g. \"WP1 awaits 'facility-pages / playwright' at commit 8b30531 (not reported yet); WP2 depends on WP1\". Repeated polls with the same verdict are recorded once."
           },
           "actor": {
             "$ref": "#/components/schemas/Actor"
@@ -4117,6 +4909,7 @@
           "work_package.decided",
           "work.reopened",
           "story.unblocked",
+          "criteria.anchors_amended",
           "artifacts.updated",
           "implementation.reported",
           "review.reported",
@@ -4989,6 +5782,627 @@
           },
           "exampleRunId": {
             "type": ["string", "null"]
+          }
+        }
+      },
+      "MeetingStatus": {
+        "type": "string",
+        "enum": ["planned", "in_progress", "ended"],
+        "description": "`planned`, then `in_progress` once started, then `ended` (read-only)."
+      },
+      "RaisedBy": {
+        "type": "string",
+        "enum": ["us", "them"],
+        "description": "Who brought the topic up, our side or a stakeholder."
+      },
+      "TopicOrigin": {
+        "type": "string",
+        "enum": ["planned", "in_meeting"],
+        "description": "Noted before the meeting started, or raised during it."
+      },
+      "TopicStatus": {
+        "type": "string",
+        "enum": ["open", "moved"],
+        "description": "`moved`: carried over to the next meeting, read-only here."
+      },
+      "Email": {
+        "type": "string",
+        "format": "email",
+        "maxLength": 320
+      },
+      "MeetingSeries": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "stakeholders",
+          "cadenceDays",
+          "createdBy",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stakeholders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cadenceDays": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 366
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "MeetingSeriesList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingSeries"
+            }
+          }
+        }
+      },
+      "CreateMeetingSeriesRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "stakeholders": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/Email"
+            }
+          },
+          "cadenceDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 366,
+            "description": "Days between meetings (7 for weekly)."
+          }
+        }
+      },
+      "MeetingSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "seriesId",
+          "seriesName",
+          "title",
+          "startsAt",
+          "endsAt",
+          "stakeholders",
+          "status",
+          "startedAt",
+          "endedAt",
+          "topicCount",
+          "openTopicCount",
+          "createdBy",
+          "createdAt",
+          "updatedBy",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "seriesName": {
+            "type": ["string", "null"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "endsAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "stakeholders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/MeetingStatus"
+          },
+          "startedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "topicCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every topic of the meeting, moved ones included."
+          },
+          "openTopicCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "MeetingList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingSummary"
+            }
+          }
+        }
+      },
+      "MeetingNote": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "topicId",
+          "text",
+          "createdBy",
+          "createdAt",
+          "updatedBy",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topicId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string",
+            "description": "What was said",
+            "as plain text (untrusted).": null
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "MeetingTopicLink": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["topicId", "meetingId", "meetingStartsAt"],
+        "properties": {
+          "topicId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meetingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meetingStartsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "MeetingTopic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "meetingId",
+          "title",
+          "raisedBy",
+          "raisedByEmail",
+          "origin",
+          "status",
+          "position",
+          "carriedFrom",
+          "movedTo",
+          "notes",
+          "createdBy",
+          "createdAt",
+          "updatedBy",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meetingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "raisedBy": {
+            "$ref": "#/components/schemas/RaisedBy"
+          },
+          "raisedByEmail": {
+            "type": ["string", "null"],
+            "description": "The stakeholder who raised it",
+            "when known.": null
+          },
+          "origin": {
+            "$ref": "#/components/schemas/TopicOrigin"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TopicStatus"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "carriedFrom": {
+            "description": "The topic this one was carried over from, in the previous meeting.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MeetingTopicLink"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "movedTo": {
+            "description": "Where a moved topic went.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MeetingTopicLink"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "type": "array",
+            "description": "Oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/MeetingNote"
+            }
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "Meeting": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "seriesId",
+          "seriesName",
+          "title",
+          "startsAt",
+          "endsAt",
+          "stakeholders",
+          "status",
+          "startedAt",
+          "endedAt",
+          "topicCount",
+          "openTopicCount",
+          "createdBy",
+          "createdAt",
+          "updatedBy",
+          "updatedAt",
+          "topics"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seriesId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "seriesName": {
+            "type": ["string", "null"]
+          },
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "endsAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "stakeholders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/MeetingStatus"
+          },
+          "startedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "topicCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Every topic of the meeting, moved ones included."
+          },
+          "openTopicCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "topics": {
+            "type": "array",
+            "description": "In their order.",
+            "items": {
+              "$ref": "#/components/schemas/MeetingTopic"
+            }
+          }
+        }
+      },
+      "CreateMeetingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["startsAt"],
+        "properties": {
+          "seriesId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "endsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "stakeholders": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/Email"
+            }
+          }
+        }
+      },
+      "UpdateMeetingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "endsAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "null removes the end time."
+          },
+          "stakeholders": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/Email"
+            }
+          }
+        }
+      },
+      "EndMeetingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["carryOver"],
+        "properties": {
+          "carryOver": {
+            "type": "array",
+            "maxItems": 200,
+            "description": "The open topics to carry over to the next meeting; empty to carry none.",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "EndMeetingResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["meeting", "nextMeeting"],
+        "properties": {
+          "meeting": {
+            "$ref": "#/components/schemas/Meeting"
+          },
+          "nextMeeting": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Meeting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "AddMeetingTopicRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "raisedBy"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "\\S"
+          },
+          "raisedBy": {
+            "$ref": "#/components/schemas/RaisedBy"
+          },
+          "raisedByEmail": {
+            "$ref": "#/components/schemas/Email"
+          }
+        }
+      },
+      "UpdateMeetingTopicRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "\\S"
+          },
+          "raisedBy": {
+            "$ref": "#/components/schemas/RaisedBy"
+          },
+          "raisedByEmail": {
+            "description": "null removes the stakeholder's e-mail.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Email"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "MeetingTopicOrderRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["topicIds"],
+        "properties": {
+          "topicIds": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "MoveMeetingTopicResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["topic", "movedTo"],
+        "properties": {
+          "topic": {
+            "$ref": "#/components/schemas/MeetingTopic"
+          },
+          "movedTo": {
+            "$ref": "#/components/schemas/MeetingTopic"
+          }
+        }
+      },
+      "MeetingNoteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "pattern": "\\S"
           }
         }
       }

@@ -1,0 +1,45 @@
+/* Ahoy tokens (light theme) as CSS variables, from the Ahoy design system's tokens.json. Used with ds/ahoy/components/bundle.css. */
+:root {
+  --bg: #F6F8FA; --surface: #FFFFFF; --surface-sunken: #EEF2F5; --surface-hover: #F1F4F7; --surface-raised: #FAFBFC; --row-hover: #F7FAFE;
+  --line: #E3E8EE; --line-soft: #EEF2F5; --line-strong: #D5DCE3;
+  --ink: #1B2733; --ink-muted: #5B6B7A; --ink-soft: #455562; --ink-disabled: #8494A2;
+  --accent: #1A64D6; --accent-hover: #1755B8; --accent-text: #1747A6; --accent-soft: #E7EFFC; --on-accent: #FFFFFF; --focus: #9DBDF1;
+  --status-queued-bg: #EDF1F5; --status-queued-fg: #3D4B59;
+  --status-running-bg: #DDF3F7; --status-running-fg: #0B5C6B;
+  --status-input-bg: #FFF1D6; --status-input-fg: #7A4B00;
+  --status-decision-bg: #EEE8FB; --status-decision-fg: #4E3290;
+  --status-halted-bg: #FDE3E3; --status-halted-fg: #962020;
+  --status-done-bg: #DDF3E6; --status-done-fg: #1C6337;
+  --status-blocked-bg: #2B3A47; --status-blocked-fg: #FFFFFF;
+  --status-sendback-bg: #FDEBDD; --status-sendback-fg: #8A3D0C;
+  --live: #2E9B5B; --live-halo: #DDF3E6; --live-text: #1C6337;
+  --danger: #B42323; --danger-text: #A11F1F; --danger-line: #F1C4C4;
+  --notice-bg: #FFF8E8; --notice-line: #F0D79A; --notice-fg: #4F3A0E;
+  --error-bg: #FFF5F5; --error-line: #F3CACA; --error-fg: #5A2020;
+  --info-bg: #F5F9FF; --info-line: #D6E4FA; --highlight: #FFF6D9;
+  --toast-bg: #1B2733; --toast-fg: #FFFFFF;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --space-1: 4px; --space-1\.5: 6px; --space-2: 8px; --space-2\.5: 10px; --space-3: 12px; --space-3\.5: 14px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --radius-xs: 6px; --radius-sm: 9px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 18px; --radius-pill: 999px;
+  --shadow-selected: 0 1px 2px rgba(20, 40, 60, 0.12);
+  --shadow-dialog: 0 18px 48px rgba(20, 40, 60, 0.16), 0 0 0 1px rgba(20, 40, 60, 0.06);
+  --shadow-toast: 0 10px 24px rgba(20, 40, 60, 0.2);
+  --control-sm: 28px; --control-md: 34px; --control-lg: 40px; --badge-height: 22px; --avatar: 30px; --page-max: 1360px;
+}
+
+/* Fix: bundle.css colours every link inside .ah with accent-text (.ah a), which beats the
+   component classes. Links styled as buttons, nav items, tabs and the logo keep their own colours. */
+.ah a.ah-btn, .ah a.ah-btn:hover { color: var(--ink); text-decoration: none; }
+.ah a.ah-btn--primary, .ah a.ah-btn--primary:hover,
+.ah a.ah-btn--danger, .ah a.ah-btn--danger:hover { color: var(--on-accent); }
+.ah a.ah-btn--soft, .ah a.ah-btn--soft:hover { color: var(--accent-text); }
+.ah a.ah-btn--ghost, .ah a.ah-btn--ghost:hover { color: var(--ink-soft); }
+.ah a.ah-btn--danger-outline { color: var(--danger-text); }
+.ah a.ah-logo, .ah a.ah-logo:hover { color: var(--ink); }
+.ah a.ah-nav__item { color: var(--ink-muted); }
+.ah a.ah-nav__item:hover { color: var(--ink); }
+.ah a.ah-nav__item[aria-current="page"] { color: var(--accent-text); }
+.ah a.ah-tabs__item { color: var(--ink-soft); }
+.ah a.ah-tabs__item:hover { color: var(--ink); }
+.ah a.ah-tabs__item[aria-current="page"] { color: var(--accent-text); }

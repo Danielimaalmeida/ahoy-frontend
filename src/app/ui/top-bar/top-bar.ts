@@ -63,6 +63,14 @@ let nextMenuId = 0;
         </a>
         <a
           class="ah-nav__item"
+          routerLink="/meetings"
+          routerLinkActive
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="prefix"
+          >Meetings</a
+        >
+        <a
+          class="ah-nav__item"
           routerLink="/voyages"
           routerLinkActive
           ariaCurrentWhenActive="page"

@@ -1,0 +1,628 @@
+/**
+ * The mock's meetings with stakeholders (`/meetings`, `/meeting-topics`, `/meeting-notes`, `/meeting-series`), as
+ * `packages/core/src/service/meetings.ts` of `ahoy-hosted` keeps the real ones: a meeting is planned, then in progress,
+ * then ended (read-only); topics are raised by us or by a stakeholder, planned before the start or raised during it;
+ * ending a meeting carries the chosen open topics, notes and all, to the series' next meeting. 0 AIU. Fictional data.
+ */
+import type {
+  AddMeetingTopicRequest,
+  CreateMeetingRequest,
+  CreateMeetingSeriesRequest,
+  EndMeetingResult,
+  Meeting,
+  MeetingNote,
+  MeetingSeries,
+  MeetingStatus,
+  MeetingSummary,
+  MeetingTopic,
+  MoveMeetingTopicResult,
+  UpdateMeetingRequest,
+  UpdateMeetingTopicRequest,
+} from '@core/api/types';
+import { iso, type MockClock } from './clock';
+import { MockProblem } from './http';
+import type { Writable } from './voyage';
+
+const DAY_MS = 86_400_000;
+const HALF_HOUR_MS = 1_800_000;
+
+type SeriesRecord = Writable<MeetingSeries>;
+type MeetingRecord = Writable<
+  Omit<MeetingSummary, 'topicCount' | 'openTopicCount' | 'seriesName'>
+>;
+type TopicRecord = Writable<
+  Omit<MeetingTopic, 'notes' | 'carriedFrom' | 'movedTo'>
+> & {
+  carriedFromTopicId: string | null;
+  movedToTopicId: string | null;
+};
+type NoteRecord = Writable<MeetingNote>;
+
+const notFound = (what: string, id: string) =>
+  new MockProblem('not_found', `${what} ${id} does not exist`);
+const invalid = (message: string) => new MockProblem('invalid_state', message);
+const refused = (path: string, message: string) =>
+  new MockProblem('validation_failed', message, {
+    errors: [{ path, message }],
+  });
+
+/** Trims, lower-cases and keeps each e-mail once, in the order given. */
+function normalized(emails: readonly string[]): string[] {
+  return [
+    ...new Set(
+      emails.map((e) => e.trim().toLowerCase()).filter((e) => e !== '')
+    ),
+  ];
+}
+
+/** The meetings of a mock world. */
+export class MeetingDesk {
+  private readonly series = new Map<string, SeriesRecord>();
+  private readonly meetings = new Map<string, MeetingRecord>();
+  private readonly topics = new Map<string, TopicRecord>();
+  private readonly notes = new Map<string, NoteRecord>();
+  private nextId = 1;
+
+  constructor(private readonly clock: MockClock) {}
+
+  /** A new UUID, in order, so a mock world is the same every time. */
+  private id(): string {
+    return `00000000-0000-4000-8000-${(this.nextId++).toString(16).padStart(12, '0')}`;
+  }
+
+  private now(): string {
+    return iso(this.clock.now());
+  }
+
+  /** The seeded Finance sync: last week's meeting ended, this week's running since half an hour ago, next week's planned. */
+  seed(at: number): void {
+    const alex = 'alex@example.com';
+    const series = this.createSeries(alex, {
+      name: 'Finance sync',
+      stakeholders: ['priya@example.com', 'jordan@example.com'],
+      cadenceDays: 7,
+    });
+    const startOf = (days: number) => iso(at - HALF_HOUR_MS + days * DAY_MS);
+    const endOf = (days: number) => iso(at + HALF_HOUR_MS + days * DAY_MS);
+    const past = this.insertMeeting(
+      alex,
+      series.id,
+      'Finance sync',
+      startOf(-7),
+      endOf(-7),
+      series.stakeholders
+    );
+    this.addTopic(alex, past.id, {
+      title: 'Dashboard exports time out',
+      raisedBy: 'us',
+    });
+    past.status = 'ended';
+    past.startedAt = startOf(-7);
+    past.endedAt = endOf(-7);
+    const now = this.insertMeeting(
+      alex,
+      series.id,
+      'Finance sync',
+      startOf(0),
+      endOf(0),
+      series.stakeholders
+    );
+    this.insertMeeting(
+      alex,
+      series.id,
+      'Finance sync',
+      startOf(7),
+      endOf(7),
+      series.stakeholders
+    );
+    const reminders = this.addTopic(alex, now.id, {
+      title: 'Overdue invoice reminders',
+      raisedBy: 'us',
+    });
+    this.addTopic(alex, now.id, {
+      title: 'Tax ID validation for EU customers',
+      raisedBy: 'them',
+      raisedByEmail: 'jordan@example.com',
+    });
+    this.addNote(alex, reminders.id, {
+      text: 'About 120 reminders a month are sent by hand.',
+    });
+    now.status = 'in_progress';
+    now.startedAt = startOf(0);
+    const fees = this.addTopic(alex, now.id, {
+      title: 'Late fees for enterprise accounts',
+      raisedBy: 'them',
+      raisedByEmail: 'priya@example.com',
+    });
+    this.addNote(alex, fees.id, {
+      text: '1.5% per month, capped at 10% of the invoice.',
+    });
+  }
+
+  /** Every meeting, optionally of one status, latest start first. */
+  list(status?: MeetingStatus): MeetingSummary[] {
+    return [...this.meetings.values()]
+      .filter((m) => status === undefined || m.status === status)
+      .sort((a, b) =>
+        a.startsAt < b.startsAt
+          ? 1
+          : a.startsAt > b.startsAt
+            ? -1
+            : a.id < b.id
+              ? -1
+              : 1
+      )
+      .map((m) => this.summary(m));
+  }
+
+  /** One meeting with its topics and notes, or `404 not_found`. */
+  get(id: string): Meeting {
+    return this.meetingDto(this.meeting(id));
+  }
+
+  create(actor: string, body: CreateMeetingRequest): Meeting {
+    const series =
+      body.seriesId === undefined ? undefined : this.series.get(body.seriesId);
+    if (body.seriesId !== undefined && series === undefined)
+      throw notFound('Series', body.seriesId);
+    const title = body.title?.trim() || series?.name;
+    if (!title)
+      throw refused(
+        'body/title',
+        'title is required for a meeting outside a series'
+      );
+    this.checkTimes(body.startsAt, body.endsAt ?? null);
+    const meeting = this.insertMeeting(
+      actor,
+      series?.id ?? null,
+      title,
+      body.startsAt,
+      body.endsAt ?? null,
+      normalized(body.stakeholders ?? series?.stakeholders ?? [])
+    );
+    return this.meetingDto(meeting);
+  }
+
+  update(actor: string, id: string, body: UpdateMeetingRequest): Meeting {
+    const meeting = this.openMeeting(id);
+    const startsAt = body.startsAt ?? meeting.startsAt;
+    const endsAt = body.endsAt === undefined ? meeting.endsAt : body.endsAt;
+    this.checkTimes(startsAt, endsAt);
+    if (body.title !== undefined) meeting.title = body.title.trim();
+    if (body.stakeholders !== undefined)
+      meeting.stakeholders = normalized(body.stakeholders);
+    meeting.startsAt = startsAt;
+    meeting.endsAt = endsAt;
+    this.touch(meeting, actor);
+    return this.meetingDto(meeting);
+  }
+
+  start(actor: string, id: string): Meeting {
+    const meeting = this.meeting(id);
+    if (meeting.status !== 'planned')
+      throw invalid(
+        `Only a planned meeting can start; this one is ${meeting.status}`
+      );
+    meeting.status = 'in_progress';
+    meeting.startedAt = this.now();
+    this.touch(meeting, actor);
+    return this.meetingDto(meeting);
+  }
+
+  end(
+    actor: string,
+    id: string,
+    carryOver: readonly string[]
+  ): EndMeetingResult {
+    const meeting = this.meeting(id);
+    if (meeting.status !== 'in_progress')
+      throw invalid(
+        `Only a meeting in progress can end; this one is ${meeting.status}`
+      );
+    if (new Set(carryOver).size !== carryOver.length)
+      throw refused('body/carryOver', 'carryOver names a topic twice');
+    const open = new Set(
+      this.topicsOf(id)
+        .filter((t) => t.status === 'open')
+        .map((t) => t.id)
+    );
+    const bad = carryOver.filter((t) => !open.has(t));
+    if (bad.length > 0)
+      throw refused(
+        'body/carryOver',
+        `carryOver names topics that are not open topics of this meeting: ${bad.join(', ')}`
+      );
+    let next: MeetingRecord | null = null;
+    if (carryOver.length > 0) {
+      next = this.nextMeetingOf(meeting, actor);
+      for (const topic of this.topicsOf(id))
+        if (carryOver.includes(topic.id)) this.carry(topic, next, actor);
+    }
+    meeting.status = 'ended';
+    meeting.endedAt = this.now();
+    this.touch(meeting, actor);
+    return {
+      meeting: this.meetingDto(meeting),
+      nextMeeting: next === null ? null : this.meetingDto(next),
+    };
+  }
+
+  addTopic(
+    actor: string,
+    meetingId: string,
+    body: AddMeetingTopicRequest
+  ): MeetingTopic {
+    const meeting = this.openMeeting(meetingId);
+    const email = body.raisedByEmail?.trim().toLowerCase() || null;
+    if (body.raisedBy === 'us' && email !== null)
+      throw refused(
+        'body/raisedByEmail',
+        'raisedByEmail is only for a topic raised by them'
+      );
+    const at = this.now();
+    const topic: TopicRecord = {
+      id: this.id(),
+      meetingId,
+      title: body.title.trim(),
+      raisedBy: body.raisedBy,
+      raisedByEmail: email,
+      origin: meeting.status === 'planned' ? 'planned' : 'in_meeting',
+      status: 'open',
+      position: this.topicsOf(meetingId).length,
+      carriedFromTopicId: null,
+      movedToTopicId: null,
+      createdBy: actor,
+      createdAt: at,
+      updatedBy: actor,
+      updatedAt: at,
+    };
+    this.topics.set(topic.id, topic);
+    return this.topicDto(topic);
+  }
+
+  updateTopic(
+    actor: string,
+    id: string,
+    body: UpdateMeetingTopicRequest
+  ): MeetingTopic {
+    const topic = this.changeableTopic(id);
+    const raisedBy = body.raisedBy ?? topic.raisedBy;
+    const wanted =
+      body.raisedByEmail !== undefined
+        ? body.raisedByEmail
+        : body.raisedBy === 'us'
+          ? null
+          : topic.raisedByEmail;
+    const email = wanted?.trim().toLowerCase() || null;
+    if (raisedBy === 'us' && email !== null)
+      throw refused(
+        'body/raisedByEmail',
+        'raisedByEmail is only for a topic raised by them'
+      );
+    if (body.title !== undefined) topic.title = body.title.trim();
+    topic.raisedBy = raisedBy;
+    topic.raisedByEmail = email;
+    topic.updatedBy = actor;
+    topic.updatedAt = this.now();
+    return this.topicDto(topic);
+  }
+
+  deleteTopic(id: string): void {
+    this.changeableTopic(id);
+    for (const note of [...this.notes.values()])
+      if (note.topicId === id) this.notes.delete(note.id);
+    for (const other of this.topics.values()) {
+      if (other.movedToTopicId === id) other.movedToTopicId = null;
+      if (other.carriedFromTopicId === id) other.carriedFromTopicId = null;
+    }
+    this.topics.delete(id);
+  }
+
+  order(
+    actor: string,
+    meetingId: string,
+    topicIds: readonly string[]
+  ): Meeting {
+    const meeting = this.openMeeting(meetingId);
+    const current = this.topicsOf(meetingId).map((t) => t.id);
+    if (new Set(topicIds).size !== topicIds.length)
+      throw refused('body/topicIds', 'topicIds names a topic twice');
+    const unknown = topicIds.filter((t) => !current.includes(t));
+    if (unknown.length > 0)
+      throw refused(
+        'body/topicIds',
+        `topicIds names topics this meeting does not have: ${unknown.join(', ')}`
+      );
+    const missing = current.filter((t) => !topicIds.includes(t));
+    if (missing.length > 0)
+      throw refused(
+        'body/topicIds',
+        `topicIds leaves out topics of this meeting: ${missing.join(', ')}`
+      );
+    topicIds.forEach((topicId, position) => {
+      const topic = this.topics.get(topicId);
+      if (topic !== undefined && topic.position !== position) {
+        topic.position = position;
+        topic.updatedBy = actor;
+        topic.updatedAt = this.now();
+      }
+    });
+    return this.meetingDto(meeting);
+  }
+
+  move(actor: string, id: string): MoveMeetingTopicResult {
+    const topic = this.changeableTopic(id);
+    const next = this.nextMeetingOf(this.meeting(topic.meetingId), actor);
+    const copy = this.carry(topic, next, actor);
+    return { topic: this.topicDto(topic), movedTo: this.topicDto(copy) };
+  }
+
+  addNote(
+    actor: string,
+    topicId: string,
+    body: { readonly text: string }
+  ): MeetingNote {
+    this.changeableTopic(topicId);
+    const at = this.now();
+    const note: NoteRecord = {
+      id: this.id(),
+      topicId,
+      text: body.text.trim(),
+      createdBy: actor,
+      createdAt: at,
+      updatedBy: actor,
+      updatedAt: at,
+    };
+    this.notes.set(note.id, note);
+    return { ...note };
+  }
+
+  updateNote(
+    actor: string,
+    id: string,
+    body: { readonly text: string }
+  ): MeetingNote {
+    const note = this.changeableNote(id);
+    note.text = body.text.trim();
+    note.updatedBy = actor;
+    note.updatedAt = this.now();
+    return { ...note };
+  }
+
+  deleteNote(id: string): void {
+    this.changeableNote(id);
+    this.notes.delete(id);
+  }
+
+  listSeries(): MeetingSeries[] {
+    return [...this.series.values()]
+      .sort(
+        (a, b) =>
+          a.name.toLowerCase().localeCompare(b.name.toLowerCase()) ||
+          (a.id < b.id ? -1 : 1)
+      )
+      .map((s) => ({ ...s, stakeholders: [...s.stakeholders] }));
+  }
+
+  createSeries(actor: string, body: CreateMeetingSeriesRequest): MeetingSeries {
+    const series: SeriesRecord = {
+      id: this.id(),
+      name: body.name.trim(),
+      stakeholders: normalized(body.stakeholders ?? []),
+      cadenceDays: body.cadenceDays ?? null,
+      createdBy: actor,
+      createdAt: this.now(),
+    };
+    this.series.set(series.id, series);
+    return { ...series, stakeholders: [...series.stakeholders] };
+  }
+
+  private insertMeeting(
+    actor: string,
+    seriesId: string | null,
+    title: string,
+    startsAt: string,
+    endsAt: string | null,
+    stakeholders: readonly string[]
+  ): MeetingRecord {
+    const at = this.now();
+    const meeting: MeetingRecord = {
+      id: this.id(),
+      seriesId,
+      title,
+      startsAt,
+      endsAt,
+      stakeholders: [...stakeholders],
+      status: 'planned',
+      startedAt: null,
+      endedAt: null,
+      createdBy: actor,
+      createdAt: at,
+      updatedBy: actor,
+      updatedAt: at,
+    };
+    this.meetings.set(meeting.id, meeting);
+    return meeting;
+  }
+
+  private checkTimes(startsAt: string, endsAt: string | null): void {
+    if (endsAt !== null && Date.parse(endsAt) <= Date.parse(startsAt))
+      throw refused('body/endsAt', 'endsAt must be after startsAt');
+  }
+
+  private touch(meeting: MeetingRecord, actor: string): void {
+    meeting.updatedBy = actor;
+    meeting.updatedAt = this.now();
+  }
+
+  private meeting(id: string): MeetingRecord {
+    const meeting = this.meetings.get(id);
+    if (meeting === undefined) throw notFound('Meeting', id);
+    return meeting;
+  }
+
+  private openMeeting(id: string): MeetingRecord {
+    const meeting = this.meeting(id);
+    if (meeting.status === 'ended')
+      throw invalid(`Meeting ${id} has ended; it is read-only`);
+    return meeting;
+  }
+
+  private changeableTopic(id: string): TopicRecord {
+    const topic = this.topics.get(id);
+    if (topic === undefined) throw notFound('Topic', id);
+    if (this.meeting(topic.meetingId).status === 'ended')
+      throw invalid(`The meeting of topic ${id} has ended; it is read-only`);
+    if (topic.status === 'moved')
+      throw invalid(
+        `Topic ${id} was moved to the next meeting; change it there`
+      );
+    return topic;
+  }
+
+  private changeableNote(id: string): NoteRecord {
+    const note = this.notes.get(id);
+    if (note === undefined) throw notFound('Note', id);
+    this.changeableTopic(note.topicId);
+    return note;
+  }
+
+  private topicsOf(meetingId: string): TopicRecord[] {
+    return [...this.topics.values()]
+      .filter((t) => t.meetingId === meetingId)
+      .sort((a, b) => a.position - b.position || (a.id < b.id ? -1 : 1));
+  }
+
+  /** The series' first planned meeting after this one; else a new one a cadence on; else `409 invalid_state`. */
+  private nextMeetingOf(meeting: MeetingRecord, actor: string): MeetingRecord {
+    if (meeting.seriesId === null)
+      throw invalid('A one-off meeting has no next meeting to move topics to');
+    const next = [...this.meetings.values()]
+      .filter(
+        (m) =>
+          m.seriesId === meeting.seriesId &&
+          m.status === 'planned' &&
+          m.id !== meeting.id &&
+          m.startsAt > meeting.startsAt
+      )
+      .sort((a, b) =>
+        a.startsAt < b.startsAt
+          ? -1
+          : a.startsAt > b.startsAt
+            ? 1
+            : a.id < b.id
+              ? -1
+              : 1
+      )[0];
+    if (next !== undefined) return next;
+    const series = this.series.get(meeting.seriesId);
+    if (series === undefined || series.cadenceDays === null)
+      throw invalid(
+        `Series ${series?.name ?? meeting.seriesId} has no planned meeting after this one; plan it first`
+      );
+    const step = series.cadenceDays * DAY_MS;
+    const start = Date.parse(meeting.startsAt);
+    const after = Math.max(start, this.clock.now());
+    const at = start + (Math.floor((after - start) / step) + 1) * step;
+    const length =
+      meeting.endsAt === null ? null : Date.parse(meeting.endsAt) - start;
+    return this.insertMeeting(
+      actor,
+      meeting.seriesId,
+      meeting.title,
+      iso(at),
+      length === null ? null : iso(at + length),
+      meeting.stakeholders
+    );
+  }
+
+  /** Copies a topic and its notes to the end of `next` and marks the original moved; returns the copy. */
+  private carry(
+    topic: TopicRecord,
+    next: MeetingRecord,
+    actor: string
+  ): TopicRecord {
+    const at = this.now();
+    const copy: TopicRecord = {
+      ...topic,
+      id: this.id(),
+      meetingId: next.id,
+      origin: 'planned',
+      status: 'open',
+      position: this.topicsOf(next.id).length,
+      carriedFromTopicId: topic.id,
+      movedToTopicId: null,
+      createdBy: actor,
+      createdAt: at,
+      updatedBy: actor,
+      updatedAt: at,
+    };
+    this.topics.set(copy.id, copy);
+    for (const note of [...this.notes.values()].filter(
+      (n) => n.topicId === topic.id
+    )) {
+      const noteId = this.id();
+      this.notes.set(noteId, { ...note, id: noteId, topicId: copy.id });
+    }
+    topic.status = 'moved';
+    topic.movedToTopicId = copy.id;
+    topic.updatedBy = actor;
+    topic.updatedAt = at;
+    return copy;
+  }
+
+  private summary(meeting: MeetingRecord): MeetingSummary {
+    const topics = this.topicsOf(meeting.id);
+    return {
+      ...meeting,
+      stakeholders: [...meeting.stakeholders],
+      seriesName:
+        meeting.seriesId === null
+          ? null
+          : (this.series.get(meeting.seriesId)?.name ?? null),
+      topicCount: topics.length,
+      openTopicCount: topics.filter((t) => t.status === 'open').length,
+    };
+  }
+
+  private meetingDto(meeting: MeetingRecord): Meeting {
+    return {
+      ...this.summary(meeting),
+      topics: this.topicsOf(meeting.id).map((t) => this.topicDto(t)),
+    };
+  }
+
+  private link(topicId: string | null): MeetingTopic['carriedFrom'] {
+    const topic = topicId === null ? undefined : this.topics.get(topicId);
+    const meeting =
+      topic === undefined ? undefined : this.meetings.get(topic.meetingId);
+    return topic === undefined || meeting === undefined
+      ? null
+      : {
+          topicId: topic.id,
+          meetingId: meeting.id,
+          meetingStartsAt: meeting.startsAt,
+        };
+  }
+
+  private topicDto(topic: TopicRecord): MeetingTopic {
+    const { carriedFromTopicId, movedToTopicId, ...fields } = topic;
+    return {
+      ...fields,
+      carriedFrom: this.link(carriedFromTopicId),
+      movedTo: this.link(movedToTopicId),
+      notes: [...this.notes.values()]
+        .filter((n) => n.topicId === topic.id)
+        .sort((a, b) =>
+          a.createdAt < b.createdAt
+            ? -1
+            : a.createdAt > b.createdAt
+              ? 1
+              : a.id < b.id
+                ? -1
+                : 1
+        )
+        .map((n) => ({ ...n })),
+    };
+  }
+}

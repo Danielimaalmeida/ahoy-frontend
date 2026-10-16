@@ -1,5 +1,35 @@
 # Ahoy frontend · progress
 
+**Updated 2026-10-16 for Meetings, slice 1** (on `feature/meetings-slice-1`, matching `ahoy-hosted`'s branch of the
+same name). Offline only; no API or TEST environment contacted; 0 AIU. Not committed.
+
+## Meetings, slice 1 (2026-10-16)
+
+- The user asked for a page for weekly business meetings with stakeholders (design: the Meetings row of the wireframes,
+  boards `Meetings` and `MeetingNext`, now copied into `docs/design/wireframes/`; plan in the Claude project doc
+  `claude/meetings-plan.md`). Slice 1 has no agent, Jira or Confluence: series, meetings, topics raised by us or a
+  stakeholder, notes, order, and carrying open topics to the series' next meeting.
+- Contract: `openapi/ahoy-v1.yaml` vendored from `ahoy-hosted` e86fcb6 (sixteen operations under `/meetings`,
+  `/meeting-topics`, `/meeting-notes`, `/meeting-series`); `schema.d.ts`, types, guards, `ApiClient` methods,
+  fixtures and the mock backend's `MeetingDesk` (seeded Finance sync: last week ended, one running now, one next week).
+- `/meetings` and `/meetings/:id` (`features/meetings/`): a shell with the list (Now, Next, Past) and New meeting
+  (existing series, new series with stakeholders and cadence, or one-off; day and start time), and the meeting view:
+  status, Start or End, the add-topic line (Us or Them and which stakeholder; Enter adds), topic cards with notes, add
+  and remove note, up and down, Move to next meeting, Remove with a second click, and read-only ended meetings. End
+  meeting asks which open topics move on (those without notes ticked first). The top bar gains Meetings after Needs
+  you. Not built here (later slices, each needing its own agreement): user stories, Grill me, Confluence; also not
+  built: editing a note or a topic title in place, editing a meeting's time or stakeholders, drag to reorder.
+- What ran, in this session's cloud container with the npm registry blocked (no `npm ci`, so no Angular, Vitest or
+  ESLint): TypeScript 6.0.2 with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` over the feature,
+  its imports and its specs against hand-written Angular/CDK/rxjs stand-ins (templates not checked); the pure specs
+  bundled with esbuild and run under a small describe/it/expect shim: domain meetings 11/11, meeting errors 5/5,
+  meeting guards 5/5, mock meetings 5/5, mock conformance 8/8, API contract 123/123; Prettier 3.8.1 on every changed
+  file (`src/app/domain/types.ts` was already unformatted on `main` and was left as is).
+- Did not run: `ng build`, `npm run typecheck` (strict templates, boundary check), `npm run lint`, Vitest, including
+  the new page spec `features/meetings/meetings.spec.ts` (ten cases on the mock backend) and the updated top-bar spec,
+  and any browser check. Needs from other lanes: none; `ahoy-hosted` migration 0014 must be applied before the page
+  works against a real API.
+
 **Updated 2026-10-15 for the code review of Blocked is not Ended** (on `fix/blocked-review-followups`, after PR #31
 merged). Offline only; no API or TEST environment contacted; 0 AIU.
 
@@ -865,6 +895,10 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+Meetings, slice 1 (2026-10-16) is on `feature/meetings-slice-1`, not committed: the Meetings page (list, meeting,
+topics us/them, notes, carry-over) on the vendored contract and the mock backend. Only a stand-in type check, the pure
+specs and Prettier ran here (npm registry blocked); see its section above.
+
 Blocked is not Ended (PR #31, merged 2026-10-15) and its review fixes (on `fix/blocked-review-followups`): blocked
 voyages have their own chip and tile; Needs you lists only those a person can unblock. Specs updated; nothing ran here
 (npm registry blocked).
@@ -1001,6 +1035,11 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+Meetings, slice 1: run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on
+Node 24 (nothing Angular ran when it was written), fix what strict templates or lint find, then open `/meetings` on
+`npm run start:mock` and against a local `ahoy-hosted --simulate` with migration 0014. Commit and push need the user's
+approval. Slices 2–4 (user story by an agent, Grill me, Confluence) each need their own agreement first.
+
 Run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on Node 24 for PR #31
 (merged untested) and the review-fix branch `fix/blocked-review-followups`, then check Needs you against a local
 `ahoy-hosted --simulate` (0 AIU) with one voyage blocked by rework and one rejected at the plan.
@@ -1036,6 +1075,10 @@ The next release must retain the corrected NGINX document root; remote image sta
 Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
+
+The newest change, on `feature/meetings-slice-1` (2026-10-16, uncommitted), adds the Meetings page for stakeholder
+meetings, slice 1, matching `ahoy-hosted`'s branch of the same name. Nothing Angular ran in the session that wrote it
+(npm registry blocked): run the full check on Node 24 first. See "Meetings, slice 1".
 
 The newest change, on `fix/blocked-review-followups` (after PR #31 merged), keeps a voyage rejected at a human gate
 out of Needs you: an aground voyage is listed with Unblock only when its last move to `blocked` came from a phase

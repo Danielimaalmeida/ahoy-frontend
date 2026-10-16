@@ -29,7 +29,16 @@ import {
   isJiraBacklog,
   isKnowledgeReview,
   isKnowledgeReviewList,
+  isEndMeetingResult,
+  isMeeting,
+  isMeetingList,
+  isMeetingNote,
+  isMeetingSeries,
+  isMeetingSeriesList,
+  isMeetingTopic,
   isMetricsReport,
+  isMoveMeetingTopicResult,
+  isNoContent,
   isModelPlan,
   isModelCatalog,
   isProblem,
@@ -46,6 +55,7 @@ import {
   isStoryStateDocument,
 } from './guards';
 import type {
+  AddMeetingTopicRequest,
   AgentDiagnosisList,
   AgentDiagnosisRequest,
   AnswerAccepted,
@@ -54,7 +64,11 @@ import type {
   ArtifactContentQuery,
   ArtifactList,
   DecisionAccepted,
+  CreateMeetingRequest,
+  CreateMeetingSeriesRequest,
   DecisionRequest,
+  EndMeetingRequest,
+  EndMeetingResult,
   EventPage,
   KnowledgeReview,
   KnowledgeReviewList,
@@ -64,6 +78,15 @@ import type {
   ListEventsQuery,
   ListStoriesQuery,
   JiraBacklog,
+  ListMeetingsQuery,
+  Meeting,
+  MeetingList,
+  MeetingNote,
+  MeetingNoteRequest,
+  MeetingSeries,
+  MeetingSeriesList,
+  MeetingTopic,
+  MeetingTopicOrderRequest,
   MetricsExport,
   MetricsFormat,
   MetricsQuery,
@@ -71,6 +94,7 @@ import type {
   MetricsTable,
   ModelPlan,
   ModelCatalog,
+  MoveMeetingTopicResult,
   Question,
   CancelRefinementRequest,
   Diagnosis,
@@ -89,6 +113,8 @@ import type {
   StoryPage,
   StoryPlanFit,
   StoryStateDocument,
+  UpdateMeetingRequest,
+  UpdateMeetingTopicRequest,
   WorkPackageDecisionRequest,
   UnblockStoryRequest,
 } from './types';
@@ -609,6 +635,184 @@ export class ApiClient {
     );
   }
 
+  /** Every meeting with stakeholders, latest start first, optionally of one status. Spends nothing. */
+  listMeetings(query: ListMeetingsQuery = {}): Promise<ApiResult<MeetingList>> {
+    let params = new HttpParams();
+    if (query.status !== undefined) params = params.set('status', query.status);
+    return this.get('listMeetings', '/meetings', isMeetingList, params);
+  }
+
+  /** Plans a meeting, alone or in a series. The answer (201) is the meeting. */
+  createMeeting(body: CreateMeetingRequest): Promise<ApiResult<Meeting>> {
+    return this.post('createMeeting', '/meetings', body, isMeeting);
+  }
+
+  /** One meeting with its topics in order and their notes. */
+  getMeeting(id: string): Promise<ApiResult<Meeting>> {
+    return this.get('getMeeting', `/meetings/${segment(id)}`, isMeeting);
+  }
+
+  /** Changes a meeting's title, time or stakeholders; refused once it has ended. */
+  updateMeeting(
+    id: string,
+    body: UpdateMeetingRequest
+  ): Promise<ApiResult<Meeting>> {
+    return this.send(
+      'updateMeeting',
+      isMeeting,
+      this.http.patch<unknown>(this.url(`/meetings/${segment(id)}`), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Starts a planned meeting: from now on, a topic added to it was raised in the meeting. */
+  startMeeting(id: string): Promise<ApiResult<Meeting>> {
+    return this.post(
+      'startMeeting',
+      `/meetings/${segment(id)}/start`,
+      null,
+      isMeeting
+    );
+  }
+
+  /** Ends a meeting in progress and carries the chosen open topics, with their notes, to the series' next meeting. */
+  endMeeting(
+    id: string,
+    body: EndMeetingRequest
+  ): Promise<ApiResult<EndMeetingResult>> {
+    return this.post(
+      'endMeeting',
+      `/meetings/${segment(id)}/end`,
+      body,
+      isEndMeetingResult
+    );
+  }
+
+  /** Adds a topic at the end of the meeting's list. The answer (201) is the topic. */
+  addMeetingTopic(
+    meetingId: string,
+    body: AddMeetingTopicRequest
+  ): Promise<ApiResult<MeetingTopic>> {
+    return this.post(
+      'addMeetingTopic',
+      `/meetings/${segment(meetingId)}/topics`,
+      body,
+      isMeetingTopic
+    );
+  }
+
+  /** Puts the meeting's topics in a new order; `topicIds` names each of them once. */
+  setMeetingTopicOrder(
+    meetingId: string,
+    body: MeetingTopicOrderRequest
+  ): Promise<ApiResult<Meeting>> {
+    return this.send(
+      'setMeetingTopicOrder',
+      isMeeting,
+      this.http.put<unknown>(
+        this.url(`/meetings/${segment(meetingId)}/topic-order`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Renames a topic or changes who raised it. */
+  updateMeetingTopic(
+    topicId: string,
+    body: UpdateMeetingTopicRequest
+  ): Promise<ApiResult<MeetingTopic>> {
+    return this.send(
+      'updateMeetingTopic',
+      isMeetingTopic,
+      this.http.patch<unknown>(
+        this.url(`/meeting-topics/${segment(topicId)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Removes a topic and its notes. The answer (204) has no body. */
+  deleteMeetingTopic(topicId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteMeetingTopic',
+      `/meeting-topics/${segment(topicId)}`
+    );
+  }
+
+  /** Moves one topic, with its notes, to the series' next meeting without ending this one. */
+  moveMeetingTopic(
+    topicId: string
+  ): Promise<ApiResult<MoveMeetingTopicResult>> {
+    return this.post(
+      'moveMeetingTopic',
+      `/meeting-topics/${segment(topicId)}/move`,
+      null,
+      isMoveMeetingTopicResult
+    );
+  }
+
+  /** Adds a note under a topic. The answer (201) is the note. */
+  addMeetingNote(
+    topicId: string,
+    body: MeetingNoteRequest
+  ): Promise<ApiResult<MeetingNote>> {
+    return this.post(
+      'addMeetingNote',
+      `/meeting-topics/${segment(topicId)}/notes`,
+      body,
+      isMeetingNote
+    );
+  }
+
+  /** Rewrites a note. */
+  updateMeetingNote(
+    noteId: string,
+    body: MeetingNoteRequest
+  ): Promise<ApiResult<MeetingNote>> {
+    return this.send(
+      'updateMeetingNote',
+      isMeetingNote,
+      this.http.patch<unknown>(
+        this.url(`/meeting-notes/${segment(noteId)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Removes a note. The answer (204) has no body. */
+  deleteMeetingNote(noteId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteMeetingNote',
+      `/meeting-notes/${segment(noteId)}`
+    );
+  }
+
+  /** Every meeting series, by name. */
+  listMeetingSeries(): Promise<ApiResult<MeetingSeriesList>> {
+    return this.get(
+      'listMeetingSeries',
+      '/meeting-series',
+      isMeetingSeriesList
+    );
+  }
+
+  /** Adds a meeting series. The answer (201) is the series. */
+  createMeetingSeries(
+    body: CreateMeetingSeriesRequest
+  ): Promise<ApiResult<MeetingSeries>> {
+    return this.post(
+      'createMeetingSeries',
+      '/meeting-series',
+      body,
+      isMeetingSeries
+    );
+  }
+
   private url(path: string): string {
     return `${this.base}${path}`;
   }
@@ -639,6 +843,14 @@ export class ApiClient {
       timeout: REQUEST_TIMEOUT_MS,
     });
     return this.send(op, accept, request);
+  }
+
+  private delete(op: string, path: string): Promise<ApiResult<null>> {
+    const request = this.http.delete<unknown>(this.url(path), {
+      observe: 'response',
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    return this.send(op, isNoContent, request);
   }
 
   /** Waits for the answer and turns it, or whatever went wrong, into an `ApiResult`. Never rejects. */
