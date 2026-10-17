@@ -106,7 +106,7 @@
         "operationId": "listJiraBacklog",
         "tags": ["jira"],
         "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
-        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = CTW AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
+        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = CTW AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
         "responses": {
           "200": {
             "description": "Complete backlog in Jira rank order.",
@@ -2642,6 +2642,247 @@
           }
         }
       }
+    },
+    "/meeting-series/{seriesId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingSeriesId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateMeetingSeries",
+        "tags": ["meetings"],
+        "summary": "Set where the stories drafted from the series' meetings are created in Jira.",
+        "description": "`jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` defaults\nto `Story`.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeetingSeriesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The series.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingSeries"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meetings/{meetingId}/story-drafts": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "get": {
+        "operationId": "listMeetingStoryDrafts",
+        "tags": ["meetings"],
+        "summary": "The meeting's story drafts that were not discarded, newest first.",
+        "responses": {
+          "200": {
+            "description": "The drafts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingStoryDraftList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-topics/{topicId}/story-drafts": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingTopicId"
+        }
+      ],
+      "post": {
+        "operationId": "requestMeetingStoryDraft",
+        "tags": ["meetings"],
+        "summary": "Ask an agent to draft a user story from a topic. May spend AIU.",
+        "description": "Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It\nreads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)\nand replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never\nwrites to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll\n`getMeetingStoryDraft` until it is not `drafting`.\n\n`409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503\nunavailable` when story drafts are not configured or the control repo cannot be read.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingStoryDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The draft, being written.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingStoryDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-story-drafts/{draftId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingStoryDraftId"
+        }
+      ],
+      "get": {
+        "operationId": "getMeetingStoryDraft",
+        "tags": ["meetings"],
+        "summary": "One story draft, with its story once the agent has written it.",
+        "responses": {
+          "200": {
+            "description": "The draft.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingStoryDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "discardMeetingStoryDraft",
+        "tags": ["meetings"],
+        "summary": "Discard a draft not yet created in Jira, so its topic can be drafted again.",
+        "description": "A draft still being written has its run stopped: a queued one spends nothing, a running one is cancelled.\n`409 invalid_state` when the draft was created in Jira; `404` when it was already discarded.\n",
+        "responses": {
+          "204": {
+            "description": "The draft is discarded."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-story-drafts/{draftId}/create-issue": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingStoryDraftId"
+        }
+      ],
+      "post": {
+        "operationId": "createMeetingStoryIssue",
+        "tags": ["meetings"],
+        "summary": "Create a ready draft's story in Jira, in its series' project. Writes to Jira.",
+        "description": "Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the\nstory, its acceptance criteria, what is out of scope, open questions and the meeting it came from as the\ndescription; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its\nissue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira\nproject; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).\n",
+        "responses": {
+          "200": {
+            "description": "The draft, created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingStoryDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2771,6 +3012,24 @@
       },
       "MeetingNoteId": {
         "name": "noteId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "MeetingSeriesId": {
+        "name": "seriesId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "MeetingStoryDraftId": {
+        "name": "draftId",
         "in": "path",
         "required": true,
         "schema": {
@@ -5818,6 +6077,8 @@
           "name",
           "stakeholders",
           "cadenceDays",
+          "jiraProjectKey",
+          "jiraIssueType",
           "createdBy",
           "createdAt"
         ],
@@ -5839,6 +6100,20 @@
             "type": ["integer", "null"],
             "minimum": 1,
             "maximum": 366
+          },
+          "jiraProjectKey": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraProjectKey"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where stories drafted from the series' meetings are created; null when creating is off."
+          },
+          "jiraIssueType": {
+            "$ref": "#/components/schemas/JiraIssueType"
           },
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
@@ -5884,6 +6159,301 @@
             "minimum": 1,
             "maximum": 366,
             "description": "Days between meetings (7 for weekly)."
+          },
+          "jiraProjectKey": {
+            "$ref": "#/components/schemas/JiraProjectKey"
+          },
+          "jiraIssueType": {
+            "$ref": "#/components/schemas/JiraIssueType"
+          }
+        }
+      },
+      "UpdateMeetingSeriesRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["jiraProjectKey"],
+        "properties": {
+          "jiraProjectKey": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraProjectKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "jiraIssueType": {
+            "$ref": "#/components/schemas/JiraIssueType"
+          }
+        }
+      },
+      "JiraProjectKey": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]+$",
+        "maxLength": 50,
+        "description": "A Jira project key, such as FIN."
+      },
+      "JiraIssueType": {
+        "type": "string",
+        "enum": ["Story", "Task", "Bug"],
+        "description": "The issue type a series' stories are created as; `Story` by default."
+      },
+      "MeetingStoryDraftRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["confirmSpend"],
+        "properties": {
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          },
+          "noteIds": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The notes to draft from; all of the topic's notes when absent or empty."
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000000000,
+            "description": "The run's AIU cap, at most 50 AIU; the server's story draft cap when absent."
+          }
+        }
+      },
+      "StoryTemplate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "role",
+          "want",
+          "soThat",
+          "acceptanceCriteria",
+          "outOfScope",
+          "openQuestions"
+        ],
+        "description": "A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it.",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "As a ..."
+          },
+          "want": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "I want ..."
+          },
+          "soThat": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "So that ..."
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            }
+          },
+          "outOfScope": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            }
+          },
+          "openQuestions": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            }
+          }
+        }
+      },
+      "MeetingStoryDraftStatus": {
+        "type": "string",
+        "enum": ["drafting", "ready", "failed", "created"],
+        "description": "`drafting`: the agent is writing it. `ready`: the story can be checked and created. `failed`: no story, see\n`failure`. `created`: in Jira as `jiraKey`.\n"
+      },
+      "MeetingStoryDraft": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "topicId",
+          "meetingId",
+          "topicTitle",
+          "noteIds",
+          "status",
+          "story",
+          "failure",
+          "target",
+          "jiraKey",
+          "jiraUrl",
+          "jiraCreatedBy",
+          "jiraCreatedAt",
+          "run",
+          "createdBy",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topicId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meetingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topicTitle": {
+            "type": "string"
+          },
+          "noteIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The chosen notes; empty means all of the topic's notes."
+          },
+          "status": {
+            "$ref": "#/components/schemas/MeetingStoryDraftStatus"
+          },
+          "story": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StoryTemplate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure": {
+            "type": ["string", "null"],
+            "description": "Why there is no story, for a failed draft."
+          },
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["projectKey", "issueType"],
+            "description": "Where Create in Jira puts it, from the series; a null project means it cannot be created.",
+            "properties": {
+              "projectKey": {
+                "type": ["string", "null"]
+              },
+              "issueType": {
+                "type": ["string", "null"]
+              }
+            }
+          },
+          "jiraKey": {
+            "type": ["string", "null"],
+            "pattern": "^[A-Z][A-Z0-9_]+-[0-9]+$"
+          },
+          "jiraUrl": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "The issue in Jira, once created."
+          },
+          "jiraCreatedBy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "jiraCreatedAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run": {
+            "description": "The agent run that wrote it.",
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "status",
+                  "budgetNanoAiu",
+                  "nanoAiu",
+                  "cancelRequested"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "budgetNanoAiu": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "nanoAiu": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cancelRequested": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "MeetingStoryDraftList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingStoryDraft"
+            }
           }
         }
       },
@@ -6006,8 +6576,7 @@
           },
           "text": {
             "type": "string",
-            "description": "What was said",
-            "as plain text (untrusted).": null
+            "description": "What was said, as plain text (untrusted)."
           },
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
@@ -6078,8 +6647,7 @@
           },
           "raisedByEmail": {
             "type": ["string", "null"],
-            "description": "The stakeholder who raised it",
-            "when known.": null
+            "description": "The stakeholder who raised it, when known."
           },
           "origin": {
             "$ref": "#/components/schemas/TopicOrigin"

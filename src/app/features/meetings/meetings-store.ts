@@ -3,6 +3,7 @@ import { ApiClient } from '@core/api/api-client';
 import type { ApiError, ApiResult } from '@core/api/api-error';
 import type {
   EndMeetingResult,
+  JiraIssueType,
   Meeting,
   MeetingSeries,
   MeetingSummary,
@@ -61,6 +62,14 @@ export class MeetingsStore {
   readonly editable = computed(() => {
     const m = this.meeting();
     return m !== null && m.status !== 'ended';
+  });
+
+  /** The open meeting's series, with its Jira target; null for a one-off meeting or before the series are read. */
+  readonly openSeries = computed(() => {
+    const seriesId = this.meeting()?.seriesId ?? null;
+    return seriesId === null
+      ? null
+      : (this.series().find((s) => s.id === seriesId) ?? null);
   });
 
   /** Whether the list has been read once (successfully), so the page knows which meeting to open by default. */
@@ -146,6 +155,28 @@ export class MeetingsStore {
       [...this.series(), created].sort((a, b) => a.name.localeCompare(b.name))
     );
     return created;
+  }
+
+  /**
+   * Sets where the series' drafted stories are created in Jira (a null project turns creating off) and keeps the new
+   * series in the list. The dialog shows the outcome itself, so the page's command error is left alone.
+   */
+  async setSeriesTarget(
+    seriesId: string,
+    projectKey: string | null,
+    issueType: JiraIssueType
+  ): Promise<ApiResult<MeetingSeries>> {
+    this.busy.set(true);
+    const result = await this.api.updateMeetingSeries(seriesId, {
+      jiraProjectKey: projectKey,
+      ...(projectKey !== null ? { jiraIssueType: issueType } : {}),
+    });
+    this.busy.set(false);
+    if (result.ok)
+      this.series.set(
+        this.series().map((s) => (s.id === seriesId ? result.value : s))
+      );
+    return result;
   }
 
   /** Starts the open meeting: topics added from now on were raised in it. */

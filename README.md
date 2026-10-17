@@ -72,6 +72,11 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Meetings, slice 2 (2026-10-17):** a topic becomes a Jira user story with no typing: "Turn into a user story",
+  "Draft it for me" (an agent writes it; may spend up to 50 AIU), then check it and Create in Jira in the series'
+  project. Grill me comes later. Not built or tested with Angular here (npm registry blocked); see
+  [docs/progress.md](docs/progress.md).
+
 - **Meetings, slice 1 (2026-10-16):** `/meetings` keeps weekly business meetings with stakeholders: plan a meeting
   (in a series or one-off), note topics before it, add topics raised by us or a stakeholder during it, take notes, and
   carry open topics to the series' next meeting when it ends. No agent, Jira or Confluence yet. Not built or tested

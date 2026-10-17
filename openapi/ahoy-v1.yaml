@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: e86fcb654647529ddbae5d9d3f3017407ad7adab
+# Commit: fad45c3cd71e2b175f60022b51b3e9c42aac37ef (plus uncommitted changes in the source file)
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -100,7 +100,7 @@ paths:
         Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
         WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
         `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-        `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
+        `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
         AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
 
         The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
@@ -1517,6 +1517,138 @@ paths:
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /meeting-series/{seriesId}:
+    parameters:
+      - $ref: '#/components/parameters/MeetingSeriesId'
+    patch:
+      operationId: updateMeetingSeries
+      tags: [meetings]
+      summary: Set where the stories drafted from the series' meetings are created in Jira.
+      description: |
+        `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` defaults
+        to `Story`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateMeetingSeriesRequest' }
+      responses:
+        '200':
+          description: The series.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingSeries' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /meetings/{meetingId}/story-drafts:
+    parameters:
+      - $ref: '#/components/parameters/MeetingId'
+    get:
+      operationId: listMeetingStoryDrafts
+      tags: [meetings]
+      summary: The meeting's story drafts that were not discarded, newest first.
+      responses:
+        '200':
+          description: The drafts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingStoryDraftList' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /meeting-topics/{topicId}/story-drafts:
+    parameters:
+      - $ref: '#/components/parameters/MeetingTopicId'
+    post:
+      operationId: requestMeetingStoryDraft
+      tags: [meetings]
+      summary: Ask an agent to draft a user story from a topic. May spend AIU.
+      description: |
+        Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It
+        reads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)
+        and replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never
+        writes to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll
+        `getMeetingStoryDraft` until it is not `drafting`.
+
+        `409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503
+        unavailable` when story drafts are not configured or the control repo cannot be read.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingStoryDraftRequest' }
+      responses:
+        '202':
+          description: The draft, being written.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingStoryDraft' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /meeting-story-drafts/{draftId}:
+    parameters:
+      - $ref: '#/components/parameters/MeetingStoryDraftId'
+    get:
+      operationId: getMeetingStoryDraft
+      tags: [meetings]
+      summary: One story draft, with its story once the agent has written it.
+      responses:
+        '200':
+          description: The draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingStoryDraft' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: discardMeetingStoryDraft
+      tags: [meetings]
+      summary: Discard a draft not yet created in Jira, so its topic can be drafted again.
+      description: |
+        A draft still being written has its run stopped: a queued one spends nothing, a running one is cancelled.
+        `409 invalid_state` when the draft was created in Jira; `404` when it was already discarded.
+      responses:
+        '204':
+          description: The draft is discarded.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /meeting-story-drafts/{draftId}/create-issue:
+    parameters:
+      - $ref: '#/components/parameters/MeetingStoryDraftId'
+    post:
+      operationId: createMeetingStoryIssue
+      tags: [meetings]
+      summary: Create a ready draft's story in Jira, in its series' project. Writes to Jira.
+      description: |
+        Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the
+        story, its acceptance criteria, what is out of scope, open questions and the meeting it came from as the
+        description; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its
+        issue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira
+        project; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).
+      responses:
+        '200':
+          description: The draft, created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingStoryDraft' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     webeam:
@@ -1591,6 +1723,16 @@ components:
       schema: { type: string, format: uuid }
     MeetingNoteId:
       name: noteId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MeetingSeriesId:
+      name: seriesId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MeetingStoryDraftId:
+      name: draftId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -3413,12 +3555,28 @@ components:
     MeetingSeries:
       type: object
       additionalProperties: false
-      required: [id, name, stakeholders, cadenceDays, createdBy, createdAt]
+      required:
+        [
+          id,
+          name,
+          stakeholders,
+          cadenceDays,
+          jiraProjectKey,
+          jiraIssueType,
+          createdBy,
+          createdAt,
+        ]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         stakeholders: { type: array, items: { type: string } }
         cadenceDays: { type: [integer, 'null'], minimum: 1, maximum: 366 }
+        jiraProjectKey:
+          oneOf:
+            - { $ref: '#/components/schemas/JiraProjectKey' }
+            - { type: 'null' }
+          description: Where stories drafted from the series' meetings are created; null when creating is off.
+        jiraIssueType: { $ref: '#/components/schemas/JiraIssueType' }
         createdBy: { $ref: '#/components/schemas/Actor' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
     MeetingSeriesList:
@@ -3444,6 +3602,185 @@ components:
           minimum: 1
           maximum: 366
           description: Days between meetings (7 for weekly).
+        jiraProjectKey: { $ref: '#/components/schemas/JiraProjectKey' }
+        jiraIssueType: { $ref: '#/components/schemas/JiraIssueType' }
+    UpdateMeetingSeriesRequest:
+      type: object
+      additionalProperties: false
+      required: [jiraProjectKey]
+      properties:
+        jiraProjectKey:
+          oneOf:
+            - { $ref: '#/components/schemas/JiraProjectKey' }
+            - { type: 'null' }
+        jiraIssueType: { $ref: '#/components/schemas/JiraIssueType' }
+    JiraProjectKey:
+      type: string
+      pattern: '^[A-Z][A-Z0-9_]+$'
+      maxLength: 50
+      description: A Jira project key, such as FIN.
+    JiraIssueType:
+      type: string
+      enum: [Story, Task, Bug]
+      description: The issue type a series' stories are created as; `Story` by default.
+    MeetingStoryDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [confirmSpend]
+      properties:
+        confirmSpend: { type: boolean, const: true }
+        noteIds:
+          type: array
+          maxItems: 200
+          items: { type: string, format: uuid }
+          description: The notes to draft from; all of the topic's notes when absent or empty.
+        budgetNanoAiu:
+          type: integer
+          minimum: 1
+          maximum: 50000000000
+          description: The run's AIU cap, at most 50 AIU; the server's story draft cap when absent.
+    StoryTemplate:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          title,
+          role,
+          want,
+          soThat,
+          acceptanceCriteria,
+          outOfScope,
+          openQuestions,
+        ]
+      description: A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it.
+      properties:
+        title: { type: string, minLength: 1, maxLength: 255 }
+        role:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 1000,
+            description: 'As a ...',
+          }
+        want:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 1000,
+            description: 'I want ...',
+          }
+        soThat:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 1000,
+            description: 'So that ...',
+          }
+        acceptanceCriteria:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 1000 }
+        outOfScope:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 1000 }
+        openQuestions:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 1000 }
+    MeetingStoryDraftStatus:
+      type: string
+      enum: [drafting, ready, failed, created]
+      description: |
+        `drafting`: the agent is writing it. `ready`: the story can be checked and created. `failed`: no story, see
+        `failure`. `created`: in Jira as `jiraKey`.
+    MeetingStoryDraft:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          topicId,
+          meetingId,
+          topicTitle,
+          noteIds,
+          status,
+          story,
+          failure,
+          target,
+          jiraKey,
+          jiraUrl,
+          jiraCreatedBy,
+          jiraCreatedAt,
+          run,
+          createdBy,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        topicId: { type: string, format: uuid }
+        meetingId: { type: string, format: uuid }
+        topicTitle: { type: string }
+        noteIds:
+          type: array
+          items: { type: string, format: uuid }
+          description: The chosen notes; empty means all of the topic's notes.
+        status: { $ref: '#/components/schemas/MeetingStoryDraftStatus' }
+        story:
+          oneOf:
+            - { $ref: '#/components/schemas/StoryTemplate' }
+            - { type: 'null' }
+        failure:
+          {
+            type: [string, 'null'],
+            description: 'Why there is no story, for a failed draft.',
+          }
+        target:
+          type: object
+          additionalProperties: false
+          required: [projectKey, issueType]
+          description: Where Create in Jira puts it, from the series; a null project means it cannot be created.
+          properties:
+            projectKey: { type: [string, 'null'] }
+            issueType: { type: [string, 'null'] }
+        jiraKey: { type: [string, 'null'], pattern: '^[A-Z][A-Z0-9_]+-[0-9]+$' }
+        jiraUrl:
+          {
+            type: [string, 'null'],
+            format: uri,
+            description: 'The issue in Jira, once created.',
+          }
+        jiraCreatedBy:
+          oneOf:
+            - { $ref: '#/components/schemas/Actor' }
+            - { type: 'null' }
+        jiraCreatedAt:
+          oneOf:
+            - { $ref: '#/components/schemas/Timestamp' }
+            - { type: 'null' }
+        run:
+          description: The agent run that wrote it.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [status, budgetNanoAiu, nanoAiu, cancelRequested]
+              properties:
+                status: { type: string }
+                budgetNanoAiu: { type: integer, minimum: 1 }
+                nanoAiu: { type: integer, minimum: 0 }
+                cancelRequested: { type: boolean }
+            - { type: 'null' }
+        createdBy: { $ref: '#/components/schemas/Actor' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+    MeetingStoryDraftList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MeetingStoryDraft' }
     MeetingSummary:
       type: object
       additionalProperties: false
@@ -3504,8 +3841,7 @@ components:
         text:
           {
             type: string,
-            description: What was said,
-            as plain text (untrusted).,
+            description: 'What was said, as plain text (untrusted).',
           }
         createdBy: { $ref: '#/components/schemas/Actor' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
@@ -3548,8 +3884,7 @@ components:
         raisedByEmail:
           {
             type: [string, 'null'],
-            description: The stakeholder who raised it,
-            when known.,
+            description: 'The stakeholder who raised it, when known.',
           }
         origin: { $ref: '#/components/schemas/TopicOrigin' }
         status: { $ref: '#/components/schemas/TopicStatus' }

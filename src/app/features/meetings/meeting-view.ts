@@ -8,11 +8,14 @@ import {
 } from '@angular/core';
 import { DialogService } from '@ui/dialog/dialog';
 import { meetingDay, meetingTime } from '@domain/meetings';
+import { targetText } from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { EndMeetingDialog, type EndMeetingData } from './end-meeting-dialog';
 import { meetingErrorView } from './meeting-errors';
 import { MeetingsStore } from './meetings-store';
+import { SeriesJiraDialog, type SeriesJiraData } from './series-jira-dialog';
+import { StoryDraftsStore } from './story-drafts-store';
 import { TopicCard } from './topic-card';
 import { TopicComposer } from './topic-composer';
 
@@ -75,6 +78,12 @@ const STATUS_WORDS = {
       display: flex;
       gap: 8px;
     }
+    .jira {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 8px;
+      align-items: center;
+    }
     .topics-head {
       display: flex;
       align-items: center;
@@ -126,6 +135,21 @@ const STATUS_WORDS = {
           @if (m.stakeholders.length > 0) {
             <span class="ah-muted">With {{ m.stakeholders.join(', ') }}</span>
           }
+          @if (series(); as s) {
+            <span class="jira">
+              <span class="ah-hint">{{ jiraTarget() }}</span>
+              <button
+                ahButton="ghost"
+                size="sm"
+                type="button"
+                (click)="changeTarget()"
+              >
+                {{
+                  s.jiraProjectKey === null ? 'Set the Jira project' : 'Change'
+                }}
+              </button>
+            </span>
+          }
         </div>
         <div class="actions">
           @if (m.status === 'planned') {
@@ -172,6 +196,13 @@ const STATUS_WORDS = {
         <ah-topic-composer />
       }
 
+      @if (drafts.loadError() !== null) {
+        <span class="ah-hint" role="status"
+          >The topics' user stories couldn't be read, so their state isn't
+          shown. Refresh to try again.</span
+        >
+      }
+
       <div class="topics-head">
         <h2>{{ m.status === 'planned' ? 'Topics to raise' : 'Topics' }}</h2>
         <span class="ah-tabs__count">{{ m.topics.length }}</span>
@@ -209,6 +240,7 @@ const STATUS_WORDS = {
 })
 export class MeetingView {
   protected readonly store = inject(MeetingsStore);
+  protected readonly drafts = inject(StoryDraftsStore);
   private readonly dialogs = inject(DialogService);
 
   /** The meeting in the address (`/meetings/:id`); none for `/meetings`. */
@@ -229,6 +261,21 @@ export class MeetingView {
     const at = this.meeting()?.endedAt ?? null;
     return at === null ? '' : `on ${meetingDay(at)} at ${meetingTime(at)}`;
   });
+  protected readonly series = this.store.openSeries;
+  /** "Stories go to FIN as Story", or that the series has none. */
+  protected readonly jiraTarget = computed(() => {
+    const s = this.series();
+    if (s === null) return '';
+    const text = targetText({
+      projectKey: s.jiraProjectKey,
+      issueType: s.jiraIssueType,
+    });
+    return text === null
+      ? 'Stories from this series are not created in Jira yet'
+      : `Stories go to ${text}`;
+  });
+  /** The open meeting's id, so the drafts are read once per meeting and not after every change to it. */
+  private readonly meetingId = computed(() => this.meeting()?.id ?? null);
   protected readonly openFailure = computed(() => {
     const error = this.store.openError();
     return error === null ? null : meetingErrorView(error);
@@ -245,6 +292,25 @@ export class MeetingView {
       if (!this.store.loaded()) return;
       untracked(() => void this.store.show(id));
     });
+    // The topics' story drafts belong to the meeting on screen.
+    effect(() => {
+      const meetingId = this.meetingId();
+      untracked(() => void this.drafts.load(meetingId));
+    });
+  }
+
+  /** Opens the series' Jira target. */
+  protected changeTarget(): void {
+    const series = this.series();
+    if (series === null) return;
+    this.dialogs
+      .open<
+        unknown,
+        SeriesJiraData
+      >(SeriesJiraDialog, { data: { store: this.store, series } })
+      .closed.subscribe((changed) => {
+        if (changed !== undefined) void this.drafts.reload();
+      });
   }
 
   /** Asks which open topics move on, then ends the meeting. */

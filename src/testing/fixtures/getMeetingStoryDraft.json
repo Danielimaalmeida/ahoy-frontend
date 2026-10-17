@@ -1,0 +1,37 @@
+{
+  "id": "9c1e4f2a-3b5d-4e6f-8a7b-1c2d3e4f5a60",
+  "topicId": "2f6d8b1c-4a3e-4c5d-9e7f-0a1b2c3d4e5f",
+  "meetingId": "7a3c9e1b-2d4f-4a6b-8c0e-1f2a3b4c5d6e",
+  "topicTitle": "Late fees for enterprise accounts",
+  "noteIds": ["4b8d2f6a-1c3e-4a5b-9d7f-2e4a6c8b0d1f"],
+  "status": "ready",
+  "story": {
+    "title": "Charge late fees on overdue enterprise invoices",
+    "role": "a finance user",
+    "want": "overdue enterprise invoices to carry a late fee I approve",
+    "soThat": "customers pay on time and we stop chasing them by hand",
+    "acceptanceCriteria": [
+      "Only accounts on the enterprise plan can get a late fee.",
+      "The fee is 1.5% per month, capped at 10% of the invoice."
+    ],
+    "outOfScope": ["Contract accounts"],
+    "openQuestions": ["Who approves a waiver?"]
+  },
+  "failure": null,
+  "target": {
+    "projectKey": "PROJ",
+    "issueType": "Story"
+  },
+  "jiraKey": null,
+  "jiraUrl": null,
+  "jiraCreatedBy": null,
+  "jiraCreatedAt": null,
+  "run": {
+    "status": "succeeded",
+    "budgetNanoAiu": 5000000000,
+    "nanoAiu": 1200000000,
+    "cancelRequested": false
+  },
+  "createdBy": "alex@example.com",
+  "createdAt": "2026-10-15T09:31:00.000Z"
+}

@@ -8,6 +8,7 @@ import { DialogService } from '@ui/dialog/dialog';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { meetingErrorView } from './meeting-errors';
 import { MeetingsStore } from './meetings-store';
+import { StoryDraftsStore } from './story-drafts-store';
 import { NewMeetingDialog, type NewMeetingData } from './new-meeting-dialog';
 
 /** One line of the left column. */
@@ -47,7 +48,7 @@ export function meetingLine(m: MeetingSummary): MeetingLine {
 @Component({
   selector: 'ah-meetings-shell',
   imports: [Banner, Button, RouterLink, RouterOutlet, Skeleton],
-  providers: [MeetingsStore],
+  providers: [MeetingsStore, StoryDraftsStore],
   styles: `
     :host {
       display: flex;

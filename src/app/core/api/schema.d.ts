@@ -1203,6 +1203,127 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/meeting-series/{seriesId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly seriesId: components['parameters']['MeetingSeriesId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Set where the stories drafted from the series' meetings are created in Jira.
+     * @description `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` defaults
+     *     to `Story`.
+     */
+    readonly patch: operations['updateMeetingSeries'];
+    readonly trace?: never;
+  };
+  readonly '/meetings/{meetingId}/story-drafts': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    /** The meeting's story drafts that were not discarded, newest first. */
+    readonly get: operations['listMeetingStoryDrafts'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meeting-topics/{topicId}/story-drafts': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly topicId: components['parameters']['MeetingTopicId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask an agent to draft a user story from a topic. May spend AIU.
+     * @description Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It
+     *     reads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)
+     *     and replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never
+     *     writes to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll
+     *     `getMeetingStoryDraft` until it is not `drafting`.
+     *
+     *     `409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503
+     *     unavailable` when story drafts are not configured or the control repo cannot be read.
+     */
+    readonly post: operations['requestMeetingStoryDraft'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meeting-story-drafts/{draftId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    /** One story draft, with its story once the agent has written it. */
+    readonly get: operations['getMeetingStoryDraft'];
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Discard a draft not yet created in Jira, so its topic can be drafted again.
+     * @description A draft still being written has its run stopped: a queued one spends nothing, a running one is cancelled.
+     *     `409 invalid_state` when the draft was created in Jira; `404` when it was already discarded.
+     */
+    readonly delete: operations['discardMeetingStoryDraft'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meeting-story-drafts/{draftId}/create-issue': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Create a ready draft's story in Jira, in its series' project. Writes to Jira.
+     * @description Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the
+     *     story, its acceptance criteria, what is out of scope, open questions and the meeting it came from as the
+     *     description; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its
+     *     issue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira
+     *     project; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).
+     */
+    readonly post: operations['createMeetingStoryIssue'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2191,6 +2312,9 @@ export interface components {
       readonly name: string;
       readonly stakeholders: readonly string[];
       readonly cadenceDays: number | null;
+      /** @description Where stories drafted from the series' meetings are created; null when creating is off. */
+      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
+      readonly jiraIssueType: components['schemas']['JiraIssueType'];
       readonly createdBy: components['schemas']['Actor'];
       readonly createdAt: components['schemas']['Timestamp'];
     };
@@ -2202,6 +2326,90 @@ export interface components {
       readonly stakeholders?: readonly components['schemas']['Email'][];
       /** @description Days between meetings (7 for weekly). */
       readonly cadenceDays?: number;
+      readonly jiraProjectKey?: components['schemas']['JiraProjectKey'];
+      readonly jiraIssueType?: components['schemas']['JiraIssueType'];
+    };
+    readonly UpdateMeetingSeriesRequest: {
+      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
+      readonly jiraIssueType?: components['schemas']['JiraIssueType'];
+    };
+    /** @description A Jira project key, such as FIN. */
+    readonly JiraProjectKey: string;
+    /**
+     * @description The issue type a series' stories are created as; `Story` by default.
+     * @enum {string}
+     */
+    readonly JiraIssueType: 'Story' | 'Task' | 'Bug';
+    readonly MeetingStoryDraftRequest: {
+      /** @constant */
+      readonly confirmSpend: true;
+      /** @description The notes to draft from; all of the topic's notes when absent or empty. */
+      readonly noteIds?: readonly string[];
+      /** @description The run's AIU cap, at most 50 AIU; the server's story draft cap when absent. */
+      readonly budgetNanoAiu?: number;
+    };
+    /** @description A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it. */
+    readonly StoryTemplate: {
+      readonly title: string;
+      /** @description As a ... */
+      readonly role: string;
+      /** @description I want ... */
+      readonly want: string;
+      /** @description So that ... */
+      readonly soThat: string;
+      readonly acceptanceCriteria: readonly string[];
+      readonly outOfScope: readonly string[];
+      readonly openQuestions: readonly string[];
+    };
+    /**
+     * @description `drafting`: the agent is writing it. `ready`: the story can be checked and created. `failed`: no story, see
+     *     `failure`. `created`: in Jira as `jiraKey`.
+     * @enum {string}
+     */
+    readonly MeetingStoryDraftStatus:
+      | 'drafting'
+      | 'ready'
+      | 'failed'
+      | 'created';
+    readonly MeetingStoryDraft: {
+      /** Format: uuid */
+      readonly id: string;
+      /** Format: uuid */
+      readonly topicId: string;
+      /** Format: uuid */
+      readonly meetingId: string;
+      readonly topicTitle: string;
+      /** @description The chosen notes; empty means all of the topic's notes. */
+      readonly noteIds: readonly string[];
+      readonly status: components['schemas']['MeetingStoryDraftStatus'];
+      readonly story: components['schemas']['StoryTemplate'] | null;
+      /** @description Why there is no story, for a failed draft. */
+      readonly failure: string | null;
+      /** @description Where Create in Jira puts it, from the series; a null project means it cannot be created. */
+      readonly target: {
+        readonly projectKey: string | null;
+        readonly issueType: string | null;
+      };
+      readonly jiraKey: string | null;
+      /**
+       * Format: uri
+       * @description The issue in Jira, once created.
+       */
+      readonly jiraUrl: string | null;
+      readonly jiraCreatedBy: components['schemas']['Actor'] | null;
+      readonly jiraCreatedAt: components['schemas']['Timestamp'] | null;
+      /** @description The agent run that wrote it. */
+      readonly run: {
+        readonly status: string;
+        readonly budgetNanoAiu: number;
+        readonly nanoAiu: number;
+        readonly cancelRequested: boolean;
+      } | null;
+      readonly createdBy: components['schemas']['Actor'];
+      readonly createdAt: components['schemas']['Timestamp'];
+    };
+    readonly MeetingStoryDraftList: {
+      readonly items: readonly components['schemas']['MeetingStoryDraft'][];
     };
     readonly MeetingSummary: {
       /** Format: uuid */
@@ -2235,7 +2443,7 @@ export interface components {
       readonly id: string;
       /** Format: uuid */
       readonly topicId: string;
-      /** @description What was said */
+      /** @description What was said, as plain text (untrusted). */
       readonly text: string;
       readonly createdBy: components['schemas']['Actor'];
       readonly createdAt: components['schemas']['Timestamp'];
@@ -2256,7 +2464,7 @@ export interface components {
       readonly meetingId: string;
       readonly title: string;
       readonly raisedBy: components['schemas']['RaisedBy'];
-      /** @description The stakeholder who raised it */
+      /** @description The stakeholder who raised it, when known. */
       readonly raisedByEmail: string | null;
       readonly origin: components['schemas']['TopicOrigin'];
       readonly status: components['schemas']['TopicStatus'];
@@ -2375,6 +2583,8 @@ export interface components {
     readonly MeetingId: string;
     readonly MeetingTopicId: string;
     readonly MeetingNoteId: string;
+    readonly MeetingSeriesId: string;
+    readonly MeetingStoryDraftId: string;
   };
   requestBodies: never;
   headers: never;
@@ -4067,6 +4277,173 @@ export interface operations {
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updateMeetingSeries: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly seriesId: components['parameters']['MeetingSeriesId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['UpdateMeetingSeriesRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The series. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingSeries'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly listMeetingStoryDrafts: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The drafts. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingStoryDraftList'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly requestMeetingStoryDraft: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly topicId: components['parameters']['MeetingTopicId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MeetingStoryDraftRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The draft, being written. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly getMeetingStoryDraft: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The draft. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly discardMeetingStoryDraft: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The draft is discarded. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly createMeetingStoryIssue: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The draft, created. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
     };
   };
 }

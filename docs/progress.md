@@ -1,7 +1,40 @@
 # Ahoy frontend · progress
 
+**Updated 2026-10-17 for Meetings, slice 2: user stories from topics** (on `feature/meetings-slice-2`, stacked on
+`feature/meetings-slice-1`, matching `ahoy-hosted`'s branches of the same names). Offline only; no API or TEST
+environment contacted; 0 AIU. Not committed.
+
+## Meetings, slice 2: user stories from topics (2026-10-17)
+
+- The user agreed slice 2 on 2026-10-17 (boards `UserStory` and `StoryReview`; `ahoy-hosted` design §5 "User
+  stories from topics"): a topic becomes a Jira user story that an agent writes in a fixed template; nobody types it.
+  The person checks it and creates it in Jira with one click, in the series' Jira project and issue type.
+- Contract: re-vendored from `ahoy-hosted` `feature/meetings-slice-2` (its uncommitted working tree on top of
+  fad45c3; the header says so): six operations (`updateMeetingSeries`, `listMeetingStoryDrafts`,
+  `requestMeetingStoryDraft`, `getMeetingStoryDraft`, `discardMeetingStoryDraft`, `createMeetingStoryIssue`) and a
+  Jira target on each series. `schema.d.ts` was edited by hand to match, since `openapi-typescript` cannot be installed
+  here; `npm run api:check` must confirm it. Types, guards, `ApiClient` methods, fixtures and the mock's drafts (a
+  simulated agent that finishes after 1.5 s, a pretend Jira, a switch to fail a draft or refuse Create).
+- Page (`features/meetings/`): each topic not moved on gets "Turn into a user story", also after the meeting ended.
+  The dialog lists the topic's notes to use (all ticked), shows "Grill me" as coming later and "Draft it for me", an
+  optional AIU limit (at most 50) and the cost. The topic card then shows the draft's state, read again every 3 s
+  while the agent writes. "Check the story" opens the review: the story as Jira will get it (title, sentence,
+  acceptance criteria, out of scope, open questions, where it goes), Create in Jira (only with a Jira project), Write
+  it again, Change project or type; a failed draft says why and offers Try again; a created one links to Jira. The
+  meeting header shows where the series' stories go, with Change. Domain rules in `domain/story-drafts.ts`; errors in
+  `story-errors.ts`; state in `StoryDraftsStore`.
+- What ran here (npm registry blocked, so no Angular, Vitest or ESLint): the stand-in TypeScript check over the
+  feature, its imports and specs (templates not checked); the pure specs under the shim: story drafts 9/9, story
+  errors 4/4, mock meetings 10/10 (5 new for drafts), meeting guards 9/9, API contract 128/128, mock conformance 8/8,
+  domain meetings 11/11, meeting errors 5/5; the boundary check; `openapi-mirror --check`; Prettier on every changed
+  file.
+- Did not run: `ng build`, `npm run typecheck` (strict templates), `npm run lint`, `npm run api:check`, Vitest,
+  including three new page specs in `features/meetings/meetings.spec.ts` (draft and create, a failed draft, a series
+  without a Jira project), and any browser check. Needs from other lanes: none; `ahoy-hosted` migrations 0014 and 0015
+  must be applied before the page works against a real API, and story drafts need `AHOY_STORY_DRAFT_AGENT` there.
+
 **Updated 2026-10-16 for Meetings, slice 1** (on `feature/meetings-slice-1`, matching `ahoy-hosted`'s branch of the
-same name). Offline only; no API or TEST environment contacted; 0 AIU. Not committed.
+same name; committed and in PR #33). Offline only; no API or TEST environment contacted; 0 AIU.
 
 ## Meetings, slice 1 (2026-10-16)
 
@@ -895,9 +928,10 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-Meetings, slice 1 (2026-10-16) is on `feature/meetings-slice-1`, not committed: the Meetings page (list, meeting,
-topics us/them, notes, carry-over) on the vendored contract and the mock backend. Only a stand-in type check, the pure
-specs and Prettier ran here (npm registry blocked); see its section above.
+Meetings, slice 2 (2026-10-17) is on `feature/meetings-slice-2`, not committed: a topic turned into a user story by an
+agent, checked and created in Jira with one click. Slice 1 (2026-10-16) is in PR #33: the Meetings page (list,
+meeting, topics us/them, notes, carry-over). For both, only a stand-in type check, the pure specs and Prettier ran here
+(npm registry blocked); see their sections above.
 
 Blocked is not Ended (PR #31, merged 2026-10-15) and its review fixes (on `fix/blocked-review-followups`): blocked
 voyages have their own chip and tile; Needs you lists only those a person can unblock. Specs updated; nothing ran here
@@ -1035,10 +1069,12 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-Meetings, slice 1: run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on
-Node 24 (nothing Angular ran when it was written), fix what strict templates or lint find, then open `/meetings` on
-`npm run start:mock` and against a local `ahoy-hosted --simulate` with migration 0014. Commit and push need the user's
-approval. Slices 2–4 (user story by an agent, Grill me, Confluence) each need their own agreement first.
+Meetings, slices 1 and 2: let PR #33's CI run the full check, then on `feature/meetings-slice-2` run `npm run api:check`
+and `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on Node 24 (nothing Angular
+ran when either was written), fix what strict templates or lint find, then try `/meetings` on `npm run start:mock`
+(Turn into a user story, Check the story, Create in Jira) and against a local `ahoy-hosted --simulate` with migrations
+0014 and 0015. Commit and push need the user's approval. Slices 3 (Grill me) and 4 (Confluence) each need their own
+agreement first.
 
 Run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on Node 24 for PR #31
 (merged untested) and the review-fix branch `fix/blocked-review-followups`, then check Needs you against a local
@@ -1076,9 +1112,10 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The newest change, on `feature/meetings-slice-1` (2026-10-16, uncommitted), adds the Meetings page for stakeholder
-meetings, slice 1, matching `ahoy-hosted`'s branch of the same name. Nothing Angular ran in the session that wrote it
-(npm registry blocked): run the full check on Node 24 first. See "Meetings, slice 1".
+The newest change, on `feature/meetings-slice-2` (2026-10-17, uncommitted, stacked on slice 1's PR #33), turns a
+meeting topic into a Jira user story: an agent drafts it, a person checks it and creates it in Jira with one click.
+`schema.d.ts` was edited by hand (no `openapi-typescript` here), and nothing Angular ran in the session that wrote it
+(npm registry blocked): run `npm run api:check` and the full check on Node 24 first. See "Meetings, slice 2".
 
 The newest change, on `fix/blocked-review-followups` (after PR #31 merged), keeps a voyage rejected at a human gate
 out of Needs you: an aground voyage is listed with Unblock only when its last move to `blocked` came from a phase

@@ -23,6 +23,7 @@ import type {
   KnowledgeReviewRequest,
   MeetingNoteRequest,
   MeetingStatus,
+  MeetingStoryDraftRequest,
   MeetingTopicOrderRequest,
   ModelChoice,
   ModelSlot,
@@ -36,6 +37,7 @@ import type {
   StopStoryRequest,
   StoryPage,
   UpdateMeetingRequest,
+  UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
   AnswerRequest,
   JiraBacklog,
@@ -845,6 +847,40 @@ export class MockAhoyServer {
             call.actor,
             call.body as CreateMeetingSeriesRequest // validated
           )
+        );
+      case 'updateMeetingSeries':
+        return jsonResponse(
+          200,
+          this.meetings.updateSeries(
+            call.path['seriesId'] ?? '',
+            call.body as UpdateMeetingSeriesRequest // validated
+          )
+        );
+      case 'listMeetingStoryDrafts':
+        return jsonResponse(200, {
+          items: this.meetings.listDrafts(call.path['meetingId'] ?? ''),
+        });
+      case 'requestMeetingStoryDraft':
+        return jsonResponse(
+          202,
+          this.meetings.requestDraft(
+            call.actor,
+            call.path['topicId'] ?? '',
+            call.body as MeetingStoryDraftRequest // validated
+          )
+        );
+      case 'getMeetingStoryDraft':
+        return jsonResponse(
+          200,
+          this.meetings.getDraft(call.path['draftId'] ?? '')
+        );
+      case 'discardMeetingStoryDraft':
+        this.meetings.discardDraft(call.path['draftId'] ?? '');
+        return { kind: 'empty', status: 204, headers: {} };
+      case 'createMeetingStoryIssue':
+        return jsonResponse(
+          200,
+          this.meetings.createIssue(call.actor, call.path['draftId'] ?? '')
         );
       case 'getMetrics':
         return jsonResponse(200, this.metrics(call), {
