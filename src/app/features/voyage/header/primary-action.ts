@@ -67,3 +67,25 @@ export function canRefreshIntake(
     !runs.some((run) => run.phase === 'implementation')
   );
 }
+
+/** The phases a voyage's design can be refreshed from while it is halted, as `refreshDesign` allows. */
+const DESIGN_REFRESH_HALTS: readonly string[] = ['implementation', 'pr_review'];
+
+/**
+ * Whether the header offers Refresh design, as `refreshDesign` allows (it refuses the rest with `409 invalid_state`): no
+ * run is under way, and either a design was read and the voyage is halted in implementation or review or waits at the
+ * delivery gate, or an earlier refresh's links stopped it in the design phase (they could not be read), which only
+ * another refresh can correct.
+ */
+export function canRefreshDesign(
+  story: Pick<Story, 'phase' | 'status' | 'currentRunId'>,
+  design: { readonly read: boolean; readonly refreshed: boolean }
+): boolean {
+  if (story.currentRunId !== null) return false;
+  if (story.status === 'halted' && story.phase === 'design')
+    return design.refreshed;
+  if (!design.read) return false;
+  return story.status === 'halted'
+    ? DESIGN_REFRESH_HALTS.includes(story.phase)
+    : story.status === 'awaiting_decision' && story.phase === 'delivery_gate';
+}

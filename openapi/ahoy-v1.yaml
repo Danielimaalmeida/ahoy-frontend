@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: e86fcb654647529ddbae5d9d3f3017407ad7adab
+# Commit: ab1c2a0f909b55594a6af4d0b2079fb47803fa1b
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -100,7 +100,7 @@ paths:
         Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
         WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
         `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-        `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
+        `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
         AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
 
         The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
@@ -650,6 +650,42 @@ paths:
       responses:
         '202':
           description: The packages are reopened and the story is ready.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/refresh-design:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: refreshDesign
+      tags: [decisions]
+      summary: Replace a story's Figma design with new frames and send its UI packages round again. May spend AIU.
+      description: |
+        Human-triggered, for a story whose design was read from Figma, while it is halted in implementation or review
+        or waits at the delivery gate (left undecided, it opens again when the work comes back), with no active run;
+        also while it is halted in the design phase after an earlier refresh (links that could not be read, or a pack
+        the gate refused), which only another refresh can correct. `figmaLinks` are the new frames (each a figma.com
+        link with its node-id); they replace the Jira snapshot's links for this story and every later refresh starts
+        from them. A Figma link in `reason` is not read. Nothing compares the old design with the new one.
+        The current design spec moves to `history/design-v<version>/` as a record (no run is seeded with it), every
+        work package of a UI implementer is reopened, however its last run ended, with a note to make the delivered UI
+        match the new frames (no rework round or revision is charged), and the story goes to the design phase, which
+        reads the new frames and runs the density agent before the packages run again. The plan and the acceptance
+        criteria still win where the new design differs. confirmSpend must be true; the request itself spends nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshDesignRequest' }
+      responses:
+        '202':
+          description: The design refresh is scheduled; the story is ready in the design phase.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Story' }
@@ -1935,6 +1971,26 @@ components:
           uniqueItems: true
           items: { $ref: '#/components/schemas/RepoAlias' }
         expectedVersion: { $ref: '#/components/schemas/Version' }
+    RefreshDesignRequest:
+      type: object
+      required: [expectedVersion, reason, figmaLinks, confirmSpend]
+      additionalProperties: false
+      properties:
+        expectedVersion: { $ref: '#/components/schemas/Version' }
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          pattern: "\\S"
+          description: Why the design changed. The UI implementers and the reviewer are given it as a person's decision.
+        figmaLinks:
+          type: array
+          minItems: 1
+          maxItems: 10
+          uniqueItems: true
+          description: The new Figma frames, each a figma.com /design/, /file/ or /proto/ link with its node-id.
+          items: { type: string, minLength: 1, maxLength: 2000 }
+        confirmSpend: { type: boolean, const: true }
     AmendAnchorsRequest:
       type: object
       required: [amendments, reason, expectedVersion]
@@ -2842,6 +2898,7 @@ components:
         - story.halted
         - story.resumed
         - story.intake_refreshed
+        - design.refreshed
         - story.budget_changed
         - story.models_changed
         - story.phase_changed

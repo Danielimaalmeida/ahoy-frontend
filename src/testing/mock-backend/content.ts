@@ -134,6 +134,48 @@ export function implementationReport(key: string): string {
   ].join('\n');
 }
 
+/** The density usage pack the simulated design phase writes. */
+export const DENSITY_PACK = [
+  '# Density usage pack',
+  '',
+  '## Button  -> ds-button, variant primary',
+  '',
+  '## Text field  -> ds-input',
+  '',
+].join('\n');
+
+/**
+ * The design index the simulated design phase writes: the links of `design/figma-links.md` among `files` (a design
+ * refresh's), each read as one frame.
+ */
+export function designIndex(
+  files: readonly { readonly path: string; readonly text: string }[]
+): string {
+  const links =
+    files
+      .find((f) => f.path === 'design/figma-links.md')
+      ?.text.split('\n')
+      .filter((line) => line.startsWith('- '))
+      .map((line) => line.slice(2)) ?? [];
+  return `${JSON.stringify(
+    {
+      v: 1,
+      source: 'figma-rest',
+      links: links.map((url) => ({ url })),
+      frames: links.map((url, i) => ({
+        id: `${i + 1}:1`,
+        name: `Frame ${i + 1}`,
+        url,
+      })),
+      components: [],
+      icons: [],
+      notes: [],
+    },
+    null,
+    2
+  )}\n`;
+}
+
 /** The steps a run of a phase logs, in order (enough for the longest simulated run). */
 export function progressSteps(
   phase: string,

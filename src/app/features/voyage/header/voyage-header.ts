@@ -10,6 +10,7 @@ import { currentRunView } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
 import {
+  canRefreshDesign,
   canRefreshIntake,
   headerActions,
   primaryAction,
@@ -24,7 +25,8 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
 /**
  * The voyage header (wireframes `PlanReview` and `Halted`): key, status badge with the API words (`awaiting_decision ·
  * plan_accepted`, `halted · run_failed`), title, the primary action for the status with Budget, Models, Back to intake
- * (in planning and plan review) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
+ * (in planning and plan review), Refresh design (with a design read, halted in implementation or review or at the
+ * delivery gate, or halted in design after a refresh) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
  * round, the pull requests the harness opened, agent config). Shown once the story is read.
  */
 @Component({
@@ -93,6 +95,11 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
               @if (v.intake) {
                 <button type="button" ahButton (click)="openRefreshIntake()">
                   Back to intake
+                </button>
+              }
+              @if (v.design) {
+                <button type="button" ahButton (click)="openRefreshDesign()">
+                  Refresh design
                 </button>
               }
               @if (v.actions.stop) {
@@ -216,6 +223,7 @@ export class VoyageHeader {
         story,
         this.context.counts().runs === null ? null : this.context.runs()
       ),
+      design: canRefreshDesign(story, this.context.design()),
       run: currentRunView(story.currentRunId, this.context.runs()),
       round: this.roundText(),
       pullRequests: (this.context.state()?.pullRequests ?? []).map((pr) => ({
@@ -259,5 +267,9 @@ export class VoyageHeader {
 
   protected openRefreshIntake(): void {
     this.dialogs.refreshIntake(this.context);
+  }
+
+  protected openRefreshDesign(): void {
+    this.dialogs.refreshDesign(this.context);
   }
 }

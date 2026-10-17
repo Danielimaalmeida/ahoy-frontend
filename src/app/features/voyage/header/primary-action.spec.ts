@@ -1,4 +1,5 @@
 import {
+  canRefreshDesign,
   canRefreshIntake,
   headerActions,
   primaryAction,
@@ -104,5 +105,74 @@ describe('canRefreshIntake', () => {
       false
     );
     expect(canRefreshIntake({ ...planning, phase: 'design' }, [])).toBe(false);
+  });
+});
+
+describe('canRefreshDesign', () => {
+  const atDelivery = {
+    phase: 'delivery_gate',
+    status: 'awaiting_decision',
+    currentRunId: null,
+  } as const;
+  const READ = { read: true, refreshed: false } as const;
+  const NONE = { read: false, refreshed: false } as const;
+
+  it('offers Refresh design at the delivery gate and on a halted implementation or review, once a design was read', () => {
+    expect(canRefreshDesign(atDelivery, READ)).toBe(true);
+    expect(
+      canRefreshDesign(
+        { ...atDelivery, phase: 'implementation', status: 'halted' },
+        READ
+      )
+    ).toBe(true);
+    expect(
+      canRefreshDesign(
+        { ...atDelivery, phase: 'pr_review', status: 'halted' },
+        READ
+      )
+    ).toBe(true);
+  });
+
+  it('offers it in the design phase only after a refresh, so a person can correct links that could not be read', () => {
+    const stopped = {
+      ...atDelivery,
+      phase: 'design',
+      status: 'halted',
+    } as const;
+    expect(canRefreshDesign(stopped, { read: false, refreshed: true })).toBe(
+      true
+    );
+    expect(canRefreshDesign(stopped, READ)).toBe(false);
+    expect(
+      canRefreshDesign(
+        { ...stopped, status: 'running' },
+        { read: false, refreshed: true }
+      )
+    ).toBe(false);
+  });
+
+  it('offers nothing without a design, with a run under way, or where the API refuses a refresh', () => {
+    expect(canRefreshDesign(atDelivery, NONE)).toBe(false);
+    expect(canRefreshDesign({ ...atDelivery, currentRunId: 'r-1' }, READ)).toBe(
+      false
+    );
+    expect(
+      canRefreshDesign(
+        { ...atDelivery, phase: 'plan_review', status: 'awaiting_decision' },
+        READ
+      )
+    ).toBe(false);
+    expect(
+      canRefreshDesign(
+        { ...atDelivery, phase: 'implementation', status: 'running' },
+        READ
+      )
+    ).toBe(false);
+    expect(
+      canRefreshDesign(
+        { ...atDelivery, phase: 'done', status: 'terminal' },
+        READ
+      )
+    ).toBe(false);
   });
 });

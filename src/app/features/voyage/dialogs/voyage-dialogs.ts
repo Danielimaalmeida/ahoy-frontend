@@ -31,6 +31,7 @@ import {
   PackageDecisionDialog,
   type PackageDecisionDialogData,
 } from './package-decision-dialog';
+import { RefreshDesignDialog } from './refresh-design-dialog';
 import { RefreshIntakeDialog } from './refresh-intake-dialog';
 import { ResumeDialog } from './resume-dialog';
 import { StopDialog } from './stop-dialog';
@@ -71,6 +72,14 @@ export class VoyageDialogs {
   refreshIntake(context: VoyageContext): DialogRef<Story, RefreshIntakeDialog> {
     return this.dialogs.open<Story, VoyageDialogData, RefreshIntakeDialog>(
       RefreshIntakeDialog,
+      { data: { context } }
+    );
+  }
+
+  /** "Refresh the design of PROJ-123?" */
+  refreshDesign(context: VoyageContext): DialogRef<Story, RefreshDesignDialog> {
+    return this.dialogs.open<Story, VoyageDialogData, RefreshDesignDialog>(
+      RefreshDesignDialog,
       { data: { context } }
     );
   }

@@ -120,6 +120,25 @@ describe('eventText: the types whose payload is confirmed', () => {
     });
   });
 
+  it("shows a design refresh as a person's act, with where it came from, why and what it reopens", () => {
+    const refreshed = event(
+      'design.refreshed',
+      {
+        from: 'delivery_gate',
+        reason: 'The designer moved the totals',
+        packages: ['WP2', 3],
+        figmaLinks: ['https://www.figma.com/design/Fk2/x?node-id=1-2'],
+      },
+      'jordan@example.com'
+    );
+    expect(eventText(refreshed)).toMatchObject({
+      title: 'Design refreshed',
+      details:
+        'delivery_gate → design · The designer moved the totals · reopens WP2',
+      kind: 'human',
+    });
+  });
+
   it('shows a queued run with its crew member, model and effort, and links the run', () => {
     const queued = event('run.queued', {
       runId: 'r-04',
