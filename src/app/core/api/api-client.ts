@@ -107,6 +107,7 @@ import type {
   RefinementList,
   RefinementRequest,
   RefinementSummary,
+  RefreshDesignRequest,
   RefreshIntakeRequest,
   ResumeStoryRequest,
   Run,
@@ -345,6 +346,23 @@ export class ApiClient {
     return this.post(
       'refreshIntake',
       `/stories/${segment(key)}/refresh-intake`,
+      body,
+      isStory
+    );
+  }
+
+  /**
+   * Replaces the story's design with new Figma frames, from a halted implementation or review or at the delivery gate:
+   * the old design is archived, every UI package is reopened and the design phase reads the new frames. May spend AIU.
+   * The answer (202) is the story.
+   */
+  refreshDesign(
+    key: string,
+    body: RefreshDesignRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'refreshDesign',
+      `/stories/${segment(key)}/refresh-design`,
       body,
       isStory
     );

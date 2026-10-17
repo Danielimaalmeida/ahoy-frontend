@@ -28,6 +28,15 @@ export const DEFAULT_CONTROL_SHA = 'a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302';
 /** The file the planner writes. */
 export const PLAN_FILE = 'implementation-plan.md';
 
+/** The design spec's index, which the design phase writes when it reads a story's Figma frames. */
+export const DESIGN_INDEX_FILE = 'design/index.json';
+
+/** The links of a design refresh, which the design phase reads instead of the Jira snapshot's. */
+export const DESIGN_LINKS_FILE = 'design/figma-links.md';
+
+/** The implementers whose work packages a design refresh reopens (`AHOY_DESIGN_UI_AGENTS` of the mock's server). */
+export const UI_AGENTS: readonly string[] = ['implementer'];
+
 /** The system actor of the reconciler; the UI shows it as "Ahoy". */
 export const SYSTEM_ACTOR = 'ahoy-reconciler';
 
@@ -66,6 +75,13 @@ export const PHASE_TABLE: Readonly<Record<string, PhaseRow>> = {
     gate: 'plan_accepted',
     onPass: 'implementation',
     producer: 'planning',
+  },
+  // Reached only by a design refresh here: the fixture's table routes plan_review straight to implementation.
+  design: {
+    kind: 'auto',
+    agent: 'density-reader',
+    gate: 'design',
+    onPass: 'implementation',
   },
   implementation: {
     kind: 'auto',
@@ -292,9 +308,14 @@ export class Voyage {
     );
   }
 
-  /** Adds a complete artifact set made of the current one with `changes` applied; returns its number. */
-  addRevision(changes: readonly ArtifactFile[], at: number): number {
+  /** Adds a complete artifact set made of the current one with `changes` applied and `removed` left out; returns its number. */
+  addRevision(
+    changes: readonly ArtifactFile[],
+    at: number,
+    removed: readonly string[] = []
+  ): number {
     const files = new Map((this.current?.files ?? []).map((f) => [f.path, f]));
+    for (const path of removed) files.delete(path);
     for (const change of changes) files.set(change.path, change);
     const number = this.revisions.length + 1;
     this.revisions.push({

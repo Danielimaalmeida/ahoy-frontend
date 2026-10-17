@@ -56,7 +56,14 @@ export const CONTEXT_RESOURCES: readonly StoryResourceName[] = [
   'questions',
   'gates',
   'models',
+  'artifacts',
 ];
+
+/** The design spec's index, which the harness writes when it reads a story's Figma frames. */
+const DESIGN_INDEX = 'design/index.json';
+
+/** The links of a design refresh, which the design phase reads instead of the Jira snapshot's. */
+const DESIGN_LINKS = 'design/figma-links.md';
 
 /** The open voyage and its event history, held together. */
 interface Held {
@@ -135,6 +142,20 @@ export class VoyageContext {
     return story === null
       ? 0
       : remainingNano(story.budgetNanoAiu, story.spentNanoAiu);
+  });
+
+  /**
+   * What the voyage's artifacts say about its design: `read` when a design was read from Figma (`design/index.json`),
+   * `refreshed` when a design refresh gave it links (`design/figma-links.md`); both false until the artifacts are read.
+   */
+  readonly design = computed(() => {
+    const paths = (this.held()?.handle.artifacts.value()?.items ?? []).map(
+      (artifact) => artifact.path
+    );
+    return {
+      read: paths.includes(DESIGN_INDEX),
+      refreshed: paths.includes(DESIGN_LINKS),
+    };
   });
 
   /** The voyage's runs, as the API lists them; empty until read. */
@@ -276,6 +297,24 @@ export class VoyageContext {
       this.api.refreshIntake(key, {
         expectedVersion,
         reason,
+        confirmSpend: true,
+      })
+    );
+  }
+
+  /**
+   * Replaces the voyage's design with new Figma frames (`refreshDesign`), with why it changed, confirming that it may
+   * spend AIU. The `202` story goes to the store; the state and artifacts follow with the `design.refreshed` event.
+   */
+  refreshDesign(
+    reason: string,
+    figmaLinks: readonly string[]
+  ): Promise<CommandOutcome<Story>> {
+    return this.storyCommand((key, expectedVersion) =>
+      this.api.refreshDesign(key, {
+        expectedVersion,
+        reason,
+        figmaLinks: [...figmaLinks],
         confirmSpend: true,
       })
     );

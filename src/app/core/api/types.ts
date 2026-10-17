@@ -385,6 +385,12 @@ export type Diagnosis = Schemas['Diagnosis'];
 /** Body of `refreshIntake`: sends a story in planning or plan review back to intake. `confirmSpend` must be true. */
 export type RefreshIntakeRequest = Schemas['RefreshIntakeRequest'];
 
+/**
+ * Body of `refreshDesign`: replaces a story's Figma design with the frames of `figmaLinks` and sends its UI packages
+ * round again. `confirmSpend` must be true.
+ */
+export type RefreshDesignRequest = Schemas['RefreshDesignRequest'];
+
 /** An agent's pre-refinement of a Jira backlog item; `content` is its Markdown, non-null exactly when it succeeded. */
 export type Refinement = Schemas['Refinement'];
 

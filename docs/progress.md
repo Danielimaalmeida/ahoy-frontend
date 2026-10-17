@@ -1,19 +1,20 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-17 for Meetings, slice 2: user stories from topics** (on `feature/meetings-slice-2`, stacked on
-`feature/meetings-slice-1`, matching `ahoy-hosted`'s branches of the same names). Offline only; no API or TEST
-environment contacted; 0 AIU. Not committed.
+**Updated 2026-10-17 for Meetings, slice 2: user stories from topics** (on `feature/meetings-slice-2`, based on `main` after
+slice 1 merged in PR #33, matching `ahoy-hosted`'s branch of the same name). Offline only; no API or TEST environment
+contacted; 0 AIU.
 
 ## Meetings, slice 2: user stories from topics (2026-10-17)
 
 - The user agreed slice 2 on 2026-10-17 (boards `UserStory` and `StoryReview`; `ahoy-hosted` design §5 "User
   stories from topics"): a topic becomes a Jira user story that an agent writes in a fixed template; nobody types it.
   The person checks it and creates it in Jira with one click, in the series' Jira project and issue type.
-- Contract: re-vendored from `ahoy-hosted` `feature/meetings-slice-2` (its uncommitted working tree on top of
-  fad45c3; the header says so): six operations (`updateMeetingSeries`, `listMeetingStoryDrafts`,
+- Contract: re-vendored from `ahoy-hosted` `feature/meetings-slice-2` at bc2d6d8 (after merging its `main`): six
+  operations (`updateMeetingSeries`, `listMeetingStoryDrafts`,
   `requestMeetingStoryDraft`, `getMeetingStoryDraft`, `discardMeetingStoryDraft`, `createMeetingStoryIssue`) and a
-  Jira target on each series. `schema.d.ts` was edited by hand to match, since `openapi-typescript` cannot be installed
-  here; `npm run api:check` must confirm it. Types, guards, `ApiClient` methods, fixtures and the mock's drafts (a
+  Jira target on each series. `schema.d.ts`: `main`'s generated file with slice 2's types added by hand in the
+  generator's style, since `openapi-typescript` cannot be installed here; `npm run api:check` must confirm it (or
+  `npm run api:types` regenerates it). Types, guards, `ApiClient` methods, fixtures and the mock's drafts (a
   simulated agent that finishes after 1.5 s, a pretend Jira, a switch to fail a draft or refuse Create).
 - Page (`features/meetings/`): each topic not moved on gets "Turn into a user story", also after the meeting ended.
   The dialog lists the topic's notes to use (all ticked), shows "Grill me" as coming later and "Draft it for me", an
@@ -33,8 +34,43 @@ environment contacted; 0 AIU. Not committed.
   without a Jira project), and any browser check. Needs from other lanes: none; `ahoy-hosted` migrations 0014 and 0015
   must be applied before the page works against a real API, and story drafts need `AHOY_STORY_DRAFT_AGENT` there.
 
-**Updated 2026-10-16 for Meetings, slice 1** (on `feature/meetings-slice-1`, matching `ahoy-hosted`'s branch of the
-same name; committed and in PR #33). Offline only; no API or TEST environment contacted; 0 AIU.
+**Updated 2026-10-17 for Refresh design** (on `claude/relaxed-bell-qi5pe0`, matching `ahoy-hosted`'s branch of the
+same name). Offline only; no API or TEST environment contacted; 0 AIU. Not committed.
+
+## Refresh design (2026-10-17)
+
+- The user asked for a way to rebuild a voyage's UI when the designer changes the Figma design after implementation,
+  usually in a copy of the frames with new links (agreed in `ahoy-hosted` design §4 "Design refresh"). Nothing
+  compares the old and new design: the implementer compares its code with the new frames.
+- Contract: `openapi/ahoy-v1.yaml` vendored from `ahoy-hosted` ab1c2a0, with `refreshDesign`
+  (`POST /stories/{key}/refresh-design`: `reason`, `figmaLinks`, `confirmSpend: true`) and event `design.refreshed`;
+  `schema.d.ts` and the JSON mirror regenerated with `npm run api:types`.
+- `ApiClient.refreshDesign`, `VoyageContext.refreshDesign` and `design` (`read`: the artifacts list holds
+  `design/index.json`; `refreshed`: it holds `design/figma-links.md`; the context now also watches `artifacts`),
+  `canRefreshDesign` (no run, and a design read with the voyage halted in implementation or review or waiting at the
+  delivery gate, or halted in design after a refresh, to correct links that could not be read) and a Refresh design
+  button in the voyage header. The
+  dialog takes the new links one per line (`domain/figma-links.ts` checks them before sending: figma.com links naming
+  a frame, at most 10, none twice) and the reason, with the AIU warning; the API's field errors show under each field.
+  The log names `design.refreshed` ("Design refreshed · delivery_gate → design · reason · reopens WP2"), and the event
+  refreshes the story, state and artifacts.
+- Mock backend: `refreshDesign` with the hosted rules (its `AHOY_DESIGN_UI_AGENTS` is the mock's `implementer`), a
+  `design` row in its phase table reached only by a refresh, and a simulated design step that writes
+  `design/index.json` and `design/density.md`. No seeded voyage has a design, so on `npm run start:mock` the button
+  shows only once a design artifact exists.
+- What ran, in this session's cloud container on Node 24.22.0 (npm registry reachable, but `@acme-fedev/auth` and
+  `@acme-fedev/playwright-helpers` are private: the install left them out and used a local stand-in for
+  `@acme-fedev/auth` under `node_modules`, not committed, and the Linux native bindings the lockfile lacks):
+  `npm run typecheck` (both projects, boundary check ok), `ng build`, `npm run lint` (ESLint and Stylelint) and
+  `npm run api:check` pass. After the code-review fixes, `ng test`: 161 files, 2,842 tests pass and 8 fail; the same 8 fail on `main` without this
+  change (meetings 4, voyages 2, top bar 1, All hands 1: the Meetings slice's top-bar link and seeds). New specs:
+  `figma-links.spec.ts`, `refresh-design-dialog.spec.ts`, `canRefreshDesign`, the mock's design refresh journey, the
+  log text and the contract cases. `format:check` warns on the same 10 files as on `main`.
+- Did not run: Playwright e2e, any browser check, or a local `ahoy-hosted --simulate`. Needs from other lanes: the
+  `ahoy-hosted` change merged with this one.
+
+**Updated 2026-10-16 for Meetings, slice 1** (on `feature/meetings-slice-1`, merged as PR #33). Offline only; no API
+or TEST environment contacted; 0 AIU.
 
 ## Meetings, slice 1 (2026-10-16)
 
@@ -928,10 +964,17 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
-Meetings, slice 2 (2026-10-17) is on `feature/meetings-slice-2`, not committed: a topic turned into a user story by an
-agent, checked and created in Jira with one click. Slice 1 (2026-10-16) is in PR #33: the Meetings page (list,
-meeting, topics us/them, notes, carry-over). For both, only a stand-in type check, the pure specs and Prettier ran here
-(npm registry blocked); see their sections above.
+Meetings, slice 2 (2026-10-17) is on `feature/meetings-slice-2`, in its pull request: a topic turned into a user story
+by an agent, checked and created in Jira with one click. Only a stand-in type check, the pure specs and Prettier ran
+here (npm registry blocked); see its section above.
+
+Refresh design (2026-10-17) is on `claude/relaxed-bell-qi5pe0`, not committed: a voyage with a Figma design can be
+sent round again with the designer's new links from its header. Build, typecheck, lint and the unit tests ran here
+(8 failures that `main` has too); see its section above.
+
+Meetings, slice 1 (2026-10-16) is merged (PR #33): the Meetings page (list, meeting,
+topics us/them, notes, carry-over) on the vendored contract and the mock backend. Only a stand-in type check, the pure
+specs and Prettier ran here (npm registry blocked); see its section above.
 
 Blocked is not Ended (PR #31, merged 2026-10-15) and its review fixes (on `fix/blocked-review-followups`): blocked
 voyages have their own chip and tile; Needs you lists only those a person can unblock. Specs updated; nothing ran here
@@ -1069,12 +1112,15 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
-Meetings, slices 1 and 2: let PR #33's CI run the full check, then on `feature/meetings-slice-2` run `npm run api:check`
-and `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on Node 24 (nothing Angular
-ran when either was written), fix what strict templates or lint find, then try `/meetings` on `npm run start:mock`
-(Turn into a user story, Check the story, Create in Jira) and against a local `ahoy-hosted --simulate` with migrations
-0014 and 0015. Commit and push need the user's approval. Slices 3 (Grill me) and 4 (Confluence) each need their own
-agreement first.
+Meetings, slice 2: on `feature/meetings-slice-2` run `npm run api:check` and `npm run build && npm run typecheck &&
+npm run lint && npm test && npm run format:check` on Node 24 (nothing Angular ran when it was written), fix what strict
+templates or lint find, then try `/meetings` on `npm run start:mock` (Turn into a user story, Check the story, Create in
+Jira) and against a local `ahoy-hosted --simulate` with migrations 0014 and 0015. Slices 3 (Grill me) and 4
+(Confluence) each need their own agreement first.
+
+Refresh design: review and commit with `ahoy-hosted`'s change (explicit approval). Then try it against a local
+`ahoy-hosted --simulate` (0 AIU) with a story whose design was read. Separately, fix the 8 unit tests that fail on
+`main` since the Meetings slice (top-bar link count and seed-dependent meetings, voyages and All hands specs).
 
 Run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on Node 24 for PR #31
 (merged untested) and the review-fix branch `fix/blocked-review-followups`, then check Needs you against a local
@@ -1112,10 +1158,14 @@ Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
 
-The newest change, on `feature/meetings-slice-2` (2026-10-17, uncommitted, stacked on slice 1's PR #33), turns a
+The newest change, on `feature/meetings-slice-2` (2026-10-17, in its pull request; slice 1 is merged), turns a
 meeting topic into a Jira user story: an agent drafts it, a person checks it and creates it in Jira with one click.
-`schema.d.ts` was edited by hand (no `openapi-typescript` here), and nothing Angular ran in the session that wrote it
+slice 2's part of `schema.d.ts` was written by hand (no `openapi-typescript` here), and nothing Angular ran in the session that wrote it
 (npm registry blocked): run `npm run api:check` and the full check on Node 24 first. See "Meetings, slice 2".
+
+The newest change, on `claude/relaxed-bell-qi5pe0` (2026-10-17, uncommitted), adds Refresh design to the voyage
+header (new Figma links and a reason, `refreshDesign`), matching `ahoy-hosted`'s branch of the same name. Build,
+typecheck, lint and the unit tests ran on Node 24; 8 unit tests fail on `main` as well. See "Refresh design".
 
 The newest change, on `fix/blocked-review-followups` (after PR #31 merged), keeps a voyage rejected at a human gate
 out of Needs you: an aground voyage is listed with Unblock only when its last move to `blocked` came from a phase

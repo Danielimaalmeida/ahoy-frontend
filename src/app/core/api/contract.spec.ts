@@ -44,6 +44,7 @@ import listStoryEvents from '@testing/fixtures/listStoryEvents.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
+import refreshDesign from '@testing/fixtures/refreshDesign.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
@@ -117,6 +118,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['resumeStory', resumeStory],
   ['setStoryBudget', setStoryBudget],
   ['refreshIntake', refreshIntake],
+  ['refreshDesign', refreshDesign],
   ['getStoryModels', getStoryModels],
   ['setStoryModels', setStoryModels],
   ['listStoryRuns', listStoryRuns],
@@ -194,7 +196,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 2).toBe(
-      59
+      60
     );
   });
 
@@ -276,6 +278,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'decideHumanGate',
       'decideWorkPackage',
       'refreshIntake',
+      'refreshDesign',
       'requestRefinement',
       'cancelRefinement',
       'requestAgentDiagnosis',
@@ -373,6 +376,19 @@ describe('the request bodies the client sends', () => {
       },
     };
     expect(requestViolations('startStory', body)).toEqual([]);
+  });
+
+  it('are valid for refreshDesign as the client sends it, and refuse a request without links', () => {
+    const body = {
+      expectedVersion: 23,
+      reason: 'The designer moved the due date under the total',
+      figmaLinks: ['https://www.figma.com/design/Fk2/Billing-v2?node-id=12-40'],
+      confirmSpend: true,
+    };
+    expect(requestViolations('refreshDesign', body)).toEqual([]);
+    expect(
+      requestViolations('refreshDesign', { ...body, figmaLinks: [] })
+    ).not.toEqual([]);
   });
 
   it('are valid for refreshIntake, requestRefinement and cancelRefinement as the client sends them', () => {

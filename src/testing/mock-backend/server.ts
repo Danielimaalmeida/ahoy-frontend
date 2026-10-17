@@ -29,6 +29,7 @@ import type {
   ModelSlot,
   ProblemCode,
   RefinementRequest,
+  RefreshDesignRequest,
   RefreshIntakeRequest,
   ResumeStoryRequest,
   SetStoryBudgetRequest,
@@ -42,6 +43,7 @@ import type {
   AnswerRequest,
   JiraBacklog,
 } from '@core/api/types';
+import { figmaLinksInput } from '@domain/figma-links';
 import { realClock, type MockClock } from './clock';
 import { agentDiagnosisMarkdown } from './content';
 import { diagnosisOf } from './diagnosis';
@@ -65,11 +67,14 @@ import { LIVE_TIMING, Simulator, type SimulationTiming } from './simulator';
 import {
   artifactFile,
   DEFAULT_CONTROL_SHA,
+  DESIGN_INDEX_FILE,
+  DESIGN_LINKS_FILE,
   eventDto,
   PHASE_TABLE,
   PLAN_FILE,
   REVISION_CEILING,
   SLOTS,
+  UI_AGENTS,
   Voyage,
 } from './voyage';
 import { World } from './world';
@@ -597,6 +602,8 @@ export class MockAhoyServer {
         return this.resumeStory(call);
       case 'refreshIntake':
         return this.refreshIntake(call);
+      case 'refreshDesign':
+        return this.refreshDesign(call);
       case 'listRefinements':
         return jsonResponse(200, { items: this.refinements.latest() });
       case 'getRefinements': {
@@ -1102,6 +1109,129 @@ export class MockAhoyServer {
       spentNanoAiu: story.spentNanoAiu,
       confirmSpend: true,
     });
+    this.simulator.poke(voyage);
+    return jsonResponse(202, voyage.storyDto());
+  }
+
+  /**
+   * Replaces a story's Figma design, as `refreshDesign` of `ahoy-hosted` does: from a halted implementation or review or
+   * at the delivery gate, with a design read, or halted in the design phase after an earlier refresh. The design files
+   * move to `history/design-v<version>/`, the links go to `design/figma-links.md`, every UI package is reopened with a
+   * note, and the design phase reads the new frames.
+   */
+  private refreshDesign(call: Call): MockResponse {
+    const body = call.body as RefreshDesignRequest; // validated
+    const links = figmaLinksInput(body.figmaLinks.join('\n'));
+    if (!links.ok)
+      throw new MockProblem(
+        'validation_failed',
+        'The Figma links cannot be read',
+        {
+          errors: [{ path: '/figmaLinks', message: links.message }],
+        }
+      );
+    const voyage = this.lock(call, body.expectedVersion);
+    const story = voyage.story;
+    if (story.currentRunId !== null || story.status === 'running')
+      throw new MockProblem(
+        'invalid_state',
+        `Run ${story.currentRunId ?? ''} is still active; wait until it has ended`
+      );
+    const atDelivery =
+      story.status === 'awaiting_decision' && story.phase === 'delivery_gate';
+    const files = voyage.current?.files ?? [];
+    const refreshed = files.some((f) => f.path === DESIGN_LINKS_FILE);
+    const halted =
+      story.status === 'halted' &&
+      (['implementation', 'pr_review'].includes(story.phase) ||
+        (story.phase === 'design' && refreshed));
+    if (!atDelivery && !halted)
+      throw new MockProblem(
+        'invalid_state',
+        `Story ${story.key} is ${story.status} in ${story.phase}; a design is refreshed from a halted implementation or review, at the delivery gate, or from a halt in the design phase after an earlier refresh`
+      );
+    if (story.spentNanoAiu >= story.budgetNanoAiu)
+      throw new MockProblem(
+        'invalid_state',
+        'Increase the story budget before refreshing the design'
+      );
+    if (!refreshed && !files.some((f) => f.path === DESIGN_INDEX_FILE))
+      throw new MockProblem(
+        'invalid_state',
+        `Story ${story.key} has no design read from Figma to refresh`
+      );
+    const reason = body.reason.trim();
+    const ui = voyage.plan.packages
+      .filter((p) => UI_AGENTS.includes(String(p['agent'])))
+      .map((p) => String(p['id']));
+    if (ui.length === 0)
+      throw new MockProblem(
+        'invalid_state',
+        `no work package is for a UI agent (${UI_AGENTS.join(', ')})`
+      );
+    const archive = `history/design-v${story.version}/`;
+    const design = files.filter((f) => f.path.startsWith('design/'));
+    const now = this.world.nowIso();
+    const revision = voyage.addRevision(
+      [
+        ...design.map((f) =>
+          artifactFile(
+            `${archive}${f.path.slice('design/'.length)}`,
+            f.text,
+            f.runId
+          )
+        ),
+        artifactFile(
+          DESIGN_LINKS_FILE,
+          `# Figma links of the design refresh\n\n${links.links.map((l) => `- ${l}\n`).join('')}`,
+          null
+        ),
+      ],
+      this.world.clock.now(),
+      design.map((f) => f.path)
+    );
+    const note =
+      `The design of this story was replaced (design refresh by ${call.actor}): ${reason}\n` +
+      `The new Figma frames are in specs/${story.key}/design/, read from:\n${links.links.map((l) => `- ${l}`).join('\n')}`;
+    voyage.plan = {
+      ...voyage.plan,
+      packages: voyage.plan.packages.map((p) =>
+        ui.includes(String(p['id']))
+          ? { ...p, status: 'pending', rework_note: note }
+          : p
+      ),
+    };
+    voyage.decisionLog.push({
+      timestamp: now.replace(/\.\d{3}Z$/, 'Z'),
+      actor: 'human',
+      type: 'design',
+      summary: `design refreshed by ${call.actor}: ${reason}`,
+    });
+    if (atDelivery) delete voyage.humanGates['delivery_accepted'];
+    const from = story.phase;
+    const previousStatus = story.status;
+    story.phase = 'design';
+    story.status = 'ready';
+    story.haltReason = null;
+    this.world.touch(voyage);
+    this.world.append(voyage, 'design.refreshed', call.actor, {
+      reason,
+      figmaLinks: [...links.links],
+      packages: ui,
+      archive,
+      from,
+      previousStatus,
+      revision,
+      budgetNanoAiu: story.budgetNanoAiu,
+      spentNanoAiu: story.spentNanoAiu,
+      confirmSpend: true,
+    });
+    this.world.append(voyage, 'artifacts.updated', call.actor, { revision });
+    if (from !== 'design')
+      this.world.append(voyage, 'story.phase_changed', call.actor, {
+        from,
+        to: 'design',
+      });
     this.simulator.poke(voyage);
     return jsonResponse(202, voyage.storyDto());
   }

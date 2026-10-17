@@ -106,7 +106,7 @@
         "operationId": "listJiraBacklog",
         "tags": ["jira"],
         "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
-        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = CTW AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
+        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = CTW AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
         "responses": {
           "200": {
             "description": "Complete backlog in Jira rank order.",
@@ -1095,6 +1095,59 @@
         "responses": {
           "202": {
             "description": "The packages are reopened and the story is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Story"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/refresh-design": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "refreshDesign",
+        "tags": ["decisions"],
+        "summary": "Replace a story's Figma design with new frames and send its UI packages round again. May spend AIU.",
+        "description": "Human-triggered, for a story whose design was read from Figma, while it is halted in implementation or review\nor waits at the delivery gate (left undecided, it opens again when the work comes back), with no active run;\nalso while it is halted in the design phase after an earlier refresh (links that could not be read, or a pack\nthe gate refused), which only another refresh can correct. `figmaLinks` are the new frames (each a figma.com\nlink with its node-id); they replace the Jira snapshot's links for this story and every later refresh starts\nfrom them. A Figma link in `reason` is not read. Nothing compares the old design with the new one.\nThe current design spec moves to `history/design-v<version>/` as a record (no run is seeded with it), every\nwork package of a UI implementer is reopened, however its last run ended, with a note to make the delivered UI\nmatch the new frames (no rework round or revision is charged), and the story goes to the design phase, which\nreads the new frames and runs the density agent before the packages run again. The plan and the acceptance\ncriteria still win where the new design differs. confirmSpend must be true; the request itself spends nothing.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The design refresh is scheduled; the story is ready in the design phase.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3623,6 +3676,39 @@
           }
         }
       },
+      "RefreshDesignRequest": {
+        "type": "object",
+        "required": ["expectedVersion", "reason", "figmaLinks", "confirmSpend"],
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S",
+            "description": "Why the design changed. The UI implementers and the reviewer are given it as a person's decision."
+          },
+          "figmaLinks": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "uniqueItems": true,
+            "description": "The new Figma frames, each a figma.com /design/, /file/ or /proto/ link with its node-id.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      },
       "AmendAnchorsRequest": {
         "type": "object",
         "required": ["amendments", "reason", "expectedVersion"],
@@ -5152,6 +5238,7 @@
           "story.halted",
           "story.resumed",
           "story.intake_refreshed",
+          "design.refreshed",
           "story.budget_changed",
           "story.models_changed",
           "story.phase_changed",

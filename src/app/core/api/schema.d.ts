@@ -4,4446 +4,4426 @@
  */
 
 export interface paths {
-  readonly '/health': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/health": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Liveness and database reachability. */
+        readonly get: operations["getHealth"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /** Liveness and database reachability. */
-    readonly get: operations['getHealth'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/models': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/models": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The models a person may choose for a story's phases, and what each phase runs on by default.
+         * @description The catalogue is configured on the server, not read from a Copilot account: `AHOY_MODEL_CATALOG` (a JSON
+         *     file, `source: file`) or the built-in list (`source: built_in`). Every model the server's phase
+         *     configuration names is listed too, so a default is always one a person can pick. `reasoningEfforts` of a
+         *     model is null when the catalogue does not say which efforts it takes; `[]` means it takes none.
+         *
+         *     Choosing a model outside this list is still accepted by `startStory` and `setStoryModels`: whether the owner's
+         *     Copilot account may use a model, and whether it takes the effort, is checked by the worker before it sends a
+         *     prompt (0 AIU); a run refused there fails and the story halts.
+         *
+         *     `defaults` is what each slot of a story started now (without `controlRef`) runs on when nobody chooses: the
+         *     server's phase configuration, then `phases.tsv` at the control repo's HEAD (`controlSha`). When the control
+         *     repo cannot be read, `controlSha` is null and the defaults come from the configuration alone.
+         */
+        readonly get: operations["listModels"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * The models a person may choose for a story's phases, and what each phase runs on by default.
-     * @description The catalogue is configured on the server, not read from a Copilot account: `AHOY_MODEL_CATALOG` (a JSON
-     *     file, `source: file`) or the built-in list (`source: built_in`). Every model the server's phase
-     *     configuration names is listed too, so a default is always one a person can pick. `reasoningEfforts` of a
-     *     model is null when the catalogue does not say which efforts it takes; `[]` means it takes none.
-     *
-     *     Choosing a model outside this list is still accepted by `startStory` and `setStoryModels`: whether the owner's
-     *     Copilot account may use a model, and whether it takes the effort, is checked by the worker before it sends a
-     *     prompt (0 AIU); a run refused there fails and the story halts.
-     *
-     *     `defaults` is what each slot of a story started now (without `controlRef`) runs on when nobody chooses: the
-     *     server's phase configuration, then `phases.tsv` at the control repo's HEAD (`controlSha`). When the control
-     *     repo cannot be read, `controlSha` is null and the defaults come from the configuration alone.
-     */
-    readonly get: operations['listModels'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/jira/backlog': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/jira/backlog": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * All Jira Stories, Tasks and Bugs matching the configured backlog query.
+         * @description Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
+         *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
+         *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
+         *     `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
+         *     AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
+         *
+         *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
+         *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
+         *     issues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters
+         *     are accepted. The backend follows all Jira search pages and preserves rank order; `total` equals
+         *     the number of returned items. Issues already started in Ahoy are not excluded.
+         *
+         *     A successful result is cached on the server for 30 seconds. No stale or partial result is served.
+         *     Missing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout
+         *     errors, malformed responses or pagination inconsistencies return `503 unavailable`.
+         *     This lookup never starts a delivery or spends AIU.
+         *
+         *     Each item carries `readiness`, fixed rules over its description, labels and "is blocked by" links (the
+         *     description itself is not returned): `missing` when intake would stop it (no description, no acceptance
+         *     criteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when
+         *     the harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is
+         *     worth running through the harness is told from its plan (`getStoryPlanFit`).
+         */
+        readonly get: operations["listJiraBacklog"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * All Jira Stories, Tasks and Bugs matching the configured backlog query.
-     * @description Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
-     *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
-     *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-     *     `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-     *     AND "Feature Team" = CTW AND Team in (34115) ORDER BY Rank ASC`.
-     *
-     *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
-     *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
-     *     issues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters
-     *     are accepted. The backend follows all Jira search pages and preserves rank order; `total` equals
-     *     the number of returned items. Issues already started in Ahoy are not excluded.
-     *
-     *     A successful result is cached on the server for 30 seconds. No stale or partial result is served.
-     *     Missing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout
-     *     errors, malformed responses or pagination inconsistencies return `503 unavailable`.
-     *     This lookup never starts a delivery or spends AIU.
-     *
-     *     Each item carries `readiness`, fixed rules over its description, labels and "is blocked by" links (the
-     *     description itself is not returned): `missing` when intake would stop it (no description, no acceptance
-     *     criteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when
-     *     the harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is
-     *     worth running through the harness is told from its plan (`getStoryPlanFit`).
-     */
-    readonly get: operations['listJiraBacklog'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/metrics': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/metrics": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Where the harness spends AIU, where stories halt, which errors repeat and how long people keep them waiting.
+         * @description Read-only and 0 AIU (design §5, "Metrics"): aggregated from `runs`, `gate_records`, `review_findings` and
+         *     `events`. Halts are explained by the same rules as `GET /stories/{key}/diagnosis`. The period is
+         *     `[from, to)`; it defaults to the 30 days before now and may span at most 366 days. `owner` keeps the stories
+         *     of one owner, `repo` the stories that touch one child repository, and `model` the runs of one model. Error
+         *     signatures and gate messages are untrusted text. AIU in integer nano-AIU, durations in whole seconds.
+         */
+        readonly get: operations["getMetrics"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Where the harness spends AIU, where stories halt, which errors repeat and how long people keep them waiting.
-     * @description Read-only and 0 AIU (design §5, "Metrics"): aggregated from `runs`, `gate_records`, `review_findings` and
-     *     `events`. Halts are explained by the same rules as `GET /stories/{key}/diagnosis`. The period is
-     *     `[from, to)`; it defaults to the 30 days before now and may span at most 366 days. `owner` keeps the stories
-     *     of one owner, `repo` the stories that touch one child repository, and `model` the runs of one model. Error
-     *     signatures and gate messages are untrusted text. AIU in integer nano-AIU, durations in whole seconds.
-     */
-    readonly get: operations['getMetrics'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/metrics/export': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/metrics/export": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The rows behind the metrics as CSV or JSON, one table at a time.
+         * @description `runs`: every run in the period with its spend, tokens, outcome and gate verdict. `halts`: every halt with its
+         *     diagnosis and when it was resumed. `gates`: every automated gate verdict. `errors`: the grouped errors. Same
+         *     period and filters as `GET /metrics`. No story text or agent output is exported; messages are untrusted text.
+         */
+        readonly get: operations["exportMetrics"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * The rows behind the metrics as CSV or JSON, one table at a time.
-     * @description `runs`: every run in the period with its spend, tokens, outcome and gate verdict. `halts`: every halt with its
-     *     diagnosis and when it was resumed. `gates`: every automated gate verdict. `errors`: the grouped errors. Same
-     *     period and filters as `GET /metrics`. No story text or agent output is exported; messages are untrusted text.
-     */
-    readonly get: operations['exportMetrics'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/stories": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get: operations["listStories"];
+        readonly put?: never;
+        /**
+         * Start a story at intake. The actor becomes its owner and runs bill the owner's token.
+         * @description `models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,
+         *     `implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase
+         *     configuration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows
+         *     what each phase will get. Intake runs no model: the reconciler reads the issue from Jira over REST, so a choice
+         *     for `intake` is kept but unused. A `models` that names an unknown slot, an empty choice, a model or effort no
+         *     run can take, or `null` answers `400 validation_failed`, and no story is created.
+         */
+        readonly post: operations["startStory"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get: operations['listStories'];
-    readonly put?: never;
-    /**
-     * Start a story at intake. The actor becomes its owner and runs bill the owner's token.
-     * @description `models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,
-     *     `implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase
-     *     configuration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows
-     *     what each phase will get. Intake runs no model: the reconciler reads the issue from Jira over REST, so a choice
-     *     for `intake` is kept but unused. A `models` that names an unknown slot, an empty choice, a model or effort no
-     *     run can take, or `null` answers `400 validation_failed`, and no story is created.
-     */
-    readonly post: operations['startStory'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get: operations["getStory"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get: operations['getStory'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/stop': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/stop": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Halt the story and cancel its active run, if any. The phase does not change. */
+        readonly post: operations["stopStory"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /** Halt the story and cancel its active run, if any. The phase does not change. */
-    readonly post: operations['stopStory'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/resume': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/resume": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Clear a halt so the reconciler retries the current phase. May spend AIU.
+         * @description On an implementation halted package_stuck or package_needs_decision, every failed, stalled,
+         *     blocked or unverified work package is retried, as the package decision `retry` does, with the
+         *     reason as its rework note; the reason is then required (400 without it). The event
+         *     story.resumed names them in retriedPackages. Any other halt is resumed as it stands. A package
+         *     `awaiting_ci` is never retried by a resume: after child_ready halted on its deferred check, a resume
+         *     runs child_ready again, which halts again while the check is still missing past the wait; retry or
+         *     accept that package with its own decision instead.
+         */
+        readonly post: operations["resumeStory"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Clear a halt so the reconciler retries the current phase. May spend AIU.
-     * @description On an implementation halted package_stuck or package_needs_decision, every failed, stalled,
-     *     blocked or unverified work package is retried, as the package decision `retry` does, with the
-     *     reason as its rework note; the reason is then required (400 without it). The event
-     *     story.resumed names them in retriedPackages. Any other halt is resumed as it stands. A package
-     *     `awaiting_ci` is never retried by a resume: after child_ready halted on its deferred check, a resume
-     *     runs child_ready again, which halts again while the check is still missing past the wait; retry or
-     *     accept that package with its own decision instead.
-     */
-    readonly post: operations['resumeStory'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/refresh-intake': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/refresh-intake": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Refresh Jira intake and invalidate the old plan. The planning that follows may spend AIU.
+         * @description Human-triggered, during planning or plan_review only, with no active run and before
+         *     implementation has started. Update Jira first. Preserves the story identity, owner,
+         *     pinned control commit, model choices, total budget, cumulative spend and audit evidence.
+         *     Archives current artifacts and state, supersedes all existing questions (still listed
+         *     with supersededAt), and clears the current plan, criteria, work packages and approvals.
+         *     Schedules a new intake, which reads Jira again and spends nothing, followed by planning within the remaining
+         *     story budget.
+         *     confirmSpend must be true; this does not increase the cap or guarantee a successful refresh.
+         *     A failed intake does not restore the obsolete snapshot or plan.
+         */
+        readonly post: operations["refreshIntake"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Refresh Jira intake and invalidate the old plan. The planning that follows may spend AIU.
-     * @description Human-triggered, during planning or plan_review only, with no active run and before
-     *     implementation has started. Update Jira first. Preserves the story identity, owner,
-     *     pinned control commit, model choices, total budget, cumulative spend and audit evidence.
-     *     Archives current artifacts and state, supersedes all existing questions (still listed
-     *     with supersededAt), and clears the current plan, criteria, work packages and approvals.
-     *     Schedules a new intake, which reads Jira again and spends nothing, followed by planning within the remaining
-     *     story budget.
-     *     confirmSpend must be true; this does not increase the cap or guarantee a successful refresh.
-     *     A failed intake does not restore the obsolete snapshot or plan.
-     */
-    readonly post: operations['refreshIntake'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/budget': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/budget": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Change the story's total AIU cap. May allow further spend.
+         * @description Takes effect when the reconciler next queues a run; an active run keeps the cap it started with.
+         *     The new cap must not be below what the story has already spent. Status and phase do not change,
+         *     so a halted story still needs `resume`.
+         */
+        readonly post: operations["setStoryBudget"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Change the story's total AIU cap. May allow further spend.
-     * @description Takes effect when the reconciler next queues a run; an active run keeps the cap it started with.
-     *     The new cap must not be below what the story has already spent. Status and phase do not change,
-     *     so a halted story still needs `resume`.
-     */
-    readonly post: operations['setStoryBudget'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/models': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/models": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /**
+         * The model and reasoning effort each phase of the story runs on, and where each comes from.
+         * @description One entry per slot of the story's model plan: `intake` (which runs no model: it reads Jira over REST),
+         *     `planning`, `implementation`, and `review` (the one reviewer of `pr_review`). `chosen` is what a person chose
+         *     for the story;
+         *     `model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the
+         *     pinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another
+         *     model is not carried onto a model a person chose, which then runs at its own default effort. Whether the
+         *     owner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker
+         *     before it sends a prompt (0 AIU); a run refused there fails and the story halts.
+         */
+        readonly get: operations["getStoryModels"];
+        readonly put?: never;
+        /**
+         * Choose the model and reasoning effort for some phases of the story.
+         * @description Each slot given a choice holds exactly that choice; `null` gives the slot back to the configured defaults;
+         *     slots left out are unchanged. Takes effect when the reconciler next queues a run of that phase: an active run
+         *     keeps the model it started with. Status and phase do not change.
+         */
+        readonly post: operations["setStoryModels"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * The model and reasoning effort each phase of the story runs on, and where each comes from.
-     * @description One entry per slot of the story's model plan: `intake` (which runs no model: it reads Jira over REST),
-     *     `planning`, `implementation`, and `review` (the one reviewer of `pr_review`). `chosen` is what a person chose
-     *     for the story;
-     *     `model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the
-     *     pinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another
-     *     model is not carried onto a model a person chose, which then runs at its own default effort. Whether the
-     *     owner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker
-     *     before it sends a prompt (0 AIU); a run refused there fails and the story halts.
-     */
-    readonly get: operations['getStoryModels'];
-    readonly put?: never;
-    /**
-     * Choose the model and reasoning effort for some phases of the story.
-     * @description Each slot given a choice holds exactly that choice; `null` gives the slot back to the configured defaults;
-     *     slots left out are unchanged. Takes effect when the reconciler next queues a run of that phase: an active run
-     *     keeps the model it started with. Status and phase do not change.
-     */
-    readonly post: operations['setStoryModels'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/runs': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/runs": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get: operations["listStoryRuns"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get: operations['listStoryRuns'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/runs/{runId}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly runId: components['schemas']['RunId'];
-      };
-      readonly cookie?: never;
+    readonly "/runs/{runId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly runId: components["schemas"]["RunId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get: operations["getRun"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get: operations['getRun'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/questions': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/questions": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get: operations["listQuestions"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get: operations['listQuestions'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/questions/{questionId}/answer': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-        readonly questionId: string;
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/questions/{questionId}/answer": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+                readonly questionId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Record one human answer. Answers are never replaced; the next run consumes them. */
+        readonly post: operations["answerQuestion"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /** Record one human answer. Answers are never replaced; the next run consumes them. */
-    readonly post: operations['answerQuestion'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/gates': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/gates": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /** Automated gate verdicts and human decisions, oldest first. */
+        readonly get: operations["listGateRecords"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /** Automated gate verdicts and human decisions, oldest first. */
-    readonly get: operations['listGateRecords'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/decisions': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/decisions": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Approve, send back or reject at a human gate. Silence is never approval. */
+        readonly post: operations["decideHumanGate"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /** Approve, send back or reject at a human gate. Silence is never approval. */
-    readonly post: operations['decideHumanGate'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/review': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/review": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Settle a review the review gate halted on, by sending the work to rework or overriding the review.
+         * @description Only for a story halted on the review gate (`gate_halt` or `gate_rejected`) in a review phase. `rework`
+         *     charges the rework ceiling and reopens the work the findings name, or exactly `packages`. `override` moves the
+         *     story to the delivery gate, which still needs a person's decision. Reworking may spend AIU.
+         */
+        readonly post: operations["resolveReview"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Settle a review the review gate halted on, by sending the work to rework or overriding the review.
-     * @description Only for a story halted on the review gate (`gate_halt` or `gate_rejected`) in a review phase. `rework`
-     *     charges the rework ceiling and reopens the work the findings name, or exactly `packages`. `override` moves the
-     *     story to the delivery gate, which still needs a person's decision. Reworking may spend AIU.
-     */
-    readonly post: operations['resolveReview'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/work-packages/{workPackageId}/decision': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-        readonly workPackageId: components['parameters']['WorkPackageId'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/work-packages/{workPackageId}/decision": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+                readonly workPackageId: components["parameters"]["WorkPackageId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Retry or accept a work package nothing else will move (failed, stalled, blocked or unverified), or one awaiting CI.
+         * @description Only while the story is halted in implementation. `retry` sends the package round again with `reason` as its
+         *     rework note (may spend AIU); `accept` marks it done as it stands. The repository is still checked by
+         *     `child_ready` before review. A package `awaiting_ci` (its verification delegated to a declared CI check) can
+         *     be decided when child_ready halted or rejected on that check: `accept` drops its deferred checks, so
+         *     child_ready no longer waits for them; `retry` delivers it again.
+         */
+        readonly post: operations["decideWorkPackage"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Retry or accept a work package nothing else will move (failed, stalled, blocked or unverified), or one awaiting CI.
-     * @description Only while the story is halted in implementation. `retry` sends the package round again with `reason` as its
-     *     rework note (may spend AIU); `accept` marks it done as it stands. The repository is still checked by
-     *     `child_ready` before review. A package `awaiting_ci` (its verification delegated to a declared CI check) can
-     *     be decided when child_ready halted or rejected on that check: `accept` drops its deferred checks, so
-     *     child_ready no longer waits for them; `retry` delivers it again.
-     */
-    readonly post: operations['decideWorkPackage'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/reopen': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/reopen": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Send delivered work packages round again by hand, from a halted implementation or review.
+         * @description Reopens `packages` (even in a merged repository), or the delivered packages of `repos`, or all delivered
+         *     packages (`done`, or `awaiting_ci` with their deferred checks dropped), with `note` as their rework note, and
+         *     moves the story to implementation. No rework round is charged.
+         *     May spend AIU. A delivery gate is sent back with a decision instead.
+         */
+        readonly post: operations["reopenWork"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Send delivered work packages round again by hand, from a halted implementation or review.
-     * @description Reopens `packages` (even in a merged repository), or the delivered packages of `repos`, or all delivered
-     *     packages (`done`, or `awaiting_ci` with their deferred checks dropped), with `note` as their rework note, and
-     *     moves the story to implementation. No rework round is charged.
-     *     May spend AIU. A delivery gate is sent back with a decision instead.
-     */
-    readonly post: operations['reopenWork'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/anchors': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/refresh-design": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Replace a story's Figma design with new frames and send its UI packages round again. May spend AIU.
+         * @description Human-triggered, for a story whose design was read from Figma, while it is halted in implementation or review
+         *     or waits at the delivery gate (left undecided, it opens again when the work comes back), with no active run;
+         *     also while it is halted in the design phase after an earlier refresh (links that could not be read, or a pack
+         *     the gate refused), which only another refresh can correct. `figmaLinks` are the new frames (each a figma.com
+         *     link with its node-id); they replace the Jira snapshot's links for this story and every later refresh starts
+         *     from them. A Figma link in `reason` is not read. Nothing compares the old design with the new one.
+         *     The current design spec moves to `history/design-v<version>/` as a record (no run is seeded with it), every
+         *     work package of a UI implementer is reopened, however its last run ended, with a note to make the delivered UI
+         *     match the new frames (no rework round or revision is charged), and the story goes to the design phase, which
+         *     reads the new frames and runs the density agent before the packages run again. The plan and the acceptance
+         *     criteria still win where the new design differs. confirmSpend must be true; the request itself spends nothing.
+         */
+        readonly post: operations["refreshDesign"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Replace or waive verification anchors that child_ready rejected, on a halted implementation.
-     * @description Only while the story is halted `gate_rejected` in implementation, and only for anchors that the last
-     *     child_ready rejection names; all amendments apply or none. `replace` swaps an anchor for `replacement` (the new
-     *     one is checked on the pull request's added lines like a planned one). `waive` drops it, only when child_ready
-     *     proved it unsatisfiable by design (it is on an unchanged or removed line of the pull request, never an added
-     *     one) and the repository keeps another anchor. Each change is kept in the decision log, and the event
-     *     criteria.anchors_amended records them; the story becomes ready and child_ready runs again. Spends nothing by
-     *     itself.
-     */
-    readonly post: operations['amendAnchors'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/unblock': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/anchors": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Replace or waive verification anchors that child_ready rejected, on a halted implementation.
+         * @description Only while the story is halted `gate_rejected` in implementation, and only for anchors that the last
+         *     child_ready rejection names; all amendments apply or none. `replace` swaps an anchor for `replacement` (the new
+         *     one is checked on the pull request's added lines like a planned one). `waive` drops it, only when child_ready
+         *     proved it unsatisfiable by design (it is on an unchanged or removed line of the pull request, never an added
+         *     one) and the repository keeps another anchor. Each change is kept in the decision log, and the event
+         *     criteria.anchors_amended records them; the story becomes ready and child_ready runs again. Spends nothing by
+         *     itself.
+         */
+        readonly post: operations["amendAnchors"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Take a story out of `blocked`, back to the phase it was blocked from, with more rework rounds.
-     * @description Starts the CI fixes of each repository at the CI fix ceiling again; when none is, raises the rework ceiling of
-     *     each repository at it by `rounds`. Named `repos` get both. Then returns the story to the phase that moved it to
-     *     `blocked`, which evaluates its gate again. A story blocked by a person's
-     *     rejection at a human gate cannot be unblocked. May spend AIU.
-     */
-    readonly post: operations['unblockStory'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/state': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/unblock": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Take a story out of `blocked`, back to the phase it was blocked from, with more rework rounds.
+         * @description Starts the CI fixes of each repository at the CI fix ceiling again; when none is, raises the rework ceiling of
+         *     each repository at it by `rounds`. Named `repos` get both. Then returns the story to the phase that moved it to
+         *     `blocked`, which evaluates its gate again. A story blocked by a person's
+         *     rejection at a human gate cannot be unblocked. May spend AIU.
+         */
+        readonly post: operations["unblockStory"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * The story's state, as a worker's `state.json` shows it to the agents.
-     * @description Rendered from the story's typed tables in Postgres, where the state lives: acceptance criteria, work packages, child repositories, reviews, human gates, revisions, the gate rejection, `gate_results` (from the gate records) and `decision_log` (from the `decisions` table). The field names follow the control repo's `state.json`; fields the agents wrote that no rule reads are passed through as they wrote them. A reviewer's report shows the fields the review gate reads; the report as written is in its `review.reported` event.
-     */
-    readonly get: operations['getStoryState'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/artifacts': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/state": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /**
+         * The story's state, as a worker's `state.json` shows it to the agents.
+         * @description Rendered from the story's typed tables in Postgres, where the state lives: acceptance criteria, work packages, child repositories, reviews, human gates, revisions, the gate rejection, `gate_results` (from the gate records) and `decision_log` (from the `decisions` table). The field names follow the control repo's `state.json`; fields the agents wrote that no rule reads are passed through as they wrote them. A reviewer's report shows the fields the review gate reads; the report as written is in its `review.reported` event.
+         */
+        readonly get: operations["getStoryState"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /** The story's current artifact set (Jira snapshot, plan and the other files its agents wrote). */
-    readonly get: operations['listArtifacts'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/artifacts/content': {
-    readonly parameters: {
-      readonly query: {
-        /** @description Story-relative path, as listed by `listArtifacts`. */
-        readonly path: components['schemas']['ArtifactPath'];
-        /** @description Artifact-set revision; defaults to the current one. */
-        readonly revision?: number;
-      };
-      readonly header?: {
-        /** @description An ETag from an earlier response; a match answers 304 without a body. */
-        readonly 'If-None-Match'?: string;
-      };
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/artifacts": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /** The story's current artifact set (Jira snapshot, plan and the other files its agents wrote). */
+        readonly get: operations["listArtifacts"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get: operations['getArtifactContent'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/plan-fit': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/artifacts/content": {
+        readonly parameters: {
+            readonly query: {
+                /** @description Story-relative path, as listed by `listArtifacts`. */
+                readonly path: components["schemas"]["ArtifactPath"];
+                /** @description Artifact-set revision; defaults to the current one. */
+                readonly revision?: number;
+            };
+            readonly header?: {
+                /** @description An ETag from an earlier response; a match answers 304 without a body. */
+                readonly "If-None-Match"?: string;
+            };
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get: operations["getArtifactContent"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Whether the story's plan suits the harness, for the person deciding `plan_accepted`.
-     * @description Fixed rules over the planned work packages and acceptance criteria; it spends nothing and changes nothing.
-     *     `poor` when a criterion needs CI or pipeline changes, which the implementation workflow may not make.
-     *     `attention` when work waits across repositories, the plan changes more than 2 repositories, has more than 6
-     *     work packages or a `depends_on` chain longer than 3, or a criterion names a repository no package changes.
-     *     Else `fits`. `fit` is null until the planner has written work packages.
-     */
-    readonly get: operations['getStoryPlanFit'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/diagnosis': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/plan-fit": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /**
+         * Whether the story's plan suits the harness, for the person deciding `plan_accepted`.
+         * @description Fixed rules over the planned work packages and acceptance criteria; it spends nothing and changes nothing.
+         *     `poor` when a criterion needs CI or pipeline changes, which the implementation workflow may not make.
+         *     `attention` when work waits across repositories, the plan changes more than 2 repositories, has more than 6
+         *     work packages or a `depends_on` chain longer than 3, or a criterion names a repository no package changes.
+         *     Else `fits`. `fit` is null until the planner has written work packages.
+         */
+        readonly get: operations["getStoryPlanFit"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Why the story stands where it stands, and what fixes it.
-     * @description Read from the story, its runs and its latest `story.halted` event by fixed rules; it spends nothing and
-     *     changes nothing. A story that is not `halted` has no findings. Each finding names a known cause (Copilot
-     *     authentication, a gate rejection, missing configuration, the cluster not scheduling or removing the run's pod,
-     *     the budget, a timeout, forbidden writes, a lost run…), the evidence for it, the action that fixes it and who
-     *     takes it; a halt no rule explains gets one `other` finding with what is known. Evidence quotes runs, gates and
-     *     Kubernetes and is untrusted text.
-     */
-    readonly get: operations['getStoryDiagnosis'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/agent-diagnoses': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/diagnosis": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /**
+         * Why the story stands where it stands, and what fixes it.
+         * @description Read from the story, its runs and its latest `story.halted` event by fixed rules; it spends nothing and
+         *     changes nothing. A story that is not `halted` has no findings. Each finding names a known cause (Copilot
+         *     authentication, a gate rejection, missing configuration, the cluster not scheduling or removing the run's pod,
+         *     the budget, a timeout, forbidden writes, a lost run…), the evidence for it, the action that fixes it and who
+         *     takes it; a halt no rule explains gets one `other` finding with what is known. Evidence quotes runs, gates and
+         *     Kubernetes and is untrusted text.
+         */
+        readonly get: operations["getStoryDiagnosis"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Every agent diagnosis of one story, newest first, with the agent's Markdown.
-     * @description A story no agent was asked to diagnose answers `200` with no items. `404` when the story does not exist. An agent
-     *     diagnosis has the shape of a refinement (`Refinement`); it is not the rules' diagnosis of `getStoryDiagnosis`.
-     */
-    readonly get: operations['listAgentDiagnoses'];
-    readonly put?: never;
-    /**
-     * Ask an agent to diagnose a halted story. May spend AIU.
-     * @description For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis
-     *     agent (`AHOY_DIAGNOSIS_AGENT`) for the story, pinned to the control repo's HEAD now. The agent reads the evidence
-     *     Ahoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the
-     *     control repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and
-     *     who takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it
-     *     changes nothing about the story: the halt reason, the status and the version stay as they are.
-     *
-     *     The story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
-     *     `budgetNanoAiu` (at most 100 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the
-     *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for
-     *     the outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request
-     *     answers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.
-     */
-    readonly post: operations['requestAgentDiagnosis'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/agent-diagnoses/cancel': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/agent-diagnoses": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /**
+         * Every agent diagnosis of one story, newest first, with the agent's Markdown.
+         * @description A story no agent was asked to diagnose answers `200` with no items. `404` when the story does not exist. An agent
+         *     diagnosis has the shape of a refinement (`Refinement`); it is not the rules' diagnosis of `getStoryDiagnosis`.
+         */
+        readonly get: operations["listAgentDiagnoses"];
+        readonly put?: never;
+        /**
+         * Ask an agent to diagnose a halted story. May spend AIU.
+         * @description For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis
+         *     agent (`AHOY_DIAGNOSIS_AGENT`) for the story, pinned to the control repo's HEAD now. The agent reads the evidence
+         *     Ahoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the
+         *     control repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and
+         *     who takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it
+         *     changes nothing about the story: the halt reason, the status and the version stay as they are.
+         *
+         *     The story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
+         *     `budgetNanoAiu` (at most 100 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the
+         *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for
+         *     the outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request
+         *     answers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.
+         */
+        readonly post: operations["requestAgentDiagnosis"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Stop the story's agent diagnosis in progress.
-     * @description A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
-     *     reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
-     *     `409 invalid_state` when nothing is in progress.
-     */
-    readonly post: operations['cancelAgentDiagnosis'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/knowledge-reviews': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/agent-diagnoses/cancel": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Stop the story's agent diagnosis in progress.
+         * @description A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
+         *     reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
+         *     `409 invalid_state` when nothing is in progress.
+         */
+        readonly post: operations["cancelAgentDiagnosis"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Every knowledge review of one story, newest first, with the proposed business rules and lessons.
-     * @description When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs
-     *     them (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
-     *     the approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its
-     *     halts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content
-     *     repository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is
-     *     `content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files
-     *     at `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`
-     *     when it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request
-     *     there with the patch, and the rules are approved in that pull request. A story without one answers `200` with no
-     *     items. `404` when the story does not exist.
-     */
-    readonly get: operations['listKnowledgeReviews'];
-    readonly put?: never;
-    /**
-     * Ask an agent for a delivered story's rules and lessons, or a halted story's lessons. May spend AIU.
-     * @description For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a
-     *     halted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for
-     *     the story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the
-     *     content repository, and may change only `knowledge/business-context.md` and `knowledge/lessons.md` in its own
-     *     copy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It
-     *     changes nothing about the story.
-     *
-     *     The story must be `done` or `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
-     *     `budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the
-     *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for
-     *     the outcome. One knowledge review per story is in progress at a time: another request answers
-     *     `409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be
-     *     read.
-     */
-    readonly post: operations['requestKnowledgeReview'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/knowledge-reviews/cancel': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/knowledge-reviews": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /**
+         * Every knowledge review of one story, newest first, with the proposed business rules and lessons.
+         * @description When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs
+         *     them (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
+         *     the approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its
+         *     halts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content
+         *     repository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is
+         *     `content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files
+         *     at `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`
+         *     when it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request
+         *     there with the patch, and the rules are approved in that pull request. A story without one answers `200` with no
+         *     items. `404` when the story does not exist.
+         */
+        readonly get: operations["listKnowledgeReviews"];
+        readonly put?: never;
+        /**
+         * Ask an agent for a delivered story's rules and lessons, or a halted story's lessons. May spend AIU.
+         * @description For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a
+         *     halted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for
+         *     the story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the
+         *     content repository, and may change only `knowledge/business-context.md` and `knowledge/lessons.md` in its own
+         *     copy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It
+         *     changes nothing about the story.
+         *
+         *     The story must be `done` or `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at
+         *     `budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the
+         *     story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for
+         *     the outcome. One knowledge review per story is in progress at a time: another request answers
+         *     `409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be
+         *     read.
+         */
+        readonly post: operations["requestKnowledgeReview"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Stop the story's knowledge review in progress.
-     * @description A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
-     *     reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
-     *     `409 invalid_state` when nothing is in progress.
-     */
-    readonly post: operations['cancelKnowledgeReview'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/stories/{key}/events': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/stories/{key}/knowledge-reviews/cancel": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Stop the story's knowledge review in progress.
+         * @description A queued one ends `cancelled` at once and spends nothing. A running one is marked `cancelRequested`; the
+         *     reconciler stops its worker and records what it spent. Who cancelled and why become its `exitReason`.
+         *     `409 invalid_state` when nothing is in progress.
+         */
+        readonly post: operations["cancelKnowledgeReview"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get: operations['listStoryEvents'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/events/stream': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/stories/{key}/events": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get: operations["listStoryEvents"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Live events as Server-Sent Events.
-     * @description Each message is `id: <Event.id>`, `event: <Event.type>` and one `data:` line holding the
-     *     `Event` JSON. IDs are stable and increase monotonically. To resume, reconnect with the
-     *     `Last-Event-ID` header (or `after`); the server replays every later event before streaming
-     *     new ones. Comment lines (`: keepalive`) are sent periodically. Clients that cannot use SSE
-     *     may poll `listStoryEvents` instead.
-     */
-    readonly get: operations['streamEvents'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/refinements': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/events/stream": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Live events as Server-Sent Events.
+         * @description Each message is `id: <Event.id>`, `event: <Event.type>` and one `data:` line holding the
+         *     `Event` JSON. IDs are stable and increase monotonically. To resume, reconnect with the
+         *     `Last-Event-ID` header (or `after`); the server replays every later event before streaming
+         *     new ones. Comment lines (`: keepalive`) are sent periodically. Clients that cannot use SSE
+         *     may poll `listStoryEvents` instead.
+         */
+        readonly get: operations["streamEvents"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * The newest refinement of every Jira issue that has one, newest first, without content.
-     * @description One entry per Jira issue, so a backlog view can show each item's refinement state in one call. Read the
-     *     Markdown with `getRefinements`. An issue that was never refined is absent.
-     */
-    readonly get: operations['listRefinements'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/refinements/{key}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/refinements": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * The newest refinement of every Jira issue that has one, newest first, without content.
+         * @description One entry per Jira issue, so a backlog view can show each item's refinement state in one call. Read the
+         *     Markdown with `getRefinements`. An issue that was never refined is absent.
+         */
+        readonly get: operations["listRefinements"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Every refinement of one Jira issue, newest first, with the agent's Markdown.
-     * @description An issue that was never refined answers `200` with no items, not `404`.
-     */
-    readonly get: operations['getRefinements'];
-    readonly put?: never;
-    /**
-     * Ask an agent to pre-refine a Jira backlog item. May spend AIU.
-     * @description Queues one worker run of the server's refinement agent (`AHOY_REFINEMENT_AGENT`) for the issue, pinned to the
-     *     control repo's HEAD now. The agent reads the issue through the Jira and Confluence MCP servers (and, by
-     *     default, read-only clones of the mapped child repositories) and replies with a pre-refinement in Markdown:
-     *     verdict, summary, proposed story, acceptance criteria, open questions, assumptions, risks, suggested split and
-     *     affected repositories. The reply is kept in Ahoy only; nothing is written to Jira, Confluence or GitHub, and
-     *     the agent writes no files. The issue need not have been started in Ahoy.
-     *
-     *     `confirmSpend` must be true. The run is capped at `budgetNanoAiu`, else the server's refinement cap; it is not
-     *     charged to any story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll
-     *     `getRefinements` for the outcome; refinements send no events. One refinement per issue is in progress at a
-     *     time: another request answers `409 invalid_state`. `503 unavailable` when refinement is not configured or the
-     *     control repo cannot be read.
-     */
-    readonly post: operations['requestRefinement'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/refinements/{key}/cancel': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
+    readonly "/refinements/{key}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        /**
+         * Every refinement of one Jira issue, newest first, with the agent's Markdown.
+         * @description An issue that was never refined answers `200` with no items, not `404`.
+         */
+        readonly get: operations["getRefinements"];
+        readonly put?: never;
+        /**
+         * Ask an agent to pre-refine a Jira backlog item. May spend AIU.
+         * @description Queues one worker run of the server's refinement agent (`AHOY_REFINEMENT_AGENT`) for the issue, pinned to the
+         *     control repo's HEAD now. The agent reads the issue through the Jira and Confluence MCP servers (and, by
+         *     default, read-only clones of the mapped child repositories) and replies with a pre-refinement in Markdown:
+         *     verdict, summary, proposed story, acceptance criteria, open questions, assumptions, risks, suggested split and
+         *     affected repositories. The reply is kept in Ahoy only; nothing is written to Jira, Confluence or GitHub, and
+         *     the agent writes no files. The issue need not have been started in Ahoy.
+         *
+         *     `confirmSpend` must be true. The run is capped at `budgetNanoAiu`, else the server's refinement cap; it is not
+         *     charged to any story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll
+         *     `getRefinements` for the outcome; refinements send no events. One refinement per issue is in progress at a
+         *     time: another request answers `409 invalid_state`. `503 unavailable` when refinement is not configured or the
+         *     control repo cannot be read.
+         */
+        readonly post: operations["requestRefinement"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Stop the issue's refinement in progress.
-     * @description A queued refinement ends `cancelled` at once and spends nothing. A running one is marked
-     *     `cancelRequested`; the reconciler stops its worker and records what it spent. Who cancelled and why become its
-     *     `exitReason`. `409 invalid_state` when nothing is in progress.
-     */
-    readonly post: operations['cancelRefinement'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meetings': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/refinements/{key}/cancel": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Stop the issue's refinement in progress.
+         * @description A queued refinement ends `cancelled` at once and spends nothing. A running one is marked
+         *     `cancelRequested`; the reconciler stops its worker and records what it spent. Who cancelled and why become its
+         *     `exitReason`. `409 invalid_state` when nothing is in progress.
+         */
+        readonly post: operations["cancelRefinement"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /**
-     * Every meeting with stakeholders, latest start first, with its topic counts.
-     * @description Meetings keep the topics of business meetings with stakeholders and the notes taken under them (design §5
-     *     "Meetings"). 0 AIU: no agent and no external call. A meeting is not a story; it sends no events.
-     */
-    readonly get: operations['listMeetings'];
-    readonly put?: never;
-    /**
-     * Plan a meeting, alone or as the next one of a series.
-     * @description With `seriesId`, `title` and `stakeholders` default to the series'. Without it, the meeting is a one-off and
-     *     `title` is required (`400 validation_failed`). `404 not_found` when the series does not exist. Stakeholders are
-     *     kept trimmed, lower-cased and once each.
-     */
-    readonly post: operations['createMeeting'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meetings/{meetingId}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
+    readonly "/meetings": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /**
+         * Every meeting with stakeholders, latest start first, with its topic counts.
+         * @description Meetings keep the topics of business meetings with stakeholders and the notes taken under them (design §5
+         *     "Meetings"). 0 AIU: no agent and no external call. A meeting is not a story; it sends no events.
+         */
+        readonly get: operations["listMeetings"];
+        readonly put?: never;
+        /**
+         * Plan a meeting, alone or as the next one of a series.
+         * @description With `seriesId`, `title` and `stakeholders` default to the series'. Without it, the meeting is a one-off and
+         *     `title` is required (`400 validation_failed`). `404 not_found` when the series does not exist. Stakeholders are
+         *     kept trimmed, lower-cased and once each.
+         */
+        readonly post: operations["createMeeting"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /** One meeting with its topics in order, each with its notes oldest first. */
-    readonly get: operations['getMeeting'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    /**
-     * Change a meeting's title, time or stakeholders.
-     * @description `409 invalid_state` once the meeting has ended: an ended meeting is read-only.
-     */
-    readonly patch: operations['updateMeeting'];
-    readonly trace?: never;
-  };
-  readonly '/meetings/{meetingId}/start': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
+    readonly "/meetings/{meetingId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        /** One meeting with its topics in order, each with its notes oldest first. */
+        readonly get: operations["getMeeting"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        /**
+         * Change a meeting's title, time or stakeholders.
+         * @description `409 invalid_state` once the meeting has ended: an ended meeting is read-only.
+         */
+        readonly patch: operations["updateMeeting"];
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Start a planned meeting.
-     * @description From now on a topic added to the meeting was raised in it (`origin: in_meeting`). `409 invalid_state` unless the
-     *     meeting is `planned`.
-     */
-    readonly post: operations['startMeeting'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meetings/{meetingId}/end': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
+    readonly "/meetings/{meetingId}/start": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Start a planned meeting.
+         * @description From now on a topic added to the meeting was raised in it (`origin: in_meeting`). `409 invalid_state` unless the
+         *     meeting is `planned`.
+         */
+        readonly post: operations["startMeeting"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * End a meeting in progress and carry the chosen open topics over to the series' next meeting.
-     * @description Each topic in `carryOver` is copied, with its notes (their authors and times kept), to the end of the series'
-     *     next planned meeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next
-     *     meeting is planned one cadence on (or at the first step in the future), with the same title, length and
-     *     stakeholders. All or nothing: `409 invalid_state` when the meeting is not in progress, or when a topic is to be
-     *     carried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);
-     *     `400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.
-     *     The meeting is read-only once ended.
-     */
-    readonly post: operations['endMeeting'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meetings/{meetingId}/topics': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
+    readonly "/meetings/{meetingId}/end": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * End a meeting in progress and carry the chosen open topics over to the series' next meeting.
+         * @description Each topic in `carryOver` is copied, with its notes (their authors and times kept), to the end of the series'
+         *     next planned meeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next
+         *     meeting is planned one cadence on (or at the first step in the future), with the same title, length and
+         *     stakeholders. All or nothing: `409 invalid_state` when the meeting is not in progress, or when a topic is to be
+         *     carried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);
+         *     `400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.
+         *     The meeting is read-only once ended.
+         */
+        readonly post: operations["endMeeting"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Add a topic at the end of the meeting's list.
-     * @description `origin` is `planned` before the meeting starts and `in_meeting` while it runs. `raisedByEmail` names the
-     *     stakeholder of a topic raised by `them` (`400 validation_failed` with `raisedBy: us`). `409 invalid_state` once
-     *     the meeting has ended.
-     */
-    readonly post: operations['addMeetingTopic'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meetings/{meetingId}/topic-order': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
+    readonly "/meetings/{meetingId}/topics": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Add a topic at the end of the meeting's list.
+         * @description `origin` is `planned` before the meeting starts and `in_meeting` while it runs. `raisedByEmail` names the
+         *     stakeholder of a topic raised by `them` (`400 validation_failed` with `raisedBy: us`). `409 invalid_state` once
+         *     the meeting has ended.
+         */
+        readonly post: operations["addMeetingTopic"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    /**
-     * Put the meeting's topics in a new order.
-     * @description `topicIds` names every topic of the meeting exactly once, moved ones included (`400 validation_failed`
-     *     otherwise). `409 invalid_state` once the meeting has ended.
-     */
-    readonly put: operations['setMeetingTopicOrder'];
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meeting-topics/{topicId}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
+    readonly "/meetings/{meetingId}/topic-order": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        /**
+         * Put the meeting's topics in a new order.
+         * @description `topicIds` names every topic of the meeting exactly once, moved ones included (`400 validation_failed`
+         *     otherwise). `409 invalid_state` once the meeting has ended.
+         */
+        readonly put: operations["setMeetingTopicOrder"];
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    readonly post?: never;
-    /**
-     * Remove a topic and its notes.
-     * @description `409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.
-     */
-    readonly delete: operations['deleteMeetingTopic'];
-    readonly options?: never;
-    readonly head?: never;
-    /**
-     * Rename a topic or change who raised it.
-     * @description Choosing `raisedBy: us` clears the stakeholder's e-mail. `409 invalid_state` when the topic was moved to the
-     *     next meeting or its meeting has ended.
-     */
-    readonly patch: operations['updateMeetingTopic'];
-    readonly trace?: never;
-  };
-  readonly '/meeting-topics/{topicId}/move': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
+    readonly "/meeting-topics/{topicId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        /**
+         * Remove a topic and its notes.
+         * @description `409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.
+         */
+        readonly delete: operations["deleteMeetingTopic"];
+        readonly options?: never;
+        readonly head?: never;
+        /**
+         * Rename a topic or change who raised it.
+         * @description Choosing `raisedBy: us` clears the stakeholder's e-mail. `409 invalid_state` when the topic was moved to the
+         *     next meeting or its meeting has ended.
+         */
+        readonly patch: operations["updateMeetingTopic"];
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Move one topic, with its notes, to the series' next meeting without ending this one.
-     * @description The next meeting is found or planned as for `endMeeting`. `409 invalid_state` when the topic was already moved,
-     *     its meeting has ended, or there is no next meeting to take it.
-     */
-    readonly post: operations['moveMeetingTopic'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meeting-topics/{topicId}/notes': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
+    readonly "/meeting-topics/{topicId}/move": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Move one topic, with its notes, to the series' next meeting without ending this one.
+         * @description The next meeting is found or planned as for `endMeeting`. `409 invalid_state` when the topic was already moved,
+         *     its meeting has ended, or there is no next meeting to take it.
+         */
+        readonly post: operations["moveMeetingTopic"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Add a note under a topic.
-     * @description `409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.
-     */
-    readonly post: operations['addMeetingNote'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meeting-notes/{noteId}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly noteId: components['parameters']['MeetingNoteId'];
-      };
-      readonly cookie?: never;
+    readonly "/meeting-topics/{topicId}/notes": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Add a note under a topic.
+         * @description `409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.
+         */
+        readonly post: operations["addMeetingNote"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    readonly post?: never;
-    /**
-     * Remove a note.
-     * @description `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.
-     */
-    readonly delete: operations['deleteMeetingNote'];
-    readonly options?: never;
-    readonly head?: never;
-    /**
-     * Rewrite a note.
-     * @description `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.
-     */
-    readonly patch: operations['updateMeetingNote'];
-    readonly trace?: never;
-  };
-  readonly '/meeting-series': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
+    readonly "/meeting-notes/{noteId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly noteId: components["parameters"]["MeetingNoteId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        /**
+         * Remove a note.
+         * @description `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.
+         */
+        readonly delete: operations["deleteMeetingNote"];
+        readonly options?: never;
+        readonly head?: never;
+        /**
+         * Rewrite a note.
+         * @description `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.
+         */
+        readonly patch: operations["updateMeetingNote"];
+        readonly trace?: never;
     };
-    /** Every meeting series, by name. */
-    readonly get: operations['listMeetingSeries'];
-    readonly put?: never;
-    /**
-     * Add a meeting series.
-     * @description `cadenceDays` lets Ahoy plan the series' next meeting itself when topics are carried over and none is planned.
-     */
-    readonly post: operations['createMeetingSeries'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meeting-series/{seriesId}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly seriesId: components['parameters']['MeetingSeriesId'];
-      };
-      readonly cookie?: never;
+    readonly "/meeting-series": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Every meeting series, by name. */
+        readonly get: operations["listMeetingSeries"];
+        readonly put?: never;
+        /**
+         * Add a meeting series.
+         * @description `cadenceDays` lets Ahoy plan the series' next meeting itself when topics are carried over and none is planned.
+         */
+        readonly post: operations["createMeetingSeries"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    /**
-     * Set where the stories drafted from the series' meetings are created in Jira.
-     * @description `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` defaults
-     *     to `Story`.
-     */
-    readonly patch: operations['updateMeetingSeries'];
-    readonly trace?: never;
-  };
-  readonly '/meetings/{meetingId}/story-drafts': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
+    readonly "/meeting-series/{seriesId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly seriesId: components["parameters"]["MeetingSeriesId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        /**
+          * Set where the stories drafted from the series' meetings are created in Jira.
+          * @description `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` defaults
+          *     to `Story`.
+          */
+        readonly patch: operations["updateMeetingSeries"];
+        readonly trace?: never;
     };
-    /** The meeting's story drafts that were not discarded, newest first. */
-    readonly get: operations['listMeetingStoryDrafts'];
-    readonly put?: never;
-    readonly post?: never;
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meeting-topics/{topicId}/story-drafts': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
+    readonly "/meetings/{meetingId}/story-drafts": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        /** The meeting's story drafts that were not discarded, newest first. */
+        readonly get: operations["listMeetingStoryDrafts"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Ask an agent to draft a user story from a topic. May spend AIU.
-     * @description Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It
-     *     reads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)
-     *     and replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never
-     *     writes to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll
-     *     `getMeetingStoryDraft` until it is not `drafting`.
-     *
-     *     `409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503
-     *     unavailable` when story drafts are not configured or the control repo cannot be read.
-     */
-    readonly post: operations['requestMeetingStoryDraft'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meeting-story-drafts/{draftId}': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly draftId: components['parameters']['MeetingStoryDraftId'];
-      };
-      readonly cookie?: never;
+    readonly "/meeting-topics/{topicId}/story-drafts": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+          * Ask an agent to draft a user story from a topic. May spend AIU.
+          * @description Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It
+          *     reads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)
+          *     and replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never
+          *     writes to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll
+          *     `getMeetingStoryDraft` until it is not `drafting`.
+          *
+          *     `409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503
+          *     unavailable` when story drafts are not configured or the control repo cannot be read.
+          */
+        readonly post: operations["requestMeetingStoryDraft"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    /** One story draft, with its story once the agent has written it. */
-    readonly get: operations['getMeetingStoryDraft'];
-    readonly put?: never;
-    readonly post?: never;
-    /**
-     * Discard a draft not yet created in Jira, so its topic can be drafted again.
-     * @description A draft still being written has its run stopped: a queued one spends nothing, a running one is cancelled.
-     *     `409 invalid_state` when the draft was created in Jira; `404` when it was already discarded.
-     */
-    readonly delete: operations['discardMeetingStoryDraft'];
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
-  readonly '/meeting-story-drafts/{draftId}/create-issue': {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly draftId: components['parameters']['MeetingStoryDraftId'];
-      };
-      readonly cookie?: never;
+    readonly "/meeting-story-drafts/{draftId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly draftId: components["parameters"]["MeetingStoryDraftId"];
+            };
+            readonly cookie?: never;
+        };
+        /** One story draft, with its story once the agent has written it. */
+        readonly get: operations["getMeetingStoryDraft"];
+        readonly put?: never;
+        readonly post?: never;
+        /**
+          * Discard a draft not yet created in Jira, so its topic can be drafted again.
+          * @description A draft still being written has its run stopped: a queued one spends nothing, a running one is cancelled.
+          *     `409 invalid_state` when the draft was created in Jira; `404` when it was already discarded.
+          */
+        readonly delete: operations["discardMeetingStoryDraft"];
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
     };
-    readonly get?: never;
-    readonly put?: never;
-    /**
-     * Create a ready draft's story in Jira, in its series' project. Writes to Jira.
-     * @description Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the
-     *     story, its acceptance criteria, what is out of scope, open questions and the meeting it came from as the
-     *     description; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its
-     *     issue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira
-     *     project; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).
-     */
-    readonly post: operations['createMeetingStoryIssue'];
-    readonly delete?: never;
-    readonly options?: never;
-    readonly head?: never;
-    readonly patch?: never;
-    readonly trace?: never;
-  };
+    readonly "/meeting-story-drafts/{draftId}/create-issue": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly draftId: components["parameters"]["MeetingStoryDraftId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+          * Create a ready draft's story in Jira, in its series' project. Writes to Jira.
+          * @description Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the
+          *     story, its acceptance criteria, what is out of scope, open questions and the meeting it came from as the
+          *     description; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its
+          *     issue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira
+          *     project; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).
+          */
+        readonly post: operations["createMeetingStoryIssue"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    readonly StoryKey: string;
-    readonly RunId: string;
-    readonly EventId: string;
-    readonly Actor: string;
-    /** Format: date-time */
-    readonly Timestamp: string;
-    readonly NanoAiu: number;
-    /** @description Optimistic-concurrency version; increases on every story change. */
-    readonly Version: number;
-    readonly ArtifactPath: string;
-    /**
-     * @description A phase from the pinned control repo's `phases.tsv`.
-     * @example intake
-     * @example planning
-     * @example plan_review
-     * @example implementation
-     * @example blocked
-     * @example done
-     */
-    readonly Phase: string;
-    /**
-     * @description `ready`: the reconciler will act. `running`: a worker run is active.
-     *     `awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.
-     *     `halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.
-     * @enum {string}
-     */
-    readonly StoryStatus:
-      | 'ready'
-      | 'running'
-      | 'awaiting_input'
-      | 'awaiting_decision'
-      | 'halted'
-      | 'terminal';
-    readonly JiraSprint: {
-      readonly id: number;
-      readonly name: string;
-      /** @enum {string} */
-      readonly state: 'active' | 'future' | 'closed';
-    };
-    readonly JiraBacklogIssue: {
-      readonly key: string;
-      /** @enum {string} */
-      readonly issueType: 'Story' | 'Task' | 'Bug';
-      readonly summary: string;
-      readonly status: string;
-      readonly priority: string | null;
-      /** Format: date-time */
-      readonly updatedAt: string;
-      /**
-       * @description Selected from Jira customfield_10000: active first, then future, then closed; the lowest
-       *     sprint ID breaks ties. Null when unassigned. Supports Jira Server's legacy sprint strings.
-       */
-      readonly sprint: components['schemas']['JiraSprint'] | null;
-      readonly readiness: components['schemas']['BacklogReadiness'];
-    };
-    readonly FitReason: {
-      /**
-       * @description Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,
-       *     `short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,
-       *     `many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.
-       */
-      readonly code: string;
-      /** @description English explanation with the evidence. */
-      readonly message: string;
-    };
-    readonly BacklogReadiness: {
-      /** @enum {string} */
-      readonly verdict: 'ready' | 'attention' | 'missing';
-      /** @description Reasons for `missing` first, then those for `attention`. Empty when `ready`. */
-      readonly reasons: readonly components['schemas']['FitReason'][];
-    };
-    readonly PlanFit: {
-      /** @enum {string} */
-      readonly verdict: 'fits' | 'attention' | 'poor';
-      /** @description Reasons for `poor` first, then those for `attention`. Empty when `fits`. */
-      readonly reasons: readonly components['schemas']['FitReason'][];
-      readonly repositories: number;
-      readonly packages: number;
-      readonly criteria: number;
-      /** @description Work packages in the longest depends_on chain. */
-      readonly longestChain: number;
-    };
-    readonly StoryPlanFit: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly phase: components['schemas']['Phase'];
-      readonly fit: components['schemas']['PlanFit'] | null;
-    };
-    readonly JiraBacklog: {
-      readonly items: readonly components['schemas']['JiraBacklogIssue'][];
-      readonly total: number;
-    };
-    readonly Health: {
-      /** @enum {string} */
-      readonly status: 'ok' | 'degraded';
-      /** @enum {string} */
-      readonly database: 'ok' | 'unavailable';
-    };
-    readonly Problem: {
-      readonly type: string;
-      readonly title: string;
-      readonly status: number;
-      readonly detail?: string;
-      readonly instance?: string;
-      /** @enum {string} */
-      readonly code:
-        | 'bad_request'
-        | 'validation_failed'
-        | 'unauthenticated'
-        | 'forbidden'
-        | 'not_found'
-        | 'story_exists'
-        | 'stale_version'
-        | 'invalid_state'
-        | 'already_answered'
-        | 'decision_already_recorded'
-        | 'revision_ceiling_reached'
-        | 'unsupported_gate'
-        | 'legacy_story'
-        | 'internal_error'
-        | 'unavailable';
-      readonly errors?: readonly {
-        readonly path?: string;
-        readonly message: string;
-      }[];
-      readonly currentVersion?: components['schemas']['Version'];
-    };
-    readonly Usage: {
-      readonly requests: number;
-      readonly nanoAiu: components['schemas']['NanoAiu'];
-      readonly inputTokens: number;
-      readonly outputTokens: number;
-    };
-    readonly Story: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly title: string | null;
-      readonly owner: components['schemas']['Actor'];
-      readonly phase: components['schemas']['Phase'];
-      readonly status: components['schemas']['StoryStatus'];
-      readonly haltReason: string | null;
-      readonly budgetNanoAiu: components['schemas']['NanoAiu'];
-      readonly spentNanoAiu: components['schemas']['NanoAiu'];
-      /** @description Control-repo commit (agents, skills, phase rules) pinned for the story's life. */
-      readonly controlSha: string;
-      readonly currentRunId: components['schemas']['RunId'] | null;
-      readonly version: components['schemas']['Version'];
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly updatedAt: components['schemas']['Timestamp'];
-    };
-    readonly StoryPage: {
-      readonly items: readonly components['schemas']['Story'][];
-      readonly nextCursor: string | null;
-    };
-    readonly StartStoryRequest: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly title?: string;
-      /** @description Hard AIU cap for every run of the story together. */
-      readonly budgetNanoAiu: number;
-      /** @description Control-repo commit to pin. Defaults to the configured control repo's HEAD. */
-      readonly controlRef?: string;
-      /** @description The model and reasoning effort for each phase; a slot left out runs on the server's configured defaults. Can be changed later with `setStoryModels`. */
-      readonly models?: components['schemas']['ModelPlanRequest'];
-    };
-    readonly StopStoryRequest: {
-      readonly expectedVersion: components['schemas']['Version'];
-      readonly reason: string;
-    };
-    /** @description A work package id from the plan, e.g. `WP1`. */
-    readonly WorkPackageId: string;
-    /** @description A plan alias of a child repository, as in `child_repos[].repo`. */
-    readonly RepoAlias: string;
-    readonly ResolveReviewRequest: {
-      /** @enum {string} */
-      readonly decision: 'rework' | 'override';
-      readonly reason: string;
-      /** @description `rework` only: reopen exactly these packages instead of the ones the findings name. */
-      readonly packages?: readonly components['schemas']['WorkPackageId'][];
-      readonly expectedVersion: components['schemas']['Version'];
-    };
-    readonly WorkPackageDecisionRequest: {
-      /** @enum {string} */
-      readonly decision: 'retry' | 'accept';
-      readonly reason: string;
-      readonly expectedVersion: components['schemas']['Version'];
-    };
-    readonly ReopenWorkRequest: {
-      /** @description The rework note the implementer gets. */
-      readonly note: string;
-      readonly packages?: readonly components['schemas']['WorkPackageId'][];
-      readonly repos?: readonly components['schemas']['RepoAlias'][];
-      readonly expectedVersion: components['schemas']['Version'];
-    };
-    readonly AmendAnchorsRequest: {
-      readonly amendments: readonly components['schemas']['AnchorAmendment'][];
-      readonly reason: string;
-      readonly expectedVersion: components['schemas']['Version'];
-    };
-    readonly AnchorAmendment: {
-      /** @description The acceptance criterion's id, e.g. `AC5`. */
-      readonly criterion: string;
-      /** @description The anchor as the plan has it. */
-      readonly anchor: string;
-      /** @enum {string} */
-      readonly decision: 'replace' | 'waive';
-      /** @description `replace` only: text the pull request adds, e.g. the bumped version `joi-18.2.9`. */
-      readonly replacement?: string;
-    };
-    readonly UnblockStoryRequest: {
-      readonly reason: string;
-      /** @default 1 */
-      readonly rounds: number;
-      readonly repos?: readonly components['schemas']['RepoAlias'][];
-      readonly expectedVersion: components['schemas']['Version'];
-    };
-    readonly RefinementRequest: {
-      /** @constant */
-      readonly confirmSpend: true;
-      /** @description What the agent should look at, given to it as the requester's notes. */
-      readonly notes?: string;
-      /** @description The run's AIU cap, at most 100 AIU; the server's refinement cap when absent. */
-      readonly budgetNanoAiu?: number;
-    };
-    readonly AgentDiagnosisList: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly items: readonly components['schemas']['Refinement'][];
-    };
-    readonly AgentDiagnosisRequest: {
-      /** @constant */
-      readonly confirmSpend: true;
-      /** @description What the agent should look into, given to it as the requester's notes. */
-      readonly notes?: string;
-      /** @description The run's AIU cap, at most 100 AIU; the server's diagnosis cap when absent. */
-      readonly budgetNanoAiu?: number;
-    };
-    readonly CancelRefinementRequest: {
-      readonly reason: string;
-    };
-    readonly RefreshIntakeRequest: {
-      readonly expectedVersion: components['schemas']['Version'];
-      readonly reason: string;
-      /** @constant */
-      readonly confirmSpend: true;
-    };
-    readonly ResumeStoryRequest: {
-      readonly expectedVersion: components['schemas']['Version'];
-      readonly reason?: string;
-    };
-    readonly SetStoryBudgetRequest: {
-      readonly expectedVersion: components['schemas']['Version'];
-      /** @description New hard AIU cap for every run of the story together, including what is already spent. */
-      readonly budgetNanoAiu: number;
-      readonly reason: string;
-    };
-    /**
-     * @description A part of the story that runs on one model, by phase; `review` is the one reviewer of `pr_review`.
-     * @enum {string}
-     */
-    readonly ModelSlot: 'intake' | 'planning' | 'implementation' | 'review';
-    /**
-     * @description A Copilot model id, e.g. `claude-sonnet-5` or `gpt-5.6-terra`.
-     * @example claude-sonnet-5
-     * @example gpt-5.6-terra
-     */
-    readonly ModelId: string;
-    /**
-     * @description The Copilot SDK's reasoning effort levels; a model may accept fewer, or none.
-     * @enum {string}
-     */
-    readonly ReasoningEffort: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
-    /** @description A model, a reasoning effort, or both; what is left out comes from the defaults. */
-    readonly ModelChoice: {
-      readonly model?: components['schemas']['ModelId'];
-      readonly reasoningEffort?: components['schemas']['ReasoningEffort'];
-    };
-    /** @description A choice per slot. */
-    readonly ModelPlanRequest: {
-      readonly intake?: components['schemas']['ModelChoice'];
-      readonly planning?: components['schemas']['ModelChoice'];
-      readonly implementation?: components['schemas']['ModelChoice'];
-      readonly review?: components['schemas']['ModelChoice'];
-    };
-    /** @description A choice per slot to change; `null` gives a slot back to the configured defaults. */
-    readonly ModelPlanChange: {
-      readonly intake?: components['schemas']['ModelChoice'] | null;
-      readonly planning?: components['schemas']['ModelChoice'] | null;
-      readonly implementation?: components['schemas']['ModelChoice'] | null;
-      readonly review?: components['schemas']['ModelChoice'] | null;
-    };
-    readonly SetStoryModelsRequest: {
-      readonly expectedVersion: components['schemas']['Version'];
-      readonly models: components['schemas']['ModelPlanChange'];
-      readonly reason?: string;
-    };
-    readonly SlotModel: {
-      readonly slot: components['schemas']['ModelSlot'];
-      readonly phase: components['schemas']['Phase'];
-      /** @description What a person chose for the story; null when the slot runs on the defaults. */
-      readonly chosen: components['schemas']['ModelChoice'] | null;
-      /** @description The model the slot's next run gets; null leaves it to the agent profile. */
-      readonly model: components['schemas']['ModelId'] | null;
-      /** @description The effort the slot's next run gets; null is the model's own default. */
-      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
-      /**
-       * @description `revision`: a one-round override for the phase the story is in; `story`: the person's choice; `configuration`: the server's phase configuration; `phase_table`: the pinned `phases.tsv`; `agent_profile`: no model is named, so the agent's own profile decides.
-       * @enum {string}
-       */
-      readonly modelSource:
-        | 'revision'
-        | 'story'
-        | 'configuration'
-        | 'phase_table'
-        | 'agent_profile';
-      /** @enum {string} */
-      readonly effortSource:
-        | 'revision'
-        | 'story'
-        | 'configuration'
-        | 'phase_table'
-        | 'model_default';
-    };
-    readonly ModelPlan: {
-      readonly storyKey: components['schemas']['StoryKey'];
-      readonly version: components['schemas']['Version'];
-      readonly slots: readonly components['schemas']['SlotModel'][];
-    };
-    readonly CatalogModel: {
-      readonly id: components['schemas']['ModelId'];
-      /** @description What a person reads; the id when none is configured. */
-      readonly label: string;
-      /** @description The efforts the model takes (`[]`, none); null when the catalogue does not say. */
-      readonly reasoningEfforts:
-        | readonly components['schemas']['ReasoningEffort'][]
-        | null;
-    };
-    /** @description What a slot of a story started now runs on when nobody chooses (a `SlotModel` without `chosen`). */
-    readonly SlotDefault: {
-      readonly slot: components['schemas']['ModelSlot'];
-      readonly phase: components['schemas']['Phase'];
-      /** @description The model; null leaves it to the agent profile. */
-      readonly model: components['schemas']['ModelId'] | null;
-      /** @description The effort; null is the model's own default. */
-      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
-      /** @enum {string} */
-      readonly modelSource: 'configuration' | 'phase_table' | 'agent_profile';
-      /** @enum {string} */
-      readonly effortSource: 'configuration' | 'phase_table' | 'model_default';
-    };
-    readonly ModelCatalog: {
-      /**
-       * @description Where the list came from; neither is checked against a Copilot account.
-       * @enum {string}
-       */
-      readonly source: 'built_in' | 'file';
-      readonly models: readonly components['schemas']['CatalogModel'][];
-      /** @description Every effort `startStory` and `setStoryModels` accept; a model may take fewer. */
-      readonly reasoningEfforts: readonly components['schemas']['ReasoningEffort'][];
-      /** @description The control commit whose `phases.tsv` filled the defaults; null when it could not be read. */
-      readonly controlSha: string | null;
-      readonly defaults: readonly components['schemas']['SlotDefault'][];
-    };
-    /** @enum {string} */
-    readonly RunStatus:
-      | 'queued'
-      | 'running'
-      | 'succeeded'
-      | 'awaiting_input'
-      | 'failed'
-      | 'budget_exceeded'
-      | 'timed_out'
-      | 'cancelled'
-      | 'output_violation'
-      | 'auth_failed'
-      | 'lost';
-    /** @description Latest worker observation, checked on each active poll and persisted when it changes or at least every ten seconds. Separate from the run lifecycle: a dispatched run is `running` even while its worker is starting. Null before an observation, for runtimes without observations, and after cancellation or completion. `observedAt` is collection time, not the worker's start time. Clients should show unavailable status rather than an old wait when stale. */
-    readonly RuntimeStatus: {
-      /**
-       * @description `waiting_for_node` requires a Pending, unscheduled pod whose latest autoscaler decision is `TriggeredScaleUp`; Pending alone means `scheduling`, never confirmed node creation. `starting` includes a scheduled pod preparing its containers. `blocked` means a container startup error or `NotTriggerScaleUp`. `running` means the worker container started and startup messages should disappear. `unknown` explicitly means observation failed.
-       * @enum {string}
-       */
-      readonly state:
-        | 'starting'
-        | 'scheduling'
-        | 'waiting_for_node'
-        | 'blocked'
-        | 'running'
-        | 'unknown';
-      readonly reason: string | null;
-      /** @description Bounded, credential-redacted runtime evidence; untrusted plain text, not HTML. */
-      readonly message: string | null;
-      readonly observedAt: components['schemas']['Timestamp'];
-    } | null;
-    readonly Run: {
-      readonly id: components['schemas']['RunId'];
-      readonly storyKey: components['schemas']['StoryKey'];
-      readonly phase: components['schemas']['Phase'];
-      readonly agent: string;
-      /** @description The model the run was started with; null leaves it to the agent profile. */
-      readonly model: string | null;
-      /** @description The reasoning effort the run was started with; null is the model's own default. */
-      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
-      readonly status: components['schemas']['RunStatus'];
-      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
-      /** @description Where the worker ran, e.g. `docker`, `k8s` (one Kubernetes Job), `replay` (offline re-use of recorded evidence) or `fake`. */
-      readonly runtime: string;
-      readonly controlSha: string;
-      readonly budgetNanoAiu: components['schemas']['NanoAiu'];
-      readonly usage: components['schemas']['Usage'];
-      /** @description For runtime `replay`, the recorded worker run whose outputs were re-used. Its usage is not charged again, so `usage` is zero. */
-      readonly replayOf: string | null;
-      readonly exitReason: string | null;
-      /** @description The verdict of the gate that judged this run's output, from the story's gate records. */
-      readonly gate: components['schemas']['GateVerdict'] | null;
-      readonly startedBy: components['schemas']['Actor'];
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly startedAt: components['schemas']['Timestamp'] | null;
-      readonly endedAt: components['schemas']['Timestamp'] | null;
-    };
-    /**
-     * @description `deferred_check`: child_ready halted because a check a work package's verification was delegated to did not report within the implementation phase's `ciWaitMinutes` (default 60) of the delivery, or rejected because it was skipped or neutral, or because the pull request's head no longer contains the delivered commit. Its evidence names the package, the check, the short commit and the packages that depend on it.
-     * @enum {string}
-     */
-    readonly DiagnosisKind:
-      | 'copilot_auth'
-      | 'gate_rejected'
-      | 'configuration'
-      | 'cluster_capacity'
-      | 'pod_evicted'
-      | 'out_of_memory'
-      | 'image_pull'
-      | 'runtime_deadline'
-      | 'budget_exhausted'
-      | 'run_timed_out'
-      | 'output_violation'
-      | 'run_lost'
-      | 'agent_failed'
-      | 'revision_ceiling'
-      | 'package_stuck'
-      | 'deferred_check'
-      | 'reconciler_error'
-      | 'stopped_by_user'
-      | 'other';
-    readonly DiagnosisFinding: {
-      readonly kind: components['schemas']['DiagnosisKind'];
-      /** @description The cause in one sentence. */
-      readonly title: string;
-      /** @description What the run, the gate or the runtime said (untrusted text). */
-      readonly evidence: readonly string[];
-      /** @description What fixes it. */
-      readonly action: string;
-      /**
-       * @description Who can act: the story's owner (resume, budget, models), the operator (cluster, secrets, configuration) or the maintainer of the agents' instructions.
-       * @enum {string}
-       */
-      readonly actor: 'story_owner' | 'operator' | 'agent_maintainer';
-      /** @description Whether resuming as things are is likely to help, rather than only after the action. */
-      readonly resumable: boolean;
-      readonly runId: components['schemas']['RunId'] | null;
-    };
-    readonly Diagnosis: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly status: components['schemas']['StoryStatus'];
-      readonly phase: components['schemas']['Phase'];
-      readonly haltReason: string | null;
-      readonly findings: readonly components['schemas']['DiagnosisFinding'][];
-    };
-    /**
-     * @description `queued`: waiting for a run slot. `running`: holds a slot; its worker runs once `startedAt` is set.
-     *     `succeeded`: `content` holds the refinement. Every other value is how the run ended without one; see
-     *     `exitReason`.
-     * @enum {string}
-     */
-    readonly RefinementStatus:
-      | 'queued'
-      | 'running'
-      | 'succeeded'
-      | 'failed'
-      | 'budget_exceeded'
-      | 'timed_out'
-      | 'cancelled'
-      | 'output_violation'
-      | 'auth_failed'
-      | 'lost';
-    readonly RefinementSummary: {
-      readonly id: components['schemas']['RunId'];
-      readonly key: components['schemas']['StoryKey'];
-      readonly status: components['schemas']['RefinementStatus'];
-      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
-      readonly notes: string | null;
-      readonly requestedBy: components['schemas']['Actor'];
-      /** @description The agent profile; null until the run takes a slot. */
-      readonly agent: string | null;
-      /** @description The model the run was started with; null leaves it to the agent profile. */
-      readonly model: string | null;
-      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
-      /** @description Where the worker ran; null until the run takes a slot. */
-      readonly runtime: string | null;
-      readonly controlSha: string;
-      readonly budgetNanoAiu: components['schemas']['NanoAiu'];
-      readonly usage: components['schemas']['Usage'];
-      readonly exitReason: string | null;
-      readonly cancelRequested: boolean;
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly startedAt: components['schemas']['Timestamp'] | null;
-      readonly endedAt: components['schemas']['Timestamp'] | null;
-    };
-    readonly Refinement: {
-      readonly id: components['schemas']['RunId'];
-      readonly key: components['schemas']['StoryKey'];
-      readonly status: components['schemas']['RefinementStatus'];
-      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
-      readonly notes: string | null;
-      readonly requestedBy: components['schemas']['Actor'];
-      readonly agent: string | null;
-      readonly model: string | null;
-      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
-      readonly runtime: string | null;
-      readonly controlSha: string;
-      readonly budgetNanoAiu: components['schemas']['NanoAiu'];
-      readonly usage: components['schemas']['Usage'];
-      readonly exitReason: string | null;
-      readonly cancelRequested: boolean;
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly startedAt: components['schemas']['Timestamp'] | null;
-      readonly endedAt: components['schemas']['Timestamp'] | null;
-      /** @description The agent's pre-refinement, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
-      readonly content: string | null;
-    };
-    readonly KnowledgeReview: {
-      readonly id: components['schemas']['RunId'];
-      readonly key: components['schemas']['StoryKey'];
-      readonly status: components['schemas']['RefinementStatus'];
-      readonly runtimeStatus?: components['schemas']['RuntimeStatus'];
-      readonly notes: string | null;
-      readonly requestedBy: components['schemas']['Actor'];
-      readonly agent: string | null;
-      readonly model: string | null;
-      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
-      readonly runtime: string | null;
-      readonly controlSha: string;
-      readonly budgetNanoAiu: components['schemas']['NanoAiu'];
-      readonly usage: components['schemas']['Usage'];
-      readonly exitReason: string | null;
-      readonly cancelRequested: boolean;
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly startedAt: components['schemas']['Timestamp'] | null;
-      readonly endedAt: components['schemas']['Timestamp'] | null;
-      /** @description The agent's summary of the rules and lessons it added, changed or left out, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
-      readonly content: string | null;
-      /** @description The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
-      readonly proposal: string | null;
-      /** @description The whole proposed `knowledge/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
-      readonly lessons: string | null;
-      /** @description Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content repository; null exactly when both `proposal` and `lessons` are. */
-      readonly patch: string | null;
-    };
-    readonly KnowledgeReviewList: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly items: readonly components['schemas']['KnowledgeReview'][];
-    };
-    readonly KnowledgeReviewRequest: {
-      /** @constant */
-      readonly confirmSpend: true;
-      /** @description What the agent should look at, given to it as the requester's notes. */
-      readonly notes?: string;
-      /** @description The run's AIU cap, at most 100 AIU; the server's knowledge cap when absent. */
-      readonly budgetNanoAiu?: number;
-    };
-    readonly RefinementSummaryList: {
-      readonly items: readonly components['schemas']['RefinementSummary'][];
-    };
-    readonly RefinementList: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly items: readonly components['schemas']['Refinement'][];
-    };
-    readonly StoryState: {
-      readonly key: components['schemas']['StoryKey'];
-      readonly version: components['schemas']['Version'];
-      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. A work package's `status` is `pending`, `done`, `in_progress`, `waiting_on_handback`, `failed`, `stalled`, `blocked`, `unverified` or `awaiting_ci`. `awaiting_ci`: the implementer reported `unverified` with every gap in `deferred_checks` delegated to CI checks the repository declares, and the work was published; its dependents may start, and child_ready waits for each check. Such a package also has `deferred_checks` (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done` and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A work package may also have `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its answers to the findings its rework note numbered, kept until a review sends work back again. A review in `reviewer_reviews` gives, in `criteria_reasons`, `why` and `proof` (what would prove it) for each verdict other than `met`. Its `findings` may carry `previous_id`, `regression` and `new_argument` as the reviewer wrote them, and `follow_up` as the harness set it: in a re-review a medium finding that is not a regression the rework introduced and not a previous finding still open, or a disputed one upheld without a new argument, is a follow-up, recorded for the person at the delivery gate (a `review_follow_up` entry of `decision_log`) and not sent to rework. */
-      readonly state: Record<string, never>;
-    };
-    readonly GateVerdict: {
-      readonly gate: string;
-      readonly code: number;
-      /** @enum {string} */
-      readonly result: 'pass' | 'fail' | 'error' | 'branch' | 'halt' | 'reject';
-      readonly message: string;
-    };
-    readonly Question: {
-      readonly id: string;
-      readonly round: number;
-      readonly runId: components['schemas']['RunId'];
-      readonly text: string;
-      readonly recommendation: string | null;
-      readonly answer: string | null;
-      readonly answeredBy: components['schemas']['Actor'] | null;
-      readonly answeredAt: components['schemas']['Timestamp'] | null;
-      readonly consumed: boolean;
-      /** @description Non-null means historical context invalidated by an intake refresh; cannot be answered. */
-      readonly supersededAt: components['schemas']['Timestamp'] | null;
-    };
-    readonly AnswerRequest: {
-      readonly answer: string;
-      readonly expectedVersion: components['schemas']['Version'];
-    };
-    readonly AnswerAccepted: {
-      readonly story: components['schemas']['Story'];
-      readonly question: components['schemas']['Question'];
-    };
-    readonly GateRecord: {
-      readonly id: string;
-      /**
-       * @description `gate`: an automated gate the harness ran. `human`: a recorded decision.
-       * @enum {string}
-       */
-      readonly source: 'gate' | 'human';
-      /** @description Gate name (`intake`, `plan`) or human gate key (`plan_accepted`). */
-      readonly gate: string;
-      readonly phase: components['schemas']['Phase'];
-      /** @enum {string} */
-      readonly outcome:
-        | 'pass'
-        | 'fail'
-        | 'error'
-        | 'branch'
-        | 'halt'
-        | 'reject'
-        | 'approve'
-        | 'send_back';
-      /** @description A child_ready `fail` while work packages are `awaiting_ci` is a wait, not a stuck package: one line per deferred check says what it waits on, e.g. "WP1 awaits 'facility-pages / playwright' at commit 8b30531 (not reported yet); WP2 depends on WP1". Repeated polls with the same verdict are recorded once. */
-      readonly message: string | null;
-      readonly actor: components['schemas']['Actor'];
-      readonly runId: components['schemas']['RunId'] | null;
-      readonly createdAt: components['schemas']['Timestamp'];
-    };
-    readonly DecisionRequest: {
-      /** @description Human gate key from the phase table, e.g. `plan_accepted`. */
-      readonly gate: string;
-      /**
-       * @description `approve` advances per the phase table. `send_back` returns the story to the phase
-       *     that produced the artifact with `reason` for the agent (counts a revision round).
-       *     `reject` moves the story to `blocked`. `send_back` and `reject` require `reason`.
-       * @enum {string}
-       */
-      readonly decision: 'approve' | 'send_back' | 'reject';
-      readonly reason?: string;
-      readonly expectedVersion: components['schemas']['Version'];
-    };
-    readonly DecisionAccepted: {
-      readonly story: components['schemas']['Story'];
-      readonly record: components['schemas']['GateRecord'];
-    };
-    readonly Artifact: {
-      readonly path: components['schemas']['ArtifactPath'];
-      readonly sha256: string;
-      readonly sizeBytes: number;
-      readonly mediaType: string;
-      /** @description The artifact-set revision this entry belongs to (every revision is a complete set). */
-      readonly revision: number;
-      readonly runId: components['schemas']['RunId'] | null;
-      readonly createdAt: components['schemas']['Timestamp'];
-    };
-    /**
-     * @description Stable event type. New types may be added in a minor version; clients must ignore unknown types.
-     * @example story.started
-     * @example story.halted
-     * @example story.resumed
-     * @example story.intake_refreshed
-     * @example story.budget_changed
-     * @example story.models_changed
-     * @example story.phase_changed
-     * @example story.awaiting_input
-     * @example story.awaiting_decision
-     * @example run.queued
-     * @example run.dispatched
-     * @example run.finished
-     * @example gate.evaluated
-     * @example question.asked
-     * @example question.answered
-     * @example decision.recorded
-     * @example review.resolved
-     * @example work_package.decided
-     * @example work.reopened
-     * @example story.unblocked
-     * @example criteria.anchors_amended
-     * @example artifacts.updated
-     * @example implementation.reported
-     * @example review.reported
-     * @example story.routed
-     * @example run.progress
-     * @example run.waiting
-     * @example knowledge_review.queued
-     * @example knowledge_review.skipped
-     */
-    readonly EventType: string;
-    readonly Event: {
-      readonly id: components['schemas']['EventId'];
-      readonly storyKey: components['schemas']['StoryKey'];
-      readonly type: components['schemas']['EventType'];
-      readonly actor: components['schemas']['Actor'];
-      /** @description Type-specific JSON; never contains tokens or credentials. A `run.progress` payload is a `RunProgressPayload`. A `run.waiting` event says the story's next run is waiting for a run slot: the server allows at most `maxActiveRuns` runs queued or running at once (`AHOY_MAX_ACTIVE_RUNS`, one worker container or pod each), and `activeRuns` were when the story looked. Its payload is `{phase, activeRuns, maxActiveRuns}`. It is written once when the wait starts; the story stays `ready` at the same version and its run is queued (`run.queued`) when a slot frees. */
-      readonly payload: Record<string, never>;
-      readonly createdAt: components['schemas']['Timestamp'];
-    };
-    /**
-     * @description The payload of a `run.progress` event: what a running agent is doing. The worker writes each step of its
-     *     session to the run's `events.jsonl` as it goes; while the run is running the reconciler reads the new lines
-     *     on each poll (about every 2 seconds, `AHOY_POLL_MS`, at most 4 MiB a poll) and once more when the run ends,
-     *     then to the end of the log (up to 64 MiB), so the run's last steps come before its `run.finished`. Each poll
-     *     that found steps writes them, then one `spend` event:
-     *
-     *     - `tool`: a tool call the agent started: the tool's name and a short summary of its main argument (a path,
-     *       a pattern, a query, a URL, a command, a description or an intent), when it has one;
-     *     - `message`: the first 200 characters of a message the agent wrote, on one line;
-     *     - `spend`: the run's spend so far (summed from the log the same way the worker sums it) and counts. It closes
-     *       every batch, so it also says where the reconciler stopped reading (`line`, `offset`); a restarted
-     *       reconciler goes on from there and never writes a step twice. A poll that found only spend or counts writes
-     *       one at most every 30 seconds, and always on the poll that sees the run end.
-     *
-     *     Texts are plain (no control characters or terminal escapes, whitespace collapsed) and credential-shaped
-     *     strings are masked as `[REDACTED]`, as in a halt's `workerLog`. Limits: at most 10 steps per poll, the
-     *     latest; at most 200 steps per run, after which only `spend` events are written, so the spend and `omitted`
-     *     keep moving to the end; at most 1000 events per run, a guard that a run reaches only long after its own
-     *     deadline, after which nothing more until `run.finished`. Steps left out are counted in `omitted`, lines that
-     *     could not be read (not JSON, or over 1 MiB) in `skipped`. Progress is shown, never judged: a run's outcome and what is
-     *     charged come only from `run.finished`, and a run that is cancelled, killed or lost may have shown steps that
-     *     no result reflects.
-     */
-    readonly RunProgressPayload:
-      | {
-          readonly runId: components['schemas']['RunId'];
-          /** @constant */
-          readonly kind: 'tool';
-          /** @description The line of `events.jsonl` (1-based). */
-          readonly line: number;
-          /** @description When the worker logged it */
-          readonly at?: components['schemas']['Timestamp'];
-          readonly tool: string;
-          readonly summary?: string;
-        }
-      | {
-          readonly runId: components['schemas']['RunId'];
-          /** @constant */
-          readonly kind: 'message';
-          readonly line: number;
-          readonly at?: components['schemas']['Timestamp'];
-          readonly text: string;
-        }
-      | {
-          readonly runId: components['schemas']['RunId'];
-          /** @constant */
-          readonly kind: 'spend';
-          /** @description Lines of `events.jsonl` read so far. */
-          readonly line: number;
-          /** @description Bytes of `events.jsonl` read so far. */
-          readonly offset: number;
-          /** @description Spent so far by the run, as its log shows it; `run.finished` has what is charged. */
-          readonly nanoAiu: number;
-          /** @description Model requests so far. */
-          readonly requests: number;
-          /** @description `tool` and `message` events written for the run. */
-          readonly steps: number;
-          /** @description Steps left out by the limits. */
-          readonly omitted: number;
-          /** @description Lines that could not be read. */
-          readonly skipped: number;
-          /** @description `run.progress` events written for the run, this one included. */
-          readonly events: number;
+    schemas: {
+        readonly StoryKey: string;
+        readonly RunId: string;
+        readonly EventId: string;
+        readonly Actor: string;
+        /** Format: date-time */
+        readonly Timestamp: string;
+        readonly NanoAiu: number;
+        /** @description Optimistic-concurrency version; increases on every story change. */
+        readonly Version: number;
+        readonly ArtifactPath: string;
+        /**
+         * @description A phase from the pinned control repo's `phases.tsv`.
+         * @example intake
+         * @example planning
+         * @example plan_review
+         * @example implementation
+         * @example blocked
+         * @example done
+         */
+        readonly Phase: string;
+        /**
+         * @description `ready`: the reconciler will act. `running`: a worker run is active.
+         *     `awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.
+         *     `halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.
+         * @enum {string}
+         */
+        readonly StoryStatus: "ready" | "running" | "awaiting_input" | "awaiting_decision" | "halted" | "terminal";
+        readonly JiraSprint: {
+            readonly id: number;
+            readonly name: string;
+            /** @enum {string} */
+            readonly state: "active" | "future" | "closed";
         };
-    readonly EventPage: {
-      readonly items: readonly components['schemas']['Event'][];
-      /** @description Pass as `after` to continue. */
-      readonly lastEventId: components['schemas']['EventId'] | null;
-    };
-    /** @description The metrics of one period (`GET /metrics`). AIU in integer nano-AIU, durations in whole seconds. */
-    readonly MetricsReport: {
-      /** Format: date-time */
-      readonly from: string;
-      /** Format: date-time */
-      readonly to: string;
-      readonly totals: {
-        readonly nanoAiu: components['schemas']['MetricsCount'];
-        readonly runs: components['schemas']['MetricsCount'];
-        readonly runsSucceeded: components['schemas']['MetricsCount'];
-        readonly inputTokens: components['schemas']['MetricsCount'];
-        readonly outputTokens: components['schemas']['MetricsCount'];
-        readonly storiesFinished: components['schemas']['MetricsCount'];
-        readonly storiesDone: components['schemas']['MetricsCount'];
-        readonly storiesBlocked: components['schemas']['MetricsCount'];
-        readonly medianNanoAiuPerDoneStory: number | null;
-        readonly halts: components['schemas']['MetricsCount'];
-        readonly haltedStories: components['schemas']['MetricsCount'];
-        readonly repeatHaltStories: components['schemas']['MetricsCount'];
-        readonly gateEvaluations: components['schemas']['MetricsCount'];
-        readonly gatePasses: components['schemas']['MetricsCount'];
-        readonly gateErrors: components['schemas']['MetricsCount'];
-      };
-      /** @description AIU per phase for each week (Monday 00:00 UTC) that has runs. */
-      readonly weeks: readonly {
-        /** Format: date */
-        readonly weekStart: string;
-        readonly byPhase: {
-          readonly [key: string]: components['schemas']['MetricsCount'];
+        readonly JiraBacklogIssue: {
+            readonly key: string;
+            /** @enum {string} */
+            readonly issueType: "Story" | "Task" | "Bug";
+            readonly summary: string;
+            readonly status: string;
+            readonly priority: string | null;
+            /** Format: date-time */
+            readonly updatedAt: string;
+            /**
+             * @description Selected from Jira customfield_10000: active first, then future, then closed; the lowest
+             *     sprint ID breaks ties. Null when unassigned. Supports Jira Server's legacy sprint strings.
+             */
+            readonly sprint: components["schemas"]["JiraSprint"] | null;
+            readonly readiness: components["schemas"]["BacklogReadiness"];
         };
-      }[];
-      readonly phases: readonly {
-        readonly phase: components['schemas']['Phase'];
-        readonly runs: components['schemas']['MetricsCount'];
-        readonly nanoAiu: components['schemas']['MetricsCount'];
-        readonly medianNanoAiu: components['schemas']['MetricsCount'];
-        readonly p90NanoAiu: components['schemas']['MetricsCount'];
-        /** @description The median per-run AIU cap of the phase's runs. */
-        readonly runCapNanoAiu: components['schemas']['MetricsCount'];
-        /** @description Runs that ended `budget_exceeded`. */
-        readonly runsAtCap: components['schemas']['MetricsCount'];
-        readonly medianDurationSeconds: number | null;
-        readonly inputTokens: components['schemas']['MetricsCount'];
-        readonly outputTokens: components['schemas']['MetricsCount'];
-      }[];
-      readonly agents: readonly {
-        readonly agent: string;
-        readonly model: string | null;
-        readonly runs: components['schemas']['MetricsCount'];
-        readonly nanoAiu: components['schemas']['MetricsCount'];
-        readonly medianNanoAiu: components['schemas']['MetricsCount'];
-        readonly notSucceeded: components['schemas']['MetricsCount'];
-      }[];
-      readonly runOutcomes: readonly {
-        readonly status: string;
-        readonly runs: components['schemas']['MetricsCount'];
-      }[];
-      readonly topStories: readonly {
-        readonly key: components['schemas']['StoryKey'];
-        readonly phase: components['schemas']['Phase'];
-        readonly status: components['schemas']['StoryStatus'];
-        readonly spentNanoAiu: components['schemas']['MetricsCount'];
-        readonly budgetNanoAiu: components['schemas']['MetricsCount'];
-        readonly periodNanoAiu: components['schemas']['MetricsCount'];
-        readonly runs: components['schemas']['MetricsCount'];
-        readonly halts: components['schemas']['MetricsCount'];
-        readonly topPhase: components['schemas']['Phase'];
-        readonly topPhaseNanoAiu: components['schemas']['MetricsCount'];
-      }[];
-      readonly halts: readonly components['schemas']['MetricsHalt'][];
-      readonly haltReasons: readonly {
-        readonly reason: string;
-        readonly kind: components['schemas']['DiagnosisKind'];
+        readonly FitReason: {
+            /**
+             * @description Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,
+             *     `short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,
+             *     `many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.
+             */
+            readonly code: string;
+            /** @description English explanation with the evidence. */
+            readonly message: string;
+        };
+        readonly BacklogReadiness: {
+            /** @enum {string} */
+            readonly verdict: "ready" | "attention" | "missing";
+            /** @description Reasons for `missing` first, then those for `attention`. Empty when `ready`. */
+            readonly reasons: readonly components["schemas"]["FitReason"][];
+        };
+        readonly PlanFit: {
+            /** @enum {string} */
+            readonly verdict: "fits" | "attention" | "poor";
+            /** @description Reasons for `poor` first, then those for `attention`. Empty when `fits`. */
+            readonly reasons: readonly components["schemas"]["FitReason"][];
+            readonly repositories: number;
+            readonly packages: number;
+            readonly criteria: number;
+            /** @description Work packages in the longest depends_on chain. */
+            readonly longestChain: number;
+        };
+        readonly StoryPlanFit: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly phase: components["schemas"]["Phase"];
+            readonly fit: components["schemas"]["PlanFit"] | null;
+        };
+        readonly JiraBacklog: {
+            readonly items: readonly components["schemas"]["JiraBacklogIssue"][];
+            readonly total: number;
+        };
+        readonly Health: {
+            /** @enum {string} */
+            readonly status: "ok" | "degraded";
+            /** @enum {string} */
+            readonly database: "ok" | "unavailable";
+        };
+        readonly Problem: {
+            readonly type: string;
+            readonly title: string;
+            readonly status: number;
+            readonly detail?: string;
+            readonly instance?: string;
+            /** @enum {string} */
+            readonly code: "bad_request" | "validation_failed" | "unauthenticated" | "forbidden" | "not_found" | "story_exists" | "stale_version" | "invalid_state" | "already_answered" | "decision_already_recorded" | "revision_ceiling_reached" | "unsupported_gate" | "legacy_story" | "internal_error" | "unavailable";
+            readonly errors?: readonly {
+                readonly path?: string;
+                readonly message: string;
+            }[];
+            readonly currentVersion?: components["schemas"]["Version"];
+        };
+        readonly Usage: {
+            readonly requests: number;
+            readonly nanoAiu: components["schemas"]["NanoAiu"];
+            readonly inputTokens: number;
+            readonly outputTokens: number;
+        };
+        readonly Story: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly title: string | null;
+            readonly owner: components["schemas"]["Actor"];
+            readonly phase: components["schemas"]["Phase"];
+            readonly status: components["schemas"]["StoryStatus"];
+            readonly haltReason: string | null;
+            readonly budgetNanoAiu: components["schemas"]["NanoAiu"];
+            readonly spentNanoAiu: components["schemas"]["NanoAiu"];
+            /** @description Control-repo commit (agents, skills, phase rules) pinned for the story's life. */
+            readonly controlSha: string;
+            readonly currentRunId: components["schemas"]["RunId"] | null;
+            readonly version: components["schemas"]["Version"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly updatedAt: components["schemas"]["Timestamp"];
+        };
+        readonly StoryPage: {
+            readonly items: readonly components["schemas"]["Story"][];
+            readonly nextCursor: string | null;
+        };
+        readonly StartStoryRequest: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly title?: string;
+            /** @description Hard AIU cap for every run of the story together. */
+            readonly budgetNanoAiu: number;
+            /** @description Control-repo commit to pin. Defaults to the configured control repo's HEAD. */
+            readonly controlRef?: string;
+            /** @description The model and reasoning effort for each phase; a slot left out runs on the server's configured defaults. Can be changed later with `setStoryModels`. */
+            readonly models?: components["schemas"]["ModelPlanRequest"];
+        };
+        readonly StopStoryRequest: {
+            readonly expectedVersion: components["schemas"]["Version"];
+            readonly reason: string;
+        };
+        /** @description A work package id from the plan, e.g. `WP1`. */
+        readonly WorkPackageId: string;
+        /** @description A plan alias of a child repository, as in `child_repos[].repo`. */
+        readonly RepoAlias: string;
+        readonly ResolveReviewRequest: {
+            /** @enum {string} */
+            readonly decision: "rework" | "override";
+            readonly reason: string;
+            /** @description `rework` only: reopen exactly these packages instead of the ones the findings name. */
+            readonly packages?: readonly components["schemas"]["WorkPackageId"][];
+            readonly expectedVersion: components["schemas"]["Version"];
+        };
+        readonly WorkPackageDecisionRequest: {
+            /** @enum {string} */
+            readonly decision: "retry" | "accept";
+            readonly reason: string;
+            readonly expectedVersion: components["schemas"]["Version"];
+        };
+        readonly ReopenWorkRequest: {
+            /** @description The rework note the implementer gets. */
+            readonly note: string;
+            readonly packages?: readonly components["schemas"]["WorkPackageId"][];
+            readonly repos?: readonly components["schemas"]["RepoAlias"][];
+            readonly expectedVersion: components["schemas"]["Version"];
+        };
+        readonly RefreshDesignRequest: {
+            readonly expectedVersion: components["schemas"]["Version"];
+            /** @description Why the design changed. The UI implementers and the reviewer are given it as a person's decision. */
+            readonly reason: string;
+            /** @description The new Figma frames, each a figma.com /design/, /file/ or /proto/ link with its node-id. */
+            readonly figmaLinks: readonly string[];
+            /** @constant */
+            readonly confirmSpend: true;
+        };
+        readonly AmendAnchorsRequest: {
+            readonly amendments: readonly components["schemas"]["AnchorAmendment"][];
+            readonly reason: string;
+            readonly expectedVersion: components["schemas"]["Version"];
+        };
+        readonly AnchorAmendment: {
+            /** @description The acceptance criterion's id, e.g. `AC5`. */
+            readonly criterion: string;
+            /** @description The anchor as the plan has it. */
+            readonly anchor: string;
+            /** @enum {string} */
+            readonly decision: "replace" | "waive";
+            /** @description `replace` only: text the pull request adds, e.g. the bumped version `joi-18.2.9`. */
+            readonly replacement?: string;
+        };
+        readonly UnblockStoryRequest: {
+            readonly reason: string;
+            /** @default 1 */
+            readonly rounds: number;
+            readonly repos?: readonly components["schemas"]["RepoAlias"][];
+            readonly expectedVersion: components["schemas"]["Version"];
+        };
+        readonly RefinementRequest: {
+            /** @constant */
+            readonly confirmSpend: true;
+            /** @description What the agent should look at, given to it as the requester's notes. */
+            readonly notes?: string;
+            /** @description The run's AIU cap, at most 100 AIU; the server's refinement cap when absent. */
+            readonly budgetNanoAiu?: number;
+        };
+        readonly AgentDiagnosisList: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly items: readonly components["schemas"]["Refinement"][];
+        };
+        readonly AgentDiagnosisRequest: {
+            /** @constant */
+            readonly confirmSpend: true;
+            /** @description What the agent should look into, given to it as the requester's notes. */
+            readonly notes?: string;
+            /** @description The run's AIU cap, at most 100 AIU; the server's diagnosis cap when absent. */
+            readonly budgetNanoAiu?: number;
+        };
+        readonly CancelRefinementRequest: {
+            readonly reason: string;
+        };
+        readonly RefreshIntakeRequest: {
+            readonly expectedVersion: components["schemas"]["Version"];
+            readonly reason: string;
+            /** @constant */
+            readonly confirmSpend: true;
+        };
+        readonly ResumeStoryRequest: {
+            readonly expectedVersion: components["schemas"]["Version"];
+            readonly reason?: string;
+        };
+        readonly SetStoryBudgetRequest: {
+            readonly expectedVersion: components["schemas"]["Version"];
+            /** @description New hard AIU cap for every run of the story together, including what is already spent. */
+            readonly budgetNanoAiu: number;
+            readonly reason: string;
+        };
+        /**
+         * @description A part of the story that runs on one model, by phase; `review` is the one reviewer of `pr_review`.
+         * @enum {string}
+         */
+        readonly ModelSlot: "intake" | "planning" | "implementation" | "review";
+        /**
+         * @description A Copilot model id, e.g. `claude-sonnet-5` or `gpt-5.6-terra`.
+         * @example claude-sonnet-5
+         * @example gpt-5.6-terra
+         */
+        readonly ModelId: string;
+        /**
+         * @description The Copilot SDK's reasoning effort levels; a model may accept fewer, or none.
+         * @enum {string}
+         */
+        readonly ReasoningEffort: "low" | "medium" | "high" | "xhigh" | "max";
+        /** @description A model, a reasoning effort, or both; what is left out comes from the defaults. */
+        readonly ModelChoice: {
+            readonly model?: components["schemas"]["ModelId"];
+            readonly reasoningEffort?: components["schemas"]["ReasoningEffort"];
+        };
+        /** @description A choice per slot. */
+        readonly ModelPlanRequest: {
+            readonly intake?: components["schemas"]["ModelChoice"];
+            readonly planning?: components["schemas"]["ModelChoice"];
+            readonly implementation?: components["schemas"]["ModelChoice"];
+            readonly review?: components["schemas"]["ModelChoice"];
+        };
+        /** @description A choice per slot to change; `null` gives a slot back to the configured defaults. */
+        readonly ModelPlanChange: {
+            readonly intake?: components["schemas"]["ModelChoice"] | null;
+            readonly planning?: components["schemas"]["ModelChoice"] | null;
+            readonly implementation?: components["schemas"]["ModelChoice"] | null;
+            readonly review?: components["schemas"]["ModelChoice"] | null;
+        };
+        readonly SetStoryModelsRequest: {
+            readonly expectedVersion: components["schemas"]["Version"];
+            readonly models: components["schemas"]["ModelPlanChange"];
+            readonly reason?: string;
+        };
+        readonly SlotModel: {
+            readonly slot: components["schemas"]["ModelSlot"];
+            readonly phase: components["schemas"]["Phase"];
+            /** @description What a person chose for the story; null when the slot runs on the defaults. */
+            readonly chosen: components["schemas"]["ModelChoice"] | null;
+            /** @description The model the slot's next run gets; null leaves it to the agent profile. */
+            readonly model: components["schemas"]["ModelId"] | null;
+            /** @description The effort the slot's next run gets; null is the model's own default. */
+            readonly reasoningEffort: components["schemas"]["ReasoningEffort"] | null;
+            /**
+             * @description `revision`: a one-round override for the phase the story is in; `story`: the person's choice; `configuration`: the server's phase configuration; `phase_table`: the pinned `phases.tsv`; `agent_profile`: no model is named, so the agent's own profile decides.
+             * @enum {string}
+             */
+            readonly modelSource: "revision" | "story" | "configuration" | "phase_table" | "agent_profile";
+            /** @enum {string} */
+            readonly effortSource: "revision" | "story" | "configuration" | "phase_table" | "model_default";
+        };
+        readonly ModelPlan: {
+            readonly storyKey: components["schemas"]["StoryKey"];
+            readonly version: components["schemas"]["Version"];
+            readonly slots: readonly components["schemas"]["SlotModel"][];
+        };
+        readonly CatalogModel: {
+            readonly id: components["schemas"]["ModelId"];
+            /** @description What a person reads; the id when none is configured. */
+            readonly label: string;
+            /** @description The efforts the model takes (`[]`, none); null when the catalogue does not say. */
+            readonly reasoningEfforts: readonly components["schemas"]["ReasoningEffort"][] | null;
+        };
+        /** @description What a slot of a story started now runs on when nobody chooses (a `SlotModel` without `chosen`). */
+        readonly SlotDefault: {
+            readonly slot: components["schemas"]["ModelSlot"];
+            readonly phase: components["schemas"]["Phase"];
+            /** @description The model; null leaves it to the agent profile. */
+            readonly model: components["schemas"]["ModelId"] | null;
+            /** @description The effort; null is the model's own default. */
+            readonly reasoningEffort: components["schemas"]["ReasoningEffort"] | null;
+            /** @enum {string} */
+            readonly modelSource: "configuration" | "phase_table" | "agent_profile";
+            /** @enum {string} */
+            readonly effortSource: "configuration" | "phase_table" | "model_default";
+        };
+        readonly ModelCatalog: {
+            /**
+             * @description Where the list came from; neither is checked against a Copilot account.
+             * @enum {string}
+             */
+            readonly source: "built_in" | "file";
+            readonly models: readonly components["schemas"]["CatalogModel"][];
+            /** @description Every effort `startStory` and `setStoryModels` accept; a model may take fewer. */
+            readonly reasoningEfforts: readonly components["schemas"]["ReasoningEffort"][];
+            /** @description The control commit whose `phases.tsv` filled the defaults; null when it could not be read. */
+            readonly controlSha: string | null;
+            readonly defaults: readonly components["schemas"]["SlotDefault"][];
+        };
         /** @enum {string} */
-        readonly actor: 'story_owner' | 'operator' | 'agent_maintainer';
-        readonly action: string;
-        readonly halts: components['schemas']['MetricsCount'];
-        readonly stories: components['schemas']['MetricsCount'];
-        readonly resumed: components['schemas']['MetricsCount'];
-        /** @description Resumed halts not followed by another halt with the same diagnosis. */
-        readonly fixedByFirstResume: components['schemas']['MetricsCount'];
-        readonly medianHaltedSeconds: number | null;
-      }[];
-      /** @description Halts per week (starting Monday, UTC) and diagnosis, oldest week first. `repeated` counts the halts whose diagnosis an earlier halt in the period already had, in any story: the lessons from earlier stories should make it fall. */
-      readonly haltWeeks: readonly {
-        /** Format: date */
-        readonly weekStart: string;
-        readonly kind: components['schemas']['DiagnosisKind'];
-        readonly halts: components['schemas']['MetricsCount'];
-        readonly stories: components['schemas']['MetricsCount'];
-        readonly repeated: components['schemas']['MetricsCount'];
-      }[];
-      /** @description Stories that halted with the same diagnosis twice or more in a row. */
-      readonly repeatHalts: readonly {
-        readonly storyKey: components['schemas']['StoryKey'];
-        readonly kind: components['schemas']['DiagnosisKind'];
-        readonly halts: components['schemas']['MetricsCount'];
-        readonly resumes: components['schemas']['MetricsCount'];
-        readonly nanoAiuBetween: components['schemas']['MetricsCount'];
-        readonly status: string;
-      }[];
-      readonly errors: readonly components['schemas']['MetricsError'][];
-      readonly gates: readonly {
-        readonly gate: string;
-        readonly phase: components['schemas']['Phase'];
-        readonly runs: components['schemas']['MetricsCount'];
-        readonly pass: components['schemas']['MetricsCount'];
-        /** @description `fail` and `branch` (sent to rework). */
-        readonly fail: components['schemas']['MetricsCount'];
-        readonly rejectOrHalt: components['schemas']['MetricsCount'];
-        /** @description The gate could not judge; never a verdict. */
-        readonly error: components['schemas']['MetricsCount'];
-        readonly topFailure: null | {
-          readonly signature: string;
-          readonly times: components['schemas']['MetricsCount'];
+        readonly RunStatus: "queued" | "running" | "succeeded" | "awaiting_input" | "failed" | "budget_exceeded" | "timed_out" | "cancelled" | "output_violation" | "auth_failed" | "lost";
+        /** @description Latest worker observation, checked on each active poll and persisted when it changes or at least every ten seconds. Separate from the run lifecycle: a dispatched run is `running` even while its worker is starting. Null before an observation, for runtimes without observations, and after cancellation or completion. `observedAt` is collection time, not the worker's start time. Clients should show unavailable status rather than an old wait when stale. */
+        readonly RuntimeStatus: {
+            /**
+             * @description `waiting_for_node` requires a Pending, unscheduled pod whose latest autoscaler decision is `TriggeredScaleUp`; Pending alone means `scheduling`, never confirmed node creation. `starting` includes a scheduled pod preparing its containers. `blocked` means a container startup error or `NotTriggerScaleUp`. `running` means the worker container started and startup messages should disappear. `unknown` explicitly means observation failed.
+             * @enum {string}
+             */
+            readonly state: "starting" | "scheduling" | "waiting_for_node" | "blocked" | "running" | "unknown";
+            readonly reason: string | null;
+            /** @description Bounded, credential-redacted runtime evidence; untrusted plain text, not HTML. */
+            readonly message: string | null;
+            readonly observedAt: components["schemas"]["Timestamp"];
+        } | null;
+        readonly Run: {
+            readonly id: components["schemas"]["RunId"];
+            readonly storyKey: components["schemas"]["StoryKey"];
+            readonly phase: components["schemas"]["Phase"];
+            readonly agent: string;
+            /** @description The model the run was started with; null leaves it to the agent profile. */
+            readonly model: string | null;
+            /** @description The reasoning effort the run was started with; null is the model's own default. */
+            readonly reasoningEffort: components["schemas"]["ReasoningEffort"] | null;
+            readonly status: components["schemas"]["RunStatus"];
+            readonly runtimeStatus?: components["schemas"]["RuntimeStatus"];
+            /** @description Where the worker ran, e.g. `docker`, `k8s` (one Kubernetes Job), `replay` (offline re-use of recorded evidence) or `fake`. */
+            readonly runtime: string;
+            readonly controlSha: string;
+            readonly budgetNanoAiu: components["schemas"]["NanoAiu"];
+            readonly usage: components["schemas"]["Usage"];
+            /** @description For runtime `replay`, the recorded worker run whose outputs were re-used. Its usage is not charged again, so `usage` is zero. */
+            readonly replayOf: string | null;
+            readonly exitReason: string | null;
+            /** @description The verdict of the gate that judged this run's output, from the story's gate records. */
+            readonly gate: components["schemas"]["GateVerdict"] | null;
+            readonly startedBy: components["schemas"]["Actor"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly startedAt: components["schemas"]["Timestamp"] | null;
+            readonly endedAt: components["schemas"]["Timestamp"] | null;
         };
-      }[];
-      readonly findings: readonly {
-        readonly severity: string;
-        readonly count: components['schemas']['MetricsCount'];
-      }[];
-      /** @description For the stories that ended in the period, how many went to rework how many times. */
-      readonly reworkRounds: readonly {
-        readonly rounds: components['schemas']['MetricsCount'];
-        readonly stories: components['schemas']['MetricsCount'];
-      }[];
-      readonly waits: readonly {
-        /** @enum {string} */
-        readonly kind: 'answers' | 'decision' | 'resume';
-        readonly gate: string | null;
-        readonly times: components['schemas']['MetricsCount'];
-        readonly outcomes: {
-          readonly [key: string]: components['schemas']['MetricsCount'];
+        /**
+         * @description `deferred_check`: child_ready halted because a check a work package's verification was delegated to did not report within the implementation phase's `ciWaitMinutes` (default 60) of the delivery, or rejected because it was skipped or neutral, or because the pull request's head no longer contains the delivered commit. Its evidence names the package, the check, the short commit and the packages that depend on it.
+         * @enum {string}
+         */
+        readonly DiagnosisKind: "copilot_auth" | "gate_rejected" | "configuration" | "cluster_capacity" | "pod_evicted" | "out_of_memory" | "image_pull" | "runtime_deadline" | "budget_exhausted" | "run_timed_out" | "output_violation" | "run_lost" | "agent_failed" | "revision_ceiling" | "package_stuck" | "deferred_check" | "reconciler_error" | "stopped_by_user" | "other";
+        readonly DiagnosisFinding: {
+            readonly kind: components["schemas"]["DiagnosisKind"];
+            /** @description The cause in one sentence. */
+            readonly title: string;
+            /** @description What the run, the gate or the runtime said (untrusted text). */
+            readonly evidence: readonly string[];
+            /** @description What fixes it. */
+            readonly action: string;
+            /**
+             * @description Who can act: the story's owner (resume, budget, models), the operator (cluster, secrets, configuration) or the maintainer of the agents' instructions.
+             * @enum {string}
+             */
+            readonly actor: "story_owner" | "operator" | "agent_maintainer";
+            /** @description Whether resuming as things are is likely to help, rather than only after the action. */
+            readonly resumable: boolean;
+            readonly runId: components["schemas"]["RunId"] | null;
         };
-        readonly medianSeconds: number | null;
-        readonly p90Seconds: number | null;
-        readonly waitingNow: components['schemas']['MetricsCount'];
-        readonly longestNowSeconds: number | null;
-      }[];
-      readonly insights: readonly {
-        /** @enum {string} */
-        readonly rule:
-          | 'phase_run_cap'
-          | 'resume_loop'
-          | 'gate_first_fail'
-          | 'gate_tooling_errors';
-        readonly title: string;
-        readonly evidence: string;
-        readonly action: string;
-      }[];
+        readonly Diagnosis: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly status: components["schemas"]["StoryStatus"];
+            readonly phase: components["schemas"]["Phase"];
+            readonly haltReason: string | null;
+            readonly findings: readonly components["schemas"]["DiagnosisFinding"][];
+        };
+        /**
+         * @description `queued`: waiting for a run slot. `running`: holds a slot; its worker runs once `startedAt` is set.
+         *     `succeeded`: `content` holds the refinement. Every other value is how the run ended without one; see
+         *     `exitReason`.
+         * @enum {string}
+         */
+        readonly RefinementStatus: "queued" | "running" | "succeeded" | "failed" | "budget_exceeded" | "timed_out" | "cancelled" | "output_violation" | "auth_failed" | "lost";
+        readonly RefinementSummary: {
+            readonly id: components["schemas"]["RunId"];
+            readonly key: components["schemas"]["StoryKey"];
+            readonly status: components["schemas"]["RefinementStatus"];
+            readonly runtimeStatus?: components["schemas"]["RuntimeStatus"];
+            readonly notes: string | null;
+            readonly requestedBy: components["schemas"]["Actor"];
+            /** @description The agent profile; null until the run takes a slot. */
+            readonly agent: string | null;
+            /** @description The model the run was started with; null leaves it to the agent profile. */
+            readonly model: string | null;
+            readonly reasoningEffort: components["schemas"]["ReasoningEffort"] | null;
+            /** @description Where the worker ran; null until the run takes a slot. */
+            readonly runtime: string | null;
+            readonly controlSha: string;
+            readonly budgetNanoAiu: components["schemas"]["NanoAiu"];
+            readonly usage: components["schemas"]["Usage"];
+            readonly exitReason: string | null;
+            readonly cancelRequested: boolean;
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly startedAt: components["schemas"]["Timestamp"] | null;
+            readonly endedAt: components["schemas"]["Timestamp"] | null;
+        };
+        readonly Refinement: {
+            readonly id: components["schemas"]["RunId"];
+            readonly key: components["schemas"]["StoryKey"];
+            readonly status: components["schemas"]["RefinementStatus"];
+            readonly runtimeStatus?: components["schemas"]["RuntimeStatus"];
+            readonly notes: string | null;
+            readonly requestedBy: components["schemas"]["Actor"];
+            readonly agent: string | null;
+            readonly model: string | null;
+            readonly reasoningEffort: components["schemas"]["ReasoningEffort"] | null;
+            readonly runtime: string | null;
+            readonly controlSha: string;
+            readonly budgetNanoAiu: components["schemas"]["NanoAiu"];
+            readonly usage: components["schemas"]["Usage"];
+            readonly exitReason: string | null;
+            readonly cancelRequested: boolean;
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly startedAt: components["schemas"]["Timestamp"] | null;
+            readonly endedAt: components["schemas"]["Timestamp"] | null;
+            /** @description The agent's pre-refinement, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
+            readonly content: string | null;
+        };
+        readonly KnowledgeReview: {
+            readonly id: components["schemas"]["RunId"];
+            readonly key: components["schemas"]["StoryKey"];
+            readonly status: components["schemas"]["RefinementStatus"];
+            readonly runtimeStatus?: components["schemas"]["RuntimeStatus"];
+            readonly notes: string | null;
+            readonly requestedBy: components["schemas"]["Actor"];
+            readonly agent: string | null;
+            readonly model: string | null;
+            readonly reasoningEffort: components["schemas"]["ReasoningEffort"] | null;
+            readonly runtime: string | null;
+            readonly controlSha: string;
+            readonly budgetNanoAiu: components["schemas"]["NanoAiu"];
+            readonly usage: components["schemas"]["Usage"];
+            readonly exitReason: string | null;
+            readonly cancelRequested: boolean;
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly startedAt: components["schemas"]["Timestamp"] | null;
+            readonly endedAt: components["schemas"]["Timestamp"] | null;
+            /** @description The agent's summary of the rules and lessons it added, changed or left out, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
+            readonly content: string | null;
+            /** @description The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
+            readonly proposal: string | null;
+            /** @description The whole proposed `knowledge/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
+            readonly lessons: string | null;
+            /** @description Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content repository; null exactly when both `proposal` and `lessons` are. */
+            readonly patch: string | null;
+        };
+        readonly KnowledgeReviewList: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly items: readonly components["schemas"]["KnowledgeReview"][];
+        };
+        readonly KnowledgeReviewRequest: {
+            /** @constant */
+            readonly confirmSpend: true;
+            /** @description What the agent should look at, given to it as the requester's notes. */
+            readonly notes?: string;
+            /** @description The run's AIU cap, at most 100 AIU; the server's knowledge cap when absent. */
+            readonly budgetNanoAiu?: number;
+        };
+        readonly RefinementSummaryList: {
+            readonly items: readonly components["schemas"]["RefinementSummary"][];
+        };
+        readonly RefinementList: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly items: readonly components["schemas"]["Refinement"][];
+        };
+        readonly StoryState: {
+            readonly key: components["schemas"]["StoryKey"];
+            readonly version: components["schemas"]["Version"];
+            /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. A work package's `status` is `pending`, `done`, `in_progress`, `waiting_on_handback`, `failed`, `stalled`, `blocked`, `unverified` or `awaiting_ci`. `awaiting_ci`: the implementer reported `unverified` with every gap in `deferred_checks` delegated to CI checks the repository declares, and the work was published; its dependents may start, and child_ready waits for each check. Such a package also has `deferred_checks` (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done` and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A work package may also have `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its answers to the findings its rework note numbered, kept until a review sends work back again. A review in `reviewer_reviews` gives, in `criteria_reasons`, `why` and `proof` (what would prove it) for each verdict other than `met`. Its `findings` may carry `previous_id`, `regression` and `new_argument` as the reviewer wrote them, and `follow_up` as the harness set it: in a re-review a medium finding that is not a regression the rework introduced and not a previous finding still open, or a disputed one upheld without a new argument, is a follow-up, recorded for the person at the delivery gate (a `review_follow_up` entry of `decision_log`) and not sent to rework. */
+            readonly state: Record<string, never>;
+        };
+        readonly GateVerdict: {
+            readonly gate: string;
+            readonly code: number;
+            /** @enum {string} */
+            readonly result: "pass" | "fail" | "error" | "branch" | "halt" | "reject";
+            readonly message: string;
+        };
+        readonly Question: {
+            readonly id: string;
+            readonly round: number;
+            readonly runId: components["schemas"]["RunId"];
+            readonly text: string;
+            readonly recommendation: string | null;
+            readonly answer: string | null;
+            readonly answeredBy: components["schemas"]["Actor"] | null;
+            readonly answeredAt: components["schemas"]["Timestamp"] | null;
+            readonly consumed: boolean;
+            /** @description Non-null means historical context invalidated by an intake refresh; cannot be answered. */
+            readonly supersededAt: components["schemas"]["Timestamp"] | null;
+        };
+        readonly AnswerRequest: {
+            readonly answer: string;
+            readonly expectedVersion: components["schemas"]["Version"];
+        };
+        readonly AnswerAccepted: {
+            readonly story: components["schemas"]["Story"];
+            readonly question: components["schemas"]["Question"];
+        };
+        readonly GateRecord: {
+            readonly id: string;
+            /**
+             * @description `gate`: an automated gate the harness ran. `human`: a recorded decision.
+             * @enum {string}
+             */
+            readonly source: "gate" | "human";
+            /** @description Gate name (`intake`, `plan`) or human gate key (`plan_accepted`). */
+            readonly gate: string;
+            readonly phase: components["schemas"]["Phase"];
+            /** @enum {string} */
+            readonly outcome: "pass" | "fail" | "error" | "branch" | "halt" | "reject" | "approve" | "send_back";
+            /** @description A child_ready `fail` while work packages are `awaiting_ci` is a wait, not a stuck package: one line per deferred check says what it waits on, e.g. "WP1 awaits 'facility-pages / playwright' at commit 8b30531 (not reported yet); WP2 depends on WP1". Repeated polls with the same verdict are recorded once. */
+            readonly message: string | null;
+            readonly actor: components["schemas"]["Actor"];
+            readonly runId: components["schemas"]["RunId"] | null;
+            readonly createdAt: components["schemas"]["Timestamp"];
+        };
+        readonly DecisionRequest: {
+            /** @description Human gate key from the phase table, e.g. `plan_accepted`. */
+            readonly gate: string;
+            /**
+             * @description `approve` advances per the phase table. `send_back` returns the story to the phase
+             *     that produced the artifact with `reason` for the agent (counts a revision round).
+             *     `reject` moves the story to `blocked`. `send_back` and `reject` require `reason`.
+             * @enum {string}
+             */
+            readonly decision: "approve" | "send_back" | "reject";
+            readonly reason?: string;
+            readonly expectedVersion: components["schemas"]["Version"];
+        };
+        readonly DecisionAccepted: {
+            readonly story: components["schemas"]["Story"];
+            readonly record: components["schemas"]["GateRecord"];
+        };
+        readonly Artifact: {
+            readonly path: components["schemas"]["ArtifactPath"];
+            readonly sha256: string;
+            readonly sizeBytes: number;
+            readonly mediaType: string;
+            /** @description The artifact-set revision this entry belongs to (every revision is a complete set). */
+            readonly revision: number;
+            readonly runId: components["schemas"]["RunId"] | null;
+            readonly createdAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * @description Stable event type. New types may be added in a minor version; clients must ignore unknown types.
+         * @example story.started
+         * @example story.halted
+         * @example story.resumed
+         * @example story.intake_refreshed
+         * @example design.refreshed
+         * @example story.budget_changed
+         * @example story.models_changed
+         * @example story.phase_changed
+         * @example story.awaiting_input
+         * @example story.awaiting_decision
+         * @example run.queued
+         * @example run.dispatched
+         * @example run.finished
+         * @example gate.evaluated
+         * @example question.asked
+         * @example question.answered
+         * @example decision.recorded
+         * @example review.resolved
+         * @example work_package.decided
+         * @example work.reopened
+         * @example story.unblocked
+         * @example criteria.anchors_amended
+         * @example artifacts.updated
+         * @example implementation.reported
+         * @example review.reported
+         * @example story.routed
+         * @example run.progress
+         * @example run.waiting
+         * @example knowledge_review.queued
+         * @example knowledge_review.skipped
+         */
+        readonly EventType: string;
+        readonly Event: {
+            readonly id: components["schemas"]["EventId"];
+            readonly storyKey: components["schemas"]["StoryKey"];
+            readonly type: components["schemas"]["EventType"];
+            readonly actor: components["schemas"]["Actor"];
+            /** @description Type-specific JSON; never contains tokens or credentials. A `run.progress` payload is a `RunProgressPayload`. A `run.waiting` event says the story's next run is waiting for a run slot: the server allows at most `maxActiveRuns` runs queued or running at once (`AHOY_MAX_ACTIVE_RUNS`, one worker container or pod each), and `activeRuns` were when the story looked. Its payload is `{phase, activeRuns, maxActiveRuns}`. It is written once when the wait starts; the story stays `ready` at the same version and its run is queued (`run.queued`) when a slot frees. */
+            readonly payload: Record<string, never>;
+            readonly createdAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * @description The payload of a `run.progress` event: what a running agent is doing. The worker writes each step of its
+         *     session to the run's `events.jsonl` as it goes; while the run is running the reconciler reads the new lines
+         *     on each poll (about every 2 seconds, `AHOY_POLL_MS`, at most 4 MiB a poll) and once more when the run ends,
+         *     then to the end of the log (up to 64 MiB), so the run's last steps come before its `run.finished`. Each poll
+         *     that found steps writes them, then one `spend` event:
+         *
+         *     - `tool`: a tool call the agent started: the tool's name and a short summary of its main argument (a path,
+         *       a pattern, a query, a URL, a command, a description or an intent), when it has one;
+         *     - `message`: the first 200 characters of a message the agent wrote, on one line;
+         *     - `spend`: the run's spend so far (summed from the log the same way the worker sums it) and counts. It closes
+         *       every batch, so it also says where the reconciler stopped reading (`line`, `offset`); a restarted
+         *       reconciler goes on from there and never writes a step twice. A poll that found only spend or counts writes
+         *       one at most every 30 seconds, and always on the poll that sees the run end.
+         *
+         *     Texts are plain (no control characters or terminal escapes, whitespace collapsed) and credential-shaped
+         *     strings are masked as `[REDACTED]`, as in a halt's `workerLog`. Limits: at most 10 steps per poll, the
+         *     latest; at most 200 steps per run, after which only `spend` events are written, so the spend and `omitted`
+         *     keep moving to the end; at most 1000 events per run, a guard that a run reaches only long after its own
+         *     deadline, after which nothing more until `run.finished`. Steps left out are counted in `omitted`, lines that
+         *     could not be read (not JSON, or over 1 MiB) in `skipped`. Progress is shown, never judged: a run's outcome and what is
+         *     charged come only from `run.finished`, and a run that is cancelled, killed or lost may have shown steps that
+         *     no result reflects.
+         */
+        readonly RunProgressPayload: {
+            readonly runId: components["schemas"]["RunId"];
+            /** @constant */
+            readonly kind: "tool";
+            /** @description The line of `events.jsonl` (1-based). */
+            readonly line: number;
+            /** @description When the worker logged it */
+            readonly at?: components["schemas"]["Timestamp"];
+            readonly tool: string;
+            readonly summary?: string;
+        } | {
+            readonly runId: components["schemas"]["RunId"];
+            /** @constant */
+            readonly kind: "message";
+            readonly line: number;
+            readonly at?: components["schemas"]["Timestamp"];
+            readonly text: string;
+        } | {
+            readonly runId: components["schemas"]["RunId"];
+            /** @constant */
+            readonly kind: "spend";
+            /** @description Lines of `events.jsonl` read so far. */
+            readonly line: number;
+            /** @description Bytes of `events.jsonl` read so far. */
+            readonly offset: number;
+            /** @description Spent so far by the run, as its log shows it; `run.finished` has what is charged. */
+            readonly nanoAiu: number;
+            /** @description Model requests so far. */
+            readonly requests: number;
+            /** @description `tool` and `message` events written for the run. */
+            readonly steps: number;
+            /** @description Steps left out by the limits. */
+            readonly omitted: number;
+            /** @description Lines that could not be read. */
+            readonly skipped: number;
+            /** @description `run.progress` events written for the run, this one included. */
+            readonly events: number;
+        };
+        readonly EventPage: {
+            readonly items: readonly components["schemas"]["Event"][];
+            /** @description Pass as `after` to continue. */
+            readonly lastEventId: components["schemas"]["EventId"] | null;
+        };
+        /** @description The metrics of one period (`GET /metrics`). AIU in integer nano-AIU, durations in whole seconds. */
+        readonly MetricsReport: {
+            /** Format: date-time */
+            readonly from: string;
+            /** Format: date-time */
+            readonly to: string;
+            readonly totals: {
+                readonly nanoAiu: components["schemas"]["MetricsCount"];
+                readonly runs: components["schemas"]["MetricsCount"];
+                readonly runsSucceeded: components["schemas"]["MetricsCount"];
+                readonly inputTokens: components["schemas"]["MetricsCount"];
+                readonly outputTokens: components["schemas"]["MetricsCount"];
+                readonly storiesFinished: components["schemas"]["MetricsCount"];
+                readonly storiesDone: components["schemas"]["MetricsCount"];
+                readonly storiesBlocked: components["schemas"]["MetricsCount"];
+                readonly medianNanoAiuPerDoneStory: number | null;
+                readonly halts: components["schemas"]["MetricsCount"];
+                readonly haltedStories: components["schemas"]["MetricsCount"];
+                readonly repeatHaltStories: components["schemas"]["MetricsCount"];
+                readonly gateEvaluations: components["schemas"]["MetricsCount"];
+                readonly gatePasses: components["schemas"]["MetricsCount"];
+                readonly gateErrors: components["schemas"]["MetricsCount"];
+            };
+            /** @description AIU per phase for each week (Monday 00:00 UTC) that has runs. */
+            readonly weeks: readonly {
+                /** Format: date */
+                readonly weekStart: string;
+                readonly byPhase: {
+                    readonly [key: string]: components["schemas"]["MetricsCount"];
+                };
+            }[];
+            readonly phases: readonly {
+                readonly phase: components["schemas"]["Phase"];
+                readonly runs: components["schemas"]["MetricsCount"];
+                readonly nanoAiu: components["schemas"]["MetricsCount"];
+                readonly medianNanoAiu: components["schemas"]["MetricsCount"];
+                readonly p90NanoAiu: components["schemas"]["MetricsCount"];
+                /** @description The median per-run AIU cap of the phase's runs. */
+                readonly runCapNanoAiu: components["schemas"]["MetricsCount"];
+                /** @description Runs that ended `budget_exceeded`. */
+                readonly runsAtCap: components["schemas"]["MetricsCount"];
+                readonly medianDurationSeconds: number | null;
+                readonly inputTokens: components["schemas"]["MetricsCount"];
+                readonly outputTokens: components["schemas"]["MetricsCount"];
+            }[];
+            readonly agents: readonly {
+                readonly agent: string;
+                readonly model: string | null;
+                readonly runs: components["schemas"]["MetricsCount"];
+                readonly nanoAiu: components["schemas"]["MetricsCount"];
+                readonly medianNanoAiu: components["schemas"]["MetricsCount"];
+                readonly notSucceeded: components["schemas"]["MetricsCount"];
+            }[];
+            readonly runOutcomes: readonly {
+                readonly status: string;
+                readonly runs: components["schemas"]["MetricsCount"];
+            }[];
+            readonly topStories: readonly {
+                readonly key: components["schemas"]["StoryKey"];
+                readonly phase: components["schemas"]["Phase"];
+                readonly status: components["schemas"]["StoryStatus"];
+                readonly spentNanoAiu: components["schemas"]["MetricsCount"];
+                readonly budgetNanoAiu: components["schemas"]["MetricsCount"];
+                readonly periodNanoAiu: components["schemas"]["MetricsCount"];
+                readonly runs: components["schemas"]["MetricsCount"];
+                readonly halts: components["schemas"]["MetricsCount"];
+                readonly topPhase: components["schemas"]["Phase"];
+                readonly topPhaseNanoAiu: components["schemas"]["MetricsCount"];
+            }[];
+            readonly halts: readonly components["schemas"]["MetricsHalt"][];
+            readonly haltReasons: readonly {
+                readonly reason: string;
+                readonly kind: components["schemas"]["DiagnosisKind"];
+                /** @enum {string} */
+                readonly actor: "story_owner" | "operator" | "agent_maintainer";
+                readonly action: string;
+                readonly halts: components["schemas"]["MetricsCount"];
+                readonly stories: components["schemas"]["MetricsCount"];
+                readonly resumed: components["schemas"]["MetricsCount"];
+                /** @description Resumed halts not followed by another halt with the same diagnosis. */
+                readonly fixedByFirstResume: components["schemas"]["MetricsCount"];
+                readonly medianHaltedSeconds: number | null;
+            }[];
+            /** @description Halts per week (starting Monday, UTC) and diagnosis, oldest week first. `repeated` counts the halts whose diagnosis an earlier halt in the period already had, in any story: the lessons from earlier stories should make it fall. */
+            readonly haltWeeks: readonly {
+                /** Format: date */
+                readonly weekStart: string;
+                readonly kind: components["schemas"]["DiagnosisKind"];
+                readonly halts: components["schemas"]["MetricsCount"];
+                readonly stories: components["schemas"]["MetricsCount"];
+                readonly repeated: components["schemas"]["MetricsCount"];
+            }[];
+            /** @description Stories that halted with the same diagnosis twice or more in a row. */
+            readonly repeatHalts: readonly {
+                readonly storyKey: components["schemas"]["StoryKey"];
+                readonly kind: components["schemas"]["DiagnosisKind"];
+                readonly halts: components["schemas"]["MetricsCount"];
+                readonly resumes: components["schemas"]["MetricsCount"];
+                readonly nanoAiuBetween: components["schemas"]["MetricsCount"];
+                readonly status: string;
+            }[];
+            readonly errors: readonly components["schemas"]["MetricsError"][];
+            readonly gates: readonly {
+                readonly gate: string;
+                readonly phase: components["schemas"]["Phase"];
+                readonly runs: components["schemas"]["MetricsCount"];
+                readonly pass: components["schemas"]["MetricsCount"];
+                /** @description `fail` and `branch` (sent to rework). */
+                readonly fail: components["schemas"]["MetricsCount"];
+                readonly rejectOrHalt: components["schemas"]["MetricsCount"];
+                /** @description The gate could not judge; never a verdict. */
+                readonly error: components["schemas"]["MetricsCount"];
+                readonly topFailure: null | {
+                    readonly signature: string;
+                    readonly times: components["schemas"]["MetricsCount"];
+                };
+            }[];
+            readonly findings: readonly {
+                readonly severity: string;
+                readonly count: components["schemas"]["MetricsCount"];
+            }[];
+            /** @description For the stories that ended in the period, how many went to rework how many times. */
+            readonly reworkRounds: readonly {
+                readonly rounds: components["schemas"]["MetricsCount"];
+                readonly stories: components["schemas"]["MetricsCount"];
+            }[];
+            readonly waits: readonly {
+                /** @enum {string} */
+                readonly kind: "answers" | "decision" | "resume";
+                readonly gate: string | null;
+                readonly times: components["schemas"]["MetricsCount"];
+                readonly outcomes: {
+                    readonly [key: string]: components["schemas"]["MetricsCount"];
+                };
+                readonly medianSeconds: number | null;
+                readonly p90Seconds: number | null;
+                readonly waitingNow: components["schemas"]["MetricsCount"];
+                readonly longestNowSeconds: number | null;
+            }[];
+            readonly insights: readonly {
+                /** @enum {string} */
+                readonly rule: "phase_run_cap" | "resume_loop" | "gate_first_fail" | "gate_tooling_errors";
+                readonly title: string;
+                readonly evidence: string;
+                readonly action: string;
+            }[];
+        };
+        readonly MetricsCount: number;
+        readonly MetricsHalt: {
+            readonly storyKey: components["schemas"]["StoryKey"];
+            /** Format: date-time */
+            readonly at: string;
+            readonly reason: string;
+            readonly phase: string | null;
+            readonly runId: string | null;
+            readonly kind: components["schemas"]["DiagnosisKind"];
+            /** @enum {string} */
+            readonly actor: "story_owner" | "operator" | "agent_maintainer";
+            readonly action: string;
+            /** Format: date-time */
+            readonly resumedAt: string | null;
+        };
+        readonly MetricsError: {
+            /** @enum {string} */
+            readonly source: "halt" | "gate_fail" | "gate_error" | "run";
+            /** @description The halt reason, the gate's name or the run's status. */
+            readonly code: string;
+            /** @description The message with ids, numbers and hashes blanked, so that the same error groups (untrusted text). */
+            readonly signature: string;
+            readonly phase: string | null;
+            readonly agent: string | null;
+            readonly times: components["schemas"]["MetricsCount"];
+            readonly stories: components["schemas"]["MetricsCount"];
+            /** Format: date-time */
+            readonly firstSeen: string;
+            /** Format: date-time */
+            readonly lastSeen: string;
+            readonly exampleStory: components["schemas"]["StoryKey"];
+            readonly exampleRunId: string | null;
+        };
+        /**
+         * @description `planned`, then `in_progress` once started, then `ended` (read-only).
+         * @enum {string}
+         */
+        readonly MeetingStatus: "planned" | "in_progress" | "ended";
+        /**
+         * @description Who brought the topic up, our side or a stakeholder.
+         * @enum {string}
+         */
+        readonly RaisedBy: "us" | "them";
+        /**
+         * @description Noted before the meeting started, or raised during it.
+         * @enum {string}
+         */
+        readonly TopicOrigin: "planned" | "in_meeting";
+        /**
+         * @description `moved`: carried over to the next meeting, read-only here.
+         * @enum {string}
+         */
+        readonly TopicStatus: "open" | "moved";
+        /** Format: email */
+        readonly Email: string;
+        readonly MeetingSeries: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly name: string;
+            readonly stakeholders: readonly string[];
+            readonly cadenceDays: number | null;
+            /** @description Where stories drafted from the series' meetings are created; null when creating is off. */
+            readonly jiraProjectKey: components["schemas"]["JiraProjectKey"] | null;
+            readonly jiraIssueType: components["schemas"]["JiraIssueType"];
+            readonly createdBy: components["schemas"]["Actor"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+        };
+        readonly MeetingSeriesList: {
+            readonly items: readonly components["schemas"]["MeetingSeries"][];
+        };
+        readonly CreateMeetingSeriesRequest: {
+            readonly name: string;
+            readonly stakeholders?: readonly components["schemas"]["Email"][];
+            /** @description Days between meetings (7 for weekly). */
+            readonly cadenceDays?: number;
+            readonly jiraProjectKey?: components["schemas"]["JiraProjectKey"];
+            readonly jiraIssueType?: components["schemas"]["JiraIssueType"];
+        };
+        readonly UpdateMeetingSeriesRequest: {
+            readonly jiraProjectKey: components["schemas"]["JiraProjectKey"] | null;
+            readonly jiraIssueType?: components["schemas"]["JiraIssueType"];
+        };
+        /** @description A Jira project key, such as FIN. */
+        readonly JiraProjectKey: string;
+        /**
+          * @description The issue type a series' stories are created as; `Story` by default.
+          * @enum {string}
+          */
+        readonly JiraIssueType: "Story" | "Task" | "Bug";
+        readonly MeetingStoryDraftRequest: {
+            /** @constant */
+            readonly confirmSpend: true;
+            /** @description The notes to draft from; all of the topic's notes when absent or empty. */
+            readonly noteIds?: readonly string[];
+            /** @description The run's AIU cap, at most 50 AIU; the server's story draft cap when absent. */
+            readonly budgetNanoAiu?: number;
+        };
+        /** @description A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it. */
+        readonly StoryTemplate: {
+            readonly title: string;
+            /** @description As a ... */
+            readonly role: string;
+            /** @description I want ... */
+            readonly want: string;
+            /** @description So that ... */
+            readonly soThat: string;
+            readonly acceptanceCriteria: readonly string[];
+            readonly outOfScope: readonly string[];
+            readonly openQuestions: readonly string[];
+        };
+        /**
+          * @description `drafting`: the agent is writing it. `ready`: the story can be checked and created. `failed`: no story, see
+          *     `failure`. `created`: in Jira as `jiraKey`.
+          * @enum {string}
+          */
+        readonly MeetingStoryDraftStatus:
+            | "drafting"
+            | "ready"
+            | "failed"
+            | "created";
+        readonly MeetingStoryDraft: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly topicId: string;
+            /** Format: uuid */
+            readonly meetingId: string;
+            readonly topicTitle: string;
+            /** @description The chosen notes; empty means all of the topic's notes. */
+            readonly noteIds: readonly string[];
+            readonly status: components["schemas"]["MeetingStoryDraftStatus"];
+            readonly story: components["schemas"]["StoryTemplate"] | null;
+            /** @description Why there is no story, for a failed draft. */
+            readonly failure: string | null;
+            /** @description Where Create in Jira puts it, from the series; a null project means it cannot be created. */
+            readonly target: {
+                readonly projectKey: string | null;
+                readonly issueType: string | null;
+            };
+            readonly jiraKey: string | null;
+            /**
+              * Format: uri
+              * @description The issue in Jira, once created.
+              */
+            readonly jiraUrl: string | null;
+            readonly jiraCreatedBy: components["schemas"]["Actor"] | null;
+            readonly jiraCreatedAt: components["schemas"]["Timestamp"] | null;
+            /** @description The agent run that wrote it. */
+            readonly run: {
+                readonly status: string;
+                readonly budgetNanoAiu: number;
+                readonly nanoAiu: number;
+                readonly cancelRequested: boolean;
+            } | null;
+            readonly createdBy: components["schemas"]["Actor"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+        };
+        readonly MeetingStoryDraftList: {
+            readonly items: readonly components["schemas"]["MeetingStoryDraft"][];
+        };
+        readonly MeetingSummary: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly seriesId: string | null;
+            readonly seriesName: string | null;
+            readonly title: string;
+            readonly startsAt: components["schemas"]["Timestamp"];
+            /** Format: date-time */
+            readonly endsAt: string | null;
+            readonly stakeholders: readonly string[];
+            readonly status: components["schemas"]["MeetingStatus"];
+            /** Format: date-time */
+            readonly startedAt: string | null;
+            /** Format: date-time */
+            readonly endedAt: string | null;
+            /** @description Every topic of the meeting, moved ones included. */
+            readonly topicCount: number;
+            readonly openTopicCount: number;
+            readonly createdBy: components["schemas"]["Actor"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly updatedBy: components["schemas"]["Actor"];
+            readonly updatedAt: components["schemas"]["Timestamp"];
+        };
+        readonly MeetingList: {
+            readonly items: readonly components["schemas"]["MeetingSummary"][];
+        };
+        readonly MeetingNote: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly topicId: string;
+            /** @description What was said, as plain text (untrusted). */
+            readonly text: string;
+            readonly createdBy: components["schemas"]["Actor"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly updatedBy: components["schemas"]["Actor"];
+            readonly updatedAt: components["schemas"]["Timestamp"];
+        };
+        readonly MeetingTopicLink: {
+            /** Format: uuid */
+            readonly topicId: string;
+            /** Format: uuid */
+            readonly meetingId: string;
+            readonly meetingStartsAt: components["schemas"]["Timestamp"];
+        };
+        readonly MeetingTopic: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly meetingId: string;
+            readonly title: string;
+            readonly raisedBy: components["schemas"]["RaisedBy"];
+            /** @description The stakeholder who raised it, when known. */
+            readonly raisedByEmail: string | null;
+            readonly origin: components["schemas"]["TopicOrigin"];
+            readonly status: components["schemas"]["TopicStatus"];
+            readonly position: number;
+            /** @description The topic this one was carried over from, in the previous meeting. */
+            readonly carriedFrom: components["schemas"]["MeetingTopicLink"] | null;
+            /** @description Where a moved topic went. */
+            readonly movedTo: components["schemas"]["MeetingTopicLink"] | null;
+            /** @description Oldest first. */
+            readonly notes: readonly components["schemas"]["MeetingNote"][];
+            readonly createdBy: components["schemas"]["Actor"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly updatedBy: components["schemas"]["Actor"];
+            readonly updatedAt: components["schemas"]["Timestamp"];
+        };
+        readonly Meeting: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly seriesId: string | null;
+            readonly seriesName: string | null;
+            readonly title: string;
+            readonly startsAt: components["schemas"]["Timestamp"];
+            /** Format: date-time */
+            readonly endsAt: string | null;
+            readonly stakeholders: readonly string[];
+            readonly status: components["schemas"]["MeetingStatus"];
+            /** Format: date-time */
+            readonly startedAt: string | null;
+            /** Format: date-time */
+            readonly endedAt: string | null;
+            /** @description Every topic of the meeting, moved ones included. */
+            readonly topicCount: number;
+            readonly openTopicCount: number;
+            readonly createdBy: components["schemas"]["Actor"];
+            readonly createdAt: components["schemas"]["Timestamp"];
+            readonly updatedBy: components["schemas"]["Actor"];
+            readonly updatedAt: components["schemas"]["Timestamp"];
+            /** @description In their order. */
+            readonly topics: readonly components["schemas"]["MeetingTopic"][];
+        };
+        readonly CreateMeetingRequest: {
+            /** Format: uuid */
+            readonly seriesId?: string;
+            readonly title?: string;
+            readonly startsAt: components["schemas"]["Timestamp"];
+            readonly endsAt?: components["schemas"]["Timestamp"];
+            readonly stakeholders?: readonly components["schemas"]["Email"][];
+        };
+        readonly UpdateMeetingRequest: {
+            readonly title?: string;
+            readonly startsAt?: components["schemas"]["Timestamp"];
+            /**
+             * Format: date-time
+             * @description null removes the end time.
+             */
+            readonly endsAt?: string | null;
+            readonly stakeholders?: readonly components["schemas"]["Email"][];
+        };
+        readonly EndMeetingRequest: {
+            /** @description The open topics to carry over to the next meeting; empty to carry none. */
+            readonly carryOver: readonly string[];
+        };
+        readonly EndMeetingResult: {
+            readonly meeting: components["schemas"]["Meeting"];
+            readonly nextMeeting: components["schemas"]["Meeting"] | null;
+        };
+        readonly AddMeetingTopicRequest: {
+            readonly title: string;
+            readonly raisedBy: components["schemas"]["RaisedBy"];
+            readonly raisedByEmail?: components["schemas"]["Email"];
+        };
+        readonly UpdateMeetingTopicRequest: {
+            readonly title?: string;
+            readonly raisedBy?: components["schemas"]["RaisedBy"];
+            /** @description null removes the stakeholder's e-mail. */
+            readonly raisedByEmail?: components["schemas"]["Email"] | null;
+        };
+        readonly MeetingTopicOrderRequest: {
+            readonly topicIds: readonly string[];
+        };
+        readonly MoveMeetingTopicResult: {
+            readonly topic: components["schemas"]["MeetingTopic"];
+            readonly movedTo: components["schemas"]["MeetingTopic"];
+        };
+        readonly MeetingNoteRequest: {
+            readonly text: string;
+        };
     };
-    readonly MetricsCount: number;
-    readonly MetricsHalt: {
-      readonly storyKey: components['schemas']['StoryKey'];
-      /** Format: date-time */
-      readonly at: string;
-      readonly reason: string;
-      readonly phase: string | null;
-      readonly runId: string | null;
-      readonly kind: components['schemas']['DiagnosisKind'];
-      /** @enum {string} */
-      readonly actor: 'story_owner' | 'operator' | 'agent_maintainer';
-      readonly action: string;
-      /** Format: date-time */
-      readonly resumedAt: string | null;
+    responses: {
+        /** @description An error, as RFC 9457 problem details. */
+        readonly Problem: {
+            headers: {
+                readonly [name: string]: unknown;
+            };
+            content: {
+                readonly "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
-    readonly MetricsError: {
-      /** @enum {string} */
-      readonly source: 'halt' | 'gate_fail' | 'gate_error' | 'run';
-      /** @description The halt reason, the gate's name or the run's status. */
-      readonly code: string;
-      /** @description The message with ids, numbers and hashes blanked, so that the same error groups (untrusted text). */
-      readonly signature: string;
-      readonly phase: string | null;
-      readonly agent: string | null;
-      readonly times: components['schemas']['MetricsCount'];
-      readonly stories: components['schemas']['MetricsCount'];
-      /** Format: date-time */
-      readonly firstSeen: string;
-      /** Format: date-time */
-      readonly lastSeen: string;
-      readonly exampleStory: components['schemas']['StoryKey'];
-      readonly exampleRunId: string | null;
+    parameters: {
+        /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
+        readonly MetricsFrom: string;
+        /** @description End of the period (exclusive). Defaults to now. */
+        readonly MetricsTo: string;
+        readonly MetricsOwner: string;
+        readonly MetricsRepo: string;
+        readonly MetricsModel: string;
+        readonly StoryKey: components["schemas"]["StoryKey"];
+        readonly WorkPackageId: components["schemas"]["WorkPackageId"];
+        readonly Limit: number;
+        /** @description Opaque cursor returned as `nextCursor`. */
+        readonly Cursor: string;
+        /** @description Return only events with a greater ID. */
+        readonly After: components["schemas"]["EventId"];
+        readonly MeetingId: string;
+        readonly MeetingTopicId: string;
+        readonly MeetingNoteId: string;
+        readonly MeetingSeriesId: string;
+        readonly MeetingStoryDraftId: string;
     };
-    /**
-     * @description `planned`, then `in_progress` once started, then `ended` (read-only).
-     * @enum {string}
-     */
-    readonly MeetingStatus: 'planned' | 'in_progress' | 'ended';
-    /**
-     * @description Who brought the topic up, our side or a stakeholder.
-     * @enum {string}
-     */
-    readonly RaisedBy: 'us' | 'them';
-    /**
-     * @description Noted before the meeting started, or raised during it.
-     * @enum {string}
-     */
-    readonly TopicOrigin: 'planned' | 'in_meeting';
-    /**
-     * @description `moved`: carried over to the next meeting, read-only here.
-     * @enum {string}
-     */
-    readonly TopicStatus: 'open' | 'moved';
-    /** Format: email */
-    readonly Email: string;
-    readonly MeetingSeries: {
-      /** Format: uuid */
-      readonly id: string;
-      readonly name: string;
-      readonly stakeholders: readonly string[];
-      readonly cadenceDays: number | null;
-      /** @description Where stories drafted from the series' meetings are created; null when creating is off. */
-      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
-      readonly jiraIssueType: components['schemas']['JiraIssueType'];
-      readonly createdBy: components['schemas']['Actor'];
-      readonly createdAt: components['schemas']['Timestamp'];
-    };
-    readonly MeetingSeriesList: {
-      readonly items: readonly components['schemas']['MeetingSeries'][];
-    };
-    readonly CreateMeetingSeriesRequest: {
-      readonly name: string;
-      readonly stakeholders?: readonly components['schemas']['Email'][];
-      /** @description Days between meetings (7 for weekly). */
-      readonly cadenceDays?: number;
-      readonly jiraProjectKey?: components['schemas']['JiraProjectKey'];
-      readonly jiraIssueType?: components['schemas']['JiraIssueType'];
-    };
-    readonly UpdateMeetingSeriesRequest: {
-      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
-      readonly jiraIssueType?: components['schemas']['JiraIssueType'];
-    };
-    /** @description A Jira project key, such as FIN. */
-    readonly JiraProjectKey: string;
-    /**
-     * @description The issue type a series' stories are created as; `Story` by default.
-     * @enum {string}
-     */
-    readonly JiraIssueType: 'Story' | 'Task' | 'Bug';
-    readonly MeetingStoryDraftRequest: {
-      /** @constant */
-      readonly confirmSpend: true;
-      /** @description The notes to draft from; all of the topic's notes when absent or empty. */
-      readonly noteIds?: readonly string[];
-      /** @description The run's AIU cap, at most 50 AIU; the server's story draft cap when absent. */
-      readonly budgetNanoAiu?: number;
-    };
-    /** @description A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it. */
-    readonly StoryTemplate: {
-      readonly title: string;
-      /** @description As a ... */
-      readonly role: string;
-      /** @description I want ... */
-      readonly want: string;
-      /** @description So that ... */
-      readonly soThat: string;
-      readonly acceptanceCriteria: readonly string[];
-      readonly outOfScope: readonly string[];
-      readonly openQuestions: readonly string[];
-    };
-    /**
-     * @description `drafting`: the agent is writing it. `ready`: the story can be checked and created. `failed`: no story, see
-     *     `failure`. `created`: in Jira as `jiraKey`.
-     * @enum {string}
-     */
-    readonly MeetingStoryDraftStatus:
-      | 'drafting'
-      | 'ready'
-      | 'failed'
-      | 'created';
-    readonly MeetingStoryDraft: {
-      /** Format: uuid */
-      readonly id: string;
-      /** Format: uuid */
-      readonly topicId: string;
-      /** Format: uuid */
-      readonly meetingId: string;
-      readonly topicTitle: string;
-      /** @description The chosen notes; empty means all of the topic's notes. */
-      readonly noteIds: readonly string[];
-      readonly status: components['schemas']['MeetingStoryDraftStatus'];
-      readonly story: components['schemas']['StoryTemplate'] | null;
-      /** @description Why there is no story, for a failed draft. */
-      readonly failure: string | null;
-      /** @description Where Create in Jira puts it, from the series; a null project means it cannot be created. */
-      readonly target: {
-        readonly projectKey: string | null;
-        readonly issueType: string | null;
-      };
-      readonly jiraKey: string | null;
-      /**
-       * Format: uri
-       * @description The issue in Jira, once created.
-       */
-      readonly jiraUrl: string | null;
-      readonly jiraCreatedBy: components['schemas']['Actor'] | null;
-      readonly jiraCreatedAt: components['schemas']['Timestamp'] | null;
-      /** @description The agent run that wrote it. */
-      readonly run: {
-        readonly status: string;
-        readonly budgetNanoAiu: number;
-        readonly nanoAiu: number;
-        readonly cancelRequested: boolean;
-      } | null;
-      readonly createdBy: components['schemas']['Actor'];
-      readonly createdAt: components['schemas']['Timestamp'];
-    };
-    readonly MeetingStoryDraftList: {
-      readonly items: readonly components['schemas']['MeetingStoryDraft'][];
-    };
-    readonly MeetingSummary: {
-      /** Format: uuid */
-      readonly id: string;
-      /** Format: uuid */
-      readonly seriesId: string | null;
-      readonly seriesName: string | null;
-      readonly title: string;
-      readonly startsAt: components['schemas']['Timestamp'];
-      /** Format: date-time */
-      readonly endsAt: string | null;
-      readonly stakeholders: readonly string[];
-      readonly status: components['schemas']['MeetingStatus'];
-      /** Format: date-time */
-      readonly startedAt: string | null;
-      /** Format: date-time */
-      readonly endedAt: string | null;
-      /** @description Every topic of the meeting, moved ones included. */
-      readonly topicCount: number;
-      readonly openTopicCount: number;
-      readonly createdBy: components['schemas']['Actor'];
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly updatedBy: components['schemas']['Actor'];
-      readonly updatedAt: components['schemas']['Timestamp'];
-    };
-    readonly MeetingList: {
-      readonly items: readonly components['schemas']['MeetingSummary'][];
-    };
-    readonly MeetingNote: {
-      /** Format: uuid */
-      readonly id: string;
-      /** Format: uuid */
-      readonly topicId: string;
-      /** @description What was said, as plain text (untrusted). */
-      readonly text: string;
-      readonly createdBy: components['schemas']['Actor'];
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly updatedBy: components['schemas']['Actor'];
-      readonly updatedAt: components['schemas']['Timestamp'];
-    };
-    readonly MeetingTopicLink: {
-      /** Format: uuid */
-      readonly topicId: string;
-      /** Format: uuid */
-      readonly meetingId: string;
-      readonly meetingStartsAt: components['schemas']['Timestamp'];
-    };
-    readonly MeetingTopic: {
-      /** Format: uuid */
-      readonly id: string;
-      /** Format: uuid */
-      readonly meetingId: string;
-      readonly title: string;
-      readonly raisedBy: components['schemas']['RaisedBy'];
-      /** @description The stakeholder who raised it, when known. */
-      readonly raisedByEmail: string | null;
-      readonly origin: components['schemas']['TopicOrigin'];
-      readonly status: components['schemas']['TopicStatus'];
-      readonly position: number;
-      /** @description The topic this one was carried over from, in the previous meeting. */
-      readonly carriedFrom: components['schemas']['MeetingTopicLink'] | null;
-      /** @description Where a moved topic went. */
-      readonly movedTo: components['schemas']['MeetingTopicLink'] | null;
-      /** @description Oldest first. */
-      readonly notes: readonly components['schemas']['MeetingNote'][];
-      readonly createdBy: components['schemas']['Actor'];
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly updatedBy: components['schemas']['Actor'];
-      readonly updatedAt: components['schemas']['Timestamp'];
-    };
-    readonly Meeting: {
-      /** Format: uuid */
-      readonly id: string;
-      /** Format: uuid */
-      readonly seriesId: string | null;
-      readonly seriesName: string | null;
-      readonly title: string;
-      readonly startsAt: components['schemas']['Timestamp'];
-      /** Format: date-time */
-      readonly endsAt: string | null;
-      readonly stakeholders: readonly string[];
-      readonly status: components['schemas']['MeetingStatus'];
-      /** Format: date-time */
-      readonly startedAt: string | null;
-      /** Format: date-time */
-      readonly endedAt: string | null;
-      /** @description Every topic of the meeting, moved ones included. */
-      readonly topicCount: number;
-      readonly openTopicCount: number;
-      readonly createdBy: components['schemas']['Actor'];
-      readonly createdAt: components['schemas']['Timestamp'];
-      readonly updatedBy: components['schemas']['Actor'];
-      readonly updatedAt: components['schemas']['Timestamp'];
-      /** @description In their order. */
-      readonly topics: readonly components['schemas']['MeetingTopic'][];
-    };
-    readonly CreateMeetingRequest: {
-      /** Format: uuid */
-      readonly seriesId?: string;
-      readonly title?: string;
-      readonly startsAt: components['schemas']['Timestamp'];
-      readonly endsAt?: components['schemas']['Timestamp'];
-      readonly stakeholders?: readonly components['schemas']['Email'][];
-    };
-    readonly UpdateMeetingRequest: {
-      readonly title?: string;
-      readonly startsAt?: components['schemas']['Timestamp'];
-      /**
-       * Format: date-time
-       * @description null removes the end time.
-       */
-      readonly endsAt?: string | null;
-      readonly stakeholders?: readonly components['schemas']['Email'][];
-    };
-    readonly EndMeetingRequest: {
-      /** @description The open topics to carry over to the next meeting; empty to carry none. */
-      readonly carryOver: readonly string[];
-    };
-    readonly EndMeetingResult: {
-      readonly meeting: components['schemas']['Meeting'];
-      readonly nextMeeting: components['schemas']['Meeting'] | null;
-    };
-    readonly AddMeetingTopicRequest: {
-      readonly title: string;
-      readonly raisedBy: components['schemas']['RaisedBy'];
-      readonly raisedByEmail?: components['schemas']['Email'];
-    };
-    readonly UpdateMeetingTopicRequest: {
-      readonly title?: string;
-      readonly raisedBy?: components['schemas']['RaisedBy'];
-      /** @description null removes the stakeholder's e-mail. */
-      readonly raisedByEmail?: components['schemas']['Email'] | null;
-    };
-    readonly MeetingTopicOrderRequest: {
-      readonly topicIds: readonly string[];
-    };
-    readonly MoveMeetingTopicResult: {
-      readonly topic: components['schemas']['MeetingTopic'];
-      readonly movedTo: components['schemas']['MeetingTopic'];
-    };
-    readonly MeetingNoteRequest: {
-      readonly text: string;
-    };
-  };
-  responses: {
-    /** @description An error, as RFC 9457 problem details. */
-    readonly Problem: {
-      headers: {
-        readonly [name: string]: unknown;
-      };
-      content: {
-        readonly 'application/problem+json': components['schemas']['Problem'];
-      };
-    };
-  };
-  parameters: {
-    /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
-    readonly MetricsFrom: string;
-    /** @description End of the period (exclusive). Defaults to now. */
-    readonly MetricsTo: string;
-    readonly MetricsOwner: string;
-    readonly MetricsRepo: string;
-    readonly MetricsModel: string;
-    readonly StoryKey: components['schemas']['StoryKey'];
-    readonly WorkPackageId: components['schemas']['WorkPackageId'];
-    readonly Limit: number;
-    /** @description Opaque cursor returned as `nextCursor`. */
-    readonly Cursor: string;
-    /** @description Return only events with a greater ID. */
-    readonly After: components['schemas']['EventId'];
-    readonly MeetingId: string;
-    readonly MeetingTopicId: string;
-    readonly MeetingNoteId: string;
-    readonly MeetingSeriesId: string;
-    readonly MeetingStoryDraftId: string;
-  };
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  readonly getHealth: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The API and database are reachable. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Health'];
-        };
-      };
-      readonly 503: components['responses']['Problem'];
-    };
-  };
-  readonly listModels: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The model catalogue. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['ModelCatalog'];
-        };
-      };
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly listJiraBacklog: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description Complete backlog in Jira rank order. */
-      readonly 200: {
-        headers: {
-          readonly 'Cache-Control'?: 'no-store';
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['JiraBacklog'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 503: components['responses']['Problem'];
-    };
-  };
-  readonly getMetrics: {
-    readonly parameters: {
-      readonly query?: {
-        /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
-        readonly from?: components['parameters']['MetricsFrom'];
-        /** @description End of the period (exclusive). Defaults to now. */
-        readonly to?: components['parameters']['MetricsTo'];
-        readonly owner?: components['parameters']['MetricsOwner'];
-        readonly repo?: components['parameters']['MetricsRepo'];
-        readonly model?: components['parameters']['MetricsModel'];
-      };
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The metrics of the period. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MetricsReport'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly exportMetrics: {
-    readonly parameters: {
-      readonly query: {
-        readonly table: 'runs' | 'halts' | 'gates' | 'errors';
-        readonly format?: 'csv' | 'json';
-        /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
-        readonly from?: components['parameters']['MetricsFrom'];
-        /** @description End of the period (exclusive). Defaults to now. */
-        readonly to?: components['parameters']['MetricsTo'];
-        readonly owner?: components['parameters']['MetricsOwner'];
-        readonly repo?: components['parameters']['MetricsRepo'];
-        readonly model?: components['parameters']['MetricsModel'];
-      };
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The table, as a file to save. */
-      readonly 200: {
-        headers: {
-          readonly 'Content-Disposition'?: string;
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'text/csv': string;
-          readonly 'application/json': readonly Record<string, never>[];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly listStories: {
-    readonly parameters: {
-      readonly query?: {
-        readonly status?: components['schemas']['StoryStatus'];
-        readonly limit?: components['parameters']['Limit'];
-        /** @description Opaque cursor returned as `nextCursor`. */
-        readonly cursor?: components['parameters']['Cursor'];
-      };
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description Stories, most recently updated first. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['StoryPage'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly startStory: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['StartStoryRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The story was created in phase `intake`; the reconciler will read its issue from Jira (0 AIU). */
-      readonly 201: {
-        headers: {
-          readonly Location?: string;
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 422: components['responses']['Problem'];
-    };
-  };
-  readonly getStory: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The story. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly stopStory: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['StopStoryRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The story is halted; cancellation of an active run completes asynchronously. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly resumeStory: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['ResumeStoryRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The story is ready to be stepped again. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly refreshIntake: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['RefreshIntakeRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description Intake refresh scheduled, not yet completed. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly setStoryBudget: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['SetStoryBudgetRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The story with its new budget. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly getStoryModels: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The story's model plan. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['ModelPlan'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly setStoryModels: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['SetStoryModelsRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The story's model plan after the change, at the story's new version. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['ModelPlan'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly listStoryRuns: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The story's runs, oldest first. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': {
-            readonly items: readonly components['schemas']['Run'][];
-          };
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly getRun: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly runId: components['schemas']['RunId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The run. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Run'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly listQuestions: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description Every question asked for the story, in order. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': {
-            readonly items: readonly components['schemas']['Question'][];
-          };
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly answerQuestion: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-        readonly questionId: string;
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['AnswerRequest'];
-      };
-    };
-    readonly responses: {
-      /**
-       * @description The answer is recorded. When it was the last pending question the story becomes
-       *     `ready` and the reconciler starts a new run of the same phase.
-       */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['AnswerAccepted'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly listGateRecords: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description Gate records. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': {
-            readonly items: readonly components['schemas']['GateRecord'][];
-          };
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly decideHumanGate: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['DecisionRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The decision is recorded and the story is routed per the phase table. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['DecisionAccepted'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 422: components['responses']['Problem'];
-    };
-  };
-  readonly resolveReview: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['ResolveReviewRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The decision is applied; the story is ready (or terminal at `blocked`). */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 422: components['responses']['Problem'];
-    };
-  };
-  readonly decideWorkPackage: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-        readonly workPackageId: components['parameters']['WorkPackageId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['WorkPackageDecisionRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The decision is applied and the story is ready. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 422: components['responses']['Problem'];
-    };
-  };
-  readonly reopenWork: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['ReopenWorkRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The packages are reopened and the story is ready. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 422: components['responses']['Problem'];
-    };
-  };
-  readonly amendAnchors: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['AmendAnchorsRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The anchor is amended and the story is ready. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 422: components['responses']['Problem'];
-    };
-  };
-  readonly unblockStory: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['UnblockStoryRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The story is ready again. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Story'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 422: components['responses']['Problem'];
-    };
-  };
-  readonly getStoryState: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The state document. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['StoryState'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly listArtifacts: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description Current artifacts. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': {
-            readonly revision: number;
-            readonly items: readonly components['schemas']['Artifact'][];
-          };
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly getArtifactContent: {
-    readonly parameters: {
-      readonly query: {
-        /** @description Story-relative path, as listed by `listArtifacts`. */
-        readonly path: components['schemas']['ArtifactPath'];
-        /** @description Artifact-set revision; defaults to the current one. */
-        readonly revision?: number;
-      };
-      readonly header?: {
-        /** @description An ETag from an earlier response; a match answers 304 without a body. */
-        readonly 'If-None-Match'?: string;
-      };
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The artifact bytes. */
-      readonly 200: {
-        headers: {
-          /** @description The quoted sha256 of the content. */
-          readonly ETag?: string;
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'text/markdown': string;
-          readonly 'application/json': unknown;
-          readonly 'text/plain': string;
-        };
-      };
-      /** @description The content has not changed since the given ETag. */
-      readonly 304: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content?: never;
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly getStoryPlanFit: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The plan fit. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['StoryPlanFit'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly getStoryDiagnosis: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The diagnosis. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Diagnosis'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly listAgentDiagnoses: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The story's agent diagnoses, newest first. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['AgentDiagnosisList'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly requestAgentDiagnosis: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['AgentDiagnosisRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The agent diagnosis, queued. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Refinement'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 503: components['responses']['Problem'];
-    };
-  };
-  readonly cancelAgentDiagnosis: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['CancelRefinementRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The agent diagnosis, cancelled or being cancelled. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Refinement'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly listKnowledgeReviews: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The story's knowledge reviews, newest first. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['KnowledgeReviewList'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly requestKnowledgeReview: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['KnowledgeReviewRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The knowledge review, queued. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['KnowledgeReview'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 503: components['responses']['Problem'];
-    };
-  };
-  readonly cancelKnowledgeReview: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['CancelRefinementRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The knowledge review, cancelled or being cancelled. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['KnowledgeReview'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly listStoryEvents: {
-    readonly parameters: {
-      readonly query?: {
-        /** @description Return only events with a greater ID. */
-        readonly after?: components['parameters']['After'];
-        readonly limit?: components['parameters']['Limit'];
-      };
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description Events after `after`, oldest first. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['EventPage'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly streamEvents: {
-    readonly parameters: {
-      readonly query?: {
-        /** @description Only events for this story. */
-        readonly story?: components['schemas']['StoryKey'];
-        /** @description Return only events with a greater ID. */
-        readonly after?: components['parameters']['After'];
-      };
-      readonly header?: {
-        readonly 'Last-Event-ID'?: components['schemas']['EventId'];
-      };
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description An open event stream. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'text/event-stream': string;
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly listRefinements: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The newest refinement of each refined issue. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['RefinementSummaryList'];
-        };
-      };
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly getRefinements: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The issue's refinements, newest first. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['RefinementList'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly requestRefinement: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['RefinementRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The refinement, queued. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Refinement'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 503: components['responses']['Problem'];
-    };
-  };
-  readonly cancelRefinement: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly key: components['parameters']['StoryKey'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['CancelRefinementRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The refinement, cancelled or being cancelled. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Refinement'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly listMeetings: {
-    readonly parameters: {
-      readonly query?: {
-        /** @description Only meetings with this status. */
-        readonly status?: components['schemas']['MeetingStatus'];
-      };
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The meetings, latest start first. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingList'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly createMeeting: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['CreateMeetingRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The meeting, planned. */
-      readonly 201: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Meeting'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly getMeeting: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The meeting. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Meeting'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly updateMeeting: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['UpdateMeetingRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The meeting, changed. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Meeting'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly startMeeting: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The meeting, in progress. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Meeting'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly endMeeting: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['EndMeetingRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The ended meeting and, when topics were carried over, the meeting that took them. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['EndMeetingResult'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly addMeetingTopic: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['AddMeetingTopicRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The topic. */
-      readonly 201: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingTopic'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly setMeetingTopicOrder: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['MeetingTopicOrderRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The meeting, its topics in the new order. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['Meeting'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly deleteMeetingTopic: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The topic and its notes are gone. */
-      readonly 204: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content?: never;
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly updateMeetingTopic: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['UpdateMeetingTopicRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The topic, changed. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingTopic'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly moveMeetingTopic: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The moved topic here and its copy in the next meeting. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MoveMeetingTopicResult'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly addMeetingNote: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['MeetingNoteRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The note. */
-      readonly 201: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingNote'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly deleteMeetingNote: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly noteId: components['parameters']['MeetingNoteId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The note is gone. */
-      readonly 204: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content?: never;
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly updateMeetingNote: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly noteId: components['parameters']['MeetingNoteId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['MeetingNoteRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The note, changed. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingNote'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly listMeetingSeries: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The series. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingSeriesList'];
-        };
-      };
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly createMeetingSeries: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path?: never;
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['CreateMeetingSeriesRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The series. */
-      readonly 201: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingSeries'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-    };
-  };
-  readonly updateMeetingSeries: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly seriesId: components['parameters']['MeetingSeriesId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['UpdateMeetingSeriesRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The series. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingSeries'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly listMeetingStoryDrafts: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly meetingId: components['parameters']['MeetingId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The drafts. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingStoryDraftList'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly requestMeetingStoryDraft: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly topicId: components['parameters']['MeetingTopicId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody: {
-      readonly content: {
-        readonly 'application/json': components['schemas']['MeetingStoryDraftRequest'];
-      };
-    };
-    readonly responses: {
-      /** @description The draft, being written. */
-      readonly 202: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 503: components['responses']['Problem'];
-    };
-  };
-  readonly getMeetingStoryDraft: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly draftId: components['parameters']['MeetingStoryDraftId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The draft. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-    };
-  };
-  readonly discardMeetingStoryDraft: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly draftId: components['parameters']['MeetingStoryDraftId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The draft is discarded. */
-      readonly 204: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content?: never;
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-    };
-  };
-  readonly createMeetingStoryIssue: {
-    readonly parameters: {
-      readonly query?: never;
-      readonly header?: never;
-      readonly path: {
-        readonly draftId: components['parameters']['MeetingStoryDraftId'];
-      };
-      readonly cookie?: never;
-    };
-    readonly requestBody?: never;
-    readonly responses: {
-      /** @description The draft, created. */
-      readonly 200: {
-        headers: {
-          readonly [name: string]: unknown;
-        };
-        content: {
-          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
-        };
-      };
-      readonly 400: components['responses']['Problem'];
-      readonly 401: components['responses']['Problem'];
-      readonly 403: components['responses']['Problem'];
-      readonly 404: components['responses']['Problem'];
-      readonly 409: components['responses']['Problem'];
-      readonly 503: components['responses']['Problem'];
-    };
-  };
+    readonly getHealth: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The API and database are reachable. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Health"];
+                };
+            };
+            readonly 503: components["responses"]["Problem"];
+        };
+    };
+    readonly listModels: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The model catalogue. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelCatalog"];
+                };
+            };
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly listJiraBacklog: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Complete backlog in Jira rank order. */
+            readonly 200: {
+                headers: {
+                    readonly "Cache-Control"?: "no-store";
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["JiraBacklog"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 503: components["responses"]["Problem"];
+        };
+    };
+    readonly getMetrics: {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
+                readonly from?: components["parameters"]["MetricsFrom"];
+                /** @description End of the period (exclusive). Defaults to now. */
+                readonly to?: components["parameters"]["MetricsTo"];
+                readonly owner?: components["parameters"]["MetricsOwner"];
+                readonly repo?: components["parameters"]["MetricsRepo"];
+                readonly model?: components["parameters"]["MetricsModel"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The metrics of the period. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MetricsReport"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly exportMetrics: {
+        readonly parameters: {
+            readonly query: {
+                readonly table: "runs" | "halts" | "gates" | "errors";
+                readonly format?: "csv" | "json";
+                /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
+                readonly from?: components["parameters"]["MetricsFrom"];
+                /** @description End of the period (exclusive). Defaults to now. */
+                readonly to?: components["parameters"]["MetricsTo"];
+                readonly owner?: components["parameters"]["MetricsOwner"];
+                readonly repo?: components["parameters"]["MetricsRepo"];
+                readonly model?: components["parameters"]["MetricsModel"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The table, as a file to save. */
+            readonly 200: {
+                headers: {
+                    readonly "Content-Disposition"?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "text/csv": string;
+                    readonly "application/json": readonly Record<string, never>[];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly listStories: {
+        readonly parameters: {
+            readonly query?: {
+                readonly status?: components["schemas"]["StoryStatus"];
+                readonly limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor returned as `nextCursor`. */
+                readonly cursor?: components["parameters"]["Cursor"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Stories, most recently updated first. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["StoryPage"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly startStory: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["StartStoryRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The story was created in phase `intake`; the reconciler will read its issue from Jira (0 AIU). */
+            readonly 201: {
+                headers: {
+                    readonly Location?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly getStory: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The story. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly stopStory: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["StopStoryRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The story is halted; cancellation of an active run completes asynchronously. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly resumeStory: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ResumeStoryRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The story is ready to be stepped again. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly refreshIntake: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["RefreshIntakeRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description Intake refresh scheduled, not yet completed. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly setStoryBudget: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SetStoryBudgetRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The story with its new budget. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly getStoryModels: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The story's model plan. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelPlan"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly setStoryModels: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SetStoryModelsRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The story's model plan after the change, at the story's new version. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ModelPlan"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly listStoryRuns: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The story's runs, oldest first. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly items: readonly components["schemas"]["Run"][];
+                    };
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly getRun: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly runId: components["schemas"]["RunId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The run. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Run"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly listQuestions: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Every question asked for the story, in order. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly items: readonly components["schemas"]["Question"][];
+                    };
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly answerQuestion: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+                readonly questionId: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AnswerRequest"];
+            };
+        };
+        readonly responses: {
+            /**
+             * @description The answer is recorded. When it was the last pending question the story becomes
+             *     `ready` and the reconciler starts a new run of the same phase.
+             */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AnswerAccepted"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly listGateRecords: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Gate records. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly items: readonly components["schemas"]["GateRecord"][];
+                    };
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly decideHumanGate: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["DecisionRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The decision is recorded and the story is routed per the phase table. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["DecisionAccepted"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly resolveReview: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ResolveReviewRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The decision is applied; the story is ready (or terminal at `blocked`). */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly decideWorkPackage: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+                readonly workPackageId: components["parameters"]["WorkPackageId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["WorkPackageDecisionRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The decision is applied and the story is ready. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly reopenWork: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["ReopenWorkRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The packages are reopened and the story is ready. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly refreshDesign: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["RefreshDesignRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The design refresh is scheduled; the story is ready in the design phase. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly amendAnchors: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AmendAnchorsRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The anchor is amended and the story is ready. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly unblockStory: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["UnblockStoryRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The story is ready again. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Story"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 422: components["responses"]["Problem"];
+        };
+    };
+    readonly getStoryState: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The state document. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["StoryState"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly listArtifacts: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Current artifacts. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly revision: number;
+                        readonly items: readonly components["schemas"]["Artifact"][];
+                    };
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly getArtifactContent: {
+        readonly parameters: {
+            readonly query: {
+                /** @description Story-relative path, as listed by `listArtifacts`. */
+                readonly path: components["schemas"]["ArtifactPath"];
+                /** @description Artifact-set revision; defaults to the current one. */
+                readonly revision?: number;
+            };
+            readonly header?: {
+                /** @description An ETag from an earlier response; a match answers 304 without a body. */
+                readonly "If-None-Match"?: string;
+            };
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The artifact bytes. */
+            readonly 200: {
+                headers: {
+                    /** @description The quoted sha256 of the content. */
+                    readonly ETag?: string;
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "text/markdown": string;
+                    readonly "application/json": unknown;
+                    readonly "text/plain": string;
+                };
+            };
+            /** @description The content has not changed since the given ETag. */
+            readonly 304: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly getStoryPlanFit: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The plan fit. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["StoryPlanFit"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly getStoryDiagnosis: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The diagnosis. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Diagnosis"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly listAgentDiagnoses: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The story's agent diagnoses, newest first. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AgentDiagnosisList"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly requestAgentDiagnosis: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AgentDiagnosisRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The agent diagnosis, queued. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Refinement"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 503: components["responses"]["Problem"];
+        };
+    };
+    readonly cancelAgentDiagnosis: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CancelRefinementRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The agent diagnosis, cancelled or being cancelled. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Refinement"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly listKnowledgeReviews: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The story's knowledge reviews, newest first. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["KnowledgeReviewList"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly requestKnowledgeReview: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["KnowledgeReviewRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The knowledge review, queued. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["KnowledgeReview"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 503: components["responses"]["Problem"];
+        };
+    };
+    readonly cancelKnowledgeReview: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CancelRefinementRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The knowledge review, cancelled or being cancelled. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["KnowledgeReview"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly listStoryEvents: {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Return only events with a greater ID. */
+                readonly after?: components["parameters"]["After"];
+                readonly limit?: components["parameters"]["Limit"];
+            };
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Events after `after`, oldest first. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["EventPage"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly streamEvents: {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Only events for this story. */
+                readonly story?: components["schemas"]["StoryKey"];
+                /** @description Return only events with a greater ID. */
+                readonly after?: components["parameters"]["After"];
+            };
+            readonly header?: {
+                readonly "Last-Event-ID"?: components["schemas"]["EventId"];
+            };
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description An open event stream. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "text/event-stream": string;
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly listRefinements: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The newest refinement of each refined issue. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["RefinementSummaryList"];
+                };
+            };
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly getRefinements: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The issue's refinements, newest first. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["RefinementList"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly requestRefinement: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["RefinementRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The refinement, queued. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Refinement"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 503: components["responses"]["Problem"];
+        };
+    };
+    readonly cancelRefinement: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly key: components["parameters"]["StoryKey"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CancelRefinementRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The refinement, cancelled or being cancelled. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Refinement"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly listMeetings: {
+        readonly parameters: {
+            readonly query?: {
+                /** @description Only meetings with this status. */
+                readonly status?: components["schemas"]["MeetingStatus"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The meetings, latest start first. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingList"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly createMeeting: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CreateMeetingRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The meeting, planned. */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Meeting"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly getMeeting: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The meeting. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Meeting"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly updateMeeting: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["UpdateMeetingRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The meeting, changed. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Meeting"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly startMeeting: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The meeting, in progress. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Meeting"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly endMeeting: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["EndMeetingRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The ended meeting and, when topics were carried over, the meeting that took them. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["EndMeetingResult"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly addMeetingTopic: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["AddMeetingTopicRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The topic. */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingTopic"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly setMeetingTopicOrder: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["MeetingTopicOrderRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The meeting, its topics in the new order. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Meeting"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly deleteMeetingTopic: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The topic and its notes are gone. */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly updateMeetingTopic: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["UpdateMeetingTopicRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The topic, changed. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingTopic"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly moveMeetingTopic: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The moved topic here and its copy in the next meeting. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MoveMeetingTopicResult"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly addMeetingNote: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["MeetingNoteRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The note. */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingNote"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly deleteMeetingNote: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly noteId: components["parameters"]["MeetingNoteId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The note is gone. */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly updateMeetingNote: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly noteId: components["parameters"]["MeetingNoteId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["MeetingNoteRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The note, changed. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingNote"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly listMeetingSeries: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The series. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingSeriesList"];
+                };
+            };
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly createMeetingSeries: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CreateMeetingSeriesRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The series. */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingSeries"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+        };
+    };
+    readonly updateMeetingSeries: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly seriesId: components["parameters"]["MeetingSeriesId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["UpdateMeetingSeriesRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The series. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingSeries"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly listMeetingStoryDrafts: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly meetingId: components["parameters"]["MeetingId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The drafts. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingStoryDraftList"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly requestMeetingStoryDraft: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly topicId: components["parameters"]["MeetingTopicId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["MeetingStoryDraftRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description The draft, being written. */
+            readonly 202: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingStoryDraft"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 503: components["responses"]["Problem"];
+        };
+    };
+    readonly getMeetingStoryDraft: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly draftId: components["parameters"]["MeetingStoryDraftId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The draft. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingStoryDraft"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+        };
+    };
+    readonly discardMeetingStoryDraft: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly draftId: components["parameters"]["MeetingStoryDraftId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The draft is discarded. */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+        };
+    };
+    readonly createMeetingStoryIssue: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly draftId: components["parameters"]["MeetingStoryDraftId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description The draft, created. */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["MeetingStoryDraft"];
+                };
+            };
+            readonly 400: components["responses"]["Problem"];
+            readonly 401: components["responses"]["Problem"];
+            readonly 403: components["responses"]["Problem"];
+            readonly 404: components["responses"]["Problem"];
+            readonly 409: components["responses"]["Problem"];
+            readonly 503: components["responses"]["Problem"];
+        };
+    };
 }

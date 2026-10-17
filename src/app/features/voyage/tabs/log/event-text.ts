@@ -44,6 +44,7 @@ const TITLES: Readonly<Record<string, string>> = {
   'story.halted': 'Halted',
   'story.resumed': 'Resumed',
   'story.intake_refreshed': 'Sent back to intake',
+  'design.refreshed': 'Design refreshed',
   'story.budget_changed': 'Budget changed',
   'story.models_changed': 'Models changed',
   'story.phase_changed': 'Phase changed',
@@ -175,6 +176,23 @@ function confirmedDetails(
           count === null || count === 0
             ? null
             : `${count} ${count === 1 ? 'question' : 'questions'} kept as history`,
+        ]
+          .filter((part) => part !== null)
+          .join(' · ')
+      );
+    }
+    case 'design.refreshed': {
+      const from = str(payload, 'from');
+      const reason = str(payload, 'reason');
+      const packages = payload['packages'];
+      const ids = Array.isArray(packages)
+        ? packages.filter((p): p is string => typeof p === 'string')
+        : [];
+      return clip(
+        [
+          from === null ? null : `${from} → design`,
+          reason,
+          ids.length === 0 ? null : `reopens ${ids.join(', ')}`,
         ]
           .filter((part) => part !== null)
           .join(' · ')
