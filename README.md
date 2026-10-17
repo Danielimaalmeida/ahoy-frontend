@@ -72,6 +72,11 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Meetings, slice 1 (2026-10-16):** `/meetings` keeps weekly business meetings with stakeholders: plan a meeting
+  (in a series or one-off), note topics before it, add topics raised by us or a stakeholder during it, take notes, and
+  carry open topics to the series' next meeting when it ends. No agent, Jira or Confluence yet. Not built or tested
+  with Angular here (npm registry blocked); see [docs/progress.md](docs/progress.md).
+
 - **Blocked is not Ended (2026-10-15):** a voyage that is `terminal` at phase `blocked` has its own Blocked chip on
   Voyages (`?status=blocked`) and tile in Needs you; Ended holds only Done voyages. Needs you lists a blocked voyage
   with Unblock only when its events say a person can unblock it (not one rejected at a human gate). Offline proof and

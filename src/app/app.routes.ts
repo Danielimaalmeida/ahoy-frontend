@@ -43,6 +43,13 @@ export const routes: Routes = [
       import('@features/docks/docks.routes').then((m) => m.DOCKS_ROUTES),
   },
   {
+    path: 'meetings',
+    loadChildren: () =>
+      import('@features/meetings/meetings.routes').then(
+        (m) => m.MEETINGS_ROUTES
+      ),
+  },
+  {
     path: 'metrics',
     loadChildren: () =>
       import('@features/metrics/metrics.routes').then((m) => m.METRICS_ROUTES),

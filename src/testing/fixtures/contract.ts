@@ -4,8 +4,8 @@
  * mock backend, by lane 2D: write no second one.
  *
  * Ajv draft 2020-12 with `strict: false` (the contract has OpenAPI-only keywords such as `x-sse-data-schema`) and
- * `allErrors`, so a failure lists every difference. `ajv-formats` is not an approved dependency, so `date-time`, the only
- * format the contract uses, is registered here.
+ * `allErrors`, so a failure lists every difference. `ajv-formats` is not an approved dependency, so the formats the contract
+ * uses (`date-time`, and `uuid` and `email` for the meetings) are registered here.
  */
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
 import mirror from './openapi.json';
@@ -109,6 +109,11 @@ export function isDateTime(text: string): boolean {
 
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 ajv.addFormat('date-time', { type: 'string', validate: isDateTime });
+ajv.addFormat('uuid', {
+  type: 'string',
+  validate: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+});
+ajv.addFormat('email', { type: 'string', validate: /^[^\s@]+@[^\s@]+$/ });
 ajv.addSchema({ $id: BASE, components: contract.components });
 
 /** Points every `#/components/...` reference at the registered document, so a schema can be compiled on its own. */

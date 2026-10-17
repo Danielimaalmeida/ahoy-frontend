@@ -1,3 +1,17 @@
+import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
+import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
+import createMeeting from '@testing/fixtures/createMeeting.json';
+import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
+import endMeeting from '@testing/fixtures/endMeeting.json';
+import getMeeting from '@testing/fixtures/getMeeting.json';
+import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
+import listMeetings from '@testing/fixtures/listMeetings.json';
+import moveMeetingTopic from '@testing/fixtures/moveMeetingTopic.json';
+import setMeetingTopicOrder from '@testing/fixtures/setMeetingTopicOrder.json';
+import startMeeting from '@testing/fixtures/startMeeting.json';
+import updateMeeting from '@testing/fixtures/updateMeeting.json';
+import updateMeetingNote from '@testing/fixtures/updateMeetingNote.json';
+import updateMeetingTopic from '@testing/fixtures/updateMeetingTopic.json';
 import answerQuestion from '@testing/fixtures/answerQuestion.json';
 import cancelAgentDiagnosis from '@testing/fixtures/cancelAgentDiagnosis.json';
 import cancelKnowledgeReview from '@testing/fixtures/cancelKnowledgeReview.json';
@@ -122,10 +136,31 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['listKnowledgeReviews', listKnowledgeReviews],
   ['requestKnowledgeReview', requestKnowledgeReview],
   ['cancelKnowledgeReview', cancelKnowledgeReview],
+  ['listMeetings', listMeetings],
+  ['createMeeting', createMeeting],
+  ['getMeeting', getMeeting],
+  ['updateMeeting', updateMeeting],
+  ['startMeeting', startMeeting],
+  ['endMeeting', endMeeting],
+  ['addMeetingTopic', addMeetingTopic],
+  ['setMeetingTopicOrder', setMeetingTopicOrder],
+  ['updateMeetingTopic', updateMeetingTopic],
+  ['moveMeetingTopic', moveMeetingTopic],
+  ['addMeetingNote', addMeetingNote],
+  ['updateMeetingNote', updateMeetingNote],
+  ['listMeetingSeries', listMeetingSeries],
+  ['createMeetingSeries', createMeetingSeries],
+];
+
+/** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
+const NO_CONTENT_OPERATIONS: readonly string[] = [
+  'deleteMeetingTopic',
+  'deleteMeetingNote',
 ];
 
 /** In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...) and the live stream (lane 2B). */
 const NOT_IN_THE_CLIENT_YET: readonly string[] = [
+  'amendAnchors',
   'resolveReview',
   'reopenWork',
   'unblockStory',
@@ -141,12 +176,15 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     const inTheContract = operations().map((o) => o.operationId);
     const expected = [
       ...CLIENT_OPERATIONS.map(([id]) => id),
+      ...NO_CONTENT_OPERATIONS,
       'getArtifactContent',
       'exportMetrics',
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + 2).toBe(37);
+    expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 2).toBe(
+      53
+    );
   });
 
   it('has no operation id twice', () => {
@@ -181,6 +219,35 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'text/csv',
     ]);
     expect(op.successStatuses).toEqual(['200']);
+  });
+
+  it('deleteMeetingTopic and deleteMeetingNote: the contract answers 204 with no body', () => {
+    for (const id of NO_CONTENT_OPERATIONS) {
+      const op = operationNamed(id);
+      expect(op.successStatuses).toEqual(['204']);
+      expect(op.successMediaTypes).toEqual([]);
+    }
+  });
+
+  it('the meeting commands answer 201 when they create and 200 otherwise', () => {
+    const statusOf = (id: string) => operationNamed(id).successStatuses;
+    for (const id of [
+      'createMeeting',
+      'addMeetingTopic',
+      'addMeetingNote',
+      'createMeetingSeries',
+    ])
+      expect(statusOf(id)).toEqual(['201']);
+    for (const id of [
+      'updateMeeting',
+      'startMeeting',
+      'endMeeting',
+      'setMeetingTopicOrder',
+      'updateMeetingTopic',
+      'moveMeetingTopic',
+      'updateMeetingNote',
+    ])
+      expect(statusOf(id)).toEqual(['200']);
   });
 
   it('the 2xx statuses the client tests use are the ones the contract documents for each command', () => {
@@ -230,6 +297,57 @@ describe('problems.json: one problem+json body per code', () => {
 });
 
 describe('the request bodies the client sends', () => {
+  it('are valid for the meeting commands as the meetings page sends them', () => {
+    const topicId = 'a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21';
+    expect(
+      requestViolations('createMeeting', {
+        seriesId: '5b0e2c1a-7f43-4c2e-9a51-0d3f6b8e2a10',
+        startsAt: '2026-10-13T09:00:00.000Z',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('createMeeting', {
+        title: 'Pricing review',
+        startsAt: '2026-10-13T09:00:00.000Z',
+        endsAt: '2026-10-13T10:00:00.000Z',
+        stakeholders: ['priya@example.com'],
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('addMeetingTopic', {
+        title: 'Late fees',
+        raisedBy: 'them',
+        raisedByEmail: 'priya@example.com',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('addMeetingTopic', { title: 'Overdue', raisedBy: 'us' })
+    ).toEqual([]);
+    expect(
+      requestViolations('updateMeetingTopic', { raisedByEmail: null })
+    ).toEqual([]);
+    expect(
+      requestViolations('addMeetingNote', { text: 'Bring numbers' })
+    ).toEqual([]);
+    expect(requestViolations('endMeeting', { carryOver: [topicId] })).toEqual(
+      []
+    );
+    expect(
+      requestViolations('setMeetingTopicOrder', { topicIds: [topicId] })
+    ).toEqual([]);
+    expect(
+      requestViolations('createMeetingSeries', {
+        name: 'Finance sync',
+        stakeholders: ['priya@example.com'],
+        cadenceDays: 7,
+      })
+    ).toEqual([]);
+    expect(requestViolations('addMeetingNote', { text: '  ' })).not.toEqual([]);
+    expect(requestViolations('endMeeting', { carryOver: ['x'] })).not.toEqual(
+      []
+    );
+  });
+
   it('are valid for startStory with every optional field, including models', () => {
     const body = {
       key: 'PROJ-145',

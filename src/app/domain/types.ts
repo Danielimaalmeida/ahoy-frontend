@@ -120,6 +120,7 @@ export type DiagnosisKind =
   | 'agent_failed'
   | 'revision_ceiling'
   | 'package_stuck'
+  | 'deferred_check'
   | 'reconciler_error'
   | 'stopped_by_user'
   | 'other';

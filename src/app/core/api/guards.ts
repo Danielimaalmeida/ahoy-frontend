@@ -35,16 +35,20 @@ import {
   GATE_OUTCOMES,
   GATE_RESULTS,
   GATE_SOURCES,
+  MEETING_STATUSES,
   MODEL_SLOTS,
   MODEL_SOURCES,
   PLAN_FIT_VERDICTS,
   READINESS_VERDICTS,
   REASONING_EFFORTS,
   REFINEMENT_STATUSES,
+  RAISED_BY,
   RUN_STATUSES,
   RUNTIME_STATES,
   type RuntimeStatus,
   STORY_STATUSES,
+  TOPIC_ORIGINS,
+  TOPIC_STATUSES,
   type AgentDiagnosisList,
   type BacklogReadiness,
   type FitReason,
@@ -69,6 +73,16 @@ import {
   type JiraBacklogIssue,
   type KnowledgeReview,
   type KnowledgeReviewList,
+  type Meeting,
+  type MeetingList,
+  type MeetingNote,
+  type MeetingSeries,
+  type MeetingSeriesList,
+  type MeetingSummary,
+  type MeetingTopic,
+  type MeetingTopicLink,
+  type EndMeetingResult,
+  type MoveMeetingTopicResult,
   type ModelChoice,
   type CatalogModel,
   type ModelCatalog,
@@ -734,4 +748,152 @@ export const isMetricsReport = guard<MetricsReport>(
       })
     ),
   })
+);
+
+const uuid = patterned(
+  'a UUID',
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  36
+);
+
+/** A recurring meeting; `cadenceDays` is 1 to 366, or null when the series has none. */
+const meetingSeries = shape<MeetingSeries>({
+  id: uuid,
+  name: text,
+  stakeholders: arrayOf(text),
+  cadenceDays: nullable(
+    wholeNumber('a whole number of days, 1 to 366', 1, 366)
+  ),
+  createdBy: actor,
+  createdAt: timestamp,
+});
+
+/** A meeting series, as `createMeetingSeries` answers it. */
+export const isMeetingSeries = guard<MeetingSeries>(
+  'MeetingSeries',
+  meetingSeries
+);
+
+/** Every meeting series, by name. */
+export const isMeetingSeriesList = guard<MeetingSeriesList>(
+  'MeetingSeriesList',
+  shape<MeetingSeriesList>({ items: arrayOf(meetingSeries) })
+);
+
+const meetingNote = shape<MeetingNote>({
+  id: uuid,
+  topicId: uuid,
+  text,
+  createdBy: actor,
+  createdAt: timestamp,
+  updatedBy: actor,
+  updatedAt: timestamp,
+});
+
+/** A note, as `addMeetingNote` and `updateMeetingNote` answer it. */
+export const isMeetingNote = guard<MeetingNote>('MeetingNote', meetingNote);
+
+const topicLink = shape<MeetingTopicLink>({
+  topicId: uuid,
+  meetingId: uuid,
+  meetingStartsAt: timestamp,
+});
+
+/**
+ * A topic. A stakeholder's e-mail goes only with a topic raised by `them`, and only a `moved` topic says where it went:
+ * a topic that breaks either is refused, so the screen never names the wrong person or links a topic that is still here.
+ */
+const meetingTopic: Check = (value, at) => {
+  const why = shape<MeetingTopic>({
+    id: uuid,
+    meetingId: uuid,
+    title: text,
+    raisedBy: oneOf(RAISED_BY),
+    raisedByEmail: nullable(text),
+    origin: oneOf(TOPIC_ORIGINS),
+    status: oneOf(TOPIC_STATUSES),
+    position: count,
+    carriedFrom: nullable(topicLink),
+    movedTo: nullable(topicLink),
+    notes: arrayOf(meetingNote),
+    createdBy: actor,
+    createdAt: timestamp,
+    updatedBy: actor,
+    updatedAt: timestamp,
+  })(value, at);
+  if (why !== null || !isRecord(value)) return why;
+  if (value['raisedBy'] === 'us' && value['raisedByEmail'] !== null)
+    return `${at}.raisedByEmail must be null for a topic raised by us`;
+  if (value['status'] === 'open' && value['movedTo'] !== null)
+    return `${at}.movedTo must be null for an open topic`;
+  return null;
+};
+
+/** A topic, as `addMeetingTopic` and `updateMeetingTopic` answer it. */
+export const isMeetingTopic = guard<MeetingTopic>('MeetingTopic', meetingTopic);
+
+const meetingSummaryFields = {
+  id: uuid,
+  seriesId: nullable(uuid),
+  seriesName: nullable(text),
+  title: text,
+  startsAt: timestamp,
+  endsAt: nullable(timestamp),
+  stakeholders: arrayOf(text),
+  status: oneOf(MEETING_STATUSES),
+  startedAt: nullable(timestamp),
+  endedAt: nullable(timestamp),
+  topicCount: count,
+  openTopicCount: count,
+  createdBy: actor,
+  createdAt: timestamp,
+  updatedBy: actor,
+  updatedAt: timestamp,
+} as const;
+
+/** A meeting has started exactly when it is not planned, and ended exactly when it is ended. */
+const meetingTimes: Check = (value, at) => {
+  if (!isRecord(value)) return null;
+  const planned = value['status'] === 'planned';
+  if (planned !== (value['startedAt'] === null))
+    return `${at}.startedAt must be set exactly when the meeting is not planned`;
+  if ((value['status'] === 'ended') !== (value['endedAt'] !== null))
+    return `${at}.endedAt must be set exactly when the meeting has ended`;
+  return null;
+};
+
+const meetingSummary: Check = (value, at) =>
+  shape<MeetingSummary>(meetingSummaryFields)(value, at) ??
+  meetingTimes(value, at);
+
+const meeting: Check = (value, at) =>
+  shape<Meeting>({ ...meetingSummaryFields, topics: arrayOf(meetingTopic) })(
+    value,
+    at
+  ) ?? meetingTimes(value, at);
+
+/** Every meeting, latest start first. */
+export const isMeetingList = guard<MeetingList>(
+  'MeetingList',
+  shape<MeetingList>({ items: arrayOf(meetingSummary) })
+);
+
+/** A meeting with its topics and notes. */
+export const isMeeting = guard<Meeting>('Meeting', meeting);
+
+/** The ended meeting and the meeting that took its carried-over topics, if any. */
+export const isEndMeetingResult = guard<EndMeetingResult>(
+  'EndMeetingResult',
+  shape<EndMeetingResult>({ meeting, nextMeeting: nullable(meeting) })
+);
+
+/** A moved topic and its copy in the next meeting. */
+export const isMoveMeetingTopicResult = guard<MoveMeetingTopicResult>(
+  'MoveMeetingTopicResult',
+  shape<MoveMeetingTopicResult>({ topic: meetingTopic, movedTo: meetingTopic })
+);
+
+/** The empty body of a `204 No Content` answer, which the HTTP client reads as null. */
+export const isNoContent = guard<null>('No content', (value, at) =>
+  value === null ? null : `${at} must be empty`
 );

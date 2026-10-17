@@ -318,6 +318,64 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     get(`/metrics/export?table=${table}`);
   get('/metrics/export?table=halts&format=json');
   get('/metrics/export?table=stories');
+
+  // Meetings: the seeded Finance sync, a topic and notes through every command, and the carry-over at the end.
+  const patch = (path: string, body: unknown) =>
+    call(server, 'PATCH', path, body);
+  const meetings = get('/meetings').body as {
+    items: { id: string; status: string }[];
+  };
+  get('/meetings?status=planned');
+  get('/meeting-series');
+  const running = meetings.items.find((m) => m.status === 'in_progress');
+  if (running) {
+    get(`/meetings/${running.id}`);
+    patch(`/meetings/${running.id}`, { title: 'Finance sync · month end' });
+    const added = post(`/meetings/${running.id}/topics`, {
+      title: 'Refund approvals take too long',
+      raisedBy: 'them',
+      raisedByEmail: 'priya@example.com',
+    }).body as { id: string };
+    patch(`/meeting-topics/${added.id}`, { title: 'Refund approvals' });
+    const note = post(`/meeting-topics/${added.id}/notes`, {
+      text: 'Four days on average',
+    }).body as { id: string };
+    patch(`/meeting-notes/${note.id}`, { text: 'Four working days' });
+    const scrap = post(`/meeting-topics/${added.id}/notes`, {
+      text: 'scrap',
+    }).body as { id: string };
+    call(server, 'DELETE', `/meeting-notes/${scrap.id}`);
+    const topics = (
+      get(`/meetings/${running.id}`).body as { topics: { id: string }[] }
+    ).topics.map((t) => t.id);
+    call(server, 'PUT', `/meetings/${running.id}/topic-order`, {
+      topicIds: [...topics].reverse(),
+    });
+    const extra = post(`/meetings/${running.id}/topics`, {
+      title: 'Not needed',
+      raisedBy: 'us',
+    }).body as { id: string };
+    call(server, 'DELETE', `/meeting-topics/${extra.id}`);
+    const later = post(`/meetings/${running.id}/topics`, {
+      title: 'Supplier prices',
+      raisedBy: 'us',
+    }).body as { id: string };
+    post(`/meeting-topics/${later.id}/move`, undefined);
+    post(`/meetings/${running.id}/start`, undefined);
+    post(`/meetings/${running.id}/end`, { carryOver: [added.id] });
+    post(`/meetings/${running.id}/topics`, { title: 'Late', raisedBy: 'us' });
+  }
+  const series = post('/meeting-series', {
+    name: 'Pricing review',
+    stakeholders: ['sam@example.com'],
+  }).body as { id: string };
+  const oneOff = post('/meetings', {
+    seriesId: series.id,
+    startsAt: '2026-10-20T09:00:00.000Z',
+  }).body as { id: string };
+  post(`/meetings/${oneOff.id}/start`, undefined);
+  get('/meetings/00000000-0000-4000-8000-ffffffffffff');
+  post('/meetings', { startsAt: '2026-10-20T09:00:00.000Z' });
 }
 
 describe('the mock against openapi/ahoy-v1.yaml', () => {
@@ -364,10 +422,28 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'cancelKnowledgeReview',
       'getMetrics',
       'exportMetrics',
+      'listMeetings',
+      'createMeeting',
+      'getMeeting',
+      'updateMeeting',
+      'startMeeting',
+      'endMeeting',
+      'addMeetingTopic',
+      'setMeetingTopicOrder',
+      'updateMeetingTopic',
+      'deleteMeetingTopic',
+      'moveMeetingTopic',
+      'addMeetingNote',
+      'updateMeetingNote',
+      'deleteMeetingNote',
+      'listMeetingSeries',
+      'createMeetingSeries',
     ])
       expect(used.has(op), op).toBe(true);
     const statuses = new Set(exchanges.map((e) => e.response.status));
-    for (const status of [200, 201, 202, 400, 401, 404, 409, 422, 500, 503])
+    for (const status of [
+      200, 201, 202, 204, 400, 401, 404, 409, 422, 500, 503,
+    ])
       expect(statuses.has(status), String(status)).toBe(true);
   });
 

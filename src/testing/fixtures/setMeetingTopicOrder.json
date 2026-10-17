@@ -1,0 +1,99 @@
+{
+  "id": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+  "seriesId": "5b0e2c1a-7f43-4c2e-9a51-0d3f6b8e2a10",
+  "seriesName": "Finance sync",
+  "title": "Finance sync",
+  "startsAt": "2026-10-06T09:00:00.000Z",
+  "endsAt": "2026-10-06T10:00:00.000Z",
+  "stakeholders": ["priya@example.com", "jordan@example.com"],
+  "status": "in_progress",
+  "startedAt": "2026-10-06T09:02:00.000Z",
+  "endedAt": null,
+  "topicCount": 3,
+  "openTopicCount": 2,
+  "createdBy": "alex@example.com",
+  "createdAt": "2026-10-01T08:00:00.000Z",
+  "updatedBy": "alex@example.com",
+  "updatedAt": "2026-10-06T09:02:00.000Z",
+  "topics": [
+    {
+      "id": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e22",
+      "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+      "title": "Late fees for enterprise accounts",
+      "raisedBy": "them",
+      "raisedByEmail": "priya@example.com",
+      "origin": "in_meeting",
+      "status": "open",
+      "position": 0,
+      "carriedFrom": null,
+      "movedTo": null,
+      "notes": [
+        {
+          "id": "b2e1d4c3-1c2f-4d6e-8f9a-8b7c6d5e4f32",
+          "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e22",
+          "text": "1.5% per month, capped at 10% of the invoice.",
+          "createdBy": "alex@example.com",
+          "createdAt": "2026-10-06T10:25:00.000Z",
+          "updatedBy": "alex@example.com",
+          "updatedAt": "2026-10-06T10:25:00.000Z"
+        }
+      ],
+      "createdBy": "alex@example.com",
+      "createdAt": "2026-10-06T10:24:00.000Z",
+      "updatedBy": "alex@example.com",
+      "updatedAt": "2026-10-06T10:24:00.000Z"
+    },
+    {
+      "id": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21",
+      "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+      "title": "Overdue invoice reminders",
+      "raisedBy": "us",
+      "raisedByEmail": null,
+      "origin": "planned",
+      "status": "open",
+      "position": 1,
+      "carriedFrom": {
+        "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e20",
+        "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e50",
+        "meetingStartsAt": "2026-09-29T09:00:00.000Z"
+      },
+      "movedTo": null,
+      "notes": [
+        {
+          "id": "b2e1d4c3-1c2f-4d6e-8f9a-8b7c6d5e4f31",
+          "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21",
+          "text": "About 120 reminders a month are sent by hand.",
+          "createdBy": "alex@example.com",
+          "createdAt": "2026-10-06T10:06:00.000Z",
+          "updatedBy": "alex@example.com",
+          "updatedAt": "2026-10-06T10:06:00.000Z"
+        }
+      ],
+      "createdBy": "alex@example.com",
+      "createdAt": "2026-10-05T16:00:00.000Z",
+      "updatedBy": "alex@example.com",
+      "updatedAt": "2026-10-05T16:00:00.000Z"
+    },
+    {
+      "id": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e23",
+      "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+      "title": "Tax ID validation for EU customers",
+      "raisedBy": "them",
+      "raisedByEmail": "jordan@example.com",
+      "origin": "planned",
+      "status": "moved",
+      "position": 2,
+      "carriedFrom": null,
+      "movedTo": {
+        "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e24",
+        "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e52",
+        "meetingStartsAt": "2026-10-13T09:00:00.000Z"
+      },
+      "notes": [],
+      "createdBy": "alex@example.com",
+      "createdAt": "2026-10-05T16:05:00.000Z",
+      "updatedBy": "alex@example.com",
+      "updatedAt": "2026-10-05T16:05:00.000Z"
+    }
+  ]
+}
