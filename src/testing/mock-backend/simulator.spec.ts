@@ -1,6 +1,7 @@
 import type { MockAhoyServer } from './server';
 import { call, field, problemCode, testServer } from './spec-helpers';
 import { spentSoFar } from './simulator';
+import { artifactFile } from './voyage';
 
 const AIU = 1_000_000_000;
 
@@ -413,5 +414,114 @@ describe('spentSoFar', () => {
     expect(spentSoFar({ cost: 1_800_000_000, ticks: 4, totalTicks: 4 })).toBe(
       1_800_000_000
     );
+  });
+});
+
+describe('Simulator · a design refresh', () => {
+  const NEW_FRAME = 'https://www.figma.com/design/Fk2/Billing-v2?node-id=12-40';
+
+  /** DEMO-9 sailed to the delivery gate, with a design read from Figma among its artifacts. */
+  function atDeliveryWithDesign() {
+    const t = testServer({ seed: false });
+    const { server, clock } = t;
+    call(server, 'POST', '/stories', {
+      key: 'DEMO-9',
+      title: 'Show order totals',
+      budgetNanoAiu: 30 * AIU,
+    });
+    clock.advance(10_000); // intake, then planning asks
+    const questions = call(server, 'GET', '/stories/DEMO-9/questions').body as {
+      items: { id: string }[];
+    };
+    for (const q of questions.items)
+      call(server, 'POST', `/stories/DEMO-9/questions/${q.id}/answer`, {
+        answer: 'POC test answer, not a product decision',
+        expectedVersion: story(server, 'DEMO-9')['version'],
+      });
+    clock.advance(7_000); // planning writes the plan; the plan gate opens
+    expect(story(server, 'DEMO-9')['phase']).toBe('plan_review');
+    decide(server, 'DEMO-9', 'plan_accepted', 'approve');
+    clock.advance(30_000);
+    expect(story(server, 'DEMO-9')).toMatchObject({
+      status: 'awaiting_decision',
+      phase: 'delivery_gate',
+    });
+    server.state.voyages
+      .get('DEMO-9')!
+      .addRevision(
+        [artifactFile('design/index.json', '{"v":1}\n', null)],
+        clock.now()
+      );
+    return t;
+  }
+
+  it('archives the old design, reads the new frames and builds the UI packages again, back to the delivery gate', () => {
+    const { server, clock } = atDeliveryWithDesign();
+    const version = Number(story(server, 'DEMO-9')['version']);
+    const answer = call(server, 'POST', '/stories/DEMO-9/refresh-design', {
+      expectedVersion: version,
+      reason: 'The designer moved the totals',
+      figmaLinks: [NEW_FRAME],
+      confirmSpend: true,
+    });
+    expect(answer.status).toBe(202);
+    expect(answer.body).toMatchObject({ phase: 'design', status: 'ready' });
+    const state = field(
+      call(server, 'GET', '/stories/DEMO-9/state'),
+      'state'
+    ) as { work_packages: Record<string, unknown>[] };
+    expect(state.work_packages.map((p) => p['status'])).toEqual([
+      'pending',
+      'pending',
+    ]);
+    expect(String(state.work_packages[0]!['rework_note'])).toContain(NEW_FRAME);
+
+    clock.advance(40_000); // the design phase, implementation, review, the delivery gate
+    expect(story(server, 'DEMO-9')).toMatchObject({
+      status: 'awaiting_decision',
+      phase: 'delivery_gate',
+    });
+    const paths = (
+      call(server, 'GET', '/stories/DEMO-9/artifacts').body as {
+        items: { path: string }[];
+      }
+    ).items.map((a) => a.path);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        `history/design-v${version}/index.json`,
+        'design/figma-links.md',
+        'design/index.json',
+        'design/density.md',
+      ])
+    );
+    const index = String(
+      call(
+        server,
+        'GET',
+        '/stories/DEMO-9/artifacts/content?path=design/index.json'
+      ).body
+    );
+    expect(index).toContain(NEW_FRAME);
+    expect(eventTypes(server, 'DEMO-9')).toContain('design.refreshed');
+  });
+
+  it('refuses links that name no frame, and a story that is not stopped', () => {
+    const { server } = atDeliveryWithDesign();
+    const version = story(server, 'DEMO-9')['version'];
+    const body = {
+      expectedVersion: version,
+      reason: 'The designer moved the totals',
+      figmaLinks: ['https://www.figma.com/design/Fk2/Billing-v2'],
+      confirmSpend: true,
+    };
+    const bad = call(server, 'POST', '/stories/DEMO-9/refresh-design', body);
+    expect([bad.status, problemCode(bad)]).toEqual([400, 'validation_failed']);
+    decide(server, 'DEMO-9', 'delivery_accepted', 'approve');
+    const done = call(server, 'POST', '/stories/DEMO-9/refresh-design', {
+      ...body,
+      figmaLinks: [NEW_FRAME],
+      expectedVersion: story(server, 'DEMO-9')['version'],
+    });
+    expect([done.status, problemCode(done)]).toEqual([409, 'invalid_state']);
   });
 });

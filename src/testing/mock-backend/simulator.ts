@@ -11,6 +11,8 @@ import type { ModelSlot, Run } from '@core/api/types';
 import type { Cancel } from './clock';
 import { iso } from './clock';
 import {
+  DENSITY_PACK,
+  designIndex,
   implementationPlan,
   implementationReport,
   jiraSnapshot,
@@ -387,6 +389,18 @@ export class Simulator {
         return;
       case 'planning':
         this.finishPlanning(voyage, run);
+        return;
+      case 'design':
+        this.judge(voyage, run, 'pass', 'design/density.md: 2 sections.');
+        this.writeFiles(voyage, run, [
+          artifactFile(
+            'design/index.json',
+            designIndex(voyage.current?.files ?? []),
+            run.id
+          ),
+          artifactFile('design/density.md', DENSITY_PACK, run.id),
+        ]);
+        this.moveTo(voyage, 'implementation');
         return;
       case 'implementation':
         this.judge(

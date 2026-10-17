@@ -64,6 +64,7 @@ export const STALE_AFTER: Readonly<
     'gates',
     'artifacts',
   ],
+  'design.refreshed': ['story', 'state', 'artifacts'],
   'run.queued': ['story', 'runs'],
   'run.waiting': ['story', 'runs'],
   'run.dispatched': ['story', 'runs'],

@@ -56,7 +56,11 @@ export const CONTEXT_RESOURCES: readonly StoryResourceName[] = [
   'questions',
   'gates',
   'models',
+  'artifacts',
 ];
+
+/** The design spec's index, which the harness writes when it reads a story's Figma frames. */
+const DESIGN_INDEX = 'design/index.json';
 
 /** The open voyage and its event history, held together. */
 interface Held {
@@ -136,6 +140,17 @@ export class VoyageContext {
       ? 0
       : remainingNano(story.budgetNanoAiu, story.spentNanoAiu);
   });
+
+  /**
+   * Whether the voyage has a design read from Figma (`design/index.json` among its artifacts), which a design refresh
+   * replaces; false until the artifacts are read.
+   */
+  readonly hasDesign = computed(
+    () =>
+      this.held()
+        ?.handle.artifacts.value()
+        ?.items.some((artifact) => artifact.path === DESIGN_INDEX) ?? false
+  );
 
   /** The voyage's runs, as the API lists them; empty until read. */
   readonly runs = computed<readonly Run[]>(
@@ -276,6 +291,24 @@ export class VoyageContext {
       this.api.refreshIntake(key, {
         expectedVersion,
         reason,
+        confirmSpend: true,
+      })
+    );
+  }
+
+  /**
+   * Replaces the voyage's design with new Figma frames (`refreshDesign`), with why it changed, confirming that it may
+   * spend AIU. The `202` story goes to the store; the state and artifacts follow with the `design.refreshed` event.
+   */
+  refreshDesign(
+    reason: string,
+    figmaLinks: readonly string[]
+  ): Promise<CommandOutcome<Story>> {
+    return this.storyCommand((key, expectedVersion) =>
+      this.api.refreshDesign(key, {
+        expectedVersion,
+        reason,
+        figmaLinks: [...figmaLinks],
         confirmSpend: true,
       })
     );

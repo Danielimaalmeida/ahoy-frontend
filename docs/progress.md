@@ -1,7 +1,37 @@
 # Ahoy frontend · progress
 
-**Updated 2026-10-16 for Meetings, slice 1** (on `feature/meetings-slice-1`, matching `ahoy-hosted`'s branch of the
+**Updated 2026-10-17 for Refresh design** (on `claude/relaxed-bell-qi5pe0`, matching `ahoy-hosted`'s branch of the
 same name). Offline only; no API or TEST environment contacted; 0 AIU. Not committed.
+
+## Refresh design (2026-10-17)
+
+- The user asked for a way to rebuild a voyage's UI when the designer changes the Figma design after implementation,
+  usually in a copy of the frames with new links (agreed in `ahoy-hosted` design §4 "Design refresh"). Nothing
+  compares the old and new design: the implementer compares its code with the new frames.
+- Contract: `openapi/ahoy-v1.yaml` vendored from `ahoy-hosted` 35c75ce plus its uncommitted `refreshDesign`
+  (`POST /stories/{key}/refresh-design`: `reason`, `figmaLinks`, `confirmSpend: true`) and event `design.refreshed`;
+  `schema.d.ts` and the JSON mirror regenerated with `npm run api:types`.
+- `ApiClient.refreshDesign`, `VoyageContext.refreshDesign` and `hasDesign` (the artifacts list holds
+  `design/index.json`; the context now also watches `artifacts`), `canRefreshDesign` (a design read, no run, halted in
+  implementation or review or waiting at the delivery gate) and a Refresh design button in the voyage header. The
+  dialog takes the new links one per line (`domain/figma-links.ts` checks them before sending: figma.com links naming
+  a frame, at most 10, none twice) and the reason, with the AIU warning; the API's field errors show under each field.
+  The log names `design.refreshed` ("Design refreshed · delivery_gate → design · reason · reopens WP2"), and the event
+  refreshes the story, state and artifacts.
+- Mock backend: `refreshDesign` with the hosted rules (its `AHOY_DESIGN_UI_AGENTS` is the mock's `implementer`), a
+  `design` row in its phase table reached only by a refresh, and a simulated design step that writes
+  `design/index.json` and `design/density.md`. No seeded voyage has a design, so on `npm run start:mock` the button
+  shows only once a design artifact exists.
+- What ran, in this session's cloud container on Node 24.22.0 (npm registry reachable, but `@acme-fedev/auth` and
+  `@acme-fedev/playwright-helpers` are private: the install left them out and used a local stand-in for
+  `@acme-fedev/auth` under `node_modules`, not committed, and the Linux native bindings the lockfile lacks):
+  `npm run typecheck` (both projects, boundary check ok), `ng build`, `npm run lint` (ESLint and Stylelint) and
+  `npm run api:check` pass. `ng test`: 161 files, 2,840 tests pass and 8 fail; the same 8 fail on `main` without this
+  change (meetings 4, voyages 2, top bar 1, All hands 1: the Meetings slice's top-bar link and seeds). New specs:
+  `figma-links.spec.ts`, `refresh-design-dialog.spec.ts`, `canRefreshDesign`, the mock's design refresh journey, the
+  log text and the contract cases. `format:check` warns on the same 10 files as on `main`.
+- Did not run: Playwright e2e, any browser check, or a local `ahoy-hosted --simulate`. Needs from other lanes: the
+  `ahoy-hosted` change merged with this one.
 
 ## Meetings, slice 1 (2026-10-16)
 
@@ -895,6 +925,10 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+Refresh design (2026-10-17) is on `claude/relaxed-bell-qi5pe0`, not committed: a voyage with a Figma design can be
+sent round again with the designer's new links from its header. Build, typecheck, lint and the unit tests ran here
+(8 failures that `main` has too); see its section above.
+
 Meetings, slice 1 (2026-10-16) is on `feature/meetings-slice-1`, not committed: the Meetings page (list, meeting,
 topics us/them, notes, carry-over) on the vendored contract and the mock backend. Only a stand-in type check, the pure
 specs and Prettier ran here (npm registry blocked); see its section above.
@@ -1035,6 +1069,10 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+Refresh design: review and commit with `ahoy-hosted`'s change (explicit approval). Then try it against a local
+`ahoy-hosted --simulate` (0 AIU) with a story whose design was read. Separately, fix the 8 unit tests that fail on
+`main` since the Meetings slice (top-bar link count and seed-dependent meetings, voyages and All hands specs).
+
 Meetings, slice 1: run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` on
 Node 24 (nothing Angular ran when it was written), fix what strict templates or lint find, then open `/meetings` on
 `npm run start:mock` and against a local `ahoy-hosted --simulate` with migration 0014. Commit and push need the user's
@@ -1075,6 +1113,10 @@ The next release must retain the corrected NGINX document root; remote image sta
 Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
+
+The newest change, on `claude/relaxed-bell-qi5pe0` (2026-10-17, uncommitted), adds Refresh design to the voyage
+header (new Figma links and a reason, `refreshDesign`), matching `ahoy-hosted`'s branch of the same name. Build,
+typecheck, lint and the unit tests ran on Node 24; 8 unit tests fail on `main` as well. See "Refresh design".
 
 The newest change, on `feature/meetings-slice-1` (2026-10-16, uncommitted), adds the Meetings page for stakeholder
 meetings, slice 1, matching `ahoy-hosted`'s branch of the same name. Nothing Angular ran in the session that wrote it

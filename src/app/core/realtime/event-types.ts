@@ -28,6 +28,7 @@ export const KNOWN_EVENT_TYPES = [
   'review.reported',
   'story.routed',
   'story.intake_refreshed',
+  'design.refreshed',
   'run.progress',
 ] as const;
 export type KnownEventType = (typeof KNOWN_EVENT_TYPES)[number];
