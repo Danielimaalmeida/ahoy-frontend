@@ -520,9 +520,11 @@ export interface paths {
         /**
          * Replace a story's Figma design with new frames and send its UI packages round again. May spend AIU.
          * @description Human-triggered, for a story whose design was read from Figma, while it is halted in implementation or review
-         *     or waits at the delivery gate (left undecided, it opens again when the work comes back), with no active run.
-         *     `figmaLinks` are the new frames (each a figma.com link with its node-id); they replace the Jira snapshot's links
-         *     for this story and every later refresh starts from them. Nothing compares the old design with the new one.
+         *     or waits at the delivery gate (left undecided, it opens again when the work comes back), with no active run;
+         *     also while it is halted in the design phase after an earlier refresh (links that could not be read, or a pack
+         *     the gate refused), which only another refresh can correct. `figmaLinks` are the new frames (each a figma.com
+         *     link with its node-id); they replace the Jira snapshot's links for this story and every later refresh starts
+         *     from them. A Figma link in `reason` is not read. Nothing compares the old design with the new one.
          *     The current design spec moves to `history/design-v<version>/` as a record (no run is seeded with it), every
          *     work package of a UI implementer is reopened, however its last run ended, with a note to make the delivered UI
          *     match the new frames (no rework round or revision is charged), and the story goes to the design phase, which

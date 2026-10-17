@@ -31,6 +31,9 @@ export const PLAN_FILE = 'implementation-plan.md';
 /** The design spec's index, which the design phase writes when it reads a story's Figma frames. */
 export const DESIGN_INDEX_FILE = 'design/index.json';
 
+/** The links of a design refresh, which the design phase reads instead of the Jira snapshot's. */
+export const DESIGN_LINKS_FILE = 'design/figma-links.md';
+
 /** The implementers whose work packages a design refresh reopens (`AHOY_DESIGN_UI_AGENTS` of the mock's server). */
 export const UI_AGENTS: readonly string[] = ['implementer'];
 

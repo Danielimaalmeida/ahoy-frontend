@@ -505,6 +505,29 @@ describe('Simulator · a design refresh', () => {
     expect(eventTypes(server, 'DEMO-9')).toContain('design.refreshed');
   });
 
+  it('takes another refresh while the first one is halted in the design phase, to correct its links', () => {
+    const { server } = atDeliveryWithDesign();
+    const body = {
+      expectedVersion: story(server, 'DEMO-9')['version'],
+      reason: 'The designer moved the totals',
+      figmaLinks: [NEW_FRAME],
+      confirmSpend: true,
+    };
+    expect(
+      call(server, 'POST', '/stories/DEMO-9/refresh-design', body).status
+    ).toBe(202);
+    const voyage = server.state.voyages.get('DEMO-9')!;
+    voyage.story.status = 'halted';
+    voyage.story.haltReason = 'design_unreadable';
+    const again = call(server, 'POST', '/stories/DEMO-9/refresh-design', {
+      ...body,
+      figmaLinks: [`${NEW_FRAME}1`],
+      expectedVersion: story(server, 'DEMO-9')['version'],
+    });
+    expect(again.status).toBe(202);
+    expect(again.body).toMatchObject({ phase: 'design', status: 'ready' });
+  });
+
   it('refuses links that name no frame, and a story that is not stopped', () => {
     const { server } = atDeliveryWithDesign();
     const version = story(server, 'DEMO-9')['version'];

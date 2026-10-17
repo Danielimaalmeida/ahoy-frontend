@@ -8,12 +8,14 @@ same name). Offline only; no API or TEST environment contacted; 0 AIU. Not commi
 - The user asked for a way to rebuild a voyage's UI when the designer changes the Figma design after implementation,
   usually in a copy of the frames with new links (agreed in `ahoy-hosted` design §4 "Design refresh"). Nothing
   compares the old and new design: the implementer compares its code with the new frames.
-- Contract: `openapi/ahoy-v1.yaml` vendored from `ahoy-hosted` 35c75ce plus its uncommitted `refreshDesign`
+- Contract: `openapi/ahoy-v1.yaml` vendored from `ahoy-hosted` ab1c2a0, with `refreshDesign`
   (`POST /stories/{key}/refresh-design`: `reason`, `figmaLinks`, `confirmSpend: true`) and event `design.refreshed`;
   `schema.d.ts` and the JSON mirror regenerated with `npm run api:types`.
-- `ApiClient.refreshDesign`, `VoyageContext.refreshDesign` and `hasDesign` (the artifacts list holds
-  `design/index.json`; the context now also watches `artifacts`), `canRefreshDesign` (a design read, no run, halted in
-  implementation or review or waiting at the delivery gate) and a Refresh design button in the voyage header. The
+- `ApiClient.refreshDesign`, `VoyageContext.refreshDesign` and `design` (`read`: the artifacts list holds
+  `design/index.json`; `refreshed`: it holds `design/figma-links.md`; the context now also watches `artifacts`),
+  `canRefreshDesign` (no run, and a design read with the voyage halted in implementation or review or waiting at the
+  delivery gate, or halted in design after a refresh, to correct links that could not be read) and a Refresh design
+  button in the voyage header. The
   dialog takes the new links one per line (`domain/figma-links.ts` checks them before sending: figma.com links naming
   a frame, at most 10, none twice) and the reason, with the AIU warning; the API's field errors show under each field.
   The log names `design.refreshed` ("Design refreshed · delivery_gate → design · reason · reopens WP2"), and the event
@@ -26,7 +28,7 @@ same name). Offline only; no API or TEST environment contacted; 0 AIU. Not commi
   `@acme-fedev/playwright-helpers` are private: the install left them out and used a local stand-in for
   `@acme-fedev/auth` under `node_modules`, not committed, and the Linux native bindings the lockfile lacks):
   `npm run typecheck` (both projects, boundary check ok), `ng build`, `npm run lint` (ESLint and Stylelint) and
-  `npm run api:check` pass. `ng test`: 161 files, 2,840 tests pass and 8 fail; the same 8 fail on `main` without this
+  `npm run api:check` pass. After the code-review fixes, `ng test`: 161 files, 2,842 tests pass and 8 fail; the same 8 fail on `main` without this
   change (meetings 4, voyages 2, top bar 1, All hands 1: the Meetings slice's top-bar link and seeds). New specs:
   `figma-links.spec.ts`, `refresh-design-dialog.spec.ts`, `canRefreshDesign`, the mock's design refresh journey, the
   log text and the contract cases. `format:check` warns on the same 10 files as on `main`.

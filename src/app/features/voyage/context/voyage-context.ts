@@ -62,6 +62,9 @@ export const CONTEXT_RESOURCES: readonly StoryResourceName[] = [
 /** The design spec's index, which the harness writes when it reads a story's Figma frames. */
 const DESIGN_INDEX = 'design/index.json';
 
+/** The links of a design refresh, which the design phase reads instead of the Jira snapshot's. */
+const DESIGN_LINKS = 'design/figma-links.md';
+
 /** The open voyage and its event history, held together. */
 interface Held {
   readonly handle: StoryHandle;
@@ -142,15 +145,18 @@ export class VoyageContext {
   });
 
   /**
-   * Whether the voyage has a design read from Figma (`design/index.json` among its artifacts), which a design refresh
-   * replaces; false until the artifacts are read.
+   * What the voyage's artifacts say about its design: `read` when a design was read from Figma (`design/index.json`),
+   * `refreshed` when a design refresh gave it links (`design/figma-links.md`); both false until the artifacts are read.
    */
-  readonly hasDesign = computed(
-    () =>
-      this.held()
-        ?.handle.artifacts.value()
-        ?.items.some((artifact) => artifact.path === DESIGN_INDEX) ?? false
-  );
+  readonly design = computed(() => {
+    const paths = (this.held()?.handle.artifacts.value()?.items ?? []).map(
+      (artifact) => artifact.path
+    );
+    return {
+      read: paths.includes(DESIGN_INDEX),
+      refreshed: paths.includes(DESIGN_LINKS),
+    };
+  });
 
   /** The voyage's runs, as the API lists them; empty until read. */
   readonly runs = computed<readonly Run[]>(

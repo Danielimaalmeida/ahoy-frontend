@@ -66,6 +66,7 @@ import {
   artifactFile,
   DEFAULT_CONTROL_SHA,
   DESIGN_INDEX_FILE,
+  DESIGN_LINKS_FILE,
   eventDto,
   PHASE_TABLE,
   PLAN_FILE,
@@ -1078,8 +1079,9 @@ export class MockAhoyServer {
 
   /**
    * Replaces a story's Figma design, as `refreshDesign` of `ahoy-hosted` does: from a halted implementation or review or
-   * at the delivery gate, with a design read. The design files move to `history/design-v<version>/`, the links go to
-   * `design/figma-links.md`, every UI package is reopened with a note, and the design phase reads the new frames.
+   * at the delivery gate, with a design read, or halted in the design phase after an earlier refresh. The design files
+   * move to `history/design-v<version>/`, the links go to `design/figma-links.md`, every UI package is reopened with a
+   * note, and the design phase reads the new frames.
    */
   private refreshDesign(call: Call): MockResponse {
     const body = call.body as RefreshDesignRequest; // validated
@@ -1101,21 +1103,23 @@ export class MockAhoyServer {
       );
     const atDelivery =
       story.status === 'awaiting_decision' && story.phase === 'delivery_gate';
+    const files = voyage.current?.files ?? [];
+    const refreshed = files.some((f) => f.path === DESIGN_LINKS_FILE);
     const halted =
       story.status === 'halted' &&
-      ['implementation', 'pr_review'].includes(story.phase);
+      (['implementation', 'pr_review'].includes(story.phase) ||
+        (story.phase === 'design' && refreshed));
     if (!atDelivery && !halted)
       throw new MockProblem(
         'invalid_state',
-        `Story ${story.key} is ${story.status} in ${story.phase}; a design is refreshed from a halted implementation or review, or at the delivery gate`
+        `Story ${story.key} is ${story.status} in ${story.phase}; a design is refreshed from a halted implementation or review, at the delivery gate, or from a halt in the design phase after an earlier refresh`
       );
     if (story.spentNanoAiu >= story.budgetNanoAiu)
       throw new MockProblem(
         'invalid_state',
         'Increase the story budget before refreshing the design'
       );
-    const files = voyage.current?.files ?? [];
-    if (!files.some((f) => f.path === DESIGN_INDEX_FILE))
+    if (!refreshed && !files.some((f) => f.path === DESIGN_INDEX_FILE))
       throw new MockProblem(
         'invalid_state',
         `Story ${story.key} has no design read from Figma to refresh`
@@ -1142,7 +1146,7 @@ export class MockAhoyServer {
           )
         ),
         artifactFile(
-          'design/figma-links.md',
+          DESIGN_LINKS_FILE,
           `# Figma links of the design refresh\n\n${links.links.map((l) => `- ${l}\n`).join('')}`,
           null
         ),
@@ -1187,10 +1191,11 @@ export class MockAhoyServer {
       confirmSpend: true,
     });
     this.world.append(voyage, 'artifacts.updated', call.actor, { revision });
-    this.world.append(voyage, 'story.phase_changed', call.actor, {
-      from,
-      to: 'design',
-    });
+    if (from !== 'design')
+      this.world.append(voyage, 'story.phase_changed', call.actor, {
+        from,
+        to: 'design',
+      });
     this.simulator.poke(voyage);
     return jsonResponse(202, voyage.storyDto());
   }
