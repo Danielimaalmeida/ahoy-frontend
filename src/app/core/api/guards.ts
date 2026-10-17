@@ -35,7 +35,9 @@ import {
   GATE_OUTCOMES,
   GATE_RESULTS,
   GATE_SOURCES,
+  JIRA_ISSUE_TYPES,
   MEETING_STATUSES,
+  MEETING_STORY_DRAFT_STATUSES,
   MODEL_SLOTS,
   MODEL_SOURCES,
   PLAN_FIT_VERDICTS,
@@ -78,6 +80,8 @@ import {
   type MeetingNote,
   type MeetingSeries,
   type MeetingSeriesList,
+  type MeetingStoryDraft,
+  type MeetingStoryDraftList,
   type MeetingSummary,
   type MeetingTopic,
   type MeetingTopicLink,
@@ -99,6 +103,7 @@ import {
   type Story,
   type StoryPage,
   type StoryStateDocument,
+  type StoryTemplate,
   type Usage,
 } from './types';
 
@@ -756,6 +761,12 @@ const uuid = patterned(
   36
 );
 
+const jiraProjectKey = patterned(
+  'a Jira project key like FIN',
+  /^[A-Z][A-Z0-9_]+$/,
+  50
+);
+
 /** A recurring meeting; `cadenceDays` is 1 to 366, or null when the series has none. */
 const meetingSeries = shape<MeetingSeries>({
   id: uuid,
@@ -764,6 +775,8 @@ const meetingSeries = shape<MeetingSeries>({
   cadenceDays: nullable(
     wholeNumber('a whole number of days, 1 to 366', 1, 366)
   ),
+  jiraProjectKey: nullable(jiraProjectKey),
+  jiraIssueType: oneOf(JIRA_ISSUE_TYPES),
   createdBy: actor,
   createdAt: timestamp,
 });
@@ -891,6 +904,86 @@ export const isEndMeetingResult = guard<EndMeetingResult>(
 export const isMoveMeetingTopicResult = guard<MoveMeetingTopicResult>(
   'MoveMeetingTopicResult',
   shape<MoveMeetingTopicResult>({ topic: meetingTopic, movedTo: meetingTopic })
+);
+
+const storyText = boundedText('text of 1 to 1000 characters', 1, 1000);
+const storyList = (min: number): Check => {
+  const items = arrayOf(storyText);
+  return (value, at) =>
+    items(value, at) ??
+    (Array.isArray(value) && (value.length < min || value.length > 20)
+      ? `${at} must hold ${min} to 20 items`
+      : null);
+};
+
+/** A story in the template: every field present, each text within its length, 1 to 20 criteria. */
+const storyTemplate = shape<StoryTemplate>({
+  title: boundedText('a title of 1 to 255 characters', 1, 255),
+  role: storyText,
+  want: storyText,
+  soThat: storyText,
+  acceptanceCriteria: storyList(1),
+  outOfScope: storyList(0),
+  openQuestions: storyList(0),
+});
+
+/** A ready draft has its story and a drafting or failed one none; a failed one says why; a created one has its issue. */
+const draftConsistency: Check = (value, at) => {
+  if (!isRecord(value)) return null;
+  const status = value['status'];
+  if (status === 'ready' && value['story'] === null)
+    return `${at}.story must be set for a ready draft`;
+  if ((status === 'drafting' || status === 'failed') && value['story'] !== null)
+    return `${at}.story must be null while the draft is ${String(status)}`;
+  if ((status === 'failed') !== (value['failure'] !== null))
+    return `${at}.failure must be set exactly when the draft failed`;
+  if ((status === 'created') !== (value['jiraKey'] !== null))
+    return `${at}.jiraKey must be set exactly when the draft was created`;
+  return null;
+};
+
+const meetingStoryDraft: Check = (value, at) =>
+  shape<MeetingStoryDraft>({
+    id: uuid,
+    topicId: uuid,
+    meetingId: uuid,
+    topicTitle: text,
+    noteIds: arrayOf(uuid),
+    status: oneOf(MEETING_STORY_DRAFT_STATUSES),
+    story: nullable(storyTemplate),
+    failure: nullable(text),
+    target: shape<MeetingStoryDraft['target']>({
+      projectKey: nullable(text),
+      issueType: nullable(text),
+    }),
+    jiraKey: nullable(
+      patterned('a Jira key like FIN-12', /^[A-Z][A-Z0-9_]+-[0-9]+$/, 60)
+    ),
+    jiraUrl: nullable(patterned('an https URL', /^https:\/\/\S+$/, 2000)),
+    jiraCreatedBy: nullable(actor),
+    jiraCreatedAt: nullable(timestamp),
+    run: nullable(
+      shape<NonNullable<MeetingStoryDraft['run']>>({
+        status: text,
+        budgetNanoAiu: positive,
+        nanoAiu,
+        cancelRequested: flag,
+      })
+    ),
+    createdBy: actor,
+    createdAt: timestamp,
+  })(value, at) ?? draftConsistency(value, at);
+
+/** A story draft, as `requestMeetingStoryDraft`, `getMeetingStoryDraft` and `createMeetingStoryIssue` answer it. */
+export const isMeetingStoryDraft = guard<MeetingStoryDraft>(
+  'MeetingStoryDraft',
+  meetingStoryDraft
+);
+
+/** A meeting's story drafts, newest first. */
+export const isMeetingStoryDraftList = guard<MeetingStoryDraftList>(
+  'MeetingStoryDraftList',
+  shape<MeetingStoryDraftList>({ items: arrayOf(meetingStoryDraft) })
 );
 
 /** The empty body of a `204 No Content` answer, which the HTTP client reads as null. */

@@ -35,6 +35,8 @@ import {
   isMeetingNote,
   isMeetingSeries,
   isMeetingSeriesList,
+  isMeetingStoryDraft,
+  isMeetingStoryDraftList,
   isMeetingTopic,
   isMetricsReport,
   isMoveMeetingTopicResult,
@@ -85,6 +87,9 @@ import type {
   MeetingNoteRequest,
   MeetingSeries,
   MeetingSeriesList,
+  MeetingStoryDraft,
+  MeetingStoryDraftList,
+  MeetingStoryDraftRequest,
   MeetingTopic,
   MeetingTopicOrderRequest,
   MetricsExport,
@@ -115,6 +120,7 @@ import type {
   StoryPlanFit,
   StoryStateDocument,
   UpdateMeetingRequest,
+  UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
   WorkPackageDecisionRequest,
   UnblockStoryRequest,
@@ -807,6 +813,75 @@ export class ApiClient {
     return this.delete(
       'deleteMeetingNote',
       `/meeting-notes/${segment(noteId)}`
+    );
+  }
+
+  /** Sets where the series' drafted stories are created in Jira; a null project turns creating off. */
+  updateMeetingSeries(
+    seriesId: string,
+    body: UpdateMeetingSeriesRequest
+  ): Promise<ApiResult<MeetingSeries>> {
+    return this.send(
+      'updateMeetingSeries',
+      isMeetingSeries,
+      this.http.patch<unknown>(
+        this.url(`/meeting-series/${segment(seriesId)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** The meeting's story drafts that were not discarded, newest first. */
+  listMeetingStoryDrafts(
+    meetingId: string
+  ): Promise<ApiResult<MeetingStoryDraftList>> {
+    return this.get(
+      'listMeetingStoryDrafts',
+      `/meetings/${segment(meetingId)}/story-drafts`,
+      isMeetingStoryDraftList
+    );
+  }
+
+  /** Asks the agent to draft a user story from a topic. May spend AIU: needs `confirmSpend`. The answer is 202. */
+  requestMeetingStoryDraft(
+    topicId: string,
+    body: MeetingStoryDraftRequest
+  ): Promise<ApiResult<MeetingStoryDraft>> {
+    return this.post(
+      'requestMeetingStoryDraft',
+      `/meeting-topics/${segment(topicId)}/story-drafts`,
+      body,
+      isMeetingStoryDraft
+    );
+  }
+
+  /** One story draft, with its story once the agent has written it. */
+  getMeetingStoryDraft(draftId: string): Promise<ApiResult<MeetingStoryDraft>> {
+    return this.get(
+      'getMeetingStoryDraft',
+      `/meeting-story-drafts/${segment(draftId)}`,
+      isMeetingStoryDraft
+    );
+  }
+
+  /** Discards a draft not yet created in Jira ("Write it again"). The answer (204) has no body. */
+  discardMeetingStoryDraft(draftId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'discardMeetingStoryDraft',
+      `/meeting-story-drafts/${segment(draftId)}`
+    );
+  }
+
+  /** Creates a ready draft's story in Jira, in its series' project. Writes to Jira; a second call creates nothing. */
+  createMeetingStoryIssue(
+    draftId: string
+  ): Promise<ApiResult<MeetingStoryDraft>> {
+    return this.post(
+      'createMeetingStoryIssue',
+      `/meeting-story-drafts/${segment(draftId)}/create-issue`,
+      null,
+      isMeetingStoryDraft
     );
   }
 

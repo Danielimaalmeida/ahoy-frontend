@@ -2,6 +2,11 @@ import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import createMeeting from '@testing/fixtures/createMeeting.json';
 import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
+import createMeetingStoryIssue from '@testing/fixtures/createMeetingStoryIssue.json';
+import getMeetingStoryDraft from '@testing/fixtures/getMeetingStoryDraft.json';
+import listMeetingStoryDrafts from '@testing/fixtures/listMeetingStoryDrafts.json';
+import requestMeetingStoryDraft from '@testing/fixtures/requestMeetingStoryDraft.json';
+import updateMeetingSeries from '@testing/fixtures/updateMeetingSeries.json';
 import endMeeting from '@testing/fixtures/endMeeting.json';
 import getMeeting from '@testing/fixtures/getMeeting.json';
 import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
@@ -15,6 +20,8 @@ import {
   isMeetingNote,
   isMeetingSeries,
   isMeetingSeriesList,
+  isMeetingStoryDraft,
+  isMeetingStoryDraftList,
   isMeetingTopic,
   isMoveMeetingTopicResult,
   isNoContent,
@@ -31,6 +38,57 @@ describe('meeting guards', () => {
     expect(isMeetingNote(addMeetingNote)).toBe(true);
     expect(isMeetingSeries(createMeetingSeries)).toBe(true);
     expect(isMeetingSeriesList(listMeetingSeries)).toBe(true);
+    expect(isMeetingSeries(updateMeetingSeries)).toBe(true);
+  });
+
+  it('accept every story draft answer the contract documents: drafting, ready, failed and created', () => {
+    expect(isMeetingStoryDraft(requestMeetingStoryDraft)).toBe(true);
+    expect(isMeetingStoryDraft(getMeetingStoryDraft)).toBe(true);
+    expect(isMeetingStoryDraft(createMeetingStoryIssue)).toBe(true);
+    expect(isMeetingStoryDraftList(listMeetingStoryDrafts)).toBe(true);
+  });
+
+  it('refuse a draft whose status and story, failure or issue disagree, naming the field', () => {
+    const readyWithoutStory = withField(getMeetingStoryDraft, 'story', null);
+    expect(isMeetingStoryDraft(readyWithoutStory)).toBe(false);
+    expect(isMeetingStoryDraft.explain(readyWithoutStory)).toContain('story');
+    expect(
+      isMeetingStoryDraft(
+        withField(requestMeetingStoryDraft, 'failure', 'it broke')
+      )
+    ).toBe(false);
+    expect(
+      isMeetingStoryDraft(withField(getMeetingStoryDraft, 'jiraKey', 'PROJ-1'))
+    ).toBe(false);
+    expect(
+      isMeetingStoryDraft(withField(createMeetingStoryIssue, 'jiraKey', null))
+    ).toBe(false);
+  });
+
+  it('refuse a story without acceptance criteria, or a Jira link that is not https', () => {
+    const story = getMeetingStoryDraft.story;
+    expect(
+      isMeetingStoryDraft(
+        withField(getMeetingStoryDraft, 'story', {
+          ...story,
+          acceptanceCriteria: [],
+        })
+      )
+    ).toBe(false);
+    expect(
+      isMeetingStoryDraft(
+        withField(createMeetingStoryIssue, 'jiraUrl', 'javascript:alert(1)')
+      )
+    ).toBe(false);
+  });
+
+  it('refuse a series with a Jira project key that is not one', () => {
+    expect(
+      isMeetingSeries(withField(createMeetingSeries, 'jiraProjectKey', 'proj'))
+    ).toBe(false);
+    expect(
+      isMeetingSeries(withField(createMeetingSeries, 'jiraIssueType', 'Epic'))
+    ).toBe(false);
   });
 
   it('refuse a meeting whose status and start or end time disagree, naming the field', () => {

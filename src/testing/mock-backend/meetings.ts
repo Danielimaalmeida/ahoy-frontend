@@ -2,7 +2,9 @@
  * The mock's meetings with stakeholders (`/meetings`, `/meeting-topics`, `/meeting-notes`, `/meeting-series`), as
  * `packages/core/src/service/meetings.ts` of `ahoy-hosted` keeps the real ones: a meeting is planned, then in progress,
  * then ended (read-only); topics are raised by us or by a stakeholder, planned before the start or raised during it;
- * ending a meeting carries the chosen open topics, notes and all, to the series' next meeting. 0 AIU. Fictional data.
+ * ending a meeting carries the chosen open topics, notes and all, to the series' next meeting. A topic's story draft is
+ * written by a simulated agent a moment after it is asked for, and "created" in a pretend Jira (design §5, slice 2).
+ * 0 AIU, no Jira. Fictional data.
  */
 import type {
   AddMeetingTopicRequest,
@@ -13,13 +15,17 @@ import type {
   MeetingNote,
   MeetingSeries,
   MeetingStatus,
+  MeetingStoryDraft,
+  MeetingStoryDraftRequest,
   MeetingSummary,
   MeetingTopic,
   MoveMeetingTopicResult,
+  StoryTemplate,
   UpdateMeetingRequest,
+  UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
 } from '@core/api/types';
-import { iso, type MockClock } from './clock';
+import { iso, type Cancel, type MockClock } from './clock';
 import { MockProblem } from './http';
 import type { Writable } from './voyage';
 
@@ -37,6 +43,16 @@ type TopicRecord = Writable<
   movedToTopicId: string | null;
 };
 type NoteRecord = Writable<MeetingNote>;
+type DraftRecord = Writable<MeetingStoryDraft> & {
+  discarded: boolean;
+  /** Stops the simulated agent of a draft still being written. */
+  cancel: Cancel | null;
+};
+
+/** How long the simulated agent takes to write a story. */
+export const MOCK_DRAFT_MS = 1_500;
+/** The cap a draft gets when the request names none (5 AIU), as the server's `meeting_story` configuration. */
+const DEFAULT_DRAFT_BUDGET = 5_000_000_000;
 
 const notFound = (what: string, id: string) =>
   new MockProblem('not_found', `${what} ${id} does not exist`);
@@ -61,7 +77,11 @@ export class MeetingDesk {
   private readonly meetings = new Map<string, MeetingRecord>();
   private readonly topics = new Map<string, TopicRecord>();
   private readonly notes = new Map<string, NoteRecord>();
+  private readonly drafts = new Map<string, DraftRecord>();
   private nextId = 1;
+  private nextIssue = 123;
+  /** When set, the pretend Jira refuses every issue with this message (a spec's switch). */
+  jiraRefuses: string | null = null;
 
   constructor(private readonly clock: MockClock) {}
 
@@ -81,6 +101,7 @@ export class MeetingDesk {
       name: 'Finance sync',
       stakeholders: ['priya@example.com', 'jordan@example.com'],
       cadenceDays: 7,
+      jiraProjectKey: 'PROJ',
     });
     const startOf = (days: number) => iso(at - HALF_HOUR_MS + days * DAY_MS);
     const endOf = (days: number) => iso(at + HALF_HOUR_MS + days * DAY_MS);
@@ -311,6 +332,11 @@ export class MeetingDesk {
     this.changeableTopic(id);
     for (const note of [...this.notes.values()])
       if (note.topicId === id) this.notes.delete(note.id);
+    for (const draft of [...this.drafts.values()])
+      if (draft.topicId === id) {
+        draft.cancel?.();
+        this.drafts.delete(draft.id);
+      }
     for (const other of this.topics.values()) {
       if (other.movedToTopicId === id) other.movedToTopicId = null;
       if (other.carriedFromTopicId === id) other.carriedFromTopicId = null;
@@ -410,11 +436,188 @@ export class MeetingDesk {
       name: body.name.trim(),
       stakeholders: normalized(body.stakeholders ?? []),
       cadenceDays: body.cadenceDays ?? null,
+      jiraProjectKey: body.jiraProjectKey ?? null,
+      jiraIssueType: body.jiraIssueType ?? 'Story',
       createdBy: actor,
       createdAt: this.now(),
     };
     this.series.set(series.id, series);
     return { ...series, stakeholders: [...series.stakeholders] };
+  }
+
+  /** Sets where the series' stories are created in Jira; a null project turns creating off. */
+  updateSeries(id: string, body: UpdateMeetingSeriesRequest): MeetingSeries {
+    const series = this.series.get(id);
+    if (series === undefined) throw notFound('Series', id);
+    series.jiraProjectKey = body.jiraProjectKey;
+    series.jiraIssueType = body.jiraIssueType ?? 'Story';
+    return { ...series, stakeholders: [...series.stakeholders] };
+  }
+
+  /** Asks the simulated agent for a story from the topic and the chosen notes (all of them when none are chosen). */
+  requestDraft(
+    actor: string,
+    topicId: string,
+    body: MeetingStoryDraftRequest
+  ): MeetingStoryDraft {
+    const topic = this.topics.get(topicId);
+    if (topic === undefined) throw notFound('Topic', topicId);
+    if (topic.status === 'moved')
+      throw invalid(
+        `Topic ${topicId} was moved to the next meeting; draft its story there`
+      );
+    const noteIds = [...new Set(body.noteIds ?? [])];
+    const notes = [...this.notes.values()].filter((n) => n.topicId === topicId);
+    const unknown = noteIds.find((id) => !notes.some((n) => n.id === id));
+    if (unknown !== undefined)
+      throw refused(
+        'body/noteIds',
+        `Note ${unknown} is not a note of topic ${topicId}`
+      );
+    if (
+      [...this.drafts.values()].some(
+        (d) => d.topicId === topicId && !d.discarded && d.jiraKey === null
+      )
+    )
+      throw invalid(
+        `Topic ${topicId} already has a story draft; create it in Jira or discard it first`
+      );
+    const draft: DraftRecord = {
+      id: this.id(),
+      topicId,
+      meetingId: topic.meetingId,
+      topicTitle: topic.title,
+      noteIds,
+      status: 'drafting',
+      story: null,
+      failure: null,
+      target: this.targetOf(topic.meetingId),
+      jiraKey: null,
+      jiraUrl: null,
+      jiraCreatedBy: null,
+      jiraCreatedAt: null,
+      run: {
+        status: 'running',
+        budgetNanoAiu: body.budgetNanoAiu ?? DEFAULT_DRAFT_BUDGET,
+        nanoAiu: 0,
+        cancelRequested: false,
+      },
+      createdBy: actor,
+      createdAt: this.now(),
+      discarded: false,
+      cancel: null,
+    };
+    const chosen = noteIds.length
+      ? notes.filter((n) => noteIds.includes(n.id))
+      : notes;
+    draft.cancel = this.clock.schedule(MOCK_DRAFT_MS, () => {
+      draft.cancel = null;
+      draft.status = 'ready';
+      draft.story = simulatedStory(
+        topic.title,
+        chosen.map((n) => n.text)
+      );
+      draft.run = { ...draft.run!, status: 'succeeded' };
+    });
+    this.drafts.set(draft.id, draft);
+    return this.draftDto(draft);
+  }
+
+  /** A spec's switch: the simulated agent's reply was not a story. */
+  failDraft(id: string, failure: string): void {
+    const draft = this.draft(id);
+    draft.cancel?.();
+    draft.cancel = null;
+    draft.status = 'failed';
+    draft.failure = failure;
+    draft.run = { ...draft.run!, status: 'failed' };
+  }
+
+  getDraft(id: string): MeetingStoryDraft {
+    return this.draftDto(this.draft(id));
+  }
+
+  /** The meeting's drafts that were not discarded, newest first. */
+  listDrafts(meetingId: string): MeetingStoryDraft[] {
+    this.meeting(meetingId);
+    return [...this.drafts.values()]
+      .filter((d) => d.meetingId === meetingId && !d.discarded)
+      .sort((a, b) =>
+        a.createdAt === b.createdAt
+          ? a.id < b.id
+            ? 1
+            : -1
+          : a.createdAt < b.createdAt
+            ? 1
+            : -1
+      )
+      .map((d) => this.draftDto(d));
+  }
+
+  /** Discards a draft not yet created in Jira; a draft still being written stops. */
+  discardDraft(id: string): void {
+    const draft = this.draft(id);
+    if (draft.jiraKey !== null)
+      throw invalid(
+        `Story draft ${id} was created in Jira as ${draft.jiraKey}`
+      );
+    if (draft.cancel !== null) {
+      draft.cancel();
+      draft.cancel = null;
+      draft.run = { ...draft.run!, status: 'cancelled', cancelRequested: true };
+    }
+    draft.discarded = true;
+  }
+
+  /** "Creates" a ready draft's story in the pretend Jira, once; a second call answers the same issue. */
+  createIssue(actor: string, id: string): MeetingStoryDraft {
+    const draft = this.draft(id);
+    if (draft.jiraKey !== null) return this.draftDto(draft);
+    if (draft.status !== 'ready')
+      throw invalid(
+        `Story draft ${id} is ${draft.status}; only a ready draft can be created in Jira`
+      );
+    const meeting = this.meeting(draft.meetingId);
+    const series =
+      meeting.seriesId === null ? undefined : this.series.get(meeting.seriesId);
+    if (series === undefined)
+      throw invalid(
+        "A one-off meeting has no Jira project; only a series' meetings create stories"
+      );
+    if (series.jiraProjectKey === null)
+      throw invalid(`Series ${series.name} has no Jira project; set it first`);
+    if (this.jiraRefuses !== null)
+      throw new MockProblem('unavailable', this.jiraRefuses);
+    const key = `${series.jiraProjectKey}-${this.nextIssue++}`;
+    draft.status = 'created';
+    draft.jiraKey = key;
+    draft.jiraUrl = `https://jira.example.com/browse/${key}`;
+    draft.jiraCreatedBy = actor;
+    draft.jiraCreatedAt = this.now();
+    return this.draftDto(draft);
+  }
+
+  private draft(id: string): DraftRecord {
+    const draft = this.drafts.get(id);
+    if (draft === undefined || draft.discarded)
+      throw notFound('Story draft', id);
+    return draft;
+  }
+
+  /** Where Create in Jira puts a meeting's stories: its series' project, if it has one. */
+  private targetOf(meetingId: string): MeetingStoryDraft['target'] {
+    const seriesId = this.meeting(meetingId).seriesId;
+    const series = seriesId === null ? undefined : this.series.get(seriesId);
+    return {
+      projectKey: series?.jiraProjectKey ?? null,
+      issueType: series === undefined ? null : series.jiraIssueType,
+    };
+  }
+
+  private draftDto(draft: DraftRecord): MeetingStoryDraft {
+    const { discarded: _discarded, cancel: _cancel, ...dto } = draft;
+    // The target follows the series, as the API reads it on every answer.
+    return { ...dto, target: this.targetOf(draft.meetingId) };
   }
 
   private insertMeeting(
@@ -625,4 +828,26 @@ export class MeetingDesk {
         .map((n) => ({ ...n })),
     };
   }
+}
+
+/** What the simulated agent writes: the topic as the title, one criterion per chosen note, and a word that it is simulated. */
+function simulatedStory(
+  title: string,
+  notes: readonly string[]
+): StoryTemplate {
+  const cut = (text: string, max: number) =>
+    text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  return {
+    title: cut(title, 255),
+    role: 'someone at the meeting',
+    want: cut(`what the meeting agreed on "${title}"`, 1000),
+    soThat: 'the team builds what the stakeholders asked for',
+    acceptanceCriteria: notes.length
+      ? notes
+          .slice(0, 20)
+          .map((note) => cut(`It follows this note: ${note}`, 1000))
+      : [cut(`It does what "${title}" asks.`, 1000)],
+    outOfScope: [],
+    openQuestions: ['A simulated draft: no model was called.'],
+  };
 }

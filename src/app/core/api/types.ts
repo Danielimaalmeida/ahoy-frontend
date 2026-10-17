@@ -570,6 +570,38 @@ export type MeetingNoteRequest = Schemas['MeetingNoteRequest'];
 /** Body of `createMeetingSeries`. */
 export type CreateMeetingSeriesRequest = Schemas['CreateMeetingSeriesRequest'];
 
+/** What a series' drafted stories are created as in Jira; `Story` by default (`JiraIssueType`). */
+export type JiraIssueType = Schemas['JiraIssueType'];
+export const JIRA_ISSUE_TYPES = listOf<JiraIssueType>()([
+  'Story',
+  'Task',
+  'Bug',
+]);
+
+/** Body of `updateMeetingSeries`: where the series' stories are created in Jira; a null project turns it off. */
+export type UpdateMeetingSeriesRequest = Schemas['UpdateMeetingSeriesRequest'];
+
+/** A user story in Ahoy's fixed template, as the agent wrote it and the API checked it (`StoryTemplate`). */
+export type StoryTemplate = Schemas['StoryTemplate'];
+
+/** `drafting`, then `ready` (or `failed`), then `created` in Jira (`MeetingStoryDraftStatus`). */
+export type MeetingStoryDraftStatus = Schemas['MeetingStoryDraftStatus'];
+export const MEETING_STORY_DRAFT_STATUSES = listOf<MeetingStoryDraftStatus>()([
+  'drafting',
+  'ready',
+  'failed',
+  'created',
+]);
+
+/** A user story an agent drafted from a meeting topic, and where it stands. */
+export type MeetingStoryDraft = Schemas['MeetingStoryDraft'];
+
+/** Answer of `listMeetingStoryDrafts`: newest first, discarded ones left out. */
+export type MeetingStoryDraftList = Schemas['MeetingStoryDraftList'];
+
+/** Body of `requestMeetingStoryDraft`; it may spend AIU, so `confirmSpend` is required. */
+export type MeetingStoryDraftRequest = Schemas['MeetingStoryDraftRequest'];
+
 /** Query of `listMeetings`. */
 export type ListMeetingsQuery = NonNullable<
   operations['listMeetings']['parameters']['query']

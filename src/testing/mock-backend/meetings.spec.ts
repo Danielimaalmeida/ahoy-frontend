@@ -2,9 +2,13 @@ import type {
   EndMeetingResult,
   Meeting,
   MeetingList,
+  MeetingSeries,
+  MeetingStoryDraft,
+  MeetingStoryDraftList,
   MeetingTopic,
   MoveMeetingTopicResult,
 } from '@core/api/types';
+import { MOCK_DRAFT_MS } from './meetings';
 import { call, testServer } from './spec-helpers';
 
 describe('the mock meetings', () => {
@@ -110,5 +114,135 @@ describe('the mock meetings', () => {
     expect(call(server, 'DELETE', `/meeting-topics/${topic.id}`).status).toBe(
       404
     );
+  });
+
+  describe('story drafts', () => {
+    function withTopic() {
+      const { server, clock } = testServer();
+      const list = call(server, 'GET', '/meetings').body as MeetingList;
+      const running = list.items.find((m) => m.status === 'in_progress')!;
+      const meeting = call(server, 'GET', `/meetings/${running.id}`)
+        .body as Meeting;
+      const topic = meeting.topics.find((t) => t.notes.length > 0)!;
+      return { server, clock, meeting, topic };
+    }
+
+    it('writes a story after a short while, from the chosen notes, and lists it for the meeting', () => {
+      const { server, clock, meeting, topic } = withTopic();
+      const asked = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        {
+          confirmSpend: true,
+          noteIds: [topic.notes[0]!.id],
+        }
+      );
+      expect(asked.status).toBe(202);
+      const draft = asked.body as MeetingStoryDraft;
+      expect([draft.status, draft.story, draft.noteIds]).toEqual([
+        'drafting',
+        null,
+        [topic.notes[0]!.id],
+      ]);
+      clock.advance(MOCK_DRAFT_MS);
+      const ready = call(server, 'GET', `/meeting-story-drafts/${draft.id}`)
+        .body as MeetingStoryDraft;
+      expect(ready.status).toBe('ready');
+      expect(ready.story!.acceptanceCriteria.length).toBeGreaterThan(0);
+      const listed = call(server, 'GET', `/meetings/${meeting.id}/story-drafts`)
+        .body as MeetingStoryDraftList;
+      expect(listed.items.map((d) => d.id)).toEqual([draft.id]);
+    });
+
+    it('refuses a second open draft of the same topic', () => {
+      const { server, topic } = withTopic();
+      call(server, 'POST', `/meeting-topics/${topic.id}/story-drafts`, {
+        confirmSpend: true,
+      });
+      const again = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        { confirmSpend: true }
+      );
+      expect(again.status).toBe(409);
+    });
+
+    it("creates a ready story once in the series' project, and a second click answers the same issue", () => {
+      const { server, clock, topic } = withTopic();
+      const draft = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        { confirmSpend: true }
+      ).body as MeetingStoryDraft;
+      expect(
+        call(server, 'POST', `/meeting-story-drafts/${draft.id}/create-issue`)
+          .status
+      ).toBe(409);
+      clock.advance(MOCK_DRAFT_MS);
+      const created = call(
+        server,
+        'POST',
+        `/meeting-story-drafts/${draft.id}/create-issue`
+      ).body as MeetingStoryDraft;
+      expect(created.status).toBe('created');
+      expect(created.jiraKey).toMatch(/^PROJ-\d+$/);
+      const twice = call(
+        server,
+        'POST',
+        `/meeting-story-drafts/${draft.id}/create-issue`
+      ).body as MeetingStoryDraft;
+      expect(twice.jiraKey).toBe(created.jiraKey);
+      expect(
+        call(server, 'DELETE', `/meeting-story-drafts/${draft.id}`).status
+      ).toBe(409);
+    });
+
+    it('follows the series when its Jira project is turned off, and then refuses to create', () => {
+      const { server, clock, meeting, topic } = withTopic();
+      const draft = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        { confirmSpend: true }
+      ).body as MeetingStoryDraft;
+      clock.advance(MOCK_DRAFT_MS);
+      const series = call(
+        server,
+        'PATCH',
+        `/meeting-series/${meeting.seriesId}`,
+        { jiraProjectKey: null }
+      ).body as MeetingSeries;
+      expect(series.jiraProjectKey).toBeNull();
+      const read = call(server, 'GET', `/meeting-story-drafts/${draft.id}`)
+        .body as MeetingStoryDraft;
+      expect(read.target.projectKey).toBeNull();
+      expect(
+        call(server, 'POST', `/meeting-story-drafts/${draft.id}/create-issue`)
+          .status
+      ).toBe(409);
+    });
+
+    it('stops a draft still being written when it is discarded, so it never turns ready', () => {
+      const { server, clock, meeting, topic } = withTopic();
+      const draft = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        { confirmSpend: true }
+      ).body as MeetingStoryDraft;
+      expect(
+        call(server, 'DELETE', `/meeting-story-drafts/${draft.id}`).status
+      ).toBe(204);
+      clock.advance(MOCK_DRAFT_MS);
+      expect(
+        call(server, 'GET', `/meeting-story-drafts/${draft.id}`).status
+      ).toBe(404);
+      const listed = call(server, 'GET', `/meetings/${meeting.id}/story-drafts`)
+        .body as MeetingStoryDraftList;
+      expect(listed.items).toEqual([]);
+    });
   });
 });
