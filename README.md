@@ -72,6 +72,11 @@ do not use it for unit/e2e validation or mutating actions without approval.
 
 ## Status
 
+- **Meetings, slice 2 (2026-10-17):** a topic becomes a Jira user story with no typing: "Turn into a user story",
+  "Draft it for me" (an agent writes it; may spend up to 50 AIU), then check it and Create in Jira in the series'
+  project. Grill me comes later. Not built or tested with Angular here (npm registry blocked); see
+  [docs/progress.md](docs/progress.md).
+
 - **Refresh design (2026-10-17):** a voyage built to a Figma design that the designer has since changed can be sent
   round again from its header: paste the new frame links and say what changed. Ahoy reads the new frames and builds
   every UI work package again. Offline proof and limitations are in [docs/progress.md](docs/progress.md).

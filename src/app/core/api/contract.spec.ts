@@ -2,6 +2,11 @@ import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import createMeeting from '@testing/fixtures/createMeeting.json';
 import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
+import createMeetingStoryIssue from '@testing/fixtures/createMeetingStoryIssue.json';
+import getMeetingStoryDraft from '@testing/fixtures/getMeetingStoryDraft.json';
+import listMeetingStoryDrafts from '@testing/fixtures/listMeetingStoryDrafts.json';
+import requestMeetingStoryDraft from '@testing/fixtures/requestMeetingStoryDraft.json';
+import updateMeetingSeries from '@testing/fixtures/updateMeetingSeries.json';
 import endMeeting from '@testing/fixtures/endMeeting.json';
 import getMeeting from '@testing/fixtures/getMeeting.json';
 import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
@@ -152,12 +157,18 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['updateMeetingNote', updateMeetingNote],
   ['listMeetingSeries', listMeetingSeries],
   ['createMeetingSeries', createMeetingSeries],
+  ['updateMeetingSeries', updateMeetingSeries],
+  ['listMeetingStoryDrafts', listMeetingStoryDrafts],
+  ['requestMeetingStoryDraft', requestMeetingStoryDraft],
+  ['getMeetingStoryDraft', getMeetingStoryDraft],
+  ['createMeetingStoryIssue', createMeetingStoryIssue],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
 const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteMeetingTopic',
   'deleteMeetingNote',
+  'discardMeetingStoryDraft',
 ];
 
 /** In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...) and the live stream (lane 2B). */
@@ -185,7 +196,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 2).toBe(
-      54
+      60
     );
   });
 
@@ -240,6 +251,8 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'createMeetingSeries',
     ])
       expect(statusOf(id)).toEqual(['201']);
+    expect(statusOf('requestMeetingStoryDraft')).toEqual(['202']);
+    expect(statusOf('discardMeetingStoryDraft')).toEqual(['204']);
     for (const id of [
       'updateMeeting',
       'startMeeting',

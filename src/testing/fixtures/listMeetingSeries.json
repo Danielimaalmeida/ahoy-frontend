@@ -5,6 +5,8 @@
       "name": "Finance sync",
       "stakeholders": ["priya@example.com", "jordan@example.com"],
       "cadenceDays": 7,
+      "jiraProjectKey": "PROJ",
+      "jiraIssueType": "Story",
       "createdBy": "alex@example.com",
       "createdAt": "2026-09-01T08:00:00.000Z"
     },
@@ -13,6 +15,8 @@
       "name": "Operations sync",
       "stakeholders": ["sam@example.com"],
       "cadenceDays": null,
+      "jiraProjectKey": null,
+      "jiraIssueType": "Story",
       "createdBy": "alex@example.com",
       "createdAt": "2026-09-02T08:00:00.000Z"
     }

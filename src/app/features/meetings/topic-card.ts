@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { MeetingTopic } from '@core/api/types';
+import type { MeetingStoryDraft, MeetingTopic } from '@core/api/types';
 import {
   meetingDay,
   meetingTime,
@@ -9,8 +9,13 @@ import {
   shortEmail,
   topicWhen,
 } from '@domain/meetings';
+import { draftChip } from '@domain/story-drafts';
 import { Button } from '@ui/button/button';
+import { DialogService } from '@ui/dialog/dialog';
 import { MeetingsStore } from './meetings-store';
+import { StoryDraftDialog, type StoryDraftData } from './story-draft-dialog';
+import { StoryDraftsStore } from './story-drafts-store';
+import { StoryReviewDialog, type StoryReviewData } from './story-review-dialog';
 
 /** The longest note the API takes (`maxLength: 4000`). */
 export const NOTE_MAX = 4000;
@@ -18,7 +23,9 @@ export const NOTE_MAX = 4000;
 /**
  * One topic of a meeting (board `Meetings`): its title, who raised it and when, its notes oldest first, and a line to
  * add a note. While it can change, it can also go up or down, move to the series' next meeting, or be removed with its
- * notes (after a second click). A moved topic is read-only and links to where it went. Notes are plain text.
+ * notes (after a second click). A moved topic is read-only and links to where it went. Notes are plain text. A topic
+ * that was not moved can be turned into a user story (also after the meeting ended); its draft's state shows on a line
+ * of its own, with the way to check it, and the Jira issue once created.
  */
 @Component({
   selector: 'ah-topic-card',
@@ -102,6 +109,13 @@ export const NOTE_MAX = 4000;
       height: 32px;
       background: var(--surface-raised);
       border-color: var(--line);
+    }
+    .story {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      align-items: center;
+      padding: 0 16px 12px;
     }
   `,
   template: `
@@ -226,6 +240,57 @@ export const NOTE_MAX = 4000;
           }
         </ul>
       }
+      @if (!moved()) {
+        <div class="story">
+          @if (draft(); as d) {
+            @if (d.status === 'created' && d.jiraKey !== null) {
+              <span class="ah-tag ah-tag--accent">{{ chip(d.status) }}</span>
+              @if (d.jiraUrl !== null) {
+                <a
+                  [href]="d.jiraUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ d.jiraKey }}</a
+                >
+              } @else {
+                <span class="ah-key">{{ d.jiraKey }}</span>
+              }
+            } @else {
+              <span
+                class="ah-tag"
+                [class.ah-tag--accent]="d.status === 'ready'"
+                >{{ chip(d.status) }}</span
+              >
+              <button
+                [ahButton]="d.status === 'ready' ? 'soft' : 'ghost'"
+                size="sm"
+                type="button"
+                [attr.aria-label]="reviewLabel(d)"
+                (click)="review(d)"
+              >
+                {{
+                  d.status === 'ready'
+                    ? 'Check the story'
+                    : d.status === 'failed'
+                      ? 'See why'
+                      : 'Open'
+                }}
+              </button>
+            }
+          } @else {
+            <button
+              ahButton="ghost"
+              size="sm"
+              type="button"
+              [attr.aria-label]="'Turn ' + t.title + ' into a user story'"
+              [disabled]="drafts.busy()"
+              (click)="turnIntoStory()"
+            >
+              Turn into a user story
+            </button>
+          }
+        </div>
+      }
       @if (editable()) {
         <form (submit)="$event.preventDefault(); addNote()">
           <label class="ah-sr" [for]="'note-' + t.id"
@@ -247,6 +312,8 @@ export const NOTE_MAX = 4000;
 })
 export class TopicCard {
   protected readonly store = inject(MeetingsStore);
+  protected readonly drafts = inject(StoryDraftsStore);
+  private readonly dialogs = inject(DialogService);
 
   /** The topic, with its notes. */
   readonly topic = input.required<MeetingTopic>();
@@ -279,9 +346,48 @@ export class TopicCard {
       : `Remove this topic and its ${notes === 1 ? 'note' : `${notes} notes`}?`;
   });
 
+  /** The topic's story draft, if it has one that was not discarded. */
+  protected readonly draft = computed(
+    () => this.drafts.byTopic().get(this.topic().id) ?? null
+  );
+
+  protected readonly chip = draftChip;
   protected readonly day = meetingDay;
   protected readonly time = meetingTime;
   protected readonly short = shortEmail;
+
+  /** "Check the story of Late fees", for a screen reader. */
+  protected reviewLabel(draft: MeetingStoryDraft): string {
+    const verb =
+      draft.status === 'ready'
+        ? 'Check the story of'
+        : draft.status === 'failed'
+          ? 'See why no story was written for'
+          : 'Open the story being written for';
+    return `${verb} ${this.topic().title}`;
+  }
+
+  /** Opens "Turn into a user story" for this topic. */
+  turnIntoStory(): void {
+    const m = this.store.meeting();
+    if (m === null) return;
+    this.dialogs.open<unknown, StoryDraftData>(StoryDraftDialog, {
+      data: {
+        drafts: this.drafts,
+        topic: this.topic(),
+        meeting: `${m.title}, ${meetingDay(m.startsAt)}`,
+      },
+      width: '640px',
+    });
+  }
+
+  /** Opens the review of the topic's draft: check it and create it in Jira, or see why it failed. */
+  review(draft: MeetingStoryDraft): void {
+    this.dialogs.open<unknown, StoryReviewData>(StoryReviewDialog, {
+      data: { drafts: this.drafts, store: this.store, draftId: draft.id },
+      width: '720px',
+    });
+  }
 
   /** Moves the topic one place up. */
   up(): Promise<void> {

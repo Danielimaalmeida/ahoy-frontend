@@ -9,7 +9,9 @@ import {
 } from '@core/mock/mock-backend';
 import { CLOCK, type Clock } from '@core/realtime/clock';
 import { meetingDay } from '@domain/meetings';
+import { DRAFT_POLL_MS } from '@domain/story-drafts';
 import type { ManualClock } from '@testing/mock-backend/clock';
+import { MOCK_DRAFT_MS } from '@testing/mock-backend/meetings';
 import type { MockRequest, MockResponse } from '@testing/mock-backend/http';
 import type { MockAhoyServer } from '@testing/mock-backend/server';
 import { settle, testServer } from '@testing/mock-backend/spec-helpers';
@@ -27,6 +29,8 @@ function asClock(manual: ManualClock): Clock {
 
 interface Page {
   readonly server: MockAhoyServer;
+  /** The mock's clock, which also drives the page's timers (the drafts' polling). */
+  readonly clock: ManualClock;
   readonly harness: RouterTestingHarness;
   readonly root: HTMLElement;
   /** Every request the page made, in order. */
@@ -71,6 +75,7 @@ async function open(
   await harness.navigateByUrl(url);
   const page = {
     server,
+    clock,
     harness,
     requests,
     root: harness.fixture.nativeElement as HTMLElement,
@@ -373,6 +378,116 @@ describe('Meetings on the mock backend', () => {
     expect(
       text(page.root.querySelector('ah-meeting-view ah-banner'))
     ).toContain("This meeting doesn't exist");
+  });
+
+  it('drafts a user story from a topic and its notes, then creates it in Jira in one click', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
+      'Turn into a user story'
+    );
+    expect(
+      dialog().querySelectorAll('input[type="checkbox"]:checked')
+    ).toHaveLength(1);
+    buttonNamed(dialog(), 'Draft it for me').click();
+    await flush(page);
+    const asked = page.requests.find(
+      (r) => r.method === 'POST' && r.path.endsWith('/story-drafts')
+    );
+    expect(asked?.body).toEqual({ confirmSpend: true });
+    expect(text(card(page.root, title).querySelector('.story .ah-tag'))).toBe(
+      'Writing the story…'
+    );
+
+    // The simulated agent finishes; the page reads the drafts again on its own.
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    const topic = card(page.root, title);
+    expect(text(topic.querySelector('.story .ah-tag'))).toBe(
+      'Story ready to check'
+    );
+
+    buttonNamed(topic, 'Check the story').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
+      'Check the story'
+    );
+    expect(text(dialog().querySelector('article .ah-tag'))).toBe(
+      'PROJ · Story'
+    );
+    expect(dialog().querySelectorAll('article ol li').length).toBeGreaterThan(
+      0
+    );
+    buttonNamed(dialog(), 'Create in Jira').click();
+    await flush(page);
+
+    const created = card(page.root, title);
+    expect(text(created.querySelector('.story .ah-tag'))).toBe('In Jira');
+    expect(text(created.querySelector('.story a'))).toMatch(/^PROJ-\d+$/);
+    expect(
+      page.requests.filter(
+        (r) => r.method === 'POST' && r.path.endsWith('/create-issue')
+      )
+    ).toHaveLength(1);
+  });
+
+  it('says why no story was written and offers to try again', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Draft it for me').click();
+    await flush(page);
+    const draftId = page.server.meetingDesk
+      .listDrafts(page.server.meetingDesk.list('in_progress')[0]!.id)
+      .at(0)!.id;
+    page.server.meetingDesk.failDraft(
+      draftId,
+      'The reply was not a user story.'
+    );
+    page.clock.advance(DRAFT_POLL_MS);
+    await flush(page);
+
+    const topic = card(page.root, title);
+    expect(text(topic.querySelector('.story .ah-tag'))).toBe(
+      'Story not written'
+    );
+    buttonNamed(topic, 'See why').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.ah-banner'))).toContain(
+      'The reply was not a user story.'
+    );
+    expect(buttonNamed(dialog(), 'Create in Jira').disabled).toBe(true);
+    buttonNamed(dialog(), 'Try again').click();
+    await flush(page);
+    expect(text(card(page.root, title).querySelector('.story .ah-tag'))).toBe(
+      'Writing the story…'
+    );
+  });
+
+  it('does not create a story until the series has a Jira project, and lets the person set it from the review', async () => {
+    const page = await open('/meetings', (server) => {
+      const series = server.meetingDesk.listSeries()[0]!;
+      server.meetingDesk.updateSeries(series.id, { jiraProjectKey: null });
+    });
+    expect(text(page.root.querySelector('.identity .jira .ah-hint'))).toBe(
+      'Stories from this series are not created in Jira yet'
+    );
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Draft it for me').click();
+    await flush(page);
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    buttonNamed(card(page.root, title), 'Check the story').click();
+    await flush(page);
+    expect(buttonNamed(dialog(), 'Create in Jira').disabled).toBe(true);
+    expect(text(dialog().querySelector('ah-banner'))).toContain(
+      'This series has no Jira project yet'
+    );
   });
 });
 

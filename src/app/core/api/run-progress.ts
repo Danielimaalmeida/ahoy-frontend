@@ -63,7 +63,9 @@ export interface RunProgressSpend {
 
 /** One `run.progress` payload, told apart by `kind`. */
 export type RunProgress =
-  RunProgressTool | RunProgressMessage | RunProgressSpend;
+  | RunProgressTool
+  | RunProgressMessage
+  | RunProgressSpend;
 
 const runId = patterned('a run id', /^[A-Za-z0-9_.-]+$/, 120);
 const count = wholeNumber('a whole number, 0 or more', 0);
