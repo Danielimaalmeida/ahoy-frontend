@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { RaisedBy } from '@core/api/types';
+import { RAISED_BY_LABELS } from '@domain/meetings';
 import { Button } from '@ui/button/button';
 import { MeetingsStore } from './meetings-store';
 
@@ -19,8 +20,8 @@ const SOMEONE_ELSE = '';
 
 /**
  * The one line that adds a topic to the open meeting (boards `Meetings` and `MeetingNext`): the title, who raised it
- * (Us or Them, and which stakeholder) and Add. Before the meeting the topic is one to raise; during it, one that came
- * up. Enter adds it; the choice of Us or Them stays for the next topic.
+ * (OTHER_COMPANY or ACME, and which stakeholder) and Add. Before the meeting the topic is one to raise; during it,
+ * one that came up. Enter adds it; the choice of side stays for the next topic.
  */
 @Component({
   selector: 'ah-topic-composer',
@@ -79,7 +80,7 @@ const SOMEONE_ELSE = '';
           [attr.aria-pressed]="raisedBy() === 'us'"
           (click)="raisedBy.set('us')"
         >
-          Us
+          {{ labels.us }}
         </button>
         <button
           class="ah-tabs__item"
@@ -87,7 +88,7 @@ const SOMEONE_ELSE = '';
           [attr.aria-pressed]="raisedBy() === 'them'"
           (click)="raisedBy.set('them')"
         >
-          Them
+          {{ labels.them }}
         </button>
       </div>
       @if (raisedBy() === 'them') {
@@ -110,6 +111,7 @@ export class TopicComposer {
 
   protected readonly max = TOPIC_TITLE_MAX;
   protected readonly someoneElse = SOMEONE_ELSE;
+  protected readonly labels = RAISED_BY_LABELS;
   protected readonly title = new FormControl('', { nonNullable: true });
   protected readonly who = new FormControl(SOMEONE_ELSE, { nonNullable: true });
   /** Who raised the next topic; `us` until the person picks Them. */
@@ -142,7 +144,7 @@ export class TopicComposer {
     });
   }
 
-  /** Adds the topic; on success the title clears and the choice of Us or Them stays. */
+  /** Adds the topic; on success the title clears and the choice of side stays. */
   async add(): Promise<void> {
     const title = this.title.value.trim();
     if (title === '' || this.busy()) return;
