@@ -56,7 +56,7 @@ plan_accepted`, `halted · run_failed`); título H1 (se `title` for `null`, a ch
      crew on the voyage. Recorded as {actor}."). Botões "Keep sailing" e **"Stop voyage"** (danger). `stopStory`.
    - **Resume** — "Weigh anchor and resume?": "Ahoy retries {phase} with {Crew} on {model · effort}." Caixa de custo
      `ah-cost` **"This may spend up to {restante} AIU"** — "The rest of the voyage's {orçamento} AIU budget, billed to
-     {owner}'s Copilot account. Anyone can stop it again." Reason (opcional, ≤ 2000). Botão **"Resume · up to {restante} AIU"**.
+     {owner}'s Copilot account. Anyone can stop it again." Reason (opcioonal, ≤ 2000). Botão **"Resume · up to {restante} AIU"**.
      Se `restante = 0`: sem confirmação possível e aviso "No budget left: raise the budget first." `resumeStory`.
    - **Budget** — "Change the budget": "Spent so far {12.4} of {30} AIU"; **New total cap \*** (AIU, `parseAiu`); erro "At least
      {gasto} AIU, what's already spent."; Reason \* (≤ 2000); caixa "Allows up to {delta} AIU more · Billed to {owner}. Raising
@@ -72,7 +72,7 @@ plan_accepted`, `halted · run_failed`); título H1 (se `title` for `null`, a ch
   `stopped_by_user`, running, awaiting\_\*, terminal done e blocked).
 - Stop, Resume e Budget enviam o corpo exato (`expectedVersion` = versão vista) e atualizam a página sem recarregar.
 - **Conflito:** com `conflictNext` ligado, o diálogo fica aberto, mostra o banner "This voyage changed since you opened it",
-  refresca a story e **mantém o texto**; reenviar com a versão nova funciona. Duplo clique envia um pedido.
+  refresca a story e **mantém o texto**; reenviar com a versão nova funcioona. Duplo clique envia um pedido.
 - Budget abaixo do gasto: erro no campo, sem pedido. Resume sem orçamento: bloqueado.
 - `halt-guidance` testado para os 9 motivos e um desconhecido.
 - Tema claro e escuro e 390 px, comparados com `PlanReview` (header), `Halted` (banner) e `Dialogs`.
@@ -201,7 +201,7 @@ Quadros `Halted` (tabela Models) e `Dialogs` (Change models).
 - **Marca "refused last run"** numa linha quando a viagem está `halted` com `run_failed`, o último run dessa fase falhou e usou
   o mesmo modelo.
 - **Diálogo "Change models"** (`ah-model-choice-table` dentro de `ah-dialog`): uma linha por slot, modelo (mono) e esforço;
-  "Blank means the default. Changes apply from each phase's next run." Motivo opcional (≤ 2000). Botão "Save models". O pedido leva
+  "Blank means the default. Changes apply from each phase's next run." Motivo opcioonal (≤ 2000). Botão "Save models". O pedido leva
   **só os slots alterados**; um slot a "default" vai `null`; uma escolha nunca é um objeto vazio (`minProperties: 1`).
   Um modelo sem esforço vai só `{model}`.
 - **Erro dos revisores:** comparar os modelos **efetivos** depois da alteração (os atuais, de `getStoryModels`, para os slots

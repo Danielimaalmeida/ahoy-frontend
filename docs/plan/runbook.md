@@ -16,7 +16,7 @@ Este ficheiro é só o mapa. Detalhe de cada lane: o ficheiro da fase, a partir 
 | [paralelos1](../paralelos1.md) | A      | 1A   | Base do kit de design                         | Sonnet 5.5                       | fase 0 (feita)                   |
 | [paralelos1](../paralelos1.md) | B      | 2A   | Cliente da API                                | Sonnet 5.5                       | fase 0 (feita)                   |
 | [paralelos1](../paralelos1.md) | C      | 2C   | Domínio puro                                  | DeepSeek Flash 4.1 ou Sonnet 5.5 | fase 0 (feita)                   |
-| [paralelos1](../paralelos1.md) | D      | 6D   | Release: imagem, config, CSP (opcional)       | Sonnet 5.5                       | fase 0 (feita)                   |
+| [paralelos1](../paralelos1.md) | D      | 6D   | Release: imagem, config, CSP (opcioonal)       | Sonnet 5.5                       | fase 0 (feita)                   |
 | [paralelos2](../paralelos2.md) | A      | 1B   | Kit: estado, progresso, navegação             | Sonnet 5.5                       | 1A + 2C                          |
 | [paralelos2](../paralelos2.md) | B      | 1C   | Kit: diálogo, cartões, passos, diff, markdown | **Opus 5.5**                     | 1A + 2C                          |
 | [paralelos2](../paralelos2.md) | C      | 2B   | Tempo real e stores                           | **Opus 5.5**                     | 2A + 2C                          |

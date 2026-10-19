@@ -53,7 +53,7 @@ de uma viagem (plan review, questions, running, halted, gates, artifacts, ship's
 | Wireframes (12 quadros) | Claude Design "Ahoy UI wireframes", <https://claude.ai/artifact/LTbtxVqPbLAodmy4Vr44dY>, versão `1791303315-8e37`                                                                                 |
 | Design system           | Claude Design "Ahoy", <https://claude.ai/artifact/LAzfVgbze8zdoaShrSabtf>, versão `1791303933-1d4d`: `README.md`, `vocabulary.md`, `tokens.json`, 22 componentes (CSS `ah-*`), 16 ícones, 3 logos |
 | Contrato da API         | `ahoy-hosted/openapi/ahoy-v1.yaml` (1.0.0-poc) e o README do hosted, §2 e "A running agent's progress"                                                                                            |
-| Brief funcional         | `ahoy-hosted/docs/ui-design-brief.md` (ações 1 a 15)                                                                                                                                              |
+| Brief funcioonal         | `ahoy-hosted/docs/ui-design-brief.md` (ações 1 a 15)                                                                                                                                              |
 | Front-end ↔ API         | `ahoy-hosted/docs/strategy.md` §2.2 (sem CORS, proxy, SSE com `fetch`)                                                                                                                            |
 
 A fase 0 copia as referências de design para `docs/design/` (para os agentes não dependerem de acesso aos artefactos).
@@ -107,7 +107,7 @@ seguem isto:
 - Erros: `catch (e: unknown)`; resultados esperados são valores; **uma falha de tooling nunca se mostra como veredicto de
   domínio**.
 - `domain/` é puro: sem Angular, sem I/O, sem relógio (o tempo entra por parâmetro).
-- Dependências de runtime em versão exata, devDependencies com `^`, **perguntar antes de adicionar qualquer uma** (lista no
+- Dependências de runtime em versão exata, devDependencies com `^`, **perguntar antes de adicioonar qualquer uma** (lista no
   [§10](#10-dependências-a-aprovar)).
 - Prettier com a config do hosted (120 colunas, aspas duplas, `trailingComma: all`). Husky + lint-staged.
 - Provas exatas: dizer o que correu, o que só teve teste unitário, o que não correu; nomear cada suite saltada.
@@ -165,7 +165,7 @@ src/
 /voyages                           lista        ?status=ready|running|awaiting_input|awaiting_decision|halted|terminal  ?q=
 /voyages/new                       Set sail     ?key=PROJ-123&title=...
 /docks                             The Docks (planeado)
-/voyages/:key                      shell da viagem; redireciona para a tab por omissão
+/voyages/:key                      shell da viagem; redirecioona para a tab por omissão
 /voyages/:key/plan | questions | runs | gates | artifacts | log | models
 /voyages/:key/runs/:runId          run detail
 /_kit                              galeria de componentes (só em dev)
@@ -258,9 +258,9 @@ Operações da API **sem** wireframe, para a [fase 7](phase-7-delivery-phases.md
 ## 7. Lacunas da API e desvios dos wireframes
 
 Nenhuma bloqueia a Onda 0. As propostas para a v1 não exigem alterações ao `ahoy-hosted`; a coluna "Pedir ao backend" é
-opcional e serve para o utilizador decidir.
+opcioonal e serve para o utilizador decidir.
 
-| #   | Lacuna (verificada em `openapi/ahoy-v1.yaml` e no código do hosted)                                                                                                  | Proposta para a v1                                                                                                                      | Pedir ao backend (opcional)                                        |
+| #   | Lacuna (verificada em `openapi/ahoy-v1.yaml` e no código do hosted)                                                                                                  | Proposta para a v1                                                                                                                      | Pedir ao backend (opcioonal)                                        |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | G1  | A API não tem CORS; o `OPTIONS` responde `400`.                                                                                                                      | Same-origin: proxy no dev server, Ingress no TEST.                                                                                      | Nada.                                                              |
 | G2  | `GET /events/stream` exige o header de auth; `EventSource` não o envia.                                                                                              | SSE com `fetch` (F6).                                                                                                                   | Nada.                                                              |
@@ -269,7 +269,7 @@ opcional e serve para o utilizador decidir.
 | G5  | O formulário _Set sail_ mostra defaults concretos ("Default: gpt-5.6-terra", "Server default"), mas `GET /stories/{key}/models` só existe depois de a story existir. | Mostrar "Default" sem valor e a nota "the server decides"; os valores reais aparecem em Models depois de criar.                         | `GET /config/models` com os defaults por slot.                     |
 | G6  | Não há `GET /me`.                                                                                                                                                    | `CurrentUser` a partir do `AppConfig`.                                                                                                  | `GET /me`.                                                         |
 | G7  | O detalhe de um halt (`detail`, `workerLog`) só está no evento `story.halted`; o `Story` só tem `haltReason`.                                                        | Ler o último `story.halted` por viagem em halt (poucas), com cache.                                                                     | `haltDetail` no `Story`.                                           |
-| G8  | Eventos só em ordem crescente, sem filtro por tipo nem por run; `run.progress` pode ser centenas por run.                                                            | Paginar do início (`limit=500`), filtrar no cliente, cache e stream. Ship's log mostra "newest first" invertendo no cliente.            | `type=`, `runId=` e `order=desc` em `listStoryEvents`.             |
+| G8  | Eventos só em ordem crescente, sem filtro por tipo nem por run; `run.progress` pode ser centenas por run.                                                            | Paginar do inícioo (`limit=500`), filtrar no cliente, cache e stream. Ship's log mostra "newest first" invertendo no cliente.            | `type=`, `runId=` e `order=desc` em `listStoryEvents`.             |
 | G9  | `listArtifacts` só lista a revisão **corrente**; versões antigas só por `getArtifactContent?revision=N`.                                                             | Sondar os paths conhecidos em cada revisão (`404` = não existia); mapa revisão → run a partir de `artifacts.updated`.                   | `GET /artifacts?revision=N`.                                       |
 | G10 | O número da ronda e o teto ("round 2 of 4") não estão no `Story`.                                                                                                    | `getStoryState`: `revisions[gate]` e `revision_ceiling` (por omissão 4, `DEFAULT_REVISION_CEILING`).                                    | —                                                                  |
 | G11 | A chave do gate aberto (`plan_accepted`, `delivery_accepted`) não está no `Story`.                                                                                   | Último evento `story.awaiting_decision` (`{phase, gate}`); reserva: `plan_review → plan_accepted`, `delivery_gate → delivery_accepted`. | —                                                                  |
@@ -336,7 +336,7 @@ Onda 6   P7 fases de entrega (precisa de wireframes novos)
 | 5    | 6D   | Release: imagem, config, CSP                     | S    | P0               | quase tudo                  |
 | 6    | 7    | Fases de entrega                                 | —    | wireframes novos | —                           |
 
-Máximo de agentes em simultâcio: 4 (Onda 2), 4 (Onda 3), **6** (Onda 4). Se preferires menos, junta lanes da mesma onda
+Máximo de agentes em simultâcioo: 4 (Onda 2), 4 (Onda 3), **6** (Onda 4). Se preferires menos, junta lanes da mesma onda
 na ordem da tabela. Não juntes lanes de ondas diferentes.
 
 ### 8.1 Modelo sugerido por lane
@@ -414,7 +414,7 @@ de um diff escritos à mão (mais código, mais superfície de segurança).
 | --- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | R1  | O front-end real **nunca correu contra a API real** (`docs/strategy.md` §1). Pode haver surpresas de integração. | `scripts/smoke-api.mjs` logo na 2A; e2e `--simulate` na 6C; backend falso validado contra o OpenAPI.             |
 | R2  | Node das sessões cloud abaixo de 22.22.3: o Angular 22 recusa.                                                   | Passo de pré-voo da fase 0; `.nvmrc` 24; `engines`.                                                              |
-| R3  | `exactOptionalPropertyTypes` e outras flags podem colidir com tipos do Angular.                                  | Parar e perguntar; não enfraquecer em silêncio (CLAUDE.md).                                                      |
+| R3  | `exactOptionalPropertyTypes` e outras flags podem colidir com tipos do Angular.                                  | Parar e perguntar; não enfraquecer em silêncioo (CLAUDE.md).                                                      |
 | R4  | SSE através do proxy do dev server ou do Ingress pode ser bufferizado.                                           | Verificar na fase 0 com `curl -N`; fallback automático para polling na 2B.                                       |
 | R5  | O backend falso diverge da API real.                                                                             | Testes de contrato com Ajv contra o YAML; cada desvio documentado.                                               |
 | R6  | Volume de `run.progress` num stream global.                                                                      | Buffer limitado; contado em `omitted`; se pesar, stream por story.                                               |
@@ -434,7 +434,7 @@ de um diff escritos à mão (mais código, mais superfície de segurança).
 | 5   | URL base do Jira para "Open in Jira".                                       | **Mais tarde.** Até lá, o botão fica escondido (`jiraBaseUrl` vazio, G13).                                                                                                                                                                                                                                |
 | 6   | Política de commits: uma branch por lane, ou tudo numa só?                  | **Uma branch por lane** (`lane/<id>-<slug>`), com PR para `main` quando o utilizador aprovar. Commit e push continuam a pedir aprovação de cada vez.                                                                                                                                                      |
 | 7   | Node 24 está disponível nas sessões dos agentes?                            | **Ok.** O utilizador não sabia; verificou-se que `npx node@24` devolve v24.21.0 numa sessão cloud. Fixá-lo em todas as sessões é pelo _setup script_ do ambiente (a configurar pelo utilizador; `npm install -g node@24` está **por testar**). O passo 0.1 da fase 0 confirma `node -v` e pára se falhar. |
-| 8   | Pedes já ao backend algum dos itens opcionais do §7?                        | **Sim.** Pedido feito em [`ahoy-hosted#23`](https://github.com/Danielimaalmeida/ahoy-hosted/issues/23) (7 itens, nenhum bloqueia a v1). Os workarounds do §7 mantêm-se até serem feitos.                                                                                                                  |
+| 8   | Pedes já ao backend algum dos itens opcioonais do §7?                        | **Sim.** Pedido feito em [`ahoy-hosted#23`](https://github.com/Danielimaalmeida/ahoy-hosted/issues/23) (7 itens, nenhum bloqueia a v1). Os workarounds do §7 mantêm-se até serem feitos.                                                                                                                  |
 
 > A numeração acima é a deste ficheiro. A lista que foi mostrada no chat tinha outra ordem (Node, commits, fontes, Jira nas
 > posições 4 a 7); as respostas foram registadas **por assunto**, não por número.

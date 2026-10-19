@@ -38,7 +38,7 @@ Earlier approvals, unspent budget and the presence of credentials grant nothing.
 
 - Angular 22 (standalone, zoneless, signals, OnPush by default), TypeScript 6.0, SCSS. Unit and component tests use
   Vitest through `ng test` (`@angular/build:unit-test`, jsdom); e2e uses Playwright.
-- Before calling work done, run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check`
+- Before calling work done, run `npm run build && npm run typecheck && npm run lint && npm test && npm run format`
   on Node 24. `typecheck` also runs `scripts/check-boundaries.mjs` (plan §5.2):
   - `domain/` is pure TypeScript: no Angular, rxjs, `node:`, `core`, `ui` or `features`;
   - `ui/` imports only `domain` and Angular, never `core` or `features`;
@@ -55,7 +55,7 @@ Earlier approvals, unspent budget and the presence of credentials grant nothing.
 `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noPropertyAccessFromIndexSignature` and `verbatimModuleSyntax`, and
 Angular's `strictTemplates`, `strictInjectionParameters` and `strictInputAccessModifiers`. Don't weaken it; if a flag
 clashes with an Angular type, stop and ask. `tsconfig.app.json` and `tsconfig.spec.json` only set `outDir`, `types`,
-`include` and `exclude`. Prettier is the formatter (`npm run format` / `npm run format:check`); Husky runs `lint-staged`
+`include` and `exclude`. Prettier is the formatter (`npm run format` checks, `npm run format:fix` writes); Husky runs `lint-staged`
 on staged files before commits. ESLint (`npm run lint`) enforces the rules below that a tool can check.
 
 - **Optional properties.** Under `exactOptionalPropertyTypes`, `x?: T` means "absent", not "`undefined`". Choose

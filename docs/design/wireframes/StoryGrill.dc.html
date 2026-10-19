@@ -1,91 +1,311 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Ahoy · Grill me</title>
-<script src="./support.js"></script>
-<link rel="stylesheet" href="ahoy-tokens.css">
-<link rel="stylesheet" href="ds/ahoy/components/bundle.css">
-</head>
-<body>
-<x-dc>
-<helmet>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<style>
-body{margin:0;background:#F6F8FA}
-a{color:#1747A6}a:hover{color:#1755B8}
-.opt{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;padding:11px 14px;border:1px solid #E3E8EE;border-radius:12px;background:#FFFFFF;color:#1B2733;font:inherit;cursor:pointer;box-sizing:border-box}
-.opt:hover{border-color:#1A64D6;background:#F5F9FF}
-</style>
-</helmet>
-<div class="ah" style="width: 760px; height: 900px; box-sizing: border-box; padding: 32px 40px; background: rgba(27, 39, 51, 0.35); display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-sans); font-size: 13px; color: var(--ink)">
-  <section class="ah-dialog" role="dialog" aria-modal="true" aria-labelledby="gm-title" style="width: 680px; max-width: 680px">
-    <div class="ah-dialog__head">
-      <span class="ah-dialog__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z"></path><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.4h.01"></path></svg></span>
-      <div style="display: flex; flex-direction: column; gap: 2px">
-        <h2 class="ah-dialog__title" id="gm-title">Grill me</h2>
-        <span class="ah-hint">Late fees for enterprise accounts · First Mate on your Copilot</span>
-      </div>
-      <a class="ah-dialog__close" href="Meetings.dc.html" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
-    </div>
-    <div class="ah-dialog__body" style="gap: 14px">
-      <div style="display: flex; align-items: center; gap: 10px">
-        <div class="ah-dots" aria-label="Question 3 of about 4"><span class="is-done"></span><span class="is-done"></span><span class="is-current"></span><span></span></div>
-        <span class="ah-hint">Question 3 of about 4</span>
-        <span style="flex: 1"></span>
-        <div class="ah-budget"><span class="ah-meter" style="width: 70px"><span class="ah-meter__fill" style="width: 40%"></span></span><span class="ah-mono">0.6 / 1.5 AIU</span></div>
-      </div>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · Grill me</title>
+    <script src="./support.js"></script>
+    <link rel="stylesheet" href="ahoy-tokens.css" />
+    <link rel="stylesheet" href="ds/ahoy/components/bundle.css" />
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+          }
+          a {
+            color: #1747a6;
+          }
+          a:hover {
+            color: #1755b8;
+          }
+          .opt {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+            text-align: left;
+            padding: 11px 14px;
+            border: 1px solid #e3e8ee;
+            border-radius: 12px;
+            background: #ffffff;
+            color: #1b2733;
+            font: inherit;
+            cursor: pointer;
+            box-sizing: border-box;
+          }
+          .opt:hover {
+            border-color: #1a64d6;
+            background: #f5f9ff;
+          }
+        </style>
+      </helmet>
+      <div
+        class="ah"
+        style="
+          width: 760px;
+          height: 900px;
+          box-sizing: border-box;
+          padding: 32px 40px;
+          background: rgba(27, 39, 51, 0.35);
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          font-family: var(--font-sans);
+          font-size: 13px;
+          color: var(--ink);
+        "
+      >
+        <section
+          class="ah-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="gm-title"
+          style="width: 680px; max-width: 680px"
+        >
+          <div class="ah-dialog__head">
+            <span class="ah-dialog__icon"
+              ><svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 5h14v10H9l-4 4z"></path>
+                <path
+                  d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.4h.01"
+                ></path></svg
+            ></span>
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <h2 class="ah-dialog__title" id="gm-title">Grill me</h2>
+              <span class="ah-hint"
+                >Late fees for enterprise accounts · First Mate on your
+                Copilot</span
+              >
+            </div>
+            <a
+              class="ah-dialog__close"
+              href="Meetings.dc.html"
+              aria-label="Close"
+              ><svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6L6 18"></path></svg
+            ></a>
+          </div>
+          <div class="ah-dialog__body" style="gap: 14px">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div class="ah-dots" aria-label="Question 3 of about 4">
+                <span class="is-done"></span><span class="is-done"></span
+                ><span class="is-current"></span><span></span>
+              </div>
+              <span class="ah-hint">Question 3 of about 4</span>
+              <span style="flex: 1"></span>
+              <div class="ah-budget">
+                <span class="ah-meter" style="width: 70px"
+                  ><span class="ah-meter__fill" style="width: 40%"></span></span
+                ><span class="ah-mono">0.6 / 1.5 AIU</span>
+              </div>
+            </div>
 
-      <div style="display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised)">
-        <div style="display: flex; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft)">
-          <span class="ah-question__id">Q1</span>
-          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="ah-muted">Which accounts can get a late fee?</span><span style="font-weight: 600">Enterprise plan only</span></span>
-          <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">Change</button>
-        </div>
-        <div style="display: flex; gap: 10px; padding: 9px 12px">
-          <span class="ah-question__id">Q2</span>
-          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="ah-muted">When does the fee start?</span><span style="font-weight: 600">30 days after the due date</span></span>
-          <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">Change</button>
-        </div>
-      </div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                background: var(--surface-raised);
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  gap: 10px;
+                  padding: 9px 12px;
+                  border-bottom: 1px solid var(--line-soft);
+                "
+              >
+                <span class="ah-question__id">Q1</span>
+                <span
+                  style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                  "
+                  ><span class="ah-muted"
+                    >Which accounts can get a late fee?</span
+                  ><span style="font-weight: 600"
+                    >Enterprise plan only</span
+                  ></span
+                >
+                <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">
+                  Change
+                </button>
+              </div>
+              <div style="display: flex; gap: 10px; padding: 9px 12px">
+                <span class="ah-question__id">Q2</span>
+                <span
+                  style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                  "
+                  ><span class="ah-muted">When does the fee start?</span
+                  ><span style="font-weight: 600"
+                    >30 days after the due date</span
+                  ></span
+                >
+                <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">
+                  Change
+                </button>
+              </div>
+            </div>
 
-      <article class="ah-question ah-question--open">
-        <div class="ah-question__head"><span class="ah-question__id">Q3</span><span class="ah-badge ah-badge--input"><i class="ah-badge__dot"></i>Pick an answer</span></div>
-        <div class="ah-question__text">Should the fee be added automatically, or does finance approve each one first?</div>
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 0 16px 14px">
-          <button class="opt" type="button" style="border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent)">
-            <span class="ah-mono" style="color: var(--accent-text); margin-top: 1px">A</span>
-            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b>Finance approves each fee</b><span class="ah-hint">Fewer disputes with big customers; keeps v1 small.</span></span>
-            <span class="ah-tag ah-tag--accent">Recommended</span>
-          </button>
-          <button class="opt" type="button">
-            <span class="ah-mono" style="color: var(--accent-text); margin-top: 1px">B</span>
-            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b>Added automatically</b><span class="ah-hint">No manual work, but disputes go to account managers.</span></span>
-          </button>
-          <button class="opt" type="button">
-            <span class="ah-mono" style="color: var(--accent-text); margin-top: 1px">C</span>
-            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b>Leave it open in the story</b><span class="ah-hint">It goes into the story as an open question for refinement.</span></span>
-          </button>
-          <span style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
-            <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">Answer in my own words</button>
-            <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">Ask maria@example.com</button>
-          </span>
-        </div>
-      </article>
-    </div>
-    <div class="ah-dialog__foot" style="justify-content: space-between">
-      <a class="ah-btn ah-btn--ghost" href="StoryReview.dc.html">Stop and write the story now</a>
-      <button class="ah-btn ah-btn--primary" type="button">Next question</button>
-    </div>
-  </section>
-</div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":760,"height":900}}'>
-class Component extends DCLogic {
-  renderVals() {
-    return {};
-  }
-}
-</script>
-</body>
+            <article class="ah-question ah-question--open">
+              <div class="ah-question__head">
+                <span class="ah-question__id">Q3</span
+                ><span class="ah-badge ah-badge--input"
+                  ><i class="ah-badge__dot"></i>Pick an answer</span
+                >
+              </div>
+              <div class="ah-question__text">
+                Should the fee be added automatically, or does finance approve
+                each one first?
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 8px;
+                  padding: 0 16px 14px;
+                "
+              >
+                <button
+                  class="opt"
+                  type="button"
+                  style="
+                    border-color: var(--accent);
+                    box-shadow: 0 0 0 1px var(--accent);
+                  "
+                >
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); margin-top: 1px"
+                    >A</span
+                  >
+                  <span
+                    style="
+                      flex: 1;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 2px;
+                    "
+                    ><b>Finance approves each fee</b
+                    ><span class="ah-hint"
+                      >Fewer disputes with big customers; keeps v1 small.</span
+                    ></span
+                  >
+                  <span class="ah-tag ah-tag--accent">Recommended</span>
+                </button>
+                <button class="opt" type="button">
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); margin-top: 1px"
+                    >B</span
+                  >
+                  <span
+                    style="
+                      flex: 1;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 2px;
+                    "
+                    ><b>Added automatically</b
+                    ><span class="ah-hint"
+                      >No manual work, but disputes go to account
+                      managers.</span
+                    ></span
+                  >
+                </button>
+                <button class="opt" type="button">
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); margin-top: 1px"
+                    >C</span
+                  >
+                  <span
+                    style="
+                      flex: 1;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 2px;
+                    "
+                    ><b>Leave it open in the story</b
+                    ><span class="ah-hint"
+                      >It goes into the story as an open question for
+                      refinement.</span
+                    ></span
+                  >
+                </button>
+                <span
+                  style="
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">
+                    Answer in my own words
+                  </button>
+                  <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">
+                    Ask maria@example.com
+                  </button>
+                </span>
+              </div>
+            </article>
+          </div>
+          <div class="ah-dialog__foot" style="justify-content: space-between">
+            <a class="ah-btn ah-btn--ghost" href="StoryReview.dc.html"
+              >Stop and write the story now</a
+            >
+            <button class="ah-btn ah-btn--primary" type="button">
+              Next question
+            </button>
+          </div>
+        </section>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":760,"height":900}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
 </html>

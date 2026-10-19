@@ -136,7 +136,7 @@ describe('ah-top-bar', () => {
     const { nav } = await render();
     expect(
       nav().map((a) => a.querySelector('.ah-soon')?.textContent ?? null)
-    ).toEqual([null, null, null, null]);
+    ).toEqual([null, null, null, null, null]);
   });
 
   it('has Start voyage as its only primary button, a link to the form with the sail icon', async () => {

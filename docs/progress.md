@@ -729,7 +729,7 @@ no remote environment, real API, commit or push was used for this fix.
 - **Changed:** `nginx.conf` now serves `/opt/app-root/src/ahoy-frontend`, matching `docker/Dockerfile`, rather than
   the stale `/opt/app-root/src/r3da-cdm-frontend`. Error and access logs go to stderr/stdout for container diagnostics.
   The Dockerfile's non-root `USER 1001` is unchanged.
-- **Runtime proof:** a local smoke check used the already cached `cio-frontend:latest` image (NGINX 1.29.4, UID 1001)
+- **Runtime proof:** a local smoke check used the already cached `cioo-frontend:latest` image (NGINX 1.29.4, UID 1001)
   with the production build and this repository's server configuration mounted read-only, then repeated with a local
   `npm run build:test` build. With the old document root
   absent, `/` returned HTTP 500; with the corrected root, `/`, `/index.html`, `/voyages/PROJ-123` and the JavaScript asset

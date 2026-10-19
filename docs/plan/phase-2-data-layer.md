@@ -23,7 +23,7 @@ como veredicto de domínio** (`invalid_response` ≠ `gate_rejected`).
 2. **`ApiClient`** (`HttpClient` com `withFetch`, base `API_BASE`), um método por operação usada nas fases 3 a 6:
    `getHealth`, `listStories`, `startStory`, `getStory`, `stopStory`, `resumeStory`, `setStoryBudget`, `getStoryModels`,
    `setStoryModels`, `listStoryRuns`, `getRun`, `listQuestions`, `answerQuestion`, `listGateRecords`, `decideHumanGate`,
-   `getStoryState`, `listArtifacts`, `getArtifactContent` (texto; `If-None-Match`/ETag opcional), `listStoryEvents`.
+   `getStoryState`, `listArtifacts`, `getArtifactContent` (texto; `If-None-Match`/ETag opcioonal), `listStoryEvents`.
    Cada um devolve `Promise<ApiResult<T>>`. Os da fase 7 (`resolveConsensus`, `decideWorkPackage`, `reopenWork`,
    `unblockStory`) ficam para essa fase.
 3. **`ApiError`**: `{kind:'problem', status, code, title, detail?, errors?, currentVersion?, instance?}` |
@@ -42,8 +42,8 @@ como veredicto de domínio** (`invalid_response` ≠ `gate_rejected`).
 6. **`AppConfig`** (`apiBase`, `actor`, `jiraBaseUrl?`) lido de `/config.json` no arranque (`provideAppInitializer`);
    `404` ou JSON inválido → omissões. Documentar que `actor` tem de coincidir com o `AHOY_ACTOR` do proxy.
 7. **Fixtures** em `src/testing/fixtures/`: um JSON por operação, escritos à mão a partir do OpenAPI e dos dados dos
-   wireframes (fictícios). **`contract.spec.ts`** valida cada fixture contra o schema do YAML com Ajv (só em testes).
-   `scripts/capture-fixtures.mjs` (opcional, **para o utilizador correr** contra um `--simulate` local) grava respostas reais
+   wireframes (fictícioos). **`contract.spec.ts`** valida cada fixture contra o schema do YAML com Ajv (só em testes).
+   `scripts/capture-fixtures.mjs` (opcioonal, **para o utilizador correr** contra um `--simulate` local) grava respostas reais
    em `src/testing/fixtures/captured/`; nunca committar dados reais sem revisão.
 8. **`scripts/smoke-api.mjs`**: contra `http://localhost:4200/api/v1` (via proxy) faz `getHealth`, `startStory` com uma chave
    `DEMO-<n>`, `getStory`, `listStories`. Só contra `--simulate` (0 AIU). Documentar; **não correr em sessões cloud**.
@@ -52,7 +52,7 @@ como veredicto de domínio** (`invalid_response` ≠ `gate_rejected`).
 
 - Cada método coberto com `HttpTestingController`: sucesso, `problem+json` (cada `code` do enum), erro de rede, corpo com
   forma errada → `invalid_response`.
-- `api:check` limpo; nenhum `any`; os guards rejeitam `spentNanoAiu` fracionário, negativo ou `NaN`.
+- `api:check` limpo; nenhum `any`; os guards rejeitam `spentNanoAiu` fracioonário, negativo ou `NaN`.
 - `contract.spec.ts` verde.
 - `NoAuthStrategy` provado: nenhum pedido leva `Authorization`.
 
@@ -91,7 +91,7 @@ nenhum. Não corras `smoke-api.mjs` nem `capture-fixtures.mjs` (precisam de uma 
    - `RunProgressBuffer`: por `runId`, passos (dedupe por `line`), `omitted` e última `spend` (`nanoAiu`, `requests`),
      **marcadores de intervalo** por lote (os passos entre duas `spend`; se `omitted` subiu, o intervalo vai **antes** desse
      lote); limite de retenção 1000; hidratação a partir de `listStoryEvents` para runs já terminados, sob pedido.
-   - `StoryEventsFeed`: todos os eventos da story (paginados desde o início, G8), `newestFirst()` sem `run.progress`, atualizado
+   - `StoryEventsFeed`: todos os eventos da story (paginados desde o inícioo, G8), `newestFirst()` sem `run.progress`, atualizado
      pelo stream.
    - Token `CLOCK` (partilhado com a 1B).
 7. **Sem dependência de zone.js**; ao destruir, cancela subscrições e aborta o `fetch` (`AbortController`).
@@ -200,7 +200,7 @@ Serve para desenvolver e testar **sem API nem Docker**. É um duplo do contrato,
 
 - `npm run start:mock` arranca; a história completa corre no mock **por chamadas ao `ApiClient`** (set sail → pergunta →
   plano → send-back → aprovação → done) num teste de integração sem browser.
-- Conformidade com o OpenAPI verde; um desvio **intencional** do contrato fica documentado em `docs/progress.md`.
+- Conformidade com o OpenAPI verde; um desvio **intencioonal** do contrato fica documentado em `docs/progress.md`.
 - `dist/` de produção sem rasto do mock.
 - `npm run mock:api` arranca sem API, Docker nem Postgres; com `npm start` ao lado, `curl -s localhost:4200/api/v1/health`
   responde e `curl -N localhost:4200/api/v1/events/stream` entrega eventos um a um.

@@ -31,7 +31,7 @@ export interface MeetingLike {
 export interface TopicLike {
   readonly id: string;
   readonly status: 'open' | 'moved';
-  readonly raisedBy: 'us' | 'them';
+  readonly raisedBy: 'other_company' | 'acme';
   readonly raisedByEmail: string | null;
   readonly origin: 'planned' | 'in_meeting';
   readonly createdAt: string;
@@ -82,12 +82,12 @@ export function shortEmail(email: string): string {
   return at > 0 ? email.slice(0, at + 1) : email;
 }
 
-/** Who raised a topic, for its tag: "Us", "Them" or "Them · maria@". */
+/** Who raised a topic, for its tag: "OTHER_COMPANY", "ACME" or "ACME · maria@". */
 export function raisedByLabel(topic: TopicLike): string {
-  if (topic.raisedBy === 'us') return 'Us';
+  if (topic.raisedBy === 'other_company') return 'OTHER_COMPANY';
   return topic.raisedByEmail === null
-    ? 'Them'
-    : `Them · ${shortEmail(topic.raisedByEmail)}`;
+    ? 'ACME'
+    : `ACME · ${shortEmail(topic.raisedByEmail)}`;
 }
 
 /** A day as the page writes it: "Tue 13 Oct", in the browser's time zone; "—" for a date it cannot read. */

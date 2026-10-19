@@ -54,7 +54,7 @@ por rota. Largura máxima `page-max` (1360 px), gutter 24 px (16 px em telefones
 - Contra o mock (`start:mock`): as 8 viagens semeadas aparecem nos sítios dos wireframes; os contadores batem
   (1 / 1 / 2 nos tiles; All hands 4).
 - Um evento do stream (ex.: responder à pergunta de PROJ-131) move a linha entre painéis sem recarregar.
-- Teclado: tabs, chips e linhas acionáveis acessíveis; foco visível.
+- Teclado: tabs, chips e linhas acioonáveis acessíveis; foco visível.
 - Testes: ordenação "longest wait first"; texto de "What's needed" por estado; URL ↔ chip; `?q=`.
 - A 390 px: top bar a quebrar linha, tabelas a rolar **dentro** de uma caixa, página sem scroll horizontal.
 
@@ -78,7 +78,7 @@ Quadro `SetSail`. Rota `/voyages/new?key=&title=`.
     dica "A hard cap for every run of this voyage together. You can raise it later."
 - Painel **"Crew and models"**: `ah-model-choice-table` com 5 linhas (`intake` Navigator, `planning` Cartographer,
   `implementation` Implementer, `pr_review` Lookout · design = `review-design`, Lookout · defects = `review-defect`). Todos os
-  campos opcionais; **sem defaults concretos** (G5): placeholder "Default" e a etiqueta "Server default"/"Your choice" só quando
+  campos opcioonais; **sem defaults concretos** (G5): placeholder "Default" e a etiqueta "Server default"/"Your choice" só quando
   o utilizador escolhe. Nota: "Type a Copilot model id. Ahoy can't list the models your account may use; the worker checks the
   model and effort before the first prompt (0 AIU) and anchors the voyage if they're refused." e "The two Lookouts must use
   different models." Só vão no pedido os slots **preenchidos** (`models` omitido se vazio).
@@ -115,7 +115,7 @@ Quadro `Docks`. Rota `/docks`. **A API não tem backlog (G3).**
 
 - **`BacklogPort`** (interface em `features/docks/`): `list({q, jiraStatus, assignee, scope, cursor})` →
   `{items: BacklogItem[], total, nextCursor}`; `BacklogItem` = `{key, summary, type, jiraStatus, priority, assignee,
-updatedAt}`. **`StubBacklogAdapter`** com os 9 itens do wireframe (fictícios) e os filtros a funcionar no cliente. Trocar o
+updatedAt}`. **`StubBacklogAdapter`** com os 9 itens do wireframe (fictícioos) e os filtros a funcioonar no cliente. Trocar o
   adaptador quando a API tiver o endpoint não deve tocar na UI.
 - Banner `notice` "Planned screen. The backlog is not in the API yet…".
 - Pesquisa, selects de Jira status e Assignee, `ah-section-tabs` pill **All / Not started / In Ahoy**; contador
@@ -127,7 +127,7 @@ updatedAt}`. **`StubBacklogAdapter`** com os 9 itens do wireframe (fictícios) e
 
 **Aceitação**
 
-- Com o stub, os filtros e os três estados da coluna Ahoy funcionam; "In Ahoy" reflete as viagens do mock.
+- Com o stub, os filtros e os três estados da coluna Ahoy funcioonam; "In Ahoy" reflete as viagens do mock.
 - Trocar o adaptador por um falso nos testes não altera nenhum componente.
 - Sem `jiraBaseUrl`, "Jira ↗" não aparece.
 - O ecrã diz "planned" de forma visível; nada nele finge ser dado real.

@@ -25,9 +25,9 @@ jobs:
     uses: sflp/r3da_the_guardians_workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
     with:
       runner: "['atc-ubuntu-latest']"
-      node-version: ${{ vars.CIO_NODE_VERSION }}
-      registry-url: ${{ vars.CIO_ACR_URL_TEST }}
-      registry-username: ${{ vars.CIO_ACR_USERNAME_TEST }}
+      node-version: ${{ vars.CIOO_NODE_VERSION }}
+      registry-url: ${{ vars.CIOO_ACR_URL_TEST }}
+      registry-username: ${{ vars.CIOO_ACR_USERNAME_TEST }}
       environment: 'test'
     secrets:
-      registry-password: ${{ secrets.CIO_ACR_SECRET_TEST }}
+      registry-password: ${{ secrets.CIOO_ACR_SECRET_TEST }}

@@ -18,7 +18,7 @@ Pedir ao Claude Design (mesmo design system "Ahoy", mesmo canvas) quadros para:
 4. **Intervenções** em halt: resolver o consenso (rework ou override), retry/accept de um work package, reabrir trabalho,
    desbloquear uma story `blocked`.
 
-Dados de exemplo fictícios, como nos quadros atuais. Atualizar `ahoy-hosted/docs/ui-design-brief.md` se o desenho mudar o contrato.
+Dados de exemplo fictícioos, como nos quadros atuais. Atualizar `ahoy-hosted/docs/ui-design-brief.md` se o desenho mudar o contrato.
 
 ## Dados e operações que já existem (sem wireframe)
 
@@ -27,7 +27,7 @@ Dados de exemplo fictícios, como nos quadros atuais. Atualizar `ahoy-hosted/doc
 | Estado detalhado                 | `getStoryState`: `work_packages`, `child_repos`, `lookout_reviews`, `human_gates`, `gate_results`, `decision_log` |
 | Relatórios dos agentes           | eventos `implementation.reported`, `review.reported` (o relatório completo está no evento)                        |
 | Decidir a entrega                | `decideHumanGate` com `gate: "delivery_accepted"`                                                                 |
-| Resolver um halt de consenso     | `resolveConsensus` (`rework` com `packages` opcionais, ou `override`; só em halt de consenso numa fase de review) |
+| Resolver um halt de consenso     | `resolveConsensus` (`rework` com `packages` opcioonais, ou `override`; só em halt de consenso numa fase de review) |
 | Retry ou aceitar um work package | `decideWorkPackage` (`retry`/`accept`; só em halt na implementação)                                               |
 | Reabrir trabalho entregue        | `reopenWork` (`packages` ou `repos`, com `note`; sem ronda cobrada)                                               |
 | Desbloquear uma story `blocked`  | `unblockStory` (`rounds` 1 a 10, `repos`; **não** serve para rejeição humana)                                     |

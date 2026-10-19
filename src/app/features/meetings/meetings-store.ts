@@ -240,8 +240,8 @@ export class MeetingsStore {
 
   /** Removes a topic and its notes. */
   async deleteTopic(topicId: string): Promise<void> {
-    const done = await this.run(() => this.api.deleteMeetingTopic(topicId));
-    if (done === null) return;
+    if (!(await this.runEmpty(() => this.api.deleteMeetingTopic(topicId))))
+      return;
     this.patchMeeting((m) => ({
       ...m,
       topics: m.topics.filter((t) => t.id !== topicId),
@@ -299,8 +299,8 @@ export class MeetingsStore {
 
   /** Removes a note. */
   async deleteNote(topicId: string, noteId: string): Promise<void> {
-    const done = await this.run(() => this.api.deleteMeetingNote(noteId));
-    if (done === null) return;
+    if (!(await this.runEmpty(() => this.api.deleteMeetingNote(noteId))))
+      return;
     this.patchTopic(topicId, (t) => ({
       ...t,
       notes: t.notes.filter((n) => n.id !== noteId),
@@ -331,6 +331,18 @@ export class MeetingsStore {
       return null;
     }
     return result.value;
+  }
+
+  /** Like `run` for a command with no body in its answer: whether it worked. */
+  private async runEmpty(
+    command: () => Promise<ApiResult<null>>
+  ): Promise<boolean> {
+    this.busy.set(true);
+    this.commandError.set(null);
+    const result = await command();
+    this.busy.set(false);
+    if (!result.ok) this.commandError.set(result.error);
+    return result.ok;
   }
 
   private patchMeeting(change: (meeting: Meeting) => Meeting): void {

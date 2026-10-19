@@ -1,79 +1,282 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Ahoy · Turn into a user story</title>
-<script src="./support.js"></script>
-<link rel="stylesheet" href="ahoy-tokens.css">
-<link rel="stylesheet" href="ds/ahoy/components/bundle.css">
-</head>
-<body>
-<x-dc>
-<helmet>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<style>
-body{margin:0;background:#F6F8FA}
-a{color:#1747A6}a:hover{color:#1755B8}
-.ah a.pick{display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid #E3E8EE;border-radius:14px;background:#FFFFFF;color:#1B2733;text-decoration:none}
-.ah a.pick:hover{border-color:#1A64D6;box-shadow:0 0 0 1px #1A64D6;background:#F5F9FF;color:#1B2733}
-</style>
-</helmet>
-<div class="ah" style="width: 760px; height: 760px; box-sizing: border-box; padding: 32px 40px; background: rgba(27, 39, 51, 0.35); display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-sans); font-size: 13px; color: var(--ink)">
-  <section class="ah-dialog" role="dialog" aria-modal="true" aria-labelledby="us-title" style="width: 680px; max-width: 680px">
-    <div class="ah-dialog__head">
-      <span class="ah-dialog__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M13 7l5 5-5 5"></path></svg></span>
-      <div style="display: flex; flex-direction: column; gap: 2px">
-        <h2 class="ah-dialog__title" id="us-title">Turn into a user story</h2>
-        <span class="ah-hint">From “Late fees for enterprise accounts” · Finance sync, Thu 15 Oct</span>
-      </div>
-      <a class="ah-dialog__close" href="Meetings.dc.html" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
-    </div>
-    <div class="ah-dialog__body" style="gap: 16px">
-      <div class="ah-field">
-        <span class="ah-label">First Mate will use</span>
-        <div style="display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px">
-          <label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px; border-bottom: 1px solid var(--line-soft)"><input type="checkbox" checked style="margin-top: 3px; accent-color: var(--accent)"><span>Only for the Enterprise plan; contract accounts have their own terms.</span></label>
-          <label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px; border-bottom: 1px solid var(--line-soft)"><input type="checkbox" checked style="margin-top: 3px; accent-color: var(--accent)"><span>1.5% per month on the overdue amount, capped at 10% of the invoice.</span></label>
-          <label style="display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px"><input type="checkbox" checked style="margin-top: 3px; accent-color: var(--accent)"><span>Open: does finance approve each fee, or is it automatic?</span></label>
-        </div>
-        <span class="ah-hint">Plus the topic title, who raised it and the related Jira issues it finds.</span>
-      </div>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · Turn into a user story</title>
+    <script src="./support.js"></script>
+    <link rel="stylesheet" href="ahoy-tokens.css" />
+    <link rel="stylesheet" href="ds/ahoy/components/bundle.css" />
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+          }
+          a {
+            color: #1747a6;
+          }
+          a:hover {
+            color: #1755b8;
+          }
+          .ah a.pick {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px;
+            border: 1px solid #e3e8ee;
+            border-radius: 14px;
+            background: #ffffff;
+            color: #1b2733;
+            text-decoration: none;
+          }
+          .ah a.pick:hover {
+            border-color: #1a64d6;
+            box-shadow: 0 0 0 1px #1a64d6;
+            background: #f5f9ff;
+            color: #1b2733;
+          }
+        </style>
+      </helmet>
+      <div
+        class="ah"
+        style="
+          width: 760px;
+          height: 760px;
+          box-sizing: border-box;
+          padding: 32px 40px;
+          background: rgba(27, 39, 51, 0.35);
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          font-family: var(--font-sans);
+          font-size: 13px;
+          color: var(--ink);
+        "
+      >
+        <section
+          class="ah-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="us-title"
+          style="width: 680px; max-width: 680px"
+        >
+          <div class="ah-dialog__head">
+            <span class="ah-dialog__icon"
+              ><svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h12M13 7l5 5-5 5"></path></svg
+            ></span>
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <h2 class="ah-dialog__title" id="us-title">
+                Turn into a user story
+              </h2>
+              <span class="ah-hint"
+                >From “Late fees for enterprise accounts” · Finance sync, Thu 15
+                Oct</span
+              >
+            </div>
+            <a
+              class="ah-dialog__close"
+              href="Meetings.dc.html"
+              aria-label="Close"
+              ><svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6L6 18"></path></svg
+            ></a>
+          </div>
+          <div class="ah-dialog__body" style="gap: 16px">
+            <div class="ah-field">
+              <span class="ah-label">First Mate will use</span>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  border: 1px solid var(--line);
+                  border-radius: 12px;
+                "
+              >
+                <label
+                  style="
+                    display: flex;
+                    gap: 10px;
+                    align-items: flex-start;
+                    padding: 8px 12px;
+                    border-bottom: 1px solid var(--line-soft);
+                  "
+                  ><input
+                    type="checkbox"
+                    checked
+                    style="margin-top: 3px; accent-color: var(--accent)"
+                  /><span
+                    >Only for the Enterprise plan; contract accounts have their
+                    own terms.</span
+                  ></label
+                >
+                <label
+                  style="
+                    display: flex;
+                    gap: 10px;
+                    align-items: flex-start;
+                    padding: 8px 12px;
+                    border-bottom: 1px solid var(--line-soft);
+                  "
+                  ><input
+                    type="checkbox"
+                    checked
+                    style="margin-top: 3px; accent-color: var(--accent)"
+                  /><span
+                    >1.5% per month on the overdue amount, capped at 10% of the
+                    invoice.</span
+                  ></label
+                >
+                <label
+                  style="
+                    display: flex;
+                    gap: 10px;
+                    align-items: flex-start;
+                    padding: 8px 12px;
+                  "
+                  ><input
+                    type="checkbox"
+                    checked
+                    style="margin-top: 3px; accent-color: var(--accent)"
+                  /><span
+                    >Open: does finance approve each fee, or is it
+                    automatic?</span
+                  ></label
+                >
+              </div>
+              <span class="ah-hint"
+                >Plus the topic title, who raised it and the related Jira issues
+                it finds.</span
+              >
+            </div>
 
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
-        <a class="pick" href="StoryGrill.dc.html">
-          <span style="display: flex; align-items: center; gap: 8px">
-            <span class="ah-dialog__icon" style="width: 32px; height: 32px; border-radius: 10px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z"></path><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.4h.01"></path></svg></span>
-            <span style="font-size: 15px; font-weight: 700">Grill me</span>
-            <span style="flex: 1"></span>
-            <span class="ah-tag ah-tag--accent">Suggested</span>
-          </span>
-          <span>First Mate asks about the gaps, one question at a time. You pick an answer; it writes the story.</span>
-          <span class="ah-hint">About 4 questions · up to 1.5 AIU on your Copilot</span>
-          <span class="ah-hint" style="color: var(--accent-text); font-weight: 600">Suggested because 1 note is still an open question.</span>
-        </a>
-        <a class="pick" href="StoryReview.dc.html">
-          <span style="display: flex; align-items: center; gap: 8px">
-            <span class="ah-dialog__icon" style="width: 32px; height: 32px; border-radius: 10px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"></path><path d="M14 3v5h5M9 13h7M9 17h5"></path></svg></span>
-            <span style="font-size: 15px; font-weight: 700">Draft it for me</span>
-          </span>
-          <span>First Mate writes the story and acceptance criteria straight from the notes. Anything unclear becomes an open question.</span>
-          <span class="ah-hint">About 20 seconds · up to 0.5 AIU on your Copilot</span>
-        </a>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 12px;
+              "
+            >
+              <a class="pick" href="StoryGrill.dc.html">
+                <span style="display: flex; align-items: center; gap: 8px">
+                  <span
+                    class="ah-dialog__icon"
+                    style="width: 32px; height: 32px; border-radius: 10px"
+                    ><svg
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.9"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M5 5h14v10H9l-4 4z"></path>
+                      <path
+                        d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.4h.01"
+                      ></path></svg
+                  ></span>
+                  <span style="font-size: 15px; font-weight: 700"
+                    >Grill me</span
+                  >
+                  <span style="flex: 1"></span>
+                  <span class="ah-tag ah-tag--accent">Suggested</span>
+                </span>
+                <span
+                  >First Mate asks about the gaps, one question at a time. You
+                  pick an answer; it writes the story.</span
+                >
+                <span class="ah-hint"
+                  >About 4 questions · up to 1.5 AIU on your Copilot</span
+                >
+                <span
+                  class="ah-hint"
+                  style="color: var(--accent-text); font-weight: 600"
+                  >Suggested because 1 note is still an open question.</span
+                >
+              </a>
+              <a class="pick" href="StoryReview.dc.html">
+                <span style="display: flex; align-items: center; gap: 8px">
+                  <span
+                    class="ah-dialog__icon"
+                    style="width: 32px; height: 32px; border-radius: 10px"
+                    ><svg
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.9"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M6 3h9l4 4v14H6z"></path>
+                      <path d="M14 3v5h5M9 13h7M9 17h5"></path></svg
+                  ></span>
+                  <span style="font-size: 15px; font-weight: 700"
+                    >Draft it for me</span
+                  >
+                </span>
+                <span
+                  >First Mate writes the story and acceptance criteria straight
+                  from the notes. Anything unclear becomes an open
+                  question.</span
+                >
+                <span class="ah-hint"
+                  >About 20 seconds · up to 0.5 AIU on your Copilot</span
+                >
+              </a>
+            </div>
+            <span class="ah-hint"
+              >Either way you get a finished user story to check. Nothing goes
+              to Jira until you click Create.</span
+            >
+          </div>
+          <div class="ah-dialog__foot">
+            <a class="ah-btn ah-btn--ghost" href="Meetings.dc.html">Cancel</a>
+          </div>
+        </section>
       </div>
-      <span class="ah-hint">Either way you get a finished user story to check. Nothing goes to Jira until you click Create.</span>
-    </div>
-    <div class="ah-dialog__foot">
-      <a class="ah-btn ah-btn--ghost" href="Meetings.dc.html">Cancel</a>
-    </div>
-  </section>
-</div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":760,"height":760}}'>
-class Component extends DCLogic {
-  renderVals() {
-    return {};
-  }
-}
-</script>
-</body>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":760,"height":760}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
 </html>

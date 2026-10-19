@@ -57,7 +57,7 @@ Fonte: `docs/design/design-system/` (README, vocabulary, tokens, 22 previews, `b
    - `ah-panel` com secções `head/body/foot` (projeção); sem sombra; não aninhar.
    - `ah-field`: `label`, `required` (asterisco `ah-req`), `optional`, `hint`, `unit` (`ah-suffix`), `errorText`; liga
      `aria-invalid` e `aria-describedby` ao controlo projetado e mostra o primeiro erro do `NgControl`; ids únicos.
-   - `ah-banner` `notice|error|info|cost` com título, ícone e linha técnica `ah-tech` opcional.
+   - `ah-banner` `notice|error|info|cost` com título, ícone e linha técnica `ah-tech` opcioonal.
    - Helpers de tabela como diretivas: `ahTable`, `ahNowrap`, `ah-key` (chave Jira/run id/Qn em mono), `ah-api` (palavra da
      API, mono, apagada), `ah-cell-sub`; e `ah-source` (tag de origem, variante `--chosen`).
 7. **Galeria `/_kit`** (lazy, só em dev) com alternador claro/escuro e as secções 1A.
@@ -129,12 +129,12 @@ commit nem push. Relatório em `docs/progress.md`."
 - **`ah-dialog`** sobre o `Dialog` do CDK: casca com ícone por tipo (`default | danger | sendback`), título, corpo, caixa de
   custo `ah-cost` (slot), rodapé com **Cancelar + um botão de confirmação** (variante `danger` para destrutivos),
   `busy` (desativa e mostra progresso), região de erro (Banner). Esc e Cancelar fecham sem alterar; o foco começa no primeiro
-  campo; devolve o resultado. Sem lógica de negócio: cada diálogo concreto é de outra lane.
+  campo; devolve o resultado. Sem lógica de negócioo: cada diálogo concreto é de outra lane.
 - **`ah-choice-card-group`**: cartões de rádio como `ControlValueAccessor`; cada opção tem título e consequência
-  (`ah-choice__desc`); o selecionado leva o anel de acento; navegação por setas.
+  (`ah-choice__desc`); o selecioonado leva o anel de acento; navegação por setas.
 - **`ah-question-card`**: estados **open** (anel `status-input`), **answered** (resposta, quem e quando, cadeado "Final") e
   **disabled**; recomendação do agente com **"Use recommendation"** (emite `useRecommendation`; nunca envia); textarea e botão
-  "Send answer" com a dica "Answers are final once sent". Presentacional: o pai dá o `FormControl`.
+  "Send answer" com a dica "Answers are final once sent". Presentacioonal: o pai dá o `FormControl`.
 - **`ah-model-choice-table`** / **`ah-model-choice-row`**: por slot, modelo (input mono com placeholder do default) e esforço
   (`select`: Default, low, medium, high, xhigh, max), tag de origem (`ah-source`), botão **reset** com `aria-label`; erro por
   linha, e o erro "The two Lookouts must use different models" mostra-se **nas duas** linhas dos revisores.

@@ -748,7 +748,7 @@ describe('All hands', () => {
       ).toEqual(['PROJ-131', 'PROJ-140', 'PROJ-109']);
       expect(
         Array.from(root.querySelectorAll('a.tile b')).map((b) => text(b))
-      ).toEqual(['0', '1', '2']);
+      ).toEqual(['0', '1', '2', '0']);
       expect(api.callsOf('getStory')).toHaveLength(1);
     });
 

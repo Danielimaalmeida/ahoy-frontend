@@ -1,6 +1,6 @@
 # Paralelos 1 · Onda 1
 
-**Quatro sessões ao mesmo tempo:** A, B e C são obrigatórias; D é opcional. **Pré-requisito geral:** só a fase 0, que já está
+**Quatro sessões ao mesmo tempo:** A, B e C são obrigatórias; D é opcioonal. **Pré-requisito geral:** só a fase 0, que já está
 em `main`. Quando A, B e C estiverem fundidas em `main`, passa a [paralelos2.md](paralelos2.md).
 
 | Secção | Lane | O que é                                       | Modelo sugerido                  |
@@ -8,7 +8,7 @@ em `main`. Quando A, B e C estiverem fundidas em `main`, passa a [paralelos2.md]
 | A      | 1A   | Base do kit de design                         | Sonnet 5.5                       |
 | B      | 2A   | Cliente da API                                | Sonnet 5.5                       |
 | C      | 2C   | Domínio puro                                  | DeepSeek Flash 4.1 ou Sonnet 5.5 |
-| D      | 6D   | Release: imagem, configuração, CSP (opcional) | Sonnet 5.5                       |
+| D      | 6D   | Release: imagem, configuração, CSP (opcioonal) | Sonnet 5.5                       |
 
 ## Como usar este ficheiro
 
@@ -95,7 +95,7 @@ Banner coincidem com os `preview.html` do design system em claro e escuro; os 16
 7. **Dependências aprovadas para esta lane:** `openapi-typescript`, `ajv` e `yaml`. Mais nenhuma.
 
 **Pronto quando:** cada método coberto com `HttpTestingController` (sucesso, `problem+json`, rede, forma errada);
-`api:check` limpo; nenhum `any`; os guards rejeitam valores AIU fracionários ou negativos; nenhum pedido leva
+`api:check` limpo; nenhum `any`; os guards rejeitam valores AIU fracioonários ou negativos; nenhum pedido leva
 `Authorization`. Critérios completos na lane 2A do ficheiro da fase.
 
 ---
@@ -128,7 +128,7 @@ lane 2C do ficheiro da fase.
 
 ---
 
-## Secção D · Lane 6D · Release: imagem, configuração e CSP (opcional)
+## Secção D · Lane 6D · Release: imagem, configuração e CSP (opcioonal)
 
 **Modelo sugerido:** Sonnet 5.5. **Fase:** [docs/plan/phase-6-hardening-release.md](plan/phase-6-hardening-release.md), lane 6D.
 Só precisa da fase 0, por isso podes lançá-la agora ou mais tarde.

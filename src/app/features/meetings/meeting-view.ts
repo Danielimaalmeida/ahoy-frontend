@@ -304,10 +304,9 @@ export class MeetingView {
     const series = this.series();
     if (series === null) return;
     this.dialogs
-      .open<
-        unknown,
-        SeriesJiraData
-      >(SeriesJiraDialog, { data: { store: this.store, series } })
+      .open<unknown, SeriesJiraData>(SeriesJiraDialog, {
+        data: { store: this.store, series },
+      })
       .closed.subscribe((changed) => {
         if (changed !== undefined) void this.drafts.reload();
       });

@@ -615,9 +615,14 @@ export class MeetingDesk {
   }
 
   private draftDto(draft: DraftRecord): MeetingStoryDraft {
-    const { discarded: _discarded, cancel: _cancel, ...dto } = draft;
+    const dto: Partial<DraftRecord> = { ...draft };
+    delete dto.discarded;
+    delete dto.cancel;
     // The target follows the series, as the API reads it on every answer.
-    return { ...dto, target: this.targetOf(draft.meetingId) };
+    return {
+      ...(dto as Writable<MeetingStoryDraft>),
+      target: this.targetOf(draft.meetingId),
+    };
   }
 
   private insertMeeting(

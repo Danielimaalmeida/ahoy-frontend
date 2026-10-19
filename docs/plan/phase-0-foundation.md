@@ -85,7 +85,7 @@ docs/design/design-system/          README.md, vocabulary.md, tokens.json, desig
 
 Obter com `Artifact read` (`paths`) sobre os dois URLs do [§2](00-overview.md#2-fontes-de-verdade). Os SVG são _assets_:
 os ids estão em `assetGroups` de `design-system.json` (`read` com o id em `path`). O `tokens.css` **não** existe nos
-artefactos (é gerado pela página do DS): a 1A gera-o. Os dados dos wireframes são fictícios (PROJ-123, alex@example.com).
+artefactos (é gerado pela página do DS): a 1A gera-o. Os dados dos wireframes são fictícioos (PROJ-123, alex@example.com).
 
 **0.10 Documentação.**
 
@@ -101,7 +101,7 @@ artefactos (é gerado pela página do DS): a 1A gera-o. Os dados dos wireframes 
 - `npm ci && npm run build && npm run typecheck && npm run lint && npm test && npm run format:check` verde em Node 24.
 - `npm start` serve uma shell vazia; cada rota do §5.3 mostra o seu placeholder; `/_kit` só existe em dev.
 - `check-boundaries` falha quando um ficheiro de `ui/` importa de `core/api/` (provado com um import de teste, depois removido).
-- Provar que as flags de TypeScript estão ativas: um ficheiro de teste com `any` ou com propriedade opcional mal usada falha
+- Provar que as flags de TypeScript estão ativas: um ficheiro de teste com `any` ou com propriedade opcioonal mal usada falha
   o `typecheck`/`lint`, e é removido.
 - O proxy foi verificado contra a API local **ou** `docs/progress.md` diz que não correu.
 - Nenhum token nem `.env` no repo.

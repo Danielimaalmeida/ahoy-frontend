@@ -1,6 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -65,7 +65,10 @@ async function open(
   const requests = record(server);
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ path: 'meetings', children: MEETINGS_ROUTES }]),
+      provideRouter(
+        [{ path: 'meetings', children: MEETINGS_ROUTES }],
+        withComponentInputBinding()
+      ),
       provideHttpClient(withInterceptors([mockBackendInterceptor])),
       provideMockBackend(server),
       { provide: CLOCK, useValue: asClock(clock) },
@@ -354,7 +357,7 @@ describe('Meetings on the mock backend', () => {
     expect(text(page.root.querySelector('.identity .ah-tag'))).toBe('Ended');
     expect(page.root.querySelector('ah-topic-composer')).toBeNull();
     expect(page.root.querySelectorAll('ah-topic-card form')).toHaveLength(0);
-    expect(page.root.querySelector('.header button')).toBeNull();
+    expect(page.root.querySelector('.header .actions button')).toBeNull();
   });
 
   it('says it cannot reach Ahoy when the list fails, and reads it again on Try again', async () => {
@@ -412,7 +415,7 @@ describe('Meetings on the mock backend', () => {
     buttonNamed(topic, 'Check the story').click();
     await flush(page);
     expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
-      'Check the story'
+      'Check the user story'
     );
     expect(text(dialog().querySelector('article .ah-tag'))).toBe(
       'PROJ · Story'

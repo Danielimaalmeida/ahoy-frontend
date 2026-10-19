@@ -343,13 +343,15 @@ describe('Voyages', () => {
       expect(keys()).toHaveLength(8);
     });
 
-    it('list a blocked voyage under Blocked, never under Ended with the done ones, and badge it Blocked', async () => {
+    it('list only the done voyages under Ended, badged Done', async () => {
       const ended = await open('/voyages?status=terminal');
       expect(ended.keys()).toEqual(['PROJ-097']);
       expect(
         ended.root.querySelector('tbody tr .ah-badge')!.className
       ).toContain('ah-badge--done');
+    });
 
+    it('list a blocked voyage under Blocked, never under Ended with the done ones, and badge it Blocked', async () => {
       const { root, keys } = await open('/voyages?status=blocked');
       expect(keys()).toEqual(['PROJ-102']);
       const chip = Array.from(root.querySelectorAll('.ah-chip')).find(
@@ -548,7 +550,7 @@ describe('Voyages', () => {
         Array.from(root.querySelectorAll('a.ah-key')).map((a) =>
           a.getAttribute('href')
         )
-      ).toEqual(['/voyages/PROJ-097', '/voyages/PROJ-102']);
+      ).toEqual(['/voyages/PROJ-097']);
     });
 
     it('scrolls inside a box that a keyboard can reach', async () => {

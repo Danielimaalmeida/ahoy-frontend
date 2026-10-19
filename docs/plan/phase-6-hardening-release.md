@@ -103,7 +103,7 @@ em `docs/progress.md`."
    proxy do dev server. **Precisa de Docker e Postgres: não corre em sessões cloud; é o utilizador que a lança** (`npm run e2e:sim`
    com `AHOY_API_TARGET`). Percurso: set sail com uma chave nova `DEMO-<aleatório>` e orçamento 30 → responder à pergunta
    (texto **"POC test answer, not a product decision"**) → aprovar o plano → acompanhar até `delivery_gate` → aprovar a entrega
-   (com o painel de decisão genérico da 4B) → `done`. Opcional: `AHOY_STUB_SCENARIO` para ver CI vermelho, rework e halts.
+   (com o painel de decisão genérico da 4B) → `done`. Opcioonal: `AHOY_STUB_SCENARIO` para ver CI vermelho, rework e halts.
    É o **primeiro teste do front-end real contra a API real** (risco R1).
 
 **Regras**
@@ -130,7 +130,7 @@ commit nem push. Relatório em `docs/progress.md`."
 **Depende de:** P0 (pode começar na Onda 2). **Possui:** `Dockerfile`, `nginx.conf`, `.dockerignore`,
 `docs/deploy.md`, `.github/workflows/ci.yml` (só acrescentar o job de imagem), `src/environments/environment.ts` de produção.
 
-O TEST já tem o chart `cio-ahoy-frontend` e o Ingress que encaminha `/api/v1` para a API e `/` para o front-end (docs do
+O TEST já tem o chart `cioo-ahoy-frontend` e o Ingress que encaminha `/api/v1` para a API e `/` para o front-end (docs do
 hosted, `deploy-plan.md`). **Esta lane entrega a imagem e a documentação; o chart e o deploy são do utilizador.**
 
 **Entregáveis**
@@ -138,7 +138,7 @@ hosted, `deploy-plan.md`). **Esta lane entrega a imagem e a documentação; o ch
 - **`Dockerfile`** multi-estágio: Node 24 compila (`npm ci`, `npm run build`), nginx não privilegiado serve `dist/`. Sem
   segredos na imagem.
 - **`nginx.conf`:** _fallback_ de SPA (`try_files $uri /index.html`), `index.html` e `config.json` sem cache, ficheiros com hash
-  imutáveis, gzip. **Não** faz proxy de `/api/v1` (é o Ingress); uma variante opcional só para `docker compose` local.
+  imutáveis, gzip. **Não** faz proxy de `/api/v1` (é o Ingress); uma variante opcioonal só para `docker compose` local.
 - **Configuração em runtime** (`/config.json`: `apiBase`, `actor`, `jiraBaseUrl`) montável por ConfigMap, para a mesma imagem
   servir vários ambientes. Documentar que `actor` é **só** para `AHOY_AUTH=dev` e que, com auth real, deixa de existir.
 - **CSP** e cabeçalhos de segurança no nginx (`default-src 'self'`, `connect-src 'self'`, `frame-ancestors 'none'`,

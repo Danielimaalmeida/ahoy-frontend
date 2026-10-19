@@ -389,10 +389,9 @@ export class StoryReviewDialog {
     const series = this.series();
     if (series === null) return;
     this.dialogs
-      .open<
-        unknown,
-        SeriesJiraData
-      >(SeriesJiraDialog, { data: { store: this.data.store, series } })
+      .open<unknown, SeriesJiraData>(SeriesJiraDialog, {
+        data: { store: this.data.store, series },
+      })
       .closed.subscribe((changed) => {
         if (changed !== undefined) void this.data.drafts.reload();
       });

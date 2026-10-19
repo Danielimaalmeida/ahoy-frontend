@@ -1,4 +1,4 @@
-const host = 'https://cio-ahoy.apps.4wm-fpm-test.azure.cloud.acme/';
+const host = 'https://cioo-ahoy.apps.4wm-fpm-test.azure.cloud.acme/';
 const oauth2Host = 'https://emea.int.alpha.sso.acmegroup.com:443';
 
 export const environment = {

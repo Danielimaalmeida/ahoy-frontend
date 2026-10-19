@@ -1,89 +1,338 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Ahoy · Check the user story</title>
-<script src="./support.js"></script>
-<link rel="stylesheet" href="ahoy-tokens.css">
-<link rel="stylesheet" href="ds/ahoy/components/bundle.css">
-</head>
-<body>
-<x-dc>
-<helmet>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<style>
-body{margin:0;background:#F6F8FA}
-a{color:#1747A6}a:hover{color:#1755B8}
-</style>
-</helmet>
-<div class="ah" style="width: 760px; height: 980px; box-sizing: border-box; padding: 32px 40px; background: rgba(27, 39, 51, 0.35); display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-sans); font-size: 13px; color: var(--ink)">
-  <section class="ah-dialog" role="dialog" aria-modal="true" aria-labelledby="rv-title" style="width: 680px; max-width: 680px">
-    <div class="ah-dialog__head">
-      <span class="ah-dialog__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
-      <div style="display: flex; flex-direction: column; gap: 2px">
-        <h2 class="ah-dialog__title" id="rv-title">Check the user story</h2>
-        <span class="ah-hint">Written by First Mate after 4 questions · 1.1 AIU</span>
-      </div>
-      <a class="ah-dialog__close" href="Meetings.dc.html" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
-    </div>
-    <div class="ah-dialog__body" style="gap: 14px">
-
-      <article style="border: 1px solid var(--line); border-radius: 14px; overflow: hidden">
-        <div style="display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); background: var(--surface-raised)">
-          <span style="display: flex; gap: 8px; align-items: center"><span class="ah-tag">Story</span><span class="ah-hint">PROJ · Billing</span><span style="flex: 1"></span><span class="ah-badge ah-badge--done"><i class="ah-badge__dot"></i>Ready to create</span></span>
-          <span style="font-size: 17px; line-height: 22px; font-weight: 700">Charge late fees on overdue Enterprise invoices</span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line-soft)">
-          <span style="font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-muted)">User story</span>
-          <span style="font-size: 13.5px; line-height: 22px">As <b>finance</b>, I want <b>overdue Enterprise invoices to carry a late fee that I approve</b>, so that <b>customers pay on time and we stop chasing them by hand</b>.</span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line-soft)">
-          <span style="font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-muted)">Acceptance criteria</span>
-          <div style="display: flex; gap: 8px"><span class="ah-mono" style="color: var(--accent-text); width: 30px; flex: none">AC1</span><span>Only accounts on the Enterprise plan can get a late fee.</span></div>
-          <div style="display: flex; gap: 8px"><span class="ah-mono" style="color: var(--accent-text); width: 30px; flex: none">AC2</span><span>An invoice 30 days past its due date is proposed for a fee of 1.5% of the overdue amount per month.</span></div>
-          <div style="display: flex; gap: 8px"><span class="ah-mono" style="color: var(--accent-text); width: 30px; flex: none">AC3</span><span>Finance approves or rejects each proposed fee before it is added to the invoice.</span></div>
-          <div style="display: flex; gap: 8px"><span class="ah-mono" style="color: var(--accent-text); width: 30px; flex: none">AC4</span><span>Total fees on one invoice never exceed 10% of it.</span></div>
-          <div style="display: flex; gap: 8px"><span class="ah-mono" style="color: var(--accent-text); width: 30px; flex: none">AC5</span><span>The fee shows as its own line on the invoice PDF.</span></div>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--line-soft)">
-          <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; border-right: 1px solid var(--line-soft)">
-            <span style="font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-muted)">Out of scope</span>
-            <span>Contract accounts. Waiving a fee after it is charged.</span>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ahoy · Check the user story</title>
+    <script src="./support.js"></script>
+    <link rel="stylesheet" href="ahoy-tokens.css" />
+    <link rel="stylesheet" href="ds/ahoy/components/bundle.css" />
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap"
+          rel="stylesheet"
+        />
+        <style>
+          body {
+            margin: 0;
+            background: #f6f8fa;
+          }
+          a {
+            color: #1747a6;
+          }
+          a:hover {
+            color: #1755b8;
+          }
+        </style>
+      </helmet>
+      <div
+        class="ah"
+        style="
+          width: 760px;
+          height: 980px;
+          box-sizing: border-box;
+          padding: 32px 40px;
+          background: rgba(27, 39, 51, 0.35);
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          font-family: var(--font-sans);
+          font-size: 13px;
+          color: var(--ink);
+        "
+      >
+        <section
+          class="ah-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rv-title"
+          style="width: 680px; max-width: 680px"
+        >
+          <div class="ah-dialog__head">
+            <span class="ah-dialog__icon"
+              ><svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12.5l4.5 4.5L19 7.5"></path></svg
+            ></span>
+            <div style="display: flex; flex-direction: column; gap: 2px">
+              <h2 class="ah-dialog__title" id="rv-title">
+                Check the user story
+              </h2>
+              <span class="ah-hint"
+                >Written by First Mate after 4 questions · 1.1 AIU</span
+              >
+            </div>
+            <a
+              class="ah-dialog__close"
+              href="Meetings.dc.html"
+              aria-label="Close"
+              ><svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6L6 18"></path></svg
+            ></a>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 16px">
-            <span style="font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-muted)">Open questions</span>
-            <span class="ah-muted">None</span>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 16px; font-size: 12px; color: var(--ink-muted)">
-          <span>From <a href="Meetings.dc.html">Finance sync, Thu 15 Oct</a></span>
-          <span>Raised by maria@example.com</span>
-          <span>3 notes and 4 answers in the description</span>
-          <span>Related: <span class="ah-key">PROJ-198</span></span>
-        </div>
-      </article>
+          <div class="ah-dialog__body" style="gap: 14px">
+            <article
+              style="
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                overflow: hidden;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                  padding: 14px 16px;
+                  border-bottom: 1px solid var(--line-soft);
+                  background: var(--surface-raised);
+                "
+              >
+                <span style="display: flex; gap: 8px; align-items: center"
+                  ><span class="ah-tag">Story</span
+                  ><span class="ah-hint">PROJ · Billing</span
+                  ><span style="flex: 1"></span
+                  ><span class="ah-badge ah-badge--done"
+                    ><i class="ah-badge__dot"></i>Ready to create</span
+                  ></span
+                >
+                <span
+                  style="font-size: 17px; line-height: 22px; font-weight: 700"
+                  >Charge late fees on overdue Enterprise invoices</span
+                >
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                  padding: 12px 16px;
+                  border-bottom: 1px solid var(--line-soft);
+                "
+              >
+                <span
+                  style="
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 0.03em;
+                    text-transform: uppercase;
+                    color: var(--ink-muted);
+                  "
+                  >User story</span
+                >
+                <span style="font-size: 13.5px; line-height: 22px"
+                  >As <b>finance</b>, I want
+                  <b
+                    >overdue Enterprise invoices to carry a late fee that I
+                    approve</b
+                  >, so that
+                  <b>customers pay on time and we stop chasing them by hand</b
+                  >.</span
+                >
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 8px;
+                  padding: 12px 16px;
+                  border-bottom: 1px solid var(--line-soft);
+                "
+              >
+                <span
+                  style="
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 0.03em;
+                    text-transform: uppercase;
+                    color: var(--ink-muted);
+                  "
+                  >Acceptance criteria</span
+                >
+                <div style="display: flex; gap: 8px">
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); width: 30px; flex: none"
+                    >AC1</span
+                  ><span
+                    >Only accounts on the Enterprise plan can get a late
+                    fee.</span
+                  >
+                </div>
+                <div style="display: flex; gap: 8px">
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); width: 30px; flex: none"
+                    >AC2</span
+                  ><span
+                    >An invoice 30 days past its due date is proposed for a fee
+                    of 1.5% of the overdue amount per month.</span
+                  >
+                </div>
+                <div style="display: flex; gap: 8px">
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); width: 30px; flex: none"
+                    >AC3</span
+                  ><span
+                    >Finance approves or rejects each proposed fee before it is
+                    added to the invoice.</span
+                  >
+                </div>
+                <div style="display: flex; gap: 8px">
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); width: 30px; flex: none"
+                    >AC4</span
+                  ><span
+                    >Total fees on one invoice never exceed 10% of it.</span
+                  >
+                </div>
+                <div style="display: flex; gap: 8px">
+                  <span
+                    class="ah-mono"
+                    style="color: var(--accent-text); width: 30px; flex: none"
+                    >AC5</span
+                  ><span
+                    >The fee shows as its own line on the invoice PDF.</span
+                  >
+                </div>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(2, minmax(0, 1fr));
+                  border-bottom: 1px solid var(--line-soft);
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    padding: 12px 16px;
+                    border-right: 1px solid var(--line-soft);
+                  "
+                >
+                  <span
+                    style="
+                      font-size: 11px;
+                      font-weight: 600;
+                      letter-spacing: 0.03em;
+                      text-transform: uppercase;
+                      color: var(--ink-muted);
+                    "
+                    >Out of scope</span
+                  >
+                  <span
+                    >Contract accounts. Waiving a fee after it is charged.</span
+                  >
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    padding: 12px 16px;
+                  "
+                >
+                  <span
+                    style="
+                      font-size: 11px;
+                      font-weight: 600;
+                      letter-spacing: 0.03em;
+                      text-transform: uppercase;
+                      color: var(--ink-muted);
+                    "
+                    >Open questions</span
+                  >
+                  <span class="ah-muted">None</span>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 6px 14px;
+                  padding: 10px 16px;
+                  font-size: 12px;
+                  color: var(--ink-muted);
+                "
+              >
+                <span
+                  >From
+                  <a href="Meetings.dc.html">Finance sync, Thu 15 Oct</a></span
+                >
+                <span>Raised by maria@example.com</span>
+                <span>3 notes and 4 answers in the description</span>
+                <span>Related: <span class="ah-key">PROJ-198</span></span>
+              </div>
+            </article>
 
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
-        <span class="ah-hint" style="font-weight: 600">Not quite right?</span>
-        <a class="ah-btn ah-btn--sm" href="StoryGrill.dc.html">Grill me on it</a>
-        <button class="ah-btn ah-btn--sm" type="button">Write it again</button>
-        <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">Change project or type</button>
+            <div
+              style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+              "
+            >
+              <span class="ah-hint" style="font-weight: 600"
+                >Not quite right?</span
+              >
+              <a class="ah-btn ah-btn--sm" href="StoryGrill.dc.html"
+                >Grill me on it</a
+              >
+              <button class="ah-btn ah-btn--sm" type="button">
+                Write it again
+              </button>
+              <button class="ah-btn ah-btn--sm ah-btn--ghost" type="button">
+                Change project or type
+              </button>
+            </div>
+          </div>
+          <div class="ah-dialog__foot" style="align-items: center">
+            <span class="ah-hint" style="margin-right: auto"
+              >Created with your Jira account, alex@example.com</span
+            >
+            <a class="ah-btn ah-btn--ghost" href="Meetings.dc.html">Cancel</a>
+            <a class="ah-btn ah-btn--primary ah-btn--lg" href="Meetings.dc.html"
+              >Create in Jira</a
+            >
+          </div>
+        </section>
       </div>
-    </div>
-    <div class="ah-dialog__foot" style="align-items: center">
-      <span class="ah-hint" style="margin-right: auto">Created with your Jira account, alex@example.com</span>
-      <a class="ah-btn ah-btn--ghost" href="Meetings.dc.html">Cancel</a>
-      <a class="ah-btn ah-btn--primary ah-btn--lg" href="Meetings.dc.html">Create in Jira</a>
-    </div>
-  </section>
-</div>
-</x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":760,"height":980}}'>
-class Component extends DCLogic {
-  renderVals() {
-    return {};
-  }
-}
-</script>
-</body>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":760,"height":980}}'
+    >
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
 </html>

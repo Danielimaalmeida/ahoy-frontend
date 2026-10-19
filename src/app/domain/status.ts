@@ -2,13 +2,7 @@ import type { Phase, StoryStatus } from './types';
 
 /** Badge modifiers of the design system (`ah-badge--<modifier>`). */
 export type StatusModifier =
-  | 'queued'
-  | 'running'
-  | 'input'
-  | 'decision'
-  | 'halted'
-  | 'done'
-  | 'blocked';
+  'queued' | 'running' | 'input' | 'decision' | 'halted' | 'done' | 'blocked';
 
 /** What a status badge shows: the crew's words, the CSS modifier and the API status word. */
 export interface StatusPresentation {

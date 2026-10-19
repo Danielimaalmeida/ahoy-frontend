@@ -89,7 +89,7 @@ tem scroll horizontal. Critérios completos na lane 3A do ficheiro da fase.
 **O que fazer**
 
 1. Formulário tipado (Reactive Forms) em `/voyages/new?key=&title=`: Jira key (`^[A-Z][A-Z0-9]+-[0-9]+$`, maiúsculas
-   automáticas), Title (opcional), Total budget (AIU), e a tabela "Crew and models" com os 5 slots.
+   automáticas), Title (opcioonal), Total budget (AIU), e a tabela "Crew and models" com os 5 slots.
 2. **O orçamento nunca passa por float:** usa `parseAiu` de `@domain`.
 3. **Só envias no pedido os modelos que o utilizador preencheu** (`models` omitido se vazio).
 4. Coluna direita "Before you sail" e botão "Set sail · up to {X} AIU". `startStory`: `201` leva à viagem; `409 story_exists`
@@ -124,7 +124,7 @@ um pedido. Critérios completos na lane 3B do ficheiro da fase.
    configurado, o botão "Jira ↗" não aparece.** Sem arranque em massa.
 4. **Não instalas dependências novas.**
 
-**Pronto quando:** com o stub, os filtros e os três estados da coluna Ahoy funcionam; trocar o adaptador por um falso nos
+**Pronto quando:** com o stub, os filtros e os três estados da coluna Ahoy funcioonam; trocar o adaptador por um falso nos
 testes não altera nenhum componente; o ecrã diz "planned" de forma visível. Critérios completos na lane 3C do ficheiro da
 fase.
 
