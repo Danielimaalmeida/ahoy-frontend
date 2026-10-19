@@ -89,6 +89,7 @@ import type {
   MeetingSeriesList,
   MeetingStoryDraft,
   MeetingStoryDraftList,
+  MeetingStoryAnswersRequest,
   MeetingStoryDraftRequest,
   MeetingTopic,
   MeetingTopicOrderRequest,
@@ -851,6 +852,22 @@ export class ApiClient {
     return this.post(
       'requestMeetingStoryDraft',
       `/meeting-topics/${segment(topicId)}/story-drafts`,
+      body,
+      isMeetingStoryDraft
+    );
+  }
+
+  /**
+   * Sends the answers to a grill's questions, once, and queues the run that writes the story from them. May spend AIU:
+   * needs `confirmSpend`. The answer is 202.
+   */
+  answerMeetingStoryQuestions(
+    draftId: string,
+    body: MeetingStoryAnswersRequest
+  ): Promise<ApiResult<MeetingStoryDraft>> {
+    return this.post(
+      'answerMeetingStoryQuestions',
+      `/meeting-story-drafts/${segment(draftId)}/answers`,
       body,
       isMeetingStoryDraft
     );

@@ -37,7 +37,9 @@ import {
   GATE_SOURCES,
   JIRA_ISSUE_TYPES,
   MEETING_STATUSES,
+  GRILL_CHOICES,
   MEETING_STORY_DRAFT_STATUSES,
+  MEETING_STORY_MODES,
   MODEL_SLOTS,
   MODEL_SOURCES,
   PLAN_FIT_VERDICTS,
@@ -104,6 +106,9 @@ import {
   type StoryPage,
   type StoryStateDocument,
   type StoryTemplate,
+  type GrillAnswer,
+  type GrillOption,
+  type GrillQuestion,
   type Usage,
 } from './types';
 
@@ -927,14 +932,69 @@ const storyTemplate = shape<StoryTemplate>({
   openQuestions: storyList(0),
 });
 
-/** A ready draft has its story and a drafting or failed one none; a failed one says why; a created one has its issue. */
+/** One answer offered to a grill's question. */
+const grillOption = shape<GrillOption>({
+  label: boundedText('a label of 1 to 200 characters', 1, 200),
+  detail: boundedText('a detail of 1 to 500 characters', 1, 500),
+  recommended: flag,
+});
+
+/** A grill's question: 2 to 4 options, exactly one of them recommended. */
+const grillQuestion: Check = (value, at) =>
+  shape<GrillQuestion>({
+    id: questionId,
+    text: boundedText('a question of 1 to 500 characters', 1, 500),
+    options: arrayOf(grillOption),
+  })(value, at) ??
+  (isRecord(value) && Array.isArray(value['options'])
+    ? value['options'].length < 2 || value['options'].length > 4
+      ? `${at}.options must hold 2 to 4 options`
+      : value['options'].filter((o) => isRecord(o) && o['recommended'] === true)
+            .length !== 1
+        ? `${at}.options must recommend exactly one option`
+        : null
+    : null);
+
+const grillQuestions: Check = (value, at) =>
+  arrayOf(grillQuestion)(value, at) ??
+  (Array.isArray(value) && (value.length < 1 || value.length > 6)
+    ? `${at} must hold 1 to 6 questions`
+    : null);
+
+/** An answer as kept: the option or own words as text, null when left open. */
+const grillAnswer: Check = (value, at) =>
+  shape<GrillAnswer>({
+    questionId,
+    question: nonEmptyText,
+    choice: oneOf(GRILL_CHOICES),
+    answer: nullable(nonEmptyText),
+  })(value, at) ??
+  (isRecord(value) &&
+  (value['choice'] === 'open') !== (value['answer'] === null)
+    ? `${at}.answer must be null exactly when the question was left open`
+    : null);
+
+/**
+ * A ready draft has its story and a drafting, asking or failed one none; a failed one says why; a created one has its
+ * issue; only a grill has questions or answers, and an asking grill has its questions.
+ */
 const draftConsistency: Check = (value, at) => {
   if (!isRecord(value)) return null;
   const status = value['status'];
   if (status === 'ready' && value['story'] === null)
     return `${at}.story must be set for a ready draft`;
-  if ((status === 'drafting' || status === 'failed') && value['story'] !== null)
+  if (
+    (status === 'drafting' || status === 'asking' || status === 'failed') &&
+    value['story'] !== null
+  )
     return `${at}.story must be null while the draft is ${String(status)}`;
+  if (status === 'asking' && value['questions'] === null)
+    return `${at}.questions must be set while the draft is asking`;
+  if (
+    value['mode'] === 'draft' &&
+    (value['questions'] !== null || value['answers'] !== null)
+  )
+    return `${at} has questions or answers, but was written without questions`;
   if ((status === 'failed') !== (value['failure'] !== null))
     return `${at}.failure must be set exactly when the draft failed`;
   if ((status === 'created') !== (value['jiraKey'] !== null))
@@ -949,9 +1009,13 @@ const meetingStoryDraft: Check = (value, at) =>
     meetingId: uuid,
     topicTitle: text,
     noteIds: arrayOf(uuid),
+    mode: oneOf(MEETING_STORY_MODES),
     status: oneOf(MEETING_STORY_DRAFT_STATUSES),
     story: nullable(storyTemplate),
     failure: nullable(text),
+    questions: nullable(grillQuestions),
+    answers: nullable(arrayOf(grillAnswer)),
+    spentNanoAiu: nanoAiu,
     target: shape<MeetingStoryDraft['target']>({
       projectKey: nullable(text),
       issueType: nullable(text),
@@ -974,7 +1038,10 @@ const meetingStoryDraft: Check = (value, at) =>
     createdAt: timestamp,
   })(value, at) ?? draftConsistency(value, at);
 
-/** A story draft, as `requestMeetingStoryDraft`, `getMeetingStoryDraft` and `createMeetingStoryIssue` answer it. */
+/**
+ * A story draft, as `requestMeetingStoryDraft`, `getMeetingStoryDraft`, `answerMeetingStoryQuestions` and
+ * `createMeetingStoryIssue` answer it.
+ */
 export const isMeetingStoryDraft = guard<MeetingStoryDraft>(
   'MeetingStoryDraft',
   meetingStoryDraft

@@ -15,6 +15,7 @@ import { DialogService } from '@ui/dialog/dialog';
 import { MeetingsStore } from './meetings-store';
 import { StoryDraftDialog, type StoryDraftData } from './story-draft-dialog';
 import { StoryDraftsStore } from './story-drafts-store';
+import { StoryGrillDialog, type StoryGrillData } from './story-grill-dialog';
 import { StoryReviewDialog, type StoryReviewData } from './story-review-dialog';
 
 /** The longest note the API takes (`maxLength: 4000`). */
@@ -258,22 +259,32 @@ export const NOTE_MAX = 4000;
             } @else {
               <span
                 class="ah-tag"
-                [class.ah-tag--accent]="d.status === 'ready'"
-                >{{ chip(d.status) }}</span
+                [class.ah-tag--accent]="
+                  d.status === 'ready' || d.status === 'asking'
+                "
+                >{{
+                  chip(d.status, d.mode === 'grill' && d.answers === null)
+                }}</span
               >
               <button
-                [ahButton]="d.status === 'ready' ? 'soft' : 'ghost'"
+                [ahButton]="
+                  d.status === 'ready' || d.status === 'asking'
+                    ? 'soft'
+                    : 'ghost'
+                "
                 size="sm"
                 type="button"
                 [attr.aria-label]="reviewLabel(d)"
-                (click)="review(d)"
+                (click)="d.status === 'asking' ? answer(d) : review(d)"
               >
                 {{
                   d.status === 'ready'
                     ? 'Check the story'
-                    : d.status === 'failed'
-                      ? 'See why'
-                      : 'Open'
+                    : d.status === 'asking'
+                      ? 'Answer questions'
+                      : d.status === 'failed'
+                        ? 'See why'
+                        : 'Open'
                 }}
               </button>
             }
@@ -361,9 +372,11 @@ export class TopicCard {
     const verb =
       draft.status === 'ready'
         ? 'Check the story of'
-        : draft.status === 'failed'
-          ? 'See why no story was written for'
-          : 'Open the story being written for';
+        : draft.status === 'asking'
+          ? "Answer First Mate's questions about"
+          : draft.status === 'failed'
+            ? 'See why no story was written for'
+            : 'Open the story being written for';
     return `${verb} ${this.topic().title}`;
   }
 
@@ -385,6 +398,14 @@ export class TopicCard {
   review(draft: MeetingStoryDraft): void {
     this.dialogs.open<unknown, StoryReviewData>(StoryReviewDialog, {
       data: { drafts: this.drafts, store: this.store, draftId: draft.id },
+      width: '720px',
+    });
+  }
+
+  /** Opens a grill's questions, to answer them one at a time. */
+  answer(draft: MeetingStoryDraft): void {
+    this.dialogs.open<unknown, StoryGrillData>(StoryGrillDialog, {
+      data: { drafts: this.drafts, draftId: draft.id },
       width: '720px',
     });
   }

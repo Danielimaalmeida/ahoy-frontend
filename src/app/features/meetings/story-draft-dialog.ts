@@ -4,7 +4,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { ApiError } from '@core/api/api-error';
-import type { MeetingStoryDraft, MeetingTopic } from '@core/api/types';
+import type {
+  MeetingStoryDraft,
+  MeetingStoryMode,
+  MeetingTopic,
+} from '@core/api/types';
 import { checkAiuLimit } from '@domain/aiu';
 import { raisedByLabel } from '@domain/meetings';
 import { chosenNoteIds, STORY_DRAFT_MAX_NANO_AIU } from '@domain/story-drafts';
@@ -32,10 +36,11 @@ function capValidator(
 }
 
 /**
- * "Turn into a user story" (board `UserStory`): which of the topic's notes the agent uses, then "Draft it for me". The
- * agent writes the story in Ahoy's fixed template; nobody types it. "Grill me" is shown but comes in a later slice. It
- * may spend AIU (not from any voyage's budget), so it says so and sends `confirmSpend: true`. Nothing goes to Jira
- * here. Closes with the queued draft.
+ * "Turn into a user story" (board `UserStory`): which of the topic's notes the agent uses, then "Draft it for me" or
+ * "Grill me". The agent writes the story in Ahoy's fixed template; nobody types it. With Grill me it first asks the
+ * person questions (board `StoryGrill`), then writes the story from the answers: two runs, each capped at the limit
+ * typed here. It may spend AIU (not from any voyage's budget), so it says so and sends `confirmSpend: true`. Nothing
+ * goes to Jira here. Closes with the queued draft.
  */
 @Component({
   selector: 'ah-story-draft-dialog',
@@ -70,6 +75,11 @@ function capValidator(
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
+    .picks {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
     .pick {
       display: flex;
       flex-direction: column;
@@ -77,19 +87,19 @@ function capValidator(
       padding: 12px 14px;
       border: 1px solid var(--line);
       border-radius: var(--radius-lg);
+      cursor: pointer;
     }
     .pick.chosen {
       border-color: var(--accent);
       box-shadow: 0 0 0 1px var(--accent);
     }
-    .pick.later {
-      background: var(--surface-raised);
-      color: var(--ink-soft);
-    }
     .pick strong {
       display: flex;
       gap: 8px;
       align-items: center;
+    }
+    .pick input {
+      accent-color: var(--accent);
     }
   `,
   template: `
@@ -137,28 +147,42 @@ function capValidator(
           raised it.</span
         >
       }
-      <div class="picks">
-        <div class="pick later">
-          <strong>Grill me <span class="ah-tag">Later</span></strong>
+      <fieldset class="picks">
+        <legend class="ah-sr">How First Mate writes it</legend>
+        <label class="pick" [class.chosen]="mode() === 'grill'">
+          <strong
+            ><input
+              type="radio"
+              name="story-mode"
+              [checked]="mode() === 'grill'"
+              (change)="mode.set('grill')"
+            />Grill me</strong
+          >
           <span
             >First Mate asks about the gaps, one question at a time, then writes
             the story.</span
           >
-          <span class="ah-hint">Comes in a later release.</span>
-        </div>
-        <div class="pick chosen">
-          <strong>Draft it for me</strong>
+        </label>
+        <label class="pick" [class.chosen]="mode() === 'draft'">
+          <strong
+            ><input
+              type="radio"
+              name="story-mode"
+              [checked]="mode() === 'draft'"
+              (change)="mode.set('draft')"
+            />Draft it for me</strong
+          >
           <span
             >First Mate writes the story and its acceptance criteria from the
             notes. Anything unclear becomes an open question.</span
           >
-        </div>
-      </div>
+        </label>
+      </fieldset>
       <ah-field
         label="AIU limit"
         optional
         unit="AIU"
-        hint="At most 50 AIU. Leave empty for the server's story draft cap."
+        [hint]="capHint()"
         [errorMessages]="capMessages"
       >
         <input
@@ -168,10 +192,7 @@ function capValidator(
           autocomplete="off"
         />
       </ah-field>
-      <span class="ah-hint"
-        >You get a finished user story to check. Nothing goes to Jira until you
-        click Create.</span
-      >
+      <span class="ah-hint">{{ outcome() }}</span>
     </ah-dialog>
   `,
 })
@@ -200,6 +221,8 @@ export class StoryDraftDialog {
     const checked = checkAiuLimit(this.capText(), STORY_DRAFT_MAX_NANO_AIU);
     return 'cap' in checked ? checked.cap : null;
   });
+  /** How the agent writes the story: straight from the notes (the default) or after asking the person. */
+  readonly mode = signal<MeetingStoryMode>('draft');
   /** The ids of the ticked notes; all of them to begin with. */
   readonly ticked = signal<ReadonlySet<string>>(
     new Set(this.data.topic.notes.map((n) => n.id))
@@ -213,16 +236,29 @@ export class StoryDraftDialog {
   );
   protected readonly costHeading = computed(() => {
     const cap = this.capNanoAiu();
+    if (this.mode() === 'grill')
+      return cap === null
+        ? "This may spend AIU twice, each time up to the server's story draft cap"
+        : `This may spend up to ${formatCap(cap, 9)} AIU for the questions and as much again for the story`;
     return cap === null
       ? "This may spend AIU, up to the server's story draft cap"
       : `This may spend up to ${formatCap(cap, 9)} AIU`;
   });
   protected readonly confirmLabel = computed(() => {
     const cap = this.capNanoAiu();
-    return cap === null
-      ? 'Draft it for me'
-      : `Draft it for me · up to ${formatCap(cap, 9)} AIU`;
+    const verb = this.mode() === 'grill' ? 'Grill me' : 'Draft it for me';
+    return cap === null ? verb : `${verb} · up to ${formatCap(cap, 9)} AIU`;
   });
+  protected readonly capHint = computed(() =>
+    this.mode() === 'grill'
+      ? "At most 50 AIU, for the questions and again for the story. Leave empty for the server's story draft cap."
+      : "At most 50 AIU. Leave empty for the server's story draft cap."
+  );
+  protected readonly outcome = computed(() =>
+    this.mode() === 'grill'
+      ? 'You answer the questions on the topic when they are ready, then get a finished user story to check. Nothing goes to Jira until you click Create.'
+      : 'You get a finished user story to check. Nothing goes to Jira until you click Create.'
+  );
   protected readonly busy = this.data.drafts.busy;
   private readonly failure = signal<ApiError | null>(null);
   protected readonly error = computed(() => {
@@ -246,14 +282,17 @@ export class StoryDraftDialog {
     const result = await this.data.drafts.request(
       this.topic.id,
       noteIds,
-      this.capNanoAiu()
+      this.capNanoAiu(),
+      this.mode()
     );
     if (!result.ok) {
       this.failure.set(result.error);
       return;
     }
     this.toasts.show(
-      'First Mate is writing the story. It shows on the topic when it is ready.'
+      this.mode() === 'grill'
+        ? 'First Mate is reading the notes for questions. They show on the topic when they are ready.'
+        : 'First Mate is writing the story. It shows on the topic when it is ready.'
     );
     this.ref.close(result.value);
   }

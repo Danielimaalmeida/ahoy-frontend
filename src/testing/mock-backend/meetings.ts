@@ -3,19 +3,23 @@
  * `packages/core/src/service/meetings.ts` of `ahoy-hosted` keeps the real ones: a meeting is planned, then in progress,
  * then ended (read-only); topics are raised by us or by a stakeholder, planned before the start or raised during it;
  * ending a meeting carries the chosen open topics, notes and all, to the series' next meeting. A topic's story draft is
- * written by a simulated agent a moment after it is asked for, and "created" in a pretend Jira (design §5, slice 2).
- * 0 AIU, no Jira. Fictional data.
+ * written by a simulated agent a moment after it is asked for, and "created" in a pretend Jira (design §5, slice 2); a
+ * grill's simulated agent first asks two questions, then writes the story from the answers (slice 3). 0 AIU, no Jira.
+ * Fictional data.
  */
 import type {
   AddMeetingTopicRequest,
   CreateMeetingRequest,
   CreateMeetingSeriesRequest,
   EndMeetingResult,
+  GrillAnswer,
+  GrillQuestion,
   Meeting,
   MeetingNote,
   MeetingSeries,
   MeetingStatus,
   MeetingStoryDraft,
+  MeetingStoryAnswersRequest,
   MeetingStoryDraftRequest,
   MeetingSummary,
   MeetingTopic,
@@ -482,15 +486,20 @@ export class MeetingDesk {
       throw invalid(
         `Topic ${topicId} already has a story draft; create it in Jira or discard it first`
       );
+    const mode = body.mode ?? 'draft';
     const draft: DraftRecord = {
       id: this.id(),
       topicId,
       meetingId: topic.meetingId,
       topicTitle: topic.title,
       noteIds,
+      mode,
       status: 'drafting',
       story: null,
       failure: null,
+      questions: null,
+      answers: null,
+      spentNanoAiu: 0,
       target: this.targetOf(topic.meetingId),
       jiraKey: null,
       jiraUrl: null,
@@ -512,14 +521,72 @@ export class MeetingDesk {
       : notes;
     draft.cancel = this.clock.schedule(MOCK_DRAFT_MS, () => {
       draft.cancel = null;
+      draft.run = { ...draft.run!, status: 'succeeded' };
+      if (mode === 'grill') {
+        draft.status = 'asking';
+        draft.questions = simulatedQuestions(topic.title);
+        return;
+      }
       draft.status = 'ready';
       draft.story = simulatedStory(
         topic.title,
         chosen.map((n) => n.text)
       );
-      draft.run = { ...draft.run!, status: 'succeeded' };
     });
     this.drafts.set(draft.id, draft);
+    return this.draftDto(draft);
+  }
+
+  /** Keeps a grill's answers, once, and has the simulated agent write the story from them a moment later. */
+  answerQuestions(
+    id: string,
+    body: MeetingStoryAnswersRequest
+  ): MeetingStoryDraft {
+    const draft = this.draft(id);
+    if (draft.mode !== 'grill')
+      throw invalid(
+        `Story draft ${id} was written without questions; it takes no answers`
+      );
+    if (draft.status !== 'asking' || draft.questions === null)
+      throw invalid(
+        `Story draft ${id} is ${draft.status}; only a grill waiting for answers takes them`
+      );
+    const answers = grillAnswers(draft.questions, body.answers);
+    const notes = [...this.notes.values()].filter(
+      (n) =>
+        n.topicId === draft.topicId &&
+        (draft.noteIds.length === 0 || draft.noteIds.includes(n.id))
+    );
+    draft.answers = answers;
+    draft.status = 'drafting';
+    draft.run = {
+      status: 'running',
+      budgetNanoAiu: body.budgetNanoAiu ?? DEFAULT_DRAFT_BUDGET,
+      nanoAiu: 0,
+      cancelRequested: false,
+    };
+    draft.cancel = this.clock.schedule(MOCK_DRAFT_MS, () => {
+      draft.cancel = null;
+      draft.status = 'ready';
+      const story = simulatedStory(
+        draft.topicTitle,
+        notes.map((n) => n.text)
+      );
+      draft.story = {
+        ...story,
+        acceptanceCriteria: [
+          ...story.acceptanceCriteria,
+          ...answers.flatMap((a) =>
+            a.answer === null ? [] : [`As answered: ${a.answer}`.slice(0, 1000)]
+          ),
+        ].slice(0, 20),
+        openQuestions: [
+          ...story.openQuestions,
+          ...answers.flatMap((a) => (a.answer === null ? [a.question] : [])),
+        ].slice(0, 20),
+      };
+      draft.run = { ...draft.run!, status: 'succeeded' };
+    });
     return this.draftDto(draft);
   }
 
@@ -836,6 +903,106 @@ export class MeetingDesk {
 }
 
 /** What the simulated agent writes: the topic as the title, one criterion per chosen note, and a word that it is simulated. */
+/** The simulated agent's questions about a topic: two, each with its first option recommended. */
+function simulatedQuestions(title: string): GrillQuestion[] {
+  const cut = (text: string) =>
+    text.length > 200 ? `${text.slice(0, 199)}…` : text;
+  return [
+    {
+      id: 'Q1',
+      text: `Who is "${cut(title)}" for, first?`,
+      options: [
+        {
+          label: 'The finance team',
+          detail: 'The story is written for finance users.',
+          recommended: true,
+        },
+        {
+          label: 'Every user',
+          detail: 'The story is written for everyone who signs in.',
+          recommended: false,
+        },
+      ],
+    },
+    {
+      id: 'Q2',
+      text: 'A simulated question: no model was called. Keep it in the story?',
+      options: [
+        {
+          label: 'Yes',
+          detail: 'The story keeps it as an open question.',
+          recommended: true,
+        },
+        { label: 'No', detail: 'The story leaves it out.', recommended: false },
+      ],
+    },
+  ];
+}
+
+/** A grill's answers checked against its questions, in their order, as the API keeps them; open where none was given. */
+function grillAnswers(
+  questions: readonly GrillQuestion[],
+  given: MeetingStoryAnswersRequest['answers']
+): GrillAnswer[] {
+  const seen = new Set<string>();
+  for (const [i, answer] of given.entries()) {
+    if (!questions.some((q) => q.id === answer.questionId))
+      throw refused(
+        `body/answers/${i}/questionId`,
+        `${answer.questionId} is not a question of this draft`
+      );
+    if (seen.has(answer.questionId))
+      throw refused(
+        `body/answers/${i}/questionId`,
+        `${answer.questionId} is answered twice`
+      );
+    seen.add(answer.questionId);
+  }
+  return questions.map((q) => {
+    const i = given.findIndex((a) => a.questionId === q.id);
+    const answer = given[i];
+    const path = `body/answers/${i}`;
+    if (answer === undefined || answer.choice === 'open') {
+      if (
+        answer !== undefined &&
+        (answer.option !== undefined || answer.text !== undefined)
+      )
+        throw refused(
+          path,
+          `${q.id} is left open, so it takes no option or text`
+        );
+      return {
+        questionId: q.id,
+        question: q.text,
+        choice: 'open',
+        answer: null,
+      };
+    }
+    if (answer.choice === 'option') {
+      const option =
+        answer.option === undefined ? undefined : q.options[answer.option];
+      if (option === undefined || answer.text !== undefined)
+        throw refused(
+          `${path}/option`,
+          `${q.id} offers options 0 to ${q.options.length - 1}, and an option takes no text`
+        );
+      return {
+        questionId: q.id,
+        question: q.text,
+        choice: 'option',
+        answer: `${option.label} — ${option.detail}`,
+      };
+    }
+    const own = answer.text?.trim() ?? '';
+    if (own === '' || answer.option !== undefined)
+      throw refused(
+        `${path}/text`,
+        `${q.id} answered in the person's own words needs the words, and no option`
+      );
+    return { questionId: q.id, question: q.text, choice: 'own', answer: own };
+  });
+}
+
 function simulatedStory(
   title: string,
   notes: readonly string[]
