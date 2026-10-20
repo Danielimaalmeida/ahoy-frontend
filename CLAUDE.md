@@ -1,47 +1,51 @@
 # Ahoy frontend: working rules
 
 Angular 22 web front end for Ahoy, talking to the `/api/v1` of `ahoy-hosted`. Layout, commands and local tooling are in
-[README.md](README.md); the architecture and decisions (F1–F16) are in [docs/architecture.md](docs/architecture.md); the
-plan, lanes and waves are in [docs/plan/00-overview.md](docs/plan/00-overview.md).
+[README.md](README.md); the architecture, decisions (F1–F16), layer rules (§5) and approved dependencies are in
+[docs/architecture.md](docs/architecture.md). The engineering review of 2026-10-20 is `ahoy-hosted`'s
+`docs/harness-review-2026-10-20.md`.
 
 ## Start of every session
 
-1. Read `docs/progress.md` ("Where we are", "Start here next" and "Prompt for a new session"). It is the handoff and the
-   source of truth for what is proven, what is only proven offline and what needs approval.
+1. Read `docs/progress.md` (one page). It is the handoff and the source of truth for what is proven, what is only
+   proven offline and what needs approval.
 2. Check `node -v`: Angular 22 needs `^22.22.3 || ^24.15.0 || >=26` (`.nvmrc` says 24). If it is older, use
    `npx node@24` and say so in the report.
-3. Check `git status` and the branch: one lane = one branch `lane/<id>-<slug>`, unless the session names another.
-4. Continue from the first open item unless the user says otherwise. Only edit the directories your lane owns (see its
-   phase file); ask other lanes through "Needs from lane X" in `docs/progress.md`.
+3. Check `git status` and the branch: work on the branch the session names.
+4. Continue from the first open item of "Next" in `docs/progress.md` unless the user says otherwise.
 
 ## Never without a specific, explicit approval from the user
 
 Earlier approvals, unspent budget and the presence of credentials grant nothing.
 
 - **Spend AIU.** Never run the app, tests or e2e against an API started with `--live` or against the TEST environment.
-  Use the mock backend (`npm run start:mock`) or a local `ahoy-hosted` started with `npm run dev -- --simulate` (0 AIU).
+  Use a local `ahoy-hosted` started with `npm run dev -- --simulate` (0 AIU) or the fakes in `src/testing/` (the
+  in-browser mock backend is not wired into any build configuration).
 - **Answer an agent's question, approve or send back a human gate, stop or resume a voyage, or change its budget or
   models** on a real API. Test answers must be labelled "POC test answer, not a product decision".
 - **Touch Azure or the TEST environment.**
 - **Commit, push or rewrite history.** Preserve uncommitted changes.
-- **Add a dependency.** Only the list in `docs/plan/00-overview.md` §10 is approved; anything else needs a new approval.
+- **Add a dependency.** Only the list in `docs/architecture.md` ("Approved dependencies") is approved; anything else
+  needs a new approval.
 
 ## Evidence and secrets
 
 - Never display, copy into docs or commit tokens, `.env` files or `.local/`.
-- The app never sends `Authorization`. `X-Ahoy-Actor` is added by the dev-server proxy (`proxy.conf.mjs`) for
-  `AHOY_AUTH=dev`, which is local only; the proxy never ships to production.
+- The app sends `Authorization: Bearer` only with the WebEAM token, through `FedevAuthStrategy` (F8). `X-Ahoy-Actor` is
+  added by the dev-server proxy for `AHOY_AUTH=dev`, which is local only; the proxy never ships to production.
 - Example data is fictional (PROJ-123, alex@example.com). Never put real story content in fixtures, docs or design
   tools; captured API responses are reviewed before any commit.
 - `docs/design/` is a copy of the Claude Design artifacts (`docs/design/SOURCES.md`): re-sync it, don't edit it.
-  `ahoy-hosted`, `agents-github-repository ` and child repos are read-only from here.
+  `ahoy-hosted`, `agents-github-repository` and child repos are read-only from here.
 
 ## Code
 
 - Angular 22 (standalone, zoneless, signals, OnPush by default), TypeScript 6.0, SCSS. Unit and component tests use
   Vitest through `ng test` (`@angular/build:unit-test`, jsdom); e2e uses Playwright.
-- Before calling work done, run `npm run build && npm run typecheck && npm run lint && npm test && npm run format:check`
-  on Node 24. `typecheck` also runs `scripts/check-boundaries.mjs` (plan §5.2):
+- Before calling work done, run `npm run build && npm run typecheck && npm run lint && npm test && npm run format` on
+  Node 24 (`npm run format` checks). They need the company's private npm registry (`@acme-fedev/*`): where it cannot be
+  reached (cloud sessions, GitHub-hosted CI), none of them can run, so say so and do not call the work done.
+  `typecheck` also runs `scripts/check-boundaries.mjs` (`docs/architecture.md` §5.2):
   - `domain/` is pure TypeScript: no Angular, rxjs, `node:`, `core`, `ui` or `features`;
   - `ui/` imports only `domain` and Angular, never `core` or `features`;
   - `core/` imports `domain` and Angular, never `ui` or `features`;
@@ -57,8 +61,8 @@ Earlier approvals, unspent budget and the presence of credentials grant nothing.
 `noImplicitReturns`, `noFallthroughCasesInSwitch`, `noPropertyAccessFromIndexSignature` and `verbatimModuleSyntax`, and
 Angular's `strictTemplates`, `strictInjectionParameters` and `strictInputAccessModifiers`. Don't weaken it; if a flag
 clashes with an Angular type, stop and ask. `tsconfig.app.json` and `tsconfig.spec.json` only set `outDir`, `types`,
-`include` and `exclude`. Prettier is the formatter (`npm run format` / `npm run format:check`); Husky runs `lint-staged`
-on staged files before commits. ESLint (`npm run lint`) enforces the rules below that a tool can check.
+`include` and `exclude`. Prettier is the formatter (`npm run format` checks, `npm run format:fix` writes); Husky runs
+`lint-staged` on staged files before commits. ESLint (`npm run lint`) enforces the rules below that a tool can check.
 
 - **Optional properties.** Under `exactOptionalPropertyTypes`, `x?: T` means "absent", not "`undefined`". Choose
   deliberately:
@@ -103,9 +107,9 @@ on staged files before commits. ESLint (`npm run lint`) enforces the rules below
 
 ## Reporting and handoff
 
-- After each lane, update `docs/progress.md`: your lane's section (what changed, the test counts, what was skipped and
-  why, what did not run, "Needs from lane X"), the header, "Where we are", "Start here next" and "Prompt for a new
-  session". Also update the README "Status" section.
+- After each item, rewrite `docs/progress.md` (it stays one page): what is proven and how, the test counts, what was
+  skipped or did not run and why, and "Next". The detail of a change goes in its commit message and pull request, not
+  in the page. Git history is the archive: never keep old versions or changelogs as files.
 - Be exact about proof. State whether something ran against the local API (`--simulate`), ran against the mock backend,
   was only unit-tested or was not run at all. Name every skipped suite. Never describe a check that did not run as
   passed.

@@ -1,10 +1,11 @@
 # Ahoy frontend · architecture
 
-The technical decisions of the Angular 22 front end. The plan they come from is
-[docs/plan/00-overview.md](plan/00-overview.md) (§3 decisions, §5 architecture); this file records them as decided and
-adds what phase 0 confirmed against the installed packages. When the plan and this file disagree on something phase 0
-checked, this file wins. Reviewed against the code on 2026-10-11 (WebEAM sign-in, the company template's tooling, the
-Jira backlog, refinements and diagnoses). The system around it is in `ahoy-hosted/docs/architecture.md`.
+The technical decisions of the Angular 22 front end, as decided and as phase 0 confirmed them against the installed
+packages. The original implementation plan (`docs/plan/`, lanes and waves) was removed on 2026-10-20: its architecture
+rules (§5) and its approved dependencies (§10) now live here, and the rest is in git history
+(`git show b1f9b88:docs/plan/00-overview.md`). Reviewed against the code on 2026-10-11 (WebEAM sign-in, the company
+template's tooling, the Jira backlog, refinements and diagnoses) and, for §5, on 2026-10-20. The system around it is in
+`ahoy-hosted/docs/architecture.md`.
 
 ## The app at a glance
 
@@ -52,7 +53,7 @@ flowchart TB
 | F5  | Refetch on event, not local patching (300 ms debounce). Every command sends `expectedVersion`.                                                     | Decided; lanes 2B, 4A.                                                                                                                                                                                                                                             |
 | F6  | One global SSE stream read with `fetch` (not `EventSource`), `Last-Event-ID` on reconnect, polling fallback.                                       | `FETCH` token created; lane 2B. Proxy streams SSE unbuffered (verified against a stub only).                                                                                                                                                                       |
 | F7  | Types generated from the vendored OpenAPI + hand-written guards at the boundary; errors as values (`ApiResult`).                                   | Decided; lane 2A.                                                                                                                                                                                                                                                  |
-| F8  | WebEAM sign-in through `@acme-fedev/auth`; `AuthStrategy` is the seam. `X-Ahoy-Actor` only in the dev-server proxy, for a local API.                | **Done** 2026-10-08: `FedevAuthStrategy` sends the bearer token (see below). Since 2026-10-12 only allowed qnumbers get past the shell: `allowedQnumbers` in `/config.json` (optional) or the API's `403 forbidden` shows "Access denied". SSO not proven on TEST. |
+| F8  | WebEAM sign-in through `@acme-fedev/auth`; `AuthStrategy` is the seam. `X-Ahoy-Actor` only in the dev-server proxy, for a local API.               | **Done** 2026-10-08: `FedevAuthStrategy` sends the bearer token (see below). Since 2026-10-12 only allowed qnumbers get past the shell: `allowedQnumbers` in `/config.json` (optional) or the API's `403 forbidden` shows "Access denied". SSO not proven on TEST. |
 | F9  | Same origin: the app always calls the relative `/api/v1`.                                                                                          | **Done**: `API_BASE` = `/api/v1`; dev proxy forwards it.                                                                                                                                                                                                           |
 | F10 | Typed Reactive Forms.                                                                                                                              | Decided; lanes 3B, 4A–4D.                                                                                                                                                                                                                                          |
 | F11 | Vitest (the Angular CLI runner via `@angular/build`) for unit and component tests; Playwright for e2e.                                             | **Confirmed**: `ng test` runs Vitest 5.0.3 with jsdom 30.1.2. Playwright is lane 6C.                                                                                                                                                                               |
@@ -95,9 +96,34 @@ Checked against `ng new --help` (CLI 22.2.1) and the typings in `node_modules/@a
 - **Root element.** `<ah-root class="ah">`, not the plan's `<app-root class="ah">`: the component prefix is `ah` and
   ESLint enforces it. The `ah` class is the design system's scope.
 
-## Layout and boundaries
+## 5. Architecture rules
 
-Folders as in plan §5.1. `scripts/check-boundaries.mjs` (part of `npm run typecheck`) enforces plan §5.2:
+These were §5 of the original plan, and code comments still cite them as "plan §5.x".
+
+### 5.1 Layers and folders
+
+```
+src/
+  styles.scss, styles/      tokens.css (generated), the design system's bundle, base styles
+  environments/             one file per build configuration
+  testing/                  fixtures/, mock-backend/ (dev and tests only, never in a production import)
+  app/
+    domain/                 pure TypeScript: types, vocabulary, phases, AIU, time, halt texts
+    core/
+      api/                  ApiClient, ApiError, guards, schema.d.ts (generated, never edited by hand)
+      auth/                 AuthStrategy, FedevAuthStrategy, CurrentUser, access control
+      config/               AppConfig (config.json at runtime)
+      realtime/             event stream client, event bus, polling fallback
+      stores/               StoriesStore, StoryStore, RunProgressBuffer
+      commands/             CommandRunner (conflicts, double submits)
+      mock/                 the mock API (may import src/testing/)
+    ui/                     the design system in Angular (ah-* selectors), no API
+    features/               harbour, voyages, set-sail, docks, voyage, run-detail, metrics, meetings
+```
+
+### 5.2 Boundaries
+
+`scripts/check-boundaries.mjs` (part of `npm run typecheck`) enforces them:
 
 - `domain/` imports only `domain/`: no Angular, rxjs, `node:`, `core`, `ui`, `features` or `testing`.
 - `ui/` imports `domain/`, `ui/`, Angular and third-party packages; never `core`, `features` or `testing`.
@@ -108,6 +134,85 @@ Folders as in plan §5.1. `scripts/check-boundaries.mjs` (part of `npm run typec
   `src/environments/environment.mock.ts` (lane 2D); the company template no longer has it, so the `mock` configuration
   replaces no file and the in-browser mock backend is not wired in (see `docs/progress.md`).
 - The composition root (`src/main.ts`, `src/app/app*.ts`) and `src/environments/` may import any layer.
+- Aliases `@domain/*`, `@core/*`, `@ui/*`, `@features/*`, `@testing/*`; no top-level barrels.
+
+### 5.3 Routes
+
+`/` (All hands), `/voyages` (list, `?status=` and `?q=`), `/voyages/new` (Set sail, `?key=` and `?title=`), `/docks`
+(the Jira backlog), `/meetings`, `/metrics`, `/voyages/:key` with the tabs `plan`, `questions`, `packages`, `runs`,
+`gates`, `artifacts`, `log` and `models`, and `/voyages/:key/runs/:runId` (run detail). The URL is the state (F3). A
+voyage opens on the tab `features/voyage/context/default-tab.ts` picks from the story's status.
+
+### 5.4 Data flow
+
+One global event stream (F6) feeds an event bus; the stores mark what an event touches as stale and read it again,
+debounced 300 ms (F5), and features read the stores' signals.
+
+- **Lists and the inbox.** `StoriesStore` pages through every story (`limit=500` until `nextCursor` is `null`) and stays
+  current through events. The counts and the "Needs you" inbox (`awaiting_input`, `awaiting_decision`, `halted`) come
+  from it.
+- **A voyage.** `StoryStore.for(key)` exposes `story`, `state`, `runs`, `questions`, `gates`, `models`, `artifacts` and
+  `events` as resources (`loading | ready | error`, `refresh()`); only the ones something observes stay alive.
+- **`run.progress`** never triggers a refetch: it goes to `RunProgressBuffer` (deduplicated by `line`, with `omitted`
+  and the last `spend`).
+- Event types the app does not know are ignored: the contract allows new ones.
+
+### 5.5 Commands, conflicts and errors
+
+Every command is a `POST` with `expectedVersion`, the story version the person saw. `CommandRunner` turns every answer
+into a value, and the UI treats them the same way everywhere:
+
+| Answer                                                            | What the person sees                                                                      |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `202` / `201`                                                     | The returned story becomes the truth; a past-tense toast ("Answer to Q2 sent.").          |
+| `409 stale_version`                                               | "This voyage changed since you opened it": refresh, keep what was typed, allow a resend.  |
+| `409 decision_already_recorded`                                   | Who decided first; "Your send-back wasn't recorded", the text kept, "Copy my text".       |
+| `409 already_answered`                                            | The first answer, with the person's own text still visible.                               |
+| `409 invalid_state` / `revision_ceiling_reached` / `legacy_story` | An error banner with the `detail` in plain words and the code on a technical line.        |
+| `409 story_exists`                                                | An error on the key field, linking to the existing voyage.                                |
+| `400 validation_failed`                                           | Errors beside the fields (`errors[].path`, `aria-invalid`).                               |
+| `404 not_found`                                                   | "This voyage doesn't exist".                                                              |
+| `401 unauthenticated`                                             | "Sign-in needed".                                                                         |
+| `503 unavailable`, network failure                                | "Lost contact with the harbour", "Try again", `status · code · request id`.               |
+| An answer of an unexpected shape                                  | `invalid_response`, "Ahoy sent something unexpected": a tooling failure, never a verdict. |
+
+### 5.6 AIU, time and identity
+
+- **AIU** is integer nano-AIU (`Number.isSafeInteger`, F14): one decimal in lists, two in the run detail (`domain/aiu`).
+  A typed budget is parsed from its decimal text into integers, never through a float.
+- **Time** is relative in lists ("22 m ago") and absolute in logs ("Tue 09:48").
+- **Identity.** The API has no `GET /me`: `CurrentUser` reads `actor` from the `AppConfig`, which must match the actor the
+  API sees. `AuthStrategy` is the seam for sign-in: the app config provides `FedevAuthStrategy`, which sends
+  `Authorization: Bearer` with the WebEAM token (F8); `NoAuthStrategy`, which adds nothing, is the default for tests.
+
+### 5.7 Untrusted content
+
+Plans, snapshots, questions, agent messages and worker logs come from agents. They are shown only through
+`ah-markdown` (F12): never `innerHTML` elsewhere, never `bypassSecurityTrust*`. `[REDACTED]` arrives masked by the API
+and is shown as it is; markdown links open with `rel="noopener noreferrer"` and remote images are not loaded.
+
+## Approved dependencies
+
+Approved by the user on 2026-10-06. Runtime dependencies are pinned exactly and dev dependencies use `^` (TypeScript
+`~6.0.x`). Any package outside this list needs a new approval.
+
+| Package                                                                                   | Kind        | What for                                |
+| ----------------------------------------------------------------------------------------- | ----------- | --------------------------------------- |
+| `@angular/*` 22.2.x, `rxjs` 7.x, `tslib`, `typescript` 6.0.x, `@angular/cli` and `/build` | runtime/dev | Angular 22                              |
+| `vitest` 5.x and the DOM environment the builder needs                                    | dev         | Unit and component tests (F11)          |
+| `angular-eslint`, `eslint`, `typescript-eslint`                                           | dev         | Lint with the CLAUDE.md rules           |
+| `prettier`, `husky`, `lint-staged`                                                        | dev         | Formatting and pre-commit               |
+| `@angular/cdk` 22.x                                                                       | runtime     | Dialog, overlay, a11y (F2)              |
+| `marked` 18.1.0                                                                           | runtime     | Markdown of plans and artifacts (F12)   |
+| `diff` 9.0.0                                                                              | runtime     | Artifact revision diffs (F13)           |
+| `openapi-typescript` 7.13.0                                                               | dev         | Types from `ahoy-v1.yaml`               |
+| `ajv`, `yaml`                                                                             | dev         | Contract tests of fixtures and the mock |
+| `@playwright/test`, `@axe-core/playwright`                                                | dev         | e2e and accessibility                   |
+
+The company template (2026-10-08) added `@acme-fedev/auth` (WebEAM sign-in, F8) and `@acme-fedev/playwright-helpers`
+from the company's private registry, plus its own tooling (`stylelint`, `stylelint-config-sass-guidelines`,
+`@vitest/coverage-v8`). Without access to that registry, `npm ci` fails, so neither GitHub-hosted CI nor a cloud
+session can build this app.
 
 ## Routing (task 0.7)
 
@@ -144,7 +249,7 @@ itself sends `Authorization: Bearer` when a WebEAM session exists (see "Applicat
   and never reaches production, where the Ingress routes `/api/v1` and real authentication applies.
 - Only a local API started with `npm run dev -- --simulate` (0 AIU). **Never** `--live`, never the TEST environment.
 - There is no `start:mock` script any more; `ng serve --configuration mock` builds without the mock backend (see
-  "Layout and boundaries").
+  §5.2).
 - `npm run start:test` explicitly serves the `test` configuration with `src/proxy.conf.test.json`, forwarding the
   browser's API calls to the TEST API. Do not use it for automated validation or mutating actions without approval.
 
