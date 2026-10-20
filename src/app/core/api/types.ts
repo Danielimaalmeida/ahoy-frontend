@@ -584,10 +584,14 @@ export type UpdateMeetingSeriesRequest = Schemas['UpdateMeetingSeriesRequest'];
 /** A user story in Ahoy's fixed template, as the agent wrote it and the API checked it (`StoryTemplate`). */
 export type StoryTemplate = Schemas['StoryTemplate'];
 
-/** `drafting`, then `ready` (or `failed`), then `created` in Jira (`MeetingStoryDraftStatus`). */
+/**
+ * `drafting`, then `ready` (or `failed`), then `created` in Jira (`MeetingStoryDraftStatus`); a grill is `asking` between
+ * its questions and the story.
+ */
 export type MeetingStoryDraftStatus = Schemas['MeetingStoryDraftStatus'];
 export const MEETING_STORY_DRAFT_STATUSES = listOf<MeetingStoryDraftStatus>()([
   'drafting',
+  'asking',
   'ready',
   'failed',
   'created',
@@ -601,6 +605,32 @@ export type MeetingStoryDraftList = Schemas['MeetingStoryDraftList'];
 
 /** Body of `requestMeetingStoryDraft`; it may spend AIU, so `confirmSpend` is required. */
 export type MeetingStoryDraftRequest = Schemas['MeetingStoryDraftRequest'];
+
+/** `draft`: the agent writes the story from the notes; `grill`: it asks the person questions first (`MeetingStoryMode`). */
+export type MeetingStoryMode = Schemas['MeetingStoryMode'];
+export const MEETING_STORY_MODES = listOf<MeetingStoryMode>()([
+  'draft',
+  'grill',
+]);
+
+/** One answer the agent offers to a grill's question; exactly one per question is recommended (`GrillOption`). */
+export type GrillOption = Schemas['GrillOption'];
+
+/** One of a grill's questions, numbered `Q1`.. (`GrillQuestion`). */
+export type GrillQuestion = Schemas['GrillQuestion'];
+
+/** How a question was answered: an option, left open for the story, or in the person's own words (`GrillChoice`). */
+export type GrillChoice = Schemas['GrillChoice'];
+export const GRILL_CHOICES = listOf<GrillChoice>()(['option', 'open', 'own']);
+
+/** An answer as the API keeps it, with the question as it was asked (`GrillAnswer`). */
+export type GrillAnswer = Schemas['GrillAnswer'];
+
+/** Body of `answerMeetingStoryQuestions`; the run that writes the story may spend AIU, so `confirmSpend` is required. */
+export type MeetingStoryAnswersRequest = Schemas['MeetingStoryAnswersRequest'];
+
+/** One answer in `MeetingStoryAnswersRequest`. */
+export type GrillAnswerInput = MeetingStoryAnswersRequest['answers'][number];
 
 /** Query of `listMeetings`. */
 export type ListMeetingsQuery = NonNullable<

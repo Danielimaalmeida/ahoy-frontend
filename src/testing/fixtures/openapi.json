@@ -2789,7 +2789,7 @@
         "operationId": "requestMeetingStoryDraft",
         "tags": ["meetings"],
         "summary": "Ask an agent to draft a user story from a topic. May spend AIU.",
-        "description": "Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It\nreads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)\nand replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never\nwrites to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll\n`getMeetingStoryDraft` until it is not `drafting`.\n\n`409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503\nunavailable` when story drafts are not configured or the control repo cannot be read.\n",
+        "description": "Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It\nreads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)\nand replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never\nwrites to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll\n`getMeetingStoryDraft` until it is not `drafting`.\n\nWith `mode: grill` the run asks first: it replies with 1–6 questions, each with 2–4 answer options and one\nrecommended, and the draft becomes `asking`. `answerMeetingStoryQuestions` then queues a second run that writes\nthe story from the answers.\n\n`409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503\nunavailable` when story drafts are not configured or the control repo cannot be read.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2894,6 +2894,59 @@
         }
       }
     },
+    "/meeting-story-drafts/{draftId}/answers": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingStoryDraftId"
+        }
+      ],
+      "post": {
+        "operationId": "answerMeetingStoryQuestions",
+        "tags": ["meetings"],
+        "summary": "Answer a grill's questions, so the agent writes the story. May spend AIU.",
+        "description": "Keeps the answers, one per question at most: an option (its index in `options`), the person's own words, or left\nopen; a question not answered is left open and goes under the story's open questions. Then queues a second run\nof the story draft agent under the same `MEET-<n>` label, given the questions and the answers; the draft is\n`drafting` again until it is `ready` or `failed`. Answers are sent once. `confirmSpend` must be true; the run\nis capped at `budgetNanoAiu`, else the server's cap.\n\n`400` when an answer names no question of the draft, answers one twice or does not fit its choice; `409\ninvalid_state` when the draft was written without questions or is not `asking`; `503 unavailable` when story\ndrafts are not configured.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingStoryAnswersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The draft, being written from the answers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingStoryDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meeting-story-drafts/{draftId}/create-issue": {
       "parameters": [
         {
@@ -2904,7 +2957,7 @@
         "operationId": "createMeetingStoryIssue",
         "tags": ["meetings"],
         "summary": "Create a ready draft's story in Jira, in its series' project. Writes to Jira.",
-        "description": "Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the\nstory, its acceptance criteria, what is out of scope, open questions and the meeting it came from as the\ndescription; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its\nissue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira\nproject; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).\n",
+        "description": "Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the\nstory, its acceptance criteria, what is out of scope, open questions, a grill's answers and the meeting it came\nfrom as the description; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its\nissue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira\nproject; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).\n",
         "responses": {
           "200": {
             "description": "The draft, created.",
@@ -6304,11 +6357,143 @@
             },
             "description": "The notes to draft from; all of the topic's notes when absent or empty."
           },
+          "mode": {
+            "$ref": "#/components/schemas/MeetingStoryMode"
+          },
           "budgetNanoAiu": {
             "type": "integer",
             "minimum": 1,
             "maximum": 50000000000,
             "description": "The run's AIU cap, at most 50 AIU; the server's story draft cap when absent."
+          }
+        }
+      },
+      "MeetingStoryMode": {
+        "type": "string",
+        "enum": ["draft", "grill"],
+        "description": "`draft` (the default): the agent writes the story straight from the notes. `grill`: it asks the person\nquestions first, then writes the story from the answers.\n"
+      },
+      "GrillOption": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "detail", "recommended"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "What choosing it means for the story."
+          },
+          "recommended": {
+            "type": "boolean",
+            "description": "The agent's pick; exactly one option of a question has it."
+          }
+        }
+      },
+      "GrillQuestion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "text", "options"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^Q[1-9][0-9]*$",
+            "description": "Q1, Q2, ... in the order asked."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/GrillOption"
+            }
+          }
+        }
+      },
+      "GrillChoice": {
+        "type": "string",
+        "enum": ["option", "open", "own"],
+        "description": "One of the question's options, left open for the story, or the person's own words."
+      },
+      "GrillAnswer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["questionId", "question", "choice", "answer"],
+        "description": "An answer as kept, with the question as it was asked.",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "pattern": "^Q[1-9][0-9]*$"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 1
+          },
+          "choice": {
+            "$ref": "#/components/schemas/GrillChoice"
+          },
+          "answer": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "description": "The option chosen (its label and detail) or the person's words; null when left open."
+          }
+        }
+      },
+      "MeetingStoryAnswersRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["confirmSpend", "answers"],
+        "properties": {
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          },
+          "answers": {
+            "type": "array",
+            "maxItems": 6,
+            "description": "At most one answer per question; a question not answered is left open.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["questionId", "choice"],
+              "properties": {
+                "questionId": {
+                  "type": "string",
+                  "pattern": "^Q[1-9][0-9]*$"
+                },
+                "choice": {
+                  "$ref": "#/components/schemas/GrillChoice"
+                },
+                "option": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3,
+                  "description": "The option's index in the question's `options`; only with `choice: option`."
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000,
+                  "description": "The person's own words; only with `choice: own`."
+                }
+              }
+            }
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000000000,
+            "description": "The second run's AIU cap, at most 50 AIU; the server's story draft cap when absent."
           }
         }
       },
@@ -6381,8 +6566,8 @@
       },
       "MeetingStoryDraftStatus": {
         "type": "string",
-        "enum": ["drafting", "ready", "failed", "created"],
-        "description": "`drafting`: the agent is writing it. `ready`: the story can be checked and created. `failed`: no story, see\n`failure`. `created`: in Jira as `jiraKey`.\n"
+        "enum": ["drafting", "asking", "ready", "failed", "created"],
+        "description": "`drafting`: the agent is writing it (or, for a grill, its questions). `asking`: a grill's questions wait for\nthe person's answers. `ready`: the story can be checked and created. `failed`: no story, see `failure`.\n`created`: in Jira as `jiraKey`.\n"
       },
       "MeetingStoryDraft": {
         "type": "object",
@@ -6393,9 +6578,13 @@
           "meetingId",
           "topicTitle",
           "noteIds",
+          "mode",
           "status",
           "story",
           "failure",
+          "questions",
+          "answers",
+          "spentNanoAiu",
           "target",
           "jiraKey",
           "jiraUrl",
@@ -6429,6 +6618,9 @@
             },
             "description": "The chosen notes; empty means all of the topic's notes."
           },
+          "mode": {
+            "$ref": "#/components/schemas/MeetingStoryMode"
+          },
           "status": {
             "$ref": "#/components/schemas/MeetingStoryDraftStatus"
           },
@@ -6445,6 +6637,41 @@
           "failure": {
             "type": ["string", "null"],
             "description": "Why there is no story, for a failed draft."
+          },
+          "questions": {
+            "description": "A grill's questions, once the agent asked them; null for a plain draft and before.",
+            "oneOf": [
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 6,
+                "items": {
+                  "$ref": "#/components/schemas/GrillQuestion"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answers": {
+            "description": "A grill's answers, one per question in their order, once sent; null before and for a plain draft.",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GrillAnswer"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spentNanoAiu": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What every run of the draft spent, a grill's two runs together."
           },
           "target": {
             "type": "object",
@@ -6490,7 +6717,7 @@
             ]
           },
           "run": {
-            "description": "The agent run that wrote it.",
+            "description": "The draft's latest agent run, the one its status follows.",
             "oneOf": [
               {
                 "type": "object",

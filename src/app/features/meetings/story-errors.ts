@@ -3,7 +3,7 @@ import { techLine, type CommandErrorView } from '@core/commands/command-error';
 import { meetingErrorView } from './meeting-errors';
 
 /** What the person was doing with a story when the API refused. */
-export type StoryAction = 'draft' | 'discard' | 'create' | 'target';
+export type StoryAction = 'draft' | 'answer' | 'discard' | 'create' | 'target';
 
 /** The API's own words for a problem, when it sent a `detail`; otherwise `fallback`. */
 function detailOr(error: ApiError, fallback: string): string {
@@ -17,13 +17,14 @@ function detailOr(error: ApiError, fallback: string): string {
 /** Headings for a 409, by action: the draft or topic was not in a state that allows it. */
 const NOT_NOW: Readonly<Record<StoryAction, string>> = {
   draft: "This topic can't be drafted now",
+  answer: "These answers can't be sent now",
   discard: "This draft can't be discarded",
   create: "This story can't go to Jira yet",
   target: "The series can't take that",
 };
 
 /**
- * What the story dialogs show for an API error. A 503 on a draft means the server has no story agent; on Create it
+ * What the story dialogs show for an API error. A 503 on a draft or on answers means the server has no story agent; on Create it
  * means Jira refused or could not be reached, and the draft is kept. Anything else reads like the Meetings page.
  */
 export function storyErrorView(
@@ -42,7 +43,7 @@ export function storyErrorView(
       ),
       tech,
     };
-  if (error.status === 503 && action === 'draft')
+  if (error.status === 503 && (action === 'draft' || action === 'answer'))
     return {
       variant: 'error',
       heading: "Story drafts aren't set up on this server",

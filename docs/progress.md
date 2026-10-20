@@ -1,5 +1,38 @@
 # Ahoy frontend · progress
 
+**Updated 2026-10-19 for Meetings, slice 3: Grill me** (on `feature/meetings-slice-3`, based on
+`fix/meetings-raised-by-labels` (PR #36), matching `ahoy-hosted`'s branch of the same name). Offline only; no API or
+TEST environment contacted; 0 AIU.
+
+## Meetings, slice 3: Grill me (2026-10-19)
+
+- The user asked for slice 3 on 2026-10-19 (board `StoryGrill`; `ahoy-hosted` design §5 "Grill me") and chose all
+  questions in one agent run, shown one at a time; a second run writes the story from the answers.
+- Contract: re-vendored from `ahoy-hosted` `feature/meetings-slice-3` at 4b36d33, keeping this repository's redacted
+  backlog JQL (`LUTA`, `OTHER_COMPANY`). New: `answerMeetingStoryQuestions`, `mode` on the draft request, status
+  `asking`, and `mode`, `questions`, `answers` and `spentNanoAiu` on each draft. `schema.d.ts` gained them by hand in
+  the generator's style (no `openapi-typescript` here); `npm run api:check` must confirm it. Types, guards (2 to 4
+  options, exactly one recommended, an open answer has no text), `ApiClient.answerMeetingStoryQuestions`, fixtures
+  (an asking grill in the list, `answerMeetingStoryQuestions.json`) and the mock (a simulated agent asks two
+  questions, then writes the story with the answers in it).
+- Page (`features/meetings/`): "Turn into a user story" now offers Grill me beside Draft it for me (the cost says it
+  may spend the limit twice). The topic shows "Finding questions…", then "Questions to answer" with Answer questions,
+  which opens the new `StoryGrillDialog`: one question at a time with "Question n of m" and the AIU spent, the agent's
+  options A, B… with Recommended, "Leave it open in the story", "Answer in my own words", answered questions above
+  with Change, Next question, "Stop and write the story now" (the rest is left open) and Discard. The answers go once, after
+  the last question, capped like the questions; closing keeps the answers picked so far. The review dialog says when
+  the agent is finding questions, offers Answer the questions while it asks, shows "Your answers" with the story, and
+  adds "Grill me on it" beside Write it again. "Ask a stakeholder" from the board is not built (not agreed).
+- What ran here (npm registry blocked, so no Angular, Vitest or ESLint): the stand-in TypeScript check over the
+  feature, the new dialog, its imports and specs (templates not checked); the pure specs under the shim: story drafts
+  16/16, story errors 5/5, mock meetings 11/11, meeting guards 11/11, guards 151/151, API contract 131/131, mock
+  conformance 8/8, domain meetings 11/11, meeting errors 5/5; the boundary check; `openapi-mirror --check`; Prettier
+  on every changed file.
+- Did not run: `ng build`, `npm run typecheck` (strict templates), `npm run lint`, `npm run api:check`, Vitest,
+  including three new page specs in `features/meetings/meetings.spec.ts` (a grill answered to the end, "Grill me on
+  it" then "Stop and write the story now", and Discard from the questions), and any browser check. Needs from other lanes: none; `ahoy-hosted`
+  migration 0016 must be applied before a grill works against a real API.
+
 **Updated 2026-10-17 for Meetings, slice 2: user stories from topics** (on `feature/meetings-slice-2`, based on `main` after
 slice 1 merged in PR #33, matching `ahoy-hosted`'s branch of the same name). Offline only; no API or TEST environment
 contacted; 0 AIU.
@@ -964,6 +997,10 @@ will carry the lane and the merge together, once the user approves it.**
 
 ## Where we are
 
+Meetings, slice 3 (2026-10-19) is on `feature/meetings-slice-3`, in its pull request (based on PR #36): Grill me, the
+agent's questions answered one at a time before it writes the story. Only a stand-in type check, the pure specs and
+Prettier ran here (npm registry blocked); see its section above.
+
 Meetings, slice 2 (2026-10-17) is on `feature/meetings-slice-2`, in its pull request: a topic turned into a user story
 by an agent, checked and created in Jira with one click. Only a stand-in type check, the pure specs and Prettier ran
 here (npm registry blocked); see its section above.
@@ -1112,6 +1149,11 @@ and the backlog table with the **Ahoy** column joined to the `StoriesStore`. The
 
 ## Start here next
 
+Meetings, slice 3: after PR #36 merges, on `feature/meetings-slice-3` run `npm run api:check` and `npm run build &&
+npm run typecheck && npm run lint && npm test && npm run format:check` on Node 24 (nothing Angular ran when it was
+written), fix what strict templates or lint find, then try Grill me on `npm run start:mock` and against a local
+`ahoy-hosted --simulate` with migration 0016. Slice 4 (Confluence) needs its own agreement first.
+
 Meetings, slice 2: on `feature/meetings-slice-2` run `npm run api:check` and `npm run build && npm run typecheck &&
 npm run lint && npm test && npm run format:check` on Node 24 (nothing Angular ran when it was written), fix what strict
 templates or lint find, then try `/meetings` on `npm run start:mock` (Turn into a user story, Check the story, Create in
@@ -1157,6 +1199,11 @@ The next release must retain the corrected NGINX document root; remote image sta
 Do not use the live API or TEST without explicit approval.
 
 ## Prompt for a new session
+
+The newest change, on `feature/meetings-slice-3` (2026-10-19, in its pull request, based on PR #36), adds Grill me:
+the agent asks questions with answer options, the person answers them one at a time, then the agent writes the story.
+Its part of `schema.d.ts` was written by hand and nothing Angular ran in the session that wrote it (npm registry
+blocked): run `npm run api:check` and the full check on Node 24 first. See "Meetings, slice 3".
 
 The newest change, on `feature/meetings-slice-2` (2026-10-17, in its pull request; slice 1 is merged), turns a
 meeting topic into a Jira user story: an agent drafts it, a person checks it and creates it in Jira with one click.

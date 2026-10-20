@@ -472,6 +472,169 @@ describe('Meetings on the mock backend', () => {
     );
   });
 
+  it('grills: asks the questions one at a time, sends the answers once, then shows the story written from them', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    dialog()
+      .querySelector<HTMLInputElement>('input[name="story-mode"]')!
+      .click();
+    await flush(page);
+    buttonNamed(dialog(), 'Grill me').click();
+    await flush(page);
+    expect(
+      page.requests.find(
+        (r) => r.method === 'POST' && r.path.endsWith('/story-drafts')
+      )?.body
+    ).toEqual({ confirmSpend: true, mode: 'grill' });
+    expect(text(card(page.root, title).querySelector('.story .ah-tag'))).toBe(
+      'Finding questions…'
+    );
+
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    const topic = card(page.root, title);
+    expect(text(topic.querySelector('.story .ah-tag'))).toBe(
+      'Questions to answer'
+    );
+    buttonNamed(topic, 'Answer questions').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.ah-dialog__title'))).toBe('Grill me');
+    expect(text(dialog().querySelector('.progress strong'))).toBe(
+      'Question 1 of 2'
+    );
+    expect(buttonNamed(dialog(), 'Next question').disabled).toBe(true);
+    const answers = () => [
+      ...dialog().querySelectorAll<HTMLInputElement>(
+        'input[name="grill-answer"]'
+      ),
+    ];
+    expect(answers()).toHaveLength(4);
+    expect(text(dialog().querySelector('fieldset .ah-tag'))).toBe(
+      'Recommended'
+    );
+    answers()[1]!.click();
+    await flush(page);
+    buttonNamed(dialog(), 'Next question').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.progress strong'))).toBe(
+      'Question 2 of 2'
+    );
+    expect(text(dialog().querySelector('.answered li strong'))).toBe(
+      'Every user'
+    );
+    answers()[3]!.click();
+    await flush(page);
+    expect(buttonNamed(dialog(), /^Write the story/).disabled).toBe(true);
+    const box = dialog().querySelector('textarea')!;
+    box.value = 'Keep it, and ask finance.';
+    box.dispatchEvent(new Event('input'));
+    await flush(page);
+    expect(page.requests.some((r) => r.path.endsWith('/answers'))).toBe(false);
+    buttonNamed(dialog(), /^Write the story/).click();
+    await flush(page);
+    expect(
+      page.requests
+        .filter((r) => r.method === 'POST' && r.path.endsWith('/answers'))
+        .map((r) => r.body)
+    ).toEqual([
+      {
+        confirmSpend: true,
+        answers: [
+          { questionId: 'Q1', choice: 'option', option: 1 },
+          {
+            questionId: 'Q2',
+            choice: 'own',
+            text: 'Keep it, and ask finance.',
+          },
+        ],
+        budgetNanoAiu: 5_000_000_000,
+      },
+    ]);
+    expect(text(card(page.root, title).querySelector('.story .ah-tag'))).toBe(
+      'Writing the story…'
+    );
+
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    buttonNamed(card(page.root, title), 'Check the story').click();
+    await flush(page);
+    expect(text(dialog().querySelector('article'))).toContain('Your answers');
+    expect(text(dialog().querySelector('article'))).toContain(
+      'Keep it, and ask finance.'
+    );
+  });
+
+  it('grills a story already written, and "Stop and write the story now" leaves every question open', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Draft it for me').click();
+    await flush(page);
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    buttonNamed(card(page.root, title), 'Check the story').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Grill me on it').click();
+    await flush(page);
+    expect(
+      page.requests
+        .filter((r) => r.method === 'POST' && r.path.endsWith('/story-drafts'))
+        .map((r) => r.body)
+    ).toEqual([{ confirmSpend: true }, { confirmSpend: true, mode: 'grill' }]);
+    expect(text(dialog().querySelector('ah-banner'))).toContain(
+      'First Mate is finding questions to ask you'
+    );
+
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    expect(text(dialog().querySelector('ah-banner'))).toContain(
+      'First Mate has questions'
+    );
+    buttonNamed(dialog(), 'Answer the questions').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.ah-dialog__title'))).toBe('Grill me');
+    buttonNamed(dialog(), 'Stop and write the story now').click();
+    await flush(page);
+    expect(
+      page.requests.find(
+        (r) => r.method === 'POST' && r.path.endsWith('/answers')
+      )?.body
+    ).toEqual({
+      confirmSpend: true,
+      answers: [],
+      budgetNanoAiu: 5_000_000_000,
+    });
+  });
+
+  it('discards a grill from its questions, so the topic can be drafted again', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    dialog()
+      .querySelector<HTMLInputElement>('input[name="story-mode"]')!
+      .click();
+    await flush(page);
+    buttonNamed(dialog(), 'Grill me').click();
+    await flush(page);
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    buttonNamed(card(page.root, title), 'Answer questions').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Discard').click();
+    await flush(page);
+    expect(
+      page.requests.filter((r) => r.method === 'DELETE').map((r) => r.path)
+    ).toHaveLength(1);
+    expect(page.requests.some((r) => r.path.endsWith('/answers'))).toBe(false);
+    expect(
+      buttonNamed(card(page.root, title), 'Turn into a user story')
+    ).toBeDefined();
+  });
+
   it('does not create a story until the series has a Jira project, and lets the person set it from the review', async () => {
     const page = await open('/meetings', (server) => {
       const series = server.meetingDesk.listSeries()[0]!;

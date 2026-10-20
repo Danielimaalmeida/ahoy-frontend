@@ -4,9 +4,13 @@
   "meetingId": "7a3c9e1b-2d4f-4a6b-8c0e-1f2a3b4c5d6e",
   "topicTitle": "Late fees for enterprise accounts",
   "noteIds": ["4b8d2f6a-1c3e-4a5b-9d7f-2e4a6c8b0d1f"],
+  "mode": "draft",
   "status": "drafting",
   "story": null,
   "failure": null,
+  "questions": null,
+  "answers": null,
+  "spentNanoAiu": 0,
   "target": {
     "projectKey": "PROJ",
     "issueType": "Story"
