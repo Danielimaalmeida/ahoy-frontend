@@ -31,7 +31,7 @@ export interface MeetingLike {
 export interface TopicLike {
   readonly id: string;
   readonly status: 'open' | 'moved';
-  readonly raisedBy: 'other_company' | 'acme';
+  readonly raisedBy: 'us' | 'them';
   readonly raisedByEmail: string | null;
   readonly origin: 'planned' | 'in_meeting';
   readonly createdAt: string;
@@ -82,12 +82,18 @@ export function shortEmail(email: string): string {
   return at > 0 ? email.slice(0, at + 1) : email;
 }
 
+/**
+ * The names the page shows for the two sides of a meeting. The API keeps `us` and `them`; the page never shows those
+ * words: our side is OTHER_COMPANY, the stakeholders' side is ACME.
+ */
+export const RAISED_BY_LABELS = { us: 'OTHER_COMPANY', them: 'ACME' } as const;
+
 /** Who raised a topic, for its tag: "OTHER_COMPANY", "ACME" or "ACME · maria@". */
 export function raisedByLabel(topic: TopicLike): string {
-  if (topic.raisedBy === 'other_company') return 'OTHER_COMPANY';
+  if (topic.raisedBy === 'us') return RAISED_BY_LABELS.us;
   return topic.raisedByEmail === null
-    ? 'ACME'
-    : `ACME · ${shortEmail(topic.raisedByEmail)}`;
+    ? RAISED_BY_LABELS.them
+    : `${RAISED_BY_LABELS.them} · ${shortEmail(topic.raisedByEmail)}`;
 }
 
 /** A day as the page writes it: "Tue 13 Oct", in the browser's time zone; "—" for a date it cannot read. */

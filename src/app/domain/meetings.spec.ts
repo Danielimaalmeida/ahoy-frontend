@@ -22,7 +22,7 @@ const meeting = (
 
 const topic = (over: Partial<TopicLike> & { id: string }): TopicLike => ({
   status: 'open',
-  raisedBy: 'other_company',
+  raisedBy: 'us',
   raisedByEmail: null,
   origin: 'planned',
   createdAt: '2026-10-06T10:24:00.000Z',
@@ -59,10 +59,10 @@ describe('meetings', () => {
 
   it('says who raised a topic, keeping a stakeholder short', () => {
     expect(raisedByLabel(topic({ id: 'a' }))).toBe('OTHER_COMPANY');
-    expect(raisedByLabel(topic({ id: 'b', raisedBy: 'acme' }))).toBe('ACME');
+    expect(raisedByLabel(topic({ id: 'b', raisedBy: 'them' }))).toBe('ACME');
     expect(
       raisedByLabel(
-        topic({ id: 'c', raisedBy: 'acme', raisedByEmail: 'maria@example.com' })
+        topic({ id: 'c', raisedBy: 'them', raisedByEmail: 'maria@example.com' })
       )
     ).toBe('ACME · maria@');
     expect(shortEmail('no-at-sign')).toBe('no-at-sign');
