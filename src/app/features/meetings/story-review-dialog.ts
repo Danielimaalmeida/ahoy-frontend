@@ -1,7 +1,7 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
 import type { ApiError } from '@core/api/api-error';
-import type { MeetingStoryDraft } from '@core/api/types';
+import type { MeetingStoryDraft, MeetingStoryMode } from '@core/api/types';
 import { meetingDay, meetingTime, shortEmail } from '@domain/meetings';
 import { storySentence, targetText } from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
@@ -13,6 +13,7 @@ import type { MeetingsStore } from './meetings-store';
 import { SeriesJiraDialog, type SeriesJiraData } from './series-jira-dialog';
 import { storyErrorView, type StoryAction } from './story-errors';
 import type { StoryDraftsStore } from './story-drafts-store';
+import { StoryGrillDialog, type StoryGrillData } from './story-grill-dialog';
 
 /** What the story review dialog is opened with: both stores of the page and the draft to show. */
 export interface StoryReviewData {
@@ -23,9 +24,10 @@ export interface StoryReviewData {
 
 /**
  * "Check the user story" (board `StoryReview`): the story the agent wrote, rendered as it will be in Jira, and where it
- * goes (the series' project and issue type). Create in Jira is one click; not right means "Write it again". The story
- * itself is not edited here: no manual typing. While the agent is still writing, it says so and can be stopped; a
- * failed draft says why. The draft is read live from the page's store, so it updates as the agent finishes.
+ * goes (the series' project and issue type). Create in Jira is one click; not right means "Write it again" or "Grill
+ * me on it" (questions first). The story itself is not edited here: no manual typing. While the agent is still
+ * writing, it says so and can be stopped; a grill's questions are answered in their own dialog; a failed draft says
+ * why. The draft is read live from the page's store, so it updates as the agent finishes.
  */
 @Component({
   selector: 'ah-story-review-dialog',
@@ -106,7 +108,7 @@ export interface StoryReviewData {
         <span ahDialogLead>{{ lead() }}</span>
         @switch (d.status) {
           @case ('drafting') {
-            <ah-banner variant="info" heading="First Mate is writing the story"
+            <ah-banner variant="info" [heading]="draftingHeading()"
               >This takes a short while. It shows here as soon as it is ready;
               you can close this meanwhile.</ah-banner
             >
@@ -119,6 +121,32 @@ export interface StoryReviewData {
                 (click)="discard()"
               >
                 Stop and discard
+              </button>
+            </div>
+          }
+          @case ('asking') {
+            <ah-banner variant="info" heading="First Mate has questions"
+              >{{ questionCount() }} about this topic, one at a time. It writes
+              the story once you answer.</ah-banner
+            >
+            <div class="again">
+              <button
+                ahButton="soft"
+                size="sm"
+                type="button"
+                [disabled]="busy()"
+                (click)="answerQuestions()"
+              >
+                Answer the questions
+              </button>
+              <button
+                ahButton="ghost"
+                size="sm"
+                type="button"
+                [disabled]="busy()"
+                (click)="discard()"
+              >
+                Discard
               </button>
             </div>
           }
@@ -208,6 +236,18 @@ export interface StoryReviewData {
                     }
                   </section>
                 </div>
+                @if (givenAnswers().length > 0) {
+                  <section>
+                    <span class="label">Your answers</span>
+                    <ul>
+                      @for (a of givenAnswers(); track a.questionId) {
+                        <li class="text">
+                          {{ a.question }} <strong>{{ a.answer }}</strong>
+                        </li>
+                      }
+                    </ul>
+                  </section>
+                }
                 <div class="source ah-hint">
                   <span>From “{{ d.topicTitle }}”</span>
                   <span>{{ notesUsed() }}</span>
@@ -237,6 +277,15 @@ export interface StoryReviewData {
                     (click)="rewrite()"
                   >
                     Write it again
+                  </button>
+                  <button
+                    ahButton
+                    size="sm"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="rewrite('grill')"
+                  >
+                    Grill me on it
                   </button>
                   @if (series() !== null) {
                     <button
@@ -302,11 +351,30 @@ export class StoryReviewDialog {
   protected readonly lead = computed(() => {
     const draft = this.draft();
     if (draft === null) return '';
-    const run = draft.run;
-    const spent = run === null ? '' : ` · ${formatCap(run.nanoAiu, 2)} AIU`;
+    const spent =
+      draft.run === null ? '' : ` · ${formatCap(draft.spentNanoAiu, 2)} AIU`;
     const by = `Asked for by ${shortEmail(draft.createdBy)} on ${meetingDay(draft.createdAt)} at ${meetingTime(draft.createdAt)}`;
     return `Written by First Mate${spent}. ${by}.`;
   });
+  /** "First Mate is finding questions" for a grill not yet answered, else "… is writing the story". */
+  protected readonly draftingHeading = computed(() => {
+    const draft = this.draft();
+    return draft?.mode === 'grill' && draft.answers === null
+      ? 'First Mate is finding questions to ask you'
+      : 'First Mate is writing the story';
+  });
+  protected readonly questionCount = computed(() => {
+    const n = this.draft()?.questions?.length ?? 0;
+    return n === 1 ? 'One question' : `${n} questions`;
+  });
+  /** A grill's answers that say something: those left open are among the story's open questions. */
+  protected readonly givenAnswers = computed(() =>
+    (this.draft()?.answers ?? []).flatMap((a) =>
+      a.answer === null
+        ? []
+        : [{ questionId: a.questionId, question: a.question, answer: a.answer }]
+    )
+  );
   protected readonly notesUsed = computed(() => {
     const draft = this.draft();
     if (draft === null) return '';
@@ -357,12 +425,15 @@ export class StoryReviewDialog {
     this.ref.close(result.value);
   }
 
-  /** "Write it again": discards this draft and asks for a new one from the same notes; the dialog follows it. */
-  async rewrite(): Promise<void> {
+  /**
+   * "Write it again" (the same way as before) or "Grill me on it" (`grill`): discards this draft and asks for a new one
+   * from the same notes; the dialog follows it.
+   */
+  async rewrite(mode?: MeetingStoryMode): Promise<void> {
     const draft = this.draft();
     if (draft === null || this.busy()) return;
     this.failure.set(null);
-    const result = await this.data.drafts.rewrite(draft);
+    const result = await this.data.drafts.rewrite(draft, mode ?? draft.mode);
     if (!result.ok) {
       this.failure.set({ error: result.error, action: 'draft' });
       return;
@@ -382,6 +453,17 @@ export class StoryReviewDialog {
     }
     this.toasts.show('Story draft discarded.');
     this.ref.close();
+  }
+
+  /** Opens the grill's questions in their own dialog, in place of this one. */
+  answerQuestions(): void {
+    const draft = this.draft();
+    if (draft === null) return;
+    this.ref.close();
+    this.dialogs.open<MeetingStoryDraft, StoryGrillData>(StoryGrillDialog, {
+      data: { drafts: this.data.drafts, draftId: draft.id },
+      width: '720px',
+    });
   }
 
   /** Opens the series' Jira target; the draft is read again so its target updates. */

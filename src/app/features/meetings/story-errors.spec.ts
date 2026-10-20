@@ -33,6 +33,25 @@ describe('storyErrorView', () => {
     ]);
   });
 
+  it('says answers cannot be sent now when the grill no longer waits for them, and why', () => {
+    const view = storyErrorView(
+      problem(
+        409,
+        'invalid_state',
+        'Story draft 9c1e is drafting; only a grill waiting for answers takes them'
+      ),
+      'answer'
+    );
+    expect([view.variant, view.heading, view.text]).toEqual([
+      'notice',
+      "These answers can't be sent now",
+      'Story draft 9c1e is drafting; only a grill waiting for answers takes them',
+    ]);
+    expect(storyErrorView(problem(503, 'unavailable'), 'answer').heading).toBe(
+      "Story drafts aren't set up on this server"
+    );
+  });
+
   it('shows the API reason for a refused state as a notice', () => {
     const view = storyErrorView(
       problem(

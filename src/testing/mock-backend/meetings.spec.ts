@@ -244,5 +244,83 @@ describe('the mock meetings', () => {
         .body as MeetingStoryDraftList;
       expect(listed.items).toEqual([]);
     });
+
+    it('grills: asks two questions, takes the answers once, then writes the story with them', () => {
+      const { server, clock, topic } = withTopic();
+      const draft = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        { confirmSpend: true, mode: 'grill' }
+      ).body as MeetingStoryDraft;
+      expect([draft.mode, draft.status, draft.questions]).toEqual([
+        'grill',
+        'drafting',
+        null,
+      ]);
+      expect(
+        call(server, 'POST', `/meeting-story-drafts/${draft.id}/answers`, {
+          confirmSpend: true,
+          answers: [],
+        }).status
+      ).toBe(409);
+      clock.advance(MOCK_DRAFT_MS);
+      const asking = call(server, 'GET', `/meeting-story-drafts/${draft.id}`)
+        .body as MeetingStoryDraft;
+      expect([asking.status, asking.questions?.map((q) => q.id)]).toEqual([
+        'asking',
+        ['Q1', 'Q2'],
+      ]);
+      expect(
+        call(server, 'POST', `/meeting-story-drafts/${draft.id}/answers`, {
+          confirmSpend: true,
+          answers: [{ questionId: 'Q9', choice: 'open' }],
+        }).status
+      ).toBe(400);
+      const answered = call(
+        server,
+        'POST',
+        `/meeting-story-drafts/${draft.id}/answers`,
+        {
+          confirmSpend: true,
+          answers: [
+            { questionId: 'Q1', choice: 'own', text: ' Finance only ' },
+          ],
+        }
+      );
+      expect(answered.status).toBe(202);
+      const writing = answered.body as MeetingStoryDraft;
+      expect([writing.status, writing.answers]).toEqual([
+        'drafting',
+        [
+          {
+            questionId: 'Q1',
+            question: asking.questions![0]!.text,
+            choice: 'own',
+            answer: 'Finance only',
+          },
+          {
+            questionId: 'Q2',
+            question: asking.questions![1]!.text,
+            choice: 'open',
+            answer: null,
+          },
+        ],
+      ]);
+      clock.advance(MOCK_DRAFT_MS);
+      const ready = call(server, 'GET', `/meeting-story-drafts/${draft.id}`)
+        .body as MeetingStoryDraft;
+      expect(ready.status).toBe('ready');
+      expect(ready.story!.acceptanceCriteria).toContain(
+        'As answered: Finance only'
+      );
+      expect(ready.story!.openQuestions).toContain(asking.questions![1]!.text);
+      expect(
+        call(server, 'POST', `/meeting-story-drafts/${draft.id}/answers`, {
+          confirmSpend: true,
+          answers: [],
+        }).status
+      ).toBe(409);
+    });
   });
 });

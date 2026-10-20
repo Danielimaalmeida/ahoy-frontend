@@ -1,0 +1,81 @@
+{
+  "id": "9c1e4f2a-3b5d-4e6f-8a7b-1c2d3e4f5a62",
+  "topicId": "2f6d8b1c-4a3e-4c5d-9e7f-0a1b2c3d4e61",
+  "meetingId": "7a3c9e1b-2d4f-4a6b-8c0e-1f2a3b4c5d6e",
+  "topicTitle": "Invoice reminders by e-mail",
+  "noteIds": [],
+  "mode": "grill",
+  "status": "drafting",
+  "story": null,
+  "failure": null,
+  "questions": [
+    {
+      "id": "Q1",
+      "text": "Should the fee be added automatically, or does finance approve each one first?",
+      "options": [
+        {
+          "label": "Finance approves each fee",
+          "detail": "Fewer disputes with big customers; keeps the first version small.",
+          "recommended": true
+        },
+        {
+          "label": "Added automatically",
+          "detail": "No manual work, but disputes go to account managers.",
+          "recommended": false
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "text": "When does the fee start?",
+      "options": [
+        {
+          "label": "30 days after the due date",
+          "detail": "Matches the reminder emails customers already get.",
+          "recommended": true
+        },
+        {
+          "label": "On the due date",
+          "detail": "Stricter; expect more complaints.",
+          "recommended": false
+        },
+        {
+          "label": "60 days after the due date",
+          "detail": "Gentler; slower cash flow.",
+          "recommended": false
+        }
+      ]
+    }
+  ],
+  "answers": [
+    {
+      "questionId": "Q1",
+      "question": "Should the fee be added automatically, or does finance approve each one first?",
+      "choice": "own",
+      "answer": "Finance approves fees above 500 EUR; smaller ones are added automatically."
+    },
+    {
+      "questionId": "Q2",
+      "question": "When does the fee start?",
+      "choice": "option",
+      "answer": "30 days after the due date — Matches the reminder emails customers already get."
+    }
+  ],
+  "spentNanoAiu": 600000000,
+  "target": {
+    "projectKey": "PROJ",
+    "issueType": "Story"
+  },
+  "jiraKey": null,
+  "jiraUrl": null,
+  "jiraCreatedBy": null,
+  "jiraCreatedAt": null,
+  "run": {
+    "status": "queued",
+    "budgetNanoAiu": 5000000000,
+    "nanoAiu": 0,
+    "cancelRequested": false
+  },
+  "createdBy": "alex@example.com",
+  "createdAt": "2026-10-15T09:31:00.000Z"
+}

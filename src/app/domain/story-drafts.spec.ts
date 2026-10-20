@@ -2,13 +2,21 @@ import {
   anyDrafting,
   chosenNoteIds,
   draftChip,
+  firstUnanswered,
+  grillAnswerBodies,
+  grillProgress,
   isProjectKey,
   latestDraftByTopic,
   normaliseProjectKey,
   notesCount,
+  optionLetter,
+  pickComplete,
+  pickSummary,
   storySentence,
   targetText,
   type DraftLike,
+  type GrillPick,
+  type GrillQuestionLike,
 } from './story-drafts';
 
 const draft = (
@@ -53,15 +61,21 @@ describe('story drafts', () => {
 
   it('labels each state of a draft in plain words', () => {
     expect(
-      ['drafting', 'ready', 'failed', 'created'].map((s) =>
+      ['drafting', 'asking', 'ready', 'failed', 'created'].map((s) =>
         draftChip(s as DraftLike['status'])
       )
     ).toEqual([
       'Writing the story…',
+      'Questions to answer',
       'Story ready to check',
       'Story not written',
       'In Jira',
     ]);
+    expect(draftChip('drafting', true)).toBe('Finding questions…');
+  });
+
+  it('does not keep reading while a grill waits for answers', () => {
+    expect(anyDrafting([draft('a', 't', 'asking', 'x')])).toBe(false);
   });
 
   it('writes the story as one sentence without doubled full stops', () => {
@@ -117,5 +131,101 @@ describe('story drafts', () => {
 
   it('refuses a choice of no notes when the topic has some, since the API reads it as all of them', () => {
     expect(chosenNoteIds(['a', 'b'], new Set())).toBeNull();
+  });
+
+  describe('a grill', () => {
+    const questions: GrillQuestionLike[] = [
+      {
+        id: 'Q1',
+        text: 'Who approves each fee?',
+        options: [
+          { label: 'Finance', detail: 'Fewer disputes.', recommended: true },
+          {
+            label: 'Nobody',
+            detail: 'Added automatically.',
+            recommended: false,
+          },
+        ],
+      },
+      {
+        id: 'Q2',
+        text: 'When does the fee start?',
+        options: [
+          {
+            label: '30 days late',
+            detail: 'Matches the reminders.',
+            recommended: true,
+          },
+          { label: 'On the due date', detail: 'Stricter.', recommended: false },
+        ],
+      },
+      {
+        id: 'Q3',
+        text: 'Which currency?',
+        options: [
+          { label: 'EUR', detail: 'Only euros.', recommended: true },
+          { label: 'Any', detail: 'The invoice currency.', recommended: false },
+        ],
+      },
+    ];
+    const q1 = questions[0]!;
+
+    it('letters the options A, B, C', () => {
+      expect([0, 1, 2].map(optionLetter)).toEqual(['A', 'B', 'C']);
+    });
+
+    it('takes an option the question offers, an open answer, or own words that are not blank', () => {
+      expect(pickComplete(q1, { choice: 'option', option: 1 })).toBe(true);
+      expect(pickComplete(q1, { choice: 'option', option: 2 })).toBe(false);
+      expect(pickComplete(q1, { choice: 'open' })).toBe(true);
+      expect(pickComplete(q1, { choice: 'own', text: '  ' })).toBe(false);
+      expect(pickComplete(q1, { choice: 'own', text: 'x'.repeat(2001) })).toBe(
+        false
+      );
+      expect(
+        pickComplete(q1, { choice: 'own', text: ' Finance, over 500 EUR ' })
+      ).toBe(true);
+    });
+
+    it('sums up each answer in a few words', () => {
+      expect(pickSummary(q1, { choice: 'option', option: 0 })).toBe('Finance');
+      expect(pickSummary(q1, { choice: 'open' })).toBe(
+        'Left open in the story'
+      );
+      expect(
+        pickSummary(q1, { choice: 'own', text: ' Finance, over 500 EUR ' })
+      ).toBe('Finance, over 500 EUR');
+    });
+
+    it('sends the answers in the order asked, trimmed, and leaves out questions not answered', () => {
+      const picks = new Map<string, GrillPick>([
+        ['Q3', { choice: 'own', text: ' Any currency ' }],
+        ['Q1', { choice: 'option', option: 1 }],
+        ['Q2', { choice: 'own', text: '   ' }],
+      ]);
+      expect(grillAnswerBodies(questions, picks)).toEqual([
+        { questionId: 'Q1', choice: 'option', option: 1 },
+        { questionId: 'Q3', choice: 'own', text: 'Any currency' },
+      ]);
+      expect(
+        grillAnswerBodies(questions, new Map([['Q2', { choice: 'open' }]]))
+      ).toEqual([{ questionId: 'Q2', choice: 'open' }]);
+    });
+
+    it('starts at the first question not yet answered, and stays on the last once all are', () => {
+      expect(firstUnanswered(questions, new Map())).toBe(0);
+      expect(
+        firstUnanswered(questions, new Map([['Q1', { choice: 'open' }]]))
+      ).toBe(1);
+      const all = new Map<string, GrillPick>(
+        questions.map((q) => [q.id, { choice: 'open' }])
+      );
+      expect(firstUnanswered(questions, all)).toBe(2);
+      expect(firstUnanswered([], new Map())).toBe(0);
+    });
+
+    it('counts the questions from one', () => {
+      expect(grillProgress(2, 4)).toBe('Question 3 of 4');
+    });
   });
 });

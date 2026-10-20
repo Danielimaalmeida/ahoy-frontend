@@ -1296,6 +1296,10 @@ export interface paths {
      *     writes to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll
      *     `getMeetingStoryDraft` until it is not `drafting`.
      *
+     *     With `mode: grill` the run asks first: it replies with 1–6 questions, each with 2–4 answer options and one
+     *     recommended, and the draft becomes `asking`. `answerMeetingStoryQuestions` then queues a second run that writes
+     *     the story from the answers.
+     *
      *     `409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503
      *     unavailable` when story drafts are not configured or the control repo cannot be read.
      */
@@ -1330,6 +1334,36 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/meeting-story-drafts/{draftId}/answers': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Answer a grill's questions, so the agent writes the story. May spend AIU.
+     * @description Keeps the answers, one per question at most: an option (its index in `options`), the person's own words, or left
+     *     open; a question not answered is left open and goes under the story's open questions. Then queues a second run
+     *     of the story draft agent under the same `MEET-<n>` label, given the questions and the answers; the draft is
+     *     `drafting` again until it is `ready` or `failed`. Answers are sent once. `confirmSpend` must be true; the run
+     *     is capped at `budgetNanoAiu`, else the server's cap.
+     *
+     *     `400` when an answer names no question of the draft, answers one twice or does not fit its choice; `409
+     *     invalid_state` when the draft was written without questions or is not `asking`; `503 unavailable` when story
+     *     drafts are not configured.
+     */
+    readonly post: operations['answerMeetingStoryQuestions'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meeting-story-drafts/{draftId}/create-issue': {
     readonly parameters: {
       readonly query?: never;
@@ -1344,8 +1378,8 @@ export interface paths {
     /**
      * Create a ready draft's story in Jira, in its series' project. Writes to Jira.
      * @description Creates the issue with the server's Jira credentials (`POST /rest/api/2/issue`): the title as summary; the
-     *     story, its acceptance criteria, what is out of scope, open questions and the meeting it came from as the
-     *     description; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its
+     *     story, its acceptance criteria, what is out of scope, open questions, a grill's answers and the meeting it came
+     *     from as the description; the labels `ahoy-meeting` and `ahoy-draft-<id>`. Once only: a draft already created answers its
      *     issue. `409 invalid_state` when the draft is not `ready`, or its meeting is a one-off or its series has no Jira
      *     project; `503 unavailable` when Jira is not configured or refuses (the draft stays `ready`).
      */
@@ -1699,7 +1733,8 @@ export interface components {
       readonly label: string;
       /** @description The efforts the model takes (`[]`, none); null when the catalogue does not say. */
       readonly reasoningEfforts:
-        readonly components['schemas']['ReasoningEffort'][] | null;
+        | readonly components['schemas']['ReasoningEffort'][]
+        | null;
     };
     /** @description What a slot of a story started now runs on when nobody chooses (a `SlotModel` without `chosen`). */
     readonly SlotDefault: {
@@ -2386,7 +2421,55 @@ export interface components {
       readonly confirmSpend: true;
       /** @description The notes to draft from; all of the topic's notes when absent or empty. */
       readonly noteIds?: readonly string[];
+      readonly mode?: components['schemas']['MeetingStoryMode'];
       /** @description The run's AIU cap, at most 50 AIU; the server's story draft cap when absent. */
+      readonly budgetNanoAiu?: number;
+    };
+    /**
+     * @description `draft` (the default): the agent writes the story straight from the notes. `grill`: it asks the person
+     *     questions first, then writes the story from the answers.
+     * @enum {string}
+     */
+    readonly MeetingStoryMode: 'draft' | 'grill';
+    readonly GrillOption: {
+      readonly label: string;
+      /** @description What choosing it means for the story. */
+      readonly detail: string;
+      /** @description The agent's pick; exactly one option of a question has it. */
+      readonly recommended: boolean;
+    };
+    readonly GrillQuestion: {
+      /** @description Q1, Q2, ... in the order asked. */
+      readonly id: string;
+      readonly text: string;
+      readonly options: readonly components['schemas']['GrillOption'][];
+    };
+    /**
+     * @description One of the question's options, left open for the story, or the person's own words.
+     * @enum {string}
+     */
+    readonly GrillChoice: 'option' | 'open' | 'own';
+    /** @description An answer as kept, with the question as it was asked. */
+    readonly GrillAnswer: {
+      readonly questionId: string;
+      readonly question: string;
+      readonly choice: components['schemas']['GrillChoice'];
+      /** @description The option chosen (its label and detail) or the person's words; null when left open. */
+      readonly answer: string | null;
+    };
+    readonly MeetingStoryAnswersRequest: {
+      /** @constant */
+      readonly confirmSpend: true;
+      /** @description At most one answer per question; a question not answered is left open. */
+      readonly answers: readonly {
+        readonly questionId: string;
+        readonly choice: components['schemas']['GrillChoice'];
+        /** @description The option's index in the question's `options`; only with `choice: option`. */
+        readonly option?: number;
+        /** @description The person's own words; only with `choice: own`. */
+        readonly text?: string;
+      }[];
+      /** @description The second run's AIU cap, at most 50 AIU; the server's story draft cap when absent. */
       readonly budgetNanoAiu?: number;
     };
     /** @description A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it. */
@@ -2403,12 +2486,17 @@ export interface components {
       readonly openQuestions: readonly string[];
     };
     /**
-     * @description `drafting`: the agent is writing it. `ready`: the story can be checked and created. `failed`: no story, see
-     *     `failure`. `created`: in Jira as `jiraKey`.
+     * @description `drafting`: the agent is writing it (or, for a grill, its questions). `asking`: a grill's questions wait for
+     *     the person's answers. `ready`: the story can be checked and created. `failed`: no story, see `failure`.
+     *     `created`: in Jira as `jiraKey`.
      * @enum {string}
      */
     readonly MeetingStoryDraftStatus:
-      'drafting' | 'ready' | 'failed' | 'created';
+      | 'drafting'
+      | 'asking'
+      | 'ready'
+      | 'failed'
+      | 'created';
     readonly MeetingStoryDraft: {
       /** Format: uuid */
       readonly id: string;
@@ -2419,10 +2507,19 @@ export interface components {
       readonly topicTitle: string;
       /** @description The chosen notes; empty means all of the topic's notes. */
       readonly noteIds: readonly string[];
+      readonly mode: components['schemas']['MeetingStoryMode'];
       readonly status: components['schemas']['MeetingStoryDraftStatus'];
       readonly story: components['schemas']['StoryTemplate'] | null;
       /** @description Why there is no story, for a failed draft. */
       readonly failure: string | null;
+      /** @description A grill's questions, once the agent asked them; null for a plain draft and before. */
+      readonly questions:
+        | readonly components['schemas']['GrillQuestion'][]
+        | null;
+      /** @description A grill's answers, one per question in their order, once sent; null before and for a plain draft. */
+      readonly answers: readonly components['schemas']['GrillAnswer'][] | null;
+      /** @description What every run of the draft spent, a grill's two runs together. */
+      readonly spentNanoAiu: number;
       /** @description Where Create in Jira puts it, from the series; a null project means it cannot be created. */
       readonly target: {
         readonly projectKey: string | null;
@@ -2436,7 +2533,7 @@ export interface components {
       readonly jiraUrl: string | null;
       readonly jiraCreatedBy: components['schemas']['Actor'] | null;
       readonly jiraCreatedAt: components['schemas']['Timestamp'] | null;
-      /** @description The agent run that wrote it. */
+      /** @description The draft's latest agent run, the one its status follows. */
       readonly run: {
         readonly status: string;
         readonly budgetNanoAiu: number;
@@ -4486,6 +4583,38 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly answerMeetingStoryQuestions: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MeetingStoryAnswersRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The draft, being written from the answers. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
     };
   };
   readonly createMeetingStoryIssue: {

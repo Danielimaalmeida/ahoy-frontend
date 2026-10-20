@@ -2,6 +2,7 @@ import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import createMeeting from '@testing/fixtures/createMeeting.json';
 import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
+import answerMeetingStoryQuestions from '@testing/fixtures/answerMeetingStoryQuestions.json';
 import createMeetingStoryIssue from '@testing/fixtures/createMeetingStoryIssue.json';
 import getMeetingStoryDraft from '@testing/fixtures/getMeetingStoryDraft.json';
 import listMeetingStoryDrafts from '@testing/fixtures/listMeetingStoryDrafts.json';
@@ -41,8 +42,9 @@ describe('meeting guards', () => {
     expect(isMeetingSeries(updateMeetingSeries)).toBe(true);
   });
 
-  it('accept every story draft answer the contract documents: drafting, ready, failed and created', () => {
+  it('accept every story draft answer the contract documents: drafting, asking, ready, failed and created', () => {
     expect(isMeetingStoryDraft(requestMeetingStoryDraft)).toBe(true);
+    expect(isMeetingStoryDraft(answerMeetingStoryQuestions)).toBe(true);
     expect(isMeetingStoryDraft(getMeetingStoryDraft)).toBe(true);
     expect(isMeetingStoryDraft(createMeetingStoryIssue)).toBe(true);
     expect(isMeetingStoryDraftList(listMeetingStoryDrafts)).toBe(true);
@@ -62,6 +64,54 @@ describe('meeting guards', () => {
     ).toBe(false);
     expect(
       isMeetingStoryDraft(withField(createMeetingStoryIssue, 'jiraKey', null))
+    ).toBe(false);
+  });
+
+  it('refuse a grill whose questions do not recommend exactly one option, or a plain draft with questions', () => {
+    const asking = listMeetingStoryDrafts.items[2]!;
+    expect(asking.status).toBe('asking');
+    expect(isMeetingStoryDraft(asking)).toBe(true);
+    const [first, ...rest] = asking.questions!;
+    const twoRecommended = {
+      ...first!,
+      options: first!.options.map((o) => ({ ...o, recommended: true })),
+    };
+    expect(
+      isMeetingStoryDraft(
+        withField(asking, 'questions', [twoRecommended, ...rest])
+      )
+    ).toBe(false);
+    const oneOption = { ...first!, options: first!.options.slice(0, 1) };
+    expect(
+      isMeetingStoryDraft(withField(asking, 'questions', [oneOption, ...rest]))
+    ).toBe(false);
+    const askingWithout = withField(asking, 'questions', null);
+    expect(isMeetingStoryDraft(askingWithout)).toBe(false);
+    expect(isMeetingStoryDraft.explain(askingWithout)).toContain('questions');
+    expect(
+      isMeetingStoryDraft(
+        withField(getMeetingStoryDraft, 'questions', asking.questions)
+      )
+    ).toBe(false);
+  });
+
+  it('refuse an answer left open that still has text, or one answered that has none', () => {
+    const [own, option] = answerMeetingStoryQuestions.answers;
+    expect(
+      isMeetingStoryDraft(
+        withField(answerMeetingStoryQuestions, 'answers', [
+          { ...own!, choice: 'open' },
+          option,
+        ])
+      )
+    ).toBe(false);
+    expect(
+      isMeetingStoryDraft(
+        withField(answerMeetingStoryQuestions, 'answers', [
+          { ...own!, answer: null },
+          option,
+        ])
+      )
     ).toBe(false);
   });
 

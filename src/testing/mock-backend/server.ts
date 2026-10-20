@@ -23,6 +23,7 @@ import type {
   KnowledgeReviewRequest,
   MeetingNoteRequest,
   MeetingStatus,
+  MeetingStoryAnswersRequest,
   MeetingStoryDraftRequest,
   MeetingTopicOrderRequest,
   ModelChoice,
@@ -874,6 +875,14 @@ export class MockAhoyServer {
             call.actor,
             call.path['topicId'] ?? '',
             call.body as MeetingStoryDraftRequest // validated
+          )
+        );
+      case 'answerMeetingStoryQuestions':
+        return jsonResponse(
+          202,
+          this.meetings.answerQuestions(
+            call.path['draftId'] ?? '',
+            call.body as MeetingStoryAnswersRequest // validated
           )
         );
       case 'getMeetingStoryDraft':
