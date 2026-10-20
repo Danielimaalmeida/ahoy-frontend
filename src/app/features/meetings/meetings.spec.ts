@@ -609,6 +609,32 @@ describe('Meetings on the mock backend', () => {
     });
   });
 
+  it('discards a grill from its questions, so the topic can be drafted again', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    dialog()
+      .querySelector<HTMLInputElement>('input[name="story-mode"]')!
+      .click();
+    await flush(page);
+    buttonNamed(dialog(), 'Grill me').click();
+    await flush(page);
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    buttonNamed(card(page.root, title), 'Answer questions').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Discard').click();
+    await flush(page);
+    expect(
+      page.requests.filter((r) => r.method === 'DELETE').map((r) => r.path)
+    ).toHaveLength(1);
+    expect(page.requests.some((r) => r.path.endsWith('/answers'))).toBe(false);
+    expect(
+      buttonNamed(card(page.root, title), 'Turn into a user story')
+    ).toBeDefined();
+  });
+
   it('does not create a story until the series has a Jira project, and lets the person set it from the review', async () => {
     const page = await open('/meetings', (server) => {
       const series = server.meetingDesk.listSeries()[0]!;

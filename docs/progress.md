@@ -19,7 +19,7 @@ TEST environment contacted; 0 AIU.
   may spend the limit twice). The topic shows "Finding questions…", then "Questions to answer" with Answer questions,
   which opens the new `StoryGrillDialog`: one question at a time with "Question n of m" and the AIU spent, the agent's
   options A, B… with Recommended, "Leave it open in the story", "Answer in my own words", answered questions above
-  with Change, Next question, and "Stop and write the story now" (the rest is left open). The answers go once, after
+  with Change, Next question, "Stop and write the story now" (the rest is left open) and Discard. The answers go once, after
   the last question, capped like the questions; closing keeps the answers picked so far. The review dialog says when
   the agent is finding questions, offers Answer the questions while it asks, shows "Your answers" with the story, and
   adds "Grill me on it" beside Write it again. "Ask a stakeholder" from the board is not built (not agreed).
@@ -29,8 +29,8 @@ TEST environment contacted; 0 AIU.
   conformance 8/8, domain meetings 11/11, meeting errors 5/5; the boundary check; `openapi-mirror --check`; Prettier
   on every changed file.
 - Did not run: `ng build`, `npm run typecheck` (strict templates), `npm run lint`, `npm run api:check`, Vitest,
-  including two new page specs in `features/meetings/meetings.spec.ts` (a grill answered to the end, and "Grill me on
-  it" then "Stop and write the story now"), and any browser check. Needs from other lanes: none; `ahoy-hosted`
+  including three new page specs in `features/meetings/meetings.spec.ts` (a grill answered to the end, "Grill me on
+  it" then "Stop and write the story now", and Discard from the questions), and any browser check. Needs from other lanes: none; `ahoy-hosted`
   migration 0016 must be applied before a grill works against a real API.
 
 **Updated 2026-10-17 for Meetings, slice 2: user stories from topics** (on `feature/meetings-slice-2`, based on `main` after

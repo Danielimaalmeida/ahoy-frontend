@@ -39,7 +39,8 @@ interface Answered {
  * (one recommended), "Leave it open in the story" and "Answer in my own words"; answered ones show above with Change.
  * Nothing is sent until the last question, or "Stop and write the story now" (the rest is left open): then the answers
  * go once and the agent writes the story, which may spend AIU up to the questions' cap. Closing keeps the answers
- * picked so far for the next time it opens.
+ * picked so far for the next time it opens. Discard drops the grill (nothing more is spent), so the topic can be
+ * drafted again.
  */
 @Component({
   selector: 'ah-story-grill-dialog',
@@ -272,6 +273,15 @@ interface Answered {
               Stop and write the story now
             </button>
             <span class="ah-hint">{{ stopHint() }}</span>
+            <button
+              ahButton="ghost"
+              size="sm"
+              type="button"
+              [disabled]="busy()"
+              (click)="discard()"
+            >
+              Discard
+            </button>
           </div>
         } @else {
           <ah-banner variant="notice" heading="These questions were answered"
@@ -289,8 +299,8 @@ export class StoryGrillDialog {
   private readonly data = inject<StoryGrillData>(DIALOG_DATA);
   private readonly ref = inject<DialogRef<MeetingStoryDraft>>(DialogRef);
   private readonly toasts = inject(ToastService);
-  /** Whether the answers went; then closing keeps nothing. */
-  private sent = false;
+  /** Whether the answers went or the grill was discarded; then closing keeps nothing. */
+  private done = false;
 
   /** The grill as the page's store has it now; null once discarded. */
   readonly draft = computed(
@@ -368,10 +378,15 @@ export class StoryGrillDialog {
   protected readonly ownMax = GRILL_OWN_ANSWER_MAX;
   /** The answer in the person's own words to the question shown. */
   protected readonly own = new FormControl('', { nonNullable: true });
-  private readonly failure = signal<ApiError | null>(null);
+  private readonly failure = signal<{
+    error: ApiError;
+    action: 'answer' | 'discard';
+  } | null>(null);
   protected readonly error = computed(() => {
     const failure = this.failure();
-    return failure === null ? null : storyErrorView(failure, 'answer');
+    return failure === null
+      ? null
+      : storyErrorView(failure.error, failure.action);
   });
 
   protected readonly letter = optionLetter;
@@ -383,7 +398,7 @@ export class StoryGrillDialog {
         this.pick({ choice: 'own', text });
     });
     inject(DestroyRef).onDestroy(() => {
-      if (!this.sent)
+      if (!this.done)
         this.data.drafts.keepPicks(this.data.draftId, this.picks());
     });
   }
@@ -447,14 +462,28 @@ export class StoryGrillDialog {
       this.cap()
     );
     if (!result.ok) {
-      this.failure.set(result.error);
+      this.failure.set({ error: result.error, action: 'answer' });
       return;
     }
-    this.sent = true;
+    this.done = true;
     this.toasts.show(
       'First Mate is writing the story from your answers. It shows on the topic when it is ready.'
     );
     this.ref.close(result.value);
+  }
+
+  /** Discards the grill and its answers, so the topic can be drafted again; nothing more is spent. */
+  async discard(): Promise<void> {
+    if (this.draft() === null || this.busy()) return;
+    this.failure.set(null);
+    const result = await this.data.drafts.discard(this.data.draftId);
+    if (!result.ok) {
+      this.failure.set({ error: result.error, action: 'discard' });
+      return;
+    }
+    this.done = true;
+    this.toasts.show('Story draft discarded.');
+    this.ref.close();
   }
 
   private pick(pick: GrillPick): void {
