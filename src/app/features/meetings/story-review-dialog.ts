@@ -2,7 +2,8 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
 import type { ApiError } from '@core/api/api-error';
 import type { MeetingStoryDraft, MeetingStoryMode } from '@core/api/types';
-import { meetingDay, meetingTime, shortEmail } from '@domain/meetings';
+import { AccessControl } from '@core/auth/access-control';
+import { authorLabel, meetingDay, meetingTime } from '@domain/meetings';
 import { storySentence, targetText } from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
@@ -321,6 +322,7 @@ export class StoryReviewDialog {
   private readonly data = inject<StoryReviewData>(DIALOG_DATA);
   private readonly ref = inject<DialogRef<MeetingStoryDraft>>(DialogRef);
   private readonly toasts = inject(ToastService);
+  private readonly access = inject(AccessControl);
   private readonly dialogs = inject(DialogService);
 
   /** The draft this dialog shows; after "Write it again" the new draft of the same topic. */
@@ -353,7 +355,7 @@ export class StoryReviewDialog {
     if (draft === null) return '';
     const spent =
       draft.run === null ? '' : ` · ${formatCap(draft.spentNanoAiu, 2)} AIU`;
-    const by = `Asked for by ${shortEmail(draft.createdBy)} on ${meetingDay(draft.createdAt)} at ${meetingTime(draft.createdAt)}`;
+    const by = `Asked for by ${authorLabel(draft.createdBy, this.access.nameOf(draft.createdBy))} on ${meetingDay(draft.createdAt)} at ${meetingTime(draft.createdAt)}`;
     return `Written by First Mate${spent}. ${by}.`;
   });
   /** "First Mate is finding questions" for a grill not yet answered, else "… is writing the story". */

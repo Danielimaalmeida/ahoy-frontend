@@ -33,6 +33,11 @@ import { iso, type Cancel, type MockClock } from './clock';
 import { MockProblem } from './http';
 import type { Writable } from './voyage';
 
+const KNOWN_NAMES: ReadonlyMap<string, string> = new Map([
+  ['alex@example.com', 'Alex Example'],
+  ['dev@example.com', 'Dev Example'],
+]);
+
 const DAY_MS = 86_400_000;
 const HALF_HOUR_MS = 1_800_000;
 
@@ -92,6 +97,11 @@ export class MeetingDesk {
   /** A new UUID, in order, so a mock world is the same every time. */
   private id(): string {
     return `00000000-0000-4000-8000-${(this.nextId++).toString(16).padStart(12, '0')}`;
+  }
+
+  /** What the real API knows about a person after their first request: a name, or `null` for anyone unknown. */
+  private nameOf(actor: string): string | null {
+    return KNOWN_NAMES.get(actor) ?? null;
   }
 
   private now(): string {
@@ -297,8 +307,10 @@ export class MeetingDesk {
       carriedFromTopicId: null,
       movedToTopicId: null,
       createdBy: actor,
+      createdByName: this.nameOf(actor),
       createdAt: at,
       updatedBy: actor,
+      updatedByName: this.nameOf(actor),
       updatedAt: at,
     };
     this.topics.set(topic.id, topic);
@@ -328,6 +340,7 @@ export class MeetingDesk {
     topic.raisedBy = raisedBy;
     topic.raisedByEmail = email;
     topic.updatedBy = actor;
+    topic.updatedByName = this.nameOf(actor);
     topic.updatedAt = this.now();
     return this.topicDto(topic);
   }
@@ -374,6 +387,7 @@ export class MeetingDesk {
       if (topic !== undefined && topic.position !== position) {
         topic.position = position;
         topic.updatedBy = actor;
+        topic.updatedByName = this.nameOf(actor);
         topic.updatedAt = this.now();
       }
     });
@@ -399,8 +413,10 @@ export class MeetingDesk {
       topicId,
       text: body.text.trim(),
       createdBy: actor,
+      createdByName: this.nameOf(actor),
       createdAt: at,
       updatedBy: actor,
+      updatedByName: this.nameOf(actor),
       updatedAt: at,
     };
     this.notes.set(note.id, note);
@@ -415,6 +431,7 @@ export class MeetingDesk {
     const note = this.changeableNote(id);
     note.text = body.text.trim();
     note.updatedBy = actor;
+    note.updatedByName = this.nameOf(actor);
     note.updatedAt = this.now();
     return { ...note };
   }
@@ -443,6 +460,7 @@ export class MeetingDesk {
       jiraProjectKey: body.jiraProjectKey ?? null,
       jiraIssueType: body.jiraIssueType ?? 'Story',
       createdBy: actor,
+      createdByName: this.nameOf(actor),
       createdAt: this.now(),
     };
     this.series.set(series.id, series);
@@ -712,8 +730,10 @@ export class MeetingDesk {
       startedAt: null,
       endedAt: null,
       createdBy: actor,
+      createdByName: this.nameOf(actor),
       createdAt: at,
       updatedBy: actor,
+      updatedByName: this.nameOf(actor),
       updatedAt: at,
     };
     this.meetings.set(meeting.id, meeting);
@@ -727,6 +747,7 @@ export class MeetingDesk {
 
   private touch(meeting: MeetingRecord, actor: string): void {
     meeting.updatedBy = actor;
+    meeting.updatedByName = this.nameOf(actor);
     meeting.updatedAt = this.now();
   }
 
@@ -828,8 +849,10 @@ export class MeetingDesk {
       carriedFromTopicId: topic.id,
       movedToTopicId: null,
       createdBy: actor,
+      createdByName: this.nameOf(actor),
       createdAt: at,
       updatedBy: actor,
+      updatedByName: this.nameOf(actor),
       updatedAt: at,
     };
     this.topics.set(copy.id, copy);
@@ -842,6 +865,7 @@ export class MeetingDesk {
     topic.status = 'moved';
     topic.movedToTopicId = copy.id;
     topic.updatedBy = actor;
+    topic.updatedByName = this.nameOf(actor);
     topic.updatedAt = at;
     return copy;
   }

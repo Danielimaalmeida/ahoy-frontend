@@ -24,14 +24,18 @@
         "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21",
         "text": "About 120 reminders a month are sent by hand.",
         "createdBy": "alex@example.com",
+        "createdByName": "Alex Example",
         "createdAt": "2026-10-06T10:06:00.000Z",
         "updatedBy": "alex@example.com",
+        "updatedByName": "Alex Example",
         "updatedAt": "2026-10-06T10:06:00.000Z"
       }
     ],
     "createdBy": "alex@example.com",
+    "createdByName": "Alex Example",
     "createdAt": "2026-10-05T16:00:00.000Z",
     "updatedBy": "alex@example.com",
+    "updatedByName": "Alex Example",
     "updatedAt": "2026-10-05T16:00:00.000Z"
   },
   "movedTo": {
@@ -55,14 +59,18 @@
         "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e26",
         "text": "About 120 reminders a month are sent by hand.",
         "createdBy": "alex@example.com",
+        "createdByName": "Alex Example",
         "createdAt": "2026-10-06T10:06:00.000Z",
         "updatedBy": "alex@example.com",
+        "updatedByName": "Alex Example",
         "updatedAt": "2026-10-06T10:06:00.000Z"
       }
     ],
     "createdBy": "alex@example.com",
+    "createdByName": "Alex Example",
     "createdAt": "2026-10-06T10:40:00.000Z",
     "updatedBy": "alex@example.com",
+    "updatedByName": "Alex Example",
     "updatedAt": "2026-10-06T10:40:00.000Z"
   }
 }

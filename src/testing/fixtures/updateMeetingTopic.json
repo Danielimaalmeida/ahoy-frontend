@@ -15,13 +15,17 @@
       "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e22",
       "text": "1.5% per month, capped at 10% of the invoice.",
       "createdBy": "alex@example.com",
+      "createdByName": "Alex Example",
       "createdAt": "2026-10-06T10:25:00.000Z",
       "updatedBy": "alex@example.com",
+      "updatedByName": "Alex Example",
       "updatedAt": "2026-10-06T10:25:00.000Z"
     }
   ],
   "createdBy": "alex@example.com",
+  "createdByName": "Alex Example",
   "createdAt": "2026-10-06T10:24:00.000Z",
   "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
   "updatedAt": "2026-10-06T10:30:00.000Z"
 }

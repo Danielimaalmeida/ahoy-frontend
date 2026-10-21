@@ -1,7 +1,9 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { FedevAuthService } from '@acme-fedev/auth';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   mockBackendInterceptor,
@@ -72,6 +74,10 @@ async function open(
       provideHttpClient(withInterceptors([mockBackendInterceptor])),
       provideMockBackend(server),
       { provide: CLOCK, useValue: asClock(clock) },
+      {
+        provide: FedevAuthService,
+        useValue: { userProfile: signal(null), currentUser: signal(null) },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -160,9 +166,7 @@ describe('Meetings on the mock backend', () => {
       'Tax ID validation for EU customers',
       'Late fees for enterprise accounts',
     ]);
-    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe(
-      'OTHER_COMPANY'
-    );
+    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe('OTHER_COMPANY');
     expect(tagOf(card(page.root, 'Late fees for enterprise accounts'))).toBe(
       'ACME · priya@'
     );
@@ -243,6 +247,13 @@ describe('Meetings on the mock backend', () => {
     expect(
       notesOf(card(page.root, 'Tax ID validation for EU customers'))
     ).toEqual(['Check the VIES service for each new customer.']);
+    expect(
+      text(
+        card(page.root, 'Tax ID validation for EU customers').querySelector(
+          'li .by'
+        )
+      )
+    ).toMatch(/^Dev Example · /);
     expect(
       card(
         page.root,
@@ -359,7 +370,11 @@ describe('Meetings on the mock backend', () => {
     expect(text(page.root.querySelector('.identity .ah-tag'))).toBe('Ended');
     expect(page.root.querySelector('ah-topic-composer')).toBeNull();
     expect(page.root.querySelectorAll('ah-topic-card form')).toHaveLength(0);
-    expect(page.root.querySelector('.header .actions button')).toBeNull();
+    expect(
+      [...page.root.querySelectorAll('.header .actions button')].map((b) =>
+        text(b)
+      )
+    ).toEqual(['Copy for Confluence']);
   });
 
   it('says it cannot reach Ahoy when the list fails, and reads it again on Try again', async () => {
@@ -376,6 +391,30 @@ describe('Meetings on the mock backend', () => {
     await flush(page);
     expect(page.root.querySelector('main > ah-banner')).toBeNull();
     expect(text(page.root.querySelector('h1'))).toBe('Finance sync');
+  });
+
+  it('copies the open meeting as Confluence markup', async () => {
+    const written: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (t: string) => (written.push(t), Promise.resolve()),
+      },
+    });
+    try {
+      const page = await open('/meetings');
+      buttonNamed(page.root, 'Copy for Confluence').click();
+      await flush(page);
+      expect(written[0]).toContain('h1. Finance sync');
+      expect(written[0]).toContain('h2. Topics');
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .map((t) => t.text)
+      ).toEqual(['Meeting copied as Confluence markup.']);
+    } finally {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it("says a meeting in the address doesn't exist", async () => {
@@ -422,6 +461,7 @@ describe('Meetings on the mock backend', () => {
     expect(text(dialog().querySelector('article .ah-tag'))).toBe(
       'PROJ · Story'
     );
+    expect(text(dialog())).toContain('Asked for by dev@ on');
     expect(dialog().querySelectorAll('article ol li').length).toBeGreaterThan(
       0
     );
@@ -671,8 +711,10 @@ describe('meetingLine', () => {
     endedAt: null,
     openTopicCount: 0,
     createdBy: 'alex@example.com',
+    createdByName: null,
     createdAt: '2026-10-01T10:00:00.000Z',
     updatedBy: 'alex@example.com',
+    updatedByName: null,
     updatedAt: '2026-10-01T10:00:00.000Z',
   } as const;
 

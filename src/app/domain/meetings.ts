@@ -83,6 +83,14 @@ export function shortEmail(email: string): string {
 }
 
 /**
+ * Who wrote or edited something, for a byline: the person's name, or the shortened actor (`createdBy`, the q-number)
+ * while the name is not known yet (`null`).
+ */
+export function authorLabel(actor: string, name: string | null): string {
+  return name !== null && name.trim() !== '' ? name.trim() : shortEmail(actor);
+}
+
+/**
  * The names the page shows for the two sides of a meeting. The API keeps `us` and `them`; the page never shows those
  * words: our side is OTHER_COMPANY, the stakeholders' side is ACME.
  */
@@ -174,4 +182,77 @@ export function startsAtFrom(date: string, time: string): string | null {
     return null;
   const at = new Date(`${date}T${time}`);
   return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}
+
+/** What the Confluence export reads of a note. */
+export interface NoteDoc {
+  readonly text: string;
+  readonly createdBy: string;
+  readonly createdByName: string | null;
+  readonly createdAt: string;
+}
+
+/** What the Confluence export reads of a topic. */
+export interface TopicDoc extends TopicLike {
+  readonly title: string;
+  readonly notes: readonly NoteDoc[];
+  readonly movedTo: { readonly meetingStartsAt: string } | null;
+}
+
+/** What the Confluence export reads of a meeting. */
+export interface MeetingDoc extends MeetingLike {
+  readonly title: string;
+  readonly seriesName: string | null;
+  readonly endsAt: string | null;
+  readonly stakeholders: readonly string[];
+  readonly topics: readonly TopicDoc[];
+}
+
+const STATUS_NAMES = {
+  planned: 'Planned',
+  in_progress: 'In progress',
+  ended: 'Ended',
+} as const;
+
+/** Escapes what Confluence wiki markup would read as formatting; line breaks become `\\`. */
+function wiki(text: string): string {
+  return text
+    .trim()
+    .replace(/[{}[\]|*_^~!+?#-]/g, (c) => `\\${c}`)
+    .replace(/\s*\r?\n\s*/g, ' \\\\ ');
+}
+
+/**
+ * A meeting as Confluence wiki markup (Insert → Markup → Confluence Wiki in the editor): its title, when, who, and
+ * each topic with who raised it, where it went and its notes. Text from people is escaped, so it never formats.
+ */
+export function meetingToConfluence(meeting: MeetingDoc): string {
+  const end = meeting.endsAt === null ? '' : `–${meetingTime(meeting.endsAt)}`;
+  const lines = [
+    `h1. ${wiki(meeting.title)}`,
+    `*When:* ${meetingDay(meeting.startsAt)} · ${meetingTime(meeting.startsAt)}${end}`,
+    `*Status:* ${STATUS_NAMES[meeting.status]}`,
+  ];
+  if (meeting.seriesName !== null)
+    lines.push(`*Series:* ${wiki(meeting.seriesName)}`);
+  if (meeting.stakeholders.length > 0)
+    lines.push(`*With:* ${meeting.stakeholders.map(wiki).join(', ')}`);
+  lines.push('', 'h2. Topics');
+  if (meeting.topics.length === 0) lines.push('_No topics._');
+  meeting.topics.forEach((topic, index) => {
+    const moved =
+      topic.movedTo === null
+        ? ''
+        : ` · moved to ${meetingDay(topic.movedTo.meetingStartsAt)}`;
+    lines.push(
+      '',
+      `h3. ${index + 1}. ${wiki(topic.title)}`,
+      `_${wiki(raisedByLabel(topic))} · ${topicWhen(topic)}${moved}_`
+    );
+    for (const note of topic.notes)
+      lines.push(
+        `* ${wiki(note.text)} _(${wiki(authorLabel(note.createdBy, note.createdByName))}, ${meetingTime(note.createdAt)})_`
+      );
+  });
+  return `${lines.join('\n')}\n`;
 }

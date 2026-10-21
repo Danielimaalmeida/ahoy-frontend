@@ -12,8 +12,10 @@
   "topicCount": 0,
   "openTopicCount": 0,
   "createdBy": "alex@example.com",
+  "createdByName": "Alex Example",
   "createdAt": "2026-10-01T08:00:00.000Z",
   "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
   "updatedAt": "2026-10-01T08:00:00.000Z",
   "topics": []
 }

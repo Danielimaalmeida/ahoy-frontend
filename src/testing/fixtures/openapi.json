@@ -3177,6 +3177,10 @@
         "minLength": 1,
         "maxLength": 200
       },
+      "ActorName": {
+        "type": ["string", "null"],
+        "description": "The person's display name, or null when it is not known yet. `createdBy`/`updatedBy` stay the q-number."
+      },
       "Timestamp": {
         "type": "string",
         "format": "date-time"
@@ -6220,6 +6224,7 @@
           "jiraProjectKey",
           "jiraIssueType",
           "createdBy",
+          "createdByName",
           "createdAt"
         ],
         "properties": {
@@ -6257,6 +6262,9 @@
           },
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
+          },
+          "createdByName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
@@ -6788,8 +6796,10 @@
           "topicCount",
           "openTopicCount",
           "createdBy",
+          "createdByName",
           "createdAt",
           "updatedBy",
+          "updatedByName",
           "updatedAt"
         ],
         "properties": {
@@ -6843,11 +6853,17 @@
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
           },
+          "createdByName": {
+            "$ref": "#/components/schemas/ActorName"
+          },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
           },
           "updatedBy": {
             "$ref": "#/components/schemas/Actor"
+          },
+          "updatedByName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "updatedAt": {
             "$ref": "#/components/schemas/Timestamp"
@@ -6875,8 +6891,10 @@
           "topicId",
           "text",
           "createdBy",
+          "createdByName",
           "createdAt",
           "updatedBy",
+          "updatedByName",
           "updatedAt"
         ],
         "properties": {
@@ -6895,11 +6913,17 @@
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
           },
+          "createdByName": {
+            "$ref": "#/components/schemas/ActorName"
+          },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
           },
           "updatedBy": {
             "$ref": "#/components/schemas/Actor"
+          },
+          "updatedByName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "updatedAt": {
             "$ref": "#/components/schemas/Timestamp"
@@ -6940,8 +6964,10 @@
           "movedTo",
           "notes",
           "createdBy",
+          "createdByName",
           "createdAt",
           "updatedBy",
+          "updatedByName",
           "updatedAt"
         ],
         "properties": {
@@ -7005,11 +7031,17 @@
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
           },
+          "createdByName": {
+            "$ref": "#/components/schemas/ActorName"
+          },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
           },
           "updatedBy": {
             "$ref": "#/components/schemas/Actor"
+          },
+          "updatedByName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "updatedAt": {
             "$ref": "#/components/schemas/Timestamp"
@@ -7033,8 +7065,10 @@
           "topicCount",
           "openTopicCount",
           "createdBy",
+          "createdByName",
           "createdAt",
           "updatedBy",
+          "updatedByName",
           "updatedAt",
           "topics"
         ],
@@ -7089,11 +7123,17 @@
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
           },
+          "createdByName": {
+            "$ref": "#/components/schemas/ActorName"
+          },
           "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
           },
           "updatedBy": {
             "$ref": "#/components/schemas/Actor"
+          },
+          "updatedByName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "updatedAt": {
             "$ref": "#/components/schemas/Timestamp"

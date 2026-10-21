@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { FedevAuthService } from '@acme-fedev/auth';
 import { AppConfigStore } from '@core/config/app-config';
-import { isAllowedUser, qnumberOf } from '@domain/access';
+import { isAllowedUser, normalizeQnumber, qnumberOf } from '@domain/access';
 
 /**
  * Whether the signed-in user may use Ahoy. Two checks, either of which refuses: the `allowedQnumbers` of `/config.json`
@@ -30,6 +30,19 @@ export class AccessControl {
     ]);
   });
 
+  /** The user's name from the sign-in profile (`given_name` and `family_name`); null when it has none. */
+  readonly name: Signal<string | null> = computed(() => {
+    const profile = this.auth.userProfile();
+    const part = (key: string): string => {
+      const value: unknown = profile?.[key];
+      return typeof value === 'string' ? value.trim() : '';
+    };
+    const name = [part('given_name'), part('family_name')]
+      .filter(Boolean)
+      .join(' ');
+    return name === '' ? null : name;
+  });
+
   /** True when the user may not use the app. */
   readonly denied: Signal<boolean> = computed(
     () =>
@@ -40,5 +53,13 @@ export class AccessControl {
   /** Records that the API refused the user (`403 forbidden`). It lasts until the page is loaded again. */
   refuseByApi(): void {
     this.refusedByApi.set(true);
+  }
+
+  /** The user's name when `actor` is the user's own qnumber; null for anyone else, whose name this profile cannot give. */
+  nameOf(actor: string): string | null {
+    const mine = this.qnumber();
+    return mine !== null && normalizeQnumber(actor) === mine
+      ? this.name()
+      : null;
   }
 }

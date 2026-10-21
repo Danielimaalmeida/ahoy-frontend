@@ -14,8 +14,10 @@
       "topicCount": 1,
       "openTopicCount": 1,
       "createdBy": "alex@example.com",
+      "createdByName": "Alex Example",
       "createdAt": "2026-10-01T08:00:00.000Z",
       "updatedBy": "alex@example.com",
+      "updatedByName": "Alex Example",
       "updatedAt": "2026-10-01T08:00:00.000Z"
     },
     {
@@ -32,8 +34,10 @@
       "topicCount": 3,
       "openTopicCount": 2,
       "createdBy": "alex@example.com",
+      "createdByName": "Alex Example",
       "createdAt": "2026-10-01T08:00:00.000Z",
       "updatedBy": "alex@example.com",
+      "updatedByName": "Alex Example",
       "updatedAt": "2026-10-06T09:02:00.000Z"
     },
     {
@@ -50,8 +54,10 @@
       "topicCount": 4,
       "openTopicCount": 2,
       "createdBy": "alex@example.com",
+      "createdByName": "Alex Example",
       "createdAt": "2026-10-01T08:00:00.000Z",
       "updatedBy": "alex@example.com",
+      "updatedByName": "Alex Example",
       "updatedAt": "2026-09-29T09:01:00.000Z"
     }
   ]

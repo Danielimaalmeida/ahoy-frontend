@@ -7,10 +7,11 @@ import {
   untracked,
 } from '@angular/core';
 import { DialogService } from '@ui/dialog/dialog';
-import { meetingDay, meetingTime } from '@domain/meetings';
+import { meetingDay, meetingTime, meetingToConfluence } from '@domain/meetings';
 import { targetText } from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
+import { ToastService } from '@ui/toast/toast';
 import { EndMeetingDialog, type EndMeetingData } from './end-meeting-dialog';
 import { meetingErrorView } from './meeting-errors';
 import { MeetingsStore } from './meetings-store';
@@ -152,6 +153,9 @@ const STATUS_WORDS = {
           }
         </div>
         <div class="actions">
+          <button ahButton type="button" (click)="copyConfluence()">
+            Copy for Confluence
+          </button>
           @if (m.status === 'planned') {
             <button
               ahButton="primary"
@@ -242,6 +246,7 @@ export class MeetingView {
   protected readonly store = inject(MeetingsStore);
   protected readonly drafts = inject(StoryDraftsStore);
   private readonly dialogs = inject(DialogService);
+  private readonly toasts = inject(ToastService);
 
   /** The meeting in the address (`/meetings/:id`); none for `/meetings`. */
   readonly id = input<string | undefined>(undefined);
@@ -310,6 +315,20 @@ export class MeetingView {
       .closed.subscribe((changed) => {
         if (changed !== undefined) void this.drafts.reload();
       });
+  }
+
+  /** Copies the meeting as Confluence wiki markup; the Clipboard API can be missing or refused. */
+  protected async copyConfluence(): Promise<void> {
+    const meeting = this.meeting();
+    if (meeting === null) return;
+    try {
+      await navigator.clipboard.writeText(meetingToConfluence(meeting));
+      this.toasts.show('Meeting copied as Confluence markup.');
+    } catch {
+      this.toasts.show(
+        "Couldn't copy to the clipboard. Allow clipboard access and try again."
+      );
+    }
   }
 
   /** Asks which open topics move on, then ends the meeting. */

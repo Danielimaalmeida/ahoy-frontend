@@ -21,11 +21,7 @@ export const PROJECT_KEY_MAX = 50;
  * be checked, it failed, or it is in Jira.
  */
 export type DraftStatusLike =
-  | 'drafting'
-  | 'asking'
-  | 'ready'
-  | 'failed'
-  | 'created';
+  'drafting' | 'asking' | 'ready' | 'failed' | 'created';
 
 /** The parts of a draft these rules read; the API's `MeetingStoryDraft` has them all. */
 export interface DraftLike {

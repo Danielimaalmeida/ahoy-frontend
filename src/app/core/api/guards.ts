@@ -783,6 +783,7 @@ const meetingSeries = shape<MeetingSeries>({
   jiraProjectKey: nullable(jiraProjectKey),
   jiraIssueType: oneOf(JIRA_ISSUE_TYPES),
   createdBy: actor,
+  createdByName: nullable(text),
   createdAt: timestamp,
 });
 
@@ -803,8 +804,10 @@ const meetingNote = shape<MeetingNote>({
   topicId: uuid,
   text,
   createdBy: actor,
+  createdByName: nullable(text),
   createdAt: timestamp,
   updatedBy: actor,
+  updatedByName: nullable(text),
   updatedAt: timestamp,
 });
 
@@ -835,8 +838,10 @@ const meetingTopic: Check = (value, at) => {
     movedTo: nullable(topicLink),
     notes: arrayOf(meetingNote),
     createdBy: actor,
+    createdByName: nullable(text),
     createdAt: timestamp,
     updatedBy: actor,
+    updatedByName: nullable(text),
     updatedAt: timestamp,
   })(value, at);
   if (why !== null || !isRecord(value)) return why;
@@ -864,8 +869,10 @@ const meetingSummaryFields = {
   topicCount: count,
   openTopicCount: count,
   createdBy: actor,
+  createdByName: nullable(text),
   createdAt: timestamp,
   updatedBy: actor,
+  updatedByName: nullable(text),
   updatedAt: timestamp,
 } as const;
 

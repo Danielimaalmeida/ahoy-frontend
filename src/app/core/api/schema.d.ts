@@ -64,7 +64,7 @@ export interface paths {
      * @description Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
      *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
      *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-     *     `project = R3DA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
+     *     `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
      *     AND "Feature Team" = OTHER_COMPANY AND Team in (34115) ORDER BY Rank ASC`.
      *
      *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
@@ -1398,6 +1398,8 @@ export interface components {
     readonly RunId: string;
     readonly EventId: string;
     readonly Actor: string;
+    /** @description The person's display name, or null when it is not known yet. `createdBy`/`updatedBy` stay the q-number. */
+    readonly ActorName: string | null;
     /** Format: date-time */
     readonly Timestamp: string;
     readonly NanoAiu: number;
@@ -1733,8 +1735,7 @@ export interface components {
       readonly label: string;
       /** @description The efforts the model takes (`[]`, none); null when the catalogue does not say. */
       readonly reasoningEfforts:
-        | readonly components['schemas']['ReasoningEffort'][]
-        | null;
+        readonly components['schemas']['ReasoningEffort'][] | null;
     };
     /** @description What a slot of a story started now runs on when nobody chooses (a `SlotModel` without `chosen`). */
     readonly SlotDefault: {
@@ -2392,6 +2393,7 @@ export interface components {
       readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType: components['schemas']['JiraIssueType'];
       readonly createdBy: components['schemas']['Actor'];
+      readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
     };
     readonly MeetingSeriesList: {
@@ -2492,11 +2494,7 @@ export interface components {
      * @enum {string}
      */
     readonly MeetingStoryDraftStatus:
-      | 'drafting'
-      | 'asking'
-      | 'ready'
-      | 'failed'
-      | 'created';
+      'drafting' | 'asking' | 'ready' | 'failed' | 'created';
     readonly MeetingStoryDraft: {
       /** Format: uuid */
       readonly id: string;
@@ -2514,8 +2512,7 @@ export interface components {
       readonly failure: string | null;
       /** @description A grill's questions, once the agent asked them; null for a plain draft and before. */
       readonly questions:
-        | readonly components['schemas']['GrillQuestion'][]
-        | null;
+        readonly components['schemas']['GrillQuestion'][] | null;
       /** @description A grill's answers, one per question in their order, once sent; null before and for a plain draft. */
       readonly answers: readonly components['schemas']['GrillAnswer'][] | null;
       /** @description What every run of the draft spent, a grill's two runs together. */
@@ -2566,8 +2563,10 @@ export interface components {
       readonly topicCount: number;
       readonly openTopicCount: number;
       readonly createdBy: components['schemas']['Actor'];
+      readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedBy: components['schemas']['Actor'];
+      readonly updatedByName: components['schemas']['ActorName'];
       readonly updatedAt: components['schemas']['Timestamp'];
     };
     readonly MeetingList: {
@@ -2581,8 +2580,10 @@ export interface components {
       /** @description What was said, as plain text (untrusted). */
       readonly text: string;
       readonly createdBy: components['schemas']['Actor'];
+      readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedBy: components['schemas']['Actor'];
+      readonly updatedByName: components['schemas']['ActorName'];
       readonly updatedAt: components['schemas']['Timestamp'];
     };
     readonly MeetingTopicLink: {
@@ -2611,8 +2612,10 @@ export interface components {
       /** @description Oldest first. */
       readonly notes: readonly components['schemas']['MeetingNote'][];
       readonly createdBy: components['schemas']['Actor'];
+      readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedBy: components['schemas']['Actor'];
+      readonly updatedByName: components['schemas']['ActorName'];
       readonly updatedAt: components['schemas']['Timestamp'];
     };
     readonly Meeting: {
@@ -2635,8 +2638,10 @@ export interface components {
       readonly topicCount: number;
       readonly openTopicCount: number;
       readonly createdBy: components['schemas']['Actor'];
+      readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedBy: components['schemas']['Actor'];
+      readonly updatedByName: components['schemas']['ActorName'];
       readonly updatedAt: components['schemas']['Timestamp'];
       /** @description In their order. */
       readonly topics: readonly components['schemas']['MeetingTopic'][];

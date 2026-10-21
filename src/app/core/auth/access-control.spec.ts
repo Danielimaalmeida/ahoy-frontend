@@ -58,4 +58,27 @@ describe('AccessControl', () => {
     access.refuseByApi();
     expect(access.denied()).toBe(true);
   });
+
+  it("reads the user's name from the profile", () => {
+    expect(
+      configure({
+        sub: 'q1',
+        given_name: ' Maria ',
+        family_name: 'Silva',
+      }).name()
+    ).toBe('Maria Silva');
+    TestBed.resetTestingModule();
+    expect(configure({ sub: 'q1' }).name()).toBeNull();
+  });
+
+  it('gives a name only for the user themselves, however the qnumber is written', () => {
+    const access = configure({
+      sub: 'q123456',
+      given_name: 'Maria',
+      family_name: 'Silva',
+    });
+    expect(access.nameOf('Q123456')).toBe('Maria Silva');
+    expect(access.nameOf('q654321')).toBeNull();
+    expect(access.nameOf('alex@example.com')).toBeNull();
+  });
 });

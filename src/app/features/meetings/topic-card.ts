@@ -3,10 +3,10 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import type { MeetingStoryDraft, MeetingTopic } from '@core/api/types';
 import {
+  authorLabel,
   meetingDay,
   meetingTime,
   raisedByLabel,
-  shortEmail,
   topicWhen,
 } from '@domain/meetings';
 import { draftChip } from '@domain/story-drafts';
@@ -219,8 +219,8 @@ export const NOTE_MAX = 4000;
             <li>
               <span class="note">
                 <span class="text">{{ note.text }}</span>
-                <span class="ah-hint by"
-                  >{{ short(note.createdBy) }} ·
+                <span class="ah-hint by" [attr.title]="note.createdBy"
+                  >{{ author(note.createdBy, note.createdByName) }} ·
                   {{ time(note.createdAt) }}</span
                 >
                 @if (editable()) {
@@ -365,7 +365,7 @@ export class TopicCard {
   protected readonly chip = draftChip;
   protected readonly day = meetingDay;
   protected readonly time = meetingTime;
-  protected readonly short = shortEmail;
+  protected readonly author = authorLabel;
 
   /** "Check the story of Late fees", for a screen reader. */
   protected reviewLabel(draft: MeetingStoryDraft): string {

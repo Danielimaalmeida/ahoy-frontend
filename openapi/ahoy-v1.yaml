@@ -1833,6 +1833,9 @@ components:
       type: string
       minLength: 1
       maxLength: 200
+    ActorName:
+      type: [string, 'null']
+      description: The person's display name, or null when it is not known yet. `createdBy`/`updatedBy` stay the q-number.
     Timestamp:
       type: string
       format: date-time
@@ -3659,6 +3662,7 @@ components:
           jiraProjectKey,
           jiraIssueType,
           createdBy,
+          createdByName,
           createdAt,
         ]
       properties:
@@ -3673,6 +3677,7 @@ components:
           description: Where stories drafted from the series' meetings are created; null when creating is off.
         jiraIssueType: { $ref: '#/components/schemas/JiraIssueType' }
         createdBy: { $ref: '#/components/schemas/Actor' }
+        createdByName: { $ref: '#/components/schemas/ActorName' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
     MeetingSeriesList:
       type: object
@@ -4009,8 +4014,10 @@ components:
           topicCount,
           openTopicCount,
           createdBy,
+          createdByName,
           createdAt,
           updatedBy,
+          updatedByName,
           updatedAt,
         ]
       properties:
@@ -4030,8 +4037,10 @@ components:
           description: Every topic of the meeting, moved ones included.
         openTopicCount: { type: integer, minimum: 0 }
         createdBy: { $ref: '#/components/schemas/Actor' }
+        createdByName: { $ref: '#/components/schemas/ActorName' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedBy: { $ref: '#/components/schemas/Actor' }
+        updatedByName: { $ref: '#/components/schemas/ActorName' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
     MeetingList:
       type: object
@@ -4044,7 +4053,18 @@ components:
     MeetingNote:
       type: object
       additionalProperties: false
-      required: [id, topicId, text, createdBy, createdAt, updatedBy, updatedAt]
+      required:
+        [
+          id,
+          topicId,
+          text,
+          createdBy,
+          createdByName,
+          createdAt,
+          updatedBy,
+          updatedByName,
+          updatedAt,
+        ]
       properties:
         id: { type: string, format: uuid }
         topicId: { type: string, format: uuid }
@@ -4054,8 +4074,10 @@ components:
             description: 'What was said, as plain text (untrusted).',
           }
         createdBy: { $ref: '#/components/schemas/Actor' }
+        createdByName: { $ref: '#/components/schemas/ActorName' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedBy: { $ref: '#/components/schemas/Actor' }
+        updatedByName: { $ref: '#/components/schemas/ActorName' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
     MeetingTopicLink:
       type: object
@@ -4082,8 +4104,10 @@ components:
           movedTo,
           notes,
           createdBy,
+          createdByName,
           createdAt,
           updatedBy,
+          updatedByName,
           updatedAt,
         ]
       properties:
@@ -4114,8 +4138,10 @@ components:
           description: Oldest first.
           items: { $ref: '#/components/schemas/MeetingNote' }
         createdBy: { $ref: '#/components/schemas/Actor' }
+        createdByName: { $ref: '#/components/schemas/ActorName' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedBy: { $ref: '#/components/schemas/Actor' }
+        updatedByName: { $ref: '#/components/schemas/ActorName' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
     Meeting:
       type: object
@@ -4135,8 +4161,10 @@ components:
           topicCount,
           openTopicCount,
           createdBy,
+          createdByName,
           createdAt,
           updatedBy,
+          updatedByName,
           updatedAt,
           topics,
         ]
@@ -4157,8 +4185,10 @@ components:
           description: Every topic of the meeting, moved ones included.
         openTopicCount: { type: integer, minimum: 0 }
         createdBy: { $ref: '#/components/schemas/Actor' }
+        createdByName: { $ref: '#/components/schemas/ActorName' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedBy: { $ref: '#/components/schemas/Actor' }
+        updatedByName: { $ref: '#/components/schemas/ActorName' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
         topics:
           type: array

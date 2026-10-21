@@ -1,8 +1,10 @@
 import {
+  authorLabel,
   carryOverCandidates,
   dateInputValue,
   defaultMeeting,
   groupMeetings,
+  meetingToConfluence,
   moveInOrder,
   parseEmails,
   raisedByLabel,
@@ -10,6 +12,7 @@ import {
   startsAtFrom,
   suggestedCarryOver,
   topicWhen,
+  type MeetingDoc,
   type MeetingLike,
   type TopicLike,
 } from './meetings';
@@ -66,6 +69,13 @@ describe('meetings', () => {
       )
     ).toBe('ACME · maria@');
     expect(shortEmail('no-at-sign')).toBe('no-at-sign');
+  });
+
+  it('names the author by their name, and by the shortened actor while the name is not known', () => {
+    expect(authorLabel('Q123456', 'Maria Silva')).toBe('Maria Silva');
+    expect(authorLabel('alex@example.com', null)).toBe('alex@');
+    expect(authorLabel('Q123456', null)).toBe('Q123456');
+    expect(authorLabel('Q123456', '  ')).toBe('Q123456');
   });
 
   it('says a topic was planned, or when it was raised in the meeting', () => {
@@ -129,5 +139,104 @@ describe('meetings', () => {
       expect(startsAtFrom('22/10/2026', '09:30')).toBeNull();
       expect(startsAtFrom('2026-13-40', '09:30')).toBeNull();
     });
+  });
+});
+
+describe('meetingToConfluence', () => {
+  const at = (h: number, m: number, d = 13) =>
+    new Date(2026, 9, d, h, m).toISOString();
+  const meetingDoc = (over: Partial<MeetingDoc> = {}): MeetingDoc => ({
+    id: 'm1',
+    status: 'ended',
+    startsAt: at(9, 30),
+    endsAt: at(10, 0),
+    title: 'Billing sync',
+    seriesName: 'Weekly billing',
+    stakeholders: ['maria@example.com'],
+    topics: [],
+    ...over,
+  });
+
+  it('writes the heading, when, status, series and stakeholders', () => {
+    expect(meetingToConfluence(meetingDoc())).toBe(
+      [
+        'h1. Billing sync',
+        '*When:* Tue 13 Oct · 09:30–10:00',
+        '*Status:* Ended',
+        '*Series:* Weekly billing',
+        '*With:* maria@example.com',
+        '',
+        'h2. Topics',
+        '_No topics._',
+        '',
+      ].join('\n')
+    );
+  });
+
+  it('writes each topic with who raised it, where it moved and its notes', () => {
+    const markup = meetingToConfluence(
+      meetingDoc({
+        seriesName: null,
+        stakeholders: [],
+        topics: [
+          {
+            id: 't1',
+            title: 'Late fees',
+            status: 'moved',
+            raisedBy: 'them',
+            raisedByEmail: 'maria@example.com',
+            origin: 'in_meeting',
+            createdAt: at(9, 45),
+            movedTo: { meetingStartsAt: at(9, 30, 20) },
+            notes: [
+              {
+                text: 'Agree a cap',
+                createdBy: 'q123',
+                createdByName: 'Alex Doe',
+                createdAt: at(9, 50),
+              },
+            ],
+          },
+        ],
+      })
+    );
+    expect(markup).toContain('h3. 1. Late fees');
+    expect(markup).toContain(
+      '_ACME · maria@ · raised at 09:45 · moved to Tue 20 Oct_'
+    );
+    expect(markup).toContain('* Agree a cap _(Alex Doe, 09:50)_');
+    expect(markup).not.toContain('*Series:*');
+    expect(markup).not.toContain('*With:*');
+  });
+
+  it('escapes markup and keeps line breaks in text people wrote', () => {
+    const markup = meetingToConfluence(
+      meetingDoc({
+        title: '*Big* {panel}',
+        topics: [
+          {
+            id: 't1',
+            title: '[link]|x',
+            status: 'open',
+            raisedBy: 'us',
+            raisedByEmail: null,
+            origin: 'planned',
+            createdAt: at(9, 0),
+            movedTo: null,
+            notes: [
+              {
+                text: 'one\ntwo',
+                createdBy: 'q123',
+                createdByName: null,
+                createdAt: at(9, 5),
+              },
+            ],
+          },
+        ],
+      })
+    );
+    expect(markup).toContain('h1. \\*Big\\* \\{panel\\}');
+    expect(markup).toContain('h3. 1. \\[link\\]\\|x');
+    expect(markup).toContain('* one \\\\ two');
   });
 });
