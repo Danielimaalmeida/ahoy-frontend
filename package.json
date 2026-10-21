@@ -38,6 +38,7 @@
     "audit:fix": "npm audit fix --registry=https://registry.npmjs.org",
     "add-density": "ng add @acme-fedev/density-components",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.spec.json && node scripts/check-boundaries.mjs",
+    "test:scripts": "node --test scripts/redact.test.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "api:sync": "node scripts/sync-openapi.mjs",
     "api:types": "openapi-typescript openapi/ahoy-v1.yaml -o src/app/core/api/schema.d.ts --immutable && node scripts/openapi-mirror.mjs",

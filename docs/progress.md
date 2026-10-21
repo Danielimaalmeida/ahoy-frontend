@@ -1,6 +1,7 @@
 # Ahoy frontend · progress
 
-Updated 2026-10-20 (documentation cleanup and engineering review). One page: replace it, do not append; git history is
+Updated 2026-10-21 (`scripts/redact.mjs` fixed as in `ahoy-hosted`; before that, 2026-10-20, documentation cleanup and
+engineering review). One page: replace it, do not append; git history is
 the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both
 repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`.
 
@@ -30,8 +31,13 @@ repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harn
 - **CI:** none runs on github.com. `test.yml` and `lints-format.yml` call `ATC-GitHub/reusable-workflows` on
   `atc-ubuntu-latest`, which do not exist there, and `npm ci` needs the private registry for `@acme-fedev/*`. Every run
   fails before it starts; PR #37 merged with no check run.
-- **This change** (docs only): Prettier on the changed files; nothing else could run here (`npm ci` fails with `404` on
-  `@acme-fedev/playwright-helpers`).
+- **This change** (`scripts/redact.mjs` only, the same fix as `ahoy-hosted`'s): a term in any spelling other than
+  lowercase, UPPERCASE or Capitalized was never redacted and the run still passed; the same term twice in a rules file
+  was silently dropped; a non-reversible placeholder only warned. Now a mixed-case term is an exact rule, a leftover in
+  any case fails with its file and line (except inside an integrity hash or base64 data), a repeated term and a
+  non-reversible copy fail. `npm run test:scripts` (new, `node:test`, made-up terms) passes 10/10 with Node 22.22, and
+  Prettier passes on the changed files. Nothing else could run here (`npm ci` needs the private registry for
+  `@acme-fedev/*`): no build, typecheck, lint or Vitest.
 
 ## Open decisions
 

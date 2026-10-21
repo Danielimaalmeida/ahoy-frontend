@@ -33,6 +33,7 @@ src/
     features/             harbour/, voyages/, set-sail/, docks/, voyage/ (shell + tabs/), run-detail/, metrics/,
                           meetings/
 scripts/check-boundaries.mjs                  layer rules, part of npm run typecheck
+scripts/redact.mjs                            redacted copy for an external model, and --unredact (as in ahoy-hosted)
 src/proxy.conf.json                           dev-server proxy to a local hosted API (proxy.conf.mjs is not read)
 docs/design/                                  copies of the wireframes and the design system (don't edit)
 ```
@@ -50,8 +51,13 @@ docs/design/                                  copies of the wireframes and the d
 | `npm run typecheck`        | `tsc --noEmit` for app and specs, then `scripts/check-boundaries.mjs`.                                                |
 | `npm run check:boundaries` | Only the layer rules.                                                                                                 |
 | `npm run format`           | Prettier check on the whole repository (writes nothing); `npm run format:fix` writes.                                 |
+| `npm run test:scripts`     | The tests of `scripts/redact.mjs` (`node:test`, throwaway git repositories, made-up terms); needs no `npm ci`.        |
 
 Before calling work done: `npm run build && npm run typecheck && npm run lint && npm test && npm run format`.
+
+`scripts/redact.mjs` works as in `ahoy-hosted` (its `docs/developing.md`, "Sharing code with an external model"):
+`node scripts/redact.mjs --force` writes `.work/redacted/`, `node scripts/redact.mjs --unredact --force [--in DIR]`
+writes `.work/unredacted/`, with the rules in `scripts/redact-rules.txt` and `.local/redact-rules.txt`.
 
 ## Running against the hosted API (local, 0 AIU)
 

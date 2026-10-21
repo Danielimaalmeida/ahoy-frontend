@@ -5,6 +5,12 @@
 //   node scripts/redact.mjs --unredact [--in DIR] [--out DIR] [--force]
 // Redact copies only tracked and untracked-but-not-ignored files, so .local/, .work/,
 // node_modules/ and dist/ never leave. Neither mode ever writes to the source tree.
+//
+// A rule is `term => placeholder`. A term written in one case (brand, BRAND or Brand: the same rule) matches its
+// lowercase, UPPERCASE and Capitalized spellings and keeps that case in its placeholder, which is written in lowercase.
+// A term in any other spelling (BrandName) is exact: it matches that spelling only, and its placeholder is used and
+// reversed exactly as written. Redaction fails if a term is still there in any spelling, except inside an integrity
+// hash or base64 data, and if the copy would not come back exactly with --unredact.
 import { execFileSync } from 'node:child_process';
 import {
   existsSync,
@@ -32,44 +38,65 @@ const out = resolve(
   root,
   opt('--out', unredactMode ? '.work/unredacted' : '.work/redacted')
 );
+// .local/ is read first, so its rules override the same terms in scripts/.
 const ruleFiles = [
   join(root, '.local/redact-rules.txt'),
   join(root, 'scripts/redact-rules.txt'),
 ];
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const isUpper = (s) => s === s.toUpperCase() && s !== s.toLowerCase();
-const isCapitalized = (s) =>
-  s[0] !== s[0].toLowerCase() && s.slice(1) === s.slice(1).toLowerCase();
-const matchCase = (found, repl) => {
-  if (isUpper(found)) return repl.toUpperCase();
-  if (isCapitalized(found)) return repl[0].toUpperCase() + repl.slice(1);
-  return repl;
-};
+const capitalized = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+/** The three spellings a one-case term matches: lowercase, UPPERCASE and Capitalized. */
+const spellings = (s) => [
+  s.toLowerCase(),
+  s.toUpperCase(),
+  capitalized(s.toLowerCase()),
+];
+/** A term written in one of its three spellings is matched in all three; any other spelling only as written. */
+const isExact = (term) => !spellings(term).includes(term);
 
 function loadRules() {
   const literals = [];
   const oneWay = [];
   for (const file of ruleFiles) {
     if (!existsSync(file)) continue;
-    for (const raw of readFileSync(file, 'utf8').split(/\r?\n/)) {
-      const line = raw.trim();
-      if (!line || line.startsWith('#')) continue;
-      const [lhs, rhs] = line.split(/\s+=>\s+/);
-      const re = lhs.match(/^\/(.+)\/([a-z]*)$/);
-      if (re) {
-        const flags = re[2].includes('g') ? re[2] : re[2] + 'g';
-        oneWay.push({
-          label: `regex ${lhs}`,
-          re: new RegExp(re[1], flags),
-          to: rhs ?? 'REDACTED',
-        });
-      } else {
-        if (!rhs) throw new Error(`literal rule needs a placeholder: ${lhs}`);
-        if (literals.some((l) => l.term === lhs.toLowerCase())) continue; // .local overrides
-        literals.push({ term: lhs.toLowerCase(), placeholder: rhs });
-      }
-    }
+    const name = relative(root, file);
+    const seenHere = new Map();
+    readFileSync(file, 'utf8')
+      .split(/\r?\n/)
+      .forEach((raw, i) => {
+        const line = raw.trim();
+        if (!line || line.startsWith('#')) return;
+        const [lhs, rhs] = line.split(/\s+=>\s+/);
+        const re = lhs.match(/^\/(.+)\/([a-z]*)$/);
+        if (re) {
+          const flags = re[2].includes('g') ? re[2] : re[2] + 'g';
+          oneWay.push({
+            label: `regex ${lhs}`,
+            re: new RegExp(re[1], flags),
+            to: rhs ?? 'REDACTED',
+          });
+          return;
+        }
+        if (!rhs)
+          throw new Error(
+            `${name}:${i + 1}: literal rule needs a placeholder: ${lhs}`
+          );
+        const exact = isExact(lhs);
+        const key = exact ? lhs : lhs.toLowerCase();
+        if (seenHere.has(key))
+          throw new Error(
+            `${name}:${i + 1}: ${lhs} repeats the rule on line ${seenHere.get(key)}`
+          );
+        seenHere.set(key, i + 1);
+        if (literals.some((l) => l.key === key)) return; // .local overrides
+        if (!exact && rhs !== rhs.toLowerCase())
+          throw new Error(
+            `${name}:${i + 1}: the placeholder of ${lhs} must be lowercase (${rhs.toLowerCase()}): it takes the case ` +
+              'of each spelling it replaces, so any other case could not be reversed'
+          );
+        literals.push({ key, term: key, placeholder: rhs, exact });
+      });
   }
   if (!literals.length && !oneWay.length)
     throw new Error('no redaction rules found');
@@ -80,33 +107,74 @@ function loadRules() {
       throw new Error(
         `placeholder used twice (not reversible): ${placeholder}`
       );
-    if (literals.some((l) => p.includes(l.term)))
+    if (literals.some((l) => p.includes(l.term.toLowerCase())))
       throw new Error(`placeholder contains a term: ${placeholder}`);
     seen.add(p);
   }
   return { literals, oneWay };
 }
 
-// Single pass, longest key first, so overlapping keys cannot chain into each other.
+/** Each spelling a rule replaces, and what replaces it: a one-case rule's three spellings, an exact rule's one. */
+function spellingPairs(literals, reverse) {
+  return literals.flatMap((l, rule) => {
+    const pairs = l.exact
+      ? [[l.term, l.placeholder]]
+      : spellings(l.term).map((s, i) => [s, spellings(l.placeholder)[i]]);
+    return pairs.map(([term, placeholder]) =>
+      reverse ? [placeholder, term, rule] : [term, placeholder, rule]
+    );
+  });
+}
+
+// Single pass, longest spelling first, so overlapping keys cannot chain into each other. Only the listed spellings
+// match, so every replacement reverses exactly.
 function translator(pairs) {
-  const map = new Map(pairs.map(([from, to]) => [from.toLowerCase(), to]));
-  // Only lower, UPPER and Capitalized spellings match, so random mixed case (e.g. in
-  // base64 hashes) is left alone and every replacement reverses exactly.
-  const variants = [...map.keys()].flatMap((k) => [
-    k,
-    k.toUpperCase(),
-    k[0].toUpperCase() + k.slice(1),
-  ]);
-  const keys = [...new Set(variants)].sort((a, b) => b.length - a.length);
+  const map = new Map(pairs.map(([from, to, rule]) => [from, { to, rule }]));
+  const keys = [...map.keys()].sort((a, b) => b.length - a.length);
   const re = keys.length ? new RegExp(keys.map(escape).join('|'), 'g') : null;
   return (text, counts) =>
     re
       ? text.replace(re, (m) => {
-          const key = m.toLowerCase();
-          if (counts) counts.set(key, (counts.get(key) ?? 0) + 1);
-          return matchCase(m, map.get(key));
+          const { to, rule } = map.get(m);
+          if (counts) counts.set(rule, (counts.get(rule) ?? 0) + 1);
+          return to;
         })
       : text;
+}
+
+/** Every match of `words` in `text` in any case, with its 1-based line. */
+function occurrences(words, text) {
+  if (!words.length) return [];
+  const re = new RegExp(
+    [...words]
+      .sort((a, b) => b.length - a.length)
+      .map(escape)
+      .join('|'),
+    'gi'
+  );
+  return [...text.matchAll(re)].map((m) => ({
+    found: m[0],
+    start: m.index,
+    end: m.index + m[0].length,
+    line: text.slice(0, m.index).split('\n').length,
+  }));
+}
+
+const BASE64 = /[A-Za-z0-9+/=]/;
+/**
+ * Whether text[start, end) lies inside an integrity hash (`sha512-...`) or base64 data (`base64,...`), where letters of
+ * a term in random case are noise, not a name.
+ */
+function inEncodedData(text, start, end) {
+  if (![...text.slice(start, end)].every((c) => BASE64.test(c))) return false;
+  let a = start;
+  while (a > 0 && BASE64.test(text[a - 1])) a--;
+  let b = end;
+  while (b < text.length && BASE64.test(text[b])) b++;
+  return (
+    b - a >= 20 &&
+    /(?:sha(?:1|256|384|512)-|base64,)$/.test(text.slice(Math.max(0, a - 8), a))
+  );
 }
 
 function guardOut() {
@@ -126,10 +194,12 @@ const write = (file, data) => {
   writeFileSync(join(out, file), data);
 };
 const isBinary = (buf) => buf.subarray(0, 8000).includes(0);
+const ruleLabel = (rule) =>
+  typeof rule === 'number' ? `rule #${rule + 1}` : rule;
 
 const { literals, oneWay } = loadRules();
-const forward = translator(literals.map((l) => [l.term, l.placeholder]));
-const backward = translator(literals.map((l) => [l.placeholder, l.term]));
+const forward = translator(spellingPairs(literals, false));
+const backward = translator(spellingPairs(literals, true));
 const redact = (text, counts) => {
   text = forward(text, counts);
   for (const r of oneWay) {
@@ -154,24 +224,35 @@ if (unredactMode) {
           : []
     );
   const counts = new Map();
+  const unrestored = [];
+  const restorable = literals.map((l) => l.placeholder);
   let n = 0;
   for (const abs of walk(inDir)) {
     const file = relative(inDir, abs);
     const buf = readFileSync(abs);
-    write(
-      backward(file, counts),
-      isBinary(buf)
-        ? buf
-        : Buffer.from(backward(buf.toString('utf8'), counts), 'utf8')
-    );
+    const target = backward(file, counts);
+    const text = isBinary(buf)
+      ? undefined
+      : backward(buf.toString('utf8'), counts);
+    write(target, text === undefined ? buf : Buffer.from(text, 'utf8'));
+    // A placeholder that came back in a spelling no rule lists (a model wrote it so) is not restored.
+    for (const o of occurrences(
+      restorable,
+      text === undefined ? target : `${text}\n${target}`
+    ))
+      unrestored.push(`${target}:${o.line}: ${o.found}`);
     n++;
   }
   console.log(`${n} files restored from ${inDir}`);
-  for (const [k, c] of counts)
-    console.log(
-      `  ${String(c).padStart(5)}  placeholder #${literals.findIndex((l) => l.placeholder.toLowerCase() === k) + 1}`
-    );
+  for (const [rule, c] of counts)
+    console.log(`  ${String(c).padStart(5)}  ${ruleLabel(rule)}`);
   console.log(`wrote ${out}`);
+  if (unrestored.length) {
+    console.warn(
+      `note: placeholder left in a spelling --unredact cannot restore in ${unrestored.length} place(s); review:`
+    );
+    for (const u of unrestored) console.warn(`  ${u}`);
+  }
   if (oneWay.length)
     console.log(
       `note: ${oneWay.length} one-way regex rule(s) are not reversed`
@@ -199,16 +280,12 @@ const files = execFileSync(
   .filter((f) => existsSync(join(root, f)) && statSync(join(root, f)).isFile());
 
 const terms = literals.map((l) => l.term);
-const spellings = terms.flatMap((t) => [
-  t,
-  t.toUpperCase(),
-  t[0].toUpperCase() + t.slice(1),
-]);
+const replaced = spellingPairs(literals, false).map(([spelling]) => spelling);
 const placeholders = literals.map((l) => l.placeholder.toLowerCase());
 const collisions = [];
 const leftovers = [];
+const encoded = [];
 const notReversible = [];
-const mixedCase = [];
 const counts = new Map();
 
 // A placeholder already in the source would be "restored" to a term by --unredact.
@@ -240,10 +317,25 @@ for (const file of files) {
   const source = bin ? '' : buf.toString('utf8');
   const redacted = bin ? '' : redact(source, counts);
   if (bin) binary++;
-  const scan = (bin ? buf.toString('latin1') : redacted) + '\n' + target;
-  if (spellings.some((t) => scan.includes(t))) leftovers.push(target);
-  else if (terms.some((t) => scan.toLowerCase().includes(t)))
-    mixedCase.push(target);
+  for (const o of occurrences(terms, target))
+    leftovers.push({ where: `${target} (path)`, found: o.found });
+  if (bin) {
+    // A binary is copied as it is: a spelling a rule replaces is a leak, any other case is noted.
+    for (const o of occurrences(terms, buf.toString('latin1'))) {
+      if (replaced.includes(o.found))
+        leftovers.push({
+          where: `${target} (binary, copied as it is)`,
+          found: o.found,
+        });
+      else encoded.push(`${target} (binary): ${o.found}`);
+    }
+  } else {
+    for (const o of occurrences(terms, redacted)) {
+      if (inEncodedData(redacted, o.start, o.end))
+        encoded.push(`${target}:${o.line}: ${o.found}`);
+      else leftovers.push({ where: `${target}:${o.line}`, found: o.found });
+    }
+  }
   if (
     !oneWay.length &&
     (backward(target) !== file || (!bin && backward(redacted) !== source))
@@ -255,28 +347,40 @@ for (const file of files) {
 console.log(
   `${files.length} files scanned (${binary} binary, copied as-is), ${literals.length} literal + ${oneWay.length} regex rules`
 );
-for (const [k, c] of counts) {
-  const i = terms.indexOf(k);
+for (const [rule, c] of counts) {
+  const l = literals[rule];
   console.log(
-    `  ${String(c).padStart(5)}  ${i >= 0 ? `rule #${i + 1} -> ${literals[i].placeholder}` : k}`
+    `  ${String(c).padStart(5)}  ${l ? `${ruleLabel(rule)} -> ${l.placeholder}` : rule}`
   );
 }
 if (!checkOnly) console.log(`wrote ${out}`);
-if (notReversible.length) {
+if (encoded.length) {
   console.warn(
-    `warning: ${notReversible.length} file(s) will not round-trip exactly:`
+    `note: ${encoded.length} mixed-case match(es) left in encoded data (hashes, base64, binaries), unchanged:`
   );
-  for (const f of notReversible) console.warn(`  ${f}`);
+  for (const e of encoded) console.warn(`  ${e}`);
 }
-if (mixedCase.length) {
-  console.warn(
-    `note: odd mixed-case matches left untouched (often hashes) in ${mixedCase.length} file(s); review:`
+let failed = false;
+if (notReversible.length) {
+  console.error(
+    `${notReversible.length} file(s) would not come back exactly with --unredact:`
   );
-  for (const f of mixedCase) console.warn(`  ${f}`);
+  for (const f of notReversible) console.error(`  ${f}`);
+  failed = true;
 }
 if (leftovers.length) {
-  console.error(`LEFTOVER terms still present in ${leftovers.length} file(s):`);
-  for (const f of leftovers) console.error(`  ${f}`);
-  process.exit(1);
+  const missing = [
+    ...new Set(
+      leftovers.map((l) => l.found).filter((found) => !replaced.includes(found))
+    ),
+  ];
+  console.error(`LEFTOVER terms in ${leftovers.length} place(s):`);
+  for (const l of leftovers) console.error(`  ${l.where}: ${l.found}`);
+  if (missing.length)
+    console.error(
+      `add an exact rule for each spelling: ${missing.map((s) => `${s} => <placeholder>`).join(', ')}`
+    );
+  failed = true;
 }
+if (failed) process.exit(1);
 console.log('check: no rule terms remain');
