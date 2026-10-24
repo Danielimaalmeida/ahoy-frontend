@@ -11,11 +11,15 @@
     "role": "a finance user",
     "want": "overdue enterprise invoices to carry a late fee I approve",
     "soThat": "customers pay on time and we stop chasing them by hand",
+    "context": null,
+    "implementedFeature": null,
     "acceptanceCriteria": [
       "Only accounts on the enterprise plan can get a late fee.",
       "The fee is 1.5% per month, capped at 10% of the invoice."
     ],
     "outOfScope": ["Contract accounts"],
+    "dependencies": [],
+    "testNotes": [],
     "openQuestions": ["Who approves a waiver?"]
   },
   "failure": null,

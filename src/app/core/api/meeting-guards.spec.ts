@@ -11,14 +11,17 @@ import updateMeetingSeries from '@testing/fixtures/updateMeetingSeries.json';
 import endMeeting from '@testing/fixtures/endMeeting.json';
 import getMeeting from '@testing/fixtures/getMeeting.json';
 import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
+import listMeetingNotes from '@testing/fixtures/listMeetingNotes.json';
 import listMeetings from '@testing/fixtures/listMeetings.json';
 import moveMeetingTopic from '@testing/fixtures/moveMeetingTopic.json';
+import setMeetingNoteDone from '@testing/fixtures/setMeetingNoteDone.json';
 import { withField } from '@testing/fixtures/mutate';
 import {
   isEndMeetingResult,
   isMeeting,
   isMeetingList,
   isMeetingNote,
+  isMeetingNoteList,
   isMeetingSeries,
   isMeetingSeriesList,
   isMeetingStoryDraft,
@@ -40,6 +43,39 @@ describe('meeting guards', () => {
     expect(isMeetingSeries(createMeetingSeries)).toBe(true);
     expect(isMeetingSeriesList(listMeetingSeries)).toBe(true);
     expect(isMeetingSeries(updateMeetingSeries)).toBe(true);
+  });
+
+  it('accept a done action and the notes of one kind across meetings', () => {
+    expect(isMeetingNote(setMeetingNoteDone)).toBe(true);
+    expect(isMeetingNoteList(listMeetingNotes)).toBe(true);
+  });
+
+  it('refuse an owner, a due day or a done mark on a note that is not an action, naming the field', () => {
+    const decisionWithOwner = withField(
+      { ...addMeetingNote, kind: 'decision' },
+      'owner',
+      'Sam'
+    );
+    expect(isMeetingNote(decisionWithOwner)).toBe(false);
+    expect(isMeetingNote.explain(decisionWithOwner)).toContain('owner');
+    expect(
+      isMeetingNote(withField(setMeetingNoteDone, 'kind', 'question'))
+    ).toBe(false);
+    expect(
+      isMeetingNote(withField(addMeetingNote, 'dueOn', '2026-10-30'))
+    ).toBe(false);
+    expect(isMeetingNote(withField(addMeetingNote, 'kind', 'todo'))).toBe(
+      false
+    );
+  });
+
+  it('refuse a done mark without who did it, or who without when', () => {
+    expect(isMeetingNote(withField(setMeetingNoteDone, 'doneBy', null))).toBe(
+      false
+    );
+    expect(isMeetingNote(withField(setMeetingNoteDone, 'doneAt', null))).toBe(
+      false
+    );
   });
 
   it('accept every story draft answer the contract documents: drafting, asking, ready, failed and created', () => {

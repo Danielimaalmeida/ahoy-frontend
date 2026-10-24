@@ -1,7 +1,8 @@
 /**
  * Meetings with stakeholders (the Meetings page): grouping meetings into now, next and past, the words for who raised a
- * topic and where it came from, and which topics to suggest carrying over when a meeting ends. Pure: no Angular, no
- * clock (times come in as parameters).
+ * topic and where it came from, which topics to suggest carrying over when a meeting ends, and what each note is (a
+ * decision, an action with an owner and a due day, a question). Pure: no Angular, no clock (times come in as
+ * parameters).
  */
 
 const MONTHS = [
@@ -184,9 +185,110 @@ export function startsAtFrom(date: string, time: string): string | null {
   return Number.isNaN(at.getTime()) ? null : at.toISOString();
 }
 
-/** What the Confluence export reads of a note. */
+/** What a note is (`MeetingNoteKind`): what was said, what was agreed, something to do next, or what is still open. */
+export type NoteKind = 'note' | 'decision' | 'action' | 'question';
+
+/** The word for each kind of note, as its tag and the composer's choice show it. */
+export const NOTE_KIND_LABELS: Readonly<Record<NoteKind, string>> = {
+  note: 'Note',
+  decision: 'Decision',
+  action: 'Action',
+  question: 'Question',
+};
+
+/** A note's kind and, for an action, its owner and due day (`YYYY-MM-DD`). */
+export interface NoteKindFields {
+  readonly kind: NoteKind;
+  readonly owner: string | null;
+  readonly dueOn: string | null;
+}
+
+/** A change to a note's kind and action fields: absent keeps the current value, null clears it. */
+export interface NoteKindChange {
+  readonly kind?: NoteKind;
+  readonly owner?: string | null;
+  readonly dueOn?: string | null;
+}
+
+/**
+ * A note's kind and action fields after `change`, or the reason it is refused, as the API decides it: only an action
+ * has an owner or a due day, so naming either for another kind is refused, and a note that stops being an action loses
+ * them. An owner is trimmed; a blank one is none.
+ */
+export function noteKindFields(
+  current: NoteKindFields,
+  change: NoteKindChange
+): NoteKindFields | string {
+  const kind = change.kind ?? current.kind;
+  const owner =
+    change.owner === undefined ? undefined : change.owner?.trim() || null;
+  if (kind !== 'action') {
+    if (owner || change.dueOn)
+      return 'owner and dueOn are only for a note of kind action';
+    return { kind, owner: null, dueOn: null };
+  }
+  const wasAction = current.kind === 'action';
+  return {
+    kind,
+    owner: owner !== undefined ? owner : wasAction ? current.owner : null,
+    dueOn:
+      change.dueOn !== undefined
+        ? change.dueOn
+        : wasAction
+          ? current.dueOn
+          : null,
+  };
+}
+
+/** How often an open meeting in progress is read again, so notes others take show up without a refresh. */
+export const LIVE_POLL_MS = 5000;
+
+const SHORTCUTS: Readonly<Record<string, NoteKind>> = {
+  n: 'note',
+  d: 'decision',
+  a: 'action',
+  q: 'question',
+};
+
+/**
+ * A typed note that starts with a shortcut (`/d`, `/a`, `/q`, `/n`, then a space) as its kind and the rest of the text;
+ * null when it does not start with one, so the kind chosen on screen stands.
+ */
+export function noteShortcut(
+  typed: string
+): { readonly kind: NoteKind; readonly text: string } | null {
+  const [, letter, rest] =
+    /^\/([ndaq])\s+([\s\S]*)$/i.exec(typed.trimStart()) ?? [];
+  const kind =
+    letter === undefined ? undefined : SHORTCUTS[letter.toLowerCase()];
+  return kind === undefined || rest === undefined
+    ? null
+    : { kind, text: rest.trim() };
+}
+
+/**
+ * When an action is due, from the day it is due and today (both `YYYY-MM-DD`, in the browser's time zone): "due Fri
+ * 30 Oct", "due today" or "overdue since Fri 30 Oct"; null for no due day.
+ */
+export function dueLabel(
+  dueOn: string | null,
+  today: string
+): { readonly text: string; readonly overdue: boolean } | null {
+  if (dueOn === null) return null;
+  const day = meetingDay(`${dueOn}T12:00:00`);
+  if (dueOn === today) return { text: 'due today', overdue: false };
+  return dueOn < today
+    ? { text: `overdue since ${day}`, overdue: true }
+    : { text: `due ${day}`, overdue: false };
+}
+
+/** What the Confluence export reads of a note; a note without a kind is a plain note. */
 export interface NoteDoc {
   readonly text: string;
+  readonly kind?: NoteKind;
+  readonly owner?: string | null;
+  readonly dueOn?: string | null;
+  readonly doneAt?: string | null;
   readonly createdBy: string;
   readonly createdByName: string | null;
   readonly createdAt: string;
@@ -237,6 +339,19 @@ export function meetingToConfluence(meeting: MeetingDoc): string {
     lines.push(`*Series:* ${wiki(meeting.seriesName)}`);
   if (meeting.stakeholders.length > 0)
     lines.push(`*With:* ${meeting.stakeholders.map(wiki).join(', ')}`);
+  const { decisions, actions } = decisionsAndActions(meeting);
+  if (decisions.length > 0)
+    lines.push(
+      '',
+      'h2. Decisions',
+      ...decisions.map((n) => `* ${wiki(n.text)}`)
+    );
+  if (actions.length > 0)
+    lines.push(
+      '',
+      'h2. Actions',
+      ...actions.map((n) => `* ${wiki(n.text)}${actionSuffix(n)}`)
+    );
   lines.push('', 'h2. Topics');
   if (meeting.topics.length === 0) lines.push('_No topics._');
   meeting.topics.forEach((topic, index) => {
@@ -251,8 +366,39 @@ export function meetingToConfluence(meeting: MeetingDoc): string {
     );
     for (const note of topic.notes)
       lines.push(
-        `* ${wiki(note.text)} _(${wiki(authorLabel(note.createdBy, note.createdByName))}, ${meetingTime(note.createdAt)})_`
+        `* ${notePrefix(note)}${wiki(note.text)}${actionSuffix(note)} _(${wiki(authorLabel(note.createdBy, note.createdByName))}, ${meetingTime(note.createdAt)})_`
       );
   });
   return `${lines.join('\n')}\n`;
+}
+
+/** "*Decision:* " before a decision, action or question; nothing before a plain note. */
+function notePrefix(note: NoteDoc): string {
+  const kind = note.kind ?? 'note';
+  return kind === 'note' ? '' : `*${NOTE_KIND_LABELS[kind]}:* `;
+}
+
+/** " — Ana, due Fri 30 Oct, done" after an action: whatever of its owner, due day and done mark it has. */
+function actionSuffix(note: NoteDoc): string {
+  if (note.kind !== 'action') return '';
+  const parts = [
+    ...(note.owner ? [wiki(note.owner)] : []),
+    ...(note.dueOn ? [`due ${meetingDay(`${note.dueOn}T12:00:00`)}`] : []),
+    ...(note.doneAt ? ['done'] : []),
+  ];
+  return parts.length === 0 ? '' : ` — ${parts.join(', ')}`;
+}
+
+/**
+ * The decisions and the actions of a meeting, in topic order, for the summary above its topics: what a person who
+ * missed the meeting reads first.
+ */
+export function decisionsAndActions<N extends NoteDoc>(meeting: {
+  readonly topics: readonly { readonly notes: readonly N[] }[];
+}): { readonly decisions: N[]; readonly actions: N[] } {
+  const notes = meeting.topics.flatMap((t) => t.notes);
+  return {
+    decisions: notes.filter((n) => n.kind === 'decision'),
+    actions: notes.filter((n) => n.kind === 'action'),
+  };
 }

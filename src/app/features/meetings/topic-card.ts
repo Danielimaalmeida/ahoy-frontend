@@ -1,13 +1,23 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import type { MeetingStoryDraft, MeetingTopic } from '@core/api/types';
+import {
+  MEETING_NOTE_KINDS,
+  type MeetingNote,
+  type MeetingStoryDraft,
+  type MeetingTopic,
+} from '@core/api/types';
 import {
   authorLabel,
+  dueLabel,
   meetingDay,
   meetingTime,
+  NOTE_KIND_LABELS,
+  noteShortcut,
   raisedByLabel,
   topicWhen,
+  type NoteKind,
 } from '@domain/meetings';
 import { draftChip } from '@domain/story-drafts';
 import { Button } from '@ui/button/button';
@@ -24,7 +34,9 @@ export const NOTE_MAX = 4000;
 /**
  * One topic of a meeting (board `Meetings`): its title, who raised it and when, its notes oldest first, and a line to
  * add a note. While it can change, it can also go up or down, move to the series' next meeting, or be removed with its
- * notes (after a second click). A moved topic is read-only and links to where it went. Notes are plain text. A topic
+ * notes (after a second click). A moved topic is read-only and links to where it went. Notes are plain text; a note can
+ * be a decision, an action (with an owner and a due day, ticked done also after the meeting ended) or a question,
+ * chosen beside the line or typed as `/d`, `/a`, `/q` before the text. A topic
  * that was not moved can be turned into a user story (also after the meeting ended); its draft's state shows on a line
  * of its own, with the way to check it, and the Jira issue once created.
  */
@@ -94,6 +106,29 @@ export const NOTE_MAX = 4000;
     .by {
       white-space: nowrap;
     }
+    .kind {
+      flex: none;
+    }
+    .kind-decision {
+      background: var(--status-decision-bg);
+      color: var(--status-decision-fg);
+    }
+    .kind-question {
+      background: var(--status-input-bg);
+      color: var(--status-input-fg);
+    }
+    .done .text {
+      text-decoration: line-through;
+      color: var(--ink-soft);
+    }
+    .overdue {
+      color: var(--danger-text);
+    }
+    .done-box {
+      margin: 0;
+      flex: none;
+      accent-color: var(--accent);
+    }
     .remove-note {
       opacity: 0;
     }
@@ -103,13 +138,28 @@ export const NOTE_MAX = 4000;
     }
     form {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       padding: 0 16px 12px;
     }
-    form input {
+    form input,
+    form select {
       height: 32px;
       background: var(--surface-raised);
       border-color: var(--line);
+    }
+    form select {
+      flex: none;
+      width: auto;
+    }
+    form .line {
+      flex: 1 1 240px;
+    }
+    form .owner {
+      flex: 0 1 160px;
+    }
+    form .due {
+      flex: 0 1 150px;
     }
     .story {
       display: flex;
@@ -216,9 +266,38 @@ export const NOTE_MAX = 4000;
       @if (t.notes.length > 0) {
         <ul [attr.aria-label]="'Notes on ' + t.title">
           @for (note of t.notes; track note.id) {
-            <li>
+            <li [class.done]="note.doneAt !== null">
               <span class="note">
+                @if (note.kind === 'action') {
+                  <input
+                    type="checkbox"
+                    class="done-box"
+                    [checked]="note.doneAt !== null"
+                    [disabled]="busy() || moved()"
+                    [attr.aria-label]="
+                      (note.doneAt === null
+                        ? 'Mark done: '
+                        : 'Mark not done: ') + note.text
+                    "
+                    (change)="toggleDone(note, $event)"
+                  />
+                }
+                @if (note.kind !== 'note') {
+                  <span class="ah-tag kind" [class]="'kind-' + note.kind">{{
+                    kindLabel[note.kind]
+                  }}</span>
+                }
                 <span class="text">{{ note.text }}</span>
+                @if (note.kind === 'action') {
+                  @if (note.owner !== null) {
+                    <span class="ah-hint by">{{ note.owner }}</span>
+                  }
+                  @if (due(note); as d) {
+                    <span class="ah-hint by" [class.overdue]="d.overdue">{{
+                      d.text
+                    }}</span>
+                  }
+                }
                 <span class="ah-hint by" [attr.title]="note.createdBy"
                   >{{ author(note.createdBy, note.createdByName) }} ·
                   {{ time(note.createdAt) }}</span
@@ -304,18 +383,48 @@ export const NOTE_MAX = 4000;
       }
       @if (editable()) {
         <form (submit)="$event.preventDefault(); addNote()">
+          <label class="ah-sr" [for]="'kind-' + t.id"
+            >Kind of note for {{ t.title }}</label
+          >
+          <select class="ah-input" [id]="'kind-' + t.id" [formControl]="kind">
+            @for (k of kinds; track k) {
+              <option [value]="k">{{ kindLabel[k] }}</option>
+            }
+          </select>
           <label class="ah-sr" [for]="'note-' + t.id"
             >Add a note to {{ t.title }}</label
           >
           <input
-            class="ah-input"
+            class="ah-input line"
             type="text"
             autocomplete="off"
-            placeholder="Add a note"
+            [placeholder]="placeholder()"
             [id]="'note-' + t.id"
             [maxlength]="noteMax"
             [formControl]="note"
           />
+          @if (kindNow() === 'action') {
+            <label class="ah-sr" [for]="'owner-' + t.id">Who does it</label>
+            <input
+              class="ah-input owner"
+              type="text"
+              autocomplete="off"
+              placeholder="Owner"
+              maxlength="200"
+              [id]="'owner-' + t.id"
+              [formControl]="owner"
+            />
+            <label class="ah-sr" [for]="'due-' + t.id">Due on</label>
+            <input
+              class="ah-input due"
+              type="date"
+              [id]="'due-' + t.id"
+              [formControl]="dueOn"
+            />
+            <button ahButton="soft" size="sm" type="submit" [disabled]="busy()">
+              Add action
+            </button>
+          }
         </form>
       }
     </article>
@@ -339,6 +448,22 @@ export class TopicCard {
 
   protected readonly noteMax = NOTE_MAX;
   protected readonly note = new FormControl('', { nonNullable: true });
+  protected readonly kind = new FormControl<NoteKind>('note', {
+    nonNullable: true,
+  });
+  protected readonly owner = new FormControl('', { nonNullable: true });
+  protected readonly dueOn = new FormControl('', { nonNullable: true });
+  protected readonly kinds = MEETING_NOTE_KINDS;
+  protected readonly kindLabel = NOTE_KIND_LABELS;
+  /** The kind chosen beside the line, as a signal for the template. */
+  protected readonly kindNow = toSignal(this.kind.valueChanges, {
+    initialValue: this.kind.value,
+  });
+  protected readonly placeholder = computed(() =>
+    this.kindNow() === 'note'
+      ? 'Add a note (/d decision, /a action, /q question)'
+      : `Add a ${NOTE_KIND_LABELS[this.kindNow()].toLowerCase()}`
+  );
   /** Whether the person clicked Remove once and is asked to confirm. */
   readonly confirming = signal(false);
 
@@ -420,12 +545,39 @@ export class TopicCard {
     return this.store.reorder(this.topic().id, 1);
   }
 
-  /** Adds the typed note; on success the line clears for the next one. */
+  /** When an action is due, against today. */
+  protected due(note: MeetingNote) {
+    return dueLabel(note.dueOn, this.store.today());
+  }
+
+  /** Ticks an action done, or not done again; the box follows the answer. */
+  protected async toggleDone(note: MeetingNote, event: Event): Promise<void> {
+    const box = event.target as HTMLInputElement;
+    const done = box.checked;
+    const changed = await this.store.setDone(note.id, done);
+    if (!changed) box.checked = !done;
+  }
+
+  /**
+   * Adds the typed note, of the kind chosen beside the line or typed as a shortcut (`/a Send the deck`); on success the
+   * line clears for the next one and the kind goes back to a plain note.
+   */
   async addNote(): Promise<void> {
-    const text = this.note.value.trim();
+    const typed = this.note.value.trim();
+    const shortcut = noteShortcut(typed);
+    const text = shortcut?.text ?? typed;
+    const kind = shortcut?.kind ?? this.kind.value;
     if (text === '' || this.busy()) return;
-    const added = await this.store.addNote(this.topic().id, text);
-    if (added) this.note.setValue('');
+    const added = await this.store.addNote(this.topic().id, text, {
+      kind,
+      owner: this.owner.value,
+      dueOn: this.dueOn.value,
+    });
+    if (!added) return;
+    this.note.setValue('');
+    this.owner.setValue('');
+    this.dueOn.setValue('');
+    this.kind.setValue('note');
   }
 
   /** Removes the topic and its notes, once confirmed. */

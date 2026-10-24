@@ -12,6 +12,7 @@ import { targetText } from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { ToastService } from '@ui/toast/toast';
+import { ActionsPanel } from './actions-panel';
 import { EndMeetingDialog, type EndMeetingData } from './end-meeting-dialog';
 import { meetingErrorView } from './meeting-errors';
 import { MeetingsStore } from './meetings-store';
@@ -37,12 +38,13 @@ const STATUS_WORDS = {
 
 /**
  * The meeting open on the right of the Meetings page (boards `Meetings` and `MeetingNext`): its status, day and
- * stakeholders, Start or End, the line that adds a topic, and the topics with their notes. `/meetings` opens the
+ * stakeholders, Start or End, the line that adds a topic, the series' open actions and this meeting's decisions, and
+ * the topics with their notes. `/meetings` opens the
  * meeting running now, else the next planned one, else the latest that ended; `/meetings/:id` opens that one.
  */
 @Component({
   selector: 'ah-meeting-view',
-  imports: [Banner, Button, TopicCard, TopicComposer],
+  imports: [ActionsPanel, Banner, Button, TopicCard, TopicComposer],
   styles: `
     :host {
       display: flex;
@@ -199,6 +201,8 @@ const STATUS_WORDS = {
       } @else {
         <ah-topic-composer />
       }
+
+      <ah-actions-panel />
 
       @if (drafts.loadError() !== null) {
         <span class="ah-hint" role="status"

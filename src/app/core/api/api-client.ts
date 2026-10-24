@@ -33,6 +33,7 @@ import {
   isMeeting,
   isMeetingList,
   isMeetingNote,
+  isMeetingNoteList,
   isMeetingSeries,
   isMeetingSeriesList,
   isMeetingStoryDraft,
@@ -80,10 +81,13 @@ import type {
   ListEventsQuery,
   ListStoriesQuery,
   JiraBacklog,
+  ListMeetingNotesQuery,
   ListMeetingsQuery,
   Meeting,
   MeetingList,
   MeetingNote,
+  MeetingNoteDoneRequest,
+  MeetingNoteList,
   MeetingNoteRequest,
   MeetingSeries,
   MeetingSeriesList,
@@ -806,6 +810,37 @@ export class ApiClient {
         body,
         { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
       )
+    );
+  }
+
+  /** Marks an action done, or not done again; also after its meeting ended. */
+  setMeetingNoteDone(
+    noteId: string,
+    body: MeetingNoteDoneRequest
+  ): Promise<ApiResult<MeetingNote>> {
+    return this.post(
+      'setMeetingNoteDone',
+      `/meeting-notes/${segment(noteId)}/done`,
+      body,
+      isMeetingNote
+    );
+  }
+
+  /** The notes of one kind across meetings (a series' open actions, a meeting's decisions), latest meeting first. */
+  listMeetingNotes(
+    query: ListMeetingNotesQuery
+  ): Promise<ApiResult<MeetingNoteList>> {
+    let params = new HttpParams().set('kind', query.kind);
+    if (query.seriesId !== undefined)
+      params = params.set('seriesId', query.seriesId);
+    if (query.meetingId !== undefined)
+      params = params.set('meetingId', query.meetingId);
+    if (query.status !== undefined) params = params.set('status', query.status);
+    return this.get(
+      'listMeetingNotes',
+      '/meeting-notes',
+      isMeetingNoteList,
+      params
     );
   }
 

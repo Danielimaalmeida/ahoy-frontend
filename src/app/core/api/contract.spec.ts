@@ -10,9 +10,11 @@ import requestMeetingStoryDraft from '@testing/fixtures/requestMeetingStoryDraft
 import updateMeetingSeries from '@testing/fixtures/updateMeetingSeries.json';
 import endMeeting from '@testing/fixtures/endMeeting.json';
 import getMeeting from '@testing/fixtures/getMeeting.json';
+import listMeetingNotes from '@testing/fixtures/listMeetingNotes.json';
 import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
 import listMeetings from '@testing/fixtures/listMeetings.json';
 import moveMeetingTopic from '@testing/fixtures/moveMeetingTopic.json';
+import setMeetingNoteDone from '@testing/fixtures/setMeetingNoteDone.json';
 import setMeetingTopicOrder from '@testing/fixtures/setMeetingTopicOrder.json';
 import startMeeting from '@testing/fixtures/startMeeting.json';
 import updateMeeting from '@testing/fixtures/updateMeeting.json';
@@ -156,6 +158,8 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['moveMeetingTopic', moveMeetingTopic],
   ['addMeetingNote', addMeetingNote],
   ['updateMeetingNote', updateMeetingNote],
+  ['setMeetingNoteDone', setMeetingNoteDone],
+  ['listMeetingNotes', listMeetingNotes],
   ['listMeetingSeries', listMeetingSeries],
   ['createMeetingSeries', createMeetingSeries],
   ['updateMeetingSeries', updateMeetingSeries],
@@ -198,7 +202,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 2).toBe(
-      61
+      63
     );
   });
 
@@ -264,6 +268,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'updateMeetingTopic',
       'moveMeetingTopic',
       'updateMeetingNote',
+      'setMeetingNoteDone',
     ])
       expect(statusOf(id)).toEqual(['200']);
   });
@@ -361,7 +366,28 @@ describe('the request bodies the client sends', () => {
         cadenceDays: 7,
       })
     ).toEqual([]);
+    expect(
+      requestViolations('addMeetingNote', {
+        text: 'Send the proposal to finance',
+        kind: 'action',
+        owner: 'Sam Example',
+        dueOn: '2026-10-30',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('updateMeetingNote', {
+        text: 'Exports stay synchronous',
+        kind: 'decision',
+        owner: null,
+        dueOn: null,
+      })
+    ).toEqual([]);
+    expect(requestViolations('setMeetingNoteDone', { done: true })).toEqual([]);
     expect(requestViolations('addMeetingNote', { text: '  ' })).not.toEqual([]);
+    expect(
+      requestViolations('addMeetingNote', { text: 'x', kind: 'todo' })
+    ).not.toEqual([]);
+    expect(requestViolations('setMeetingNoteDone', {})).not.toEqual([]);
     expect(requestViolations('endMeeting', { carryOver: ['x'] })).not.toEqual(
       []
     );

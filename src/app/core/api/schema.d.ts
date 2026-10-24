@@ -126,9 +126,13 @@ export interface paths {
     };
     /**
      * The rows behind the metrics as CSV or JSON, one table at a time.
-     * @description `runs`: every run in the period with its spend, tokens, outcome and gate verdict. `halts`: every halt with its
-     *     diagnosis and when it was resumed. `gates`: every automated gate verdict. `errors`: the grouped errors. Same
-     *     period and filters as `GET /metrics`. No story text or agent output is exported; messages are untrusted text.
+     * @description `runs`: every run in the period with its kind (why it ran: `first`, `review_rework`, `ci_fix`, `retry`,
+     *     `repair`, ...), its work package, spend, tokens, outcome and gate verdict. `halts`: every halt, and every block
+     *     at a ceiling, with its diagnosis, when it ended and what ended it (`endedBy`). `gates`: every automated gate
+     *     verdict. `errors`: the grouped errors; a poll of a pull request whose CI is still running is not one. `waits`:
+     *     every wait on a person (answers, a human gate's decision, a halt to end) with its start, end, outcome and
+     *     seconds. Same period and filters as `GET /metrics`. No story text or agent output is exported; messages are
+     *     untrusted text.
      */
     readonly get: operations['exportMetrics'];
     readonly put?: never;
@@ -1178,10 +1182,58 @@ export interface paths {
     readonly get?: never;
     readonly put?: never;
     /**
-     * Add a note under a topic.
-     * @description `409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.
+     * Add a note, decision, action or question under a topic.
+     * @description A plain `note` unless `kind` says otherwise. `owner` and `dueOn` are only for an action (`400
+     *     validation_failed` otherwise). `409 invalid_state` when the topic was moved to the next meeting or its meeting
+     *     has ended.
      */
     readonly post: operations['addMeetingNote'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meeting-notes': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The notes of one kind across meetings, such as a series' open actions or its decisions.
+     * @description Latest meeting first, then in the meeting's topic order and the order the notes were taken; at most 500. A note
+     *     under a topic carried over to the next meeting is listed once, as its copy there. `status` is only for
+     *     `kind=action` (`400 validation_failed` otherwise). 0 AIU.
+     */
+    readonly get: operations['listMeetingNotes'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meeting-notes/{noteId}/done': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly noteId: components['parameters']['MeetingNoteId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Mark an action done, or not done again.
+     * @description Records who marked it and when; `done: false` clears both. Allowed after the meeting has ended, since actions
+     *     are done after it. `409 invalid_state` when the note is not an action, or its topic was moved to the next
+     *     meeting (mark the copy there).
+     */
+    readonly post: operations['setMeetingNoteDone'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -1208,8 +1260,10 @@ export interface paths {
     readonly options?: never;
     readonly head?: never;
     /**
-     * Rewrite a note.
-     * @description `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.
+     * Rewrite a note, and change its kind, owner or due day.
+     * @description `kind`, `owner` and `dueOn` absent keep their values; null clears `owner` or `dueOn`. A note that stops being an
+     *     action loses its owner, due day and done mark. `409 invalid_state` when its topic was moved to the next meeting
+     *     or its meeting has ended.
      */
     readonly patch: operations['updateMeetingNote'];
     readonly trace?: never;
@@ -1398,7 +1452,10 @@ export interface components {
     readonly RunId: string;
     readonly EventId: string;
     readonly Actor: string;
-    /** @description The person's display name, or null when it is not known yet. `createdBy`/`updatedBy` stay the q-number. */
+    /**
+     * @description The name to show for an actor, from the identity provider; null when none is known, and then the actor
+     *     (the qnumber) is shown.
+     */
     readonly ActorName: string | null;
     /** Format: date-time */
     readonly Timestamp: string;
@@ -1980,7 +2037,7 @@ export interface components {
     readonly StoryState: {
       readonly key: components['schemas']['StoryKey'];
       readonly version: components['schemas']['Version'];
-      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. A work package's `status` is `pending`, `done`, `in_progress`, `waiting_on_handback`, `failed`, `stalled`, `blocked`, `unverified` or `awaiting_ci`. `awaiting_ci`: the implementer reported `unverified` with every gap in `deferred_checks` delegated to CI checks the repository declares, and the work was published; its dependents may start, and child_ready waits for each check. Such a package also has `deferred_checks` (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done` and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A work package may also have `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its answers to the findings its rework note numbered, kept until a review sends work back again. A review in `reviewer_reviews` gives, in `criteria_reasons`, `why` and `proof` (what would prove it) for each verdict other than `met`. Its `findings` may carry `previous_id`, `regression` and `new_argument` as the reviewer wrote them, and `follow_up` as the harness set it: in a re-review a medium finding that is not a regression the rework introduced and not a previous finding still open, or a disputed one upheld without a new argument, is a follow-up, recorded for the person at the delivery gate (a `review_follow_up` entry of `decision_log`) and not sent to rework. */
+      /** @description The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. A work package's `status` is `pending`, `done`, `in_progress`, `waiting_on_handback`, `failed`, `stalled`, `blocked`, `unverified` or `awaiting_ci`. `awaiting_ci`: the implementer reported `unverified` with every gap in `deferred_checks` delegated to CI checks the repository declares, and the work was published; its dependents may start, and child_ready waits for each check. Such a package also has `deferred_checks` (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done` and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A package reported `unverified` without such a delegation, whose work was published, is `done` like a `ready` one: child_ready requires its pull request with every check green, the reviewer is told its gaps, and the decision log records them (`unverified_delivered`); it stays `unverified`, for a person, only when publication is not proven. A work package may also have `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its answers to the findings its rework note numbered, kept until a review sends work back again. A review in `reviewer_reviews` gives, in `criteria_reasons`, `why` and `proof` (what would prove it) for each verdict other than `met`. Its `findings` may carry `previous_id`, `regression` and `new_argument` as the reviewer wrote them, and `follow_up` as the harness set it: in a re-review a medium finding that is not a regression the rework introduced and not a previous finding still open, or a disputed one upheld without a new argument, is a follow-up, recorded for the person at the delivery gate (a `review_follow_up` entry of `decision_log`) and not sent to rework. */
       readonly state: Record<string, never>;
     };
     readonly GateVerdict: {
@@ -2284,11 +2341,13 @@ export interface components {
         readonly phase: components['schemas']['Phase'];
         readonly runs: components['schemas']['MetricsCount'];
         readonly pass: components['schemas']['MetricsCount'];
-        /** @description `fail` and `branch` (sent to rework). */
+        /** @description `fail` and `branch` (sent to rework); a poll that said "not yet" is `notYet`. */
         readonly fail: components['schemas']['MetricsCount'];
         readonly rejectOrHalt: components['schemas']['MetricsCount'];
         /** @description The gate could not judge; never a verdict. */
         readonly error: components['schemas']['MetricsCount'];
+        /** @description Polls of `child_ready` and `pr` that said "not yet" (CI still running): waits, not failures. */
+        readonly notYet: components['schemas']['MetricsCount'];
         readonly topFailure: null | {
           readonly signature: string;
           readonly times: components['schemas']['MetricsCount'];
@@ -2302,6 +2361,25 @@ export interface components {
       readonly reworkRounds: readonly {
         readonly rounds: components['schemas']['MetricsCount'];
         readonly stories: components['schemas']['MetricsCount'];
+      }[];
+      /** @description The period's runs by phase and kind (why each ran), with their spend. */
+      readonly runKinds: readonly {
+        readonly phase: components['schemas']['Phase'];
+        /** @enum {string} */
+        readonly kind:
+          | 'first'
+          | 'continue'
+          | 'resume'
+          | 'after_answers'
+          | 're_review'
+          | 'review_rework'
+          | 'ci_fix'
+          | 'revision'
+          | 'retry'
+          | 'design_refresh'
+          | 'repair';
+        readonly runs: components['schemas']['MetricsCount'];
+        readonly nanoAiu: components['schemas']['MetricsCount'];
       }[];
       readonly waits: readonly {
         /** @enum {string} */
@@ -2340,8 +2418,13 @@ export interface components {
       /** @enum {string} */
       readonly actor: 'story_owner' | 'operator' | 'agent_maintainer';
       readonly action: string;
-      /** Format: date-time */
+      /**
+       * Format: date-time
+       * @description When the story moved on (a Resume, a person's other exit, an unblock); `null` while it has not.
+       */
       readonly resumedAt: string | null;
+      /** @description The event that moved it on (`story.resumed`, `work_package.decided`, `story.unblocked`, ...). */
+      readonly endedBy: string | null;
     };
     readonly MetricsError: {
       /** @enum {string} */
@@ -2474,7 +2557,12 @@ export interface components {
       /** @description The second run's AIU cap, at most 50 AIU; the server's story draft cap when absent. */
       readonly budgetNanoAiu?: number;
     };
-    /** @description A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it. */
+    /**
+     * @description A user story in Ahoy's fixed template (the workspace story-writer's sections), as the agent wrote it and Ahoy
+     *     checked it. A story drafted before `context`, `implementedFeature`, `dependencies` and `testNotes` existed
+     *     answers them as `null` and empty lists. In Jira the criteria go in the acceptance-criteria checklist, the rest
+     *     in the description.
+     */
     readonly StoryTemplate: {
       readonly title: string;
       /** @description As a ... */
@@ -2483,8 +2571,14 @@ export interface components {
       readonly want: string;
       /** @description So that ... */
       readonly soThat: string;
+      /** @description Why now and what exists today. */
+      readonly context: string | null;
+      /** @description What the system does once the story ships. */
+      readonly implementedFeature: string | null;
       readonly acceptanceCriteria: readonly string[];
       readonly outOfScope: readonly string[];
+      readonly dependencies: readonly string[];
+      readonly testNotes: readonly string[];
       readonly openQuestions: readonly string[];
     };
     /**
@@ -2572,6 +2666,14 @@ export interface components {
     readonly MeetingList: {
       readonly items: readonly components['schemas']['MeetingSummary'][];
     };
+    /**
+     * @description `note`: what was said. `decision`: what was agreed. `action`: something a person does next, with an optional
+     *     owner and due day. `question`: what is still to be answered.
+     * @enum {string}
+     */
+    readonly MeetingNoteKind: 'note' | 'decision' | 'action' | 'question';
+    /** @enum {string} */
+    readonly MeetingActionStatus: 'open' | 'done';
     readonly MeetingNote: {
       /** Format: uuid */
       readonly id: string;
@@ -2579,6 +2681,22 @@ export interface components {
       readonly topicId: string;
       /** @description What was said, as plain text (untrusted). */
       readonly text: string;
+      readonly kind: components['schemas']['MeetingNoteKind'];
+      /** @description An action's owner as a person typed it, a name or an e-mail (untrusted); null for other kinds. */
+      readonly owner: string | null;
+      /**
+       * Format: date
+       * @description An action's due day; null when none.
+       */
+      readonly dueOn: string | null;
+      /**
+       * Format: date-time
+       * @description When the action was marked done.
+       */
+      readonly doneAt: string | null;
+      /** @description Who marked the action done. */
+      readonly doneBy: string | null;
+      readonly doneByName: components['schemas']['ActorName'];
       readonly createdBy: components['schemas']['Actor'];
       readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
@@ -2692,6 +2810,32 @@ export interface components {
     };
     readonly MeetingNoteRequest: {
       readonly text: string;
+      readonly kind?: components['schemas']['MeetingNoteKind'];
+      /** @description Only for an action; null or blank clears it. */
+      readonly owner?: string | null;
+      /**
+       * Format: date
+       * @description Only for an action; null clears it.
+       */
+      readonly dueOn?: string | null;
+    };
+    readonly MeetingNoteDoneRequest: {
+      readonly done: boolean;
+    };
+    /** @description A note with the topic and meeting it was taken in. */
+    readonly MeetingNoteInContext: {
+      readonly note: components['schemas']['MeetingNote'];
+      /** @description The topic's title (untrusted). */
+      readonly topicTitle: string;
+      /** Format: uuid */
+      readonly meetingId: string;
+      readonly meetingTitle: string;
+      readonly meetingStartsAt: components['schemas']['Timestamp'];
+      /** Format: uuid */
+      readonly seriesId: string | null;
+    };
+    readonly MeetingNoteList: {
+      readonly items: readonly components['schemas']['MeetingNoteInContext'][];
     };
   };
   responses: {
@@ -2834,7 +2978,7 @@ export interface operations {
   readonly exportMetrics: {
     readonly parameters: {
       readonly query: {
-        readonly table: 'runs' | 'halts' | 'gates' | 'errors';
+        readonly table: 'runs' | 'halts' | 'gates' | 'errors' | 'waits';
         readonly format?: 'csv' | 'json';
         /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
         readonly from?: components['parameters']['MetricsFrom'];
@@ -4332,6 +4476,68 @@ export interface operations {
     readonly responses: {
       /** @description The note. */
       readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingNote'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly listMeetingNotes: {
+    readonly parameters: {
+      readonly query: {
+        readonly kind: components['schemas']['MeetingNoteKind'];
+        /** @description Only notes from this series' meetings. */
+        readonly seriesId?: string;
+        /** @description Only notes from this meeting. */
+        readonly meetingId?: string;
+        /** @description Only the actions still to do (`open`) or done. */
+        readonly status?: components['schemas']['MeetingActionStatus'];
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The notes, with the topic and meeting each was taken in. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingNoteList'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly setMeetingNoteDone: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly noteId: components['parameters']['MeetingNoteId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MeetingNoteDoneRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The action, changed. */
+      readonly 200: {
         headers: {
           readonly [name: string]: unknown;
         };

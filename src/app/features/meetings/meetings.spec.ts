@@ -10,13 +10,14 @@ import {
   provideMockBackend,
 } from '@core/mock/mock-backend';
 import { CLOCK, type Clock } from '@core/realtime/clock';
-import { meetingDay } from '@domain/meetings';
+import { LIVE_POLL_MS, meetingDay } from '@domain/meetings';
 import { DRAFT_POLL_MS } from '@domain/story-drafts';
 import type { ManualClock } from '@testing/mock-backend/clock';
 import { MOCK_DRAFT_MS } from '@testing/mock-backend/meetings';
 import type { MockRequest, MockResponse } from '@testing/mock-backend/http';
 import type { MockAhoyServer } from '@testing/mock-backend/server';
-import { settle, testServer } from '@testing/mock-backend/spec-helpers';
+import type { Meeting } from '@core/api/types';
+import { call, settle, testServer } from '@testing/mock-backend/spec-helpers';
 import { ToastService } from '@ui/toast/toast';
 import { meetingLine } from './meetings-shell';
 import { MEETINGS_ROUTES } from './meetings.routes';
@@ -166,7 +167,9 @@ describe('Meetings on the mock backend', () => {
       'Tax ID validation for EU customers',
       'Late fees for enterprise accounts',
     ]);
-    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe('OTHER_COMPANY');
+    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe(
+      'OTHER_COMPANY'
+    );
     expect(tagOf(card(page.root, 'Late fees for enterprise accounts'))).toBe(
       'ACME · priya@'
     );
@@ -391,6 +394,120 @@ describe('Meetings on the mock backend', () => {
     await flush(page);
     expect(page.root.querySelector('main > ah-banner')).toBeNull();
     expect(text(page.root.querySelector('h1'))).toBe('Finance sync');
+  });
+
+  it("shows the series' open actions above the topics, overdue ones in red, and ticks one done", async () => {
+    const page = await open('/meetings');
+    const panel = page.root.querySelector<HTMLElement>('ah-actions-panel')!;
+    const items = () => [
+      ...panel.querySelectorAll<HTMLElement>(
+        'ul[aria-label="Open actions"] li'
+      ),
+    ];
+    expect(items()).toHaveLength(1);
+    const [action] = items();
+    expect(text(action!.querySelector('.text'))).toBe(
+      'Profile the export query on the largest account'
+    );
+    expect(text(action)).toContain('Sam');
+    expect(text(action!.querySelector('.overdue'))).toMatch(/^overdue since /);
+    expect(text(action!.querySelector('a'))).toMatch(
+      /^Dashboard exports time out, /
+    );
+    const box = action!.querySelector<HTMLInputElement>('input')!;
+    box.checked = true;
+    box.dispatchEvent(new Event('change'));
+    await flush(page);
+    expect(items()).toHaveLength(0);
+    expect(panel.querySelector('section')).toBeNull();
+    expect(
+      page.requests.some((r) => r.method === 'POST' && r.path.endsWith('/done'))
+    ).toBe(true);
+  });
+
+  it('adds an action with an owner and a due day, tagged under its topic and listed as open', async () => {
+    const page = await open('/meetings');
+    const topic = card(page.root, 'Tax ID validation for EU customers');
+    const kind = topic.querySelector<HTMLSelectElement>('form select')!;
+    kind.value = 'action';
+    kind.dispatchEvent(new Event('change'));
+    await flush(page);
+    type(topic.querySelector('form input.line'), 'Ask finance for the list');
+    type(topic.querySelector('form input.owner'), 'Priya');
+    type(topic.querySelector('form input.due'), '2026-10-30');
+    submit(topic.querySelector('form'));
+    await flush(page);
+    const after = card(page.root, 'Tax ID validation for EU customers');
+    expect(text(after.querySelector('li .kind'))).toBe('Action');
+    expect(text(after.querySelector('li'))).toContain('Priya');
+    expect(text(after.querySelector('li'))).toContain('due Fri 30 Oct');
+    expect(
+      [
+        ...page.root.querySelectorAll(
+          'ah-actions-panel ul[aria-label="Open actions"] li .text'
+        ),
+      ].map((n) => text(n))
+    ).toContain('Ask finance for the list');
+    expect(after.querySelector('form input.owner')).toBeNull();
+    expect(after.querySelector<HTMLSelectElement>('form select')!.value).toBe(
+      'note'
+    );
+  });
+
+  it('reads a typed /d as a decision and lists it as decided in this meeting', async () => {
+    const page = await open('/meetings');
+    const topic = card(page.root, 'Tax ID validation for EU customers');
+    type(topic.querySelector('form input'), '/d Validate with VIES only');
+    submit(topic.querySelector('form'));
+    await flush(page);
+    expect(
+      notesOf(card(page.root, 'Tax ID validation for EU customers'))
+    ).toEqual(['Validate with VIES only']);
+    expect(
+      [
+        ...page.root.querySelectorAll(
+          'ah-actions-panel ul[aria-label="Decisions"] li'
+        ),
+      ].map((n) => text(n))
+    ).toEqual(['Validate with VIES only']);
+  });
+
+  it('shows the notes others take while the meeting runs, and stops reading once it ends', async () => {
+    const page = await open('/meetings');
+    const running = (
+      call(page.server, 'GET', '/meetings?status=in_progress').body as {
+        items: { id: string }[];
+      }
+    ).items[0]!;
+    const meeting = call(page.server, 'GET', `/meetings/${running.id}`)
+      .body as Meeting;
+    const tax = meeting.topics.find(
+      (t) => t.title === 'Tax ID validation for EU customers'
+    )!;
+    call(page.server, 'POST', `/meeting-topics/${tax.id}/notes`, {
+      text: 'Written on another laptop',
+    });
+    expect(
+      notesOf(card(page.root, 'Tax ID validation for EU customers'))
+    ).toEqual([]);
+    page.clock.advance(LIVE_POLL_MS);
+    await flush(page);
+    expect(
+      notesOf(card(page.root, 'Tax ID validation for EU customers'))
+    ).toEqual(['Written on another laptop']);
+
+    call(page.server, 'POST', `/meetings/${running.id}/end`, { carryOver: [] });
+    page.clock.advance(LIVE_POLL_MS);
+    await flush(page);
+    expect(text(page.root.querySelector('.identity .ah-tag'))).toBe('Ended');
+    const reads = () =>
+      page.requests.filter(
+        (r) => r.method === 'GET' && r.path.endsWith(`/meetings/${running.id}`)
+      ).length;
+    const before = reads();
+    page.clock.advance(3 * LIVE_POLL_MS);
+    await flush(page);
+    expect(reads()).toBe(before);
   });
 
   it('copies the open meeting as Confluence markup', async () => {

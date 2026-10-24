@@ -1,9 +1,10 @@
 # Ahoy frontend · progress
 
-Updated 2026-10-21 (`scripts/redact.mjs` fixed as in `ahoy-hosted`; before that, 2026-10-20, documentation cleanup and
-engineering review). One page: replace it, do not append; git history is
-the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both
-repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`.
+Updated 2026-10-24 (Meetings: decisions and actions with an owner, and live refresh; before that, 2026-10-21,
+`scripts/redact.mjs` fixed as in `ahoy-hosted`). One page: replace it, do not append; git history is the archive (the
+3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories, with its
+proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its
+freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
@@ -12,32 +13,32 @@ repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harn
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, and Meetings slices 1 to 3 (topics, notes, carry-over, user stories drafted by an agent,
-  Grill me).
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `4b36d33`, which is what `ahoy-hosted` `main` holds.
-  Needs from `ahoy-hosted`: none.
+  Grill me, Copy for Confluence).
+- **This branch** (`feat/meeting-decisions-actions`): a note is a note, decision, action or question (chosen beside
+  the line or typed `/d`, `/a`, `/q`); an action has an owner, a due day and a done box, also after the meeting ended;
+  an "Open actions" panel above the topics lists the series' open actions (overdue in red, earlier meetings linked) and
+  this meeting's decisions; a meeting in progress is read again every 5 s; Copy for Confluence starts with Decisions
+  and Actions. It also catches up with the hosted fields the frontend did not read yet (`endedBy`, `notYet`,
+  `runKinds`, the `waits` metrics table, the new story sections).
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `521a05b` (PR #60, not merged yet), with the
+  redaction placeholders kept. Needs from `ahoy-hosted`: PR #60 (migration 0018, `listMeetingNotes`,
+  `setMeetingNoteDone`) merged and migrated before this branch can run against an API.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
-  checked by unit and component tests and, until 2026-10-10, on the in-browser mock, which no build configuration wires
-  in any more (`npm run start:mock` is gone).
+  checked by unit and component tests on the mock backend only.
 
 ## Proof
 
-- **Last full Vitest run** (2026-10-17, Refresh design, cloud container, Node 24.22.0, a local stand-in for
-  `@acme-fedev/auth`): 161 files, 2,842 tests passed and 8 failed; the same 8 fail on `main` (meetings 4, voyages 2,
-  top bar 1, All hands 1: the Meetings top-bar link and seeds). `typecheck`, `ng build`, `lint` and `api:check`
-  passed; `npm run format` warned on 10 files, as on `main`.
+- **Last full run** (2026-10-24, this branch, cloud container, Node 24.22.1, a local stand-in for `@acme-fedev/auth`
+  because the private registry is not reachable): Vitest 163 files, 2,925 tests, all passed (the 8 failures of
+  2026-10-17 no longer reproduce); `tsc` for app and specs, `check-boundaries`, `eslint`, `stylelint`, `ng build` and
+  `prettier --check` passed; `npm run test:scripts` passed. Offline only: nothing ran against an API.
+- **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
+  Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
+  `npm run api:types` is byte-identical to the committed file.
 - **Merged without any Angular check:** "Blocked is not Ended" (PR #31) and its review fixes, Meetings slice 2, slice 3
-  and the grill discard fix. Their sessions ran only a stand-in `tsc`, the pure specs and Prettier; `ng build`, strict
-  templates, `lint`, Vitest and `api:check` did not run, and slices 2 and 3 added their part of `schema.d.ts` by hand.
+  and the grill discard fix (their sessions ran only a stand-in `tsc`, the pure specs and Prettier).
 - **CI:** none runs on github.com. `test.yml` and `lints-format.yml` call `ATC-GitHub/reusable-workflows` on
-  `atc-ubuntu-latest`, which do not exist there, and `npm ci` needs the private registry for `@acme-fedev/*`. Every run
-  fails before it starts; PR #37 merged with no check run.
-- **This change** (`scripts/redact.mjs` only, the same fix as `ahoy-hosted`'s): a term in any spelling other than
-  lowercase, UPPERCASE or Capitalized was never redacted and the run still passed; the same term twice in a rules file
-  was silently dropped; a non-reversible placeholder only warned. Now a mixed-case term is an exact rule, a leftover in
-  any case fails with its file and line (except inside an integrity hash or base64 data), a repeated term and a
-  non-reversible copy fail. `npm run test:scripts` (new, `node:test`, made-up terms) passes 10/10 with Node 22.22, and
-  Prettier passes on the changed files. Nothing else could run here (`npm ci` needs the private registry for
-  `@acme-fedev/*`): no build, typecheck, lint or Vitest.
+  `atc-ubuntu-latest`, which do not exist there, and `npm ci` needs the private registry for `@acme-fedev/*`.
 
 ## Open decisions
 
@@ -50,14 +51,16 @@ repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harn
 ## Next, in order
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. On a machine with the private registry and Node 24: `npm ci`, `npm run api:check` (or `npm run api:types`), then
-   `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix what fails: at least the 8
-   known unit failures and whatever strict templates and lint find in Meetings slices 2 and 3.
+1. Merge `ahoy-hosted` PR #60, then this branch. On a machine with the private registry and Node 24, repeat the full
+   check with the real `@acme-fedev/auth`: `npm ci`, then
+   `npm run build && npm run typecheck && npm run lint && npm test && npm run format`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0016): start a
+3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0018): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
-   Meetings.
-4. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
+   Meetings (with migration 0018: an action ticked done, two browsers on one meeting in progress).
+4. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
+   then publishing to Confluence through its API (today the page copies wiki markup).
+5. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
    fixers' answers beside the delivery gate, the anchor amendment beside a `child_ready` rejection).
 
 Each step: the full check above on Node 24, then replace this page. Never contact TEST or a `--live` API without
