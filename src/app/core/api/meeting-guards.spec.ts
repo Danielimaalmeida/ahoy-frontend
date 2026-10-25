@@ -1,4 +1,5 @@
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
+import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import createMeeting from '@testing/fixtures/createMeeting.json';
 import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
@@ -65,6 +66,28 @@ describe('meeting guards', () => {
       isMeetingNote(withField(addMeetingNote, 'dueOn', '2026-10-30'))
     ).toBe(false);
     expect(isMeetingNote(withField(addMeetingNote, 'kind', 'todo'))).toBe(
+      false
+    );
+  });
+
+  it('accept a note with images, and refuse an image of another format, an empty or oversized one, or an eleventh', () => {
+    expect(isMeetingNote(addMeetingNoteImage)).toBe(true);
+    const image = addMeetingNoteImage.images[0]!;
+    const withImage = (over: object) =>
+      withField(addMeetingNoteImage, 'images', [{ ...image, ...over }]);
+    expect(isMeetingNote(withImage({ mediaType: 'image/svg+xml' }))).toBe(
+      false
+    );
+    expect(isMeetingNote(withImage({ sizeBytes: 0 }))).toBe(false);
+    expect(isMeetingNote(withImage({ sizeBytes: 5_242_881 }))).toBe(false);
+    const eleven = withField(
+      addMeetingNoteImage,
+      'images',
+      Array.from({ length: 11 }, () => image)
+    );
+    expect(isMeetingNote(eleven)).toBe(false);
+    expect(isMeetingNote.explain(eleven)).toContain('images');
+    expect(isMeetingNote(withField(addMeetingNote, 'images', undefined))).toBe(
       false
     );
   });

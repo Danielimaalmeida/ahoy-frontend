@@ -222,6 +222,125 @@ describe('the mock meetings', () => {
     ).toBe(400);
   });
 
+  describe('note images', () => {
+    const PNG = Uint8Array.from(
+      atob(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+      ),
+      (c) => c.charCodeAt(0)
+    );
+    const asPng = { 'Content-Type': 'image/png' };
+
+    function noted() {
+      const { server, running } = seeded();
+      const topic = call(server, 'POST', `/meetings/${running.id}/topics`, {
+        title: 'Screens',
+        raisedBy: 'us',
+      }).body as MeetingTopic;
+      const note = call(server, 'POST', `/meeting-topics/${topic.id}/notes`, {
+        text: 'The old screen',
+      }).body as MeetingNote;
+      return { server, running, topic, note };
+    }
+
+    it('adds an image to a note and serves its bytes with its type, an ETag and no sniffing, or 304', () => {
+      const { server, note } = noted();
+      const added = call(
+        server,
+        'POST',
+        `/meeting-notes/${note.id}/images`,
+        PNG,
+        asPng
+      );
+      expect(added.status).toBe(201);
+      const image = (added.body as MeetingNote).images[0]!;
+      expect([image.mediaType, image.sizeBytes, image.createdBy]).toEqual([
+        'image/png',
+        PNG.length,
+        'alex@example.com',
+      ]);
+      const read = call(server, 'GET', `/meeting-note-images/${image.id}`);
+      expect(read.status).toBe(200);
+      expect(read.headers['Content-Type']).toBe('image/png');
+      expect(read.headers['X-Content-Type-Options']).toBe('nosniff');
+      expect(read.response.kind === 'bytes' && read.response.body).toEqual(PNG);
+      const again = call(
+        server,
+        'GET',
+        `/meeting-note-images/${image.id}`,
+        undefined,
+        { 'If-None-Match': read.headers['ETag']! }
+      );
+      expect(again.status).toBe(304);
+    });
+
+    it('refuses an SVG, another content type, no bytes and an eleventh image', () => {
+      const { server, note } = noted();
+      const path = `/meeting-notes/${note.id}/images`;
+      const svg = new TextEncoder().encode(
+        '<svg xmlns="http://www.w3.org/2000/svg"/>'
+      );
+      expect(call(server, 'POST', path, svg, asPng).status).toBe(400);
+      expect(
+        call(server, 'POST', path, svg, { 'Content-Type': 'image/svg+xml' })
+          .status
+      ).toBe(400);
+      expect(call(server, 'POST', path, new Uint8Array(), asPng).status).toBe(
+        400
+      );
+      for (let i = 0; i < 10; i++)
+        expect(call(server, 'POST', path, PNG, asPng).status).toBe(201);
+      expect(call(server, 'POST', path, PNG, asPng).status).toBe(409);
+    });
+
+    it('removes an image with 204, then answers 404 for it', () => {
+      const { server, running, note } = noted();
+      const image = (
+        call(server, 'POST', `/meeting-notes/${note.id}/images`, PNG, asPng)
+          .body as MeetingNote
+      ).images[0]!;
+      const gone = call(server, 'DELETE', `/meeting-note-images/${image.id}`);
+      expect([gone.status, gone.body]).toEqual([204, null]);
+      expect(
+        call(server, 'GET', `/meeting-note-images/${image.id}`).status
+      ).toBe(404);
+      expect(
+        call(server, 'DELETE', `/meeting-note-images/${image.id}`).status
+      ).toBe(404);
+      const meeting = call(server, 'GET', `/meetings/${running.id}`)
+        .body as Meeting;
+      expect(
+        meeting.topics.find((t) => t.id === note.topicId)!.notes[0]!.images
+      ).toEqual([]);
+    });
+
+    it("carries the images with their note to the next meeting, and keeps an ended meeting's images as they are", () => {
+      const { server, running, topic, note } = noted();
+      const image = (
+        call(server, 'POST', `/meeting-notes/${note.id}/images`, PNG, asPng)
+          .body as MeetingNote
+      ).images[0]!;
+      const result = call(server, 'POST', `/meetings/${running.id}/end`, {
+        carryOver: [topic.id],
+      }).body as EndMeetingResult;
+      const copy = result.nextMeeting!.topics.find(
+        (t) => t.carriedFrom?.topicId === topic.id
+      )!.notes[0]!.images[0]!;
+      expect(copy.id).not.toBe(image.id);
+      const copied = call(server, 'GET', `/meeting-note-images/${copy.id}`);
+      expect(copied.response.kind === 'bytes' && copied.response.body).toEqual(
+        PNG
+      );
+      expect(
+        call(server, 'POST', `/meeting-notes/${note.id}/images`, PNG, asPng)
+          .status
+      ).toBe(409);
+      expect(
+        call(server, 'DELETE', `/meeting-note-images/${image.id}`).status
+      ).toBe(409);
+    });
+  });
+
   describe('story drafts', () => {
     function withTopic() {
       const { server, clock } = testServer();

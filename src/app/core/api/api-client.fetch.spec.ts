@@ -1,5 +1,6 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getStory from '@testing/fixtures/getStory.json';
@@ -186,6 +187,82 @@ describe('ApiClient over the real fetch backend', () => {
     expect(await TestBed.inject(ApiClient).getHealth()).toEqual({
       ok: true,
       value: getHealth,
+    });
+  });
+
+  describe('note images', () => {
+    const PNG = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+    ]);
+
+    it('sends an image as its raw bytes with its own Content-Type, and gives the note back', async () => {
+      answerWith(() => json(addMeetingNoteImage, 201));
+      const image = new Blob([PNG], { type: 'image/png' });
+      const result = await TestBed.inject(ApiClient).addMeetingNoteImage(
+        addMeetingNoteImage.id,
+        image
+      );
+      expect(result).toEqual({ ok: true, value: addMeetingNoteImage });
+      expect(seen[0]?.url).toBe(
+        `/api/v1/meeting-notes/${addMeetingNoteImage.id}/images`
+      );
+      expect(seen[0]?.init.method).toBe('POST');
+      expect(seen[0]?.init.body).toBe(image);
+      expect(
+        (seen[0]?.init.headers as Record<string, string>)['Content-Type']
+      ).toBe('image/png');
+    });
+
+    it('gives the bytes of an image as a Blob of its format', async () => {
+      answerWith(() =>
+        Promise.resolve(
+          new Response(PNG, {
+            status: 200,
+            headers: { 'Content-Type': 'image/png', ETag: '"abc"' },
+          })
+        )
+      );
+      const result = await TestBed.inject(ApiClient).getMeetingNoteImage('i1');
+      expect(seen[0]?.url).toBe('/api/v1/meeting-note-images/i1');
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.type).toBe('image/png');
+      expect(result.value.size).toBe(PNG.length);
+    });
+
+    it('calls an answer that is not one of the four image formats an invalid response', async () => {
+      answerWith(() =>
+        Promise.resolve(
+          new Response('<svg/>', {
+            status: 200,
+            headers: { 'Content-Type': 'image/svg+xml' },
+          })
+        )
+      );
+      const result = await TestBed.inject(ApiClient).getMeetingNoteImage('i1');
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.kind).toBe('invalid_response');
+    });
+
+    it('reads the problem details of a 404 although the body is asked for as bytes', async () => {
+      const notFound = problems.find((p) => p.code === 'not_found')!;
+      answerWith(() =>
+        json(notFound, notFound.status, 'application/problem+json')
+      );
+      const result = await TestBed.inject(ApiClient).getMeetingNoteImage('i1');
+      expect(result.ok).toBe(false);
+      if (!result.ok)
+        expect(result.error).toEqual(
+          expect.objectContaining({ kind: 'problem', code: 'not_found' })
+        );
+    });
+
+    it('removes an image with a 204 and no body', async () => {
+      answerWith(() => Promise.resolve(new Response(null, { status: 204 })));
+      expect(
+        await TestBed.inject(ApiClient).deleteMeetingNoteImage('i1')
+      ).toEqual({ ok: true, value: null });
+      expect(seen[0]?.init.method).toBe('DELETE');
     });
   });
 

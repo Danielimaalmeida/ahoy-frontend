@@ -341,6 +341,34 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
       text: 'Four days on average',
     }).body as { id: string };
     patch(`/meeting-notes/${note.id}`, { text: 'Four working days' });
+    const png = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+    ]);
+    const asPng = { 'Content-Type': 'image/png' };
+    const imaged = call(
+      server,
+      'POST',
+      `/meeting-notes/${note.id}/images`,
+      png,
+      asPng
+    ).body as { images: { id: string }[] };
+    for (const image of imaged.images) {
+      get(`/meeting-note-images/${image.id}`);
+      call(server, 'GET', `/meeting-note-images/${image.id}`, undefined, {
+        'If-None-Match': `"${image.id}"`,
+      });
+    }
+    call(server, 'POST', `/meeting-notes/${note.id}/images`, png, {
+      'Content-Type': 'image/svg+xml',
+    });
+    const spare = call(
+      server,
+      'POST',
+      `/meeting-notes/${note.id}/images`,
+      png,
+      asPng
+    ).body as { images: { id: string }[] };
+    call(server, 'DELETE', `/meeting-note-images/${spare.images[1]!.id}`);
     const scrap = post(`/meeting-topics/${added.id}/notes`, {
       text: 'scrap',
     }).body as { id: string };
@@ -436,6 +464,9 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'addMeetingNote',
       'updateMeetingNote',
       'deleteMeetingNote',
+      'addMeetingNoteImage',
+      'getMeetingNoteImage',
+      'deleteMeetingNoteImage',
       'listMeetingSeries',
       'createMeetingSeries',
     ])

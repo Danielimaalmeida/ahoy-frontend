@@ -289,6 +289,7 @@ export interface NoteDoc {
   readonly owner?: string | null;
   readonly dueOn?: string | null;
   readonly doneAt?: string | null;
+  readonly images?: readonly unknown[];
   readonly createdBy: string;
   readonly createdByName: string | null;
   readonly createdAt: string;
@@ -326,7 +327,8 @@ function wiki(text: string): string {
 
 /**
  * A meeting as Confluence wiki markup (Insert → Markup → Confluence Wiki in the editor): its title, when, who, and
- * each topic with who raised it, where it went and its notes. Text from people is escaped, so it never formats.
+ * each topic with who raised it, where it went and its notes (a note's images are counted, not copied). Text from people
+ * is escaped, so it never formats.
  */
 export function meetingToConfluence(meeting: MeetingDoc): string {
   const end = meeting.endsAt === null ? '' : `–${meetingTime(meeting.endsAt)}`;
@@ -366,10 +368,16 @@ export function meetingToConfluence(meeting: MeetingDoc): string {
     );
     for (const note of topic.notes)
       lines.push(
-        `* ${notePrefix(note)}${wiki(note.text)}${actionSuffix(note)} _(${wiki(authorLabel(note.createdBy, note.createdByName))}, ${meetingTime(note.createdAt)})_`
+        `* ${notePrefix(note)}${wiki(note.text)}${actionSuffix(note)}${imagesSuffix(note)} _(${wiki(authorLabel(note.createdBy, note.createdByName))}, ${meetingTime(note.createdAt)})_`
       );
   });
   return `${lines.join('\n')}\n`;
+}
+
+/** " (2 images)" after a note with images: the export has no room for them, so it says they are on the page. */
+function imagesSuffix(note: NoteDoc): string {
+  const n = note.images?.length ?? 0;
+  return n === 0 ? '' : ` (${n === 1 ? '1 image' : `${n} images`})`;
 }
 
 /** "*Decision:* " before a decision, action or question; nothing before a plain note. */
@@ -401,4 +409,85 @@ export function decisionsAndActions<N extends NoteDoc>(meeting: {
     decisions: notes.filter((n) => n.kind === 'decision'),
     actions: notes.filter((n) => n.kind === 'action'),
   };
+}
+
+/** The formats a note's image can have, as the API recognises them from the bytes (no SVG). */
+export type NoteImageType =
+  'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+
+/** The largest image a note takes: 5 MiB. */
+export const MAX_NOTE_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/** The most images one note shows. */
+export const MAX_IMAGES_PER_NOTE = 10;
+
+const startsWith = (
+  bytes: Uint8Array,
+  prefix: readonly number[],
+  at = 0
+): boolean =>
+  bytes.length >= at + prefix.length &&
+  prefix.every((b, i) => bytes[at + i] === b);
+
+/**
+ * The format of an image from its first bytes, as the API reads it (Python-parity note: ahoy-hosted's
+ * `sniffImageType`); null when it is not a PNG, JPEG, WebP or GIF.
+ */
+export function sniffImageType(bytes: Uint8Array): NoteImageType | null {
+  if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    return 'image/png';
+  if (startsWith(bytes, [0xff, 0xd8, 0xff])) return 'image/jpeg';
+  if (
+    startsWith(bytes, [0x47, 0x49, 0x46, 0x38]) &&
+    (bytes[4] === 0x37 || bytes[4] === 0x39) &&
+    bytes[5] === 0x61
+  )
+    return 'image/gif';
+  if (
+    startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+    startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)
+  )
+    return 'image/webp';
+  return null;
+}
+
+/**
+ * Why a file chosen, pasted or dropped cannot be a note's image, before it is sent: its declared type and size (the API
+ * checks the bytes again); null when it can be sent.
+ */
+export function imageFileRefusal(file: {
+  readonly type: string;
+  readonly size: number;
+}): string | null {
+  if (
+    !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)
+  )
+    return 'Only PNG, JPEG, WebP and GIF images can be added.';
+  if (file.size === 0) return 'The image is empty.';
+  if (file.size > MAX_NOTE_IMAGE_BYTES) return 'The image is larger than 5 MB.';
+  return null;
+}
+
+/**
+ * The files a note can take, in order, up to `room` more images, and why the first one left out cannot be added; the
+ * refusal is null when every file was taken.
+ */
+export function acceptImages<
+  F extends { readonly type: string; readonly size: number },
+>(
+  files: readonly F[],
+  room: number
+): { readonly images: readonly F[]; readonly refusal: string | null } {
+  const images: F[] = [];
+  let refusal: string | null = null;
+  for (const file of files) {
+    const why =
+      imageFileRefusal(file) ??
+      (images.length >= room
+        ? `A note takes at most ${MAX_IMAGES_PER_NOTE} images.`
+        : null);
+    if (why === null) images.push(file);
+    else refusal ??= why;
+  }
+  return { images, refusal };
 }

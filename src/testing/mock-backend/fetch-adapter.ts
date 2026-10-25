@@ -69,6 +69,20 @@ export async function toMockRequest(
   });
   if (actor !== null && headers['x-ahoy-actor'] === undefined)
     headers['x-ahoy-actor'] = actor;
+  if (
+    request.method !== 'GET' &&
+    request.method !== 'HEAD' &&
+    /^image\//i.test(headers['content-type'] ?? '')
+  ) {
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    return {
+      method: request.method,
+      path: url.pathname.slice(base.length) || '/',
+      query: url.searchParams,
+      headers,
+      body: bytes.length > 0 ? bytes : undefined,
+    };
+  }
   const text =
     request.method === 'GET' || request.method === 'HEAD'
       ? ''
@@ -104,6 +118,8 @@ export function toResponse(
       return new Response(JSON.stringify(response.body), init);
     case 'text':
       return new Response(response.body, init);
+    case 'bytes':
+      return new Response(response.body.slice(), init);
     case 'empty':
       return new Response(null, init);
     case 'stream': {

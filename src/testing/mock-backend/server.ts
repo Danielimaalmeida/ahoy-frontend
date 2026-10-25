@@ -190,6 +190,8 @@ interface Route {
   readonly operationId: string;
   readonly params: readonly Param[];
   readonly body: unknown;
+  /** The media types of a body that is bytes (an image upload), or undefined when the body is JSON or none. */
+  readonly bytesBody: readonly string[] | undefined;
   /** The operation's `responses`, by status (`"200"`, `"409"`, `default`). */
   readonly responses: Readonly<Record<string, unknown>>;
   readonly anonymous: boolean;
@@ -546,6 +548,22 @@ export class MockAhoyServer {
           path: `query.${name}`,
           message: 'is not a parameter of this operation',
         });
+    if (route.bytesBody !== undefined) {
+      const type = (request.headers['content-type'] ?? '')
+        .split(';')[0]!
+        .trim()
+        .toLowerCase();
+      if (!route.bytesBody.includes(type))
+        errors.push({
+          path: 'header.content-type',
+          message: `must be one of ${route.bytesBody.join(', ')}`,
+        });
+      else if (
+        !(request.body instanceof Uint8Array) ||
+        request.body.length === 0
+      )
+        errors.push({ path: 'body', message: 'is required' });
+    }
     if (route.body !== undefined) {
       if (request.bodyIsInvalidJson)
         throw new MockProblem('bad_request', 'Request body is not valid JSON');
@@ -859,6 +877,20 @@ export class MockAhoyServer {
         return jsonResponse(200, {
           items: this.meetings.listNotes(notesQuery(call.query)),
         });
+      case 'addMeetingNoteImage':
+        return jsonResponse(
+          201,
+          this.meetings.addNoteImage(
+            call.actor,
+            call.path['noteId'] ?? '',
+            call.body as Uint8Array // validated
+          )
+        );
+      case 'getMeetingNoteImage':
+        return this.noteImage(call);
+      case 'deleteMeetingNoteImage':
+        this.meetings.deleteNoteImage(call.path['imageId'] ?? '');
+        return { kind: 'empty', status: 204, headers: {} };
       case 'deleteMeetingNote':
         this.meetings.deleteNote(call.path['noteId'] ?? '');
         return { kind: 'empty', status: 204, headers: {} };
@@ -1499,6 +1531,22 @@ export class MockAhoyServer {
     return { kind: 'text', status: 200, headers, body: file.text };
   }
 
+  /** A note's image, as the API serves it: its format, an ETag and no sniffing; 304 when the caller has it. */
+  private noteImage(call: Call): MockResponse {
+    const id = call.path['imageId'] ?? '';
+    const image = this.meetings.noteImage(id);
+    const etag = `"${id}"`;
+    const headers = {
+      'Content-Type': image.mediaType,
+      ETag: etag,
+      'Cache-Control': 'private, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (call.headers['if-none-match'] === etag)
+      return { kind: 'empty', status: 304, headers };
+    return { kind: 'bytes', status: 200, headers, body: image.bytes };
+  }
+
   /** The metrics of the period: the design's fictional figures (the fixture), over the period the query names. */
   private metrics(call: Call): typeof getMetrics {
     const to =
@@ -1716,6 +1764,9 @@ function buildRoutes(
       const json = isRecord(content['application/json'])
         ? content['application/json']
         : null;
+      const imageTypes = Object.keys(content).filter((type) =>
+        type.startsWith('image/')
+      );
       routes.push({
         method: method.toUpperCase(),
         template,
@@ -1724,6 +1775,7 @@ function buildRoutes(
         operationId: op['operationId'],
         params: [...shared, ...readParams(op['parameters'])],
         body: json === null ? undefined : json['schema'],
+        bytesBody: imageTypes.length > 0 ? imageTypes : undefined,
         responses: isRecord(op['responses']) ? op['responses'] : {},
         anonymous: Array.isArray(op['security']) && op['security'].length === 0,
       });
