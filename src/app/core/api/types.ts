@@ -463,6 +463,22 @@ export type ArtifactContentQuery =
  */
 export type MetricsReport = Schemas['MetricsReport'];
 
+/** Why a run ran (`first`, `review_rework`, `ci_fix`, `repair`, ...), as `MetricsReport.runKinds` counts it. */
+export type RunKind = MetricsReport['runKinds'][number]['kind'];
+export const RUN_KINDS = listOf<RunKind>()([
+  'first',
+  'continue',
+  'resume',
+  'after_answers',
+  're_review',
+  'review_rework',
+  'ci_fix',
+  'revision',
+  'retry',
+  'design_refresh',
+  'repair',
+]);
+
 /** One halt in the period, explained by the same rules as the voyage's diagnosis. */
 export type MetricsHalt = Schemas['MetricsHalt'];
 
@@ -482,6 +498,7 @@ export const METRICS_TABLES = listOf<MetricsTable>()([
   'halts',
   'gates',
   'errors',
+  'waits',
 ]);
 
 /** The file formats `exportMetrics` serves (`format`). */
@@ -567,6 +584,31 @@ export type MeetingTopicOrderRequest = Schemas['MeetingTopicOrderRequest'];
 /** Body of `addMeetingNote` and `updateMeetingNote`. */
 export type MeetingNoteRequest = Schemas['MeetingNoteRequest'];
 
+/** What a note is: what was said, what was agreed, something to do next, or what is still to answer (`MeetingNoteKind`). */
+export type MeetingNoteKind = Schemas['MeetingNoteKind'];
+export const MEETING_NOTE_KINDS = listOf<MeetingNoteKind>()([
+  'note',
+  'decision',
+  'action',
+  'question',
+]);
+
+/** Whether an action is still to do or done, when actions are listed (`MeetingActionStatus`). */
+export type MeetingActionStatus = Schemas['MeetingActionStatus'];
+export const MEETING_ACTION_STATUSES = listOf<MeetingActionStatus>()([
+  'open',
+  'done',
+]);
+
+/** Body of `setMeetingNoteDone`. */
+export type MeetingNoteDoneRequest = Schemas['MeetingNoteDoneRequest'];
+
+/** A note with the topic and meeting it was taken in, as `listMeetingNotes` lists it. */
+export type MeetingNoteInContext = Schemas['MeetingNoteInContext'];
+
+/** Answer of `listMeetingNotes`: latest meeting first. */
+export type MeetingNoteList = Schemas['MeetingNoteList'];
+
 /** Body of `createMeetingSeries`. */
 export type CreateMeetingSeriesRequest = Schemas['CreateMeetingSeriesRequest'];
 
@@ -631,6 +673,10 @@ export type MeetingStoryAnswersRequest = Schemas['MeetingStoryAnswersRequest'];
 
 /** One answer in `MeetingStoryAnswersRequest`. */
 export type GrillAnswerInput = MeetingStoryAnswersRequest['answers'][number];
+
+/** Query of `listMeetingNotes`: one kind, optionally of one series or meeting, and open or done actions. */
+export type ListMeetingNotesQuery =
+  operations['listMeetingNotes']['parameters']['query'];
 
 /** Query of `listMeetings`. */
 export type ListMeetingsQuery = NonNullable<

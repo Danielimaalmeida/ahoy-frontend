@@ -1,0 +1,17 @@
+{
+  "id": "c3f2e5d4-2d3a-4e7f-9a0b-9c8d7e6f5a43",
+  "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e22",
+  "text": "Send the late-fee proposal to finance.",
+  "kind": "action",
+  "owner": "Sam Example",
+  "dueOn": "2026-10-09",
+  "doneAt": "2026-10-08T14:02:00.000Z",
+  "doneBy": "alex@example.com",
+  "doneByName": "Alex Example",
+  "createdBy": "alex@example.com",
+  "createdByName": "Alex Example",
+  "createdAt": "2026-10-06T10:31:00.000Z",
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-10-06T10:31:00.000Z"
+}

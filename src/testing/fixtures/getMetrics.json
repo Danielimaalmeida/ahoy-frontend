@@ -282,7 +282,8 @@
       "kind": "other",
       "actor": "story_owner",
       "action": "Accept or reopen the work package, then resume.",
-      "resumedAt": null
+      "resumedAt": null,
+      "endedBy": null
     },
     {
       "storyKey": "PROJ-144",
@@ -293,7 +294,8 @@
       "kind": "budget_exhausted",
       "actor": "story_owner",
       "action": "Raise the story's budget, then resume it.",
-      "resumedAt": "2026-10-11T08:10:00.000Z"
+      "resumedAt": "2026-10-11T08:10:00.000Z",
+      "endedBy": "story.resumed"
     },
     {
       "storyKey": "PROJ-118",
@@ -304,7 +306,8 @@
       "kind": "configuration",
       "actor": "operator",
       "action": "Give the worker access to the model, then resume.",
-      "resumedAt": null
+      "resumedAt": null,
+      "endedBy": null
     }
   ],
   "haltReasons": [
@@ -617,6 +620,7 @@
       "fail": 9,
       "rejectOrHalt": 2,
       "error": 0,
+      "notYet": 0,
       "topFailure": {
         "signature": "Tests named in the plan were not run",
         "times": 5
@@ -630,6 +634,7 @@
       "fail": 13,
       "rejectOrHalt": 0,
       "error": 0,
+      "notYet": 0,
       "topFailure": {
         "signature": "AC-# has no test_ids",
         "times": 9
@@ -643,6 +648,7 @@
       "fail": 1,
       "rejectOrHalt": 0,
       "error": 0,
+      "notYet": 0,
       "topFailure": {
         "signature": "Rework note not addressed",
         "times": 1
@@ -656,6 +662,7 @@
       "fail": 9,
       "rejectOrHalt": 3,
       "error": 2,
+      "notYet": 0,
       "topFailure": {
         "signature": "Medium finding sent to rework",
         "times": 7
@@ -669,6 +676,7 @@
       "fail": 1,
       "rejectOrHalt": 0,
       "error": 0,
+      "notYet": 0,
       "topFailure": {
         "signature": "Snapshot misses the Jira description",
         "times": 1
@@ -711,6 +719,7 @@
       "stories": 1
     }
   ],
+  "runKinds": [],
   "waits": [
     {
       "kind": "answers",

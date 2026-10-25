@@ -2,6 +2,8 @@ import type {
   EndMeetingResult,
   Meeting,
   MeetingList,
+  MeetingNote,
+  MeetingNoteList,
   MeetingSeries,
   MeetingStoryDraft,
   MeetingStoryDraftList,
@@ -114,6 +116,110 @@ describe('the mock meetings', () => {
     expect(call(server, 'DELETE', `/meeting-topics/${topic.id}`).status).toBe(
       404
     );
+  });
+
+  it('seeds last week with an open action and a decision, listed across the series', () => {
+    const { server, running } = seeded();
+    const open = call(
+      server,
+      'GET',
+      `/meeting-notes?kind=action&seriesId=${running.seriesId}&status=open`
+    ).body as MeetingNoteList;
+    expect(open.items.map((i) => [i.note.text, i.note.owner])).toEqual([
+      ['Profile the export query on the largest account', 'Sam'],
+    ]);
+    expect(open.items[0]!.meetingId).not.toBe(running.id);
+    const decisions = call(server, 'GET', '/meeting-notes?kind=decision')
+      .body as MeetingNoteList;
+    expect(decisions.items.map((i) => i.note.text)).toEqual([
+      'Exports stay synchronous for now',
+    ]);
+  });
+
+  it('adds an action with an owner and a due day, and refuses them on another kind', () => {
+    const { server, running } = seeded();
+    const topic = (
+      call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+    ).topics[0]!;
+    const added = call(server, 'POST', `/meeting-topics/${topic.id}/notes`, {
+      text: 'Send the numbers',
+      kind: 'action',
+      owner: ' Priya ',
+      dueOn: '2026-10-30',
+    });
+    expect(added.status).toBe(201);
+    const note = added.body as MeetingNote;
+    expect([note.kind, note.owner, note.dueOn, note.doneAt]).toEqual([
+      'action',
+      'Priya',
+      '2026-10-30',
+      null,
+    ]);
+    const refused = call(server, 'POST', `/meeting-topics/${topic.id}/notes`, {
+      text: 'Agreed',
+      kind: 'decision',
+      owner: 'Priya',
+    });
+    expect(refused.status).toBe(400);
+    const decided = call(server, 'PATCH', `/meeting-notes/${note.id}`, {
+      text: 'Send the numbers',
+      kind: 'decision',
+    }).body as MeetingNote;
+    expect([decided.kind, decided.owner, decided.dueOn]).toEqual([
+      'decision',
+      null,
+      null,
+    ]);
+  });
+
+  it('marks an action done and open again after its meeting ended, and refuses another kind', () => {
+    const { server, running } = seeded();
+    const [action] = (
+      call(server, 'GET', `/meeting-notes?kind=action&status=open`)
+        .body as MeetingNoteList
+    ).items;
+    const done = call(
+      server,
+      'POST',
+      `/meeting-notes/${action!.note.id}/done`,
+      {
+        done: true,
+      }
+    );
+    expect(done.status).toBe(200);
+    expect((done.body as MeetingNote).doneByName).not.toBeNull();
+    expect(
+      (
+        call(
+          server,
+          'GET',
+          `/meeting-notes?kind=action&seriesId=${running.seriesId}&status=open`
+        ).body as MeetingNoteList
+      ).items
+    ).toEqual([]);
+    const undone = call(
+      server,
+      'POST',
+      `/meeting-notes/${action!.note.id}/done`,
+      { done: false }
+    ).body as MeetingNote;
+    expect([undone.doneAt, undone.doneBy]).toEqual([null, null]);
+    const [decision] = (
+      call(server, 'GET', '/meeting-notes?kind=decision')
+        .body as MeetingNoteList
+    ).items;
+    expect(
+      call(server, 'POST', `/meeting-notes/${decision!.note.id}/done`, {
+        done: true,
+      }).status
+    ).toBe(409);
+  });
+
+  it('refuses a status on notes that are not actions', () => {
+    const { server } = seeded();
+    expect(
+      call(server, 'GET', '/meeting-notes?kind=decision&status=open').status
+    ).toBe(400);
   });
 
   describe('story drafts', () => {

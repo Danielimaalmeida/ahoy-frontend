@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "note": {
+        "id": "c3f2e5d4-2d3a-4e7f-9a0b-9c8d7e6f5a44",
+        "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e22",
+        "text": "Draft the late-fee wording for the invoice footer.",
+        "kind": "action",
+        "owner": "Sam Example",
+        "dueOn": "2026-10-13",
+        "doneAt": null,
+        "doneBy": null,
+        "doneByName": null,
+        "createdBy": "alex@example.com",
+        "createdByName": "Alex Example",
+        "createdAt": "2026-10-06T10:33:00.000Z",
+        "updatedBy": "alex@example.com",
+        "updatedByName": "Alex Example",
+        "updatedAt": "2026-10-06T10:33:00.000Z"
+      },
+      "topicTitle": "Late fees for enterprise accounts",
+      "meetingId": "0c6f3a52-1d2e-4b7a-8f90-6a1b2c3d4e51",
+      "meetingTitle": "Finance sync",
+      "meetingStartsAt": "2026-10-06T09:00:00.000Z",
+      "seriesId": "5b0e2c1a-7f43-4c2e-9a51-0d3f6b8e2a10"
+    }
+  ]
+}

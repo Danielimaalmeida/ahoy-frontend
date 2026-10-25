@@ -2,10 +2,14 @@ import {
   authorLabel,
   carryOverCandidates,
   dateInputValue,
+  decisionsAndActions,
   defaultMeeting,
+  dueLabel,
   groupMeetings,
   meetingToConfluence,
   moveInOrder,
+  noteKindFields,
+  noteShortcut,
   parseEmails,
   raisedByLabel,
   shortEmail,
@@ -14,6 +18,7 @@ import {
   topicWhen,
   type MeetingDoc,
   type MeetingLike,
+  type NoteDoc,
   type TopicLike,
 } from './meetings';
 
@@ -142,6 +147,112 @@ describe('meetings', () => {
   });
 });
 
+describe('note kinds', () => {
+  const plain = { kind: 'note', owner: null, dueOn: null } as const;
+  const action = { kind: 'action', owner: 'Sam', dueOn: '2026-10-30' } as const;
+
+  it('gives an action an owner and a due day, trimming the owner and treating a blank one as none', () => {
+    expect(
+      noteKindFields(plain, {
+        kind: 'action',
+        owner: '  Sam ',
+        dueOn: '2026-10-30',
+      })
+    ).toEqual(action);
+    expect(noteKindFields(plain, { kind: 'action', owner: '   ' })).toEqual({
+      kind: 'action',
+      owner: null,
+      dueOn: null,
+    });
+  });
+
+  it('keeps an action owner and due day that a change does not name, and clears them on null', () => {
+    expect(noteKindFields(action, {})).toEqual(action);
+    expect(noteKindFields(action, { dueOn: null })).toEqual({
+      ...action,
+      dueOn: null,
+    });
+  });
+
+  it('drops the owner and due day of a note that stops being an action', () => {
+    expect(noteKindFields(action, { kind: 'decision' })).toEqual({
+      kind: 'decision',
+      owner: null,
+      dueOn: null,
+    });
+  });
+
+  it('refuses an owner or a due day on a note that is not an action', () => {
+    expect(noteKindFields(plain, { owner: 'Sam' })).toBe(
+      'owner and dueOn are only for a note of kind action'
+    );
+    expect(
+      noteKindFields(action, { kind: 'question', dueOn: '2026-10-30' })
+    ).toBe('owner and dueOn are only for a note of kind action');
+  });
+
+  it('reads a typed shortcut as the kind and the rest as the text', () => {
+    expect(noteShortcut('/d Exports stay synchronous')).toEqual({
+      kind: 'decision',
+      text: 'Exports stay synchronous',
+    });
+    expect(noteShortcut('  /A  Profile the query ')).toEqual({
+      kind: 'action',
+      text: 'Profile the query',
+    });
+    expect(noteShortcut('/q who owns it?\nand when?')).toEqual({
+      kind: 'question',
+      text: 'who owns it?\nand when?',
+    });
+    expect(noteShortcut('/n back to a note')).toEqual({
+      kind: 'note',
+      text: 'back to a note',
+    });
+  });
+
+  it('leaves text without a shortcut, or with an unknown one, as typed', () => {
+    expect(noteShortcut('A plain note')).toBeNull();
+    expect(noteShortcut('/x not a kind')).toBeNull();
+    expect(noteShortcut('/decision spelled out')).toBeNull();
+    expect(noteShortcut('and/or /d later')).toBeNull();
+  });
+
+  it('says when an action is due, today, or how long it is overdue', () => {
+    expect(dueLabel(null, '2026-10-24')).toBeNull();
+    expect(dueLabel('2026-10-24', '2026-10-24')).toEqual({
+      text: 'due today',
+      overdue: false,
+    });
+    expect(dueLabel('2026-10-30', '2026-10-24')).toEqual({
+      text: 'due Fri 30 Oct',
+      overdue: false,
+    });
+    expect(dueLabel('2026-10-22', '2026-10-24')).toEqual({
+      text: 'overdue since Thu 22 Oct',
+      overdue: true,
+    });
+  });
+
+  it('collects the decisions and the actions of a meeting in topic order', () => {
+    const note = (text: string, kind: NoteDoc['kind']): NoteDoc => ({
+      text,
+      ...(kind !== undefined ? { kind } : {}),
+      createdBy: 'q123',
+      createdByName: null,
+      createdAt: '2026-10-13T09:00:00.000Z',
+    });
+    const found = decisionsAndActions({
+      topics: [
+        { notes: [note('said', 'note'), note('act 1', 'action')] },
+        { notes: [note('agreed', 'decision'), note('old', undefined)] },
+        { notes: [note('act 2', 'action'), note('open?', 'question')] },
+      ],
+    });
+    expect(found.decisions.map((n) => n.text)).toEqual(['agreed']);
+    expect(found.actions.map((n) => n.text)).toEqual(['act 1', 'act 2']);
+  });
+});
+
 describe('meetingToConfluence', () => {
   const at = (h: number, m: number, d = 13) =>
     new Date(2026, 9, d, h, m).toISOString();
@@ -207,6 +318,68 @@ describe('meetingToConfluence', () => {
     expect(markup).toContain('* Agree a cap _(Alex Doe, 09:50)_');
     expect(markup).not.toContain('*Series:*');
     expect(markup).not.toContain('*With:*');
+  });
+
+  it('lists the decisions and the actions first, and tags each kind of note in its topic', () => {
+    const note = (over: Partial<NoteDoc>): NoteDoc => ({
+      text: 'x',
+      createdBy: 'q123',
+      createdByName: 'Alex Doe',
+      createdAt: at(9, 50),
+      ...over,
+    });
+    const markup = meetingToConfluence(
+      meetingDoc({
+        topics: [
+          {
+            id: 't1',
+            title: 'Exports',
+            status: 'open',
+            raisedBy: 'us',
+            raisedByEmail: null,
+            origin: 'planned',
+            createdAt: at(9, 30),
+            movedTo: null,
+            notes: [
+              note({ text: 'Stay synchronous', kind: 'decision' }),
+              note({
+                text: 'Profile the query',
+                kind: 'action',
+                owner: 'Sam',
+                dueOn: '2026-10-16',
+              }),
+              note({
+                text: 'Write the release note',
+                kind: 'action',
+                owner: null,
+                dueOn: null,
+                doneAt: at(9, 55),
+              }),
+              note({ text: 'Who signs off', kind: 'question' }),
+              note({ text: 'Said in passing', kind: 'note' }),
+            ],
+          },
+        ],
+      })
+    );
+    const lines = markup.split('\n');
+    const at_ = (line: string) => lines.indexOf(line);
+    expect(at_('h2. Decisions')).toBeGreaterThan(-1);
+    expect(at_('* Stay synchronous')).toBe(at_('h2. Decisions') + 1);
+    expect(at_('h2. Actions')).toBeGreaterThan(at_('h2. Decisions'));
+    expect(at_('* Profile the query — Sam, due Fri 16 Oct')).toBe(
+      at_('h2. Actions') + 1
+    );
+    expect(at_('* Write the release note — done')).toBe(at_('h2. Actions') + 2);
+    expect(at_('h2. Topics')).toBeGreaterThan(at_('h2. Actions'));
+    expect(markup).toContain(
+      '* *Decision:* Stay synchronous _(Alex Doe, 09:50)_'
+    );
+    expect(markup).toContain(
+      '* *Action:* Profile the query — Sam, due Fri 16 Oct _(Alex Doe, 09:50)_'
+    );
+    expect(markup).toContain('* *Question:* Who signs off _(Alex Doe, 09:50)_');
+    expect(markup).toContain('* Said in passing _(Alex Doe, 09:50)_');
   });
 
   it('escapes markup and keeps line breaks in text people wrote', () => {

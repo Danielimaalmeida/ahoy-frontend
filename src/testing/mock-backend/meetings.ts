@@ -4,8 +4,9 @@
  * then ended (read-only); topics are raised by us or by a stakeholder, planned before the start or raised during it;
  * ending a meeting carries the chosen open topics, notes and all, to the series' next meeting. A topic's story draft is
  * written by a simulated agent a moment after it is asked for, and "created" in a pretend Jira (design §5, slice 2); a
- * grill's simulated agent first asks two questions, then writes the story from the answers (slice 3). 0 AIU, no Jira.
- * Fictional data.
+ * grill's simulated agent first asks two questions, then writes the story from the answers (slice 3). A note is a
+ * decision, an action (with an owner, a due day and a done mark that changes after the meeting ended) or a question,
+ * and the notes of one kind are listed across a series. 0 AIU, no Jira. Fictional data.
  */
 import type {
   AddMeetingTopicRequest,
@@ -15,7 +16,10 @@ import type {
   GrillAnswer,
   GrillQuestion,
   Meeting,
+  ListMeetingNotesQuery,
   MeetingNote,
+  MeetingNoteInContext,
+  MeetingNoteRequest,
   MeetingSeries,
   MeetingStatus,
   MeetingStoryDraft,
@@ -29,6 +33,7 @@ import type {
   UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
 } from '@core/api/types';
+import { noteKindFields } from '@domain/meetings';
 import { iso, type Cancel, type MockClock } from './clock';
 import { MockProblem } from './http';
 import type { Writable } from './voyage';
@@ -171,6 +176,18 @@ export class MeetingDesk {
     });
     this.addNote(alex, fees.id, {
       text: '1.5% per month, capped at 10% of the invoice.',
+    });
+    // Last week's meeting left an action open; added after the rest so the seeded ids stay as they were.
+    const exports = this.topicsOf(past.id)[0]!;
+    this.insertNote(alex, exports.id, {
+      text: 'Profile the export query on the largest account',
+      kind: 'action',
+      owner: 'Sam',
+      dueOn: iso(at - 2 * DAY_MS).slice(0, 10),
+    });
+    this.insertNote(alex, exports.id, {
+      text: 'Exports stay synchronous for now',
+      kind: 'decision',
     });
   }
 
@@ -404,14 +421,31 @@ export class MeetingDesk {
   addNote(
     actor: string,
     topicId: string,
-    body: { readonly text: string }
+    body: MeetingNoteRequest
   ): MeetingNote {
     this.changeableTopic(topicId);
+    return { ...this.insertNote(actor, topicId, body) };
+  }
+
+  /** Adds a note with no check of its topic (the seeds add some to an ended meeting). */
+  private insertNote(
+    actor: string,
+    topicId: string,
+    body: MeetingNoteRequest
+  ): NoteRecord {
+    const fields = this.kindFields(
+      { kind: 'note', owner: null, dueOn: null },
+      body
+    );
     const at = this.now();
     const note: NoteRecord = {
       id: this.id(),
       topicId,
       text: body.text.trim(),
+      ...fields,
+      doneAt: null,
+      doneBy: null,
+      doneByName: null,
       createdBy: actor,
       createdByName: this.nameOf(actor),
       createdAt: at,
@@ -420,20 +454,80 @@ export class MeetingDesk {
       updatedAt: at,
     };
     this.notes.set(note.id, note);
-    return { ...note };
+    return note;
   }
 
-  updateNote(
-    actor: string,
-    id: string,
-    body: { readonly text: string }
-  ): MeetingNote {
+  updateNote(actor: string, id: string, body: MeetingNoteRequest): MeetingNote {
     const note = this.changeableNote(id);
+    const fields = this.kindFields(note, body);
     note.text = body.text.trim();
+    Object.assign(note, fields);
+    if (fields.kind !== 'action') {
+      note.doneAt = null;
+      note.doneBy = null;
+      note.doneByName = null;
+    }
     note.updatedBy = actor;
     note.updatedByName = this.nameOf(actor);
     note.updatedAt = this.now();
     return { ...note };
+  }
+
+  /** Marks an action done or not; also after its meeting ended, but not under a topic that moved on. */
+  setNoteDone(actor: string, id: string, done: boolean): MeetingNote {
+    const note = this.notes.get(id);
+    if (note === undefined) throw notFound('Note', id);
+    if (this.topics.get(note.topicId)?.status === 'moved')
+      throw invalid(`The topic of note ${id} was moved to the next meeting`);
+    if (note.kind !== 'action')
+      throw invalid(`Note ${id} is a ${note.kind}; only an action is done`);
+    note.doneAt = done ? this.now() : null;
+    note.doneBy = done ? actor : null;
+    note.doneByName = done ? this.nameOf(actor) : null;
+    return { ...note };
+  }
+
+  /** The notes of one kind across meetings, latest meeting first; a moved topic's notes are left to its copy. */
+  listNotes(query: ListMeetingNotesQuery): MeetingNoteInContext[] {
+    if (query.status !== undefined && query.kind !== 'action')
+      throw refused('query.status', 'status is only for notes of kind action');
+    const rows: MeetingNoteInContext[] = [];
+    for (const meeting of this.list()) {
+      if (query.seriesId !== undefined && meeting.seriesId !== query.seriesId)
+        continue;
+      if (query.meetingId !== undefined && meeting.id !== query.meetingId)
+        continue;
+      for (const topic of this.topicsOf(meeting.id)) {
+        if (topic.status === 'moved') continue;
+        for (const note of this.topicDto(topic).notes) {
+          if (note.kind !== query.kind) continue;
+          if (
+            query.status !== undefined &&
+            (note.doneAt === null) !== (query.status === 'open')
+          )
+            continue;
+          rows.push({
+            note,
+            topicTitle: topic.title,
+            meetingId: meeting.id,
+            meetingTitle: meeting.title,
+            meetingStartsAt: meeting.startsAt,
+            seriesId: meeting.seriesId,
+          });
+        }
+      }
+    }
+    return rows.slice(0, 500);
+  }
+
+  private kindFields(
+    current: Pick<NoteRecord, 'kind' | 'owner' | 'dueOn'>,
+    body: MeetingNoteRequest
+  ) {
+    const fields = noteKindFields(current, body);
+    if (typeof fields === 'string')
+      throw refused(body.owner ? 'body/owner' : 'body/dueOn', fields);
+    return fields;
   }
 
   deleteNote(id: string): void {
@@ -1043,7 +1137,11 @@ function simulatedStory(
           .slice(0, 20)
           .map((note) => cut(`It follows this note: ${note}`, 1000))
       : [cut(`It does what "${title}" asks.`, 1000)],
+    context: null,
+    implementedFeature: null,
     outOfScope: [],
+    dependencies: [],
+    testNotes: [],
     openQuestions: ['A simulated draft: no model was called.'],
   };
 }

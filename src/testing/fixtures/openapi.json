@@ -192,7 +192,7 @@
         "operationId": "exportMetrics",
         "tags": ["metrics"],
         "summary": "The rows behind the metrics as CSV or JSON, one table at a time.",
-        "description": "`runs`: every run in the period with its spend, tokens, outcome and gate verdict. `halts`: every halt with its\ndiagnosis and when it was resumed. `gates`: every automated gate verdict. `errors`: the grouped errors. Same\nperiod and filters as `GET /metrics`. No story text or agent output is exported; messages are untrusted text.\n",
+        "description": "`runs`: every run in the period with its kind (why it ran: `first`, `review_rework`, `ci_fix`, `retry`,\n`repair`, ...), its work package, spend, tokens, outcome and gate verdict. `halts`: every halt, and every block\nat a ceiling, with its diagnosis, when it ended and what ended it (`endedBy`). `gates`: every automated gate\nverdict. `errors`: the grouped errors; a poll of a pull request whose CI is still running is not one. `waits`:\nevery wait on a person (answers, a human gate's decision, a halt to end) with its start, end, outcome and\nseconds. Same period and filters as `GET /metrics`. No story text or agent output is exported; messages are\nuntrusted text.\n",
         "parameters": [
           {
             "name": "table",
@@ -200,7 +200,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "enum": ["runs", "halts", "gates", "errors"]
+              "enum": ["runs", "halts", "gates", "errors", "waits"]
             }
           },
           {
@@ -2517,8 +2517,8 @@
       "post": {
         "operationId": "addMeetingNote",
         "tags": ["meetings"],
-        "summary": "Add a note under a topic.",
-        "description": "`409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.",
+        "summary": "Add a note, decision, action or question under a topic.",
+        "description": "A plain `note` unless `kind` says otherwise. `owner` and `dueOn` are only for an action (`400\nvalidation_failed` otherwise). `409 invalid_state` when the topic was moved to the next meeting or its meeting\nhas ended.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2558,6 +2558,124 @@
         }
       }
     },
+    "/meeting-notes": {
+      "get": {
+        "operationId": "listMeetingNotes",
+        "tags": ["meetings"],
+        "summary": "The notes of one kind across meetings, such as a series' open actions or its decisions.",
+        "description": "Latest meeting first, then in the meeting's topic order and the order the notes were taken; at most 500. A note\nunder a topic carried over to the next meeting is listed once, as its copy there. `status` is only for\n`kind=action` (`400 validation_failed` otherwise). 0 AIU.\n",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/MeetingNoteKind"
+            }
+          },
+          {
+            "name": "seriesId",
+            "in": "query",
+            "required": false,
+            "description": "Only notes from this series' meetings.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "meetingId",
+            "in": "query",
+            "required": false,
+            "description": "Only notes from this meeting.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Only the actions still to do (`open`) or done.",
+            "schema": {
+              "$ref": "#/components/schemas/MeetingActionStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The notes, with the topic and meeting each was taken in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingNoteList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-notes/{noteId}/done": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingNoteId"
+        }
+      ],
+      "post": {
+        "operationId": "setMeetingNoteDone",
+        "tags": ["meetings"],
+        "summary": "Mark an action done, or not done again.",
+        "description": "Records who marked it and when; `done: false` clears both. Allowed after the meeting has ended, since actions\nare done after it. `409 invalid_state` when the note is not an action, or its topic was moved to the next\nmeeting (mark the copy there).\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingNoteDoneRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The action, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meeting-notes/{noteId}": {
       "parameters": [
         {
@@ -2567,8 +2685,8 @@
       "patch": {
         "operationId": "updateMeetingNote",
         "tags": ["meetings"],
-        "summary": "Rewrite a note.",
-        "description": "`409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.",
+        "summary": "Rewrite a note, and change its kind, owner or due day.",
+        "description": "`kind`, `owner` and `dueOn` absent keep their values; null clears `owner` or `dueOn`. A note that stops being an\naction loses its owner, due day and done mark. `409 invalid_state` when its topic was moved to the next meeting\nor its meeting has ended.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -3179,7 +3297,8 @@
       },
       "ActorName": {
         "type": ["string", "null"],
-        "description": "The person's display name, or null when it is not known yet. `createdBy`/`updatedBy` stay the q-number."
+        "maxLength": 200,
+        "description": "The name to show for an actor, from the identity provider; null when none is known, and then the actor\n(the qnumber) is shown.\n"
       },
       "Timestamp": {
         "type": "string",
@@ -5011,7 +5130,7 @@
           },
           "state": {
             "type": "object",
-            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. A work package's `status` is `pending`, `done`, `in_progress`, `waiting_on_handback`, `failed`, `stalled`, `blocked`, `unverified` or `awaiting_ci`. `awaiting_ci`: the implementer reported `unverified` with every gap in `deferred_checks` delegated to CI checks the repository declares, and the work was published; its dependents may start, and child_ready waits for each check. Such a package also has `deferred_checks` (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done` and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A work package may also have `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its answers to the findings its rework note numbered, kept until a review sends work back again. A review in `reviewer_reviews` gives, in `criteria_reasons`, `why` and `proof` (what would prove it) for each verdict other than `met`. Its `findings` may carry `previous_id`, `regression` and `new_argument` as the reviewer wrote them, and `follow_up` as the harness set it: in a re-review a medium finding that is not a regression the rework introduced and not a previous finding still open, or a disputed one upheld without a new argument, is a follow-up, recorded for the person at the delivery gate (a `review_follow_up` entry of `decision_log`) and not sent to rework."
+            "description": "The state document (`story_id`, `phase`, `human_gates`, `acceptance_criteria`, `work_packages`, `child_repos`, `reviewer_reviews`, `gate_results`, `decision_log`, ...), at `version`. A work package's `status` is `pending`, `done`, `in_progress`, `waiting_on_handback`, `failed`, `stalled`, `blocked`, `unverified` or `awaiting_ci`. `awaiting_ci`: the implementer reported `unverified` with every gap in `deferred_checks` delegated to CI checks the repository declares, and the work was published; its dependents may start, and child_ready waits for each check. Such a package also has `deferred_checks` (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done` and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A package reported `unverified` without such a delegation, whose work was published, is `done` like a `ready` one: child_ready requires its pull request with every check green, the reviewer is told its gaps, and the decision log records them (`unverified_delivered`); it stays `unverified`, for a person, only when publication is not proven. A work package may also have `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its answers to the findings its rework note numbered, kept until a review sends work back again. A review in `reviewer_reviews` gives, in `criteria_reasons`, `why` and `proof` (what would prove it) for each verdict other than `met`. Its `findings` may carry `previous_id`, `regression` and `new_argument` as the reviewer wrote them, and `follow_up` as the harness set it: in a re-review a medium finding that is not a regression the rework introduced and not a previous finding still open, or a disputed one upheld without a new argument, is a follow-up, recorded for the person at the delivery gate (a `review_follow_up` entry of `decision_log`) and not sent to rework."
           }
         }
       },
@@ -5520,6 +5639,7 @@
           "gates",
           "findings",
           "reworkRounds",
+          "runKinds",
           "waits",
           "insights"
         ],
@@ -5918,6 +6038,7 @@
                 "fail",
                 "rejectOrHalt",
                 "error",
+                "notYet",
                 "topFailure"
               ],
               "properties": {
@@ -5935,7 +6056,7 @@
                 },
                 "fail": {
                   "$ref": "#/components/schemas/MetricsCount",
-                  "description": "`fail` and `branch` (sent to rework)."
+                  "description": "`fail` and `branch` (sent to rework); a poll that said \"not yet\" is `notYet`."
                 },
                 "rejectOrHalt": {
                   "$ref": "#/components/schemas/MetricsCount"
@@ -5943,6 +6064,10 @@
                 "error": {
                   "$ref": "#/components/schemas/MetricsCount",
                   "description": "The gate could not judge; never a verdict."
+                },
+                "notYet": {
+                  "$ref": "#/components/schemas/MetricsCount",
+                  "description": "Polls of `child_ready` and `pr` that said \"not yet\" (CI still running): waits, not failures."
                 },
                 "topFailure": {
                   "oneOf": [
@@ -5995,6 +6120,42 @@
                   "$ref": "#/components/schemas/MetricsCount"
                 },
                 "stories": {
+                  "$ref": "#/components/schemas/MetricsCount"
+                }
+              }
+            }
+          },
+          "runKinds": {
+            "type": "array",
+            "description": "The period's runs by phase and kind (why each ran), with their spend.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["phase", "kind", "runs", "nanoAiu"],
+              "properties": {
+                "phase": {
+                  "$ref": "#/components/schemas/Phase"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "first",
+                    "continue",
+                    "resume",
+                    "after_answers",
+                    "re_review",
+                    "review_rework",
+                    "ci_fix",
+                    "revision",
+                    "retry",
+                    "design_refresh",
+                    "repair"
+                  ]
+                },
+                "runs": {
+                  "$ref": "#/components/schemas/MetricsCount"
+                },
+                "nanoAiu": {
                   "$ref": "#/components/schemas/MetricsCount"
                 }
               }
@@ -6096,7 +6257,8 @@
           "kind",
           "actor",
           "action",
-          "resumedAt"
+          "resumedAt",
+          "endedBy"
         ],
         "properties": {
           "storyKey": {
@@ -6127,7 +6289,12 @@
           },
           "resumedAt": {
             "type": ["string", "null"],
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the story moved on (a Resume, a person's other exit, an unblock); `null` while it has not."
+          },
+          "endedBy": {
+            "type": ["string", "null"],
+            "description": "The event that moved it on (`story.resumed`, `work_package.decided`, `story.unblocked`, ...)."
           }
         }
       },
@@ -6513,11 +6680,15 @@
           "role",
           "want",
           "soThat",
+          "context",
+          "implementedFeature",
           "acceptanceCriteria",
           "outOfScope",
+          "dependencies",
+          "testNotes",
           "openQuestions"
         ],
-        "description": "A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it.",
+        "description": "A user story in Ahoy's fixed template (the workspace story-writer's sections), as the agent wrote it and Ahoy\nchecked it. A story drafted before `context`, `implementedFeature`, `dependencies` and `testNotes` existed\nanswers them as `null` and empty lists. In Jira the criteria go in the acceptance-criteria checklist, the rest\nin the description.\n",
         "properties": {
           "title": {
             "type": "string",
@@ -6542,6 +6713,18 @@
             "maxLength": 1000,
             "description": "So that ..."
           },
+          "context": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Why now and what exists today."
+          },
+          "implementedFeature": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "What the system does once the story ships."
+          },
           "acceptanceCriteria": {
             "type": "array",
             "minItems": 1,
@@ -6553,6 +6736,24 @@
             }
           },
           "outOfScope": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            }
+          },
+          "testNotes": {
             "type": "array",
             "maxItems": 20,
             "items": {
@@ -6883,6 +7084,15 @@
           }
         }
       },
+      "MeetingNoteKind": {
+        "type": "string",
+        "enum": ["note", "decision", "action", "question"],
+        "description": "`note`: what was said. `decision`: what was agreed. `action`: something a person does next, with an optional\nowner and due day. `question`: what is still to be answered.\n"
+      },
+      "MeetingActionStatus": {
+        "type": "string",
+        "enum": ["open", "done"]
+      },
       "MeetingNote": {
         "type": "object",
         "additionalProperties": false,
@@ -6890,6 +7100,12 @@
           "id",
           "topicId",
           "text",
+          "kind",
+          "owner",
+          "dueOn",
+          "doneAt",
+          "doneBy",
+          "doneByName",
           "createdBy",
           "createdByName",
           "createdAt",
@@ -6909,6 +7125,33 @@
           "text": {
             "type": "string",
             "description": "What was said, as plain text (untrusted)."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MeetingNoteKind"
+          },
+          "owner": {
+            "type": ["string", "null"],
+            "maxLength": 200,
+            "description": "An action's owner as a person typed it, a name or an e-mail (untrusted); null for other kinds."
+          },
+          "dueOn": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "An action's due day; null when none."
+          },
+          "doneAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the action was marked done."
+          },
+          "doneBy": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Who marked the action done."
+          },
+          "doneByName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
@@ -7325,6 +7568,78 @@
             "minLength": 1,
             "maxLength": 4000,
             "pattern": "\\S"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MeetingNoteKind"
+          },
+          "owner": {
+            "type": ["string", "null"],
+            "maxLength": 200,
+            "description": "Only for an action; null or blank clears it."
+          },
+          "dueOn": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Only for an action; null clears it."
+          }
+        }
+      },
+      "MeetingNoteDoneRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["done"],
+        "properties": {
+          "done": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MeetingNoteInContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "A note with the topic and meeting it was taken in.",
+        "required": [
+          "note",
+          "topicTitle",
+          "meetingId",
+          "meetingTitle",
+          "meetingStartsAt",
+          "seriesId"
+        ],
+        "properties": {
+          "note": {
+            "$ref": "#/components/schemas/MeetingNote"
+          },
+          "topicTitle": {
+            "type": "string",
+            "description": "The topic's title (untrusted)."
+          },
+          "meetingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meetingTitle": {
+            "type": "string"
+          },
+          "meetingStartsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "seriesId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
+        }
+      },
+      "MeetingNoteList": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingNoteInContext"
+            }
           }
         }
       }

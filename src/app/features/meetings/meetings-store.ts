@@ -1,16 +1,39 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import {
+  DestroyRef,
+  Injectable,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 import type { ApiError, ApiResult } from '@core/api/api-error';
 import type {
   EndMeetingResult,
   JiraIssueType,
   Meeting,
+  MeetingNote,
+  MeetingNoteInContext,
   MeetingSeries,
   MeetingSummary,
   MeetingTopic,
   RaisedBy,
 } from '@core/api/types';
-import { defaultMeeting, groupMeetings, moveInOrder } from '@domain/meetings';
+import { CLOCK, type Timer } from '@core/realtime/clock';
+import {
+  dateInputValue,
+  defaultMeeting,
+  groupMeetings,
+  LIVE_POLL_MS,
+  moveInOrder,
+  type NoteKind,
+} from '@domain/meetings';
+
+/** What a note is beyond its text: a decision, an action with an optional owner and due day, or a question. */
+export interface NoteExtras {
+  readonly kind: NoteKind;
+  readonly owner?: string;
+  readonly dueOn?: string;
+}
 
 /** What the page asks for when it plans a meeting: in a series (title optional) or a one-off (title required). */
 export interface NewMeeting {
@@ -31,13 +54,21 @@ export interface NewSeries {
 /**
  * The state of the Meetings page: every meeting (for the left column), the series, the meeting open on the right, and
  * the outcome of the last command. Every command answers with what changed, which replaces the open meeting or one of
- * its topics; the list is read again after a command that changes counts or statuses. 0 AIU.
+ * its topics; the list is read again after a command that changes counts or statuses. A meeting in progress is read
+ * again every few seconds, so the notes others take show up without a refresh, and the open actions of its series are
+ * kept beside it. 0 AIU.
  */
 @Injectable()
 export class MeetingsStore {
   private readonly api = inject(ApiClient);
+  private readonly clock = inject(CLOCK);
   /** Counts loads of the open meeting, so an answer to an older one is dropped. */
   private generation = 0;
+  private timer: Timer | null = null;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopLive());
+  }
 
   /** Every meeting, latest start first, once read. */
   readonly meetings = signal<readonly MeetingSummary[]>([]);
@@ -55,6 +86,10 @@ export class MeetingsStore {
   readonly loading = signal(false);
   /** Whether a command is in flight; the page disables its controls meanwhile. */
   readonly busy = signal(false);
+  /** The actions still to do of the open meeting's series (of the meeting alone when it is a one-off). */
+  readonly openActions = signal<readonly MeetingNoteInContext[]>([]);
+  /** Why the open actions could not be read; the meeting still shows. */
+  readonly actionsError = signal<ApiError | null>(null);
 
   /** The left column: running now, planned (soonest first), ended (latest first). */
   readonly groups = computed(() => groupMeetings(this.meetings()));
@@ -98,25 +133,97 @@ export class MeetingsStore {
     const target = id ?? defaultMeeting(this.meetings())?.id;
     if (target === undefined) {
       this.generation++;
+      this.stopLive();
       this.openError.set(null);
       this.meeting.set(null);
+      this.openActions.set([]);
       return;
     }
     await this.open(target);
   }
 
-  /** Opens one meeting on the right. */
+  /** Opens one meeting on the right, with the open actions of its series. */
   async open(id: string): Promise<void> {
     const generation = ++this.generation;
+    this.stopLive();
     const result = await this.api.getMeeting(id);
     if (generation !== this.generation) return;
     if (!result.ok) {
       this.openError.set(result.error);
       this.meeting.set(null);
+      this.openActions.set([]);
       return;
     }
     this.openError.set(null);
     this.meeting.set(result.value);
+    await this.loadActions();
+    this.keepLive();
+  }
+
+  /** Today in the browser's time zone (`YYYY-MM-DD`), to say which actions are overdue. */
+  today(): string {
+    return dateInputValue(this.clock.now());
+  }
+
+  /** Reads the open actions of the open meeting's series, or of the meeting alone when it is a one-off. */
+  async loadActions(): Promise<void> {
+    const meeting = this.meeting();
+    if (meeting === null) return;
+    const generation = this.generation;
+    const result = await this.api.listMeetingNotes({
+      kind: 'action',
+      status: 'open',
+      ...(meeting.seriesId !== null
+        ? { seriesId: meeting.seriesId }
+        : { meetingId: meeting.id }),
+    });
+    if (generation !== this.generation) return;
+    if (!result.ok) {
+      this.actionsError.set(result.error);
+      return;
+    }
+    this.actionsError.set(null);
+    this.openActions.set(result.value.items);
+  }
+
+  /** Reads the open meeting again in a few seconds while it is in progress, and so on until it ends or closes. */
+  private keepLive(): void {
+    this.stopLive();
+    const meeting = this.meeting();
+    if (meeting === null || meeting.status !== 'in_progress') return;
+    const generation = this.generation;
+    this.timer = this.clock.schedule(LIVE_POLL_MS, () => {
+      this.timer = null;
+      if (generation === this.generation) void this.tick(meeting.id);
+    });
+  }
+
+  private stopLive(): void {
+    this.timer?.cancel();
+    this.timer = null;
+  }
+
+  /**
+   * One live read: the meeting as others left it, unless a command of this page is in flight or changed the meeting
+   * meanwhile (its own answer is newer), then the open actions.
+   */
+  private async tick(id: string): Promise<void> {
+    const generation = this.generation;
+    const before = this.meeting();
+    if (!this.busy()) {
+      const result = await this.api.getMeeting(id);
+      if (generation !== this.generation) return;
+      if (
+        result.ok &&
+        !this.busy() &&
+        this.meeting() === before &&
+        JSON.stringify(result.value) !== JSON.stringify(before)
+      )
+        this.meeting.set(result.value);
+      await this.loadActions();
+      if (generation !== this.generation) return;
+    }
+    this.keepLive();
   }
 
   /** Plans a meeting and opens it. Answers the new meeting's id, or null when it was refused. */
@@ -186,6 +293,7 @@ export class MeetingsStore {
     const started = await this.run(() => this.api.startMeeting(id));
     if (started === null) return;
     this.meeting.set(started);
+    this.keepLive();
     await this.refreshList();
   }
 
@@ -201,7 +309,9 @@ export class MeetingsStore {
     );
     if (ended === null) return null;
     this.meeting.set(ended.meeting);
+    this.stopLive();
     await this.refreshList();
+    await this.loadActions();
     return ended;
   }
 
@@ -270,13 +380,49 @@ export class MeetingsStore {
     await this.refreshList();
   }
 
-  /** Adds a note under a topic. */
-  async addNote(topicId: string, text: string): Promise<boolean> {
+  /** Adds a note under a topic: a plain note, or a decision, an action (with its owner and due day) or a question. */
+  async addNote(
+    topicId: string,
+    text: string,
+    extras?: NoteExtras
+  ): Promise<boolean> {
+    const owner = extras?.owner?.trim() ?? '';
     const note = await this.run(() =>
-      this.api.addMeetingNote(topicId, { text: text.trim() })
+      this.api.addMeetingNote(topicId, {
+        text: text.trim(),
+        ...(extras !== undefined && extras.kind !== 'note'
+          ? { kind: extras.kind }
+          : {}),
+        ...(extras?.kind === 'action' && owner !== '' ? { owner } : {}),
+        ...(extras?.kind === 'action' && extras.dueOn
+          ? { dueOn: extras.dueOn }
+          : {}),
+      })
     );
     if (note === null) return false;
     this.patchTopic(topicId, (t) => ({ ...t, notes: [...t.notes, note] }));
+    if (note.kind === 'action') await this.loadActions();
+    return true;
+  }
+
+  /**
+   * Marks an action done or not done again, wherever it shows: under its topic in the open meeting and among the open
+   * actions. Allowed after the meeting ended.
+   */
+  async setDone(noteId: string, done: boolean): Promise<boolean> {
+    const note = await this.run(() =>
+      this.api.setMeetingNoteDone(noteId, { done })
+    );
+    if (note === null) return false;
+    this.replaceNote(note);
+    this.openActions.set(
+      done
+        ? this.openActions().filter((a) => a.note.id !== noteId)
+        : this.openActions().map((a) =>
+            a.note.id === noteId ? { ...a, note } : a
+          )
+    );
+    if (!done) await this.loadActions();
     return true;
   }
 
@@ -305,6 +451,9 @@ export class MeetingsStore {
       ...t,
       notes: t.notes.filter((n) => n.id !== noteId),
     }));
+    this.openActions.set(
+      this.openActions().filter((a) => a.note.id !== noteId)
+    );
   }
 
   /** Clears the last command's error, when the person dismisses it. */
@@ -362,5 +511,13 @@ export class MeetingsStore {
 
   private replaceTopic(topic: MeetingTopic): void {
     this.patchTopic(topic.id, () => topic);
+  }
+
+  /** Puts a changed note in place under its topic, when its topic is in the open meeting. */
+  private replaceNote(note: MeetingNote): void {
+    this.patchTopic(note.topicId, (t) => ({
+      ...t,
+      notes: t.notes.map((n) => (n.id === note.id ? note : n)),
+    }));
   }
 }

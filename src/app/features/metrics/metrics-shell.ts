@@ -33,6 +33,7 @@ const TABLE_LABELS: Readonly<Record<MetricsTable, string>> = {
   halts: 'Halts',
   gates: 'Gate verdicts',
   errors: 'Errors',
+  waits: 'Waits on people',
 };
 
 /** Why the metrics could not be read, in words. A tooling failure is never a verdict about the harness. */

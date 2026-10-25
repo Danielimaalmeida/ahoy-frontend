@@ -36,6 +36,7 @@ import {
   GATE_RESULTS,
   GATE_SOURCES,
   JIRA_ISSUE_TYPES,
+  MEETING_NOTE_KINDS,
   MEETING_STATUSES,
   GRILL_CHOICES,
   MEETING_STORY_DRAFT_STATUSES,
@@ -47,6 +48,7 @@ import {
   REASONING_EFFORTS,
   REFINEMENT_STATUSES,
   RAISED_BY,
+  RUN_KINDS,
   RUN_STATUSES,
   RUNTIME_STATES,
   type RuntimeStatus,
@@ -80,6 +82,8 @@ import {
   type Meeting,
   type MeetingList,
   type MeetingNote,
+  type MeetingNoteInContext,
+  type MeetingNoteList,
   type MeetingSeries,
   type MeetingSeriesList,
   type MeetingStoryDraft,
@@ -586,6 +590,7 @@ const metricsHalt = shape<MetricsHalt>({
   actor: diagnosisActor,
   action: text,
   resumedAt: nullable(timestamp),
+  endedBy: nullable(text),
 });
 
 const metricsError = shape<MetricsError>({
@@ -715,6 +720,7 @@ export const isMetricsReport = guard<MetricsReport>(
         fail: count,
         rejectOrHalt: count,
         error: count,
+        notYet: count,
         topFailure: nullable(
           shape<{ signature: string; times: number }>({
             signature: text,
@@ -730,6 +736,14 @@ export const isMetricsReport = guard<MetricsReport>(
       shape<Item<MetricsReport['reworkRounds']>>({
         rounds: count,
         stories: count,
+      })
+    ),
+    runKinds: arrayOf(
+      shape<Item<MetricsReport['runKinds']>>({
+        phase: nonEmptyText,
+        kind: oneOf(RUN_KINDS),
+        runs: count,
+        nanoAiu,
       })
     ),
     waits: arrayOf(
@@ -799,10 +813,16 @@ export const isMeetingSeriesList = guard<MeetingSeriesList>(
   shape<MeetingSeriesList>({ items: arrayOf(meetingSeries) })
 );
 
-const meetingNote = shape<MeetingNote>({
+const meetingNoteShape = shape<MeetingNote>({
   id: uuid,
   topicId: uuid,
   text,
+  kind: oneOf(MEETING_NOTE_KINDS),
+  owner: nullable(text),
+  dueOn: nullable(isoDate),
+  doneAt: nullable(timestamp),
+  doneBy: nullable(actor),
+  doneByName: nullable(text),
   createdBy: actor,
   createdByName: nullable(text),
   createdAt: timestamp,
@@ -811,8 +831,43 @@ const meetingNote = shape<MeetingNote>({
   updatedAt: timestamp,
 });
 
-/** A note, as `addMeetingNote` and `updateMeetingNote` answer it. */
+/**
+ * A note. Only an action has an owner, a due day or a done mark, and a done mark names who and when: a note that breaks
+ * either is refused, so the screen never shows a decision as done or an action done by nobody.
+ */
+const meetingNote: Check = (value, at) => {
+  const why = meetingNoteShape(value, at);
+  if (why !== null) return why;
+  const note = value as MeetingNote;
+  if (
+    note.kind !== 'action' &&
+    (note.owner !== null || note.dueOn !== null || note.doneAt !== null)
+  )
+    return `${at} is a ${note.kind} with an owner, due day or done mark`;
+  if ((note.doneAt === null) !== (note.doneBy === null))
+    return `${at}.doneAt and ${at}.doneBy must be set together`;
+  return null;
+};
+
+/** A note, as `addMeetingNote`, `updateMeetingNote` and `setMeetingNoteDone` answer it. */
 export const isMeetingNote = guard<MeetingNote>('MeetingNote', meetingNote);
+
+/** Every note of one kind across meetings, each with the topic and meeting it was taken in. */
+export const isMeetingNoteList = guard<MeetingNoteList>(
+  'MeetingNoteList',
+  shape<MeetingNoteList>({
+    items: arrayOf(
+      shape<MeetingNoteInContext>({
+        note: meetingNote,
+        topicTitle: text,
+        meetingId: uuid,
+        meetingTitle: text,
+        meetingStartsAt: timestamp,
+        seriesId: nullable(uuid),
+      })
+    ),
+  })
+);
 
 const topicLink = shape<MeetingTopicLink>({
   topicId: uuid,
@@ -919,6 +974,7 @@ export const isMoveMeetingTopicResult = guard<MoveMeetingTopicResult>(
 );
 
 const storyText = boundedText('text of 1 to 1000 characters', 1, 1000);
+const storySection = boundedText('text of 1 to 2000 characters', 1, 2000);
 const storyList = (min: number): Check => {
   const items = arrayOf(storyText);
   return (value, at) =>
@@ -934,8 +990,12 @@ const storyTemplate = shape<StoryTemplate>({
   role: storyText,
   want: storyText,
   soThat: storyText,
+  context: nullable(storySection),
+  implementedFeature: nullable(storySection),
   acceptanceCriteria: storyList(1),
   outOfScope: storyList(0),
+  dependencies: storyList(0),
+  testNotes: storyList(0),
   openQuestions: storyList(0),
 });
 

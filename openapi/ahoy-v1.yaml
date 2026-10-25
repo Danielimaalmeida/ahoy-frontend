@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 4b36d336c0f3a30c7f006de6d3f79e4341fe6f95
+# Commit: 521a05bba5a64ecbf20908925e3812d9e017fcf8
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -164,14 +164,18 @@ paths:
       tags: [metrics]
       summary: The rows behind the metrics as CSV or JSON, one table at a time.
       description: |
-        `runs`: every run in the period with its spend, tokens, outcome and gate verdict. `halts`: every halt with its
-        diagnosis and when it was resumed. `gates`: every automated gate verdict. `errors`: the grouped errors. Same
-        period and filters as `GET /metrics`. No story text or agent output is exported; messages are untrusted text.
+        `runs`: every run in the period with its kind (why it ran: `first`, `review_rework`, `ci_fix`, `retry`,
+        `repair`, ...), its work package, spend, tokens, outcome and gate verdict. `halts`: every halt, and every block
+        at a ceiling, with its diagnosis, when it ended and what ended it (`endedBy`). `gates`: every automated gate
+        verdict. `errors`: the grouped errors; a poll of a pull request whose CI is still running is not one. `waits`:
+        every wait on a person (answers, a human gate's decision, a halt to end) with its start, end, outcome and
+        seconds. Same period and filters as `GET /metrics`. No story text or agent output is exported; messages are
+        untrusted text.
       parameters:
         - name: table
           in: query
           required: true
-          schema: { type: string, enum: [runs, halts, gates, errors] }
+          schema: { type: string, enum: [runs, halts, gates, errors, waits] }
         - name: format
           in: query
           schema: { type: string, enum: [csv, json], default: csv }
@@ -1465,8 +1469,11 @@ paths:
     post:
       operationId: addMeetingNote
       tags: [meetings]
-      summary: Add a note under a topic.
-      description: '`409 invalid_state` when the topic was moved to the next meeting or its meeting has ended.'
+      summary: Add a note, decision, action or question under a topic.
+      description: |
+        A plain `note` unless `kind` says otherwise. `owner` and `dueOn` are only for an action (`400
+        validation_failed` otherwise). `409 invalid_state` when the topic was moved to the next meeting or its meeting
+        has ended.
       requestBody:
         required: true
         content:
@@ -1483,14 +1490,82 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /meeting-notes:
+    get:
+      operationId: listMeetingNotes
+      tags: [meetings]
+      summary: The notes of one kind across meetings, such as a series' open actions or its decisions.
+      description: |
+        Latest meeting first, then in the meeting's topic order and the order the notes were taken; at most 500. A note
+        under a topic carried over to the next meeting is listed once, as its copy there. `status` is only for
+        `kind=action` (`400 validation_failed` otherwise). 0 AIU.
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/MeetingNoteKind' }
+        - name: seriesId
+          in: query
+          required: false
+          description: Only notes from this series' meetings.
+          schema: { type: string, format: uuid }
+        - name: meetingId
+          in: query
+          required: false
+          description: Only notes from this meeting.
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          required: false
+          description: Only the actions still to do (`open`) or done.
+          schema: { $ref: '#/components/schemas/MeetingActionStatus' }
+      responses:
+        '200':
+          description: The notes, with the topic and meeting each was taken in.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingNoteList' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /meeting-notes/{noteId}/done:
+    parameters:
+      - $ref: '#/components/parameters/MeetingNoteId'
+    post:
+      operationId: setMeetingNoteDone
+      tags: [meetings]
+      summary: Mark an action done, or not done again.
+      description: |
+        Records who marked it and when; `done: false` clears both. Allowed after the meeting has ended, since actions
+        are done after it. `409 invalid_state` when the note is not an action, or its topic was moved to the next
+        meeting (mark the copy there).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingNoteDoneRequest' }
+      responses:
+        '200':
+          description: The action, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingNote' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /meeting-notes/{noteId}:
     parameters:
       - $ref: '#/components/parameters/MeetingNoteId'
     patch:
       operationId: updateMeetingNote
       tags: [meetings]
-      summary: Rewrite a note.
-      description: '`409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.'
+      summary: Rewrite a note, and change its kind, owner or due day.
+      description: |
+        `kind`, `owner` and `dueOn` absent keep their values; null clears `owner` or `dueOn`. A note that stops being an
+        action loses its owner, due day and done mark. `409 invalid_state` when its topic was moved to the next meeting
+        or its meeting has ended.
       requestBody:
         required: true
         content:
@@ -1835,7 +1910,10 @@ components:
       maxLength: 200
     ActorName:
       type: [string, 'null']
-      description: The person's display name, or null when it is not known yet. `createdBy`/`updatedBy` stay the q-number.
+      maxLength: 200
+      description: |
+        The name to show for an actor, from the identity provider; null when none is known, and then the actor
+        (the qnumber) is shown.
     Timestamp:
       type: string
       format: date-time
@@ -2934,7 +3012,11 @@ components:
             (`check` type, resolved check `name`, `criteria`, `reason`), `delivered_sha` and `delivered_at`; once
             child_ready sees every check SUCCESS on a pull-request head that contains `delivered_sha`, it is `done`
             and the decision log keeps each check and commit (`ci_verified`); it keeps `deferred_checks` and
-            `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A work package may also have
+            `delivered_sha`, without `delivered_at`, until it is reopened or redelivered. A package reported
+            `unverified` without such a delegation, whose work was published, is `done` like a `ready` one: child_ready
+            requires its pull request with every check green, the reviewer is told its gaps, and the decision log
+            records them (`unverified_delivered`); it stays `unverified`, for a person, only when publication is not
+            proven. A work package may also have
             `changed_files` and `mapped_criteria`: what its implementers' handoffs claimed, which narrows the packages a
             review reopens, and `finding_responses` (`id` `R1`.., `status` `fixed` or `disputed`, `detail`): its
             answers to the findings its rework note numbered, kept until a review sends work back again. A review in
@@ -3272,6 +3354,7 @@ components:
           gates,
           findings,
           reworkRounds,
+          runKinds,
           waits,
           insights,
         ]
@@ -3489,7 +3572,17 @@ components:
             type: object
             additionalProperties: false
             required:
-              [gate, phase, runs, pass, fail, rejectOrHalt, error, topFailure]
+              [
+                gate,
+                phase,
+                runs,
+                pass,
+                fail,
+                rejectOrHalt,
+                error,
+                notYet,
+                topFailure,
+              ]
             properties:
               gate: { type: string }
               phase: { $ref: '#/components/schemas/Phase' }
@@ -3497,11 +3590,14 @@ components:
               pass: { $ref: '#/components/schemas/MetricsCount' }
               fail:
                 $ref: '#/components/schemas/MetricsCount'
-                description: '`fail` and `branch` (sent to rework).'
+                description: '`fail` and `branch` (sent to rework); a poll that said "not yet" is `notYet`.'
               rejectOrHalt: { $ref: '#/components/schemas/MetricsCount' }
               error:
                 $ref: '#/components/schemas/MetricsCount'
                 description: The gate could not judge; never a verdict.
+              notYet:
+                $ref: '#/components/schemas/MetricsCount'
+                description: 'Polls of `child_ready` and `pr` that said "not yet" (CI still running): waits, not failures.'
               topFailure:
                 oneOf:
                   - type: 'null'
@@ -3530,6 +3626,33 @@ components:
             properties:
               rounds: { $ref: '#/components/schemas/MetricsCount' }
               stories: { $ref: '#/components/schemas/MetricsCount' }
+        runKinds:
+          type: array
+          description: The period's runs by phase and kind (why each ran), with their spend.
+          items:
+            type: object
+            additionalProperties: false
+            required: [phase, kind, runs, nanoAiu]
+            properties:
+              phase: { $ref: '#/components/schemas/Phase' }
+              kind:
+                type: string
+                enum:
+                  [
+                    first,
+                    continue,
+                    resume,
+                    after_answers,
+                    re_review,
+                    review_rework,
+                    ci_fix,
+                    revision,
+                    retry,
+                    design_refresh,
+                    repair,
+                  ]
+              runs: { $ref: '#/components/schemas/MetricsCount' }
+              nanoAiu: { $ref: '#/components/schemas/MetricsCount' }
         waits:
           type: array
           items:
@@ -3586,7 +3709,18 @@ components:
       type: object
       additionalProperties: false
       required:
-        [storyKey, at, reason, phase, runId, kind, actor, action, resumedAt]
+        [
+          storyKey,
+          at,
+          reason,
+          phase,
+          runId,
+          kind,
+          actor,
+          action,
+          resumedAt,
+          endedBy,
+        ]
       properties:
         storyKey: { $ref: '#/components/schemas/StoryKey' }
         at: { type: string, format: date-time }
@@ -3596,7 +3730,13 @@ components:
         kind: { $ref: '#/components/schemas/DiagnosisKind' }
         actor: { type: string, enum: [story_owner, operator, agent_maintainer] }
         action: { type: string }
-        resumedAt: { type: [string, 'null'], format: date-time }
+        resumedAt:
+          type: [string, 'null']
+          format: date-time
+          description: When the story moved on (a Resume, a person's other exit, an unblock); `null` while it has not.
+        endedBy:
+          type: [string, 'null']
+          description: The event that moved it on (`story.resumed`, `work_package.decided`, `story.unblocked`, ...).
     MetricsError:
       type: object
       additionalProperties: false
@@ -3839,11 +3979,19 @@ components:
           role,
           want,
           soThat,
+          context,
+          implementedFeature,
           acceptanceCriteria,
           outOfScope,
+          dependencies,
+          testNotes,
           openQuestions,
         ]
-      description: A user story in Ahoy's fixed template, as the agent wrote it and Ahoy checked it.
+      description: |
+        A user story in Ahoy's fixed template (the workspace story-writer's sections), as the agent wrote it and Ahoy
+        checked it. A story drafted before `context`, `implementedFeature`, `dependencies` and `testNotes` existed
+        answers them as `null` and empty lists. In Jira the criteria go in the acceptance-criteria checklist, the rest
+        in the description.
       properties:
         title: { type: string, minLength: 1, maxLength: 255 }
         role:
@@ -3867,12 +4015,30 @@ components:
             maxLength: 1000,
             description: 'So that ...',
           }
+        context:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 2000
+          description: Why now and what exists today.
+        implementedFeature:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 2000
+          description: What the system does once the story ships.
         acceptanceCriteria:
           type: array
           minItems: 1
           maxItems: 20
           items: { type: string, minLength: 1, maxLength: 1000 }
         outOfScope:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 1000 }
+        dependencies:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 1000 }
+        testNotes:
           type: array
           maxItems: 20
           items: { type: string, minLength: 1, maxLength: 1000 }
@@ -4050,6 +4216,15 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/MeetingSummary' }
+    MeetingNoteKind:
+      type: string
+      enum: [note, decision, action, question]
+      description: |
+        `note`: what was said. `decision`: what was agreed. `action`: something a person does next, with an optional
+        owner and due day. `question`: what is still to be answered.
+    MeetingActionStatus:
+      type: string
+      enum: [open, done]
     MeetingNote:
       type: object
       additionalProperties: false
@@ -4058,6 +4233,12 @@ components:
           id,
           topicId,
           text,
+          kind,
+          owner,
+          dueOn,
+          doneAt,
+          doneBy,
+          doneByName,
           createdBy,
           createdByName,
           createdAt,
@@ -4073,6 +4254,31 @@ components:
             type: string,
             description: 'What was said, as plain text (untrusted).',
           }
+        kind: { $ref: '#/components/schemas/MeetingNoteKind' }
+        owner:
+          type: [string, 'null']
+          maxLength: 200
+          description: "An action's owner as a person typed it, a name or an e-mail (untrusted); null for other kinds."
+        dueOn:
+          {
+            type: [string, 'null'],
+            format: date,
+            description: "An action's due day; null when none.",
+          }
+        doneAt:
+          {
+            type: [string, 'null'],
+            format: date-time,
+            description: 'When the action was marked done.',
+          }
+        doneBy:
+          {
+            type: [string, 'null'],
+            minLength: 1,
+            maxLength: 200,
+            description: 'Who marked the action done.',
+          }
+        doneByName: { $ref: '#/components/schemas/ActorName' }
         createdBy: { $ref: '#/components/schemas/Actor' }
         createdByName: { $ref: '#/components/schemas/ActorName' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
@@ -4286,3 +4492,44 @@ components:
       required: [text]
       properties:
         text: { type: string, minLength: 1, maxLength: 4000, pattern: "\\S" }
+        kind: { $ref: '#/components/schemas/MeetingNoteKind' }
+        owner:
+          {
+            type: [string, 'null'],
+            maxLength: 200,
+            description: 'Only for an action; null or blank clears it.',
+          }
+        dueOn:
+          {
+            type: [string, 'null'],
+            format: date,
+            description: 'Only for an action; null clears it.',
+          }
+    MeetingNoteDoneRequest:
+      type: object
+      additionalProperties: false
+      required: [done]
+      properties:
+        done: { type: boolean }
+    MeetingNoteInContext:
+      type: object
+      additionalProperties: false
+      description: A note with the topic and meeting it was taken in.
+      required:
+        [note, topicTitle, meetingId, meetingTitle, meetingStartsAt, seriesId]
+      properties:
+        note: { $ref: '#/components/schemas/MeetingNote' }
+        topicTitle:
+          { type: string, description: "The topic's title (untrusted)." }
+        meetingId: { type: string, format: uuid }
+        meetingTitle: { type: string }
+        meetingStartsAt: { $ref: '#/components/schemas/Timestamp' }
+        seriesId: { type: [string, 'null'], format: uuid }
+    MeetingNoteList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MeetingNoteInContext' }

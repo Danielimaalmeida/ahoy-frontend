@@ -21,6 +21,9 @@ import type {
   DecisionRequest,
   EndMeetingRequest,
   KnowledgeReviewRequest,
+  ListMeetingNotesQuery,
+  MeetingNoteDoneRequest,
+  MeetingNoteKind,
   MeetingNoteRequest,
   MeetingStatus,
   MeetingStoryAnswersRequest,
@@ -843,6 +846,19 @@ export class MockAhoyServer {
             call.body as MeetingNoteRequest // validated
           )
         );
+      case 'setMeetingNoteDone':
+        return jsonResponse(
+          200,
+          this.meetings.setNoteDone(
+            call.actor,
+            call.path['noteId'] ?? '',
+            (call.body as MeetingNoteDoneRequest).done // validated
+          )
+        );
+      case 'listMeetingNotes':
+        return jsonResponse(200, {
+          items: this.meetings.listNotes(notesQuery(call.query)),
+        });
       case 'deleteMeetingNote':
         this.meetings.deleteNote(call.path['noteId'] ?? '');
         return { kind: 'empty', status: 204, headers: {} };
@@ -1757,4 +1773,23 @@ function decodeCursor(cursor: string): {
     // Not base64 or not JSON: refused below.
   }
   throw new MockProblem('bad_request', 'cursor is not one this server issued');
+}
+
+/** The query of `listMeetingNotes`, already checked against the contract. */
+function notesQuery(
+  query: Readonly<Record<string, string | number>>
+): ListMeetingNotesQuery {
+  const text = (key: string): string | undefined => {
+    const value = query[key];
+    return typeof value === 'string' ? value : undefined;
+  };
+  const seriesId = text('seriesId');
+  const meetingId = text('meetingId');
+  const status = text('status');
+  return {
+    kind: query['kind'] as MeetingNoteKind, // validated
+    ...(seriesId !== undefined ? { seriesId } : {}),
+    ...(meetingId !== undefined ? { meetingId } : {}),
+    ...(status === 'open' || status === 'done' ? { status } : {}),
+  };
 }
