@@ -3,14 +3,17 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
+  MEETING_NOTE_IMAGE_TYPES,
   MEETING_NOTE_KINDS,
   type MeetingNote,
   type MeetingStoryDraft,
   type MeetingTopic,
 } from '@core/api/types';
 import {
+  acceptImages,
   authorLabel,
   dueLabel,
+  MAX_IMAGES_PER_NOTE,
   meetingDay,
   meetingTime,
   NOTE_KIND_LABELS,
@@ -23,6 +26,7 @@ import { draftChip } from '@domain/story-drafts';
 import { Button } from '@ui/button/button';
 import { DialogService } from '@ui/dialog/dialog';
 import { MeetingsStore } from './meetings-store';
+import { NoteImages } from './note-images';
 import { StoryDraftDialog, type StoryDraftData } from './story-draft-dialog';
 import { StoryDraftsStore } from './story-drafts-store';
 import { StoryGrillDialog, type StoryGrillData } from './story-grill-dialog';
@@ -36,13 +40,14 @@ export const NOTE_MAX = 4000;
  * add a note. While it can change, it can also go up or down, move to the series' next meeting, or be removed with its
  * notes (after a second click). A moved topic is read-only and links to where it went. Notes are plain text; a note can
  * be a decision, an action (with an owner and a due day, ticked done also after the meeting ended) or a question,
- * chosen beside the line or typed as `/d`, `/a`, `/q` before the text. A topic
+ * chosen beside the line or typed as `/d`, `/a`, `/q` before the text. Images (PNG, JPEG, WebP, GIF) are pasted into the
+ * line, dropped on the topic or chosen with Add image, and go with the next note; Add image beside a note adds to it. A topic
  * that was not moved can be turned into a user story (also after the meeting ended); its draft's state shows on a line
  * of its own, with the way to check it, and the Jira issue once created.
  */
 @Component({
   selector: 'ah-topic-card',
-  imports: [Button, ReactiveFormsModule, RouterLink],
+  imports: [Button, NoteImages, ReactiveFormsModule, RouterLink],
   styles: `
     :host {
       display: block;
@@ -55,6 +60,10 @@ export const NOTE_MAX = 4000;
     }
     article.moved {
       background: var(--surface-raised);
+    }
+    article.dropping {
+      outline: 2px dashed var(--accent);
+      outline-offset: -2px;
     }
     .head {
       display: flex;
@@ -129,12 +138,32 @@ export const NOTE_MAX = 4000;
       flex: none;
       accent-color: var(--accent);
     }
-    .remove-note {
+    .remove-note,
+    .add-image {
       opacity: 0;
     }
-    li:hover .remove-note,
-    li:focus-within .remove-note {
+    li:hover :is(.remove-note, .add-image),
+    li:focus-within :is(.remove-note, .add-image) {
       opacity: 1;
+    }
+    .pending {
+      flex: 1 0 100%;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pending li {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 0 0 8px;
+    }
+    .image-hint {
+      flex: 1 0 100%;
+      margin: 0;
     }
     form {
       display: flex;
@@ -171,7 +200,14 @@ export const NOTE_MAX = 4000;
   `,
   template: `
     @let t = topic();
-    <article [class.moved]="moved()" [attr.aria-labelledby]="'topic-' + t.id">
+    <article
+      [class.moved]="moved()"
+      [class.dropping]="dropping()"
+      [attr.aria-labelledby]="'topic-' + t.id"
+      (dragover)="dragOver($event)"
+      (dragleave)="dropping.set(false)"
+      (drop)="drop($event)"
+    >
       <div class="head">
         <h3 [id]="'topic-' + t.id">{{ t.title }}</h3>
         <span
@@ -303,6 +339,29 @@ export const NOTE_MAX = 4000;
                   {{ time(note.createdAt) }}</span
                 >
                 @if (editable()) {
+                  @if (note.images.length < maxImages) {
+                    <input
+                      #picker
+                      type="file"
+                      multiple
+                      hidden
+                      [accept]="imageTypes"
+                      (change)="addImagesTo(note, $event)"
+                    />
+                    <button
+                      ahButton="ghost"
+                      size="sm"
+                      type="button"
+                      class="add-image"
+                      [attr.aria-label]="
+                        'Add an image to the note: ' + note.text
+                      "
+                      [disabled]="busy()"
+                      (click)="picker.click()"
+                    >
+                      Add image
+                    </button>
+                  }
                   <button
                     ahButton="ghost"
                     size="sm"
@@ -316,6 +375,9 @@ export const NOTE_MAX = 4000;
                   </button>
                 }
               </span>
+              @if (note.images.length > 0) {
+                <ah-note-images [note]="note" [editable]="editable()" />
+              }
             </li>
           }
         </ul>
@@ -402,6 +464,7 @@ export const NOTE_MAX = 4000;
             [id]="'note-' + t.id"
             [maxlength]="noteMax"
             [formControl]="note"
+            (paste)="paste($event)"
           />
           @if (kindNow() === 'action') {
             <label class="ah-sr" [for]="'owner-' + t.id">Who does it</label>
@@ -424,6 +487,50 @@ export const NOTE_MAX = 4000;
             <button ahButton="soft" size="sm" type="submit" [disabled]="busy()">
               Add action
             </button>
+          }
+          <input
+            #composerPicker
+            type="file"
+            multiple
+            hidden
+            [accept]="imageTypes"
+            (change)="choose($event)"
+          />
+          <button
+            ahButton="ghost"
+            size="sm"
+            type="button"
+            [attr.aria-label]="'Add an image to the next note on ' + t.title"
+            [disabled]="busy() || pending().length >= maxImages"
+            (click)="composerPicker.click()"
+          >
+            Add image
+          </button>
+          @if (pending().length > 0) {
+            <ul
+              class="pending"
+              [attr.aria-label]="'Images for the next note on ' + t.title"
+            >
+              @for (file of pending(); track $index) {
+                <li class="ah-tag">
+                  {{ file.name || 'Pasted image' }}
+                  <button
+                    ahButton="ghost"
+                    size="sm"
+                    type="button"
+                    [attr.aria-label]="
+                      'Leave out ' + (file.name || 'the pasted image')
+                    "
+                    (click)="leaveOut($index)"
+                  >
+                    ×
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          @if (imageHint(); as hint) {
+            <p class="ah-hint image-hint" role="status">{{ hint }}</p>
           }
         </form>
       }
@@ -466,6 +573,14 @@ export class TopicCard {
   );
   /** Whether the person clicked Remove once and is asked to confirm. */
   readonly confirming = signal(false);
+  /** The images pasted, dropped or chosen for the next note. */
+  readonly pending = signal<readonly File[]>([]);
+  /** Why an image pasted, dropped or chosen was left out. */
+  readonly imageHint = signal<string | null>(null);
+  /** Whether files are dragged over the topic. */
+  protected readonly dropping = signal(false);
+  protected readonly imageTypes = MEETING_NOTE_IMAGE_TYPES.join(',');
+  protected readonly maxImages = MAX_IMAGES_PER_NOTE;
 
   protected readonly busy = this.store.busy;
   protected readonly moved = computed(() => this.topic().status === 'moved');
@@ -567,17 +682,76 @@ export class TopicCard {
     const shortcut = noteShortcut(typed);
     const text = shortcut?.text ?? typed;
     const kind = shortcut?.kind ?? this.kind.value;
-    if (text === '' || this.busy()) return;
-    const added = await this.store.addNote(this.topic().id, text, {
-      kind,
-      owner: this.owner.value,
-      dueOn: this.dueOn.value,
-    });
+    const images = this.pending();
+    if ((text === '' && images.length === 0) || this.busy()) return;
+    const added = await this.store.addNote(
+      this.topic().id,
+      text !== '' ? text : images.length === 1 ? 'Image' : 'Images',
+      { kind, owner: this.owner.value, dueOn: this.dueOn.value },
+      images
+    );
     if (!added) return;
+    this.pending.set([]);
+    this.imageHint.set(null);
     this.note.setValue('');
     this.owner.setValue('');
     this.dueOn.setValue('');
     this.kind.setValue('note');
+  }
+
+  /** Takes the images pasted into the line for the next note; pasted text goes in as usual. */
+  protected paste(event: ClipboardEvent): void {
+    const files = Array.from(event.clipboardData?.files ?? []);
+    if (files.length === 0) return;
+    event.preventDefault();
+    this.take(files);
+  }
+
+  /** Lets files be dropped on a topic that takes notes. */
+  protected dragOver(event: DragEvent): void {
+    if (!this.editable() || !event.dataTransfer?.types.includes('Files'))
+      return;
+    event.preventDefault();
+    this.dropping.set(true);
+  }
+
+  /** Takes the images dropped on the topic for the next note. */
+  protected drop(event: DragEvent): void {
+    this.dropping.set(false);
+    if (!this.editable()) return;
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length === 0) return;
+    event.preventDefault();
+    this.take(files);
+  }
+
+  /** Takes the images chosen with Add image beside the line for the next note. */
+  protected choose(event: Event): void {
+    this.take(chosenFiles(event));
+  }
+
+  /** Leaves an image out of the next note. */
+  protected leaveOut(index: number): void {
+    this.pending.update((files) => files.filter((_, i) => i !== index));
+  }
+
+  /** Adds the images chosen with Add image beside a note to that note. */
+  protected async addImagesTo(note: MeetingNote, event: Event): Promise<void> {
+    const { images, refusal } = acceptImages(
+      chosenFiles(event),
+      MAX_IMAGES_PER_NOTE - note.images.length
+    );
+    this.imageHint.set(refusal);
+    if (images.length > 0) await this.store.addNoteImages(note.id, images);
+  }
+
+  private take(files: readonly File[]): void {
+    const { images, refusal } = acceptImages(
+      files,
+      MAX_IMAGES_PER_NOTE - this.pending().length
+    );
+    this.imageHint.set(refusal);
+    if (images.length > 0) this.pending.update((p) => [...p, ...images]);
   }
 
   /** Removes the topic and its notes, once confirmed. */
@@ -585,4 +759,13 @@ export class TopicCard {
     await this.store.deleteTopic(this.topic().id);
     this.confirming.set(false);
   }
+}
+
+/** The files chosen in a file input, which is cleared so the same file can be chosen again. */
+function chosenFiles(event: Event): readonly File[] {
+  const input = event.target;
+  if (!(input instanceof HTMLInputElement)) return [];
+  const files = Array.from(input.files ?? []);
+  input.value = '';
+  return files;
 }

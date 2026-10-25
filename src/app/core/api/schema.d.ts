@@ -1216,6 +1216,59 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/meeting-notes/{noteId}/images': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly noteId: components['parameters']['MeetingNoteId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Add an image to a note.
+     * @description The body is the image itself: a PNG, JPEG, WebP or GIF of at most 5 MiB (5 242 880 bytes). Its format is read
+     *     from its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`.
+     *     Stored in Postgres beside the artifacts' bytes. `409 invalid_state` when the note has 10 images already, its
+     *     topic was moved to the next meeting or its meeting has ended. 0 AIU, no external call.
+     */
+    readonly post: operations['addMeetingNoteImage'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meeting-note-images/{imageId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly imageId: string;
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The bytes of a note's image.
+     * @description Served with the format recognised at upload, `X-Content-Type-Options: nosniff` and a `sandbox` content security
+     *     policy. An image never changes, so the answer may be cached; its ETag is the quoted sha256 of the bytes.
+     */
+    readonly get: operations['getMeetingNoteImage'];
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Remove an image from a note.
+     * @description `409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended, as for the
+     *     note itself.
+     */
+    readonly delete: operations['deleteMeetingNoteImage'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meeting-notes/{noteId}/done': {
     readonly parameters: {
       readonly query?: never;
@@ -2697,12 +2750,24 @@ export interface components {
       /** @description Who marked the action done. */
       readonly doneBy: string | null;
       readonly doneByName: components['schemas']['ActorName'];
+      /** @description The note's images, oldest first; read each from `GET /meeting-note-images/{id}`. */
+      readonly images: readonly components['schemas']['MeetingNoteImage'][];
       readonly createdBy: components['schemas']['Actor'];
       readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedBy: components['schemas']['Actor'];
       readonly updatedByName: components['schemas']['ActorName'];
       readonly updatedAt: components['schemas']['Timestamp'];
+    };
+    readonly MeetingNoteImage: {
+      /** Format: uuid */
+      readonly id: string;
+      /** @enum {string} */
+      readonly mediaType:
+        'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+      readonly sizeBytes: number;
+      readonly createdBy: components['schemas']['Actor'];
+      readonly createdAt: components['schemas']['Timestamp'];
     };
     readonly MeetingTopicLink: {
       /** Format: uuid */
@@ -4519,6 +4584,106 @@ export interface operations {
       readonly 400: components['responses']['Problem'];
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly addMeetingNoteImage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly noteId: components['parameters']['MeetingNoteId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'image/png': string;
+        readonly 'image/jpeg': string;
+        readonly 'image/webp': string;
+        readonly 'image/gif': string;
+      };
+    };
+    readonly responses: {
+      /** @description The note, with the image last in `images`. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingNote'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getMeetingNoteImage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: {
+        /** @description An ETag from an earlier response; a match answers 304 without a body. */
+        readonly 'If-None-Match'?: string;
+      };
+      readonly path: {
+        readonly imageId: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The image. */
+      readonly 200: {
+        headers: {
+          /** @description The quoted sha256 of the image. */
+          readonly ETag?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'image/png': string;
+          readonly 'image/jpeg': string;
+          readonly 'image/webp': string;
+          readonly 'image/gif': string;
+        };
+      };
+      /** @description The image has not changed since the given ETag. */
+      readonly 304: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly deleteMeetingNoteImage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly imageId: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description Removed. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly setMeetingNoteDone: {

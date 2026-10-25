@@ -50,7 +50,10 @@ export interface Answer {
   readonly response: MockResponse;
 }
 
-/** Calls the server like `curl` would, as {@link ACTOR} unless `headers` say otherwise. `target` may hold a query. */
+/**
+ * Calls the server like `curl` would, as {@link ACTOR} unless `headers` say otherwise. `target` may hold a query; a
+ * `Uint8Array` body is sent as raw bytes (an image upload), anything else as JSON.
+ */
 export function call(
   server: MockAhoyServer,
   method: string,
@@ -64,7 +67,10 @@ export function call(
     path: url.pathname,
     query: url.searchParams,
     headers: { 'x-ahoy-actor': ACTOR, ...lower(headers) },
-    body: body === undefined ? undefined : JSON.parse(JSON.stringify(body)),
+    body:
+      body === undefined || body instanceof Uint8Array
+        ? body
+        : JSON.parse(JSON.stringify(body)),
   };
   const response = server.handle(request);
   const answerBody =

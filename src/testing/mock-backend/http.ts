@@ -13,7 +13,7 @@ export interface MockRequest {
   readonly query: URLSearchParams;
   /** Header names in lower case. */
   readonly headers: Readonly<Record<string, string>>;
-  /** The body: parsed JSON, `undefined` for none, or the raw text when it was not JSON. */
+  /** The body: parsed JSON, `undefined` for none, the raw text when it was not JSON, or the bytes of an image upload. */
   readonly body: unknown;
   /** Whether a body was sent that is not JSON (`bad_request`). */
   readonly bodyIsInvalidJson?: boolean;
@@ -39,6 +39,12 @@ export type MockResponse =
       readonly status: number;
       readonly headers: Readonly<Record<string, string>>;
       readonly body: string;
+    }
+  | {
+      readonly kind: 'bytes';
+      readonly status: number;
+      readonly headers: Readonly<Record<string, string>>;
+      readonly body: Uint8Array;
     }
   | {
       readonly kind: 'empty';
@@ -144,6 +150,7 @@ export function responseText(response: MockResponse): string | null {
       return JSON.stringify(response.body);
     case 'text':
       return response.body;
+    case 'bytes':
     case 'empty':
     case 'stream':
       return null;

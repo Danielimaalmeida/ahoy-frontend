@@ -2626,6 +2626,186 @@
         }
       }
     },
+    "/meeting-notes/{noteId}/images": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingNoteId"
+        }
+      ],
+      "post": {
+        "operationId": "addMeetingNoteImage",
+        "tags": ["meetings"],
+        "summary": "Add an image to a note.",
+        "description": "The body is the image itself: a PNG, JPEG, WebP or GIF of at most 5 MiB (5 242 880 bytes). Its format is read\nfrom its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`.\nStored in Postgres beside the artifacts' bytes. `409 invalid_state` when the note has 10 images already, its\ntopic was moved to the next meeting or its meeting has ended. 0 AIU, no external call.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The note, with the image last in `images`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingNote"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-note-images/{imageId}": {
+      "parameters": [
+        {
+          "name": "imageId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getMeetingNoteImage",
+        "tags": ["meetings"],
+        "summary": "The bytes of a note's image.",
+        "description": "Served with the format recognised at upload, `X-Content-Type-Options: nosniff` and a `sandbox` content security\npolicy. An image never changes, so the answer may be cached; its ETag is the quoted sha256 of the bytes.\n",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "An ETag from an earlier response; a match answers 304 without a body.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image.",
+            "headers": {
+              "ETag": {
+                "description": "The quoted sha256 of the image.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The image has not changed since the given ETag."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMeetingNoteImage",
+        "tags": ["meetings"],
+        "summary": "Remove an image from a note.",
+        "description": "`409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended, as for the\nnote itself.\n",
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meeting-notes/{noteId}/done": {
       "parameters": [
         {
@@ -7106,6 +7286,7 @@
           "doneAt",
           "doneBy",
           "doneByName",
+          "images",
           "createdBy",
           "createdByName",
           "createdAt",
@@ -7153,6 +7334,14 @@
           "doneByName": {
             "$ref": "#/components/schemas/ActorName"
           },
+          "images": {
+            "type": "array",
+            "maxItems": 10,
+            "description": "The note's images, oldest first; read each from `GET /meeting-note-images/{id}`.",
+            "items": {
+              "$ref": "#/components/schemas/MeetingNoteImage"
+            }
+          },
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
           },
@@ -7169,6 +7358,32 @@
             "$ref": "#/components/schemas/ActorName"
           },
           "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "MeetingNoteImage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "mediaType", "sizeBytes", "createdBy", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": ["image/png", "image/jpeg", "image/webp", "image/gif"]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5242880
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "createdAt": {
             "$ref": "#/components/schemas/Timestamp"
           }
         }

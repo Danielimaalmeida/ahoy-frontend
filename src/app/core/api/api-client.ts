@@ -130,9 +130,13 @@ import type {
   WorkPackageDecisionRequest,
   UnblockStoryRequest,
 } from './types';
+import { MEETING_NOTE_IMAGE_TYPES } from './types';
 
 /** How long a request may take before the call gives `{ kind: "network" }`: a hung request must not hang the screen. */
 export const REQUEST_TIMEOUT_MS = 30_000;
+
+/** How long an image upload or download may take: up to 5 MiB over a slow line. */
+export const IMAGE_TIMEOUT_MS = 120_000;
 
 /** What a gateway answers with when the API behind it is down. Without problem details, these mean "no usable answer". */
 const GATEWAY_STATUSES: readonly number[] = [502, 503, 504];
@@ -158,6 +162,34 @@ function metricsParams(query: MetricsQuery): HttpParams {
     if (value !== undefined) params = params.set(name, value);
   }
   return params;
+}
+
+/**
+ * The same error with its body as text when a `blob` request got one as a Blob, so its problem details can be read;
+ * anything else as it was.
+ */
+async function withTextError(thrown: unknown): Promise<unknown> {
+  if (!(thrown instanceof HttpErrorResponse) || !(thrown.error instanceof Blob))
+    return thrown;
+  const blob = thrown.error;
+  const text = await (
+    typeof blob.text === 'function'
+      ? blob.text()
+      : new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            resolve(typeof reader.result === 'string' ? reader.result : '');
+          reader.onerror = () => resolve('');
+          reader.readAsText(blob);
+        })
+  ).catch(() => '');
+  return new HttpErrorResponse({
+    error: text,
+    headers: thrown.headers,
+    status: thrown.status,
+    statusText: thrown.statusText,
+    ...(thrown.url !== null ? { url: thrown.url } : {}),
+  });
 }
 
 /** Turns whatever a request threw into an `ApiError`. */
@@ -841,6 +873,68 @@ export class ApiClient {
       '/meeting-notes',
       isMeetingNoteList,
       params
+    );
+  }
+
+  /**
+   * Adds an image (a PNG, JPEG, WebP or GIF of at most 5 MiB) to a note; the body is the image itself. The answer (201)
+   * is the note with the image last in `images`.
+   */
+  addMeetingNoteImage(
+    noteId: string,
+    image: Blob
+  ): Promise<ApiResult<MeetingNote>> {
+    return this.send(
+      'addMeetingNoteImage',
+      isMeetingNote,
+      this.http.post<unknown>(
+        this.url(`/meeting-notes/${segment(noteId)}/images`),
+        image,
+        {
+          observe: 'response',
+          timeout: IMAGE_TIMEOUT_MS,
+          headers: new HttpHeaders({ 'Content-Type': image.type }),
+        }
+      )
+    );
+  }
+
+  /**
+   * The bytes of a note's image, to show through an object URL: an `<img>` cannot send the token, so the page reads
+   * them here. Anything but one of the four image formats is an invalid response.
+   */
+  async getMeetingNoteImage(imageId: string): Promise<ApiResult<Blob>> {
+    const op = 'getMeetingNoteImage';
+    try {
+      const response = await firstValueFrom(
+        this.http.get(this.url(`/meeting-note-images/${segment(imageId)}`), {
+          observe: 'response',
+          responseType: 'blob',
+          timeout: IMAGE_TIMEOUT_MS,
+        })
+      );
+      const [type = ''] = (response.headers.get('Content-Type') ?? '').split(
+        ';'
+      );
+      const known = MEETING_NOTE_IMAGE_TYPES.find((t) => t === type.trim());
+      if (response.body === null || known === undefined)
+        return fail(
+          invalidResponse(
+            op,
+            `the answer is not an image (${type || 'no type'})`
+          )
+        );
+      return ok(new Blob([response.body], { type: known }));
+    } catch (thrown: unknown) {
+      return fail(toApiError(op, await withTextError(thrown)));
+    }
+  }
+
+  /** Removes an image from a note. The answer (204) has no body. */
+  deleteMeetingNoteImage(imageId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteMeetingNoteImage',
+      `/meeting-note-images/${segment(imageId)}`
     );
   }
 

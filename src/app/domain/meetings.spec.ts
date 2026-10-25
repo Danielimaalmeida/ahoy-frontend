@@ -1,4 +1,5 @@
 import {
+  acceptImages,
   authorLabel,
   carryOverCandidates,
   dateInputValue,
@@ -6,6 +7,8 @@ import {
   defaultMeeting,
   dueLabel,
   groupMeetings,
+  imageFileRefusal,
+  MAX_NOTE_IMAGE_BYTES,
   meetingToConfluence,
   moveInOrder,
   noteKindFields,
@@ -13,6 +16,7 @@ import {
   parseEmails,
   raisedByLabel,
   shortEmail,
+  sniffImageType,
   startsAtFrom,
   suggestedCarryOver,
   topicWhen,
@@ -382,6 +386,41 @@ describe('meetingToConfluence', () => {
     expect(markup).toContain('* Said in passing _(Alex Doe, 09:50)_');
   });
 
+  it("counts a note's images instead of copying them", () => {
+    const image = { id: 'i' };
+    const note = (text: string, images: readonly unknown[]): NoteDoc => ({
+      text,
+      images,
+      createdBy: 'q123',
+      createdByName: 'Alex Doe',
+      createdAt: at(9, 50),
+    });
+    const markup = meetingToConfluence(
+      meetingDoc({
+        topics: [
+          {
+            id: 't1',
+            title: 'Exports',
+            status: 'open',
+            raisedBy: 'us',
+            raisedByEmail: null,
+            origin: 'planned',
+            createdAt: at(9, 30),
+            movedTo: null,
+            notes: [
+              note('The old screen', [image]),
+              note('Both mockups', [image, image]),
+              note('No pictures', []),
+            ],
+          },
+        ],
+      })
+    );
+    expect(markup).toContain('* The old screen (1 image) _(Alex Doe, 09:50)_');
+    expect(markup).toContain('* Both mockups (2 images) _(Alex Doe, 09:50)_');
+    expect(markup).toContain('* No pictures _(Alex Doe, 09:50)_');
+  });
+
   it('escapes markup and keeps line breaks in text people wrote', () => {
     const markup = meetingToConfluence(
       meetingDoc({
@@ -411,5 +450,71 @@ describe('meetingToConfluence', () => {
     expect(markup).toContain('h1. \\*Big\\* \\{panel\\}');
     expect(markup).toContain('h3. 1. \\[link\\]\\|x');
     expect(markup).toContain('* one \\\\ two');
+  });
+});
+
+describe('note images', () => {
+  const bytes = (...b: number[]) => new Uint8Array(b);
+
+  it('recognises PNG, JPEG, GIF and WebP from their first bytes, and nothing else', () => {
+    expect(
+      sniffImageType(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0))
+    ).toBe('image/png');
+    expect(sniffImageType(bytes(0xff, 0xd8, 0xff, 0xe0))).toBe('image/jpeg');
+    expect(sniffImageType(new TextEncoder().encode('GIF89a...'))).toBe(
+      'image/gif'
+    );
+    expect(sniffImageType(new TextEncoder().encode('GIF87a...'))).toBe(
+      'image/gif'
+    );
+    expect(
+      sniffImageType(new TextEncoder().encode('RIFF\0\0\0\0WEBPVP8 '))
+    ).toBe('image/webp');
+    expect(
+      sniffImageType(new TextEncoder().encode('RIFF\0\0\0\0WAVE'))
+    ).toBeNull();
+    expect(
+      sniffImageType(new TextEncoder().encode('<svg xmlns="x"/>'))
+    ).toBeNull();
+    expect(sniffImageType(bytes(0x89, 0x50))).toBeNull();
+    expect(sniffImageType(bytes())).toBeNull();
+  });
+
+  it('refuses a file that is not one of the four formats, is empty or is over 5 MB', () => {
+    expect(imageFileRefusal({ type: 'image/png', size: 10 })).toBeNull();
+    expect(
+      imageFileRefusal({ type: 'image/webp', size: MAX_NOTE_IMAGE_BYTES })
+    ).toBeNull();
+    expect(imageFileRefusal({ type: 'image/svg+xml', size: 10 })).toBe(
+      'Only PNG, JPEG, WebP and GIF images can be added.'
+    );
+    expect(imageFileRefusal({ type: 'application/pdf', size: 10 })).toBe(
+      'Only PNG, JPEG, WebP and GIF images can be added.'
+    );
+    expect(imageFileRefusal({ type: 'image/gif', size: 0 })).toBe(
+      'The image is empty.'
+    );
+    expect(
+      imageFileRefusal({ type: 'image/jpeg', size: MAX_NOTE_IMAGE_BYTES + 1 })
+    ).toBe('The image is larger than 5 MB.');
+  });
+
+  it('takes the images that fit, in order, and says why the first other one was left out', () => {
+    const png = { type: 'image/png', size: 10, name: 'a' };
+    const svg = { type: 'image/svg+xml', size: 10, name: 'b' };
+    const jpg = { type: 'image/jpeg', size: 10, name: 'c' };
+    expect(acceptImages([png, svg, jpg], 10)).toEqual({
+      images: [png, jpg],
+      refusal: 'Only PNG, JPEG, WebP and GIF images can be added.',
+    });
+    expect(acceptImages([png, jpg], 1)).toEqual({
+      images: [png],
+      refusal: 'A note takes at most 10 images.',
+    });
+    expect(acceptImages([png], 0)).toEqual({
+      images: [],
+      refusal: 'A note takes at most 10 images.',
+    });
+    expect(acceptImages([], 10)).toEqual({ images: [], refusal: null });
   });
 });
