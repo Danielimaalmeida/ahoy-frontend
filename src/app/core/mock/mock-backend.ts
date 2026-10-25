@@ -19,7 +19,7 @@ import {
   type MockServerOptions,
 } from '@testing/mock-backend/server';
 import contract from '@testing/fixtures/openapi.json';
-import { Observable } from 'rxjs';
+import { from, Observable, switchMap } from 'rxjs';
 
 /**
  * Dev-only providers of the mock backend (lane 2D): the `mock` configuration (`npm run start:mock`) and specs use them;
@@ -75,18 +75,55 @@ export const mockBackendInterceptor: HttpInterceptorFn = (req, next) => {
   for (const name of req.headers.keys())
     headers[name.toLowerCase()] = req.headers.getAll(name)?.join(', ') ?? '';
   headers['x-ahoy-actor'] ??= user.id();
-  const request: MockRequest = {
+  const requestWith = (body: unknown): MockRequest => ({
     method: req.method,
     path: url.pathname.slice(base.length) || '/',
     query: url.searchParams,
     headers,
-    // Through the wire and back: the mock never holds the caller's object, and the caller never holds the mock's.
-    body:
+    body,
+  });
+  // An image upload goes as bytes, read from its Blob first; anything else through the wire and back as JSON, so the
+  // mock never holds the caller's object, and the caller never holds the mock's.
+  const blob = req.body instanceof Blob ? req.body : null;
+  if (blob !== null) {
+    headers['content-type'] ??= blob.type;
+    return from(blobBytes(blob)).pipe(
+      switchMap((bytes) => answerWith(server, req, requestWith(bytes)))
+    );
+  }
+  return answerWith(
+    server,
+    req,
+    requestWith(
       req.body === null || req.body === undefined
         ? undefined
-        : JSON.parse(JSON.stringify(req.body)),
-  };
+        : JSON.parse(JSON.stringify(req.body))
+    )
+  );
+};
 
+/** The bytes of a Blob (jsdom's Blob may lack `arrayBuffer`, so a `FileReader` stands in). */
+function blobBytes(blob: Blob): Promise<Uint8Array> {
+  if (typeof blob.arrayBuffer === 'function')
+    return blob.arrayBuffer().then((buffer) => new Uint8Array(buffer));
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      reader.result instanceof ArrayBuffer
+        ? resolve(new Uint8Array(reader.result))
+        : reject(new Error('FileReader gave no bytes'));
+    reader.onerror = () =>
+      reject(reader.error ?? new Error('FileReader failed'));
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+/** Answers one request from the mock, after the server's latency. */
+function answerWith(
+  server: MockAhoyServer,
+  req: HttpRequest<unknown>,
+  request: MockRequest
+): Observable<HttpEvent<unknown>> {
   return new Observable<HttpEvent<unknown>>((subscriber) => {
     const answer = (): void => {
       const event = toHttpEvent(server.handle(request), req);
@@ -103,7 +140,7 @@ export const mockBackendInterceptor: HttpInterceptorFn = (req, next) => {
     }
     return server.clock.schedule(latency, answer);
   });
-};
+}
 
 /** A mock answer as `HttpClient` hands it over. */
 function toHttpEvent(
@@ -124,7 +161,15 @@ function toHttpEvent(
         ? JSON.stringify(response.body)
         : response.body;
   else if (response.kind === 'text') body = response.body;
-  else if (response.kind === 'stream') {
+  else if (response.kind === 'bytes') {
+    const type = response.headers['Content-Type'] ?? '';
+    body =
+      req.responseType === 'blob'
+        ? new Blob([response.body.slice()], { type })
+        : req.responseType === 'arraybuffer'
+          ? response.body.slice().buffer
+          : new TextDecoder().decode(response.body);
+  } else if (response.kind === 'stream') {
     response.stream.abort(new Error('HttpClient cannot read an event stream'));
     return new HttpErrorResponse({
       ...init,

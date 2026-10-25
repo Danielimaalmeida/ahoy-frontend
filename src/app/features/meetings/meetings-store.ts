@@ -67,8 +67,16 @@ export class MeetingsStore {
   private timer: Timer | null = null;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopLive());
+    inject(DestroyRef).onDestroy(() => {
+      this.stopLive();
+      for (const url of this.imageUrls().values()) URL.revokeObjectURL(url);
+    });
   }
+
+  /** The object URL of each note image read so far, by image id. An image never changes, so one read is enough. */
+  readonly imageUrls = signal<ReadonlyMap<string, string>>(new Map());
+  /** The images being read or that could not be read, so each is asked for once. */
+  private readonly imageReads = new Set<string>();
 
   /** Every meeting, latest start first, once read. */
   readonly meetings = signal<readonly MeetingSummary[]>([]);
@@ -380,11 +388,15 @@ export class MeetingsStore {
     await this.refreshList();
   }
 
-  /** Adds a note under a topic: a plain note, or a decision, an action (with its owner and due day) or a question. */
+  /**
+   * Adds a note under a topic: a plain note, or a decision, an action (with its owner and due day) or a question, then
+   * its images. Answers whether the note was added; an image refused after that shows in `commandError`.
+   */
   async addNote(
     topicId: string,
     text: string,
-    extras?: NoteExtras
+    extras?: NoteExtras,
+    images: readonly Blob[] = []
   ): Promise<boolean> {
     const owner = extras?.owner?.trim() ?? '';
     const note = await this.run(() =>
@@ -402,7 +414,48 @@ export class MeetingsStore {
     if (note === null) return false;
     this.patchTopic(topicId, (t) => ({ ...t, notes: [...t.notes, note] }));
     if (note.kind === 'action') await this.loadActions();
+    if (images.length > 0) await this.addNoteImages(note.id, images);
     return true;
+  }
+
+  /**
+   * Adds images to a note, one after the other, each putting the note in place as the API answers it. Stops at the
+   * first refusal (its reason is in `commandError`) and answers whether all were added.
+   */
+  async addNoteImages(
+    noteId: string,
+    images: readonly Blob[]
+  ): Promise<boolean> {
+    for (const image of images) {
+      const note = await this.run(() =>
+        this.api.addMeetingNoteImage(noteId, image)
+      );
+      if (note === null) return false;
+      this.replaceNote(note);
+    }
+    return true;
+  }
+
+  /** Removes an image from a note. */
+  async deleteNoteImage(noteId: string, imageId: string): Promise<boolean> {
+    if (!(await this.runEmpty(() => this.api.deleteMeetingNoteImage(imageId))))
+      return false;
+    this.patchNote(noteId, (n) => ({
+      ...n,
+      images: n.images.filter((i) => i.id !== imageId),
+    }));
+    return true;
+  }
+
+  /** Reads an image's bytes once, for `imageUrls`; a failure leaves it out (the page shows a placeholder). */
+  async loadImage(imageId: string): Promise<void> {
+    if (this.imageReads.has(imageId)) return;
+    this.imageReads.add(imageId);
+    const result = await this.api.getMeetingNoteImage(imageId);
+    if (!result.ok) return;
+    const urls = new Map(this.imageUrls());
+    urls.set(imageId, URL.createObjectURL(result.value));
+    this.imageUrls.set(urls);
   }
 
   /**
@@ -518,6 +571,22 @@ export class MeetingsStore {
     this.patchTopic(note.topicId, (t) => ({
       ...t,
       notes: t.notes.map((n) => (n.id === note.id ? note : n)),
+    }));
+  }
+
+  /** Changes one note of the open meeting, wherever it is. */
+  private patchNote(
+    noteId: string,
+    change: (note: MeetingNote) => MeetingNote
+  ): void {
+    const meeting = this.meeting();
+    const topic = meeting?.topics.find((t) =>
+      t.notes.some((n) => n.id === noteId)
+    );
+    if (topic === undefined) return;
+    this.patchTopic(topic.id, (t) => ({
+      ...t,
+      notes: t.notes.map((n) => (n.id === noteId ? change(n) : n)),
     }));
   }
 }

@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { FedevAuthService } from '@acme-fedev/auth';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   mockBackendInterceptor,
   provideMockBackend,
@@ -263,6 +263,154 @@ describe('Meetings on the mock backend', () => {
         'Tax ID validation for EU customers'
       ).querySelector<HTMLInputElement>('form input')!.value
     ).toBe('');
+  });
+
+  describe('images on notes', () => {
+    const PNG = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+    ]);
+    const TOPIC = 'Tax ID validation for EU customers';
+    const made: string[] = [];
+    const revoked: string[] = [];
+    const real = {
+      create: Object.getOwnPropertyDescriptor(URL, 'createObjectURL'),
+      revoke: Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL'),
+    };
+
+    beforeEach(() => {
+      made.length = 0;
+      revoked.length = 0;
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        writable: true,
+        value: () => {
+          made.push(`blob:fake/${made.length + 1}`);
+          return made.at(-1)!;
+        },
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        writable: true,
+        value: (url: string) => revoked.push(url),
+      });
+    });
+
+    afterEach(() => {
+      for (const [name, descriptor] of [
+        ['createObjectURL', real.create],
+        ['revokeObjectURL', real.revoke],
+      ] as const)
+        if (descriptor) Object.defineProperty(URL, name, descriptor);
+        else Reflect.deleteProperty(URL, name);
+    });
+
+    function paste(field: Element | null, files: readonly File[]): void {
+      if (field === null) throw new Error('no field');
+      const event = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'clipboardData', { value: { files } });
+      field.dispatchEvent(event);
+    }
+
+    function choose(
+      input: HTMLInputElement | null,
+      files: readonly File[]
+    ): void {
+      if (input === null) throw new Error('no file input');
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: files,
+      });
+      input.dispatchEvent(new Event('change'));
+    }
+
+    const screen = () => new File([PNG], 'screen.png', { type: 'image/png' });
+    const thumbs = (topic: HTMLElement) =>
+      [...topic.querySelectorAll<HTMLImageElement>('ah-note-images img')].map(
+        (i) => i.getAttribute('src')
+      );
+
+    it('adds an image pasted into the line with the next note, shows it, opens it large and removes it', async () => {
+      const page = await open('/meetings');
+      const line = card(page.root, TOPIC).querySelector('form input');
+      paste(line, [screen()]);
+      await flush(page);
+      expect(text(card(page.root, TOPIC).querySelector('.pending'))).toContain(
+        'screen.png'
+      );
+      submit(card(page.root, TOPIC).querySelector('form'));
+      await flush(page);
+      const topic = card(page.root, TOPIC);
+      expect(notesOf(topic)).toEqual(['Image']);
+      expect(thumbs(topic)).toEqual(['blob:fake/1']);
+      expect(topic.querySelector('.pending')).toBeNull();
+      const upload = page.requests.find((r) => r.path.endsWith('/images'))!;
+      expect(upload.headers['content-type']).toBe('image/png');
+      expect(upload.body).toEqual(PNG);
+
+      const thumb = topic.querySelector<HTMLButtonElement>('.thumb')!;
+      expect(thumb.getAttribute('aria-label')).toBe('Image 1 of 1');
+      thumb.click();
+      await flush(page);
+      expect(dialog().querySelector('img')?.getAttribute('src')).toBe(
+        'blob:fake/1'
+      );
+      buttonNamed(dialog(), 'Close').click();
+      await flush(page);
+
+      topic.querySelector<HTMLButtonElement>('.remove-image')!.click();
+      await flush(page);
+      expect(thumbs(card(page.root, TOPIC))).toEqual([]);
+      expect(page.requests.at(-1)?.method).toBe('DELETE');
+    });
+
+    it('adds a chosen image to a note already taken, and says why an SVG is left out', async () => {
+      const page = await open('/meetings');
+      const line = card(page.root, TOPIC).querySelector<HTMLInputElement>(
+        'form input'
+      );
+      type(line, 'The VIES error screen');
+      submit(card(page.root, TOPIC).querySelector('form'));
+      await flush(page);
+      const svg = new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' });
+      choose(
+        card(page.root, TOPIC).querySelector<HTMLInputElement>(
+          'li input[type=file]'
+        ),
+        [svg, screen()]
+      );
+      await flush(page);
+      const topic = card(page.root, TOPIC);
+      expect(notesOf(topic)).toEqual(['The VIES error screen']);
+      expect(thumbs(topic)).toEqual(['blob:fake/1']);
+      expect(text(topic.querySelector('.image-hint'))).toBe(
+        'Only PNG, JPEG, WebP and GIF images can be added.'
+      );
+    });
+
+    it('counts the images of a note in the Confluence markup', async () => {
+      const written: string[] = [];
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: (t: string) => (written.push(t), Promise.resolve()),
+        },
+      });
+      try {
+        const page = await open('/meetings');
+        const line = card(page.root, TOPIC).querySelector<HTMLInputElement>(
+          'form input'
+        );
+        type(line, 'The VIES error screen');
+        paste(line, [screen(), screen()]);
+        submit(card(page.root, TOPIC).querySelector('form'));
+        await flush(page);
+        buttonNamed(page.root, 'Copy for Confluence').click();
+        await flush(page);
+        expect(written[0]).toContain('* The VIES error screen (2 images) _(');
+      } finally {
+        Reflect.deleteProperty(navigator, 'clipboard');
+      }
+    });
   });
 
   it('moves a topic down when asked', async () => {

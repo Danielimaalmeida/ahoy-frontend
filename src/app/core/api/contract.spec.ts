@@ -1,4 +1,5 @@
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
+import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import createMeeting from '@testing/fixtures/createMeeting.json';
 import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
@@ -98,6 +99,7 @@ import {
   GATE_RESULTS,
   GATE_SOURCES,
   HUMAN_DECISIONS,
+  MEETING_NOTE_IMAGE_TYPES,
   MODEL_SLOTS,
   DIAGNOSIS_ACTORS,
   DIAGNOSIS_KINDS,
@@ -159,6 +161,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['addMeetingNote', addMeetingNote],
   ['updateMeetingNote', updateMeetingNote],
   ['setMeetingNoteDone', setMeetingNoteDone],
+  ['addMeetingNoteImage', addMeetingNoteImage],
   ['listMeetingNotes', listMeetingNotes],
   ['listMeetingSeries', listMeetingSeries],
   ['createMeetingSeries', createMeetingSeries],
@@ -174,6 +177,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
 const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteMeetingTopic',
   'deleteMeetingNote',
+  'deleteMeetingNoteImage',
   'discardMeetingStoryDraft',
 ];
 
@@ -198,11 +202,12 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       ...NO_CONTENT_OPERATIONS,
       'getArtifactContent',
       'exportMetrics',
+      'getMeetingNoteImage',
       ...NOT_IN_THE_CLIENT_YET,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 2).toBe(
-      63
+    expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
+      66
     );
   });
 
@@ -240,7 +245,23 @@ describe('each fixture is a valid successful answer of its operation', () => {
     expect(op.successStatuses).toEqual(['200']);
   });
 
-  it('deleteMeetingTopic and deleteMeetingNote: the contract answers 204 with no body', () => {
+  it('getMeetingNoteImage: the contract answers the image bytes in one of the four formats, or 304 with an ETag', () => {
+    const op = operationNamed('getMeetingNoteImage');
+    expect(members(op.successMediaTypes)).toEqual(
+      members(MEETING_NOTE_IMAGE_TYPES)
+    );
+    expect(members(op.successStatuses)).toEqual(['200', '304']);
+  });
+
+  it('addMeetingNoteImage: the contract takes the raw bytes in one of the four formats, not JSON', () => {
+    const op = operationNamed('addMeetingNoteImage');
+    expect(members(op.requestMediaTypes)).toEqual(
+      members(MEETING_NOTE_IMAGE_TYPES)
+    );
+    expect(op.requestSchema).toBeNull();
+  });
+
+  it('the delete commands of the meetings page: the contract answers 204 with no body', () => {
     for (const id of NO_CONTENT_OPERATIONS) {
       const op = operationNamed(id);
       expect(op.successStatuses).toEqual(['204']);
@@ -254,6 +275,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'createMeeting',
       'addMeetingTopic',
       'addMeetingNote',
+      'addMeetingNoteImage',
       'createMeetingSeries',
     ])
       expect(statusOf(id)).toEqual(['201']);

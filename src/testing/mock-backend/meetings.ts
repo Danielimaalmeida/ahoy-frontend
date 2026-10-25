@@ -33,7 +33,13 @@ import type {
   UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
 } from '@core/api/types';
-import { noteKindFields } from '@domain/meetings';
+import {
+  MAX_IMAGES_PER_NOTE,
+  MAX_NOTE_IMAGE_BYTES,
+  noteKindFields,
+  sniffImageType,
+  type NoteImageType,
+} from '@domain/meetings';
 import { iso, type Cancel, type MockClock } from './clock';
 import { MockProblem } from './http';
 import type { Writable } from './voyage';
@@ -91,6 +97,11 @@ export class MeetingDesk {
   private readonly meetings = new Map<string, MeetingRecord>();
   private readonly topics = new Map<string, TopicRecord>();
   private readonly notes = new Map<string, NoteRecord>();
+  /** The bytes of each note image, by image id; a carried-over copy shares its original's bytes. */
+  private readonly imageBytes = new Map<
+    string,
+    { readonly bytes: Uint8Array; readonly mediaType: NoteImageType }
+  >();
   private readonly drafts = new Map<string, DraftRecord>();
   private nextId = 1;
   private nextIssue = 123;
@@ -446,6 +457,7 @@ export class MeetingDesk {
       doneAt: null,
       doneBy: null,
       doneByName: null,
+      images: [],
       createdBy: actor,
       createdByName: this.nameOf(actor),
       createdAt: at,
@@ -528,6 +540,55 @@ export class MeetingDesk {
     if (typeof fields === 'string')
       throw refused(body.owner ? 'body/owner' : 'body/dueOn', fields);
     return fields;
+  }
+
+  /**
+   * Adds an image to a note that can still change; its format comes from its bytes, as the API reads it. At most
+   * {@link MAX_IMAGES_PER_NOTE} per note and {@link MAX_NOTE_IMAGE_BYTES} each.
+   */
+  addNoteImage(actor: string, noteId: string, bytes: Uint8Array): MeetingNote {
+    const note = this.changeableNote(noteId);
+    const mediaType = sniffImageType(bytes);
+    if (bytes.length > MAX_NOTE_IMAGE_BYTES)
+      throw refused('body', `must be at most ${MAX_NOTE_IMAGE_BYTES} bytes`);
+    if (mediaType === null)
+      throw refused('body', 'The file is not a PNG, JPEG, WebP or GIF image');
+    if (note.images.length >= MAX_IMAGES_PER_NOTE)
+      throw invalid(`Note ${noteId} already has ${MAX_IMAGES_PER_NOTE} images`);
+    const id = this.id();
+    this.imageBytes.set(id, { bytes: bytes.slice(), mediaType });
+    note.images = [
+      ...note.images,
+      {
+        id,
+        mediaType,
+        sizeBytes: bytes.length,
+        createdBy: actor,
+        createdAt: this.now(),
+      },
+    ];
+    return { ...note };
+  }
+
+  /** The bytes and format of a note's image. */
+  noteImage(id: string): {
+    readonly bytes: Uint8Array;
+    readonly mediaType: NoteImageType;
+  } {
+    const image = this.imageBytes.get(id);
+    if (image === undefined) throw notFound('Image', id);
+    return image;
+  }
+
+  /** Removes an image from a note that can still change. */
+  deleteNoteImage(id: string): void {
+    const note = [...this.notes.values()].find((n) =>
+      n.images.some((i) => i.id === id)
+    );
+    if (note === undefined) throw notFound('Image', id);
+    this.changeableNote(note.id);
+    note.images = note.images.filter((i) => i.id !== id);
+    this.imageBytes.delete(id);
   }
 
   deleteNote(id: string): void {
@@ -954,7 +1015,17 @@ export class MeetingDesk {
       (n) => n.topicId === topic.id
     )) {
       const noteId = this.id();
-      this.notes.set(noteId, { ...note, id: noteId, topicId: copy.id });
+      const images = note.images.map((image) => {
+        const imageId = this.id();
+        this.imageBytes.set(imageId, this.noteImage(image.id));
+        return { ...image, id: imageId };
+      });
+      this.notes.set(noteId, {
+        ...note,
+        id: noteId,
+        topicId: copy.id,
+        images,
+      });
     }
     topic.status = 'moved';
     topic.movedToTopicId = copy.id;

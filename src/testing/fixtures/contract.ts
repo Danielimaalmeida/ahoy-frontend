@@ -21,6 +21,8 @@ export interface ContractOperation {
   readonly path: string;
   /** The schema of the JSON request body, or null when the operation has none. */
   readonly requestSchema: ContractSchema | null;
+  /** The media types the request body may have, such as `application/json` or `image/png`; empty when it has none. */
+  readonly requestMediaTypes: readonly string[];
   /** The schema of the JSON body of the successful answer, or null when it is not JSON (events stream, artifact text). */
   readonly successSchema: ContractSchema | null;
   /** The media types the successful answer may have, such as `application/json` or `text/markdown`. */
@@ -217,6 +219,7 @@ export function operations(): readonly ContractOperation[] {
         method: method.toUpperCase(),
         path,
         requestSchema: jsonSchemaOf(op['requestBody']),
+        requestMediaTypes: mediaTypesOf(op['requestBody']),
         successSchema:
           first === undefined ? null : jsonSchemaOf(responses[first]),
         successMediaTypes:

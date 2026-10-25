@@ -36,6 +36,7 @@ import {
   GATE_RESULTS,
   GATE_SOURCES,
   JIRA_ISSUE_TYPES,
+  MEETING_NOTE_IMAGE_TYPES,
   MEETING_NOTE_KINDS,
   MEETING_STATUSES,
   GRILL_CHOICES,
@@ -82,6 +83,7 @@ import {
   type Meeting,
   type MeetingList,
   type MeetingNote,
+  type MeetingNoteImage,
   type MeetingNoteInContext,
   type MeetingNoteList,
   type MeetingSeries,
@@ -823,6 +825,15 @@ const meetingNoteShape = shape<MeetingNote>({
   doneAt: nullable(timestamp),
   doneBy: nullable(actor),
   doneByName: nullable(text),
+  images: arrayOf(
+    shape<MeetingNoteImage>({
+      id: uuid,
+      mediaType: oneOf(MEETING_NOTE_IMAGE_TYPES),
+      sizeBytes: wholeNumber('a size from 1 to 5242880 bytes', 1, 5_242_880),
+      createdBy: actor,
+      createdAt: timestamp,
+    })
+  ),
   createdBy: actor,
   createdByName: nullable(text),
   createdAt: timestamp,
@@ -846,6 +857,7 @@ const meetingNote: Check = (value, at) => {
     return `${at} is a ${note.kind} with an owner, due day or done mark`;
   if ((note.doneAt === null) !== (note.doneBy === null))
     return `${at}.doneAt and ${at}.doneBy must be set together`;
+  if (note.images.length > 10) return `${at}.images has more than 10 images`;
   return null;
 };
 

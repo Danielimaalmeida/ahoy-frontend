@@ -600,6 +600,18 @@ export const MEETING_ACTION_STATUSES = listOf<MeetingActionStatus>()([
   'done',
 ]);
 
+/** An image on a note (`MeetingNoteImage`); its bytes come from `getMeetingNoteImage`. */
+export type MeetingNoteImage = Schemas['MeetingNoteImage'];
+
+/** The formats a note's image can have: rasters only, recognised by the API from the bytes. */
+export type MeetingNoteImageType = MeetingNoteImage['mediaType'];
+export const MEETING_NOTE_IMAGE_TYPES = listOf<MeetingNoteImageType>()([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+]);
+
 /** Body of `setMeetingNoteDone`. */
 export type MeetingNoteDoneRequest = Schemas['MeetingNoteDoneRequest'];
 
