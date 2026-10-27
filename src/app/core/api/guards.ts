@@ -29,6 +29,9 @@ import {
   type Check,
 } from './guard-kit';
 import {
+  CREW_RECORDED_MODES,
+  CREW_ROLES,
+  CREW_SPRINT_STATES,
   DIAGNOSIS_ACTORS,
   DIAGNOSIS_KINDS,
   EFFORT_SOURCES,
@@ -57,6 +60,11 @@ import {
   TOPIC_ORIGINS,
   TOPIC_STATUSES,
   type AgentDiagnosisList,
+  type Crew,
+  type CrewAssignment,
+  type CrewMember,
+  type CrewSprint,
+  type CrewTimeOff,
   type BacklogReadiness,
   type FitReason,
   type PlanFit,
@@ -1131,6 +1139,70 @@ export const isMeetingStoryDraftList = guard<MeetingStoryDraftList>(
   'MeetingStoryDraftList',
   shape<MeetingStoryDraftList>({ items: arrayOf(meetingStoryDraft) })
 );
+
+const crewTimeOff = shape<CrewTimeOff>({
+  id: uuid,
+  memberId: uuid,
+  startsOn: isoDate,
+  endsOn: isoDate,
+  note: nullable(text),
+});
+
+const crewMember = shape<CrewMember>({
+  id: uuid,
+  name: nonEmptyText,
+  roles: arrayOf(oneOf(CREW_ROLES)),
+  timeOff: arrayOf(crewTimeOff),
+});
+
+const crewAssignment = shape<CrewAssignment>({
+  role: oneOf(CREW_ROLES),
+  memberId: uuid,
+  memberName: nonEmptyText,
+  dueMemberId: uuid,
+  dueMemberName: nonEmptyText,
+  change: nullable(
+    shape<NonNullable<CrewAssignment['change']>>({
+      mode: oneOf(CREW_RECORDED_MODES),
+      reason: nullable(text),
+      changedBy: actor,
+      changedByName: nullable(text),
+      changedAt: timestamp,
+    })
+  ),
+  away: flag,
+  suggestedMemberId: nullable(uuid),
+  suggestedMemberName: nullable(text),
+});
+
+const crewSprint = shape<CrewSprint>({
+  startsOn: isoDate,
+  endsOn: isoDate,
+  name: nullable(text),
+  jiraSprintId: nullable(wholeNumber('a Jira sprint id', 0)),
+  state: oneOf(CREW_SPRINT_STATES),
+  datesEstimated: flag,
+  current: flag,
+  assignments: arrayOf(crewAssignment),
+});
+
+/** The crew page, as `getCrew` answers it. */
+export const isCrew = guard<Crew>(
+  'Crew',
+  shape<Crew>({
+    today: isoDate,
+    jiraConfigured: flag,
+    sprintsProblem: nullable(text),
+    members: arrayOf(crewMember),
+    sprints: arrayOf(crewSprint),
+  })
+);
+
+/** A member, as `addCrewMember` and `updateCrewMember` answer it. */
+export const isCrewMember = guard<CrewMember>('CrewMember', crewMember);
+
+/** A time off, as `addCrewTimeOff` answers it. */
+export const isCrewTimeOff = guard<CrewTimeOff>('CrewTimeOff', crewTimeOff);
 
 /** The empty body of a `204 No Content` answer, which the HTTP client reads as null. */
 export const isNoContent = guard<null>('No content', (value, at) =>

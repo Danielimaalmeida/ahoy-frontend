@@ -93,6 +93,14 @@ let nextMenuId = 0;
           [routerLinkActiveOptions]="prefix"
           >Metrics</a
         >
+        <a
+          class="ah-nav__item"
+          routerLink="/crew"
+          routerLinkActive
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="prefix"
+          >Crew</a
+        >
       </nav>
       <input
         class="ah-search"

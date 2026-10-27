@@ -1,3 +1,5 @@
+import addCrewMember from '@testing/fixtures/addCrewMember.json';
+import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
 import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
@@ -8,6 +10,7 @@ import createMeetingStoryIssue from '@testing/fixtures/createMeetingStoryIssue.j
 import getMeetingStoryDraft from '@testing/fixtures/getMeetingStoryDraft.json';
 import listMeetingStoryDrafts from '@testing/fixtures/listMeetingStoryDrafts.json';
 import requestMeetingStoryDraft from '@testing/fixtures/requestMeetingStoryDraft.json';
+import updateCrewMember from '@testing/fixtures/updateCrewMember.json';
 import updateMeetingSeries from '@testing/fixtures/updateMeetingSeries.json';
 import endMeeting from '@testing/fixtures/endMeeting.json';
 import getMeeting from '@testing/fixtures/getMeeting.json';
@@ -27,6 +30,7 @@ import cancelKnowledgeReview from '@testing/fixtures/cancelKnowledgeReview.json'
 import cancelRefinement from '@testing/fixtures/cancelRefinement.json';
 import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
+import getCrew from '@testing/fixtures/getCrew.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
@@ -171,6 +175,10 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['getMeetingStoryDraft', getMeetingStoryDraft],
   ['answerMeetingStoryQuestions', answerMeetingStoryQuestions],
   ['createMeetingStoryIssue', createMeetingStoryIssue],
+  ['getCrew', getCrew],
+  ['addCrewMember', addCrewMember],
+  ['updateCrewMember', updateCrewMember],
+  ['addCrewTimeOff', addCrewTimeOff],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -179,15 +187,24 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteMeetingNote',
   'deleteMeetingNoteImage',
   'discardMeetingStoryDraft',
+  'deleteCrewMember',
+  'deleteCrewTimeOff',
+  'changeCrewSprint',
+  'clearCrewSprintChange',
 ];
 
-/** In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...) and the live stream (lane 2B). */
+/**
+ * In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...), the live stream (lane 2B) and a
+ * run's input.
+ */
 const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'amendAnchors',
   'resolveReview',
   'reopenWork',
   'unblockStory',
   'streamEvents',
+  'getRunInput',
+  'getRunInputContent',
 ];
 
 /** The members of a list, sorted, so that the order the contract lists enum values in does not matter. */
@@ -207,7 +224,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      66
+      74
     );
   });
 
@@ -261,7 +278,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
     expect(op.requestSchema).toBeNull();
   });
 
-  it('the delete commands of the meetings page: the contract answers 204 with no body', () => {
+  it('the commands with no answer body (meetings and crew): the contract answers 204 with no body', () => {
     for (const id of NO_CONTENT_OPERATIONS) {
       const op = operationNamed(id);
       expect(op.successStatuses).toEqual(['204']);
@@ -293,6 +310,13 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'setMeetingNoteDone',
     ])
       expect(statusOf(id)).toEqual(['200']);
+  });
+
+  it('the crew commands answer 201 when they add and 200 when they change a member', () => {
+    const statusOf = (id: string) => operationNamed(id).successStatuses;
+    expect(statusOf('addCrewMember')).toEqual(['201']);
+    expect(statusOf('addCrewTimeOff')).toEqual(['201']);
+    expect(statusOf('updateCrewMember')).toEqual(['200']);
   });
 
   it('the 2xx statuses the client tests use are the ones the contract documents for each command', () => {
@@ -343,6 +367,48 @@ describe('problems.json: one problem+json body per code', () => {
 });
 
 describe('the request bodies the client sends', () => {
+  it('are valid for the crew commands as the crew page sends them', () => {
+    const memberId = '11111111-2222-4333-8444-000000000001';
+    expect(
+      requestViolations('addCrewMember', {
+        name: 'Alex Example',
+        roles: ['sprint_person', 'lunch_host'],
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('addCrewMember', { name: 'Chris Example', roles: [] })
+    ).toEqual([]);
+    expect(
+      requestViolations('updateCrewMember', {
+        name: 'Alex Example',
+        roles: ['lunch_host'],
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('addCrewTimeOff', {
+        startsOn: '2026-11-09',
+        endsOn: '2026-11-13',
+        note: 'Holiday',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('addCrewTimeOff', {
+        startsOn: '2026-11-09',
+        endsOn: '2026-11-09',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('changeCrewSprint', {
+        memberId,
+        mode: 'skip',
+        reason: 'On holiday',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('changeCrewSprint', { memberId, mode: 'swap' })
+    ).toEqual([]);
+  });
+
   it('are valid for the meeting commands as the meetings page sends them', () => {
     const topicId = 'a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e21';
     expect(

@@ -54,6 +54,11 @@ export const routes: Routes = [
     loadChildren: () =>
       import('@features/metrics/metrics.routes').then((m) => m.METRICS_ROUTES),
   },
+  {
+    path: 'crew',
+    loadChildren: () =>
+      import('@features/crew/crew.routes').then((m) => m.CREW_ROUTES),
+  },
   ...environment.devRoutes,
   // Lane 6A replaces this with the "not found" state.
   {
