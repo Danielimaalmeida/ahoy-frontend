@@ -1,0 +1,96 @@
+{
+  "today": "2026-10-27",
+  "jiraConfigured": true,
+  "sprintsProblem": null,
+  "members": [
+    {
+      "id": "11111111-2222-4333-8444-000000000001",
+      "name": "Alex Example",
+      "roles": ["sprint_person", "lunch_host"],
+      "timeOff": []
+    },
+    {
+      "id": "11111111-2222-4333-8444-000000000002",
+      "name": "Bea Example",
+      "roles": ["sprint_person", "lunch_host"],
+      "timeOff": [
+        {
+          "id": "11111111-2222-4333-8444-0000000000a1",
+          "memberId": "11111111-2222-4333-8444-000000000002",
+          "startsOn": "2026-11-09",
+          "endsOn": "2026-11-13",
+          "note": "Holiday"
+        }
+      ]
+    },
+    {
+      "id": "11111111-2222-4333-8444-000000000003",
+      "name": "Chris Example",
+      "roles": ["lunch_host"],
+      "timeOff": []
+    }
+  ],
+  "sprints": [
+    {
+      "startsOn": "2026-10-19",
+      "endsOn": "2026-11-01",
+      "name": "PROJ Sprint 42",
+      "jiraSprintId": 142,
+      "state": "active",
+      "datesEstimated": false,
+      "current": true,
+      "assignments": [
+        {
+          "role": "sprint_person",
+          "memberId": "11111111-2222-4333-8444-000000000001",
+          "memberName": "Alex Example",
+          "dueMemberId": "11111111-2222-4333-8444-000000000001",
+          "dueMemberName": "Alex Example",
+          "change": null,
+          "away": false,
+          "suggestedMemberId": null,
+          "suggestedMemberName": null
+        },
+        {
+          "role": "lunch_host",
+          "memberId": "11111111-2222-4333-8444-000000000003",
+          "memberName": "Chris Example",
+          "dueMemberId": "11111111-2222-4333-8444-000000000002",
+          "dueMemberName": "Bea Example",
+          "change": {
+            "mode": "swap",
+            "reason": "Bea is at a conference",
+            "changedBy": "alex@example.com",
+            "changedByName": "Alex Example",
+            "changedAt": "2026-10-20T09:00:00.000Z"
+          },
+          "away": false,
+          "suggestedMemberId": null,
+          "suggestedMemberName": null
+        }
+      ]
+    },
+    {
+      "startsOn": "2026-11-02",
+      "endsOn": "2026-11-15",
+      "name": null,
+      "jiraSprintId": null,
+      "state": "projected",
+      "datesEstimated": true,
+      "current": false,
+      "assignments": [
+        {
+          "role": "sprint_person",
+          "memberId": "11111111-2222-4333-8444-000000000002",
+          "memberName": "Bea Example",
+          "dueMemberId": "11111111-2222-4333-8444-000000000002",
+          "dueMemberName": "Bea Example",
+          "change": null,
+          "away": true,
+          "suggestedMemberId": "11111111-2222-4333-8444-000000000001",
+          "suggestedMemberName": "Alex Example"
+        }
+      ]
+    }
+  ]
+}

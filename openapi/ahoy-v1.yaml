@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 46946ebe64215286445cb9b4cf8b023241580caf
+# Commit: dd668d34fbf72bfcb0db24de85d2ce1091eab3fc
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -50,6 +50,7 @@ tags:
   - name: refinements
   - name: metrics
   - name: meetings
+  - name: crew
 paths:
   /health:
     get:
@@ -473,6 +474,68 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /runs/{runId}/input:
+    parameters:
+      - name: runId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/RunId' }
+    get:
+      operationId: getRunInput
+      tags: [runs]
+      summary: >-
+        What the run was given (design §5, "Run input"): its spec, the files of its seed as it was queued, and the prompt
+        its agent was sent. A run queued before its input was recorded has only its spec and seed revision.
+      responses:
+        '200':
+          description: The run's input.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunInput' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /runs/{runId}/input/content:
+    parameters:
+      - name: runId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/RunId' }
+      - name: path
+        in: query
+        required: true
+        description: Story-relative path, as listed by `getRunInput`.
+        schema: { $ref: '#/components/schemas/ArtifactPath' }
+      - name: If-None-Match
+        in: header
+        required: false
+        description: An ETag from an earlier response; a match answers 304 without a body.
+        schema: { type: string, maxLength: 200 }
+    get:
+      operationId: getRunInputContent
+      tags: [runs]
+      responses:
+        '304':
+          description: The content has not changed since the given ETag.
+        '200':
+          description: The bytes of one file of the run's seed.
+          headers:
+            ETag:
+              description: The quoted sha256 of the content.
+              schema: { type: string }
+          content:
+            text/markdown:
+              schema: { type: string }
+            application/json:
+              schema: {}
+            text/plain:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/questions:
     parameters:
       - $ref: '#/components/parameters/StoryKey'
@@ -1888,6 +1951,159 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
+  /crew:
+    get:
+      operationId: getCrew
+      tags: [crew]
+      summary: The crew page, with who is on in the current sprint and the next five.
+      description: |
+        The team's members alphabetically, with their time off, and the sprints from the current one: Jira's active
+        sprint, read from the team's board (`JIRA_BOARD_ID`) and kept; future sprints without dates follow at the
+        team's cadence (`datesEstimated`), and after Jira's last sprint come `projected` ones. Each sprint names who is
+        on for each role (`sprint_person`, the devs; `lunch_host`, anyone), in alphabetical turns from where the role's
+        order started, with the changes people made. A role nobody started starts on the current sprint with the first
+        member alphabetically. When Jira cannot be read, the sprints last seen are used and `sprintsProblem` says why.
+        0 AIU.
+      responses:
+        '200':
+          description: The crew page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Crew' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /crew/members:
+    post:
+      operationId: addCrewMember
+      tags: [crew]
+      summary: Add a member to the crew.
+      description: 'Names are unique, ignoring case (`400 validation_failed`).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrewMemberRequest' }
+      responses:
+        '201':
+          description: The member.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrewMember' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /crew/members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/CrewMemberId'
+    patch:
+      operationId: updateCrewMember
+      tags: [crew]
+      summary: Rename a member, or change the turns they take.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCrewMemberRequest' }
+      responses:
+        '200':
+          description: The member, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrewMember' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteCrewMember
+      tags: [crew]
+      summary: Remove a member, with their time off and the changes that name them.
+      description: The orders go on from where their name stood.
+      responses:
+        '204':
+          description: The member is gone.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /crew/members/{memberId}/time-off:
+    parameters:
+      - $ref: '#/components/parameters/CrewMemberId'
+    post:
+      operationId: addCrewTimeOff
+      tags: [crew]
+      summary: Record days a member is away.
+      description: |
+        Both days included, at most a year. A member away for any day of a sprint is flagged on it, with the next
+        person in the order who is not; nobody is moved until a person changes the sprint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrewTimeOffRequest' }
+      responses:
+        '201':
+          description: The time off.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CrewTimeOff' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /crew/time-off/{timeOffId}:
+    parameters:
+      - $ref: '#/components/parameters/CrewTimeOffId'
+    delete:
+      operationId: deleteCrewTimeOff
+      tags: [crew]
+      summary: Remove a time off.
+      responses:
+        '204':
+          description: The time off is gone.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /crew/sprints/{startsOn}/{role}:
+    parameters:
+      - $ref: '#/components/parameters/CrewSprintStartsOn'
+      - $ref: '#/components/parameters/CrewRole'
+    put:
+      operationId: changeCrewSprint
+      tags: [crew]
+      summary: Change who is on for a role in the current or a later sprint.
+      description: |
+        The sprint is named by its first day, so a change to a projected sprint stays once Jira creates it. `swap` (the
+        default): the person due takes the next sprint, and the one chosen skips their own next turn. `skip`: the person
+        due waits for the next round, and the one chosen still skips their next turn. `restart`: the role's order starts
+        again from the person chosen, on this sprint. Choosing the person due anyway removes the change. Up to 25
+        sprints after the current one; `404 not_found` for another day, `409 invalid_state` for a sprint that is over,
+        `400 validation_failed` for a member who does not take the role. Uses the sprints last seen.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CrewChangeRequest' }
+      responses:
+        '204':
+          description: Changed; read `GET /crew` again.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: clearCrewSprintChange
+      tags: [crew]
+      summary: Undo a sprint's change for a role, so the order decides again.
+      responses:
+        '204':
+          description: Undone.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     webeam:
@@ -1975,6 +2191,27 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    CrewMemberId:
+      name: memberId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CrewTimeOffId:
+      name: timeOffId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CrewSprintStartsOn:
+      name: startsOn
+      in: path
+      required: true
+      description: The sprint's first day.
+      schema: { type: string, format: date }
+    CrewRole:
+      name: role
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/CrewRole' }
   responses:
     Problem:
       description: An error, as RFC 9457 problem details.
@@ -2755,6 +2992,74 @@ components:
             oneOf:
               [{ $ref: '#/components/schemas/Timestamp' }, { type: 'null' }],
           }
+    RunInputFile:
+      type: object
+      required: [path, sha256, sizeBytes, mediaType]
+      additionalProperties: false
+      properties:
+        path: { $ref: '#/components/schemas/ArtifactPath' }
+        sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        sizeBytes: { type: integer, minimum: 0 }
+        mediaType: { type: string }
+    RunInput:
+      type: object
+      required:
+        [
+          runId,
+          storyKey,
+          phase,
+          agent,
+          seedRevision,
+          spec,
+          recordedAt,
+          prompt,
+          actionsContext,
+          files,
+        ]
+      additionalProperties: false
+      properties:
+        runId: { $ref: '#/components/schemas/RunId' }
+        storyKey: { $ref: '#/components/schemas/StoryKey' }
+        phase: { $ref: '#/components/schemas/Phase' }
+        agent: { type: string }
+        seedRevision:
+          type: integer
+          minimum: 0
+          description: The story's artifact-set revision the seed was made from.
+        spec:
+          type: object
+          description: The run spec as the reconciler dispatched it; it never holds a credential.
+        recordedAt:
+          description: When the seed was recorded; null for a run queued before runs recorded their input.
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        prompt:
+          type: [string, 'null']
+          description: >-
+            The prompt the run's agent was sent, as the runtime reported it when the run ended (an Actions run's is the
+            rendered context's). Null until then, and for a run that ended before its agent was sent anything.
+        actionsContext:
+          description: >-
+            For a run on GitHub Actions, what its context carried besides the prompt: the seed files the workflow
+            writes under `.ahoy/specs/<KEY>/`, and the frame images it downloads, by story path, with their links.
+            Null for other runs, and until the run ends.
+          oneOf:
+            - type: object
+              required: [files, images]
+              additionalProperties: false
+              properties:
+                files:
+                  type: array
+                  items: { $ref: '#/components/schemas/ArtifactPath' }
+                images:
+                  type: object
+                  additionalProperties: { type: string }
+            - type: 'null'
+        files:
+          type: array
+          description: The seed's files (the story's artifacts and the files the reconciler rendered), by path.
+          items: { $ref: '#/components/schemas/RunInputFile' }
     DiagnosisKind:
       type: string
       enum:
@@ -4640,3 +4945,176 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/MeetingNoteInContext' }
+    CrewRole:
+      type: string
+      enum: [sprint_person, lunch_host]
+      description: |
+        `sprint_person`: takes the refinement notes, the pre-refinement and the release (the devs). `lunch_host`: picks
+        the restaurant for the sprint's lunch and moderates the retro (anyone).
+    CrewTimeOff:
+      type: object
+      additionalProperties: false
+      required: [id, memberId, startsOn, endsOn, note]
+      properties:
+        id: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        startsOn: { type: string, format: date }
+        endsOn: { type: string, format: date, description: 'Included.' }
+        note: { type: [string, 'null'], maxLength: 200 }
+    CrewMember:
+      type: object
+      additionalProperties: false
+      required: [id, name, roles, timeOff]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 100 }
+        roles: { type: array, items: { $ref: '#/components/schemas/CrewRole' } }
+        timeOff:
+          type: array
+          description: Earliest first; empty when the member was just added or changed.
+          items: { $ref: '#/components/schemas/CrewTimeOff' }
+    CrewAssignment:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          role,
+          memberId,
+          memberName,
+          dueMemberId,
+          dueMemberName,
+          change,
+          away,
+          suggestedMemberId,
+          suggestedMemberName,
+        ]
+      properties:
+        role: { $ref: '#/components/schemas/CrewRole' }
+        memberId: { type: string, format: uuid }
+        memberName: { type: string }
+        dueMemberId:
+          {
+            type: string,
+            format: uuid,
+            description: 'Who the order named; the member unless changed.',
+          }
+        dueMemberName: { type: string }
+        change:
+          description: The change that put the member here; null when the order did.
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [mode, reason, changedBy, changedByName, changedAt]
+              properties:
+                mode: { type: string, enum: [swap, skip] }
+                reason: { type: [string, 'null'] }
+                changedBy: { $ref: '#/components/schemas/Actor' }
+                changedByName: { $ref: '#/components/schemas/ActorName' }
+                changedAt: { $ref: '#/components/schemas/Timestamp' }
+        away:
+          {
+            type: boolean,
+            description: 'The member is away for at least one day of the sprint.',
+          }
+        suggestedMemberId:
+          type: [string, 'null']
+          format: uuid
+          description: When away, the next person in the order who is not.
+        suggestedMemberName: { type: [string, 'null'] }
+    CrewSprint:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          startsOn,
+          endsOn,
+          name,
+          jiraSprintId,
+          state,
+          datesEstimated,
+          current,
+          assignments,
+        ]
+      properties:
+        startsOn: { type: string, format: date }
+        endsOn: { type: string, format: date, description: 'Included.' }
+        name:
+          {
+            type: [string, 'null'],
+            description: "Jira's name for it; null for a projected sprint.",
+          }
+        jiraSprintId: { type: [integer, 'null'] }
+        state: { type: string, enum: [active, future, closed, projected] }
+        datesEstimated:
+          {
+            type: boolean,
+            description: "Ahoy placed it at the team's cadence; Jira has no dates yet.",
+          }
+        current: { type: boolean }
+        assignments:
+          type: array
+          description: One per role that has members, sprint person first.
+          items: { $ref: '#/components/schemas/CrewAssignment' }
+    Crew:
+      type: object
+      additionalProperties: false
+      required: [today, jiraConfigured, sprintsProblem, members, sprints]
+      properties:
+        today: { type: string, format: date }
+        jiraConfigured:
+          {
+            type: boolean,
+            description: "The server reads the board's sprints from Jira.",
+          }
+        sprintsProblem:
+          type: [string, 'null']
+          description: Why Jira's sprints could not be read now; the sprints last seen are shown.
+        members:
+          { type: array, items: { $ref: '#/components/schemas/CrewMember' } }
+        sprints:
+          type: array
+          description: The current sprint and the next five; empty when no sprint with dates is known.
+          items: { $ref: '#/components/schemas/CrewSprint' }
+    CrewMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [name, roles]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100, pattern: "\\S" }
+        roles:
+          {
+            type: array,
+            maxItems: 2,
+            uniqueItems: true,
+            items: { $ref: '#/components/schemas/CrewRole' },
+          }
+    UpdateCrewMemberRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100, pattern: "\\S" }
+        roles:
+          {
+            type: array,
+            maxItems: 2,
+            uniqueItems: true,
+            items: { $ref: '#/components/schemas/CrewRole' },
+          }
+    CrewTimeOffRequest:
+      type: object
+      additionalProperties: false
+      required: [startsOn, endsOn]
+      properties:
+        startsOn: { type: string, format: date }
+        endsOn: { type: string, format: date }
+        note: { type: string, maxLength: 200 }
+    CrewChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [memberId]
+      properties:
+        memberId: { type: string, format: uuid }
+        mode: { type: string, enum: [swap, skip, restart], default: swap }
+        reason: { type: string, maxLength: 200 }

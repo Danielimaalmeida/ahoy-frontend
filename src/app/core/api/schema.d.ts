@@ -358,6 +358,49 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/runs/{runId}/input': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    /** What the run was given (design §5, "Run input"): its spec, the files of its seed as it was queued, and the prompt its agent was sent. A run queued before its input was recorded has only its spec and seed revision. */
+    readonly get: operations['getRunInput'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/runs/{runId}/input/content': {
+    readonly parameters: {
+      readonly query: {
+        /** @description Story-relative path, as listed by `getRunInput`. */
+        readonly path: components['schemas']['ArtifactPath'];
+      };
+      readonly header?: {
+        /** @description An ETag from an earlier response; a match answers 304 without a body. */
+        readonly 'If-None-Match'?: string;
+      };
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get: operations['getRunInputContent'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/questions': {
     readonly parameters: {
       readonly query?: never;
@@ -1497,6 +1540,147 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/crew': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The crew page, with who is on in the current sprint and the next five.
+     * @description The team's members alphabetically, with their time off, and the sprints from the current one: Jira's active
+     *     sprint, read from the team's board (`JIRA_BOARD_ID`) and kept; future sprints without dates follow at the
+     *     team's cadence (`datesEstimated`), and after Jira's last sprint come `projected` ones. Each sprint names who is
+     *     on for each role (`sprint_person`, the devs; `lunch_host`, anyone), in alphabetical turns from where the role's
+     *     order started, with the changes people made. A role nobody started starts on the current sprint with the first
+     *     member alphabetically. When Jira cannot be read, the sprints last seen are used and `sprintsProblem` says why.
+     *     0 AIU.
+     */
+    readonly get: operations['getCrew'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/crew/members': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Add a member to the crew.
+     * @description Names are unique, ignoring case (`400 validation_failed`).
+     */
+    readonly post: operations['addCrewMember'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/crew/members/{memberId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly memberId: components['parameters']['CrewMemberId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Remove a member, with their time off and the changes that name them.
+     * @description The orders go on from where their name stood.
+     */
+    readonly delete: operations['deleteCrewMember'];
+    readonly options?: never;
+    readonly head?: never;
+    /** Rename a member, or change the turns they take. */
+    readonly patch: operations['updateCrewMember'];
+    readonly trace?: never;
+  };
+  readonly '/crew/members/{memberId}/time-off': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly memberId: components['parameters']['CrewMemberId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Record days a member is away.
+     * @description Both days included, at most a year. A member away for any day of a sprint is flagged on it, with the next
+     *     person in the order who is not; nobody is moved until a person changes the sprint.
+     */
+    readonly post: operations['addCrewTimeOff'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/crew/time-off/{timeOffId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly timeOffId: components['parameters']['CrewTimeOffId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    readonly post?: never;
+    /** Remove a time off. */
+    readonly delete: operations['deleteCrewTimeOff'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/crew/sprints/{startsOn}/{role}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description The sprint's first day. */
+        readonly startsOn: components['parameters']['CrewSprintStartsOn'];
+        readonly role: components['parameters']['CrewRole'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Change who is on for a role in the current or a later sprint.
+     * @description The sprint is named by its first day, so a change to a projected sprint stays once Jira creates it. `swap` (the
+     *     default): the person due takes the next sprint, and the one chosen skips their own next turn. `skip`: the person
+     *     due waits for the next round, and the one chosen still skips their next turn. `restart`: the role's order starts
+     *     again from the person chosen, on this sprint. Choosing the person due anyway removes the change. Up to 25
+     *     sprints after the current one; `404 not_found` for another day, `409 invalid_state` for a sprint that is over,
+     *     `400 validation_failed` for a member who does not take the role. Uses the sprints last seen.
+     */
+    readonly put: operations['changeCrewSprint'];
+    readonly post?: never;
+    /** Undo a sprint's change for a role, so the order decides again. */
+    readonly delete: operations['clearCrewSprintChange'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1929,6 +2113,35 @@ export interface components {
       readonly createdAt: components['schemas']['Timestamp'];
       readonly startedAt: components['schemas']['Timestamp'] | null;
       readonly endedAt: components['schemas']['Timestamp'] | null;
+    };
+    readonly RunInputFile: {
+      readonly path: components['schemas']['ArtifactPath'];
+      readonly sha256: string;
+      readonly sizeBytes: number;
+      readonly mediaType: string;
+    };
+    readonly RunInput: {
+      readonly runId: components['schemas']['RunId'];
+      readonly storyKey: components['schemas']['StoryKey'];
+      readonly phase: components['schemas']['Phase'];
+      readonly agent: string;
+      /** @description The story's artifact-set revision the seed was made from. */
+      readonly seedRevision: number;
+      /** @description The run spec as the reconciler dispatched it; it never holds a credential. */
+      readonly spec: Record<string, never>;
+      /** @description When the seed was recorded; null for a run queued before runs recorded their input. */
+      readonly recordedAt: components['schemas']['Timestamp'] | null;
+      /** @description The prompt the run's agent was sent, as the runtime reported it when the run ended (an Actions run's is the rendered context's). Null until then, and for a run that ended before its agent was sent anything. */
+      readonly prompt: string | null;
+      /** @description For a run on GitHub Actions, what its context carried besides the prompt: the seed files the workflow writes under `.ahoy/specs/<KEY>/`, and the frame images it downloads, by story path, with their links. Null for other runs, and until the run ends. */
+      readonly actionsContext: {
+        readonly files: readonly components['schemas']['ArtifactPath'][];
+        readonly images: {
+          readonly [key: string]: string;
+        };
+      } | null;
+      /** @description The seed's files (the story's artifacts and the files the reconciler rendered), by path. */
+      readonly files: readonly components['schemas']['RunInputFile'][];
     };
     /**
      * @description `deferred_check`: child_ready halted because a check a work package's verification was delegated to did not report within the implementation phase's `ciWaitMinutes` (default 60) of the delivery, or rejected because it was skipped or neutral, or because the pull request's head no longer contains the delivered commit. Its evidence names the package, the check, the short commit and the packages that depend on it.
@@ -2902,6 +3115,118 @@ export interface components {
     readonly MeetingNoteList: {
       readonly items: readonly components['schemas']['MeetingNoteInContext'][];
     };
+    /**
+     * @description `sprint_person`: takes the refinement notes, the pre-refinement and the release (the devs). `lunch_host`: picks
+     *     the restaurant for the sprint's lunch and moderates the retro (anyone).
+     * @enum {string}
+     */
+    readonly CrewRole: 'sprint_person' | 'lunch_host';
+    readonly CrewTimeOff: {
+      /** Format: uuid */
+      readonly id: string;
+      /** Format: uuid */
+      readonly memberId: string;
+      /** Format: date */
+      readonly startsOn: string;
+      /**
+       * Format: date
+       * @description Included.
+       */
+      readonly endsOn: string;
+      readonly note: string | null;
+    };
+    readonly CrewMember: {
+      /** Format: uuid */
+      readonly id: string;
+      readonly name: string;
+      readonly roles: readonly components['schemas']['CrewRole'][];
+      /** @description Earliest first; empty when the member was just added or changed. */
+      readonly timeOff: readonly components['schemas']['CrewTimeOff'][];
+    };
+    readonly CrewAssignment: {
+      readonly role: components['schemas']['CrewRole'];
+      /** Format: uuid */
+      readonly memberId: string;
+      readonly memberName: string;
+      /**
+       * Format: uuid
+       * @description Who the order named; the member unless changed.
+       */
+      readonly dueMemberId: string;
+      readonly dueMemberName: string;
+      /** @description The change that put the member here; null when the order did. */
+      readonly change: null | {
+        /** @enum {string} */
+        readonly mode: 'swap' | 'skip';
+        readonly reason: string | null;
+        readonly changedBy: components['schemas']['Actor'];
+        readonly changedByName: components['schemas']['ActorName'];
+        readonly changedAt: components['schemas']['Timestamp'];
+      };
+      /** @description The member is away for at least one day of the sprint. */
+      readonly away: boolean;
+      /**
+       * Format: uuid
+       * @description When away, the next person in the order who is not.
+       */
+      readonly suggestedMemberId: string | null;
+      readonly suggestedMemberName: string | null;
+    };
+    readonly CrewSprint: {
+      /** Format: date */
+      readonly startsOn: string;
+      /**
+       * Format: date
+       * @description Included.
+       */
+      readonly endsOn: string;
+      /** @description Jira's name for it; null for a projected sprint. */
+      readonly name: string | null;
+      readonly jiraSprintId: number | null;
+      /** @enum {string} */
+      readonly state: 'active' | 'future' | 'closed' | 'projected';
+      /** @description Ahoy placed it at the team's cadence; Jira has no dates yet. */
+      readonly datesEstimated: boolean;
+      readonly current: boolean;
+      /** @description One per role that has members, sprint person first. */
+      readonly assignments: readonly components['schemas']['CrewAssignment'][];
+    };
+    readonly Crew: {
+      /** Format: date */
+      readonly today: string;
+      /** @description The server reads the board's sprints from Jira. */
+      readonly jiraConfigured: boolean;
+      /** @description Why Jira's sprints could not be read now; the sprints last seen are shown. */
+      readonly sprintsProblem: string | null;
+      readonly members: readonly components['schemas']['CrewMember'][];
+      /** @description The current sprint and the next five; empty when no sprint with dates is known. */
+      readonly sprints: readonly components['schemas']['CrewSprint'][];
+    };
+    readonly CrewMemberRequest: {
+      readonly name: string;
+      readonly roles: readonly components['schemas']['CrewRole'][];
+    };
+    readonly UpdateCrewMemberRequest: {
+      readonly name?: string;
+      readonly roles?: readonly components['schemas']['CrewRole'][];
+    };
+    readonly CrewTimeOffRequest: {
+      /** Format: date */
+      readonly startsOn: string;
+      /** Format: date */
+      readonly endsOn: string;
+      readonly note?: string;
+    };
+    readonly CrewChangeRequest: {
+      /** Format: uuid */
+      readonly memberId: string;
+      /**
+       * @default swap
+       * @enum {string}
+       */
+      readonly mode: 'swap' | 'skip' | 'restart';
+      readonly reason?: string;
+    };
   };
   responses: {
     /** @description An error, as RFC 9457 problem details. */
@@ -2934,6 +3259,11 @@ export interface components {
     readonly MeetingNoteId: string;
     readonly MeetingSeriesId: string;
     readonly MeetingStoryDraftId: string;
+    readonly CrewMemberId: string;
+    readonly CrewTimeOffId: string;
+    /** @description The sprint's first day. */
+    readonly CrewSprintStartsOn: string;
+    readonly CrewRole: components['schemas']['CrewRole'];
   };
   requestBodies: never;
   headers: never;
@@ -3393,6 +3723,76 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly getRunInput: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The run's input. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['RunInput'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly getRunInputContent: {
+    readonly parameters: {
+      readonly query: {
+        /** @description Story-relative path, as listed by `getRunInput`. */
+        readonly path: components['schemas']['ArtifactPath'];
+      };
+      readonly header?: {
+        /** @description An ETag from an earlier response; a match answers 304 without a body. */
+        readonly 'If-None-Match'?: string;
+      };
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The bytes of one file of the run's seed. */
+      readonly 200: {
+        headers: {
+          /** @description The quoted sha256 of the content. */
+          readonly ETag?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'text/markdown': string;
+          readonly 'application/json': unknown;
+          readonly 'text/plain': string;
+        };
+      };
+      /** @description The content has not changed since the given ETag. */
+      readonly 304: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly listQuestions: {
@@ -5019,6 +5419,220 @@ export interface operations {
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly getCrew: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The crew page. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Crew'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly addCrewMember: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CrewMemberRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The member. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['CrewMember'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly deleteCrewMember: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly memberId: components['parameters']['CrewMemberId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The member is gone. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly updateCrewMember: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly memberId: components['parameters']['CrewMemberId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['UpdateCrewMemberRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The member, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['CrewMember'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly addCrewTimeOff: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly memberId: components['parameters']['CrewMemberId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CrewTimeOffRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The time off. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['CrewTimeOff'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly deleteCrewTimeOff: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly timeOffId: components['parameters']['CrewTimeOffId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The time off is gone. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly changeCrewSprint: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description The sprint's first day. */
+        readonly startsOn: components['parameters']['CrewSprintStartsOn'];
+        readonly role: components['parameters']['CrewRole'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CrewChangeRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description Changed; read `GET /crew` again. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly clearCrewSprintChange: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description The sprint's first day. */
+        readonly startsOn: components['parameters']['CrewSprintStartsOn'];
+        readonly role: components['parameters']['CrewRole'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description Undone. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
     };
   };
 }

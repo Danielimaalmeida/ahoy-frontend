@@ -686,6 +686,60 @@ export type MeetingStoryAnswersRequest = Schemas['MeetingStoryAnswersRequest'];
 /** One answer in `MeetingStoryAnswersRequest`. */
 export type GrillAnswerInput = MeetingStoryAnswersRequest['answers'][number];
 
+/** The duties that rotate each sprint: the sprint person (the devs) and the lunch and retro host (anyone) (`CrewRole`). */
+export type CrewRole = Schemas['CrewRole'];
+export const CREW_ROLES = listOf<CrewRole>()(['sprint_person', 'lunch_host']);
+
+/** Where a sprint's days come from: Jira's sprint, or projected by Ahoy at the team's cadence. */
+export type CrewSprintState = Schemas['CrewSprint']['state'];
+export const CREW_SPRINT_STATES = listOf<CrewSprintState>()([
+  'active',
+  'future',
+  'closed',
+  'projected',
+]);
+
+/** How a person changes who is on for a sprint (`CrewChangeRequest.mode`). */
+export type CrewChangeMode = Schemas['CrewChangeRequest']['mode'];
+export const CREW_CHANGE_MODES = listOf<CrewChangeMode>()([
+  'swap',
+  'skip',
+  'restart',
+]);
+
+/** A recorded change's mode: `restart` moves the order's start instead, so it is never one. */
+export type CrewRecordedMode = NonNullable<
+  Schemas['CrewAssignment']['change']
+>['mode'];
+export const CREW_RECORDED_MODES = listOf<CrewRecordedMode>()(['swap', 'skip']);
+
+/** Days a member is away, both included. */
+export type CrewTimeOff = Schemas['CrewTimeOff'];
+
+/** A member of the crew with the turns they take and their time off. */
+export type CrewMember = Schemas['CrewMember'];
+
+/** Who is on for one role in one sprint, who the order named, and whether they are away. */
+export type CrewAssignment = Schemas['CrewAssignment'];
+
+/** One sprint of the crew page with who is on for each role. */
+export type CrewSprint = Schemas['CrewSprint'];
+
+/** Answer of `getCrew`: the members and the current sprint with the next five. */
+export type Crew = Schemas['Crew'];
+
+/** Body of `addCrewMember`. */
+export type CrewMemberRequest = Schemas['CrewMemberRequest'];
+
+/** Body of `updateCrewMember`: absent fields keep their values. */
+export type UpdateCrewMemberRequest = Schemas['UpdateCrewMemberRequest'];
+
+/** Body of `addCrewTimeOff`. */
+export type CrewTimeOffRequest = Schemas['CrewTimeOffRequest'];
+
+/** Body of `changeCrewSprint`. */
+export type CrewChangeRequest = Schemas['CrewChangeRequest'];
+
 /** Query of `listMeetingNotes`: one kind, optionally of one series or meeting, and open or done actions. */
 export type ListMeetingNotesQuery =
   operations['listMeetingNotes']['parameters']['query'];

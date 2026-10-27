@@ -29,6 +29,9 @@ import {
   isJiraBacklog,
   isKnowledgeReview,
   isKnowledgeReviewList,
+  isCrew,
+  isCrewMember,
+  isCrewTimeOff,
   isEndMeetingResult,
   isMeeting,
   isMeetingList,
@@ -68,6 +71,13 @@ import type {
   ArtifactList,
   DecisionAccepted,
   CreateMeetingRequest,
+  Crew,
+  CrewChangeRequest,
+  CrewMember,
+  CrewMemberRequest,
+  CrewRole,
+  CrewTimeOff,
+  CrewTimeOffRequest,
   CreateMeetingSeriesRequest,
   DecisionRequest,
   EndMeetingRequest,
@@ -124,6 +134,7 @@ import type {
   StoryPage,
   StoryPlanFit,
   StoryStateDocument,
+  UpdateCrewMemberRequest,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
@@ -1049,6 +1060,89 @@ export class ApiClient {
       '/meeting-series',
       body,
       isMeetingSeries
+    );
+  }
+
+  /** The crew page: members and their time off, and who is on in the current sprint and the next five. */
+  getCrew(): Promise<ApiResult<Crew>> {
+    return this.get('getCrew', '/crew', isCrew);
+  }
+
+  /** Adds a member to the crew. The answer (201) is the member. */
+  addCrewMember(body: CrewMemberRequest): Promise<ApiResult<CrewMember>> {
+    return this.post('addCrewMember', '/crew/members', body, isCrewMember);
+  }
+
+  /** Renames a member or changes the turns they take. */
+  updateCrewMember(
+    memberId: string,
+    body: UpdateCrewMemberRequest
+  ): Promise<ApiResult<CrewMember>> {
+    return this.send(
+      'updateCrewMember',
+      isCrewMember,
+      this.http.patch<unknown>(
+        this.url(`/crew/members/${segment(memberId)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Removes a member with their time off and the changes that name them. The answer (204) has no body. */
+  deleteCrewMember(memberId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteCrewMember',
+      `/crew/members/${segment(memberId)}`
+    );
+  }
+
+  /** Records days a member is away. The answer (201) is the time off. */
+  addCrewTimeOff(
+    memberId: string,
+    body: CrewTimeOffRequest
+  ): Promise<ApiResult<CrewTimeOff>> {
+    return this.post(
+      'addCrewTimeOff',
+      `/crew/members/${segment(memberId)}/time-off`,
+      body,
+      isCrewTimeOff
+    );
+  }
+
+  /** Removes a time off. The answer (204) has no body. */
+  deleteCrewTimeOff(timeOffId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteCrewTimeOff',
+      `/crew/time-off/${segment(timeOffId)}`
+    );
+  }
+
+  /** Changes who is on for a role in a sprint, named by its first day. The answer (204) has no body. */
+  changeCrewSprint(
+    startsOn: string,
+    role: CrewRole,
+    body: CrewChangeRequest
+  ): Promise<ApiResult<null>> {
+    return this.send(
+      'changeCrewSprint',
+      isNoContent,
+      this.http.put<unknown>(
+        this.url(`/crew/sprints/${segment(startsOn)}/${segment(role)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Undoes a sprint's change for a role, so the order decides again. The answer (204) has no body. */
+  clearCrewSprintChange(
+    startsOn: string,
+    role: CrewRole
+  ): Promise<ApiResult<null>> {
+    return this.delete(
+      'clearCrewSprintChange',
+      `/crew/sprints/${segment(startsOn)}/${segment(role)}`
     );
   }
 
