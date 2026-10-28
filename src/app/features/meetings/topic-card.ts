@@ -19,6 +19,7 @@ import {
   NOTE_KIND_LABELS,
   noteShortcut,
   raisedByLabel,
+  threadNotes,
   topicWhen,
   type NoteKind,
 } from '@domain/meetings';
@@ -40,7 +41,9 @@ export const NOTE_MAX = 4000;
  * add a note. While it can change, it can also go up or down, move to the series' next meeting, or be removed with its
  * notes (after a second click). A moved topic is read-only and links to where it went. Notes are plain text; a note can
  * be a decision, an action (with an owner and a due day, ticked done also after the meeting ended) or a question,
- * chosen beside the line or typed as `/d`, `/a`, `/q` before the text. Images (PNG, JPEG, WebP, GIF) are pasted into the
+ * chosen beside the line or typed as `/d`, `/a`, `/q` before the text. A question shows open or answered, with its
+ * answers under it: Answer opens a line under it (also after the meeting ended), the first answer marks it answered,
+ * and Reopen marks it open again keeping the answers. Images (PNG, JPEG, WebP, GIF) are pasted into the
  * line, dropped on the topic or chosen with Add image, and go with the next note; Add image beside a note adds to it. A topic
  * that was not moved can be turned into a user story (also after the meeting ended); its draft's state shows on a line
  * of its own, with the way to check it, and the Jira issue once created.
@@ -142,9 +145,42 @@ export const NOTE_MAX = 4000;
     .add-image {
       opacity: 0;
     }
-    li:hover :is(.remove-note, .add-image),
-    li:focus-within :is(.remove-note, .add-image) {
+    li:hover > .note :is(.remove-note, .add-image),
+    li:focus-within > .note :is(.remove-note, .add-image) {
       opacity: 1;
+    }
+    .status {
+      flex: none;
+      border-radius: 999px;
+    }
+    .answered {
+      background: var(--status-done-bg);
+      color: var(--status-done-fg);
+    }
+    .open {
+      background: transparent;
+      border: 1px solid currentColor;
+      color: var(--status-input-fg);
+    }
+    ul.answers {
+      padding: 4px 0 0 22px;
+    }
+    .reply {
+      flex: none;
+      align-self: center;
+      color: var(--ink-soft);
+    }
+    .question-actions {
+      display: flex;
+      gap: 4px;
+      padding: 2px 0 0 18px;
+    }
+    form.answer {
+      padding: 6px 0 2px 18px;
+      align-items: center;
+    }
+    form.answer .line {
+      flex: 1 1 260px;
     }
     .pending {
       flex: 1 0 100%;
@@ -299,10 +335,10 @@ export const NOTE_MAX = 4000;
           }
         </div>
       </div>
-      @if (t.notes.length > 0) {
+      @if (notes().length > 0) {
         <ul [attr.aria-label]="'Notes on ' + t.title">
-          @for (note of t.notes; track note.id) {
-            <li [class.done]="note.doneAt !== null">
+          @for (note of notes(); track note.id) {
+            <li [class.done]="note.kind === 'action' && note.doneAt !== null">
               <span class="note">
                 @if (note.kind === 'action') {
                   <input
@@ -324,6 +360,13 @@ export const NOTE_MAX = 4000;
                   }}</span>
                 }
                 <span class="text">{{ note.text }}</span>
+                @if (note.kind === 'question') {
+                  @if (note.doneAt !== null) {
+                    <span class="ah-tag status answered">Answered</span>
+                  } @else {
+                    <span class="ah-tag status open">Open</span>
+                  }
+                }
                 @if (note.kind === 'action') {
                   @if (note.owner !== null) {
                     <span class="ah-hint by">{{ note.owner }}</span>
@@ -377,6 +420,199 @@ export const NOTE_MAX = 4000;
               </span>
               @if (note.images.length > 0) {
                 <ah-note-images [note]="note" [editable]="editable()" />
+              }
+              @if (note.kind === 'question') {
+                @let answers = answersOf().get(note.id) ?? [];
+                @if (answers.length > 0) {
+                  <ul
+                    class="answers"
+                    [attr.aria-label]="'Answers to ' + note.text"
+                  >
+                    @for (a of answers; track a.id) {
+                      <li>
+                        <span class="note">
+                          <svg
+                            class="reply"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M5 4v7a4 4 0 0 0 4 4h10" />
+                            <path d="M15 11l4 4-4 4" />
+                          </svg>
+                          <span class="text">{{ a.text }}</span>
+                          <span class="ah-hint by" [attr.title]="a.createdBy"
+                            >{{ author(a.createdBy, a.createdByName) }} ·
+                            {{ time(a.createdAt) }}</span
+                          >
+                          @if (!moved()) {
+                            @if (a.images.length < maxImages) {
+                              <input
+                                #answerPicker
+                                type="file"
+                                multiple
+                                hidden
+                                [accept]="imageTypes"
+                                (change)="addImagesTo(a, $event)"
+                              />
+                              <button
+                                ahButton="ghost"
+                                size="sm"
+                                type="button"
+                                class="add-image"
+                                [attr.aria-label]="
+                                  'Add an image to the answer: ' + a.text
+                                "
+                                [disabled]="busy()"
+                                (click)="answerPicker.click()"
+                              >
+                                Add image
+                              </button>
+                            }
+                            <button
+                              ahButton="ghost"
+                              size="sm"
+                              type="button"
+                              class="remove-note"
+                              [attr.aria-label]="'Remove the answer: ' + a.text"
+                              [disabled]="busy()"
+                              (click)="store.deleteNote(t.id, a.id)"
+                            >
+                              Remove
+                            </button>
+                          }
+                        </span>
+                        @if (a.images.length > 0) {
+                          <ah-note-images [note]="a" [editable]="!moved()" />
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (!moved()) {
+                  @if (answering() === note.id) {
+                    <form
+                      class="answer"
+                      (submit)="$event.preventDefault(); addAnswer(note)"
+                    >
+                      <label class="ah-sr" [for]="'answer-' + note.id"
+                        >Answer to: {{ note.text }}</label
+                      >
+                      <input
+                        class="ah-input line"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="Write the answer"
+                        [id]="'answer-' + note.id"
+                        [maxlength]="noteMax"
+                        [formControl]="answerText"
+                        (paste)="pasteAnswer($event)"
+                        (keydown.escape)="cancelAnswer()"
+                      />
+                      <button
+                        ahButton="primary"
+                        size="sm"
+                        type="submit"
+                        [disabled]="busy()"
+                      >
+                        Add answer
+                      </button>
+                      <input
+                        #answerComposerPicker
+                        type="file"
+                        multiple
+                        hidden
+                        [accept]="imageTypes"
+                        (change)="chooseForAnswer($event)"
+                      />
+                      <button
+                        ahButton="ghost"
+                        size="sm"
+                        type="button"
+                        [attr.aria-label]="
+                          'Add an image to the answer to: ' + note.text
+                        "
+                        [disabled]="
+                          busy() || answerPending().length >= maxImages
+                        "
+                        (click)="answerComposerPicker.click()"
+                      >
+                        Add image
+                      </button>
+                      <button
+                        ahButton="default"
+                        size="sm"
+                        type="button"
+                        (click)="cancelAnswer()"
+                      >
+                        Cancel
+                      </button>
+                      @if (answerPending().length > 0) {
+                        <ul
+                          class="pending"
+                          [attr.aria-label]="
+                            'Images for the answer to: ' + note.text
+                          "
+                        >
+                          @for (file of answerPending(); track $index) {
+                            <li class="ah-tag">
+                              {{ file.name || 'Pasted image' }}
+                              <button
+                                ahButton="ghost"
+                                size="sm"
+                                type="button"
+                                [attr.aria-label]="
+                                  'Leave out ' +
+                                  (file.name || 'the pasted image')
+                                "
+                                (click)="leaveOutOfAnswer($index)"
+                              >
+                                ×
+                              </button>
+                            </li>
+                          }
+                        </ul>
+                      }
+                      <p class="ah-hint image-hint" role="status">
+                        {{
+                          answerHint() ??
+                            'Enter adds it. The first answer marks the question answered; you can reopen it.'
+                        }}
+                      </p>
+                    </form>
+                  } @else {
+                    <span class="question-actions">
+                      <button
+                        ahButton="ghost"
+                        size="sm"
+                        type="button"
+                        [attr.aria-label]="'Answer: ' + note.text"
+                        [disabled]="busy()"
+                        (click)="startAnswer(note)"
+                      >
+                        Answer
+                      </button>
+                      @if (note.doneAt !== null) {
+                        <button
+                          ahButton="ghost"
+                          size="sm"
+                          type="button"
+                          [attr.aria-label]="'Reopen: ' + note.text"
+                          [disabled]="busy()"
+                          (click)="store.setDone(note.id, false)"
+                        >
+                          Reopen
+                        </button>
+                      }
+                    </span>
+                  }
+                }
               }
             </li>
           }
@@ -571,6 +807,13 @@ export class TopicCard {
       ? 'Add a note (/d decision, /a action, /q question)'
       : `Add a ${NOTE_KIND_LABELS[this.kindNow()].toLowerCase()}`
   );
+  /** The question whose answer line is open, if any. */
+  readonly answering = signal<string | null>(null);
+  protected readonly answerText = new FormControl('', { nonNullable: true });
+  /** The images pasted or chosen for the answer being written. */
+  readonly answerPending = signal<readonly File[]>([]);
+  /** Why an image for the answer was left out. */
+  readonly answerHint = signal<string | null>(null);
   /** Whether the person clicked Remove once and is asked to confirm. */
   readonly confirming = signal(false);
   /** The images pasted, dropped or chosen for the next note. */
@@ -590,6 +833,10 @@ export class TopicCard {
   protected readonly canMoveToNext = computed(() => this.inSeries());
   protected readonly raisedBy = computed(() => raisedByLabel(this.topic()));
   protected readonly when = computed(() => topicWhen(this.topic()));
+  /** The topic's notes without the answers, and each question's answers, which show under it. */
+  protected readonly thread = computed(() => threadNotes(this.topic().notes));
+  protected readonly notes = computed(() => this.thread().notes);
+  protected readonly answersOf = computed(() => this.thread().answers);
   protected readonly removeQuestion = computed(() => {
     const notes = this.topic().notes.length;
     return notes === 0
@@ -697,6 +944,62 @@ export class TopicCard {
     this.owner.setValue('');
     this.dueOn.setValue('');
     this.kind.setValue('note');
+  }
+
+  /** Opens the answer line under a question, closing any other. */
+  startAnswer(question: MeetingNote): void {
+    this.answering.set(question.id);
+    this.answerText.setValue('');
+    this.answerPending.set([]);
+    this.answerHint.set(null);
+  }
+
+  /** Closes the answer line, dropping what was typed. */
+  cancelAnswer(): void {
+    this.answering.set(null);
+    this.answerText.setValue('');
+    this.answerPending.set([]);
+    this.answerHint.set(null);
+  }
+
+  /** Adds the typed answer, with its images; on success the answer line closes. */
+  async addAnswer(question: MeetingNote): Promise<void> {
+    const text = this.answerText.value.trim();
+    const images = this.answerPending();
+    if ((text === '' && images.length === 0) || this.busy()) return;
+    const added = await this.store.answer(
+      question.id,
+      text !== '' ? text : images.length === 1 ? 'Image' : 'Images',
+      images
+    );
+    if (added) this.cancelAnswer();
+  }
+
+  /** Takes the images pasted into the answer line; pasted text goes in as usual. */
+  protected pasteAnswer(event: ClipboardEvent): void {
+    const files = Array.from(event.clipboardData?.files ?? []);
+    if (files.length === 0) return;
+    event.preventDefault();
+    this.takeForAnswer(files);
+  }
+
+  /** Takes the images chosen with Add image beside the answer line. */
+  protected chooseForAnswer(event: Event): void {
+    this.takeForAnswer(chosenFiles(event));
+  }
+
+  /** Leaves an image out of the answer being written. */
+  protected leaveOutOfAnswer(index: number): void {
+    this.answerPending.update((files) => files.filter((_, i) => i !== index));
+  }
+
+  private takeForAnswer(files: readonly File[]): void {
+    const { images, refusal } = acceptImages(
+      files,
+      MAX_IMAGES_PER_NOTE - this.answerPending().length
+    );
+    this.answerHint.set(refusal);
+    if (images.length > 0) this.answerPending.update((p) => [...p, ...images]);
   }
 
   /** Takes the images pasted into the line for the next note; pasted text goes in as usual. */

@@ -22,6 +22,7 @@ import type {
   EndMeetingRequest,
   KnowledgeReviewRequest,
   ListMeetingNotesQuery,
+  MeetingNoteAnswerRequest,
   MeetingNoteDoneRequest,
   MeetingNoteKind,
   MeetingNoteRequest,
@@ -871,6 +872,15 @@ export class MockAhoyServer {
             call.actor,
             call.path['noteId'] ?? '',
             call.body as MeetingNoteRequest // validated
+          )
+        );
+      case 'addMeetingNoteAnswer':
+        return jsonResponse(
+          201,
+          this.meetings.answer(
+            call.actor,
+            call.path['noteId'] ?? '',
+            (call.body as MeetingNoteAnswerRequest).text // validated
           )
         );
       case 'setMeetingNoteDone':

@@ -329,6 +329,50 @@ describe('Meetings on the mock backend', () => {
         (i) => i.getAttribute('src')
       );
 
+    it('answers a question after its meeting ended, with an image, though the rest stays read-only', async () => {
+      let endedId = '';
+      const page = await open('/meetings', (server) => {
+        const running = (
+          call(server, 'GET', '/meetings').body as {
+            items: { id: string; status: string }[];
+          }
+        ).items.find((m) => m.status === 'in_progress')!;
+        const topic = (
+          call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+        ).topics[0]!;
+        call(server, 'POST', `/meeting-topics/${topic.id}/notes`, {
+          text: 'Who signs off?',
+          kind: 'question',
+        });
+        call(server, 'POST', `/meetings/${running.id}/end`, { carryOver: [] });
+        endedId = running.id;
+      });
+      await page.harness.navigateByUrl(`/meetings/${endedId}`);
+      await flush(page);
+      expect(text(page.root.querySelector('.identity .ah-tag'))).toBe('Ended');
+      const topic = () =>
+        [...page.root.querySelectorAll<HTMLElement>('ah-topic-card')].find(
+          (c) => text(c).includes('Who signs off?')
+        )!;
+      expect(topic().querySelector('form:not(.answer)')).toBeNull();
+      buttonNamed(topic(), 'Answer').click();
+      await flush(page);
+      const form = topic().querySelector<HTMLFormElement>('form.answer')!;
+      choose(form.querySelector('input[type="file"]'), [screen()]);
+      await flush(page);
+      expect(text(form.querySelector('.pending'))).toContain('screen.png');
+      type(form.querySelector('input.line'), 'Ana, after the meeting');
+      submit(form);
+      await flush(page);
+      expect(text(topic().querySelector('li .status'))).toBe('Answered');
+      const answer = topic().querySelector<HTMLElement>('ul.answers li')!;
+      expect(text(answer.querySelector('.text'))).toBe(
+        'Ana, after the meeting'
+      );
+      expect(answer.querySelectorAll('ah-note-images li')).toHaveLength(1);
+      expect(buttonNamed(answer, 'Remove')).toBeTruthy();
+    });
+
     it('adds an image pasted into the line with the next note, shows it, opens it large and removes it', async () => {
       const page = await open('/meetings');
       const line = card(page.root, TOPIC).querySelector('form input');
@@ -755,6 +799,104 @@ describe('Meetings on the mock backend', () => {
         ),
       ].map((n) => text(n))
     ).toEqual(['Validate with VIES only']);
+  });
+
+  it('answers a question under its topic, which shows it answered with the answer under it, and reopens it', async () => {
+    const page = await open('/meetings');
+    const title = 'Tax ID validation for EU customers';
+    type(
+      card(page.root, title).querySelector('form input'),
+      '/q Do EU customers need a VAT number?'
+    );
+    submit(card(page.root, title).querySelector('form'));
+    await flush(page);
+    const status = () =>
+      text(card(page.root, title).querySelector('li .status'));
+    const panelQuestions = () =>
+      [
+        ...page.root.querySelectorAll(
+          'ah-actions-panel ul[aria-label="Open questions"] li .text'
+        ),
+      ].map((n) => text(n));
+    expect(status()).toBe('Open');
+    expect(panelQuestions()).toEqual(['Do EU customers need a VAT number?']);
+    buttonNamed(card(page.root, title), 'Answer').click();
+    await flush(page);
+    const form = card(page.root, title).querySelector<HTMLFormElement>(
+      'form.answer'
+    )!;
+    expect(text(form)).toContain('Enter adds it.');
+    type(form.querySelector('input'), 'Only for B2B customers');
+    submit(form);
+    await flush(page);
+    const topic = card(page.root, title);
+    expect(status()).toBe('Answered');
+    expect(topic.querySelector('form.answer')).toBeNull();
+    expect(
+      [...topic.querySelectorAll('ul.answers li .text')].map((n) => text(n))
+    ).toEqual(['Only for B2B customers']);
+    expect(
+      topic.querySelector('ul[aria-label^="Notes on"] > li')!.classList
+    ).not.toContain('done');
+    expect(panelQuestions()).toEqual([]);
+    buttonNamed(topic, 'Reopen').click();
+    await flush(page);
+    expect(status()).toBe('Open');
+    expect(panelQuestions()).toEqual(['Do EU customers need a VAT number?']);
+    expect(
+      card(page.root, title).querySelectorAll('ul.answers li')
+    ).toHaveLength(1);
+  });
+
+  it('answers an open question from the panel, and copies the open questions for Confluence', async () => {
+    const written: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (t: string) => (written.push(t), Promise.resolve()),
+      },
+    });
+    try {
+      const page = await open('/meetings');
+      const title = 'Tax ID validation for EU customers';
+      for (const q of ['/q Who checks the number?', '/q Which countries?']) {
+        type(card(page.root, title).querySelector('form input'), q);
+        submit(card(page.root, title).querySelector('form'));
+        await flush(page);
+      }
+      buttonNamed(page.root, 'Copy for Confluence').click();
+      await flush(page);
+      expect(written[0]).toContain(
+        'h2. Open questions\n* Who checks the number\\?\n* Which countries\\?\n'
+      );
+      const panel = page.root.querySelector<HTMLElement>('ah-actions-panel')!;
+      const first = panel.querySelector<HTMLElement>(
+        'ul[aria-label="Open questions"] li'
+      )!;
+      expect(text(first)).toContain(title);
+      buttonNamed(first, 'Answer').click();
+      await flush(page);
+      type(panel.querySelector('form input'), 'Finance, with VIES');
+      submit(panel.querySelector('form'));
+      await flush(page);
+      expect(
+        [
+          ...panel.querySelectorAll('ul[aria-label="Open questions"] li .text'),
+        ].map((n) => text(n))
+      ).toEqual(['Which countries?']);
+      const topic = card(page.root, title);
+      expect(
+        [...topic.querySelectorAll('ul.answers li .text')].map((n) => text(n))
+      ).toEqual(['Finance, with VIES']);
+      buttonNamed(page.root, 'Copy for Confluence').click();
+      await flush(page);
+      expect(written[1]).toContain(
+        '* *Question (answered):* Who checks the number\\? _('
+      );
+      expect(written[1]).toContain('** Finance, with VIES _(');
+    } finally {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('shows the notes others take while the meeting runs, and stops reading once it ends', async () => {

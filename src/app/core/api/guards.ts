@@ -102,6 +102,7 @@ import {
   type MeetingTopic,
   type MeetingTopicLink,
   type EndMeetingResult,
+  type MeetingNoteAnswerResult,
   type MoveMeetingTopicResult,
   type ModelChoice,
   type CatalogModel,
@@ -833,6 +834,7 @@ const meetingNoteShape = shape<MeetingNote>({
   doneAt: nullable(timestamp),
   doneBy: nullable(actor),
   doneByName: nullable(text),
+  answerTo: nullable(uuid),
   images: arrayOf(
     shape<MeetingNoteImage>({
       id: uuid,
@@ -851,18 +853,24 @@ const meetingNoteShape = shape<MeetingNote>({
 });
 
 /**
- * A note. Only an action has an owner, a due day or a done mark, and a done mark names who and when: a note that breaks
- * either is refused, so the screen never shows a decision as done or an action done by nobody.
+ * A note. Only an action has an owner or a due day, only an action (done) or a question (answered) a done mark, a done
+ * mark names who and when, and an answer is a plain note: a note that breaks any is refused, so the screen never shows a
+ * decision as done or an action done by nobody.
  */
 const meetingNote: Check = (value, at) => {
   const why = meetingNoteShape(value, at);
   if (why !== null) return why;
   const note = value as MeetingNote;
+  if (note.kind !== 'action' && (note.owner !== null || note.dueOn !== null))
+    return `${at} is a ${note.kind} with an owner or due day`;
   if (
     note.kind !== 'action' &&
-    (note.owner !== null || note.dueOn !== null || note.doneAt !== null)
+    note.kind !== 'question' &&
+    note.doneAt !== null
   )
-    return `${at} is a ${note.kind} with an owner, due day or done mark`;
+    return `${at} is a ${note.kind} with a done mark`;
+  if (note.answerTo !== null && note.kind !== 'note')
+    return `${at} answers a question but is a ${note.kind}`;
   if ((note.doneAt === null) !== (note.doneBy === null))
     return `${at}.doneAt and ${at}.doneBy must be set together`;
   if (note.images.length > 10) return `${at}.images has more than 10 images`;
@@ -994,6 +1002,12 @@ export const isMeeting = guard<Meeting>('Meeting', meeting);
 export const isEndMeetingResult = guard<EndMeetingResult>(
   'EndMeetingResult',
   shape<EndMeetingResult>({ meeting, nextMeeting: nullable(meeting) })
+);
+
+/** A question, answered, and its new answer. */
+export const isMeetingNoteAnswerResult = guard<MeetingNoteAnswerResult>(
+  'MeetingNoteAnswerResult',
+  shape<MeetingNoteAnswerResult>({ question: meetingNote, answer: meetingNote })
 );
 
 /** A moved topic and its copy in the next meeting. */

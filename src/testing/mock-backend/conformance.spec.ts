@@ -369,6 +369,14 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
       asPng
     ).body as { images: { id: string }[] };
     call(server, 'DELETE', `/meeting-note-images/${spare.images[1]!.id}`);
+    const question = post(`/meeting-topics/${added.id}/notes`, {
+      text: 'Who approves refunds over 5,000?',
+      kind: 'question',
+    }).body as { id: string };
+    post(`/meeting-notes/${question.id}/answers`, { text: 'Priya' });
+    post(`/meeting-notes/${question.id}/done`, { done: false });
+    get(`/meeting-notes?kind=question&status=open&meetingId=${running.id}`);
+    post(`/meeting-notes/${note.id}/answers`, { text: 'Not a question' });
     const scrap = post(`/meeting-topics/${added.id}/notes`, {
       text: 'scrap',
     }).body as { id: string };
@@ -473,6 +481,7 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'updateMeetingNote',
       'deleteMeetingNote',
       'addMeetingNoteImage',
+      'addMeetingNoteAnswer',
       'getMeetingNoteImage',
       'deleteMeetingNoteImage',
       'listMeetingSeries',

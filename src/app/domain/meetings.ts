@@ -358,8 +358,13 @@ export function dueLabel(
     : { text: `due ${day}`, overdue: false };
 }
 
-/** What the Confluence export reads of a note; a note without a kind is a plain note. */
+/**
+ * What the Confluence export reads of a note; a note without a kind is a plain note, and one with `answerTo` answers
+ * the question with that `id`.
+ */
 export interface NoteDoc {
+  readonly id?: string;
+  readonly answerTo?: string | null;
   readonly text: string;
   readonly kind?: NoteKind;
   readonly owner?: string | null;
@@ -376,6 +381,15 @@ export interface TopicDoc extends TopicLike {
   readonly title: string;
   readonly notes: readonly NoteDoc[];
   readonly movedTo: { readonly meetingStartsAt: string } | null;
+}
+
+/** What the Confluence export reads of an open question; `from` names where it was asked when not in this meeting. */
+export interface OpenQuestionDoc {
+  readonly text: string;
+  readonly from: {
+    readonly topicTitle: string;
+    readonly meetingStartsAt: string;
+  } | null;
 }
 
 /** What the Confluence export reads of a meeting. */
@@ -403,11 +417,14 @@ function wiki(text: string): string {
 }
 
 /**
- * A meeting as Confluence wiki markup (Insert → Markup → Confluence Wiki in the editor): its title, when, who, and
- * each topic with who raised it, where it went and its notes (a note's images are counted, not copied). Text from people
- * is escaped, so it never formats.
+ * A meeting as Confluence wiki markup (Insert → Markup → Confluence Wiki in the editor): its title, when, who, the open
+ * questions of its series, and each topic with who raised it, where it went and its notes, a question's answers under it
+ * (a note's images are counted, not copied). Text from people is escaped, so it never formats.
  */
-export function meetingToConfluence(meeting: MeetingDoc): string {
+export function meetingToConfluence(
+  meeting: MeetingDoc,
+  openQuestions: readonly OpenQuestionDoc[] = []
+): string {
   const end = meeting.endsAt === null ? '' : `–${meetingTime(meeting.endsAt)}`;
   const lines = [
     `h1. ${wiki(meeting.title)}`,
@@ -431,6 +448,15 @@ export function meetingToConfluence(meeting: MeetingDoc): string {
       'h2. Actions',
       ...actions.map((n) => `* ${wiki(n.text)}${actionSuffix(n)}`)
     );
+  if (openQuestions.length > 0)
+    lines.push(
+      '',
+      'h2. Open questions',
+      ...openQuestions.map(
+        (q) =>
+          `* ${wiki(q.text)}${q.from === null ? '' : ` _(${wiki(q.from.topicTitle)}, ${meetingDay(q.from.meetingStartsAt)})_`}`
+      )
+    );
   lines.push('', 'h2. Topics');
   if (meeting.topics.length === 0) lines.push('_No topics._');
   meeting.topics.forEach((topic, index) => {
@@ -443,12 +469,39 @@ export function meetingToConfluence(meeting: MeetingDoc): string {
       `h3. ${index + 1}. ${wiki(topic.title)}`,
       `_${wiki(raisedByLabel(topic))} · ${topicWhen(topic)}${moved}_`
     );
-    for (const note of topic.notes)
-      lines.push(
-        `* ${notePrefix(note)}${wiki(note.text)}${actionSuffix(note)}${imagesSuffix(note)} _(${wiki(authorLabel(note.createdBy, note.createdByName))}, ${meetingTime(note.createdAt)})_`
-      );
+    const { notes, answers } = threadNotes(topic.notes);
+    for (const note of notes) {
+      lines.push(`* ${noteLine(note)}`);
+      if (note.id !== undefined)
+        for (const a of answers.get(note.id) ?? [])
+          lines.push(`** ${noteLine(a)}`);
+    }
   });
   return `${lines.join('\n')}\n`;
+}
+
+/** A note's text with its kind, action details, images and who wrote it when. */
+function noteLine(note: NoteDoc): string {
+  return `${notePrefix(note)}${wiki(note.text)}${actionSuffix(note)}${imagesSuffix(note)} _(${wiki(authorLabel(note.createdBy, note.createdByName))}, ${meetingTime(note.createdAt)})_`;
+}
+
+/**
+ * A topic's notes in order without the answers, and each question's answers, oldest first; an answer whose question is
+ * not among the notes stays with them.
+ */
+export function threadNotes<N extends NoteDoc>(
+  notes: readonly N[]
+): { readonly notes: N[]; readonly answers: ReadonlyMap<string, N[]> } {
+  const ids = new Set(notes.flatMap((n) => (n.id === undefined ? [] : [n.id])));
+  const answers = new Map<string, N[]>();
+  const top: N[] = [];
+  for (const n of notes) {
+    const to = n.answerTo ?? null;
+    if (to !== null && ids.has(to))
+      answers.set(to, [...(answers.get(to) ?? []), n]);
+    else top.push(n);
+  }
+  return { notes: top, answers };
 }
 
 /** " (2 images)" after a note with images: the export has no room for them, so it says they are on the page. */
@@ -457,9 +510,11 @@ function imagesSuffix(note: NoteDoc): string {
   return n === 0 ? '' : ` (${n === 1 ? '1 image' : `${n} images`})`;
 }
 
-/** "*Decision:* " before a decision, action or question; nothing before a plain note. */
+/** "*Decision:* " before a decision, action or question ("*Question (answered):* " once answered); nothing before a plain note. */
 function notePrefix(note: NoteDoc): string {
   const kind = note.kind ?? 'note';
+  if (kind === 'question' && note.doneAt)
+    return `*${NOTE_KIND_LABELS[kind]} (answered):* `;
   return kind === 'note' ? '' : `*${NOTE_KIND_LABELS[kind]}:* `;
 }
 

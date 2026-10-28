@@ -1,6 +1,7 @@
 import addCrewMember from '@testing/fixtures/addCrewMember.json';
 import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
+import addMeetingNoteAnswer from '@testing/fixtures/addMeetingNoteAnswer.json';
 import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import cancelMeeting from '@testing/fixtures/cancelMeeting.json';
@@ -167,6 +168,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['addMeetingNote', addMeetingNote],
   ['updateMeetingNote', updateMeetingNote],
   ['setMeetingNoteDone', setMeetingNoteDone],
+  ['addMeetingNoteAnswer', addMeetingNoteAnswer],
   ['addMeetingNoteImage', addMeetingNoteImage],
   ['listMeetingNotes', listMeetingNotes],
   ['listMeetingSeries', listMeetingSeries],
@@ -226,7 +228,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      75
+      76
     );
   });
 
@@ -295,6 +297,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'addMeetingTopic',
       'addMeetingNote',
       'addMeetingNoteImage',
+      'addMeetingNoteAnswer',
       'createMeetingSeries',
     ])
       expect(statusOf(id)).toEqual(['201']);
@@ -479,6 +482,12 @@ describe('the request bodies the client sends', () => {
       requestViolations('addMeetingNote', { text: 'x', kind: 'todo' })
     ).not.toEqual([]);
     expect(requestViolations('setMeetingNoteDone', {})).not.toEqual([]);
+    expect(
+      requestViolations('addMeetingNoteAnswer', { text: 'Only from November' })
+    ).toEqual([]);
+    expect(
+      requestViolations('addMeetingNoteAnswer', { text: ' ' })
+    ).not.toEqual([]);
     expect(requestViolations('endMeeting', { carryOver: ['x'] })).not.toEqual(
       []
     );
