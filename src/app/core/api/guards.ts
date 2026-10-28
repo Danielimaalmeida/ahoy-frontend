@@ -905,7 +905,7 @@ const meetingTopic: Check = (value, at) => {
     meetingId: uuid,
     title: text,
     raisedBy: oneOf(RAISED_BY),
-    raisedByEmail: nullable(text),
+    raisedByStakeholder: nullable(text),
     origin: oneOf(TOPIC_ORIGINS),
     status: oneOf(TOPIC_STATUSES),
     position: count,
@@ -920,8 +920,8 @@ const meetingTopic: Check = (value, at) => {
     updatedAt: timestamp,
   })(value, at);
   if (why !== null || !isRecord(value)) return why;
-  if (value['raisedBy'] === 'us' && value['raisedByEmail'] !== null)
-    return `${at}.raisedByEmail must be null for a topic raised by us`;
+  if (value['raisedBy'] === 'us' && value['raisedByStakeholder'] !== null)
+    return `${at}.raisedByStakeholder must be null for a topic raised by us`;
   if (value['status'] === 'open' && value['movedTo'] !== null)
     return `${at}.movedTo must be null for an open topic`;
   return null;
@@ -951,14 +951,23 @@ const meetingSummaryFields = {
   updatedAt: timestamp,
 } as const;
 
-/** A meeting has started exactly when it is not planned, and ended exactly when it is ended. */
+/**
+ * A meeting in progress has started and a planned or cancelled one has not (an ended one may have: it can be marked
+ * done without a start); it was closed exactly when it is ended or cancelled.
+ */
 const meetingTimes: Check = (value, at) => {
   if (!isRecord(value)) return null;
-  const planned = value['status'] === 'planned';
-  if (planned !== (value['startedAt'] === null))
-    return `${at}.startedAt must be set exactly when the meeting is not planned`;
-  if ((value['status'] === 'ended') !== (value['endedAt'] !== null))
-    return `${at}.endedAt must be set exactly when the meeting has ended`;
+  const status = value['status'];
+  const started = value['startedAt'] !== null;
+  if (status === 'in_progress' && !started)
+    return `${at}.startedAt must be set for a meeting in progress`;
+  if ((status === 'planned' || status === 'cancelled') && started)
+    return `${at}.startedAt must be null for a ${String(status)} meeting`;
+  if (
+    (status === 'ended' || status === 'cancelled') !==
+    (value['endedAt'] !== null)
+  )
+    return `${at}.endedAt must be set exactly when the meeting has ended or was cancelled`;
   return null;
 };
 

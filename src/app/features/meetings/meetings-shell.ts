@@ -31,7 +31,9 @@ export function meetingLine(m: MeetingSummary): MeetingLine {
       ? `${meetingTime(m.startsAt)} · in progress`
       : m.status === 'planned'
         ? `${meetingDay(m.startsAt)} ${meetingTime(m.startsAt)}`
-        : meetingDay(m.startsAt);
+        : m.status === 'cancelled'
+          ? `${meetingDay(m.startsAt)} · cancelled`
+          : meetingDay(m.startsAt);
   return {
     id: m.id,
     title: m.title,
@@ -42,8 +44,9 @@ export function meetingLine(m: MeetingSummary): MeetingLine {
 
 /**
  * Meetings (`/meetings`): the weekly business meetings with stakeholders. The left column lists the meetings running
- * now, the planned ones (soonest first) and the ended ones (latest first), with New meeting; the right shows the one in
- * the address. The shell reads the list once and provides the `MeetingsStore` the meeting view shares. 0 AIU.
+ * now, the planned ones (soonest first) and the ended or cancelled ones (latest first), with New meeting; the right
+ * shows the one in the address. The shell reads the list once and provides the `MeetingsStore` the meeting view
+ * shares. 0 AIU.
  */
 @Component({
   selector: 'ah-meetings-shell',

@@ -43,16 +43,16 @@ describe('the mock meetings', () => {
     const during = call(server, 'POST', `/meetings/${running.id}/topics`, {
       title: 'Refund approvals',
       raisedBy: 'them',
-      raisedByEmail: 'Priya@Example.com',
+      raisedByStakeholder: 'Priya@Example.com',
     }).body as MeetingTopic;
-    expect([during.origin, during.raisedByEmail]).toEqual([
+    expect([during.origin, during.raisedByStakeholder]).toEqual([
       'in_meeting',
       'priya@example.com',
     ]);
     const refused = call(server, 'POST', `/meetings/${running.id}/topics`, {
       title: 'x',
       raisedBy: 'us',
-      raisedByEmail: 'priya@example.com',
+      raisedByStakeholder: 'priya@example.com',
     });
     expect(refused.status).toBe(400);
   });
@@ -81,6 +81,76 @@ describe('the mock meetings', () => {
       text: 'late',
     });
     expect(late.status).toBe(409);
+  });
+
+  it('marks a planned meeting done without starting it', () => {
+    const { server, list } = seeded();
+    const planned = list.items.find((m) => m.status === 'planned')!;
+    const done = call(server, 'POST', `/meetings/${planned.id}/end`, {
+      carryOver: [],
+    });
+    expect(done.status).toBe(200);
+    const result = done.body as EndMeetingResult;
+    expect([
+      result.meeting.status,
+      result.meeting.startedAt,
+      result.nextMeeting,
+    ]).toEqual(['ended', null, null]);
+    expect(result.meeting.endedAt).not.toBeNull();
+    expect(
+      call(server, 'POST', `/meetings/${planned.id}/end`, { carryOver: [] })
+        .status
+    ).toBe(409);
+  });
+
+  it('cancels a planned meeting, carrying the chosen topics to the next one, and keeps it read-only', () => {
+    const { server, list, running } = seeded();
+    const planned = list.items.find((m) => m.status === 'planned')!;
+    const topic = call(server, 'POST', `/meetings/${planned.id}/topics`, {
+      title: 'Supplier prices',
+      raisedBy: 'them',
+      raisedByStakeholder: '  Ana   Silva ',
+    }).body as MeetingTopic;
+    expect(topic.raisedByStakeholder).toBe('Ana Silva');
+    const cancelled = call(server, 'POST', `/meetings/${planned.id}/cancel`, {
+      carryOver: [topic.id],
+    });
+    expect(cancelled.status).toBe(200);
+    const result = cancelled.body as EndMeetingResult;
+    expect([result.meeting.status, result.meeting.startedAt]).toEqual([
+      'cancelled',
+      null,
+    ]);
+    expect(
+      result.nextMeeting!.topics.map((t) => t.carriedFrom?.topicId)
+    ).toContain(topic.id);
+    expect(
+      call(server, 'POST', `/meetings/${planned.id}/topics`, {
+        title: 'late',
+        raisedBy: 'us',
+      }).status
+    ).toBe(409);
+    expect(call(server, 'POST', `/meetings/${planned.id}/start`).status).toBe(
+      409
+    );
+    expect(
+      call(server, 'POST', `/meetings/${running.id}/cancel`, { carryOver: [] })
+        .status
+    ).toBe(409);
+  });
+
+  it('keeps stakeholders named or by e-mail, each once', () => {
+    const { server } = seeded();
+    const created = call(server, 'POST', '/meetings', {
+      title: 'Kick-off',
+      startsAt: '2026-11-02T09:00:00.000Z',
+      stakeholders: ['Ana  Silva', 'Priya@Example.com', 'ana silva'],
+    });
+    expect(created.status).toBe(201);
+    expect((created.body as Meeting).stakeholders).toEqual([
+      'Ana Silva',
+      'priya@example.com',
+    ]);
   });
 
   it('moves one topic to the next meeting without ending this one, and refuses to move it twice', () => {

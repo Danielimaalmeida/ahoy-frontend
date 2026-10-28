@@ -12,10 +12,39 @@ import { ToastService } from '@ui/toast/toast';
 import { meetingErrorView } from './meeting-errors';
 import type { MeetingsStore } from './meetings-store';
 
-/** What the End meeting dialog is opened with: the page's store, which holds the open meeting and ends it. */
+/**
+ * What the End meeting dialog is opened with: the page's store, which holds the open meeting and closes it, and how:
+ * `end` (the default) ends it or marks a planned one done, `cancel` cancels a planned one.
+ */
 export interface EndMeetingData {
   readonly store: MeetingsStore;
+  readonly how?: 'end' | 'cancel';
 }
+
+/** The words of the dialog for each way of closing a meeting. */
+const WORDS = {
+  end: {
+    heading: (title: string) => `End ${title}?`,
+    keep: 'Keep it going',
+    confirm: 'End meeting',
+    busy: 'Ending…',
+    toast: 'Meeting ended.',
+  },
+  done: {
+    heading: (title: string) => `Mark ${title} done?`,
+    keep: 'Not yet',
+    confirm: 'Mark done',
+    busy: 'Saving…',
+    toast: 'Meeting marked done.',
+  },
+  cancel: {
+    heading: (title: string) => `Cancel ${title}?`,
+    keep: 'Keep it',
+    confirm: 'Cancel meeting',
+    busy: 'Cancelling…',
+    toast: 'Meeting cancelled.',
+  },
+} as const;
 
 /** "N topics" in words. */
 function topics(n: number): string {
@@ -23,9 +52,11 @@ function topics(n: number): string {
 }
 
 /**
- * "End Finance sync?": the open topics with a tick each; the ticked ones move, with their notes, to the series' next
- * meeting (planned from its cadence when none is). Topics with no notes are ticked to begin with, as most likely not
- * reached; the person decides. A meeting outside a series keeps its topics. The meeting is read-only once ended.
+ * "End Finance sync?" (or "Mark Finance sync done?" for a meeting never started, or "Cancel Finance sync?" for one
+ * that did not take place): the open topics with a tick each; the ticked ones move, with their notes, to the series'
+ * next meeting (planned from its cadence when none is). Topics with no notes are ticked to begin with, as most likely
+ * not reached, and every open topic of a cancelled meeting; the person decides. A meeting outside a series keeps its
+ * topics. The meeting is read-only once closed.
  */
 @Component({
   selector: 'ah-end-meeting-dialog',
@@ -59,16 +90,20 @@ function topics(n: number): string {
   `,
   template: `
     <ah-dialog
-      icon="check"
-      [heading]="'End ' + title() + '?'"
-      cancelLabel="Keep it going"
+      [icon]="cancelling ? 'close' : 'check'"
+      [kind]="cancelling ? 'danger' : 'default'"
+      [heading]="words().heading(title())"
+      [cancelLabel]="words().keep"
       [confirmLabel]="confirmLabel()"
-      busyLabel="Ending…"
+      [busyLabel]="words().busy"
       [busy]="busy()"
       [error]="error()"
       (confirm)="submit()"
     >
       <span ahDialogLead>
+        @if (cancelling) {
+          It didn't take place.
+        }
         @if (inSeries()) {
           The topics you tick move, with their notes, to the next {{ title() }}.
           The rest stay here. After this the meeting is read-only.
@@ -96,16 +131,23 @@ function topics(n: number): string {
             </label>
           }
         </fieldset>
-        <span class="ah-hint"
-          >Topics with no notes are ticked to begin with: they were most likely
-          not reached.</span
-        >
+        <span class="ah-hint">
+          @if (cancelling) {
+            Every open topic is ticked to begin with: none was discussed.
+          } @else {
+            Topics with no notes are ticked to begin with: they were most likely
+            not reached.
+          }
+        </span>
       }
     </ah-dialog>
   `,
 })
 export class EndMeetingDialog {
-  private readonly store = inject<EndMeetingData>(DIALOG_DATA).store;
+  private readonly data = inject<EndMeetingData>(DIALOG_DATA);
+  private readonly store = this.data.store;
+  /** Whether the meeting is being cancelled rather than ended. */
+  protected readonly cancelling = this.data.how === 'cancel';
   private readonly ref = inject<DialogRef<EndMeetingResult>>(DialogRef);
   private readonly toasts = inject(ToastService);
 
@@ -119,9 +161,23 @@ export class EndMeetingDialog {
   protected readonly candidates = computed(() =>
     carryOverCandidates(this.store.meeting()?.topics ?? [])
   );
+  /** The words for cancelling, marking a meeting never started done, or ending one in progress. */
+  protected readonly words = computed(() =>
+    this.cancelling
+      ? WORDS.cancel
+      : this.store.meeting()?.status === 'planned'
+        ? WORDS.done
+        : WORDS.end
+  );
   /** The ids of the ticked topics. */
   readonly chosen = signal<ReadonlySet<string>>(
-    new Set(suggestedCarryOver(this.store.meeting()?.topics ?? []))
+    new Set(
+      this.cancelling
+        ? carryOverCandidates(this.store.meeting()?.topics ?? []).map(
+            (t) => t.id
+          )
+        : suggestedCarryOver(this.store.meeting()?.topics ?? [])
+    )
   );
   private readonly failed = signal(false);
   protected readonly error = computed(() => {
@@ -130,7 +186,8 @@ export class EndMeetingDialog {
   });
   protected readonly confirmLabel = computed(() => {
     const n = this.inSeries() ? this.chosen().size : 0;
-    return n === 0 ? 'End meeting' : `End meeting · move ${topics(n)}`;
+    const confirm = this.words().confirm;
+    return n === 0 ? confirm : `${confirm} · move ${topics(n)}`;
   });
 
   protected readonly label = raisedByLabel;
@@ -148,10 +205,13 @@ export class EndMeetingDialog {
     this.chosen.set(next);
   }
 
-  /** Ends the meeting with the ticked topics; on a refusal the dialog stays open with the reason. */
+  /** Ends or cancels the meeting with the ticked topics; on a refusal the dialog stays open with the reason. */
   async submit(): Promise<void> {
     const carryOver = this.inSeries() ? [...this.chosen()] : [];
-    const ended = await this.store.end(carryOver);
+    const toast = this.words().toast;
+    const ended = this.cancelling
+      ? await this.store.cancel(carryOver)
+      : await this.store.end(carryOver);
     if (ended === null) {
       this.failed.set(true);
       return;
@@ -159,8 +219,8 @@ export class EndMeetingDialog {
     const next = ended.nextMeeting;
     this.toasts.show(
       next === null
-        ? 'Meeting ended.'
-        : `Meeting ended. ${topics(carryOver.length)} moved to ${meetingDay(next.startsAt)}.`
+        ? toast
+        : `${toast} ${topics(carryOver.length)} moved to ${meetingDay(next.startsAt)}.`
     );
     this.ref.close(ended);
   }

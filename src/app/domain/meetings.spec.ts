@@ -13,9 +13,13 @@ import {
   moveInOrder,
   noteKindFields,
   noteShortcut,
-  parseEmails,
+  isClosed,
+  normalizeStakeholders,
+  parseStakeholders,
   raisedByLabel,
   shortEmail,
+  stakeholderLabel,
+  stakeholderName,
   sniffImageType,
   startsAtFrom,
   suggestedCarryOver,
@@ -35,7 +39,7 @@ const meeting = (
 const topic = (over: Partial<TopicLike> & { id: string }): TopicLike => ({
   status: 'open',
   raisedBy: 'us',
-  raisedByEmail: null,
+  raisedByStakeholder: null,
   origin: 'planned',
   createdAt: '2026-10-06T10:24:00.000Z',
   notes: [],
@@ -58,6 +62,23 @@ describe('meetings', () => {
     expect(groups.past.map((m) => m.id)).toEqual(['past-2', 'past-1']);
   });
 
+  it('lists a cancelled meeting with the past ones, and counts it as closed like an ended one', () => {
+    const groups = groupMeetings([
+      ...list,
+      meeting('called-off', 'cancelled', '2026-10-02T09:00:00.000Z'),
+    ]);
+    expect(groups.past.map((m) => m.id)).toEqual([
+      'called-off',
+      'past-2',
+      'past-1',
+    ]);
+    expect(groups.next.map((m) => m.id)).toEqual(['next-1', 'next-2']);
+    expect(isClosed('cancelled')).toBe(true);
+    expect(isClosed('ended')).toBe(true);
+    expect(isClosed('planned')).toBe(false);
+    expect(isClosed('in_progress')).toBe(false);
+  });
+
   it('opens the meeting running now, else the next one, else the latest that ended, else none', () => {
     expect(defaultMeeting(list)?.id).toBe('now');
     expect(defaultMeeting(list.filter((m) => m.id !== 'now'))?.id).toBe(
@@ -74,10 +95,26 @@ describe('meetings', () => {
     expect(raisedByLabel(topic({ id: 'b', raisedBy: 'them' }))).toBe('ACME');
     expect(
       raisedByLabel(
-        topic({ id: 'c', raisedBy: 'them', raisedByEmail: 'maria@example.com' })
+        topic({
+          id: 'c',
+          raisedBy: 'them',
+          raisedByStakeholder: 'maria@example.com',
+        })
       )
     ).toBe('ACME · maria@');
+    expect(
+      raisedByLabel(
+        topic({ id: 'd', raisedBy: 'them', raisedByStakeholder: 'Ana Silva' })
+      )
+    ).toBe('ACME · Ana Silva');
     expect(shortEmail('no-at-sign')).toBe('no-at-sign');
+  });
+
+  it('shows a stakeholder by name when there is one, and an e-mail shortened', () => {
+    expect(stakeholderLabel('Ana Silva')).toBe('Ana Silva');
+    expect(stakeholderLabel('Rui Costa <rui@example.com>')).toBe('Rui Costa');
+    expect(stakeholderLabel('maria@example.com')).toBe('maria@');
+    expect(stakeholderLabel('Ana')).toBe('Ana');
   });
 
   it('names the author by their name, and by the shortened actor while the name is not known', () => {
@@ -115,18 +152,30 @@ describe('meetings', () => {
     expect(moveInOrder(['a'], 'z', 1)).toEqual(['a']);
   });
 
-  describe('parseEmails', () => {
-    it('splits on commas, semicolons and spaces, lower-cases and keeps each e-mail once, in order', () => {
+  describe('parseStakeholders', () => {
+    it('splits names and e-mails on commas, semicolons and line breaks, and keeps each once, in order', () => {
       expect(
-        parseEmails(
-          ' Priya@example.com, jordan@example.com;priya@example.com  sam@example.com '
+        parseStakeholders(
+          ' Priya@example.com, Ana  Silva;priya@example.com\nRui Costa <rui@example.com>\n ana silva '
         )
-      ).toEqual(['priya@example.com', 'jordan@example.com', 'sam@example.com']);
+      ).toEqual([
+        'priya@example.com',
+        'Ana Silva',
+        'Rui Costa <rui@example.com>',
+      ]);
     });
 
     it('answers nothing for an empty or blank list', () => {
-      expect(parseEmails('')).toEqual([]);
-      expect(parseEmails(' , ;')).toEqual([]);
+      expect(parseStakeholders('')).toEqual([]);
+      expect(parseStakeholders(' , ;\n')).toEqual([]);
+    });
+
+    it('stores a name with its case and inner spaces collapsed, and an e-mail lower-cased, as the API does', () => {
+      expect(stakeholderName('  Ana   Silva ')).toBe('Ana Silva');
+      expect(stakeholderName(' Maria@Example.com ')).toBe('maria@example.com');
+      expect(
+        normalizeStakeholders(['Ana Silva', 'ANA SILVA', ' ', 'jo@example.com'])
+      ).toEqual(['Ana Silva', 'jo@example.com']);
     });
   });
 
@@ -288,6 +337,17 @@ describe('meetingToConfluence', () => {
     );
   });
 
+  it('says a meeting was cancelled, and lists stakeholders named or by e-mail', () => {
+    const markup = meetingToConfluence(
+      meetingDoc({
+        status: 'cancelled',
+        stakeholders: ['Ana Silva', 'maria@example.com'],
+      })
+    );
+    expect(markup).toContain('*Status:* Cancelled');
+    expect(markup).toContain('*With:* Ana Silva, maria@example.com');
+  });
+
   it('writes each topic with who raised it, where it moved and its notes', () => {
     const markup = meetingToConfluence(
       meetingDoc({
@@ -299,7 +359,7 @@ describe('meetingToConfluence', () => {
             title: 'Late fees',
             status: 'moved',
             raisedBy: 'them',
-            raisedByEmail: 'maria@example.com',
+            raisedByStakeholder: 'maria@example.com',
             origin: 'in_meeting',
             createdAt: at(9, 45),
             movedTo: { meetingStartsAt: at(9, 30, 20) },
@@ -340,7 +400,7 @@ describe('meetingToConfluence', () => {
             title: 'Exports',
             status: 'open',
             raisedBy: 'us',
-            raisedByEmail: null,
+            raisedByStakeholder: null,
             origin: 'planned',
             createdAt: at(9, 30),
             movedTo: null,
@@ -403,7 +463,7 @@ describe('meetingToConfluence', () => {
             title: 'Exports',
             status: 'open',
             raisedBy: 'us',
-            raisedByEmail: null,
+            raisedByStakeholder: null,
             origin: 'planned',
             createdAt: at(9, 30),
             movedTo: null,
@@ -431,7 +491,7 @@ describe('meetingToConfluence', () => {
             title: '[link]|x',
             status: 'open',
             raisedBy: 'us',
-            raisedByEmail: null,
+            raisedByStakeholder: null,
             origin: 'planned',
             createdAt: at(9, 0),
             movedTo: null,
