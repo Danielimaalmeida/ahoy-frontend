@@ -3,6 +3,7 @@ import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
 import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
+import cancelMeeting from '@testing/fixtures/cancelMeeting.json';
 import createMeeting from '@testing/fixtures/createMeeting.json';
 import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
 import answerMeetingStoryQuestions from '@testing/fixtures/answerMeetingStoryQuestions.json';
@@ -158,6 +159,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['updateMeeting', updateMeeting],
   ['startMeeting', startMeeting],
   ['endMeeting', endMeeting],
+  ['cancelMeeting', cancelMeeting],
   ['addMeetingTopic', addMeetingTopic],
   ['setMeetingTopicOrder', setMeetingTopicOrder],
   ['updateMeetingTopic', updateMeetingTopic],
@@ -224,7 +226,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      74
+      75
     );
   });
 
@@ -303,6 +305,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'updateMeeting',
       'startMeeting',
       'endMeeting',
+      'cancelMeeting',
       'setMeetingTopicOrder',
       'updateMeetingTopic',
       'moveMeetingTopic',
@@ -429,14 +432,14 @@ describe('the request bodies the client sends', () => {
       requestViolations('addMeetingTopic', {
         title: 'Late fees',
         raisedBy: 'them',
-        raisedByEmail: 'priya@example.com',
+        raisedByStakeholder: 'priya@example.com',
       })
     ).toEqual([]);
     expect(
       requestViolations('addMeetingTopic', { title: 'Overdue', raisedBy: 'us' })
     ).toEqual([]);
     expect(
-      requestViolations('updateMeetingTopic', { raisedByEmail: null })
+      requestViolations('updateMeetingTopic', { raisedByStakeholder: null })
     ).toEqual([]);
     expect(
       requestViolations('addMeetingNote', { text: 'Bring numbers' })

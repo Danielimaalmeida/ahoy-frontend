@@ -94,8 +94,8 @@ const SOMEONE_ELSE = '';
       @if (raisedBy() === 'them') {
         <label class="ah-sr" for="topic-who">Which stakeholder</label>
         <select id="topic-who" class="ah-input who" [formControl]="who">
-          @for (email of stakeholders(); track email) {
-            <option [value]="email">{{ email }}</option>
+          @for (stakeholder of stakeholders(); track stakeholder) {
+            <option [value]="stakeholder">{{ stakeholder }}</option>
           }
           <option [value]="someoneElse">Someone else</option>
         </select>
@@ -148,11 +148,15 @@ export class TopicComposer {
   async add(): Promise<void> {
     const title = this.title.value.trim();
     if (title === '' || this.busy()) return;
-    const email =
+    const stakeholder =
       this.raisedBy() === 'them' && this.who.value !== SOMEONE_ELSE
         ? this.who.value
         : null;
-    const added = await this.store.addTopic(title, this.raisedBy(), email);
+    const added = await this.store.addTopic(
+      title,
+      this.raisedBy(),
+      stakeholder
+    );
     if (added) this.title.setValue('');
   }
 }

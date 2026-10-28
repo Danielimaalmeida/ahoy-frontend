@@ -334,7 +334,7 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     const added = post(`/meetings/${running.id}/topics`, {
       title: 'Refund approvals take too long',
       raisedBy: 'them',
-      raisedByEmail: 'priya@example.com',
+      raisedByStakeholder: 'priya@example.com',
     }).body as { id: string };
     patch(`/meeting-topics/${added.id}`, { title: 'Refund approvals' });
     const note = post(`/meeting-topics/${added.id}/notes`, {
@@ -401,7 +401,14 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     seriesId: series.id,
     startsAt: '2026-10-20T09:00:00.000Z',
   }).body as { id: string };
+  const calledOff = post('/meetings', {
+    seriesId: series.id,
+    startsAt: '2026-10-27T09:00:00.000Z',
+    stakeholders: ['Ana Silva', 'sam@example.com'],
+  }).body as { id: string };
+  post(`/meetings/${calledOff.id}/cancel`, { carryOver: [] });
   post(`/meetings/${oneOff.id}/start`, undefined);
+  post(`/meetings/${oneOff.id}/cancel`, { carryOver: [] });
   get('/meetings/00000000-0000-4000-8000-ffffffffffff');
   post('/meetings', { startsAt: '2026-10-20T09:00:00.000Z' });
 }
@@ -456,6 +463,7 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'updateMeeting',
       'startMeeting',
       'endMeeting',
+      'cancelMeeting',
       'addMeetingTopic',
       'setMeetingTopicOrder',
       'updateMeetingTopic',

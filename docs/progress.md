@@ -1,8 +1,9 @@
 # Ahoy frontend · progress
 
-Updated 2026-10-28 (the Crew page restyled to its design, asked for by the user on 2026-10-28; the page itself,
-2026-10-27). One page: replace it, do not append; git history is the archive (the
-3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories, with its
+Updated 2026-10-28 (the Crew page restyled to its design, and Meetings: cancel, mark done without Start, and
+stakeholders by name, both asked for by the user on 2026-10-28; before that, 2026-10-27, the Crew page). One page:
+replace it, do not append; git history is the archive (the 3,692-line page before this one:
+`git show b1f9b88:docs/progress.md`). The review of both repositories, with its
 proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its
 freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
@@ -14,8 +15,9 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, and Meetings slices 1 to 3 (topics, notes, carry-over, user stories drafted by an agent,
   Grill me, Copy for Confluence).
-- **Merged since:** decisions and actions on meeting notes (PR #41), the Crew page (PR #42, with `ahoy-hosted` #64) and
-  the user's local changes (`f4ec304`). Whether `feat/meeting-note-images` merged was not checked.
+- **Merged since:** decisions and actions on meeting notes (PR #39 and #41), images on notes (PR #40), the Crew page
+  (PR #42, with `ahoy-hosted` #64), the user's local changes (`f4ec304`) and Meetings' cancel, mark done without Start
+  and stakeholders by name (PR #44, with `ahoy-hosted` #65).
 - **This branch (`feat/crew-design`, 2026-10-28):** the Crew page as in its design artifact: blue for the sprint person
   and orange for the lunch host on the avatars and tags (the orange `#c2410c` is local to the page; the tokens have it
   only as a soft status colour), "On since … · in alphabetical order", the release day on the sprint person's card,
@@ -24,21 +26,21 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   sprint whose dialog asks which turn. Also: the lunch day on the host's Next line (the sprint's last working day, not
   stored anywhere) and Copy for Teams (HTML that Teams keeps when pasted, plain text where the browser cannot copy
   HTML).
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `dd668d3` (merged as #64), with the redaction
-  placeholders kept. Needs on the API: migration 0021 applied and `JIRA_BOARD_ID` set.
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `3a28dbe` (merged as #65), with the redaction
+  placeholders kept. Needs on the API: migrations 0021 and 0022 applied and `JIRA_BOARD_ID` set.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
   checked by unit and component tests on the mock backend only (Crew over `HttpTestingController`).
 
 ## Proof
 
-- **Last full run** (2026-10-28, `feat/crew-design`, cloud container, Node 24, a local stand-in for
-  `@acme-fedev/auth` because the private registry is not reachable, and the dependencies installed without the lock
-  file, with `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 166 files, 2,990 tests, all
-  passed; `tsc` for app and specs, `check-boundaries`, `eslint`, `stylelint` and `ng build` passed (`crew-page.ts`'s
-  styles are 5.3 kB, over the 4 kB warning budget, as `docks.ts` already is). `prettier --check` flags only
-  `docs/architecture.md` and `meetings.spec.ts`, unformatted on `main` since `f4ec304`. The page was looked at once as
-  a screenshot of the component rendered with the fixture and the app's styles, never in the running app or against
-  an API. Playwright was not run.
+- **Last full run** (2026-10-28, `feat/crew-design` with `main` merged in, cloud container, Node 24, a local stand-in
+  for `@acme-fedev/auth` because the private registry is not reachable, dependencies installed without the lock file,
+  with `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 166 files, 3,005 tests, all passed; `tsc` for app and specs,
+  `check-boundaries`, `eslint`, `stylelint` and `ng build` passed (`crew-page.ts`'s styles are 5.3 kB, over the 4 kB
+  warning budget, as `docks.ts` already is). `prettier --check` flags only `docs/architecture.md`, which fails on
+  `main` too. `npm run test:scripts` cannot run (`main` removed `scripts/redact.mjs` but `package.json` still names it).
+  The Crew page was looked at once as a screenshot of the component with the fixture; Cancel, Mark done and names are
+  proven by component tests on the mock backend. Neither ran in a browser against an API; Playwright was not run.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
   `npm run api:types` is byte-identical to the committed file.
@@ -58,14 +60,14 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 ## Next, in order
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. Merge the Crew branches of `ahoy-hosted` and this repository (and the images branch if it is still open). On a
-   machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`: `npm ci`,
-   then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`.
+1. Merge `ahoy-hosted` PR #65, then this branch. On a machine with the private registry and Node 24, repeat the full
+   check with the real `@acme-fedev/auth`: `npm ci`, then
+   `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop `test:scripts`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0018): start a
+3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0022): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
-   Meetings (migrations 0018 and 0019: an action ticked done, two browsers on one meeting in progress, a screenshot
-   pasted into a note and opened large) and Crew (migration 0021 and `JIRA_BOARD_ID`: add the team, a swap for a
+   Meetings (migrations 0018, 0019 and 0022: an action ticked done, two browsers on one meeting in progress, a
+   screenshot pasted into a note and opened large, a meeting cancelled and one marked done) and Crew (migration 0021 and `JIRA_BOARD_ID`: add the team, a swap for a
    holiday, its Undo).
 4. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
    then publishing to Confluence through its API (today the page copies wiki markup).

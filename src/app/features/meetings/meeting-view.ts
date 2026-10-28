@@ -7,7 +7,12 @@ import {
   untracked,
 } from '@angular/core';
 import { DialogService } from '@ui/dialog/dialog';
-import { meetingDay, meetingTime, meetingToConfluence } from '@domain/meetings';
+import {
+  isClosed,
+  meetingDay,
+  meetingTime,
+  meetingToConfluence,
+} from '@domain/meetings';
 import { targetText } from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -21,7 +26,7 @@ import { StoryDraftsStore } from './story-drafts-store';
 import { TopicCard } from './topic-card';
 import { TopicComposer } from './topic-composer';
 
-/** "Planned", "In progress" or "Ended", with the badge it wears. */
+/** "Planned", "In progress", "Ended" or "Cancelled", with the badge it wears. */
 const STATUS_WORDS = {
   planned: {
     label: 'Planned',
@@ -34,13 +39,14 @@ const STATUS_WORDS = {
     api: 'in_progress',
   },
   ended: { label: 'Ended', badge: 'ah-tag', api: 'ended' },
+  cancelled: { label: 'Cancelled', badge: 'ah-tag', api: 'cancelled' },
 } as const;
 
 /**
  * The meeting open on the right of the Meetings page (boards `Meetings` and `MeetingNext`): its status, day and
- * stakeholders, Start or End, the line that adds a topic, the series' open actions and this meeting's decisions, and
- * the topics with their notes. `/meetings` opens the
- * meeting running now, else the next planned one, else the latest that ended; `/meetings/:id` opens that one.
+ * stakeholders, Start, Mark done and Cancel (or End once it runs), the line that adds a topic, the series' open actions
+ * and this meeting's decisions, and the topics with their notes. `/meetings` opens the meeting running now, else the
+ * next planned one, else the latest that ended; `/meetings/:id` opens that one.
  */
 @Component({
   selector: 'ah-meeting-view',
@@ -123,7 +129,7 @@ const STATUS_WORDS = {
         <div class="identity">
           <div class="status">
             <span [class]="status().badge">
-              @if (m.status !== 'ended') {
+              @if (!closed()) {
                 <i class="ah-badge__dot"></i>
               }
               {{ status().label }}</span
@@ -159,6 +165,22 @@ const STATUS_WORDS = {
             Copy for Confluence
           </button>
           @if (m.status === 'planned') {
+            <button
+              ahButton="ghost"
+              type="button"
+              [disabled]="busy()"
+              (click)="end('cancel')"
+            >
+              Cancel meeting
+            </button>
+            <button
+              ahButton
+              type="button"
+              [disabled]="busy()"
+              (click)="end('done')"
+            >
+              Mark done
+            </button>
             <button
               ahButton="primary"
               type="button"
@@ -198,6 +220,11 @@ const STATUS_WORDS = {
           It ended {{ endedAt() }} and is read-only. Topics that moved on link
           to the meeting that took them.
         </ah-banner>
+      } @else if (m.status === 'cancelled') {
+        <ah-banner variant="info" heading="This meeting was cancelled">
+          It was cancelled {{ endedAt() }} and is read-only. Topics that moved
+          on link to the meeting that took them.
+        </ah-banner>
       } @else {
         <ah-topic-composer />
       }
@@ -235,7 +262,7 @@ const STATUS_WORDS = {
           ) {
             <ah-topic-card
               [topic]="topic"
-              [meetingOpen]="m.status !== 'ended'"
+              [meetingOpen]="!closed()"
               [inSeries]="m.seriesId !== null"
               [first]="first"
               [last]="last"
@@ -259,6 +286,10 @@ export class MeetingView {
   protected readonly busy = this.store.busy;
   protected readonly status = computed(
     () => STATUS_WORDS[this.meeting()?.status ?? 'planned']
+  );
+  /** Whether the meeting ended or was cancelled, so it is read-only. */
+  protected readonly closed = computed(() =>
+    isClosed(this.meeting()?.status ?? 'planned')
   );
   protected readonly when = computed(() => {
     const m = this.meeting();
@@ -335,11 +366,11 @@ export class MeetingView {
     }
   }
 
-  /** Asks which open topics move on, then ends the meeting. */
-  protected end(): void {
+  /** Asks which open topics move on, then ends (marks done) or cancels the meeting. */
+  protected end(how: EndMeetingData['how'] = 'end'): void {
     this.store.dismissError();
     this.dialogs.open<unknown, EndMeetingData>(EndMeetingDialog, {
-      data: { store: this.store },
+      data: { store: this.store, how },
       width: '560px',
     });
   }

@@ -1100,16 +1100,42 @@ export interface paths {
     readonly get?: never;
     readonly put?: never;
     /**
-     * End a meeting in progress and carry the chosen open topics over to the series' next meeting.
-     * @description Each topic in `carryOver` is copied, with its notes (their authors and times kept), to the end of the series'
-     *     next planned meeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next
-     *     meeting is planned one cadence on (or at the first step in the future), with the same title, length and
-     *     stakeholders. All or nothing: `409 invalid_state` when the meeting is not in progress, or when a topic is to be
+     * End (mark done) a meeting, planned or in progress, and carry the chosen open topics to the next one.
+     * @description A planned meeting can be marked done without being started (its `startedAt` stays null). Each topic in
+     *     `carryOver` is copied, with its notes (their authors and times kept), to the end of the series' next planned
+     *     meeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next meeting is
+     *     planned one cadence on (or at the first step in the future), with the same title, length and stakeholders. All
+     *     or nothing: `409 invalid_state` when the meeting has already ended or was cancelled, or when a topic is to be
      *     carried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);
      *     `400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.
      *     The meeting is read-only once ended.
      */
     readonly post: operations['endMeeting'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meetings/{meetingId}/cancel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Cancel a planned meeting and carry the chosen open topics over to the series' next meeting.
+     * @description The meeting did not take place: it becomes `cancelled`, read-only, with `endedAt` the time it was cancelled.
+     *     `carryOver` works as for `endMeeting`; the topics left out stay here. `409 invalid_state` when the meeting is
+     *     not planned (one that started is ended instead), or when a topic is to be carried but there is no next
+     *     meeting; `400 validation_failed` for a `carryOver` that `endMeeting` would refuse.
+     */
+    readonly post: operations['cancelMeeting'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -1129,7 +1155,7 @@ export interface paths {
     readonly put?: never;
     /**
      * Add a topic at the end of the meeting's list.
-     * @description `origin` is `planned` before the meeting starts and `in_meeting` while it runs. `raisedByEmail` names the
+     * @description `origin` is `planned` before the meeting starts and `in_meeting` while it runs. `raisedByStakeholder` names the
      *     stakeholder of a topic raised by `them` (`400 validation_failed` with `raisedBy: us`). `409 invalid_state` once
      *     the meeting has ended.
      */
@@ -1184,7 +1210,7 @@ export interface paths {
     readonly head?: never;
     /**
      * Rename a topic or change who raised it.
-     * @description Choosing `raisedBy: us` clears the stakeholder's e-mail. `409 invalid_state` when the topic was moved to the
+     * @description Choosing `raisedBy: us` clears the stakeholder. `409 invalid_state` when the topic was moved to the
      *     next meeting or its meeting has ended.
      */
     readonly patch: operations['updateMeetingTopic'];
@@ -2711,10 +2737,10 @@ export interface components {
       readonly exampleRunId: string | null;
     };
     /**
-     * @description `planned`, then `in_progress` once started, then `ended` (read-only).
+     * @description `planned`, then `in_progress` once started, then `ended` (read-only); a planned meeting can also be ended straight away (marked done) or `cancelled` (read-only, it did not take place).
      * @enum {string}
      */
-    readonly MeetingStatus: 'planned' | 'in_progress' | 'ended';
+    readonly MeetingStatus: 'planned' | 'in_progress' | 'ended' | 'cancelled';
     /**
      * @description Who brought the topic up, our side or a stakeholder.
      * @enum {string}
@@ -2730,8 +2756,8 @@ export interface components {
      * @enum {string}
      */
     readonly TopicStatus: 'open' | 'moved';
-    /** Format: email */
-    readonly Email: string;
+    /** @description A person of the other side: a name ("Ana Silva") or an e-mail. Stored trimmed with inner spaces collapsed; an e-mail is lower-cased; repeats in one list (ignoring case) are dropped. */
+    readonly Stakeholder: string;
     readonly MeetingSeries: {
       /** Format: uuid */
       readonly id: string;
@@ -2750,7 +2776,7 @@ export interface components {
     };
     readonly CreateMeetingSeriesRequest: {
       readonly name: string;
-      readonly stakeholders?: readonly components['schemas']['Email'][];
+      readonly stakeholders?: readonly components['schemas']['Stakeholder'][];
       /** @description Days between meetings (7 for weekly). */
       readonly cadenceDays?: number;
       readonly jiraProjectKey?: components['schemas']['JiraProjectKey'];
@@ -2996,8 +3022,8 @@ export interface components {
       readonly meetingId: string;
       readonly title: string;
       readonly raisedBy: components['schemas']['RaisedBy'];
-      /** @description The stakeholder who raised it, when known. */
-      readonly raisedByEmail: string | null;
+      /** @description The stakeholder who raised it (a name or an e-mail), when known. */
+      readonly raisedByStakeholder: string | null;
       readonly origin: components['schemas']['TopicOrigin'];
       readonly status: components['schemas']['TopicStatus'];
       readonly position: number;
@@ -3048,7 +3074,7 @@ export interface components {
       readonly title?: string;
       readonly startsAt: components['schemas']['Timestamp'];
       readonly endsAt?: components['schemas']['Timestamp'];
-      readonly stakeholders?: readonly components['schemas']['Email'][];
+      readonly stakeholders?: readonly components['schemas']['Stakeholder'][];
     };
     readonly UpdateMeetingRequest: {
       readonly title?: string;
@@ -3058,7 +3084,7 @@ export interface components {
        * @description null removes the end time.
        */
       readonly endsAt?: string | null;
-      readonly stakeholders?: readonly components['schemas']['Email'][];
+      readonly stakeholders?: readonly components['schemas']['Stakeholder'][];
     };
     readonly EndMeetingRequest: {
       /** @description The open topics to carry over to the next meeting; empty to carry none. */
@@ -3071,13 +3097,14 @@ export interface components {
     readonly AddMeetingTopicRequest: {
       readonly title: string;
       readonly raisedBy: components['schemas']['RaisedBy'];
-      readonly raisedByEmail?: components['schemas']['Email'];
+      readonly raisedByStakeholder?: components['schemas']['Stakeholder'];
     };
     readonly UpdateMeetingTopicRequest: {
       readonly title?: string;
       readonly raisedBy?: components['schemas']['RaisedBy'];
-      /** @description null removes the stakeholder's e-mail. */
-      readonly raisedByEmail?: components['schemas']['Email'] | null;
+      /** @description null removes the stakeholder. */
+      readonly raisedByStakeholder?:
+        components['schemas']['Stakeholder'] | null;
     };
     readonly MeetingTopicOrderRequest: {
       readonly topicIds: readonly string[];
@@ -4764,6 +4791,37 @@ export interface operations {
     };
     readonly responses: {
       /** @description The ended meeting and, when topics were carried over, the meeting that took them. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['EndMeetingResult'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly cancelMeeting: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['EndMeetingRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The cancelled meeting and, when topics were carried over, the meeting that took them. */
       readonly 200: {
         headers: {
           readonly [name: string]: unknown;

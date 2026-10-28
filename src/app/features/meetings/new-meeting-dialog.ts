@@ -7,7 +7,11 @@ import {
   Validators,
 } from '@angular/forms';
 import { CLOCK } from '@core/realtime/clock';
-import { dateInputValue, parseEmails, startsAtFrom } from '@domain/meetings';
+import {
+  dateInputValue,
+  parseStakeholders,
+  startsAtFrom,
+} from '@domain/meetings';
 import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { maxTrimmed, requiredText } from '@ui/field/text-validators';
@@ -100,7 +104,7 @@ const NAME_MAX = 200;
           <ah-field
             label="Stakeholders"
             optional
-            hint="E-mails, separated by commas."
+            hint="Names or e-mails, separated by commas."
           >
             <input ahInput formControlName="stakeholders" autocomplete="off" />
           </ah-field>
@@ -202,7 +206,7 @@ export class NewMeetingDialog {
       this.failed.set('when');
       return;
     }
-    const stakeholders = parseEmails(value.stakeholders);
+    const stakeholders = parseStakeholders(value.stakeholders);
     let seriesId: string | null = kind === 'series' ? value.series : null;
     if (kind === 'new') {
       const cadence = value.cadence.trim();
