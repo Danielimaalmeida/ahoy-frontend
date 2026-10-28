@@ -106,11 +106,14 @@ describe('the Crew page', () => {
     const [sprint, lunch] = [...root.querySelectorAll('article')];
     expect(text(sprint)).toContain('Sprint person');
     expect(text(sprint)).toContain('Alex Example');
-    expect(text(sprint)).toContain(
-      'Bea Example · Sprint of 2 Nov from Mon 2 Nov'
-    );
+    expect(text(sprint)).toContain('Bea Example · Sprint 43 from Mon 2 Nov');
     expect(text(lunch)).toContain('Chris Example');
-    expect(text(lunch)).toContain('In for Bea Example.');
+    expect(text(sprint)).toContain(
+      'On since Mon 19 Oct · in alphabetical order'
+    );
+    expect(text(sprint)).toContain('ReleaseFri 30 Oct');
+    expect(text(lunch)).toContain('On since Mon 19 Oct · in for Bea Example');
+    expect(text(lunch)).not.toContain('Release');
     expect(text(root.querySelector('.when'))).toContain('PROJ Sprint 42');
     expect(text(root.querySelector('.when'))).toContain('day 7 of 10');
   });
@@ -120,14 +123,83 @@ describe('the Crew page', () => {
     const rows = [...root.querySelectorAll('tbody tr')];
     expect(rows).toHaveLength(2);
     expect(text(rows[0])).toContain('Now');
-    expect(text(rows[0])).toContain('Changed');
+    expect(text(rows[0]?.querySelector('th'))).toContain('42');
+    expect(text(rows[0])).toContain('Override');
     expect(text(rows[0])).toContain(
-      'In for Bea Example · Bea is at a conference'
+      'Bea Example · Bea is at a conference · Bea Example goes next'
     );
+    expect(rows[0]?.querySelector('s')?.textContent).toBe('Bea Example');
     expect(text(rows[1])).toContain('Projected');
-    expect(text(rows[1])).toContain('Away');
-    expect(text(rows[1])).toContain('Alex Example could step in');
+    expect(text(rows[1])).toContain('Check');
+    expect(text(rows[1])).toContain(
+      'Bea Example is away 9 – 13 Nov · Alex Example could step in'
+    );
     expect(text(rows[1])).toContain('Nobody');
+  });
+
+  it('colours the sprint person blue and the lunch host orange, on the cards, the tags and the roster', async () => {
+    await answerCrew();
+    const [sprint, lunch] = [...root.querySelectorAll('article')];
+    expect(sprint?.querySelector('.avatar--large')?.classList).toContain(
+      'avatar--sprint_person'
+    );
+    expect(lunch?.querySelector('.avatar--large')?.classList).toContain(
+      'avatar--lunch_host'
+    );
+    expect(sprint?.querySelector('.ah-tag')?.classList).toContain('tag-sprint');
+    expect(lunch?.querySelector('.ah-tag')?.classList).toContain('tag-lunch');
+    const avatars = [...root.querySelectorAll('.roster .member .avatar')];
+    expect(
+      avatars.map((a) => [...a.classList].filter((c) => c !== 'avatar'))
+    ).toEqual([['avatar--sprint_person'], [], ['avatar--lunch_host']]);
+    const chrisTags = [
+      ...root.querySelectorAll('.roster li:nth-child(3) .ah-tag'),
+    ];
+    expect(chrisTags.map((t) => t.classList.contains('tag-lunch'))).toEqual([
+      true,
+    ]);
+  });
+
+  it("gives the lunch host's next turn with the day of the lunch, the sprint's last working day", async () => {
+    const [current, next] = getCrew.sprints;
+    const lunch = current!.assignments[1]!;
+    await answerCrew({
+      ...getCrew,
+      sprints: [
+        current,
+        {
+          ...next,
+          assignments: [...next!.assignments, { ...lunch, change: null }],
+        },
+      ],
+    });
+    const [, card] = [...root.querySelectorAll('article')];
+    expect(text(card?.querySelector('.next'))).toContain(
+      'Chris Example · Sprint 43, lunch Fri 13 Nov'
+    );
+  });
+
+  it('copies who is on this sprint and next for Teams', async () => {
+    const written: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: (t: string) => (written.push(t), Promise.resolve()) },
+    });
+    try {
+      await answerCrew();
+      buttonNamed(root, 'Copy for Teams').click();
+      await settle();
+      expect(written[0]?.split('\n').slice(0, 3)).toEqual([
+        'Crew · PROJ Sprint 42 (19 Oct – 1 Nov)',
+        '🚀 Sprint person: Alex Example · release Fri 30 Oct',
+        '🍕 Lunch & retro host: Chris Example (in for Bea Example) · lunch Fri 30 Oct',
+      ]);
+      expect(written[0]).toContain(
+        '• Sprint 43 (2 – 15 Nov): 🚀 Bea Example (away part of it)'
+      );
+    } finally {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
   });
 
   it('lists the crew alphabetically with their time off to come', async () => {
@@ -186,7 +258,7 @@ describe('the Crew page', () => {
 
   it('swaps the sprint person for someone who is around, with a reason, through the change dialog', async () => {
     await answerCrew();
-    buttonNamed(root, 'Change the sprint person for Sprint of 2 Nov').click();
+    buttonNamed(root, 'Change Sprint 43').click();
     await settle();
     const open = dialog();
     expect(text(open)).toContain('Bea Example is away part of this sprint');
@@ -276,6 +348,35 @@ describe('the Crew page', () => {
     await settle();
     expect(text(open)).toContain('The last day is before the first.');
     http.expectNone(`${BASE}/crew/members/${ALEX}/time-off`);
+  });
+
+  it("asks which turn to change from a row of Upcoming, and shows that turn's people", async () => {
+    await answerCrew();
+    buttonNamed(root, 'Change PROJ Sprint 42').click();
+    await settle();
+    const open = dialog();
+    expect(text(open)).toContain('Which turn?');
+    expect(text(open.querySelector('h2'))).toBe('Who is the sprint person?');
+    const lunch = [...open.querySelectorAll('.roles label')].find((l) =>
+      text(l).startsWith('Lunch')
+    );
+    lunch!.querySelector('input')!.click();
+    await settle();
+    expect(text(open.querySelector('h2'))).toBe(
+      'Who hosts lunch and the retro?'
+    );
+    const people = [
+      ...open.querySelectorAll('.roles + fieldset label.choice'),
+    ].map((l) => text(l.querySelector('.choice__name')));
+    expect(people).toEqual(['Alex Example', 'Bea Example', 'Chris Example']);
+    const chris = [
+      ...open.querySelectorAll<HTMLLabelElement>('label.choice'),
+    ].find((l) => text(l).startsWith('Chris Example'));
+    expect(chris?.querySelector('input')?.checked).toBe(true);
+    expect(
+      open.querySelector<HTMLInputElement>('input[formcontrolname="reason"]')
+        ?.value
+    ).toBe('Bea is at a conference');
   });
 
   it('keeps the dialog open with the reason when the API refuses the change', async () => {

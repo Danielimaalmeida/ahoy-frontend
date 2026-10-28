@@ -124,6 +124,25 @@ export function sprintProgress(
   return of === 0 ? null : { day: Math.max(day, 1), of };
 }
 
+/** The last working day of a sprint (its release day), as `YYYY-MM-DD`; its last day when it has no working day. */
+export function lastWorkday(startsOn: string, endsOn: string): string {
+  const a = dayNumber(startsOn);
+  const b = dayNumber(endsOn);
+  if (Number.isNaN(a) || Number.isNaN(b)) return endsOn;
+  for (let n = b; n >= a; n--)
+    if (workday(n)) return new Date(n * DAY_MS).toISOString().slice(0, 10);
+  return endsOn;
+}
+
+/** "42" for "PROJ Sprint 42": the number Jira ends a sprint's name with, or the whole title when there is none. */
+export function sprintShortTitle(sprint: {
+  readonly name: string | null;
+  readonly startsOn: string;
+}): string {
+  const number = sprint.name === null ? null : /(\d+)\s*$/.exec(sprint.name);
+  return number?.[1] ?? sprintTitle(sprint);
+}
+
 /** "Sprint 42", or for a sprint Jira does not have yet, "Sprint of 30 Nov". */
 export function sprintTitle(sprint: {
   readonly name: string | null;
@@ -132,6 +151,34 @@ export function sprintTitle(sprint: {
   return (
     sprint.name ?? `Sprint of ${spanLabel(sprint.startsOn, sprint.startsOn)}`
   );
+}
+
+/** A sprint's labels: the short one for the Upcoming table ("42") and the title ("PROJ Sprint 42", "Sprint 43"). */
+export interface SprintLabels {
+  readonly short: string;
+  readonly title: string;
+}
+
+/**
+ * The labels of sprints in order. A projected sprint takes the number after the sprint before it when that one has a
+ * number ("43" after "PROJ Sprint 42"); otherwise it is named by its first day.
+ */
+export function sprintLabels(
+  sprints: readonly {
+    readonly name: string | null;
+    readonly startsOn: string;
+  }[]
+): SprintLabels[] {
+  let last: number | null = null;
+  return sprints.map((sprint) => {
+    if (sprint.name === null && last !== null) {
+      last += 1;
+      return { short: String(last), title: `Sprint ${last}` };
+    }
+    const short = sprintShortTitle(sprint);
+    last = /^\d{1,6}$/.test(short) ? Number(short) : null;
+    return { short, title: sprintTitle(sprint) };
+  });
 }
 
 /** The letter in a member's avatar. */
@@ -173,4 +220,98 @@ export function timeOffRefusal(
 /** A member's name, trimmed with its spaces collapsed; empty when there is none. */
 export function cleanName(name: string): string {
   return name.trim().replace(/\s+/g, ' ');
+}
+
+/** The first time off that overlaps the days from `startsOn` to `endsOn`, or null. */
+export function timeOffDuring<T extends DaySpan>(
+  spans: readonly T[],
+  startsOn: string,
+  endsOn: string
+): T | null {
+  return (
+    upcomingTimeOff(spans, startsOn).find((s) => s.startsOn <= endsOn) ?? null
+  );
+}
+
+/** What `crewToTeams` reads of a sprint: its title as the page shows it, its days and who is on for each role. */
+export interface TeamsSprint {
+  readonly title: string;
+  readonly startsOn: string;
+  readonly endsOn: string;
+  readonly assignments: readonly {
+    readonly role: Role;
+    readonly memberName: string;
+    readonly dueMemberName: string;
+    readonly change: unknown;
+    readonly away: boolean;
+  }[];
+}
+
+/** The crew as a Teams message: HTML, which Teams keeps when pasted (bold names, a list), and the same as plain text. */
+export interface TeamsMessage {
+  readonly html: string;
+  readonly text: string;
+}
+
+const ROLE_EMOJI: Readonly<Record<Role, string>> = {
+  sprint_person: '🚀',
+  lunch_host: '🍕',
+};
+
+/** Escapes text for HTML: names are typed by people. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * The crew as a Teams message: who is on this sprint, with the release and lunch day (the sprint's last working day),
+ * then who is up in the sprints after it. The first sprint is the current one.
+ */
+export function crewToTeams(sprints: readonly TeamsSprint[]): TeamsMessage {
+  const [now, ...next] = sprints;
+  if (now === undefined) return { html: '', text: '' };
+  const day = dayLabel(lastWorkday(now.startsOn, now.endsOn));
+  const heading = `Crew · ${now.title} (${spanLabel(now.startsOn, now.endsOn)})`;
+  const onNow = now.assignments.map((a) => ({
+    lead: `${ROLE_EMOJI[a.role]} ${ROLE_WORDS[a.role].name}: `,
+    name: a.memberName,
+    tail: `${a.change !== null ? ` (in for ${a.dueMemberName})` : ''} · ${
+      a.role === 'sprint_person' ? 'release' : 'lunch'
+    } ${day}`,
+  }));
+  const upNext = next.map((sprint) => {
+    const who = sprint.assignments
+      .map(
+        (a) =>
+          `${ROLE_EMOJI[a.role]} ${a.memberName}${a.away ? ' (away part of it)' : ''}`
+      )
+      .join(' · ');
+    return `${sprint.title} (${spanLabel(sprint.startsOn, sprint.endsOn)}): ${who || 'nobody yet'}`;
+  });
+  const text = [
+    heading,
+    ...onNow.map((l) => l.lead + l.name + l.tail),
+    ...(upNext.length > 0
+      ? ['', 'Up next', ...upNext.map((l) => `• ${l}`)]
+      : []),
+  ].join('\n');
+  const html = [
+    `<p><b>${escapeHtml(heading)}</b></p>`,
+    `<p>${onNow
+      .map(
+        (l) =>
+          `${escapeHtml(l.lead)}<b>${escapeHtml(l.name)}</b>${escapeHtml(l.tail)}`
+      )
+      .join('<br>')}</p>`,
+    ...(upNext.length > 0
+      ? [
+          `<p>Up next</p><ul>${upNext.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>`,
+        ]
+      : []),
+  ].join('');
+  return { html, text };
 }
