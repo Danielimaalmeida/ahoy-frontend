@@ -23,6 +23,7 @@ import {
   dateInputValue,
   defaultMeeting,
   groupMeetings,
+  isClosed,
   LIVE_POLL_MS,
   moveInOrder,
   type NoteKind,
@@ -99,12 +100,12 @@ export class MeetingsStore {
   /** Why the open actions could not be read; the meeting still shows. */
   readonly actionsError = signal<ApiError | null>(null);
 
-  /** The left column: running now, planned (soonest first), ended (latest first). */
+  /** The left column: running now, planned (soonest first), ended or cancelled (latest first). */
   readonly groups = computed(() => groupMeetings(this.meetings()));
-  /** Whether the open meeting takes changes (it has not ended). */
+  /** Whether the open meeting takes changes (it has not ended and was not cancelled). */
   readonly editable = computed(() => {
     const m = this.meeting();
-    return m !== null && m.status !== 'ended';
+    return m !== null && !isClosed(m.status);
   });
 
   /** The open meeting's series, with its Jira target; null for a one-off meeting or before the series are read. */
@@ -306,14 +307,30 @@ export class MeetingsStore {
   }
 
   /**
-   * Ends the open meeting, carrying `carryOver` to the next one. Answers the ended meeting and the meeting that took
-   * the topics (null when none went), or null when the API refused (the reason is in `commandError`).
+   * Ends (marks done) the open meeting, planned or in progress, carrying `carryOver` to the next one. Answers the ended
+   * meeting and the meeting that took the topics (null when none went), or null when the API refused (the reason is in
+   * `commandError`).
    */
-  async end(carryOver: readonly string[]): Promise<EndMeetingResult | null> {
+  end(carryOver: readonly string[]): Promise<EndMeetingResult | null> {
+    return this.close('end', carryOver);
+  }
+
+  /** Cancels the open meeting, which is planned, carrying `carryOver` to the next one; answers as `end` does. */
+  cancel(carryOver: readonly string[]): Promise<EndMeetingResult | null> {
+    return this.close('cancel', carryOver);
+  }
+
+  private async close(
+    how: 'end' | 'cancel',
+    carryOver: readonly string[]
+  ): Promise<EndMeetingResult | null> {
     const id = this.meeting()?.id;
     if (id === undefined) return null;
+    const body = { carryOver: [...carryOver] };
     const ended = await this.run(() =>
-      this.api.endMeeting(id, { carryOver: [...carryOver] })
+      how === 'end'
+        ? this.api.endMeeting(id, body)
+        : this.api.cancelMeeting(id, body)
     );
     if (ended === null) return null;
     this.meeting.set(ended.meeting);
@@ -323,11 +340,11 @@ export class MeetingsStore {
     return ended;
   }
 
-  /** Adds a topic at the end of the open meeting; `email` only for a topic raised by them. */
+  /** Adds a topic at the end of the open meeting; `stakeholder` (a name or an e-mail) only for a topic raised by them. */
   async addTopic(
     title: string,
     raisedBy: RaisedBy,
-    email: string | null
+    stakeholder: string | null
   ): Promise<boolean> {
     const id = this.meeting()?.id;
     if (id === undefined) return false;
@@ -335,8 +352,8 @@ export class MeetingsStore {
       this.api.addMeetingTopic(id, {
         title: title.trim(),
         raisedBy,
-        ...(raisedBy === 'them' && email !== null && email !== ''
-          ? { raisedByEmail: email }
+        ...(raisedBy === 'them' && stakeholder !== null && stakeholder !== ''
+          ? { raisedByStakeholder: stakeholder }
           : {}),
       })
     );

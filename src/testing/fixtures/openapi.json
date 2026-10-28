@@ -2376,8 +2376,8 @@
       "post": {
         "operationId": "endMeeting",
         "tags": ["meetings"],
-        "summary": "End a meeting in progress and carry the chosen open topics over to the series' next meeting.",
-        "description": "Each topic in `carryOver` is copied, with its notes (their authors and times kept), to the end of the series'\nnext planned meeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next\nmeeting is planned one cadence on (or at the first step in the future), with the same title, length and\nstakeholders. All or nothing: `409 invalid_state` when the meeting is not in progress, or when a topic is to be\ncarried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);\n`400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.\nThe meeting is read-only once ended.\n",
+        "summary": "End (mark done) a meeting, planned or in progress, and carry the chosen open topics to the next one.",
+        "description": "A planned meeting can be marked done without being started (its `startedAt` stays null). Each topic in\n`carryOver` is copied, with its notes (their authors and times kept), to the end of the series' next planned\nmeeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next meeting is\nplanned one cadence on (or at the first step in the future), with the same title, length and stakeholders. All\nor nothing: `409 invalid_state` when the meeting has already ended or was cancelled, or when a topic is to be\ncarried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);\n`400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.\nThe meeting is read-only once ended.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2417,6 +2417,56 @@
         }
       }
     },
+    "/meetings/{meetingId}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "post": {
+        "operationId": "cancelMeeting",
+        "tags": ["meetings"],
+        "summary": "Cancel a planned meeting and carry the chosen open topics over to the series' next meeting.",
+        "description": "The meeting did not take place: it becomes `cancelled`, read-only, with `endedAt` the time it was cancelled.\n`carryOver` works as for `endMeeting`; the topics left out stay here. `409 invalid_state` when the meeting is\nnot planned (one that started is ended instead), or when a topic is to be carried but there is no next\nmeeting; `400 validation_failed` for a `carryOver` that `endMeeting` would refuse.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndMeetingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The cancelled meeting and, when topics were carried over, the meeting that took them.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndMeetingResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meetings/{meetingId}/topics": {
       "parameters": [
         {
@@ -2427,7 +2477,7 @@
         "operationId": "addMeetingTopic",
         "tags": ["meetings"],
         "summary": "Add a topic at the end of the meeting's list.",
-        "description": "`origin` is `planned` before the meeting starts and `in_meeting` while it runs. `raisedByEmail` names the\nstakeholder of a topic raised by `them` (`400 validation_failed` with `raisedBy: us`). `409 invalid_state` once\nthe meeting has ended.\n",
+        "description": "`origin` is `planned` before the meeting starts and `in_meeting` while it runs. `raisedByStakeholder` names the\nstakeholder of a topic raised by `them` (`400 validation_failed` with `raisedBy: us`). `409 invalid_state` once\nthe meeting has ended.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2527,7 +2577,7 @@
         "operationId": "updateMeetingTopic",
         "tags": ["meetings"],
         "summary": "Rename a topic or change who raised it.",
-        "description": "Choosing `raisedBy: us` clears the stakeholder's e-mail. `409 invalid_state` when the topic was moved to the\nnext meeting or its meeting has ended.\n",
+        "description": "Choosing `raisedBy: us` clears the stakeholder. `409 invalid_state` when the topic was moved to the\nnext meeting or its meeting has ended.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -7085,8 +7135,8 @@
       },
       "MeetingStatus": {
         "type": "string",
-        "enum": ["planned", "in_progress", "ended"],
-        "description": "`planned`, then `in_progress` once started, then `ended` (read-only)."
+        "enum": ["planned", "in_progress", "ended", "cancelled"],
+        "description": "`planned`, then `in_progress` once started, then `ended` (read-only); a planned meeting can also be ended straight away (marked done) or `cancelled` (read-only, it did not take place)."
       },
       "RaisedBy": {
         "type": "string",
@@ -7103,10 +7153,12 @@
         "enum": ["open", "moved"],
         "description": "`moved`: carried over to the next meeting, read-only here."
       },
-      "Email": {
+      "Stakeholder": {
         "type": "string",
-        "format": "email",
-        "maxLength": 320
+        "minLength": 1,
+        "maxLength": 320,
+        "pattern": "\\S",
+        "description": "A person of the other side: a name (\"Ana Silva\") or an e-mail. Stored trimmed with inner spaces collapsed; an e-mail is lower-cased; repeats in one list (ignoring case) are dropped."
       },
       "MeetingSeries": {
         "type": "object",
@@ -7194,7 +7246,7 @@
             "type": "array",
             "maxItems": 50,
             "items": {
-              "$ref": "#/components/schemas/Email"
+              "$ref": "#/components/schemas/Stakeholder"
             }
           },
           "cadenceDays": {
@@ -7962,7 +8014,7 @@
           "meetingId",
           "title",
           "raisedBy",
-          "raisedByEmail",
+          "raisedByStakeholder",
           "origin",
           "status",
           "position",
@@ -7991,9 +8043,9 @@
           "raisedBy": {
             "$ref": "#/components/schemas/RaisedBy"
           },
-          "raisedByEmail": {
+          "raisedByStakeholder": {
             "type": ["string", "null"],
-            "description": "The stakeholder who raised it, when known."
+            "description": "The stakeholder who raised it (a name or an e-mail), when known."
           },
           "origin": {
             "$ref": "#/components/schemas/TopicOrigin"
@@ -8178,7 +8230,7 @@
             "type": "array",
             "maxItems": 50,
             "items": {
-              "$ref": "#/components/schemas/Email"
+              "$ref": "#/components/schemas/Stakeholder"
             }
           }
         }
@@ -8206,7 +8258,7 @@
             "type": "array",
             "maxItems": 50,
             "items": {
-              "$ref": "#/components/schemas/Email"
+              "$ref": "#/components/schemas/Stakeholder"
             }
           }
         }
@@ -8261,8 +8313,8 @@
           "raisedBy": {
             "$ref": "#/components/schemas/RaisedBy"
           },
-          "raisedByEmail": {
-            "$ref": "#/components/schemas/Email"
+          "raisedByStakeholder": {
+            "$ref": "#/components/schemas/Stakeholder"
           }
         }
       },
@@ -8280,11 +8332,11 @@
           "raisedBy": {
             "$ref": "#/components/schemas/RaisedBy"
           },
-          "raisedByEmail": {
-            "description": "null removes the stakeholder's e-mail.",
+          "raisedByStakeholder": {
+            "description": "null removes the stakeholder.",
             "oneOf": [
               {
-                "$ref": "#/components/schemas/Email"
+                "$ref": "#/components/schemas/Stakeholder"
               },
               {
                 "type": "null"

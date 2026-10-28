@@ -749,7 +749,26 @@ export class ApiClient {
     );
   }
 
-  /** Ends a meeting in progress and carries the chosen open topics, with their notes, to the series' next meeting. */
+  /**
+   * Cancels a planned meeting (it did not take place) and carries the chosen open topics, with their notes, to the
+   * series' next meeting.
+   */
+  cancelMeeting(
+    id: string,
+    body: EndMeetingRequest
+  ): Promise<ApiResult<EndMeetingResult>> {
+    return this.post(
+      'cancelMeeting',
+      `/meetings/${segment(id)}/cancel`,
+      body,
+      isEndMeetingResult
+    );
+  }
+
+  /**
+   * Ends (marks done) a meeting, planned or in progress, and carries the chosen open topics, with their notes, to the
+   * series' next meeting.
+   */
   endMeeting(
     id: string,
     body: EndMeetingRequest

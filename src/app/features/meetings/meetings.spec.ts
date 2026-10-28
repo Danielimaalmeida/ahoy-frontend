@@ -167,7 +167,9 @@ describe('Meetings on the mock backend', () => {
       'Tax ID validation for EU customers',
       'Late fees for enterprise accounts',
     ]);
-    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe('OTHER_COMPANY');
+    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe(
+      'OTHER_COMPANY'
+    );
     expect(tagOf(card(page.root, 'Late fees for enterprise accounts'))).toBe(
       'ACME · priya@'
     );
@@ -211,7 +213,7 @@ describe('Meetings on the mock backend', () => {
     expect(body).toEqual({
       title: 'Refund approvals take too long',
       raisedBy: 'them',
-      raisedByEmail: 'jordan@example.com',
+      raisedByStakeholder: 'jordan@example.com',
     });
   });
 
@@ -508,6 +510,143 @@ describe('Meetings on the mock backend', () => {
     expect(
       buttonNamed(page.root.querySelector('.header')!, 'End meeting')
     ).toBeTruthy();
+  });
+
+  it('marks a planned meeting done without starting it', async () => {
+    const page = await open('/meetings');
+    page.root
+      .querySelector<HTMLAnchorElement>('aside ul:nth-of-type(2) a.line')!
+      .click();
+    await flush(page);
+    const header = page.root.querySelector('.header')!;
+    expect(
+      [...header.querySelectorAll('.actions button')].map((b) => text(b))
+    ).toEqual([
+      'Copy for Confluence',
+      'Cancel meeting',
+      'Mark done',
+      'Start meeting',
+    ]);
+    buttonNamed(header, 'Mark done').click();
+    await flush(page);
+    expect(text(dialog())).toContain('Mark Finance sync done?');
+    buttonNamed(dialog(), 'Mark done').click();
+    await flush(page);
+
+    expect(text(page.root.querySelector('.identity .ah-tag'))).toBe('Ended');
+    expect(
+      TestBed.inject(ToastService)
+        .toasts()
+        .map((t) => t.text)
+    ).toEqual(['Meeting marked done.']);
+    expect(
+      page.requests
+        .filter((r) => r.method === 'POST')
+        .map((r) => r.path.split('/').at(-1))
+    ).toEqual(['end']);
+  });
+
+  it('cancels a planned meeting, moving every open topic to the next one, and shows it cancelled', async () => {
+    const page = await open('/meetings');
+    page.root
+      .querySelector<HTMLAnchorElement>('aside ul:nth-of-type(2) a.line')!
+      .click();
+    await flush(page);
+    const planned = page.server.meetingDesk.list('planned')[0]!;
+    const composer = page.root.querySelector<HTMLElement>('ah-topic-composer')!;
+    type(composer.querySelector('#topic-title'), 'Supplier prices');
+    submit(composer.querySelector('form'));
+    await flush(page);
+
+    buttonNamed(page.root.querySelector('.header')!, 'Cancel meeting').click();
+    await flush(page);
+    expect(text(dialog())).toContain('Cancel Finance sync?');
+    expect(
+      [
+        ...dialog().querySelectorAll<HTMLInputElement>(
+          'input[type="checkbox"]'
+        ),
+      ].map((b) => b.checked)
+    ).toEqual([true]);
+    buttonNamed(dialog(), 'Cancel meeting · move 1 topic').click();
+    await flush(page);
+
+    expect(text(page.root.querySelector('.identity .ah-tag'))).toBe(
+      'Cancelled'
+    );
+    expect(page.root.querySelector('ah-topic-composer')).toBeNull();
+    expect(text(page.root.querySelector('ah-banner'))).toContain(
+      'This meeting was cancelled'
+    );
+    expect(
+      text(page.root.querySelector('aside a[aria-current="page"] .ah-hint'))
+    ).toContain(`${meetingDay(planned.startsAt)} · cancelled`);
+    const next = page.server.meetingDesk.list('planned')[0]!;
+    expect(
+      page.server.meetingDesk.get(next.id).topics.map((t) => t.title)
+    ).toEqual(['Supplier prices']);
+  });
+
+  it('keeps the topics of a meeting whose series has no next meeting and no cadence, rather than fail to move them', async () => {
+    let id = '';
+    const page = await open('/meetings', (server) => {
+      const series = server.meetingDesk.createSeries('alex@example.com', {
+        name: 'Pricing review',
+        stakeholders: [],
+      });
+      id = server.meetingDesk.create('alex@example.com', {
+        seriesId: series.id,
+        startsAt: '2026-10-20T09:00:00.000Z',
+      }).id;
+      server.meetingDesk.addTopic('alex@example.com', id, {
+        title: 'Supplier prices',
+        raisedBy: 'us',
+      });
+    });
+    await page.harness.navigateByUrl(`/meetings/${id}`);
+    await flush(page);
+    buttonNamed(page.root.querySelector('.header')!, 'Cancel meeting').click();
+    await flush(page);
+    expect(text(dialog())).toContain('No next Pricing review is planned');
+    expect(dialog().querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    buttonNamed(dialog(), 'Cancel meeting').click();
+    await flush(page);
+
+    expect(text(page.root.querySelector('.identity .ah-tag'))).toBe(
+      'Cancelled'
+    );
+    expect(page.requests.find((r) => r.path.endsWith('/cancel'))?.body).toEqual(
+      { carryOver: [] }
+    );
+  });
+
+  it('plans a one-off meeting with stakeholders named or by e-mail', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const form = dialog().querySelector('form')!;
+    const series = form.querySelector<HTMLSelectElement>('select')!;
+    series.value = [...series.options].find(
+      (o) => o.text === 'One-off meeting'
+    )!.value;
+    series.dispatchEvent(new Event('change'));
+    await flush(page);
+    const inputs = (name: string) =>
+      form.querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
+    type(inputs('name'), 'Pricing review');
+    type(inputs('stakeholders'), 'Ana Silva, Priya@Example.com, ana silva');
+    type(inputs('date'), '2026-10-22');
+    type(inputs('time'), '09:30');
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+
+    const body = page.requests.find(
+      (r) => r.method === 'POST' && r.path.endsWith('/meetings')
+    )?.body;
+    expect(body).toMatchObject({
+      title: 'Pricing review',
+      stakeholders: ['Ana Silva', 'priya@example.com'],
+    });
   });
 
   it('shows an ended meeting read-only', async () => {
@@ -997,5 +1136,14 @@ describe('meetingLine', () => {
     expect(
       meetingLine({ ...base, startsAt: at, status: 'ended', topicCount: 0 }).sub
     ).toBe(`${meetingDay(at)} · no topics`);
+    expect(
+      meetingLine({
+        ...base,
+        startsAt: at,
+        status: 'cancelled',
+        endedAt: at,
+        topicCount: 0,
+      }).sub
+    ).toBe(`${meetingDay(at)} · cancelled · no topics`);
   });
 });

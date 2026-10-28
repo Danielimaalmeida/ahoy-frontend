@@ -9,6 +9,7 @@ import getMeetingStoryDraft from '@testing/fixtures/getMeetingStoryDraft.json';
 import listMeetingStoryDrafts from '@testing/fixtures/listMeetingStoryDrafts.json';
 import requestMeetingStoryDraft from '@testing/fixtures/requestMeetingStoryDraft.json';
 import updateMeetingSeries from '@testing/fixtures/updateMeetingSeries.json';
+import cancelMeeting from '@testing/fixtures/cancelMeeting.json';
 import endMeeting from '@testing/fixtures/endMeeting.json';
 import getMeeting from '@testing/fixtures/getMeeting.json';
 import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
@@ -38,6 +39,7 @@ describe('meeting guards', () => {
     expect(isMeeting(getMeeting)).toBe(true);
     expect(isMeeting(createMeeting)).toBe(true);
     expect(isEndMeetingResult(endMeeting)).toBe(true);
+    expect(isEndMeetingResult(cancelMeeting)).toBe(true);
     expect(isMeetingTopic(addMeetingTopic)).toBe(true);
     expect(isMoveMeetingTopicResult(moveMeetingTopic)).toBe(true);
     expect(isMeetingNote(addMeetingNote)).toBe(true);
@@ -208,6 +210,22 @@ describe('meeting guards', () => {
       isMeeting(withField(getMeeting, 'endedAt', '2026-10-06T10:00:00.000Z'))
     ).toBe(false);
     expect(isMeeting(withField(getMeeting, 'status', 'paused'))).toBe(false);
+  });
+
+  it('accept a meeting marked done without a start, and refuse a cancelled one that started or has no end', () => {
+    const cancelled = cancelMeeting.meeting;
+    expect(isMeeting(cancelled)).toBe(true);
+    expect(isMeeting({ ...cancelled, status: 'ended', startedAt: null })).toBe(
+      true
+    );
+    const started = withField(
+      cancelled,
+      'startedAt',
+      '2026-10-06T08:00:00.000Z'
+    );
+    expect(isMeeting(started)).toBe(false);
+    expect(isMeeting.explain(started)).toContain('startedAt');
+    expect(isMeeting(withField(cancelled, 'endedAt', null))).toBe(false);
   });
 
   it('refuse a topic that names a stakeholder for one we raised, or says where an open topic went', () => {

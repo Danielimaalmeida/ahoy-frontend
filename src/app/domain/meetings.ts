@@ -24,8 +24,18 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 /** What the grouping reads of a meeting. */
 export interface MeetingLike {
   readonly id: string;
-  readonly status: 'planned' | 'in_progress' | 'ended';
+  readonly status: 'planned' | 'in_progress' | 'ended' | 'cancelled';
   readonly startsAt: string;
+}
+
+/** What carry-over reads of a meeting: also its series. */
+export interface SeriesMeetingLike extends MeetingLike {
+  readonly seriesId: string | null;
+}
+
+/** Whether a meeting is over, ended or cancelled, and so read-only. */
+export function isClosed(status: MeetingLike['status']): boolean {
+  return status === 'ended' || status === 'cancelled';
 }
 
 /** What the topic helpers read of a topic. */
@@ -33,13 +43,16 @@ export interface TopicLike {
   readonly id: string;
   readonly status: 'open' | 'moved';
   readonly raisedBy: 'us' | 'them';
-  readonly raisedByEmail: string | null;
+  readonly raisedByStakeholder: string | null;
   readonly origin: 'planned' | 'in_meeting';
   readonly createdAt: string;
   readonly notes: readonly unknown[];
 }
 
-/** The meetings of the left column: the ones running now, the planned ones soonest first, the ended ones latest first. */
+/**
+ * The meetings of the left column: the ones running now, the planned ones soonest first, the ended and cancelled ones
+ * latest first.
+ */
 export interface MeetingGroups<T extends MeetingLike> {
   readonly now: readonly T[];
   readonly next: readonly T[];
@@ -61,14 +74,14 @@ export function groupMeetings<T extends MeetingLike>(
     now: meetings.filter((m) => m.status === 'in_progress').sort(byStart),
     next: meetings.filter((m) => m.status === 'planned').sort(byStart),
     past: meetings
-      .filter((m) => m.status === 'ended')
+      .filter((m) => isClosed(m.status))
       .sort((a, b) => byStart(b, a)),
   };
 }
 
 /**
  * The meeting to open when the page has none in its URL: the one running now, else the next planned one, else the
- * latest that ended; null when there is no meeting at all.
+ * latest that ended or was cancelled; null when there is no meeting at all.
  */
 export function defaultMeeting<T extends MeetingLike>(
   meetings: readonly T[]
@@ -97,12 +110,24 @@ export function authorLabel(actor: string, name: string | null): string {
  */
 export const RAISED_BY_LABELS = { us: 'OTHER_COMPANY', them: 'ACME' } as const;
 
-/** Who raised a topic, for its tag: "OTHER_COMPANY", "ACME" or "ACME · maria@". */
+/**
+ * A stakeholder, short enough for a tag: an e-mail as "maria@", a name with an e-mail ("Rui Costa <rui@acme.com>") as
+ * the name, and a name as it is.
+ */
+export function stakeholderLabel(stakeholder: string): string {
+  const named = /^([^<]*\S)\s*<[^>]*>$/.exec(stakeholder.trim());
+  if (named?.[1] !== undefined) return named[1].trim();
+  return /\s/.test(stakeholder.trim())
+    ? stakeholder.trim()
+    : shortEmail(stakeholder.trim());
+}
+
+/** Who raised a topic, for its tag: "OTHER_COMPANY", "ACME", "ACME · maria@" or "ACME · Ana Silva". */
 export function raisedByLabel(topic: TopicLike): string {
   if (topic.raisedBy === 'us') return RAISED_BY_LABELS.us;
-  return topic.raisedByEmail === null
+  return topic.raisedByStakeholder === null
     ? RAISED_BY_LABELS.them
-    : `${RAISED_BY_LABELS.them} · ${shortEmail(topic.raisedByEmail)}`;
+    : `${RAISED_BY_LABELS.them} · ${stakeholderLabel(topic.raisedByStakeholder)}`;
 }
 
 /** A day as the page writes it: "Tue 13 Oct", in the browser's time zone; "—" for a date it cannot read. */
@@ -158,14 +183,65 @@ export function moveInOrder(
   return next;
 }
 
-/** The e-mails in a typed list, split on commas, semicolons and spaces, in order, each once. */
-export function parseEmails(text: string): string[] {
+/** A whole e-mail address, as the API tells one from a name. */
+const EMAIL = /^[^\s@]+@[^\s@]+$/;
+
+/**
+ * A stakeholder as the API stores it (Python-parity note: ahoy-hosted's `stakeholderName`): a name ("Ana Silva",
+ * inner spaces collapsed, its case kept) or an e-mail (lower-cased).
+ */
+export function stakeholderName(text: string): string {
+  const value = text.trim().replace(/\s+/g, ' ');
+  return EMAIL.test(value) ? value.toLowerCase() : value;
+}
+
+/** Stakeholders as the API stores them: each normalised, the empty ones and the repeats (ignoring case) dropped. */
+export function normalizeStakeholders(names: readonly string[]): string[] {
   const seen = new Set<string>();
-  for (const part of text.split(/[\s,;]+/)) {
-    const email = part.trim().toLowerCase();
-    if (email !== '') seen.add(email);
+  const out: string[] = [];
+  for (const part of names) {
+    const name = stakeholderName(part);
+    if (name !== '' && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      out.push(name);
+    }
   }
-  return [...seen];
+  return out;
+}
+
+/** One part of a typed list: its words when every one is an e-mail ("a@x.com b@y.com"), else the part (a name). */
+function spacedEmails(part: string): readonly string[] {
+  const words = part.trim().split(/\s+/);
+  return words.length > 1 && words.every((w) => EMAIL.test(w)) ? words : [part];
+}
+
+/**
+ * The stakeholders in a typed list, in order: names or e-mails split on commas, semicolons and line breaks, and
+ * e-mails also on spaces.
+ */
+export function parseStakeholders(text: string): string[] {
+  return normalizeStakeholders(text.split(/[,;\n]+/).flatMap(spacedEmails));
+}
+
+/**
+ * Whether topics carried over from `meeting` have somewhere to go, as ahoy-hosted's `nextPlannedMeeting` decides: a
+ * later planned meeting of its series, or the series' cadence to plan one from.
+ */
+export function hasNextMeeting(
+  meeting: SeriesMeetingLike,
+  meetings: readonly SeriesMeetingLike[],
+  cadenceDays: number | null
+): boolean {
+  if (meeting.seriesId === null) return false;
+  if (cadenceDays !== null) return true;
+  const after = Date.parse(meeting.startsAt);
+  return meetings.some(
+    (m) =>
+      m.id !== meeting.id &&
+      m.seriesId === meeting.seriesId &&
+      m.status === 'planned' &&
+      Date.parse(m.startsAt) > after
+  );
 }
 
 /** A date as an `<input type="date">` takes it ("2026-10-22"), in the browser's time zone. */
@@ -315,6 +391,7 @@ const STATUS_NAMES = {
   planned: 'Planned',
   in_progress: 'In progress',
   ended: 'Ended',
+  cancelled: 'Cancelled',
 } as const;
 
 /** Escapes what Confluence wiki markup would read as formatting; line breaks become `\\`. */

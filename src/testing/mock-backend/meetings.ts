@@ -1,8 +1,9 @@
 /**
  * The mock's meetings with stakeholders (`/meetings`, `/meeting-topics`, `/meeting-notes`, `/meeting-series`), as
  * `packages/core/src/service/meetings.ts` of `ahoy-hosted` keeps the real ones: a meeting is planned, then in progress,
- * then ended (read-only); topics are raised by us or by a stakeholder, planned before the start or raised during it;
- * ending a meeting carries the chosen open topics, notes and all, to the series' next meeting. A topic's story draft is
+ * then ended (read-only), or ended straight from planned, or cancelled while planned; stakeholders are names or e-mails;
+ * topics are raised by us or by a stakeholder, planned before the start or raised during it; ending or cancelling a
+ * meeting carries the chosen open topics, notes and all, to the series' next meeting. A topic's story draft is
  * written by a simulated agent a moment after it is asked for, and "created" in a pretend Jira (design §5, slice 2); a
  * grill's simulated agent first asks two questions, then writes the story from the answers (slice 3). A note is a
  * decision, an action (with an owner, a due day and a done mark that changes after the meeting ended) or a question,
@@ -34,10 +35,13 @@ import type {
   UpdateMeetingTopicRequest,
 } from '@core/api/types';
 import {
+  isClosed,
   MAX_IMAGES_PER_NOTE,
   MAX_NOTE_IMAGE_BYTES,
+  normalizeStakeholders,
   noteKindFields,
   sniffImageType,
+  stakeholderName,
   type NoteImageType,
 } from '@domain/meetings';
 import { iso, type Cancel, type MockClock } from './clock';
@@ -81,15 +85,6 @@ const refused = (path: string, message: string) =>
   new MockProblem('validation_failed', message, {
     errors: [{ path, message }],
   });
-
-/** Trims, lower-cases and keeps each e-mail once, in the order given. */
-function normalized(emails: readonly string[]): string[] {
-  return [
-    ...new Set(
-      emails.map((e) => e.trim().toLowerCase()).filter((e) => e !== '')
-    ),
-  ];
-}
 
 /** The meetings of a mock world. */
 export class MeetingDesk {
@@ -173,7 +168,7 @@ export class MeetingDesk {
     this.addTopic(alex, now.id, {
       title: 'Tax ID validation for EU customers',
       raisedBy: 'them',
-      raisedByEmail: 'jordan@example.com',
+      raisedByStakeholder: 'jordan@example.com',
     });
     this.addNote(alex, reminders.id, {
       text: 'About 120 reminders a month are sent by hand.',
@@ -183,7 +178,7 @@ export class MeetingDesk {
     const fees = this.addTopic(alex, now.id, {
       title: 'Late fees for enterprise accounts',
       raisedBy: 'them',
-      raisedByEmail: 'priya@example.com',
+      raisedByStakeholder: 'priya@example.com',
     });
     this.addNote(alex, fees.id, {
       text: '1.5% per month, capped at 10% of the invoice.',
@@ -241,7 +236,7 @@ export class MeetingDesk {
       title,
       body.startsAt,
       body.endsAt ?? null,
-      normalized(body.stakeholders ?? series?.stakeholders ?? [])
+      normalizeStakeholders(body.stakeholders ?? series?.stakeholders ?? [])
     );
     return this.meetingDto(meeting);
   }
@@ -253,7 +248,7 @@ export class MeetingDesk {
     this.checkTimes(startsAt, endsAt);
     if (body.title !== undefined) meeting.title = body.title.trim();
     if (body.stakeholders !== undefined)
-      meeting.stakeholders = normalized(body.stakeholders);
+      meeting.stakeholders = normalizeStakeholders(body.stakeholders);
     meeting.startsAt = startsAt;
     meeting.endsAt = endsAt;
     this.touch(meeting, actor);
@@ -272,16 +267,41 @@ export class MeetingDesk {
     return this.meetingDto(meeting);
   }
 
+  /** Ends (marks done) a meeting, planned or in progress, carrying `carryOver` to the next one. */
   end(
     actor: string,
     id: string,
     carryOver: readonly string[]
   ): EndMeetingResult {
     const meeting = this.meeting(id);
-    if (meeting.status !== 'in_progress')
+    if (isClosed(meeting.status))
       throw invalid(
-        `Only a meeting in progress can end; this one is ${meeting.status}`
+        `Only a planned meeting or one in progress can end; this one is ${meeting.status}`
       );
+    return this.close(actor, meeting, 'ended', carryOver);
+  }
+
+  /** Cancels a planned meeting, carrying `carryOver` to the next one. */
+  cancel(
+    actor: string,
+    id: string,
+    carryOver: readonly string[]
+  ): EndMeetingResult {
+    const meeting = this.meeting(id);
+    if (meeting.status !== 'planned')
+      throw invalid(
+        `Only a planned meeting can be cancelled; this one is ${meeting.status}`
+      );
+    return this.close(actor, meeting, 'cancelled', carryOver);
+  }
+
+  private close(
+    actor: string,
+    meeting: MeetingRecord,
+    status: 'ended' | 'cancelled',
+    carryOver: readonly string[]
+  ): EndMeetingResult {
+    const id = meeting.id;
     if (new Set(carryOver).size !== carryOver.length)
       throw refused('body/carryOver', 'carryOver names a topic twice');
     const open = new Set(
@@ -301,7 +321,7 @@ export class MeetingDesk {
       for (const topic of this.topicsOf(id))
         if (carryOver.includes(topic.id)) this.carry(topic, next, actor);
     }
-    meeting.status = 'ended';
+    meeting.status = status;
     meeting.endedAt = this.now();
     this.touch(meeting, actor);
     return {
@@ -316,11 +336,11 @@ export class MeetingDesk {
     body: AddMeetingTopicRequest
   ): MeetingTopic {
     const meeting = this.openMeeting(meetingId);
-    const email = body.raisedByEmail?.trim().toLowerCase() || null;
-    if (body.raisedBy === 'us' && email !== null)
+    const stakeholder = stakeholderName(body.raisedByStakeholder ?? '') || null;
+    if (body.raisedBy === 'us' && stakeholder !== null)
       throw refused(
-        'body/raisedByEmail',
-        'raisedByEmail is only for a topic raised by them'
+        'body/raisedByStakeholder',
+        'raisedByStakeholder is only for a topic raised by them'
       );
     const at = this.now();
     const topic: TopicRecord = {
@@ -328,7 +348,7 @@ export class MeetingDesk {
       meetingId,
       title: body.title.trim(),
       raisedBy: body.raisedBy,
-      raisedByEmail: email,
+      raisedByStakeholder: stakeholder,
       origin: meeting.status === 'planned' ? 'planned' : 'in_meeting',
       status: 'open',
       position: this.topicsOf(meetingId).length,
@@ -353,20 +373,20 @@ export class MeetingDesk {
     const topic = this.changeableTopic(id);
     const raisedBy = body.raisedBy ?? topic.raisedBy;
     const wanted =
-      body.raisedByEmail !== undefined
-        ? body.raisedByEmail
+      body.raisedByStakeholder !== undefined
+        ? body.raisedByStakeholder
         : body.raisedBy === 'us'
           ? null
-          : topic.raisedByEmail;
-    const email = wanted?.trim().toLowerCase() || null;
-    if (raisedBy === 'us' && email !== null)
+          : topic.raisedByStakeholder;
+    const stakeholder = stakeholderName(wanted ?? '') || null;
+    if (raisedBy === 'us' && stakeholder !== null)
       throw refused(
-        'body/raisedByEmail',
-        'raisedByEmail is only for a topic raised by them'
+        'body/raisedByStakeholder',
+        'raisedByStakeholder is only for a topic raised by them'
       );
     if (body.title !== undefined) topic.title = body.title.trim();
     topic.raisedBy = raisedBy;
-    topic.raisedByEmail = email;
+    topic.raisedByStakeholder = stakeholder;
     topic.updatedBy = actor;
     topic.updatedByName = this.nameOf(actor);
     topic.updatedAt = this.now();
@@ -610,7 +630,7 @@ export class MeetingDesk {
     const series: SeriesRecord = {
       id: this.id(),
       name: body.name.trim(),
-      stakeholders: normalized(body.stakeholders ?? []),
+      stakeholders: normalizeStakeholders(body.stakeholders ?? []),
       cadenceDays: body.cadenceDays ?? null,
       jiraProjectKey: body.jiraProjectKey ?? null,
       jiraIssueType: body.jiraIssueType ?? 'Story',
@@ -914,16 +934,17 @@ export class MeetingDesk {
 
   private openMeeting(id: string): MeetingRecord {
     const meeting = this.meeting(id);
-    if (meeting.status === 'ended')
-      throw invalid(`Meeting ${id} has ended; it is read-only`);
+    if (isClosed(meeting.status))
+      throw invalid(`Meeting ${id} is ${meeting.status}; it is read-only`);
     return meeting;
   }
 
   private changeableTopic(id: string): TopicRecord {
     const topic = this.topics.get(id);
     if (topic === undefined) throw notFound('Topic', id);
-    if (this.meeting(topic.meetingId).status === 'ended')
-      throw invalid(`The meeting of topic ${id} has ended; it is read-only`);
+    const status = this.meeting(topic.meetingId).status;
+    if (isClosed(status))
+      throw invalid(`The meeting of topic ${id} is ${status}; it is read-only`);
     if (topic.status === 'moved')
       throw invalid(
         `Topic ${id} was moved to the next meeting; change it there`

@@ -513,12 +513,16 @@ export interface MetricsExport {
   readonly mediaType: string;
 }
 
-/** Where a meeting stands: `planned`, `in_progress` once started, then `ended` (read-only) (`MeetingStatus`). */
+/**
+ * Where a meeting stands (`MeetingStatus`): `planned`, `in_progress` once started, then `ended`; or ended straight from
+ * planned, or `cancelled` while planned. Ended and cancelled are read-only.
+ */
 export type MeetingStatus = Schemas['MeetingStatus'];
 export const MEETING_STATUSES = listOf<MeetingStatus>()([
   'planned',
   'in_progress',
   'ended',
+  'cancelled',
 ]);
 
 /** Who brought a topic up: our side or a stakeholder (`RaisedBy`). */

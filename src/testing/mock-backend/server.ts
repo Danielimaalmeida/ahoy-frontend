@@ -811,6 +811,15 @@ export class MockAhoyServer {
             (call.body as EndMeetingRequest).carryOver // validated
           )
         );
+      case 'cancelMeeting':
+        return jsonResponse(
+          200,
+          this.meetings.cancel(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            (call.body as EndMeetingRequest).carryOver // validated
+          )
+        );
       case 'addMeetingTopic':
         return jsonResponse(
           201,
