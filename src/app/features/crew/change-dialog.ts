@@ -11,11 +11,17 @@ import { ToastService } from '@ui/toast/toast';
 import { crewErrorView } from './crew-errors';
 import type { CrewStore } from './crew-store';
 
-/** What the change dialog is opened with: the page's store, the sprint and the role to change. */
+/**
+ * What the change dialog is opened with: the page's store, the sprint and the role to change. With `pickRole`, the
+ * dialog also asks which of the sprint's turns to change (the Upcoming table has one Change per sprint).
+ */
 export interface ChangeData {
   readonly store: CrewStore;
   readonly sprint: CrewSprint;
   readonly role: CrewRole;
+  readonly pickRole?: boolean;
+  /** The sprint's title as the page shows it; Jira's name, or its first day, when absent. */
+  readonly title?: string;
 }
 
 /** One person to choose. */
@@ -79,7 +85,14 @@ const MODES: readonly {
     }
     label.choice:has(input:checked) {
       border-color: var(--accent);
-      background: var(--accent-soft);
+      background: var(--info-bg);
+    }
+    .roles {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .roles label.choice {
+      flex: 1 1 160px;
     }
     .choice__name {
       flex: 1 1 auto;
@@ -90,7 +103,7 @@ const MODES: readonly {
   template: `
     <ah-dialog
       icon="compass"
-      [heading]="words.question"
+      [heading]="words().question"
       confirmLabel="Save change"
       busyLabel="Saving…"
       [busy]="busy()"
@@ -101,21 +114,33 @@ const MODES: readonly {
         >{{ title }} · {{ dayLabel(sprint.startsOn) }} –
         {{ dayLabel(sprint.endsOn) }}</span
       >
-      @if (current?.away) {
-        <ah-banner
-          variant="notice"
-          [heading]="current!.memberName + ' is away part of this sprint'"
-        >
-          @if (current!.suggestedMemberName) {
-            {{ current!.suggestedMemberName }} is next in the order and is
-            around.
-          }
-        </ah-banner>
+      @if (current(); as now) {
+        @if (now.away) {
+          <ah-banner
+            variant="notice"
+            [heading]="now.memberName + ' is away part of this sprint'"
+          >
+            @if (now.suggestedMemberName) {
+              {{ now.suggestedMemberName }} is next in the order and is around.
+            }
+          </ah-banner>
+        }
       }
       <form [formGroup]="form" (submit)="$event.preventDefault(); submit()">
+        @if (roles.length > 1) {
+          <fieldset class="roles">
+            <legend>Which turn?</legend>
+            @for (r of roles; track r) {
+              <label class="choice">
+                <input type="radio" formControlName="role" [value]="r" />
+                <span class="choice__name">{{ roleWords[r].name }}</span>
+              </label>
+            }
+          </fieldset>
+        }
         <fieldset>
           <legend>Pick someone for this sprint</legend>
-          @for (choice of choices; track choice.id) {
+          @for (choice of choices(); track choice.id) {
             <label class="choice">
               <input
                 type="radio"
@@ -129,7 +154,7 @@ const MODES: readonly {
         </fieldset>
         @if (changing()) {
           <fieldset>
-            <legend>What happens to {{ due }}'s turn?</legend>
+            <legend>What happens to {{ due() }}'s turn?</legend>
             @for (m of modes; track m.mode) {
               <label class="choice">
                 <input type="radio" formControlName="mode" [value]="m.mode" />
@@ -163,56 +188,52 @@ export class ChangeDialog {
   private readonly toasts = inject(ToastService);
 
   protected readonly sprint = this.data.sprint;
-  protected readonly words = ROLE_WORDS[this.data.role];
-  protected readonly title = sprintTitle(this.data.sprint);
+  protected readonly title = this.data.title ?? sprintTitle(this.data.sprint);
   protected readonly dayLabel = dayLabel;
   protected readonly modes = MODES;
-  protected readonly current =
-    this.data.sprint.assignments.find((a) => a.role === this.data.role) ?? null;
-  /** Who the order names for this sprint. */
-  protected readonly due = this.current?.dueMemberName ?? '';
-  private readonly away = new Set(
-    this.current?.away ? [this.current.memberId] : []
+  protected readonly roleWords = ROLE_WORDS;
+  /** The turns this dialog can change: the one it was opened for, or with `pickRole` every turn of the sprint. */
+  protected readonly roles: readonly CrewRole[] = this.data.pickRole
+    ? this.data.sprint.assignments.map((a) => a.role)
+    : [this.data.role];
+
+  protected readonly form = new FormGroup({
+    role: new FormControl<CrewRole>(this.data.role, { nonNullable: true }),
+    memberId: new FormControl('', { nonNullable: true }),
+    mode: new FormControl<CrewChangeMode>('swap', { nonNullable: true }),
+    reason: new FormControl('', { nonNullable: true }),
+  });
+  private readonly role = signal(this.data.role);
+  private readonly chosen = signal('');
+  protected readonly words = computed(() => ROLE_WORDS[this.role()]);
+  protected readonly current = computed(
+    () => this.sprint.assignments.find((a) => a.role === this.role()) ?? null
   );
-  protected readonly choices: readonly Choice[] = this.data.store
-    .membersFor(this.data.role)
-    .map((m) => ({
+  /** Who the order names for this sprint. */
+  protected readonly due = computed(() => this.current()?.dueMemberName ?? '');
+  protected readonly choices = computed<readonly Choice[]>(() => {
+    const now = this.current();
+    return this.data.store.membersFor(this.role()).map((m) => ({
       id: m.id,
       name: m.name,
       note:
-        m.id === this.current?.dueMemberId
-          ? this.away.has(m.id)
+        m.id === now?.dueMemberId
+          ? now.away && now.memberId === m.id
             ? 'Due · away'
             : 'Due by the order'
-          : m.id === this.current?.memberId
+          : m.id === now?.memberId
             ? 'On now'
-            : m.id === this.current?.suggestedMemberId
+            : m.id === now?.suggestedMemberId
               ? 'Next who is around'
               : '',
     }));
-
-  protected readonly form = new FormGroup({
-    memberId: new FormControl(
-      this.current?.suggestedMemberId ?? this.current?.memberId ?? '',
-      { nonNullable: true }
-    ),
-    mode: new FormControl<CrewChangeMode>(
-      this.current?.change?.mode ?? 'swap',
-      {
-        nonNullable: true,
-      }
-    ),
-    reason: new FormControl(this.current?.change?.reason ?? '', {
-      nonNullable: true,
-    }),
   });
-  private readonly chosen = signal(this.form.controls.memberId.value);
   protected readonly chosenName = computed(
-    () => this.choices.find((c) => c.id === this.chosen())?.name ?? ''
+    () => this.choices().find((c) => c.id === this.chosen())?.name ?? ''
   );
   /** Whether the person chosen is someone else than the one due, so the turn changes hands. */
   protected readonly changing = computed(
-    () => this.chosen() !== '' && this.chosen() !== this.current?.dueMemberId
+    () => this.chosen() !== '' && this.chosen() !== this.current()?.dueMemberId
   );
   protected readonly busy = signal(false);
   private readonly failure = signal<ApiError | null>(null);
@@ -222,20 +243,36 @@ export class ChangeDialog {
   });
 
   constructor() {
+    this.showRole(this.data.role);
+    this.form.controls.role.valueChanges.subscribe((role) =>
+      this.showRole(role)
+    );
     this.form.controls.memberId.valueChanges.subscribe((id) =>
       this.chosen.set(id)
     );
   }
 
+  /** Shows a turn: who could step in (or who is on), and the change already recorded for it. */
+  private showRole(role: CrewRole): void {
+    this.role.set(role);
+    const now = this.current();
+    this.form.patchValue({
+      memberId: now?.suggestedMemberId ?? now?.memberId ?? '',
+      mode: now?.change?.mode ?? 'swap',
+      reason: now?.change?.reason ?? '',
+    });
+    this.chosen.set(this.form.controls.memberId.value);
+  }
+
   /** Saves the change and closes; a refusal keeps the dialog open with the reason. */
   async submit(): Promise<void> {
-    const { memberId, mode, reason } = this.form.getRawValue();
+    const { role, memberId, mode, reason } = this.form.getRawValue();
     if (memberId === '' || this.busy()) return;
     this.busy.set(true);
     const trimmed = reason.trim();
     const result = await this.data.store.change(
       this.data.sprint.startsOn,
-      this.data.role,
+      role,
       {
         memberId,
         mode: this.changing() ? mode : 'swap',
@@ -247,9 +284,9 @@ export class ChangeDialog {
       this.failure.set(result.error);
       return;
     }
-    const name = this.choices.find((c) => c.id === memberId)?.name ?? '';
+    const name = this.choices().find((c) => c.id === memberId)?.name ?? '';
     this.toasts.show(
-      `${name} is the ${this.words.name.toLowerCase()} for ${this.title}.`
+      `${name} is the ${this.words().name.toLowerCase()} for ${this.title}.`
     );
     this.ref.close(true);
   }

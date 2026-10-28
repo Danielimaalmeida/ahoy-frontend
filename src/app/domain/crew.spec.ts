@@ -2,13 +2,18 @@ import { describe, expect, it } from 'vitest';
 import {
   awayLabel,
   cleanName,
+  crewToTeams,
   dayLabel,
   initial,
   isDay,
+  lastWorkday,
   ROLE_WORDS,
   spanLabel,
   sprintProgress,
+  sprintLabels,
+  sprintShortTitle,
   sprintTitle,
+  timeOffDuring,
   timeOffRefusal,
   upcomingTimeOff,
 } from './crew';
@@ -80,5 +85,142 @@ describe('crew words', () => {
     expect(initial('')).toBe('?');
     expect(ROLE_WORDS.sprint_person.who).toBe('Devs');
     expect(ROLE_WORDS.lunch_host.name).toBe('Lunch & retro host');
+  });
+});
+
+describe('sprint days', () => {
+  it('releases on the last working day of the sprint, not on its weekend', () => {
+    expect(lastWorkday('2026-10-19', '2026-11-01')).toBe('2026-10-30');
+    expect(lastWorkday('2026-10-19', '2026-10-30')).toBe('2026-10-30');
+    expect(lastWorkday('2026-10-31', '2026-11-01')).toBe('2026-11-01');
+  });
+
+  it('shortens a Jira sprint name to its number and keeps a projected sprint whole', () => {
+    expect(
+      sprintShortTitle({ name: 'PROJ Sprint 42', startsOn: '2026-10-19' })
+    ).toBe('42');
+    expect(
+      sprintShortTitle({ name: 'Guardians', startsOn: '2026-10-19' })
+    ).toBe('Guardians');
+    expect(sprintShortTitle({ name: null, startsOn: '2026-11-30' })).toBe(
+      'Sprint of 30 Nov'
+    );
+  });
+
+  it('numbers projected sprints after the last one Jira named, and names them by their first day otherwise', () => {
+    expect(
+      sprintLabels([
+        { name: 'PROJ Sprint 42', startsOn: '2026-10-19' },
+        { name: 'PROJ Sprint 43', startsOn: '2026-11-02' },
+        { name: null, startsOn: '2026-11-16' },
+        { name: null, startsOn: '2026-11-30' },
+      ])
+    ).toEqual([
+      { short: '42', title: 'PROJ Sprint 42' },
+      { short: '43', title: 'PROJ Sprint 43' },
+      { short: '44', title: 'Sprint 44' },
+      { short: '45', title: 'Sprint 45' },
+    ]);
+    expect(
+      sprintLabels([
+        { name: 'Guardians', startsOn: '2026-10-19' },
+        { name: null, startsOn: '2026-11-02' },
+      ])
+    ).toEqual([
+      { short: 'Guardians', title: 'Guardians' },
+      { short: 'Sprint of 2 Nov', title: 'Sprint of 2 Nov' },
+    ]);
+  });
+
+  it('finds the time off that overlaps a sprint, and none that ended before or starts after', () => {
+    const spans = [
+      { startsOn: '2026-10-01', endsOn: '2026-10-05' },
+      { startsOn: '2026-11-09', endsOn: '2026-11-20' },
+      { startsOn: '2026-12-21', endsOn: '2027-01-04' },
+    ];
+    expect(timeOffDuring(spans, '2026-11-16', '2026-11-27')).toBe(spans[1]);
+    expect(timeOffDuring(spans, '2026-12-28', '2027-01-08')).toBe(spans[2]);
+    expect(timeOffDuring(spans, '2026-10-19', '2026-10-30')).toBeNull();
+  });
+});
+
+describe('crewToTeams', () => {
+  const assignment = (
+    role: 'sprint_person' | 'lunch_host',
+    memberName: string,
+    extra: { dueMemberName?: string; change?: unknown; away?: boolean } = {}
+  ) => ({
+    role,
+    memberName,
+    dueMemberName: extra.dueMemberName ?? memberName,
+    change: extra.change ?? null,
+    away: extra.away ?? false,
+  });
+  const sprints = [
+    {
+      title: 'PROJ Sprint 42',
+      startsOn: '2026-10-19',
+      endsOn: '2026-11-01',
+      assignments: [
+        assignment('sprint_person', 'Alex Example'),
+        assignment('lunch_host', 'Chris Example', {
+          dueMemberName: 'Bea Example',
+          change: { mode: 'swap' },
+        }),
+      ],
+    },
+    {
+      title: 'Sprint 43',
+      startsOn: '2026-11-02',
+      endsOn: '2026-11-15',
+      assignments: [assignment('sprint_person', 'Bea Example', { away: true })],
+    },
+    {
+      title: 'Sprint 44',
+      startsOn: '2026-11-16',
+      endsOn: '2026-11-29',
+      assignments: [],
+    },
+  ];
+
+  it('says who is on this sprint with the release and lunch day, then who is up next', () => {
+    expect(crewToTeams(sprints).text.split('\n')).toEqual([
+      'Crew · PROJ Sprint 42 (19 Oct – 1 Nov)',
+      '🚀 Sprint person: Alex Example · release Fri 30 Oct',
+      '🍕 Lunch & retro host: Chris Example (in for Bea Example) · lunch Fri 30 Oct',
+      '',
+      'Up next',
+      '• Sprint 43 (2 – 15 Nov): 🚀 Bea Example (away part of it)',
+      '• Sprint 44 (16 – 29 Nov): nobody yet',
+    ]);
+  });
+
+  it('gives Teams HTML with the names in bold and the next sprints as a list', () => {
+    const { html } = crewToTeams(sprints);
+    expect(html).toContain('<b>Alex Example</b>');
+    expect(html).toContain(
+      '🍕 Lunch &amp; retro host: <b>Chris Example</b> (in for Bea Example)'
+    );
+    expect(html).toContain(
+      '<ul><li>Sprint 43 (2 – 15 Nov): 🚀 Bea Example (away part of it)</li>'
+    );
+  });
+
+  it('escapes names, so a name cannot add markup to the message', () => {
+    const [first] = sprints;
+    const { html } = crewToTeams([
+      {
+        ...first!,
+        assignments: [
+          assignment('sprint_person', '<img src=x onerror=alert(1)>'),
+        ],
+      },
+    ]);
+    expect(html).toContain('<b>&lt;img src=x onerror=alert(1)&gt;</b>');
+    expect(html).not.toContain('<img');
+  });
+
+  it('is empty when no sprint is known', () => {
+    expect(crewToTeams([])).toEqual({ html: '', text: '' });
   });
 });

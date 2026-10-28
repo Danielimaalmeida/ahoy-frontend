@@ -1,7 +1,7 @@
 # Ahoy frontend · progress
 
-Updated 2026-10-27 (the Crew page, asked for by the user on 2026-10-27; before that, 2026-10-25, Meetings: images on
-notes). One page: replace it, do not append; git history is the archive (the
+Updated 2026-10-28 (the Crew page restyled to its design, asked for by the user on 2026-10-28; the page itself,
+2026-10-27). One page: replace it, do not append; git history is the archive (the
 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories, with its
 proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its
 freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
@@ -14,29 +14,31 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, and Meetings slices 1 to 3 (topics, notes, carry-over, user stories drafted by an agent,
   Grill me, Copy for Confluence).
-- **Merged since:** decisions and actions on meeting notes (PR #41, `8b2bafd`). Images on notes were on
-  `feat/meeting-note-images`; this session did not check whether it merged.
-- **This branch (Crew, 2026-10-27):** a `/crew` page and a Crew link in the top bar. Two duty cards (the sprint
-  person, a dev, and the lunch and retro host, anyone) with who is on now and who is next; an Upcoming table of the
-  current sprint and the next five from Jira (later ones marked Projected), each cell with Change and, when changed,
-  Undo; the rotation order (alphabetical) with each person's time off to come. Dialogs: Change (pick someone, then
-  swap, skip or restart the order from them, with a reason; flags the person away and who could step in), Add or edit
-  a person (name, turns, their time off, remove) and Add time off. Every command reads the crew again.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `dd668d3` (its branch `feat/crew`, not merged),
-  with the redaction placeholders kept. It also brought `getRunInput` and `getRunInputContent`, which the client does
-  not use. Needs from `ahoy-hosted`: the crew branch merged, migration 0021 applied and `JIRA_BOARD_ID` set on the API.
+- **Merged since:** decisions and actions on meeting notes (PR #41), the Crew page (PR #42, with `ahoy-hosted` #64) and
+  the user's local changes (`f4ec304`). Whether `feat/meeting-note-images` merged was not checked.
+- **This branch (`feat/crew-design`, 2026-10-28):** the Crew page as in its design artifact: blue for the sprint person
+  and orange for the lunch host on the avatars and tags (the orange `#c2410c` is local to the page; the tokens have it
+  only as a soft status colour), "On since … · in alphabetical order", the release day on the sprint person's card,
+  the rotation order with Add person in its header, and the Upcoming table's layout: numbered sprints (a projected
+  sprint takes the number after the last one Jira named), Now, Projected, Override and Check tags, and one Change per
+  sprint whose dialog asks which turn. Also: the lunch day on the host's Next line (the sprint's last working day, not
+  stored anywhere) and Copy for Teams (HTML that Teams keeps when pasted, plain text where the browser cannot copy
+  HTML).
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `dd668d3` (merged as #64), with the redaction
+  placeholders kept. Needs on the API: migration 0021 applied and `JIRA_BOARD_ID` set.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
   checked by unit and component tests on the mock backend only (Crew over `HttpTestingController`).
 
 ## Proof
 
-- **Last full run** (2026-10-27, the Crew branch, cloud container, Node 24, a local stand-in for `@acme-fedev/auth`
-  because the private registry is not reachable, and the dependencies installed without the lock file, with
-  `@angular/compiler-cli`, `build` and `cli` put back to the locked 22.2.1): Vitest 166 files, 2,978 tests, all
-  passed; `tsc` for app and specs, `check-boundaries`, `eslint`, `stylelint`, `ng build` and `prettier --check`
-  passed. The Crew page is proven by component tests over `HttpTestingController` (the mock backend has no crew
-  handlers) and the crew fixtures against the contract with Ajv; never in a browser against an API.
-  `openapi-mirror --check` and `npm run test:scripts` (10) passed; Playwright was not run.
+- **Last full run** (2026-10-28, `feat/crew-design`, cloud container, Node 24, a local stand-in for
+  `@acme-fedev/auth` because the private registry is not reachable, and the dependencies installed without the lock
+  file, with `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 166 files, 2,990 tests, all
+  passed; `tsc` for app and specs, `check-boundaries`, `eslint`, `stylelint` and `ng build` passed (`crew-page.ts`'s
+  styles are 5.3 kB, over the 4 kB warning budget, as `docks.ts` already is). `prettier --check` flags only
+  `docs/architecture.md` and `meetings.spec.ts`, unformatted on `main` since `f4ec304`. The page was looked at once as
+  a screenshot of the component rendered with the fixture and the app's styles, never in the running app or against
+  an API. Playwright was not run.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
   `npm run api:types` is byte-identical to the committed file.
