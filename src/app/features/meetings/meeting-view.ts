@@ -173,7 +173,12 @@ const STATUS_WORDS = {
             >
               Cancel meeting
             </button>
-            <button ahButton type="button" [disabled]="busy()" (click)="end()">
+            <button
+              ahButton
+              type="button"
+              [disabled]="busy()"
+              (click)="end('done')"
+            >
               Mark done
             </button>
             <button
@@ -362,7 +367,7 @@ export class MeetingView {
   }
 
   /** Asks which open topics move on, then ends (marks done) or cancels the meeting. */
-  protected end(how: 'end' | 'cancel' = 'end'): void {
+  protected end(how: EndMeetingData['how'] = 'end'): void {
     this.store.dismissError();
     this.dialogs.open<unknown, EndMeetingData>(EndMeetingDialog, {
       data: { store: this.store, how },

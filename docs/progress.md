@@ -20,8 +20,9 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 - **This branch (`feat/meeting-close-and-guests`, 2026-10-28):** a planned meeting has Cancel meeting, Mark done and
   Start meeting. Mark done ends it without starting it; Cancel gives it the new status `cancelled` (read-only, a
   banner, "· cancelled" in the left column). Both open the closing dialog: Mark done ticks the topics nobody took a
-  note on, Cancel ticks every open topic; the person can untick any. Stakeholders are names ("Ana Silva") or e-mails,
-  in the new meeting dialog and in "who raised it"; the API field is now `raisedByStakeholder`.
+  note on, Cancel ticks every open topic; the person can untick any. When the series has no next meeting and no cadence,
+  the dialog says so and keeps the topics. Stakeholders are names ("Ana Silva") or e-mails,
+  in the new meeting dialog (split on commas, and e-mails also on spaces) and in "who raised it"; the API field is now `raisedByStakeholder`.
 - **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `3a28dbe` (its PR #65, not merged), with the
   redaction placeholders kept. Needs from `ahoy-hosted`: PR #65 merged and migration 0022 applied.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
@@ -31,7 +32,7 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 - **Last full run** (2026-10-28, this branch, cloud container, Node 24, a local stand-in for `@acme-fedev/auth`
   because the private registry is not reachable, dependencies from the scratch install of 2026-10-27): Vitest 166
-  files, 2,990 tests, all passed; `tsc` for app and specs, `check-boundaries`, `eslint`, `stylelint` and `ng build`
+  files, 2,993 tests, all passed; `tsc` for app and specs, `check-boundaries`, `eslint`, `stylelint` and `ng build`
   passed; `openapi-mirror --check` passed. `prettier --check` flags only `docs/architecture.md`, which fails on `main`
   too. `npm run test:scripts` cannot run: `main` (`f4ec304`) removed `scripts/redact.mjs` and its test, but
   `package.json` still names them.

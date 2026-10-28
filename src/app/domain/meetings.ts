@@ -28,6 +28,11 @@ export interface MeetingLike {
   readonly startsAt: string;
 }
 
+/** What carry-over reads of a meeting: also its series. */
+export interface SeriesMeetingLike extends MeetingLike {
+  readonly seriesId: string | null;
+}
+
 /** Whether a meeting is over, ended or cancelled, and so read-only. */
 export function isClosed(status: MeetingLike['status']): boolean {
   return status === 'ended' || status === 'cancelled';
@@ -178,13 +183,16 @@ export function moveInOrder(
   return next;
 }
 
+/** A whole e-mail address, as the API tells one from a name. */
+const EMAIL = /^[^\s@]+@[^\s@]+$/;
+
 /**
  * A stakeholder as the API stores it (Python-parity note: ahoy-hosted's `stakeholderName`): a name ("Ana Silva",
  * inner spaces collapsed, its case kept) or an e-mail (lower-cased).
  */
 export function stakeholderName(text: string): string {
   const value = text.trim().replace(/\s+/g, ' ');
-  return /^[^\s@]+@[^\s@]+$/.test(value) ? value.toLowerCase() : value;
+  return EMAIL.test(value) ? value.toLowerCase() : value;
 }
 
 /** Stakeholders as the API stores them: each normalised, the empty ones and the repeats (ignoring case) dropped. */
@@ -201,9 +209,39 @@ export function normalizeStakeholders(names: readonly string[]): string[] {
   return out;
 }
 
-/** The stakeholders in a typed list, names or e-mails split on commas, semicolons and line breaks, in order. */
+/** One part of a typed list: its words when every one is an e-mail ("a@x.com b@y.com"), else the part (a name). */
+function spacedEmails(part: string): readonly string[] {
+  const words = part.trim().split(/\s+/);
+  return words.length > 1 && words.every((w) => EMAIL.test(w)) ? words : [part];
+}
+
+/**
+ * The stakeholders in a typed list, in order: names or e-mails split on commas, semicolons and line breaks, and
+ * e-mails also on spaces.
+ */
 export function parseStakeholders(text: string): string[] {
-  return normalizeStakeholders(text.split(/[,;\n]+/));
+  return normalizeStakeholders(text.split(/[,;\n]+/).flatMap(spacedEmails));
+}
+
+/**
+ * Whether topics carried over from `meeting` have somewhere to go, as ahoy-hosted's `nextPlannedMeeting` decides: a
+ * later planned meeting of its series, or the series' cadence to plan one from.
+ */
+export function hasNextMeeting(
+  meeting: SeriesMeetingLike,
+  meetings: readonly SeriesMeetingLike[],
+  cadenceDays: number | null
+): boolean {
+  if (meeting.seriesId === null) return false;
+  if (cadenceDays !== null) return true;
+  const after = Date.parse(meeting.startsAt);
+  return meetings.some(
+    (m) =>
+      m.id !== meeting.id &&
+      m.seriesId === meeting.seriesId &&
+      m.status === 'planned' &&
+      Date.parse(m.startsAt) > after
+  );
 }
 
 /** A date as an `<input type="date">` takes it ("2026-10-22"), in the browser's time zone. */

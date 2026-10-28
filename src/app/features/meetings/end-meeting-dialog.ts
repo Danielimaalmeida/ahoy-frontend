@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import type { EndMeetingResult } from '@core/api/types';
 import {
   carryOverCandidates,
+  hasNextMeeting,
   meetingDay,
   raisedByLabel,
   suggestedCarryOver,
@@ -14,11 +15,11 @@ import type { MeetingsStore } from './meetings-store';
 
 /**
  * What the End meeting dialog is opened with: the page's store, which holds the open meeting and closes it, and how:
- * `end` (the default) ends it or marks a planned one done, `cancel` cancels a planned one.
+ * `end` ends one in progress, `done` marks a planned one done, `cancel` cancels a planned one.
  */
 export interface EndMeetingData {
   readonly store: MeetingsStore;
-  readonly how?: 'end' | 'cancel';
+  readonly how: 'end' | 'done' | 'cancel';
 }
 
 /** The words of the dialog for each way of closing a meeting. */
@@ -55,8 +56,8 @@ function topics(n: number): string {
  * "End Finance sync?" (or "Mark Finance sync done?" for a meeting never started, or "Cancel Finance sync?" for one
  * that did not take place): the open topics with a tick each; the ticked ones move, with their notes, to the series'
  * next meeting (planned from its cadence when none is). Topics with no notes are ticked to begin with, as most likely
- * not reached, and every open topic of a cancelled meeting; the person decides. A meeting outside a series keeps its
- * topics. The meeting is read-only once closed.
+ * not reached, and every open topic of a cancelled meeting; the person decides. A meeting outside a series, or in one
+ * with no next meeting and no cadence, keeps its topics. The meeting is read-only once closed.
  */
 @Component({
   selector: 'ah-end-meeting-dialog',
@@ -92,10 +93,10 @@ function topics(n: number): string {
     <ah-dialog
       [icon]="cancelling ? 'close' : 'check'"
       [kind]="cancelling ? 'danger' : 'default'"
-      [heading]="words().heading(title())"
-      [cancelLabel]="words().keep"
+      [heading]="words.heading(title())"
+      [cancelLabel]="words.keep"
       [confirmLabel]="confirmLabel()"
-      [busyLabel]="words().busy"
+      [busyLabel]="words.busy"
       [busy]="busy()"
       [error]="error()"
       (confirm)="submit()"
@@ -104,15 +105,18 @@ function topics(n: number): string {
         @if (cancelling) {
           It didn't take place.
         }
-        @if (inSeries()) {
+        @if (canMove()) {
           The topics you tick move, with their notes, to the next {{ title() }}.
           The rest stay here. After this the meeting is read-only.
+        } @else if (inSeries()) {
+          No next {{ title() }} is planned, so its topics stay here; plan the
+          next one first to move them. After this the meeting is read-only.
         } @else {
           This meeting isn't part of a series, so its topics stay here. After
           this the meeting is read-only.
         }
       </span>
-      @if (inSeries() && candidates().length > 0) {
+      @if (canMove() && candidates().length > 0) {
         <fieldset class="list">
           <legend class="ah-sr">Topics to move to the next meeting</legend>
           @for (topic of candidates(); track topic.id) {
@@ -158,24 +162,28 @@ export class EndMeetingDialog {
   protected readonly inSeries = computed(
     () => (this.store.meeting()?.seriesId ?? null) !== null
   );
+  /**
+   * Whether ticked topics have a next meeting to go to; when the series is not read yet, the API decides.
+   */
+  protected readonly canMove = computed(() => {
+    const meeting = this.store.meeting();
+    if (meeting === null || meeting.seriesId === null) return false;
+    const series = this.store.openSeries();
+    return (
+      series === null ||
+      hasNextMeeting(meeting, this.store.meetings(), series.cadenceDays)
+    );
+  });
   protected readonly candidates = computed(() =>
     carryOverCandidates(this.store.meeting()?.topics ?? [])
   );
-  /** The words for cancelling, marking a meeting never started done, or ending one in progress. */
-  protected readonly words = computed(() =>
-    this.cancelling
-      ? WORDS.cancel
-      : this.store.meeting()?.status === 'planned'
-        ? WORDS.done
-        : WORDS.end
-  );
+  /** The words for the way the person chose to close the meeting, fixed while the dialog is open. */
+  protected readonly words = WORDS[this.data.how];
   /** The ids of the ticked topics. */
   readonly chosen = signal<ReadonlySet<string>>(
     new Set(
       this.cancelling
-        ? carryOverCandidates(this.store.meeting()?.topics ?? []).map(
-            (t) => t.id
-          )
+        ? this.candidates().map((t) => t.id)
         : suggestedCarryOver(this.store.meeting()?.topics ?? [])
     )
   );
@@ -185,8 +193,8 @@ export class EndMeetingDialog {
     return this.failed() && error !== null ? meetingErrorView(error) : null;
   });
   protected readonly confirmLabel = computed(() => {
-    const n = this.inSeries() ? this.chosen().size : 0;
-    const confirm = this.words().confirm;
+    const n = this.canMove() ? this.chosen().size : 0;
+    const confirm = this.words.confirm;
     return n === 0 ? confirm : `${confirm} · move ${topics(n)}`;
   });
 
@@ -207,8 +215,8 @@ export class EndMeetingDialog {
 
   /** Ends or cancels the meeting with the ticked topics; on a refusal the dialog stays open with the reason. */
   async submit(): Promise<void> {
-    const carryOver = this.inSeries() ? [...this.chosen()] : [];
-    const toast = this.words().toast;
+    const carryOver = this.canMove() ? [...this.chosen()] : [];
+    const toast = this.words.toast;
     const ended = this.cancelling
       ? await this.store.cancel(carryOver)
       : await this.store.end(carryOver);

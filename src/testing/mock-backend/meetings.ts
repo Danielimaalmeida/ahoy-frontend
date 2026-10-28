@@ -86,11 +86,6 @@ const refused = (path: string, message: string) =>
     errors: [{ path, message }],
   });
 
-/** Stakeholders as the API keeps them: names or e-mails, normalised, each once ignoring case, in the order given. */
-function normalized(names: readonly string[]): string[] {
-  return normalizeStakeholders(names);
-}
-
 /** The meetings of a mock world. */
 export class MeetingDesk {
   private readonly series = new Map<string, SeriesRecord>();
@@ -241,7 +236,7 @@ export class MeetingDesk {
       title,
       body.startsAt,
       body.endsAt ?? null,
-      normalized(body.stakeholders ?? series?.stakeholders ?? [])
+      normalizeStakeholders(body.stakeholders ?? series?.stakeholders ?? [])
     );
     return this.meetingDto(meeting);
   }
@@ -253,7 +248,7 @@ export class MeetingDesk {
     this.checkTimes(startsAt, endsAt);
     if (body.title !== undefined) meeting.title = body.title.trim();
     if (body.stakeholders !== undefined)
-      meeting.stakeholders = normalized(body.stakeholders);
+      meeting.stakeholders = normalizeStakeholders(body.stakeholders);
     meeting.startsAt = startsAt;
     meeting.endsAt = endsAt;
     this.touch(meeting, actor);
@@ -635,7 +630,7 @@ export class MeetingDesk {
     const series: SeriesRecord = {
       id: this.id(),
       name: body.name.trim(),
-      stakeholders: normalized(body.stakeholders ?? []),
+      stakeholders: normalizeStakeholders(body.stakeholders ?? []),
       cadenceDays: body.cadenceDays ?? null,
       jiraProjectKey: body.jiraProjectKey ?? null,
       jiraIssueType: body.jiraIssueType ?? 'Story',

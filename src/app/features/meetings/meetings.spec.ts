@@ -587,6 +587,39 @@ describe('Meetings on the mock backend', () => {
     ).toEqual(['Supplier prices']);
   });
 
+  it('keeps the topics of a meeting whose series has no next meeting and no cadence, rather than fail to move them', async () => {
+    let id = '';
+    const page = await open('/meetings', (server) => {
+      const series = server.meetingDesk.createSeries('alex@example.com', {
+        name: 'Pricing review',
+        stakeholders: [],
+      });
+      id = server.meetingDesk.create('alex@example.com', {
+        seriesId: series.id,
+        startsAt: '2026-10-20T09:00:00.000Z',
+      }).id;
+      server.meetingDesk.addTopic('alex@example.com', id, {
+        title: 'Supplier prices',
+        raisedBy: 'us',
+      });
+    });
+    await page.harness.navigateByUrl(`/meetings/${id}`);
+    await flush(page);
+    buttonNamed(page.root.querySelector('.header')!, 'Cancel meeting').click();
+    await flush(page);
+    expect(text(dialog())).toContain('No next Pricing review is planned');
+    expect(dialog().querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    buttonNamed(dialog(), 'Cancel meeting').click();
+    await flush(page);
+
+    expect(text(page.root.querySelector('.identity .ah-tag'))).toBe(
+      'Cancelled'
+    );
+    expect(page.requests.find((r) => r.path.endsWith('/cancel'))?.body).toEqual(
+      { carryOver: [] }
+    );
+  });
+
   it('plans a one-off meeting with stakeholders named or by e-mail', async () => {
     const page = await open('/meetings');
     buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();

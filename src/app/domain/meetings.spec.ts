@@ -13,6 +13,7 @@ import {
   moveInOrder,
   noteKindFields,
   noteShortcut,
+  hasNextMeeting,
   isClosed,
   normalizeStakeholders,
   parseStakeholders,
@@ -144,6 +145,35 @@ describe('meetings', () => {
     ]);
   });
 
+  it('knows a meeting has a next one to move topics to: a later planned one in its series, or a cadence', () => {
+    const inSeries = (
+      id: string,
+      status: MeetingLike['status'],
+      startsAt: string,
+      seriesId: string | null = 's1'
+    ) => ({ ...meeting(id, status, startsAt), seriesId });
+    const now = inSeries('now', 'in_progress', '2026-10-06T09:00:00.000Z');
+    const later = inSeries('later', 'planned', '2026-10-13T09:00:00.000Z');
+    expect(hasNextMeeting(now, [now, later], null)).toBe(true);
+    expect(hasNextMeeting(now, [now], 7)).toBe(true);
+    expect(hasNextMeeting(now, [now], null)).toBe(false);
+    expect(
+      hasNextMeeting(
+        now,
+        [
+          now,
+          inSeries('other', 'planned', '2026-10-13T09:00:00.000Z', 's2'),
+          inSeries('before', 'planned', '2026-10-01T09:00:00.000Z'),
+          inSeries('done', 'ended', '2026-10-13T09:00:00.000Z'),
+        ],
+        null
+      )
+    ).toBe(false);
+    expect(hasNextMeeting({ ...now, seriesId: null }, [now, later], 7)).toBe(
+      false
+    );
+  });
+
   it('moves one topic up or down the order, and keeps the order at either end', () => {
     expect(moveInOrder(['a', 'b', 'c'], 'b', -1)).toEqual(['b', 'a', 'c']);
     expect(moveInOrder(['a', 'b', 'c'], 'b', 1)).toEqual(['a', 'c', 'b']);
@@ -162,6 +192,15 @@ describe('meetings', () => {
         'priya@example.com',
         'Ana Silva',
         'Rui Costa <rui@example.com>',
+      ]);
+    });
+
+    it('splits e-mails separated only by spaces, but keeps a name with spaces whole', () => {
+      expect(
+        parseStakeholders('Priya@example.com jordan@example.com, Ana Silva')
+      ).toEqual(['priya@example.com', 'jordan@example.com', 'Ana Silva']);
+      expect(parseStakeholders('Ana Silva ana@example.com')).toEqual([
+        'Ana Silva ana@example.com',
       ]);
     });
 
