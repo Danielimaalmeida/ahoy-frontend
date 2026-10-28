@@ -195,15 +195,11 @@ export class MeetingsStore {
       this.api.listMeetingNotes({ kind: 'question', status: 'open', ...where }),
     ]);
     if (generation !== this.generation) return;
-    if (!actions.ok || !questions.ok) {
-      this.actionsError.set(
-        !actions.ok ? actions.error : questions.ok ? null : questions.error
-      );
-      return;
-    }
-    this.actionsError.set(null);
-    this.openActions.set(actions.value.items);
-    this.openQuestions.set(questions.value.items);
+    if (actions.ok) this.openActions.set(actions.value.items);
+    if (questions.ok) this.openQuestions.set(questions.value.items);
+    this.actionsError.set(
+      !actions.ok ? actions.error : !questions.ok ? questions.error : null
+    );
   }
 
   /** Reads the open meeting again in a few seconds while it is in progress, and so on until it ends or closes. */
@@ -393,6 +389,7 @@ export class MeetingsStore {
       topics: m.topics.filter((t) => t.id !== topicId),
     }));
     await this.refreshList();
+    await this.loadActions();
   }
 
   /** Moves a topic one place up (-1) or down (+1). */
@@ -414,6 +411,7 @@ export class MeetingsStore {
     if (moved === null) return;
     this.replaceTopic(moved.topic);
     await this.refreshList();
+    await this.loadActions();
   }
 
   /**
@@ -548,17 +546,37 @@ export class MeetingsStore {
       ...t,
       notes: t.notes.map((n) => (n.id === noteId ? note : n)),
     }));
+    for (const list of [this.openActions, this.openQuestions])
+      list.set(list().map((a) => (a.note.id === noteId ? { ...a, note } : a)));
     return true;
   }
 
-  /** Removes a note, and a question's answers with it. */
+  /**
+   * Removes a note, and a question's answers with it. Removing a question's last answer marks the question open again,
+   * as the API does.
+   */
   async deleteNote(topicId: string, noteId: string): Promise<void> {
     if (!(await this.runEmpty(() => this.api.deleteMeetingNote(noteId))))
       return;
+    const notes =
+      this.meeting()?.topics.find((t) => t.id === topicId)?.notes ?? [];
+    const questionId = notes.find((n) => n.id === noteId)?.answerTo ?? null;
     this.patchTopic(topicId, (t) => ({
       ...t,
       notes: t.notes.filter((n) => n.id !== noteId && n.answerTo !== noteId),
     }));
+    if (
+      questionId !== null &&
+      !notes.some((n) => n.answerTo === questionId && n.id !== noteId)
+    ) {
+      this.patchNote(questionId, (q) => ({
+        ...q,
+        doneAt: null,
+        doneBy: null,
+        doneByName: null,
+      }));
+      await this.loadActions();
+    }
     this.openActions.set(
       this.openActions().filter((a) => a.note.id !== noteId)
     );

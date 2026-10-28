@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 977875119a06fea3c415fd08ac1e31e1d18b9e85
+# Commit: 36e7243423eef04f9e4870dc052879679c4650f2
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -1631,7 +1631,8 @@ paths:
         The body is the image itself: a PNG, JPEG, WebP or GIF of at most 5 MiB (5 242 880 bytes). Its format is read
         from its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`.
         Stored in Postgres beside the artifacts' bytes. `409 invalid_state` when the note has 10 images already, its
-        topic was moved to the next meeting or its meeting has ended. 0 AIU, no external call.
+        topic was moved to the next meeting or its meeting has ended (an answer can still take images then). 0 AIU, no
+        external call.
       requestBody:
         required: true
         content:
@@ -1700,8 +1701,8 @@ paths:
       tags: [meetings]
       summary: Remove an image from a note.
       description: |
-        `409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended, as for the
-        note itself.
+        `409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended (not for an
+        answer's image), as for the note itself.
       responses:
         '204':
           description: Removed.
@@ -1800,8 +1801,9 @@ paths:
       tags: [meetings]
       summary: Remove a note.
       description: |
-        Removing a question removes its answers. `409 invalid_state` when its topic was moved to the next meeting or its
-        meeting has ended (an answer can still be removed then).
+        Removing a question removes its answers; removing a question's last answer marks the question open again.
+        `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended (an answer can still
+        be removed then).
       responses:
         '204':
           description: The note is gone.

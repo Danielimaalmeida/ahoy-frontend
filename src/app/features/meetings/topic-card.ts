@@ -201,6 +201,9 @@ export const NOTE_MAX = 4000;
       flex: 1 0 100%;
       margin: 0;
     }
+    .closed-hint {
+      padding: 0 16px 8px;
+    }
     form {
       display: flex;
       flex-wrap: wrap;
@@ -617,6 +620,11 @@ export const NOTE_MAX = 4000;
             </li>
           }
         </ul>
+      }
+      @if (!editable() && imageHint() !== null) {
+        <p class="ah-hint image-hint closed-hint" role="status">
+          {{ imageHint() }}
+        </p>
       }
       @if (!moved()) {
         <div class="story">

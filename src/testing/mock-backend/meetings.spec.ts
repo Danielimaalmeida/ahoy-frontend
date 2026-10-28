@@ -391,6 +391,32 @@ describe('the mock meetings', () => {
     ).not.toContain(answer.id);
   });
 
+  it('marks a question open again once its last answer is removed, not before', () => {
+    const { server, running } = seeded();
+    const topic = (
+      call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+    ).topics[0]!;
+    const question = call(server, 'POST', `/meeting-topics/${topic.id}/notes`, {
+      text: 'Who signs off?',
+      kind: 'question',
+    }).body as MeetingNote;
+    const answer = (text: string) =>
+      (
+        call(server, 'POST', `/meeting-notes/${question.id}/answers`, {
+          text,
+        }).body as MeetingNoteAnswerResult
+      ).answer;
+    const [first, second] = [answer('Ana'), answer('Or Sam')];
+    const doneAt = () =>
+      (call(server, 'GET', `/meetings/${running.id}`).body as Meeting).topics
+        .flatMap((t) => t.notes)
+        .find((n) => n.id === question.id)!.doneAt;
+    call(server, 'DELETE', `/meeting-notes/${first.id}`);
+    expect(doneAt()).not.toBeNull();
+    call(server, 'DELETE', `/meeting-notes/${second.id}`);
+    expect(doneAt()).toBeNull();
+  });
+
   it('carries a question to the next meeting with its answers, which name the copy', () => {
     const { server, running } = seeded();
     const topic = (
