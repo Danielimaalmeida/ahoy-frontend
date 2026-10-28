@@ -485,6 +485,82 @@ describe('meetingToConfluence', () => {
     expect(markup).toContain('* Said in passing _(Alex Doe, 09:50)_');
   });
 
+  it('writes the open questions before the topics, and the answers under their question, which says it is answered', () => {
+    const note = (over: Partial<NoteDoc>): NoteDoc => ({
+      text: 'x',
+      createdBy: 'q123',
+      createdByName: 'Alex Doe',
+      createdAt: at(9, 50),
+      ...over,
+    });
+    const markup = meetingToConfluence(
+      meetingDoc({
+        topics: [
+          {
+            id: 't1',
+            title: 'Late fees',
+            status: 'open',
+            raisedBy: 'us',
+            raisedByStakeholder: null,
+            origin: 'planned',
+            createdAt: at(9, 30),
+            movedTo: null,
+            notes: [
+              note({
+                id: 'q1',
+                text: 'Do they apply to overdue invoices?',
+                kind: 'question',
+                doneAt: at(9, 55),
+              }),
+              note({ id: 'n1', text: 'Capped at 10%' }),
+              note({
+                id: 'a1',
+                answerTo: 'q1',
+                text: 'Only from 1 November',
+                createdByName: 'Sam Lee',
+                createdAt: at(9, 55),
+              }),
+              note({ id: 'a2', answerTo: 'gone', text: 'Lost answer' }),
+            ],
+          },
+        ],
+      }),
+      [
+        {
+          text: 'Who approves refunds?',
+          from: { topicTitle: 'Refunds', meetingStartsAt: at(9, 0, 6) },
+        },
+        { text: 'Is a VAT number needed?', from: null },
+      ]
+    );
+    const lines = markup.split('\n');
+    const at_ = (line: string) => lines.indexOf(line);
+    expect(at_('h2. Open questions')).toBeGreaterThan(-1);
+    expect(
+      lines.slice(at_('h2. Open questions') + 1, at_('h2. Topics'))
+    ).toEqual([
+      '* Who approves refunds\\? _(Refunds, Tue 6 Oct)_',
+      '* Is a VAT number needed\\?',
+      '',
+    ]);
+    const question =
+      '* *Question (answered):* Do they apply to overdue invoices\\? _(Alex Doe, 09:50)_';
+    expect(at_(question)).toBeGreaterThan(at_('h2. Topics'));
+    expect(lines[at_(question) + 1]).toBe(
+      '** Only from 1 November _(Sam Lee, 09:55)_'
+    );
+    expect(lines[at_(question) + 2]).toBe(
+      '* Capped at 10% _(Alex Doe, 09:50)_'
+    );
+    expect(markup).toContain('* Lost answer _(Alex Doe, 09:50)_');
+  });
+
+  it('leaves out the open questions when there are none', () => {
+    expect(meetingToConfluence(meetingDoc(), [])).not.toContain(
+      'Open questions'
+    );
+  });
+
   it("counts a note's images instead of copying them", () => {
     const image = { id: 'i' };
     const note = (text: string, images: readonly unknown[]): NoteDoc => ({

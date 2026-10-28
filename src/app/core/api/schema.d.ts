@@ -1274,7 +1274,7 @@ export interface paths {
      * The notes of one kind across meetings, such as a series' open actions or its decisions.
      * @description Latest meeting first, then in the meeting's topic order and the order the notes were taken; at most 500. A note
      *     under a topic carried over to the next meeting is listed once, as its copy there. `status` is only for
-     *     `kind=action` (`400 validation_failed` otherwise). 0 AIU.
+     *     `kind=action` and `kind=question` (`400 validation_failed` otherwise). 0 AIU.
      */
     readonly get: operations['listMeetingNotes'];
     readonly put?: never;
@@ -1338,6 +1338,31 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/meeting-notes/{noteId}/answers': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly noteId: components['parameters']['MeetingNoteId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Answer a question.
+     * @description Adds a plain note under the question's topic that answers it (`answerTo`), and marks the question answered when
+     *     it was open. Allowed after the question's meeting has ended, since an open question is often answered at a
+     *     later meeting. `409 invalid_state` when the note is not a question, or its topic was moved to the next meeting
+     *     (answer the copy there). 0 AIU.
+     */
+    readonly post: operations['addMeetingNoteAnswer'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meeting-notes/{noteId}/done': {
     readonly parameters: {
       readonly query?: never;
@@ -1350,10 +1375,11 @@ export interface paths {
     readonly get?: never;
     readonly put?: never;
     /**
-     * Mark an action done, or not done again.
-     * @description Records who marked it and when; `done: false` clears both. Allowed after the meeting has ended, since actions
-     *     are done after it. `409 invalid_state` when the note is not an action, or its topic was moved to the next
-     *     meeting (mark the copy there).
+     * Mark an action done or a question answered, or open again.
+     * @description Records who marked it and when; `done: false` clears both (a question reopened keeps its answers). Allowed
+     *     after the meeting has ended, since actions are done and questions answered after it. `409 invalid_state` when
+     *     the note is neither an action nor a question, or its topic was moved to the next meeting (mark the copy
+     *     there).
      */
     readonly post: operations['setMeetingNoteDone'];
     readonly delete?: never;
@@ -1376,7 +1402,8 @@ export interface paths {
     readonly post?: never;
     /**
      * Remove a note.
-     * @description `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.
+     * @description Removing a question removes its answers. `409 invalid_state` when its topic was moved to the next meeting or its
+     *     meeting has ended (an answer can still be removed then).
      */
     readonly delete: operations['deleteMeetingNote'];
     readonly options?: never;
@@ -1384,8 +1411,10 @@ export interface paths {
     /**
      * Rewrite a note, and change its kind, owner or due day.
      * @description `kind`, `owner` and `dueOn` absent keep their values; null clears `owner` or `dueOn`. A note that stops being an
-     *     action loses its owner, due day and done mark. `409 invalid_state` when its topic was moved to the next meeting
-     *     or its meeting has ended.
+     *     action loses its owner and due day, and a note whose kind changes loses its done mark. An answer stays a plain
+     *     note (`400 validation_failed`), and a question with answers stays a question (`409 invalid_state`). `409
+     *     invalid_state` when its topic was moved to the next meeting, or its meeting has ended (an answer can still
+     *     change then).
      */
     readonly patch: operations['updateMeetingNote'];
     readonly trace?: never;
@@ -2960,7 +2989,7 @@ export interface components {
     };
     /**
      * @description `note`: what was said. `decision`: what was agreed. `action`: something a person does next, with an optional
-     *     owner and due day. `question`: what is still to be answered.
+     *     owner and due day. `question`: what is still to be answered; it takes answers and is open or answered.
      * @enum {string}
      */
     readonly MeetingNoteKind: 'note' | 'decision' | 'action' | 'question';
@@ -2983,12 +3012,17 @@ export interface components {
       readonly dueOn: string | null;
       /**
        * Format: date-time
-       * @description When the action was marked done.
+       * @description When the action was marked done, or the question answered; null for other kinds.
        */
       readonly doneAt: string | null;
-      /** @description Who marked the action done. */
+      /** @description Who marked the action done or the question answered. */
       readonly doneBy: string | null;
       readonly doneByName: components['schemas']['ActorName'];
+      /**
+       * Format: uuid
+       * @description The question this note answers, under the same topic; an answer is a plain `note`. Null for any other note.
+       */
+      readonly answerTo: string | null;
       /** @description The note's images, oldest first; read each from `GET /meeting-note-images/{id}`. */
       readonly images: readonly components['schemas']['MeetingNoteImage'][];
       readonly createdBy: components['schemas']['Actor'];
@@ -3123,6 +3157,13 @@ export interface components {
        * @description Only for an action; null clears it.
        */
       readonly dueOn?: string | null;
+    };
+    readonly MeetingNoteAnswerRequest: {
+      readonly text: string;
+    };
+    readonly MeetingNoteAnswerResult: {
+      readonly question: components['schemas']['MeetingNote'];
+      readonly answer: components['schemas']['MeetingNote'];
     };
     readonly MeetingNoteDoneRequest: {
       readonly done: boolean;
@@ -5021,7 +5062,7 @@ export interface operations {
         readonly seriesId?: string;
         /** @description Only notes from this meeting. */
         readonly meetingId?: string;
-        /** @description Only the actions still to do (`open`) or done. */
+        /** @description Only the actions still to do or questions still to answer (`open`), or the done or answered ones. */
         readonly status?: components['schemas']['MeetingActionStatus'];
       };
       readonly header?: never;
@@ -5144,6 +5185,37 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly addMeetingNoteAnswer: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly noteId: components['parameters']['MeetingNoteId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MeetingNoteAnswerRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The question, answered, and the answer. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingNoteAnswerResult'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly setMeetingNoteDone: {
     readonly parameters: {
       readonly query?: never;
@@ -5159,7 +5231,7 @@ export interface operations {
       };
     };
     readonly responses: {
-      /** @description The action, changed. */
+      /** @description The action or question, changed. */
       readonly 200: {
         headers: {
           readonly [name: string]: unknown;

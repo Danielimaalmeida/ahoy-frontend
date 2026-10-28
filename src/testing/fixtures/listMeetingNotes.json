@@ -11,6 +11,7 @@
         "doneAt": null,
         "doneBy": null,
         "doneByName": null,
+        "answerTo": null,
         "images": [],
         "createdBy": "alex@example.com",
         "createdByName": "Alex Example",

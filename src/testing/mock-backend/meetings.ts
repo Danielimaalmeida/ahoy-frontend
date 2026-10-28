@@ -19,6 +19,7 @@ import type {
   Meeting,
   ListMeetingNotesQuery,
   MeetingNote,
+  MeetingNoteAnswerResult,
   MeetingNoteInContext,
   MeetingNoteRequest,
   MeetingSeries,
@@ -477,6 +478,7 @@ export class MeetingDesk {
       doneAt: null,
       doneBy: null,
       doneByName: null,
+      answerTo: null,
       images: [],
       createdBy: actor,
       createdByName: this.nameOf(actor),
@@ -492,9 +494,20 @@ export class MeetingDesk {
   updateNote(actor: string, id: string, body: MeetingNoteRequest): MeetingNote {
     const note = this.changeableNote(id);
     const fields = this.kindFields(note, body);
+    if (note.answerTo !== null && fields.kind !== 'note')
+      throw refused('body/kind', 'An answer stays a plain note');
+    if (
+      note.kind === 'question' &&
+      fields.kind !== 'question' &&
+      this.answersOf(id).length > 0
+    )
+      throw invalid(
+        `Question ${id} has answers; remove them before it becomes a ${fields.kind}`
+      );
+    const kindChanged = fields.kind !== note.kind;
     note.text = body.text.trim();
     Object.assign(note, fields);
-    if (fields.kind !== 'action') {
+    if (kindChanged) {
       note.doneAt = null;
       note.doneBy = null;
       note.doneByName = null;
@@ -505,24 +518,69 @@ export class MeetingDesk {
     return { ...note };
   }
 
-  /** Marks an action done or not; also after its meeting ended, but not under a topic that moved on. */
+  /**
+   * Marks an action done or a question answered, or open again; also after its meeting ended, but not under a topic
+   * that moved on.
+   */
   setNoteDone(actor: string, id: string, done: boolean): MeetingNote {
+    const note = this.unmovedNote(id);
+    if (note.kind !== 'action' && note.kind !== 'question')
+      throw invalid(
+        `Note ${id} is a ${note.kind}; only an action is done and only a question answered`
+      );
+    this.markDone(note, actor, done);
+    return { ...note };
+  }
+
+  /**
+   * Answers a question with a plain note under its topic, marking it answered when it was open; also after its meeting
+   * ended, but not under a topic that moved on.
+   */
+  answer(
+    actor: string,
+    questionId: string,
+    text: string
+  ): MeetingNoteAnswerResult {
+    const question = this.unmovedNote(questionId);
+    if (question.kind !== 'question')
+      throw invalid(
+        `Note ${questionId} is a ${question.kind}; only a question takes answers`
+      );
+    const answer = this.insertNote(actor, question.topicId, { text });
+    answer.answerTo = questionId;
+    if (question.doneAt === null) this.markDone(question, actor, true);
+    return { question: { ...question }, answer: { ...answer } };
+  }
+
+  private unmovedNote(id: string): NoteRecord {
     const note = this.notes.get(id);
     if (note === undefined) throw notFound('Note', id);
     if (this.topics.get(note.topicId)?.status === 'moved')
       throw invalid(`The topic of note ${id} was moved to the next meeting`);
-    if (note.kind !== 'action')
-      throw invalid(`Note ${id} is a ${note.kind}; only an action is done`);
+    return note;
+  }
+
+  private markDone(note: NoteRecord, actor: string, done: boolean): void {
     note.doneAt = done ? this.now() : null;
     note.doneBy = done ? actor : null;
     note.doneByName = done ? this.nameOf(actor) : null;
-    return { ...note };
+  }
+
+  private answersOf(questionId: string): NoteRecord[] {
+    return [...this.notes.values()].filter((n) => n.answerTo === questionId);
   }
 
   /** The notes of one kind across meetings, latest meeting first; a moved topic's notes are left to its copy. */
   listNotes(query: ListMeetingNotesQuery): MeetingNoteInContext[] {
-    if (query.status !== undefined && query.kind !== 'action')
-      throw refused('query.status', 'status is only for notes of kind action');
+    if (
+      query.status !== undefined &&
+      query.kind !== 'action' &&
+      query.kind !== 'question'
+    )
+      throw refused(
+        'query.status',
+        'status is only for notes of kind action or question'
+      );
     const rows: MeetingNoteInContext[] = [];
     for (const meeting of this.list()) {
       if (query.seriesId !== undefined && meeting.seriesId !== query.seriesId)
@@ -611,9 +669,11 @@ export class MeetingDesk {
     this.imageBytes.delete(id);
   }
 
+  /** Removes a note, and a question's answers with it. */
   deleteNote(id: string): void {
     this.changeableNote(id);
     this.notes.delete(id);
+    for (const answer of this.answersOf(id)) this.notes.delete(answer.id);
   }
 
   listSeries(): MeetingSeries[] {
@@ -952,9 +1012,11 @@ export class MeetingDesk {
     return topic;
   }
 
+  /** A note that can change: its topic can, or it is an answer, which can change after its meeting closed. */
   private changeableNote(id: string): NoteRecord {
     const note = this.notes.get(id);
     if (note === undefined) throw notFound('Note', id);
+    if (note.answerTo !== null) return this.unmovedNote(id);
     this.changeableTopic(note.topicId);
     return note;
   }
@@ -1032,10 +1094,12 @@ export class MeetingDesk {
       updatedAt: at,
     };
     this.topics.set(copy.id, copy);
-    for (const note of [...this.notes.values()].filter(
+    const notes = [...this.notes.values()].filter(
       (n) => n.topicId === topic.id
-    )) {
-      const noteId = this.id();
+    );
+    const copyIds = new Map(notes.map((n) => [n.id, this.id()]));
+    for (const note of notes) {
+      const noteId = copyIds.get(note.id)!;
       const images = note.images.map((image) => {
         const imageId = this.id();
         this.imageBytes.set(imageId, this.noteImage(image.id));
@@ -1045,6 +1109,8 @@ export class MeetingDesk {
         ...note,
         id: noteId,
         topicId: copy.id,
+        answerTo:
+          note.answerTo === null ? null : (copyIds.get(note.answerTo) ?? null),
         images,
       });
     }

@@ -97,7 +97,9 @@ export class MeetingsStore {
   readonly busy = signal(false);
   /** The actions still to do of the open meeting's series (of the meeting alone when it is a one-off). */
   readonly openActions = signal<readonly MeetingNoteInContext[]>([]);
-  /** Why the open actions could not be read; the meeting still shows. */
+  /** The open questions of the open meeting's series (or of the meeting alone when it is a one-off). */
+  readonly openQuestions = signal<readonly MeetingNoteInContext[]>([]);
+  /** Why the open actions or questions could not be read; the meeting still shows. */
   readonly actionsError = signal<ApiError | null>(null);
 
   /** The left column: running now, planned (soonest first), ended or cancelled (latest first). */
@@ -146,6 +148,7 @@ export class MeetingsStore {
       this.openError.set(null);
       this.meeting.set(null);
       this.openActions.set([]);
+      this.openQuestions.set([]);
       return;
     }
     await this.open(target);
@@ -161,6 +164,7 @@ export class MeetingsStore {
       this.openError.set(result.error);
       this.meeting.set(null);
       this.openActions.set([]);
+      this.openQuestions.set([]);
       return;
     }
     this.openError.set(null);
@@ -174,25 +178,32 @@ export class MeetingsStore {
     return dateInputValue(this.clock.now());
   }
 
-  /** Reads the open actions of the open meeting's series, or of the meeting alone when it is a one-off. */
+  /**
+   * Reads the open actions and the open questions of the open meeting's series, or of the meeting alone when it is a
+   * one-off.
+   */
   async loadActions(): Promise<void> {
     const meeting = this.meeting();
     if (meeting === null) return;
     const generation = this.generation;
-    const result = await this.api.listMeetingNotes({
-      kind: 'action',
-      status: 'open',
-      ...(meeting.seriesId !== null
+    const where =
+      meeting.seriesId !== null
         ? { seriesId: meeting.seriesId }
-        : { meetingId: meeting.id }),
-    });
+        : { meetingId: meeting.id };
+    const [actions, questions] = await Promise.all([
+      this.api.listMeetingNotes({ kind: 'action', status: 'open', ...where }),
+      this.api.listMeetingNotes({ kind: 'question', status: 'open', ...where }),
+    ]);
     if (generation !== this.generation) return;
-    if (!result.ok) {
-      this.actionsError.set(result.error);
+    if (!actions.ok || !questions.ok) {
+      this.actionsError.set(
+        !actions.ok ? actions.error : questions.ok ? null : questions.error
+      );
       return;
     }
     this.actionsError.set(null);
-    this.openActions.set(result.value.items);
+    this.openActions.set(actions.value.items);
+    this.openQuestions.set(questions.value.items);
   }
 
   /** Reads the open meeting again in a few seconds while it is in progress, and so on until it ends or closes. */
@@ -430,8 +441,35 @@ export class MeetingsStore {
     );
     if (note === null) return false;
     this.patchTopic(topicId, (t) => ({ ...t, notes: [...t.notes, note] }));
-    if (note.kind === 'action') await this.loadActions();
+    if (note.kind === 'action' || note.kind === 'question')
+      await this.loadActions();
     if (images.length > 0) await this.addNoteImages(note.id, images);
+    return true;
+  }
+
+  /**
+   * Answers a question, then adds the answer's images; the question shows answered wherever it shows. Works for a
+   * question of an earlier meeting too (from the open questions). Answers whether the answer was added; an image
+   * refused after that shows in `commandError`.
+   */
+  async answer(
+    questionId: string,
+    text: string,
+    images: readonly Blob[] = []
+  ): Promise<boolean> {
+    const result = await this.run(() =>
+      this.api.addMeetingNoteAnswer(questionId, { text: text.trim() })
+    );
+    if (result === null) return false;
+    this.replaceNote(result.question);
+    this.patchTopic(result.answer.topicId, (t) => ({
+      ...t,
+      notes: [...t.notes, result.answer],
+    }));
+    this.openQuestions.set(
+      this.openQuestions().filter((q) => q.note.id !== questionId)
+    );
+    if (images.length > 0) await this.addNoteImages(result.answer.id, images);
     return true;
   }
 
@@ -476,8 +514,8 @@ export class MeetingsStore {
   }
 
   /**
-   * Marks an action done or not done again, wherever it shows: under its topic in the open meeting and among the open
-   * actions. Allowed after the meeting ended.
+   * Marks an action done or a question answered, or open again (a question reopened), wherever it shows: under its
+   * topic in the open meeting and among the open actions or questions. Allowed after the meeting ended.
    */
   async setDone(noteId: string, done: boolean): Promise<boolean> {
     const note = await this.run(() =>
@@ -485,12 +523,12 @@ export class MeetingsStore {
     );
     if (note === null) return false;
     this.replaceNote(note);
-    this.openActions.set(
+    const list =
+      note.kind === 'question' ? this.openQuestions : this.openActions;
+    list.set(
       done
-        ? this.openActions().filter((a) => a.note.id !== noteId)
-        : this.openActions().map((a) =>
-            a.note.id === noteId ? { ...a, note } : a
-          )
+        ? list().filter((a) => a.note.id !== noteId)
+        : list().map((a) => (a.note.id === noteId ? { ...a, note } : a))
     );
     if (!done) await this.loadActions();
     return true;
@@ -513,16 +551,19 @@ export class MeetingsStore {
     return true;
   }
 
-  /** Removes a note. */
+  /** Removes a note, and a question's answers with it. */
   async deleteNote(topicId: string, noteId: string): Promise<void> {
     if (!(await this.runEmpty(() => this.api.deleteMeetingNote(noteId))))
       return;
     this.patchTopic(topicId, (t) => ({
       ...t,
-      notes: t.notes.filter((n) => n.id !== noteId),
+      notes: t.notes.filter((n) => n.id !== noteId && n.answerTo !== noteId),
     }));
     this.openActions.set(
       this.openActions().filter((a) => a.note.id !== noteId)
+    );
+    this.openQuestions.set(
+      this.openQuestions().filter((q) => q.note.id !== noteId)
     );
   }
 

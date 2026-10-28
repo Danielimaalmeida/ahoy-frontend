@@ -566,6 +566,8 @@ export type EndMeetingResult = Schemas['EndMeetingResult'];
 
 /** Answer of `moveMeetingTopic`: the moved topic and its copy in the next meeting. */
 export type MoveMeetingTopicResult = Schemas['MoveMeetingTopicResult'];
+/** A question, answered, and its new answer (`addMeetingNoteAnswer`). */
+export type MeetingNoteAnswerResult = Schemas['MeetingNoteAnswerResult'];
 
 /** Body of `createMeeting`; with `seriesId`, the title and stakeholders default to the series'. */
 export type CreateMeetingRequest = Schemas['CreateMeetingRequest'];
@@ -615,6 +617,9 @@ export const MEETING_NOTE_IMAGE_TYPES = listOf<MeetingNoteImageType>()([
   'image/webp',
   'image/gif',
 ]);
+
+/** Body of `addMeetingNoteAnswer`. */
+export type MeetingNoteAnswerRequest = Schemas['MeetingNoteAnswerRequest'];
 
 /** Body of `setMeetingNoteDone`. */
 export type MeetingNoteDoneRequest = Schemas['MeetingNoteDoneRequest'];

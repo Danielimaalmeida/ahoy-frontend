@@ -357,7 +357,21 @@ export class MeetingView {
     const meeting = this.meeting();
     if (meeting === null) return;
     try {
-      await navigator.clipboard.writeText(meetingToConfluence(meeting));
+      await navigator.clipboard.writeText(
+        meetingToConfluence(
+          meeting,
+          this.store.openQuestions().map((q) => ({
+            text: q.note.text,
+            from:
+              q.meetingId === meeting.id
+                ? null
+                : {
+                    topicTitle: q.topicTitle,
+                    meetingStartsAt: q.meetingStartsAt,
+                  },
+          }))
+        )
+      );
       this.toasts.show('Meeting copied as Confluence markup.');
     } catch {
       this.toasts.show(

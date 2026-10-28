@@ -1,4 +1,5 @@
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
+import addMeetingNoteAnswer from '@testing/fixtures/addMeetingNoteAnswer.json';
 import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import createMeeting from '@testing/fixtures/createMeeting.json';
@@ -23,6 +24,7 @@ import {
   isMeeting,
   isMeetingList,
   isMeetingNote,
+  isMeetingNoteAnswerResult,
   isMeetingNoteList,
   isMeetingSeries,
   isMeetingSeriesList,
@@ -62,7 +64,12 @@ describe('meeting guards', () => {
     expect(isMeetingNote(decisionWithOwner)).toBe(false);
     expect(isMeetingNote.explain(decisionWithOwner)).toContain('owner');
     expect(
-      isMeetingNote(withField(setMeetingNoteDone, 'kind', 'question'))
+      isMeetingNote({
+        ...setMeetingNoteDone,
+        kind: 'decision',
+        owner: null,
+        dueOn: null,
+      })
     ).toBe(false);
     expect(
       isMeetingNote(withField(addMeetingNote, 'dueOn', '2026-10-30'))
@@ -70,6 +77,23 @@ describe('meeting guards', () => {
     expect(isMeetingNote(withField(addMeetingNote, 'kind', 'todo'))).toBe(
       false
     );
+  });
+
+  it('accept an answered question with its answer, and refuse an answer that is not a plain note', () => {
+    expect(isMeetingNoteAnswerResult(addMeetingNoteAnswer)).toBe(true);
+    expect(isMeetingNote(addMeetingNoteAnswer.question)).toBe(true);
+    const answer = addMeetingNoteAnswer.answer;
+    expect(isMeetingNote(withField(answer, 'kind', 'decision'))).toBe(false);
+    expect(
+      isMeetingNote.explain(withField(answer, 'kind', 'decision'))
+    ).toContain('answers a question');
+    expect(isMeetingNote(withField(answer, 'answerTo', 'not-a-uuid'))).toBe(
+      false
+    );
+    expect(isMeetingNote(withField(answer, 'answerTo', undefined))).toBe(false);
+    expect(
+      isMeetingNoteAnswerResult({ question: addMeetingNoteAnswer.question })
+    ).toBe(false);
   });
 
   it('accept a note with images, and refuse an image of another format, an empty or oversized one, or an eleventh', () => {

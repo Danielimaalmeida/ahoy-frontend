@@ -2738,7 +2738,7 @@
         "operationId": "listMeetingNotes",
         "tags": ["meetings"],
         "summary": "The notes of one kind across meetings, such as a series' open actions or its decisions.",
-        "description": "Latest meeting first, then in the meeting's topic order and the order the notes were taken; at most 500. A note\nunder a topic carried over to the next meeting is listed once, as its copy there. `status` is only for\n`kind=action` (`400 validation_failed` otherwise). 0 AIU.\n",
+        "description": "Latest meeting first, then in the meeting's topic order and the order the notes were taken; at most 500. A note\nunder a topic carried over to the next meeting is listed once, as its copy there. `status` is only for\n`kind=action` and `kind=question` (`400 validation_failed` otherwise). 0 AIU.\n",
         "parameters": [
           {
             "name": "kind",
@@ -2772,7 +2772,7 @@
             "name": "status",
             "in": "query",
             "required": false,
-            "description": "Only the actions still to do (`open`) or done.",
+            "description": "Only the actions still to do or questions still to answer (`open`), or the done or answered ones.",
             "schema": {
               "$ref": "#/components/schemas/MeetingActionStatus"
             }
@@ -2981,6 +2981,56 @@
         }
       }
     },
+    "/meeting-notes/{noteId}/answers": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingNoteId"
+        }
+      ],
+      "post": {
+        "operationId": "addMeetingNoteAnswer",
+        "tags": ["meetings"],
+        "summary": "Answer a question.",
+        "description": "Adds a plain note under the question's topic that answers it (`answerTo`), and marks the question answered when\nit was open. Allowed after the question's meeting has ended, since an open question is often answered at a\nlater meeting. `409 invalid_state` when the note is not a question, or its topic was moved to the next meeting\n(answer the copy there). 0 AIU.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingNoteAnswerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The question, answered, and the answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingNoteAnswerResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meeting-notes/{noteId}/done": {
       "parameters": [
         {
@@ -2990,8 +3040,8 @@
       "post": {
         "operationId": "setMeetingNoteDone",
         "tags": ["meetings"],
-        "summary": "Mark an action done, or not done again.",
-        "description": "Records who marked it and when; `done: false` clears both. Allowed after the meeting has ended, since actions\nare done after it. `409 invalid_state` when the note is not an action, or its topic was moved to the next\nmeeting (mark the copy there).\n",
+        "summary": "Mark an action done or a question answered, or open again.",
+        "description": "Records who marked it and when; `done: false` clears both (a question reopened keeps its answers). Allowed\nafter the meeting has ended, since actions are done and questions answered after it. `409 invalid_state` when\nthe note is neither an action nor a question, or its topic was moved to the next meeting (mark the copy\nthere).\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -3004,7 +3054,7 @@
         },
         "responses": {
           "200": {
-            "description": "The action, changed.",
+            "description": "The action or question, changed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3041,7 +3091,7 @@
         "operationId": "updateMeetingNote",
         "tags": ["meetings"],
         "summary": "Rewrite a note, and change its kind, owner or due day.",
-        "description": "`kind`, `owner` and `dueOn` absent keep their values; null clears `owner` or `dueOn`. A note that stops being an\naction loses its owner, due day and done mark. `409 invalid_state` when its topic was moved to the next meeting\nor its meeting has ended.\n",
+        "description": "`kind`, `owner` and `dueOn` absent keep their values; null clears `owner` or `dueOn`. A note that stops being an\naction loses its owner and due day, and a note whose kind changes loses its done mark. An answer stays a plain\nnote (`400 validation_failed`), and a question with answers stays a question (`409 invalid_state`). `409\ninvalid_state` when its topic was moved to the next meeting, or its meeting has ended (an answer can still\nchange then).\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -3084,7 +3134,7 @@
         "operationId": "deleteMeetingNote",
         "tags": ["meetings"],
         "summary": "Remove a note.",
-        "description": "`409 invalid_state` when its topic was moved to the next meeting or its meeting has ended.",
+        "description": "Removing a question removes its answers. `409 invalid_state` when its topic was moved to the next meeting or its\nmeeting has ended (an answer can still be removed then).\n",
         "responses": {
           "204": {
             "description": "The note is gone."
@@ -7867,7 +7917,7 @@
       "MeetingNoteKind": {
         "type": "string",
         "enum": ["note", "decision", "action", "question"],
-        "description": "`note`: what was said. `decision`: what was agreed. `action`: something a person does next, with an optional\nowner and due day. `question`: what is still to be answered.\n"
+        "description": "`note`: what was said. `decision`: what was agreed. `action`: something a person does next, with an optional\nowner and due day. `question`: what is still to be answered; it takes answers and is open or answered.\n"
       },
       "MeetingActionStatus": {
         "type": "string",
@@ -7886,6 +7936,7 @@
           "doneAt",
           "doneBy",
           "doneByName",
+          "answerTo",
           "images",
           "createdBy",
           "createdByName",
@@ -7923,16 +7974,21 @@
           "doneAt": {
             "type": ["string", "null"],
             "format": "date-time",
-            "description": "When the action was marked done."
+            "description": "When the action was marked done, or the question answered; null for other kinds."
           },
           "doneBy": {
             "type": ["string", "null"],
             "minLength": 1,
             "maxLength": 200,
-            "description": "Who marked the action done."
+            "description": "Who marked the action done or the question answered."
           },
           "doneByName": {
             "$ref": "#/components/schemas/ActorName"
+          },
+          "answerTo": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The question this note answers, under the same topic; an answer is a plain `note`. Null for any other note.\n"
           },
           "images": {
             "type": "array",
@@ -8396,6 +8452,32 @@
             "type": ["string", "null"],
             "format": "date",
             "description": "Only for an action; null clears it."
+          }
+        }
+      },
+      "MeetingNoteAnswerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["text"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "MeetingNoteAnswerResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "answer"],
+        "properties": {
+          "question": {
+            "$ref": "#/components/schemas/MeetingNote"
+          },
+          "answer": {
+            "$ref": "#/components/schemas/MeetingNote"
           }
         }
       },

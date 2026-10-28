@@ -43,6 +43,7 @@ import {
   isMeetingStoryDraftList,
   isMeetingTopic,
   isMetricsReport,
+  isMeetingNoteAnswerResult,
   isMoveMeetingTopicResult,
   isNoContent,
   isModelPlan,
@@ -96,6 +97,8 @@ import type {
   Meeting,
   MeetingList,
   MeetingNote,
+  MeetingNoteAnswerRequest,
+  MeetingNoteAnswerResult,
   MeetingNoteDoneRequest,
   MeetingNoteList,
   MeetingNoteRequest,
@@ -875,7 +878,23 @@ export class ApiClient {
     );
   }
 
-  /** Marks an action done, or not done again; also after its meeting ended. */
+  /**
+   * Answers a question, marking it answered when it was open; also after its meeting ended. The answer (201) is the
+   * question and the answer.
+   */
+  addMeetingNoteAnswer(
+    noteId: string,
+    body: MeetingNoteAnswerRequest
+  ): Promise<ApiResult<MeetingNoteAnswerResult>> {
+    return this.post(
+      'addMeetingNoteAnswer',
+      `/meeting-notes/${segment(noteId)}/answers`,
+      body,
+      isMeetingNoteAnswerResult
+    );
+  }
+
+  /** Marks an action done or a question answered, or open again; also after its meeting ended. */
   setMeetingNoteDone(
     noteId: string,
     body: MeetingNoteDoneRequest

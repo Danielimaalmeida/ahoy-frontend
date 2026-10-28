@@ -1,0 +1,40 @@
+{
+  "question": {
+    "id": "d4a3f6e5-3e4b-4f80-8b1c-0d9e8f7a6b54",
+    "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e22",
+    "text": "Do the late fees apply to invoices already overdue?",
+    "kind": "question",
+    "owner": null,
+    "dueOn": null,
+    "doneAt": "2026-10-06T10:37:00.000Z",
+    "doneBy": "sam@example.com",
+    "doneByName": "Sam Example",
+    "answerTo": null,
+    "images": [],
+    "createdBy": "alex@example.com",
+    "createdByName": "Alex Example",
+    "createdAt": "2026-10-06T10:34:00.000Z",
+    "updatedBy": "alex@example.com",
+    "updatedByName": "Alex Example",
+    "updatedAt": "2026-10-06T10:34:00.000Z"
+  },
+  "answer": {
+    "id": "e5b4a7f6-4f5c-4a91-9c2d-1e0f9a8b7c65",
+    "topicId": "a1f0c3d2-0b1e-4c5d-9e8f-7a6b5c4d3e22",
+    "text": "No, only to invoices issued from 1 November.",
+    "kind": "note",
+    "owner": null,
+    "dueOn": null,
+    "doneAt": null,
+    "doneBy": null,
+    "doneByName": null,
+    "answerTo": "d4a3f6e5-3e4b-4f80-8b1c-0d9e8f7a6b54",
+    "images": [],
+    "createdBy": "sam@example.com",
+    "createdByName": "Sam Example",
+    "createdAt": "2026-10-06T10:37:00.000Z",
+    "updatedBy": "sam@example.com",
+    "updatedByName": "Sam Example",
+    "updatedAt": "2026-10-06T10:37:00.000Z"
+  }
+}

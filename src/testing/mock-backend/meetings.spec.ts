@@ -3,6 +3,7 @@ import type {
   Meeting,
   MeetingList,
   MeetingNote,
+  MeetingNoteAnswerResult,
   MeetingNoteList,
   MeetingSeries,
   MeetingStoryDraft,
@@ -281,6 +282,142 @@ describe('the mock meetings', () => {
     expect(
       call(server, 'POST', `/meeting-notes/${decision!.note.id}/done`, {
         done: true,
+      }).status
+    ).toBe(409);
+  });
+
+  it('answers a question, which marks it answered, reopens it keeping the answers, and takes answers after its meeting ended', () => {
+    const { server, running } = seeded();
+    const topic = (
+      call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+    ).topics[0]!;
+    const question = call(server, 'POST', `/meeting-topics/${topic.id}/notes`, {
+      text: 'Who signs off?',
+      kind: 'question',
+    }).body as MeetingNote;
+    const openQuestions = () =>
+      (
+        call(
+          server,
+          'GET',
+          `/meeting-notes?kind=question&seriesId=${running.seriesId}&status=open`
+        ).body as MeetingNoteList
+      ).items.map((i) => i.note.id);
+    expect(openQuestions()).toContain(question.id);
+    const answered = call(
+      server,
+      'POST',
+      `/meeting-notes/${question.id}/answers`,
+      { text: ' Ana ' }
+    );
+    expect(answered.status).toBe(201);
+    const result = answered.body as MeetingNoteAnswerResult;
+    expect([result.question.doneAt !== null, result.answer.answerTo]).toEqual([
+      true,
+      question.id,
+    ]);
+    expect([
+      result.answer.kind,
+      result.answer.text,
+      result.answer.topicId,
+    ]).toEqual(['note', 'Ana', topic.id]);
+    expect(openQuestions()).not.toContain(question.id);
+    const reopened = call(
+      server,
+      'POST',
+      `/meeting-notes/${question.id}/done`,
+      {
+        done: false,
+      }
+    ).body as MeetingNote;
+    expect(reopened.doneAt).toBeNull();
+    expect(openQuestions()).toContain(question.id);
+    expect(
+      call(server, 'POST', `/meetings/${running.id}/end`, { carryOver: [] })
+        .status
+    ).toBe(200);
+    const late = call(server, 'POST', `/meeting-notes/${question.id}/answers`, {
+      text: 'Ana, confirmed by legal',
+    });
+    expect(late.status).toBe(201);
+    const after = (
+      call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+    ).topics[0]!.notes.filter((n) => n.answerTo === question.id);
+    expect(after.map((n) => n.text)).toEqual([
+      'Ana',
+      'Ana, confirmed by legal',
+    ]);
+  });
+
+  it('refuses an answer to a note that is not a question, a kind on an answer, and a question with answers changing kind', () => {
+    const { server, running } = seeded();
+    const topic = (
+      call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+    ).topics[0]!;
+    const add = (body: object) =>
+      call(server, 'POST', `/meeting-topics/${topic.id}/notes`, body)
+        .body as MeetingNote;
+    const plain = add({ text: 'Plain' });
+    expect(
+      call(server, 'POST', `/meeting-notes/${plain.id}/answers`, { text: 'x' })
+        .status
+    ).toBe(409);
+    const question = add({ text: 'Why?', kind: 'question' });
+    const { answer } = call(
+      server,
+      'POST',
+      `/meeting-notes/${question.id}/answers`,
+      { text: 'Because' }
+    ).body as MeetingNoteAnswerResult;
+    expect(
+      call(server, 'PATCH', `/meeting-notes/${answer.id}`, {
+        text: 'Because',
+        kind: 'decision',
+      }).status
+    ).toBe(400);
+    expect(
+      call(server, 'PATCH', `/meeting-notes/${question.id}`, {
+        text: 'Why?',
+        kind: 'note',
+      }).status
+    ).toBe(409);
+    expect(call(server, 'DELETE', `/meeting-notes/${question.id}`).status).toBe(
+      204
+    );
+    expect(
+      (
+        call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+      ).topics[0]!.notes.map((n) => n.id)
+    ).not.toContain(answer.id);
+  });
+
+  it('carries a question to the next meeting with its answers, which name the copy', () => {
+    const { server, running } = seeded();
+    const topic = (
+      call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+    ).topics[0]!;
+    const question = call(server, 'POST', `/meeting-topics/${topic.id}/notes`, {
+      text: 'Who signs off?',
+      kind: 'question',
+    }).body as MeetingNote;
+    call(server, 'POST', `/meeting-notes/${question.id}/answers`, {
+      text: 'Ana',
+    });
+    const result = call(server, 'POST', `/meetings/${running.id}/end`, {
+      carryOver: [topic.id],
+    }).body as EndMeetingResult;
+    const copy = result.nextMeeting!.topics.find(
+      (t) => t.carriedFrom?.topicId === topic.id
+    )!;
+    const copied = copy.notes.find((n) => n.text === 'Who signs off?')!;
+    expect(copied.id).not.toBe(question.id);
+    expect(copied.doneAt).not.toBeNull();
+    expect(
+      copy.notes.filter((n) => n.answerTo === copied.id).map((n) => n.text)
+    ).toEqual(['Ana']);
+    expect(
+      call(server, 'POST', `/meeting-notes/${question.id}/answers`, {
+        text: 'too late',
       }).status
     ).toBe(409);
   });
