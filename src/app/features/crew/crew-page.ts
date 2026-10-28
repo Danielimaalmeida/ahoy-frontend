@@ -555,9 +555,12 @@ interface MemberLine {
                       }
                     </span>
                     @for (role of line.member.roles; track role) {
-                      <span class="ah-tag">{{
-                        role === 'sprint_person' ? 'Sprint' : 'Lunch'
-                      }}</span>
+                      <span class="ah-tag">
+                        <span aria-hidden="true">{{
+                          role === 'sprint_person' ? '🚀' : '🍕'
+                        }}</span>
+                        {{ role === 'sprint_person' ? 'Sprint' : 'Lunch' }}
+                      </span>
                     }
                   </button>
                 </li>

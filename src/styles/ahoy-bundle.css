@@ -203,6 +203,7 @@ body {
 .ah-tag {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   height: 20px;
   padding: 0 8px;
   border-radius: var(--radius-pill);

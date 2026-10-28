@@ -18,13 +18,13 @@ jobs:
     uses: sflp/r3da_the_guardians_workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
     with:
       runner: "['atc-ubuntu-latest']"
-      node-version: ${{ vars.CIOO_NODE_VERSION }}
-      registry-url: ${{ vars.CIOO_ACR_URL_TEST }}
-      registry-username: ${{ vars.CIOO_ACR_USERNAME_TEST }}
+      node-version: ${{ vars.FIO_NODE_VERSION }}
+      registry-url: ${{ vars.FIO_ACR_URL_TEST }}
+      registry-username: ${{ vars.FIO_ACR_USERNAME_TEST }}
       type: 'test'
       environment: 'test'
     secrets:
-      registry-password: ${{ secrets.CIOO_ACR_SECRET_TEST }}
+      registry-password: ${{ secrets.FIO_ACR_SECRET_TEST }}
 
   validate-image-tag:
     name: 'Validate image tag output'
@@ -50,11 +50,11 @@ jobs:
     uses: sflp/r3da_the_guardians_workflows/.github/workflows/update-ops-tag-reusable.yml@main
     with:
       image-tag: ${{ needs.publish-branch-container.outputs.image-tag }}
-      service: cioo-ahoy-frontend
-      values-file: charts/cioo-ahoy-frontend/values-test.yaml
+      service: fio-ahoy-frontend
+      values-file: charts/fio-ahoy-frontend/values-test.yaml
       tag-path: image.tag
       source-repository: ${{ github.repository }}
       source-workflow: ${{ github.workflow }}
       source-run-id: ${{ github.run_id }}
     secrets:
-      ops-deploy-key: ${{ secrets.CIOO_OPS_DEVELOP_DEPLOY_KEY }}
+      ops-deploy-key: ${{ secrets.FIO_OPS_DEVELOP_DEPLOY_KEY }}

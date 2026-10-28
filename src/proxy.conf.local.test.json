@@ -6,7 +6,7 @@
     "logLevel": "debug"
   },
   "/api": {
-    "target": "https://cioo-ahoy.apps.4wm-fpm-test.azure.cloud.acme",
+    "target": "https://fio-ahoy.apps.4wm-fpm-test.azure.cloud.acme",
     "secure": false,
     "changeOrigin": true,
     "headers": {
