@@ -669,11 +669,15 @@ export class MeetingDesk {
     this.imageBytes.delete(id);
   }
 
-  /** Removes a note, and a question's answers with it. */
+  /** Removes a note, and a question's answers with it; removing a question's last answer marks it open again. */
   deleteNote(id: string): void {
-    this.changeableNote(id);
+    const note = this.changeableNote(id);
     this.notes.delete(id);
     for (const answer of this.answersOf(id)) this.notes.delete(answer.id);
+    const question =
+      note.answerTo === null ? undefined : this.notes.get(note.answerTo);
+    if (question !== undefined && this.answersOf(question.id).length === 0)
+      this.markDone(question, '', false);
   }
 
   listSeries(): MeetingSeries[] {

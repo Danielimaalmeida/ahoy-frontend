@@ -1301,7 +1301,8 @@ export interface paths {
      * @description The body is the image itself: a PNG, JPEG, WebP or GIF of at most 5 MiB (5 242 880 bytes). Its format is read
      *     from its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`.
      *     Stored in Postgres beside the artifacts' bytes. `409 invalid_state` when the note has 10 images already, its
-     *     topic was moved to the next meeting or its meeting has ended. 0 AIU, no external call.
+     *     topic was moved to the next meeting or its meeting has ended (an answer can still take images then). 0 AIU, no
+     *     external call.
      */
     readonly post: operations['addMeetingNoteImage'];
     readonly delete?: never;
@@ -1329,8 +1330,8 @@ export interface paths {
     readonly post?: never;
     /**
      * Remove an image from a note.
-     * @description `409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended, as for the
-     *     note itself.
+     * @description `409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended (not for an
+     *     answer's image), as for the note itself.
      */
     readonly delete: operations['deleteMeetingNoteImage'];
     readonly options?: never;
@@ -1402,8 +1403,9 @@ export interface paths {
     readonly post?: never;
     /**
      * Remove a note.
-     * @description Removing a question removes its answers. `409 invalid_state` when its topic was moved to the next meeting or its
-     *     meeting has ended (an answer can still be removed then).
+     * @description Removing a question removes its answers; removing a question's last answer marks the question open again.
+     *     `409 invalid_state` when its topic was moved to the next meeting or its meeting has ended (an answer can still
+     *     be removed then).
      */
     readonly delete: operations['deleteMeetingNote'];
     readonly options?: never;

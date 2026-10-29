@@ -370,7 +370,17 @@ describe('Meetings on the mock backend', () => {
         'Ana, after the meeting'
       );
       expect(answer.querySelectorAll('ah-note-images li')).toHaveLength(1);
-      expect(buttonNamed(answer, 'Remove')).toBeTruthy();
+      choose(answer.querySelector<HTMLInputElement>('input[type=file]'), [
+        new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' }),
+      ]);
+      await flush(page);
+      expect(text(topic().querySelector('.image-hint'))).toBe(
+        'Only PNG, JPEG, WebP and GIF images can be added.'
+      );
+      buttonNamed(answer, 'Remove').click();
+      await flush(page);
+      expect(topic().querySelector('ul.answers')).toBeNull();
+      expect(text(topic().querySelector('li .status'))).toBe('Open');
     });
 
     it('adds an image pasted into the line with the next note, shows it, opens it large and removes it', async () => {

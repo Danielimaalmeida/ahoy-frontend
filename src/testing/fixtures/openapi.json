@@ -2811,7 +2811,7 @@
         "operationId": "addMeetingNoteImage",
         "tags": ["meetings"],
         "summary": "Add an image to a note.",
-        "description": "The body is the image itself: a PNG, JPEG, WebP or GIF of at most 5 MiB (5 242 880 bytes). Its format is read\nfrom its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`.\nStored in Postgres beside the artifacts' bytes. `409 invalid_state` when the note has 10 images already, its\ntopic was moved to the next meeting or its meeting has ended. 0 AIU, no external call.\n",
+        "description": "The body is the image itself: a PNG, JPEG, WebP or GIF of at most 5 MiB (5 242 880 bytes). Its format is read\nfrom its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`.\nStored in Postgres beside the artifacts' bytes. `409 invalid_state` when the note has 10 images already, its\ntopic was moved to the next meeting or its meeting has ended (an answer can still take images then). 0 AIU, no\nexternal call.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2958,7 +2958,7 @@
         "operationId": "deleteMeetingNoteImage",
         "tags": ["meetings"],
         "summary": "Remove an image from a note.",
-        "description": "`409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended, as for the\nnote itself.\n",
+        "description": "`409 invalid_state` when the note's topic was moved to the next meeting or its meeting has ended (not for an\nanswer's image), as for the note itself.\n",
         "responses": {
           "204": {
             "description": "Removed."
@@ -3134,7 +3134,7 @@
         "operationId": "deleteMeetingNote",
         "tags": ["meetings"],
         "summary": "Remove a note.",
-        "description": "Removing a question removes its answers. `409 invalid_state` when its topic was moved to the next meeting or its\nmeeting has ended (an answer can still be removed then).\n",
+        "description": "Removing a question removes its answers; removing a question's last answer marks the question open again.\n`409 invalid_state` when its topic was moved to the next meeting or its meeting has ended (an answer can still\nbe removed then).\n",
         "responses": {
           "204": {
             "description": "The note is gone."
