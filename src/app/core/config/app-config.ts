@@ -17,7 +17,7 @@ export interface AppConfig {
    * or "(you)", the avatar and the owner checks will disagree with what the API records.
    */
   readonly actor: string;
-  /** Optional Jira base URL override; Backlog defaults to `https://atc.acmegroup.net/jira`. */
+  /** The team's Jira base URL, for the Backlog's issue links; without it the Backlog shows no Jira link. */
   readonly jiraBaseUrl?: string;
   /**
    * The qnumbers allowed to use the app, lower-cased. Anyone else sees "Access denied". Without it the app does not
@@ -117,7 +117,7 @@ const isSet = (value: unknown): boolean =>
 
 /**
  * Reads a `/config.json` document. Everything in it is untrusted: a field that is not set (missing, `null`, or an empty
- * `jiraBaseUrl`, which leaves the Backlog's Jira default in force) takes its default, and so does one that is invalid, with a note in
+ * `jiraBaseUrl`, which leaves the Backlog without Jira links) takes its default, and so does one that is invalid, with a note in
  * `problems`. Fields the app does not know are ignored.
  */
 export function parseAppConfig(document: unknown): ParsedAppConfig {

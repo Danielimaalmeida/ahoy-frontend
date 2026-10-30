@@ -62,6 +62,7 @@ flowchart TB
 | F14 | AIU as integer nano-AIU; parse and format without floats (`domain/aiu`).                                                                           | Decided; lane 2C.                                                                                                                                                                                                                                                  |
 | F15 | UI text in English, like the design system. No i18n framework for now.                                                                             | Decided.                                                                                                                                                                                                                                                           |
 | F16 | Light theme by default, dark via `data-theme="dark"` on `<html>`. No visible toggle yet.                                                           | Decided; lane 1A.                                                                                                                                                                                                                                                  |
+| F17 | One image for every team: the WebEAM realm and client, the Jira link and the allowed users come from `/config.json`.                               | Decided 2026-10-30 (Helm chart); see "Runtime configuration".                                                                                                                                                                                                      |
 
 ## What phase 0 confirmed (tasks 0.2 and 0.3)
 
@@ -237,6 +238,31 @@ session can build this app.
 and `FETCH` (`globalThis.fetch`, `core/realtime/fetch.ts`). `API_BASE` (`core/api/api-base.ts`) comes from
 `AppConfig.apiBase` (`/config.json`, `/api/v1` when there is none). `HttpClient` requests carry `Authorization: Bearer <WebEAM token>`; the event stream reads `fetch` directly, so
 it takes the same token from `AUTH_STRATEGY`. Without a token the API answers `401 unauthenticated`.
+
+## Runtime configuration (F17)
+
+One image serves every team: whatever serves the app provides `/config.json` (the Helm chart mounts it from a ConfigMap
+into the nginx root, which serves it with `Cache-Control: no-store` and a 404 when it is missing). Every field is
+optional; a missing or invalid one takes the build's value, with a warning in the console.
+
+```json
+{
+  "apiBase": "/api/v1",
+  "auth": {
+    "realmUrl": "https://sso.example.com/auth/oauth2/realms/root/realms/alpha",
+    "clientId": "<the team's WebEAM client for the front end>",
+    "scope": "openid profile email groups"
+  },
+  "jiraBaseUrl": "https://jira.example.com/jira",
+  "allowedQnumbers": ["q123456"]
+}
+```
+
+`main.ts` reads `auth` before bootstrap (`core/config/runtime-environment.ts`), because `provideFedevAuth` takes its
+settings when it is provided: every WebEAM endpoint follows from `realmUrl`, and every redirect from the page's own
+origin (`domain/auth-settings.ts`). Without `auth` the build's environment signs in, as local builds do; the TEST
+build's `environment.test.ts` keeps FIO's realm and client only until its deployment serves `/config.json`. The rest is
+read by `initAppConfig`. Without `jiraBaseUrl` the Backlog shows no Jira link.
 
 ## Dev server and proxy (task 0.6)
 

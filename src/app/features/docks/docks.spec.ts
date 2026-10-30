@@ -187,20 +187,21 @@ describe('Docks', () => {
     });
   });
 
-  /** Opens the screen and waits for the backlog and the voyages to arrive. */
+  /**
+   * Opens the screen and waits for the backlog and the voyages to arrive. Without `jiraBaseUrl` the configuration in
+   * force gains a fictional Jira; a URL also makes alex@example.com the actor; null configures no Jira.
+   */
   async function mount(
     backlog: BacklogPort | null = null,
-    jiraBaseUrl: string | null = null
+    jiraBaseUrl?: string | null
   ): Promise<ComponentFixture<Docks>> {
     if (backlog !== null)
       TestBed.overrideProvider(BACKLOG_PORT, { useValue: backlog });
-    if (jiraBaseUrl !== null) {
-      TestBed.inject(AppConfigStore).set({
-        apiBase: '/api/v1',
-        actor: 'alex@example.com',
-        jiraBaseUrl,
-      });
-    }
+    const store = TestBed.inject(AppConfigStore);
+    if (jiraBaseUrl === undefined)
+      store.set({ ...store.config(), jiraBaseUrl: 'https://jira.example.com' });
+    else if (jiraBaseUrl !== null)
+      store.set({ apiBase: '/api/v1', actor: 'alex@example.com', jiraBaseUrl });
     const fixture = TestBed.createComponent(Docks);
     await refresh(fixture);
     return fixture;
@@ -483,13 +484,23 @@ describe('Docks', () => {
   });
 
   describe('Jira links', () => {
-    it('uses the acme Jira path when no runtime override is configured', async () => {
-      const f = await mount(new FakeBacklog([anItem('PROJ-145')]));
+    it('shows no Jira link when the runtime configuration names no Jira', async () => {
+      const f = await mount(new FakeBacklog([anItem('PROJ-145')]), null);
+      expect(
+        root(f).querySelector<HTMLAnchorElement>('a[title="Open in Jira"]')
+      ).toBeNull();
+    });
+
+    it('links to the configured Jira', async () => {
+      const f = await mount(
+        new FakeBacklog([anItem('PROJ-145')]),
+        'https://jira.example.com/jira'
+      );
       const link = root(f).querySelector<HTMLAnchorElement>(
         'a[title="Open in Jira"]'
       )!;
       expect(link.getAttribute('href')).toBe(
-        'https://atc.acmegroup.net/jira/browse/PROJ-145'
+        'https://jira.example.com/jira/browse/PROJ-145'
       );
       expect(link.getAttribute('aria-label')).toBe(
         'Open PROJ-145 in Jira (new tab)'
