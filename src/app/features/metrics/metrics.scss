@@ -146,6 +146,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
 .strong {
   font-weight: 700;
 }
@@ -154,6 +160,49 @@
   margin: 8px 0 0;
   font-size: 12.5px;
   color: var(--ink-muted);
+}
+
+// "By phase" (MetricsCost): row headers read as plain cells, a colour swatch per phase, a share bar and a Total row.
+.phases tbody th,
+.phases tfoot th {
+  padding: 7px var(--space-3\.5);
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.phases tbody tr:hover th {
+  background: var(--row-hover);
+}
+
+.phases tfoot th,
+.phases tfoot td {
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 0;
+}
+
+.phases tfoot th {
+  font-weight: 700;
+}
+
+.phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+}
+
+.share {
+  display: grid;
+  grid-template-columns: minmax(40px, 1fr) 42px;
+  align-items: center;
+  gap: 10px;
+  min-width: 100px;
 }
 
 // Horizontal bars: label, bar, value.

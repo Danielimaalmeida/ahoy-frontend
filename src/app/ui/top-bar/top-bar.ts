@@ -1,6 +1,7 @@
 import {
   Component,
   type ElementRef,
+  inject,
   input,
   linkedSignal,
   model,
@@ -11,6 +12,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Button } from '@ui/button/button';
 import { Icon } from '@ui/icon/icon';
 import { Logo } from '@ui/logo/logo';
+import { HalloweenService } from '@ui/theme/halloween.service';
 
 /** The state of the live event stream: connected, trying again, or given up (the page is not updating itself). */
 export type LiveState = 'live' | 'reconnecting' | 'offline';
@@ -25,6 +27,9 @@ export interface TopBarUser {
 const EXACT = { exact: true } as const;
 const PREFIX = { exact: false } as const;
 let nextMenuId = 0;
+/** Temporary Halloween decoration: a bat silhouette in a 24×8 box. */
+const BAT_PATH =
+  'M12 2.6C11.5 1.4 10.8 1 10.8 1s.1.9-.3 1.3C9.2 1.4 6.4 0 0 1c2 .7 2.9 1.9 3.1 3.3 1.2-.5 2.4-.3 3.1.7.8-.7 2.1-.7 2.9.2.6-.4 1.4-.4 2.1 0L12 7l.8-1.8c.7-.4 1.5-.4 2.1 0 .8-.9 2.1-.9 2.9-.2.7-1 1.9-1.2 3.1-.7.2-1.4 1.1-2.6 3.1-3.3-6.4-1-9.2.4-10.5 1.3-.4-.4-.3-1.3-.3-1.3s-.7.4-1.2 1.6z';
 
 /**
  * The app header on every screen: the logo, the three destinations, search, the Live indicator, **Start voyage** (the only
@@ -43,6 +48,7 @@ let nextMenuId = 0;
   imports: [Button, Icon, Logo, RouterLink, RouterLinkActive],
   styleUrl: './top-bar.scss',
   host: {
+    '[class.halloween]': 'halloween.enabled()',
     '(document:click)': 'dismissOutside($event)',
     '(document:keydown.escape)': 'closeMenu(true)',
   },
@@ -125,6 +131,20 @@ let nextMenuId = 0;
           }
         }
       </span>
+      <button
+        type="button"
+        class="halloween-toggle"
+        aria-label="Halloween decorations"
+        [attr.aria-pressed]="halloween.enabled()"
+        [attr.title]="
+          halloween.enabled()
+            ? 'Turn off Halloween decorations'
+            : 'Turn on Halloween decorations'
+        "
+        (click)="halloween.toggle()"
+      >
+        <span aria-hidden="true">🎃</span>
+      </button>
       <a ahButton="primary" routerLink="/voyages/new"
         ><ah-icon name="sail" />Start voyage</a
       >
@@ -185,6 +205,25 @@ let nextMenuId = 0;
         </div>
       }
     </header>
+    <!-- Temporary Halloween decorations: delete this block, the toggle, HalloweenService and the "Halloween" section of top-bar.scss. -->
+    @if (halloween.enabled()) {
+      <div class="spooky" aria-hidden="true">
+        @for (bat of bats; track bat) {
+          <svg
+            class="spooky__bat"
+            [class]="'spooky__bat--' + bat"
+            viewBox="0 0 24 8"
+          >
+            <path [attr.d]="batPath" />
+          </svg>
+        }
+        <span class="spooky__bunting"></span>
+        <span class="spooky__spider"
+          ><span class="spooky__thread"></span
+          ><span class="spooky__body">🕷️</span></span
+        >
+      </div>
+    }
   `,
 })
 export class TopBar {
@@ -199,6 +238,9 @@ export class TopBar {
   /** Requests sign-out; the shell owns the authentication service. */
   readonly logout = output<null>();
 
+  protected readonly halloween = inject(HalloweenService);
+  protected readonly bats = [1, 2, 3, 4] as const;
+  protected readonly batPath = BAT_PATH;
   protected readonly exact = EXACT;
   protected readonly prefix = PREFIX;
   protected readonly menuId = `ah-user-menu-${nextMenuId++}`;

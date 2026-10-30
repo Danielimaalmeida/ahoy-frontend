@@ -88,6 +88,19 @@ export function formatPercent(part: number, whole: number): string {
   return percent === null ? '—' : `${percent}%`;
 }
 
+/** `part` as a share of `whole` to one decimal, rounded half up: "41.5%", or a dash when there is no whole. */
+export function formatShare(part: number, whole: number): string {
+  if (
+    !Number.isSafeInteger(part) ||
+    !Number.isSafeInteger(whole) ||
+    whole <= 0 ||
+    !Number.isSafeInteger(part * 2000 + whole)
+  )
+    return '—';
+  const tenths = Math.floor((part * 2000 + whole) / (whole * 2));
+  return `${Math.floor(tenths / 10)}.${tenths % 10}%`;
+}
+
 /** How a figure moved against the period before, in words: "+12% vs previous 30 days"; `null` with nothing to compare. */
 export function changeVsPrevious(
   current: number,

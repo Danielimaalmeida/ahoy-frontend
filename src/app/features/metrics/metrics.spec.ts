@@ -166,7 +166,7 @@ describe('Metrics', () => {
     );
   });
 
-  it('shows the cost by phase with its share of the period, and links the voyages that spent most', async () => {
+  it('shows the cost by phase with coloured swatches, its share of the period and a total, and links the voyages that spent most', async () => {
     const page = await open('/metrics/cost');
     const phases = rows(page.root, 'By phase');
     expect(phases.map((r) => r[0])).toEqual([
@@ -180,8 +180,23 @@ describe('Metrics', () => {
       'implementation',
       '52',
       '171.30',
-      '41%',
+      '41.5%',
     ]);
+    const byPhase = panel(page.root, 'By phase');
+    const swatches = Array.from(
+      byPhase.querySelectorAll('tbody th .swatch')
+    ).map((i) => Array.from(i.classList).find((c) => /^s\d$/.test(c)));
+    expect(swatches).toEqual(['s1', 's2', 's3', 's4', 's5']);
+    const bars = Array.from(
+      byPhase.querySelectorAll<HTMLElement>('tbody .hbar__fill')
+    );
+    expect(bars[0]!.style.width).toBe('100%');
+    expect(bars[0]!.classList).toContain('s1');
+    const total = Array.from(
+      byPhase.querySelectorAll('tfoot th, tfoot td')
+    ).map(text);
+    expect(total[0]).toBe('Total');
+    expect(total.slice(3, 7)).toEqual(['', '', '', '']);
     const top = panel(page.root, 'Voyages by spend').querySelector('tbody a');
     expect(top?.getAttribute('href')).toBe('/voyages/PROJ-151');
   });

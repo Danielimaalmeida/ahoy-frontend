@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import type { LiveState, TopBarUser } from './top-bar';
 import { TopBar } from './top-bar';
+import { THEME_STORAGE } from '@ui/theme/theme.service';
 
 @Component({ template: `` })
 class Page {}
@@ -32,7 +33,10 @@ class Host {
 
 async function render(url = '/') {
   TestBed.configureTestingModule({
-    providers: [provideRouter([{ path: '**', component: Page }])],
+    providers: [
+      provideRouter([{ path: '**', component: Page }]),
+      { provide: THEME_STORAGE, useValue: null },
+    ],
   });
   const fixture = TestBed.createComponent(Host);
   const router = TestBed.inject(Router);
@@ -62,7 +66,7 @@ async function render(url = '/') {
 }
 
 describe('ah-top-bar', () => {
-  it('lays out the logo, the three destinations, search, Live, Start voyage and the avatar, in that order', async () => {
+  it('lays out the logo, the destinations, search, Live, the Halloween toggle, Start voyage and the avatar, in that order', async () => {
     const { bar } = await render();
     expect(
       Array.from(bar.children).map(
@@ -75,6 +79,7 @@ describe('ah-top-bar', () => {
       'nav.ah-nav',
       'input.ah-search',
       'span',
+      'button.halloween-toggle',
       'a.ah-btn',
       'div.account',
     ]);
@@ -316,6 +321,29 @@ describe('ah-top-bar, person and search', () => {
     fixture.detectChanges();
     expect(root.querySelector('.ah-avatar')).toBeNull();
     expect(root.textContent).not.toMatch(/log ?(in|out)|sign ?(in|out)/i);
+  });
+
+  it('shows the Halloween decorations by default and the toggle turns them, bunting included, off and on', async () => {
+    const { fixture, root } = await render();
+    const host = root.querySelector('ah-top-bar')!;
+    const toggle = root.querySelector<HTMLButtonElement>('.halloween-toggle')!;
+    expect(toggle.getAttribute('aria-label')).toBe('Halloween decorations');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(host.classList).toContain('halloween');
+    expect(root.querySelector('.spooky')!.getAttribute('aria-hidden')).toBe(
+      'true'
+    );
+    expect(root.querySelector('.spooky__bunting')).not.toBeNull();
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(host.classList).not.toContain('halloween');
+    expect(root.querySelector('.spooky')).toBeNull();
+    expect(root.querySelector('.spooky__bunting')).toBeNull();
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(root.querySelector('.spooky__bunting')).not.toBeNull();
   });
 
   it('has a labelled search box that reports what is typed', async () => {

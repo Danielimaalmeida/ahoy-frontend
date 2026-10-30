@@ -6,6 +6,7 @@ import {
   formatMetricsAiu,
   formatPercent,
   formatSeconds,
+  formatShare,
   formatTokens,
   isMetricsPeriod,
   outcomesLine,
@@ -56,6 +57,15 @@ describe('percentages and changes', () => {
     expect(percentOf(3, 0)).toBeNull();
     expect(formatPercent(13, 41)).toBe('32%');
     expect(formatPercent(0, 0)).toBe('—');
+  });
+
+  it('gives a share to one decimal, rounded half up', () => {
+    expect(formatShare(171_300, 412_800)).toBe('41.5%');
+    expect(formatShare(18_600, 412_800)).toBe('4.5%');
+    expect(formatShare(1, 2000)).toBe('0.1%');
+    expect(formatShare(5, 5)).toBe('100.0%');
+    expect(formatShare(0, 7)).toBe('0.0%');
+    expect(formatShare(3, 0)).toBe('—');
   });
 
   it('compares with the period before only when there was something then', () => {

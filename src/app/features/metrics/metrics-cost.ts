@@ -6,8 +6,11 @@ import {
   formatMetricsAiu,
   formatPercent,
   formatSeconds,
+  formatShare,
   formatTokens,
+  MAX_SERIES,
   percentOf,
+  stackWeeks,
 } from '@domain/metrics';
 import { EmptyState } from '@ui/empty-state/empty-state';
 import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
@@ -78,13 +81,13 @@ const NEAR_CAP_PERCENT = 90;
             /></ah-panel-body>
           } @else {
             <div class="scroll">
-              <table ahTable>
+              <table ahTable class="phases">
                 <thead>
                   <tr>
                     <th scope="col">Phase</th>
                     <th scope="col" class="num">Runs</th>
                     <th scope="col" class="num">AIU</th>
-                    <th scope="col" class="num">Share</th>
+                    <th scope="col">Share</th>
                     <th scope="col" class="num">Median / run</th>
                     <th scope="col" class="num">p90 / run</th>
                     <th scope="col" class="num">Run cap</th>
@@ -94,19 +97,33 @@ const NEAR_CAP_PERCENT = 90;
                 </thead>
                 <tbody>
                   @for (p of r.phases; track p.phase) {
+                    @let slot = phaseSlot(p.phase);
                     <tr>
                       <th scope="row">
-                        <span ahApi>{{ p.phase }}</span>
+                        <span class="phase"
+                          ><i class="swatch" [class]="'s' + slot"></i
+                          ><span class="mono">{{ p.phase }}</span></span
+                        >
                       </th>
-                      <td class="num">{{ p.runs }}</td>
-                      <td class="num">{{ aiu(p.nanoAiu) }}</td>
-                      <td class="num">
-                        {{ percent(p.nanoAiu, r.totals.nanoAiu) }}
+                      <td class="num mono">{{ p.runs }}</td>
+                      <td class="num mono">{{ aiu(p.nanoAiu) }}</td>
+                      <td>
+                        <span class="share"
+                          ><span class="hbar__track"
+                            ><i
+                              class="hbar__fill"
+                              [class]="'s' + slot"
+                              [style.width.%]="barWidth(p.nanoAiu, phaseMax())"
+                            ></i></span
+                          ><span class="mono">{{
+                            share(p.nanoAiu, r.totals.nanoAiu)
+                          }}</span></span
+                        >
                       </td>
-                      <td class="num">{{ aiu(p.medianNanoAiu) }}</td>
-                      <td class="num">{{ aiu(p.p90NanoAiu) }}</td>
-                      <td class="num">{{ aiu(p.runCapNanoAiu) }}</td>
-                      <td class="num" [class.strong]="p.runsAtCap > 0">
+                      <td class="num mono">{{ aiu(p.medianNanoAiu) }}</td>
+                      <td class="num mono">{{ aiu(p.p90NanoAiu) }}</td>
+                      <td class="num mono">{{ aiu(p.runCapNanoAiu) }}</td>
+                      <td class="num mono" [class.strong]="p.runsAtCap > 0">
                         {{ p.runsAtCap }}
                       </td>
                       <td class="num">
@@ -115,6 +132,21 @@ const NEAR_CAP_PERCENT = 90;
                     </tr>
                   }
                 </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">Total</th>
+                    <td class="num mono strong">{{ r.totals.runs }}</td>
+                    <td class="num mono strong">
+                      {{ aiu(r.totals.nanoAiu) }}
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td class="num mono">{{ runsAtCap() }}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           }
@@ -253,6 +285,7 @@ export class MetricsCost {
   protected readonly aiu = formatMetricsAiu;
   protected readonly percent = formatPercent;
   protected readonly seconds = formatSeconds;
+  protected readonly share = formatShare;
   protected readonly tokens = formatTokens;
   protected readonly barWidth = barWidth;
 
@@ -281,6 +314,29 @@ export class MetricsCost {
       ? `None above ${NEAR_CAP_PERCENT}%`
       : `Above ${NEAR_CAP_PERCENT}%: ${keys.join(', ')}`;
   });
+
+  /** Each phase's colour slot, the same as in the Overview's weekly chart. */
+  private readonly phaseSlots = computed(() => {
+    const r = this.store.report();
+    const slots = new Map<string, number>();
+    if (r === null) return slots;
+    for (const s of stackWeeks(
+      r.weeks,
+      r.phases.map((p) => p.phase)
+    ).series)
+      for (const phase of s.phases) slots.set(phase, s.slot);
+    return slots;
+  });
+  protected phaseSlot(phase: string): number {
+    return this.phaseSlots().get(phase) ?? MAX_SERIES;
+  }
+
+  protected readonly phaseMax = computed(() =>
+    Math.max(1, ...(this.store.report()?.phases ?? []).map((p) => p.nanoAiu))
+  );
+  protected readonly runsAtCap = computed(() =>
+    (this.store.report()?.phases ?? []).reduce((sum, p) => sum + p.runsAtCap, 0)
+  );
 
   protected readonly outcomeMax = computed(() =>
     Math.max(1, ...(this.store.report()?.runOutcomes ?? []).map((o) => o.runs))
