@@ -12,6 +12,7 @@ import {
   initAppConfig,
   loadAppConfig,
   parseAppConfig,
+  PRELOADED_APP_CONFIG,
 } from './app-config';
 
 describe('parseAppConfig', () => {
@@ -336,6 +337,64 @@ describe('reading /config.json at start-up', () => {
     });
     expect(TestBed.inject(AppConfigStore).config()).toEqual(DEFAULT_APP_CONFIG);
   });
+});
+
+describe('start-up with the document main.ts already read', () => {
+  const warnings: unknown[][] = [];
+  const originalWarn = console.warn;
+
+  beforeEach(() => {
+    warnings.length = 0;
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args);
+    };
+  });
+
+  afterEach(() => {
+    console.warn = originalWarn;
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  /** Runs the initializer with `document` preloaded; `verify` fails the test if it fetched anything. */
+  async function startWith(document: unknown): Promise<void> {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withFetch()),
+        provideHttpClientTesting(),
+        { provide: PRELOADED_APP_CONFIG, useValue: { document } },
+      ],
+    });
+    await TestBed.runInInjectionContext(() => initAppConfig());
+  }
+
+  it('uses the preloaded document without fetching /config.json again', async () => {
+    await startWith({ actor: 'alex@example.com', apiBase: '/ahoy/api/v1' });
+    expect(TestBed.inject(AppConfigStore).config()).toEqual({
+      apiBase: '/ahoy/api/v1',
+      actor: 'alex@example.com',
+    });
+    expect(warnings).toEqual([]);
+  });
+
+  it('uses the defaults without a complaint when there was no file to preload', async () => {
+    await startWith(undefined);
+    expect(TestBed.inject(AppConfigStore).config()).toEqual(DEFAULT_APP_CONFIG);
+    expect(warnings).toEqual([]);
+  });
+
+  it.each([
+    ['an array', []],
+    ['null', null],
+  ])(
+    'uses the defaults and says why when the preloaded document is %s',
+    async (_, document) => {
+      await startWith(document);
+      expect(TestBed.inject(AppConfigStore).config()).toEqual(
+        DEFAULT_APP_CONFIG
+      );
+      expect(warnings).toHaveLength(1);
+    }
+  );
 });
 
 describe('AppConfigStore', () => {

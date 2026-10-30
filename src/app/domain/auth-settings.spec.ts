@@ -42,19 +42,63 @@ describe('readAuthSettings', () => {
     [{ realmUrl: REALM }, 'auth.clientId'],
     [{ realmUrl: REALM, clientId: 'a\nb' }, 'auth.clientId'],
     [{ realmUrl: REALM, clientId: 'c', scope: '' }, 'auth.scope'],
+    [{ realmUrl: REALM, clientId: 'c', scope: 'a\tb' }, 'auth.scope'],
+    [
+      {
+        realmUrl: REALM,
+        clientId: 'c',
+        redirectUri: 'http://ahoy.example.com/',
+      },
+      'auth.redirectUri',
+    ],
+    [
+      {
+        realmUrl: REALM,
+        clientId: 'c',
+        silentRefreshRedirectUri: 'https://x/#a',
+      },
+      'auth.silentRefreshRedirectUri',
+    ],
+    [
+      { realmUrl: REALM, clientId: 'c', postLogoutRedirectUri: 'javascript:x' },
+      'auth.postLogoutRedirectUri',
+    ],
+    [{ realmUrl: REALM, clientId: 'c', debug: 'yes' }, 'auth.debug'],
   ])('refuses %j, saying why', (value, problem) => {
     const read = readAuthSettings(value);
     expect(read.settings).toBeNull();
     expect(read.problems.join(' ')).toContain(problem);
   });
 
-  it('accepts a plain-http realm on localhost only', () => {
+  it.each(['http://localhost:4200/realm', 'http://127.0.0.1:4200/realm'])(
+    'accepts the plain-http realm %s on this machine',
+    (realmUrl) => {
+      expect(
+        readAuthSettings({ realmUrl, clientId: 'c' }).settings?.realmUrl
+      ).toBe(realmUrl);
+    }
+  );
+
+  it('keeps registered redirect URIs exactly as written, double slash included', () => {
     expect(
       readAuthSettings({
-        realmUrl: 'http://localhost:4200/realm',
+        realmUrl: REALM,
         clientId: 'c',
-      }).settings?.realmUrl
-    ).toBe('http://localhost:4200/realm');
+        redirectUri: ' https://ahoy.example.com/ ',
+        postLogoutRedirectUri: 'https://ahoy.example.com',
+        silentRefreshRedirectUri:
+          'https://ahoy.example.com//ui/oauth/silent-refresh.html',
+        debug: true,
+      }).settings
+    ).toEqual({
+      realmUrl: REALM,
+      clientId: 'c',
+      redirectUri: 'https://ahoy.example.com/',
+      postLogoutRedirectUri: 'https://ahoy.example.com',
+      silentRefreshRedirectUri:
+        'https://ahoy.example.com//ui/oauth/silent-refresh.html',
+      debug: true,
+    });
   });
 });
 
@@ -68,16 +112,42 @@ describe('oidcEnvironment', () => {
     ).toEqual({
       issuer: REALM,
       clientId: 'ui-client',
-      redirectUri: 'https://ahoy.example.com',
+      redirectUri: 'https://ahoy.example.com/',
       silentRefreshRedirectUri:
         'https://ahoy.example.com/ui/oauth/silent-refresh.html',
-      postLogoutRedirectUri: 'https://ahoy.example.com',
+      postLogoutRedirectUri: 'https://ahoy.example.com/',
       loginUrl: `${REALM}/authorize`,
       logoutUrl: `${REALM}/connect/endSession`,
       tokenEndpoint: `${REALM}/access_token`,
       userinfoEndpoint: `${REALM}/userinfo`,
       sessionCheckIFrameUrl: `${REALM}/connect/checkSession`,
       revocationEndpoint: `${REALM}/token/revoke`,
+      showDebugInformation: false,
+    });
+  });
+
+  it('uses the registered redirects, the scope and debug when the settings give them', () => {
+    expect(
+      oidcEnvironment(
+        {
+          realmUrl: REALM,
+          clientId: 'c',
+          scope: 'openid',
+          redirectUri: 'https://ahoy.example.com',
+          postLogoutRedirectUri: 'https://ahoy.example.com/bye',
+          silentRefreshRedirectUri:
+            'https://ahoy.example.com//ui/oauth/silent-refresh.html',
+          debug: true,
+        },
+        'https://ahoy.example.com'
+      )
+    ).toMatchObject({
+      scope: 'openid',
+      redirectUri: 'https://ahoy.example.com',
+      postLogoutRedirectUri: 'https://ahoy.example.com/bye',
+      silentRefreshRedirectUri:
+        'https://ahoy.example.com//ui/oauth/silent-refresh.html',
+      showDebugInformation: true,
     });
   });
 });

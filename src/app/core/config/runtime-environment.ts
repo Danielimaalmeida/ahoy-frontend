@@ -3,11 +3,15 @@ import {
   readAuthSettings,
   type OidcEnvironment,
 } from '@domain/auth-settings';
+import { isConfigRecord } from '@domain/config-values';
 import { APP_CONFIG_TIMEOUT_MS, APP_CONFIG_URL } from './app-config';
 
-/** The environment with the team's sign-in from `/config.json`, and what was wrong with the document's `auth`. */
+/** The environment with the team's sign-in from `/config.json`, the document it came from, and what was wrong with it. */
 export interface RuntimeEnvironment<E> {
   readonly environment: E;
+  /** The parsed `/config.json`, for `PRELOADED_APP_CONFIG`; `undefined` when there was no usable file. */
+  readonly document: unknown;
+  /** Why the document's `auth` is unusable. Not empty means the app must not start: it would sign in to the wrong realm. */
   readonly problems: readonly string[];
 }
 
@@ -21,25 +25,23 @@ export async function loadRuntimeEnvironment<E extends object>(
   request: typeof fetch,
   origin: string
 ): Promise<RuntimeEnvironment<E & Partial<OidcEnvironment>>> {
-  const unchanged = { environment, problems: [] };
   let document: unknown;
   try {
     const response = await request(APP_CONFIG_URL, {
       cache: 'no-store',
       signal: AbortSignal.timeout(APP_CONFIG_TIMEOUT_MS),
     });
-    if (!response.ok) return unchanged;
+    if (!response.ok) return { environment, document: undefined, problems: [] };
     document = JSON.parse(await response.text());
   } catch {
-    return unchanged;
+    return { environment, document: undefined, problems: [] };
   }
-  if (typeof document !== 'object' || document === null) return unchanged;
-  const { settings, problems } = readAuthSettings(
-    (document as { readonly auth?: unknown }).auth
-  );
-  if (settings === null) return { environment, problems };
+  const auth = isConfigRecord(document) ? document['auth'] : undefined;
+  const { settings, problems } = readAuthSettings(auth);
+  if (settings === null) return { environment, document, problems };
   return {
     environment: { ...environment, ...oidcEnvironment(settings, origin) },
+    document,
     problems,
   };
 }

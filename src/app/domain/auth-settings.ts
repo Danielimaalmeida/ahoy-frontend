@@ -1,6 +1,14 @@
+import {
+  isConfigRecord,
+  readBaseUrl,
+  readExactUrl,
+  readLine,
+} from './config-values';
+
 /**
  * The team's WebEAM sign-in, read at runtime from `/config.json` (`auth`) so that one image serves every team. Only the
- * realm and the client differ between teams; every endpoint follows from the realm, as WebEAM lays them out.
+ * realm and the client differ between teams; every endpoint follows from the realm, as WebEAM lays them out, and every
+ * redirect from the page's origin unless the team's client registered other ones.
  */
 export interface AuthSettings {
   /** The realm, such as `https://sso.example.com/auth/oauth2/realms/root/realms/alpha`, without a trailing slash. */
@@ -9,6 +17,14 @@ export interface AuthSettings {
   readonly clientId: string;
   /** The scopes asked for; the build's own when absent. */
   readonly scope?: string;
+  /** Where WebEAM sends the browser after sign-in, exactly as registered; `<origin>/` when absent. */
+  readonly redirectUri?: string;
+  /** Where it sends the browser after sign-out, exactly as registered; `<origin>/` when absent. */
+  readonly postLogoutRedirectUri?: string;
+  /** The silent-refresh page, exactly as registered; `<origin>/ui/oauth/silent-refresh.html` when absent. */
+  readonly silentRefreshRedirectUri?: string;
+  /** Whether the auth library logs its debug information to the console; off unless `true`. */
+  readonly debug?: boolean;
 }
 
 /** The sign-in fields of the environment the auth library takes, all derived from {@link AuthSettings}. */
@@ -24,6 +40,7 @@ export interface OidcEnvironment {
   readonly userinfoEndpoint: string;
   readonly sessionCheckIFrameUrl: string;
   readonly revocationEndpoint: string;
+  readonly showDebugInformation: boolean;
   readonly scope?: string;
 }
 
@@ -33,40 +50,15 @@ export interface ReadAuthSettings {
   readonly problems: readonly string[];
 }
 
-const CONTROL = /\p{Cc}/u;
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+const REDIRECTS = [
+  'redirectUri',
+  'postLogoutRedirectUri',
+  'silentRefreshRedirectUri',
+] as const;
 
-/** A realm URL: https (http only for localhost), no credentials, query or fragment; trailing slashes dropped. */
-function readRealmUrl(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  try {
-    const url = new URL(value);
-    const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-    const secure =
-      url.protocol === 'https:' || (url.protocol === 'http:' && local);
-    if (
-      !secure ||
-      url.username !== '' ||
-      url.password !== '' ||
-      url.search !== '' ||
-      url.hash !== ''
-    )
-      return null;
-    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
-  } catch {
-    return null;
-  }
-}
-
-/** A one-line value of 1 to 200 characters, or null. */
-function readLine(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length >= 1 && trimmed.length <= 200 && !CONTROL.test(trimmed)
-    ? trimmed
-    : null;
-}
+/** Whether a document sets a field: a missing field and a `null` both mean "not set". */
+const isSet = (value: unknown): boolean =>
+  value !== undefined && value !== null;
 
 /**
  * Reads the `auth` field of a `/config.json` document. Absent (or `null`) gives no settings and no problem: the build's
@@ -74,12 +66,11 @@ function readLine(value: unknown): string | null {
  * half-configured realm.
  */
 export function readAuthSettings(value: unknown): ReadAuthSettings {
-  if (value === undefined || value === null)
-    return { settings: null, problems: [] };
-  if (!isRecord(value))
+  if (!isSet(value)) return { settings: null, problems: [] };
+  if (!isConfigRecord(value))
     return { settings: null, problems: ['auth must be a JSON object'] };
   const problems: string[] = [];
-  const realmUrl = readRealmUrl(value['realmUrl']);
+  const realmUrl = readBaseUrl(value['realmUrl'], 'local');
   if (realmUrl === null)
     problems.push(
       'auth.realmUrl must be an https URL without credentials, query or fragment'
@@ -87,14 +78,32 @@ export function readAuthSettings(value: unknown): ReadAuthSettings {
   const clientId = readLine(value['clientId']);
   if (clientId === null)
     problems.push('auth.clientId must be 1 to 200 characters on one line');
-  const hasScope = value['scope'] !== undefined && value['scope'] !== null;
-  const scope = hasScope ? readLine(value['scope']) : null;
-  if (hasScope && scope === null)
+  const scope = isSet(value['scope']) ? readLine(value['scope']) : null;
+  if (isSet(value['scope']) && scope === null)
     problems.push('auth.scope must be 1 to 200 characters on one line');
-  if (realmUrl === null || clientId === null || problems.length)
+  const redirects: Partial<Record<(typeof REDIRECTS)[number], string>> = {};
+  for (const key of REDIRECTS) {
+    if (!isSet(value[key])) continue;
+    const uri = readExactUrl(value[key], 'local');
+    if (uri === null)
+      problems.push(
+        `auth.${key} must be an https URL without credentials, query or fragment`
+      );
+    else redirects[key] = uri;
+  }
+  const debug = value['debug'];
+  if (isSet(debug) && typeof debug !== 'boolean')
+    problems.push('auth.debug must be true or false');
+  if (realmUrl === null || clientId === null || problems.length > 0)
     return { settings: null, problems };
   return {
-    settings: { realmUrl, clientId, ...(scope !== null ? { scope } : {}) },
+    settings: {
+      realmUrl,
+      clientId,
+      ...(scope !== null ? { scope } : {}),
+      ...redirects,
+      ...(debug === true ? { debug } : {}),
+    },
     problems,
   };
 }
@@ -109,15 +118,18 @@ export function oidcEnvironment(
   return {
     issuer: realm,
     clientId: settings.clientId,
-    redirectUri: host,
-    silentRefreshRedirectUri: `${host}/ui/oauth/silent-refresh.html`,
-    postLogoutRedirectUri: host,
+    redirectUri: settings.redirectUri ?? `${host}/`,
+    silentRefreshRedirectUri:
+      settings.silentRefreshRedirectUri ??
+      `${host}/ui/oauth/silent-refresh.html`,
+    postLogoutRedirectUri: settings.postLogoutRedirectUri ?? `${host}/`,
     loginUrl: `${realm}/authorize`,
     logoutUrl: `${realm}/connect/endSession`,
     tokenEndpoint: `${realm}/access_token`,
     userinfoEndpoint: `${realm}/userinfo`,
     sessionCheckIFrameUrl: `${realm}/connect/checkSession`,
     revocationEndpoint: `${realm}/token/revoke`,
+    showDebugInformation: settings.debug === true,
     ...(settings.scope !== undefined ? { scope: settings.scope } : {}),
   };
 }

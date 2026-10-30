@@ -242,8 +242,9 @@ it takes the same token from `AUTH_STRATEGY`. Without a token the API answers `4
 ## Runtime configuration (F17)
 
 One image serves every team: whatever serves the app provides `/config.json` (the Helm chart mounts it from a ConfigMap
-into the nginx root, which serves it with `Cache-Control: no-store` and a 404 when it is missing). Every field is
-optional; a missing or invalid one takes the build's value, with a warning in the console.
+into the nginx root, which serves it with `Cache-Control: no-store`; when it is missing, the server-wide `error_page`
+answers with `index.html` and status 404, which the app treats as no file). Every field is optional; a missing one
+takes the build's value, and so does an invalid one outside `auth`, with a warning in the console.
 
 ```json
 {
@@ -251,18 +252,34 @@ optional; a missing or invalid one takes the build's value, with a warning in th
   "auth": {
     "realmUrl": "https://sso.example.com/auth/oauth2/realms/root/realms/alpha",
     "clientId": "<the team's WebEAM client for the front end>",
-    "scope": "openid profile email groups"
+    "scope": "openid profile email groups",
+    "redirectUri": "https://ahoy.example.com/",
+    "postLogoutRedirectUri": "https://ahoy.example.com/",
+    "silentRefreshRedirectUri": "https://ahoy.example.com/ui/oauth/silent-refresh.html",
+    "debug": false
   },
   "jiraBaseUrl": "https://jira.example.com/jira",
   "allowedQnumbers": ["q123456"]
 }
 ```
 
-`main.ts` reads `auth` before bootstrap (`core/config/runtime-environment.ts`), because `provideFedevAuth` takes its
-settings when it is provided: every WebEAM endpoint follows from `realmUrl`, and every redirect from the page's own
-origin (`domain/auth-settings.ts`). Without `auth` the build's environment signs in, as local builds do; the TEST
-build's `environment.test.ts` keeps FIO's realm and client only until its deployment serves `/config.json`. The rest is
-read by `initAppConfig`. Without `jiraBaseUrl` the Backlog shows no Jira link.
+`main.ts` reads the file once before bootstrap (`core/config/runtime-environment.ts`), because `provideFedevAuth` takes
+its settings when it is provided, and hands the document to `initAppConfig` (`PRELOADED_APP_CONFIG`), which reads the
+rest without fetching it again.
+
+- Every WebEAM endpoint follows from `realmUrl` (`domain/auth-settings.ts`).
+- The redirects default to the page's origin: `<origin>/` after sign-in and sign-out, and
+  `<origin>/ui/oauth/silent-refresh.html`. WebEAM compares them character for character with the client's registered
+  ones, so a team whose client registered others sets them in `auth`, kept exactly as written. FIO's TEST build today
+  uses a host with a trailing slash, so its silent-refresh URI is `<origin>//ui/oauth/silent-refresh.html`: check the
+  registration before FIO moves to `/config.json`.
+- The auth library's debug logging is off unless `auth.debug` is `true`. `skipIssuerCheck` stays on, from the build,
+  because WebEAM's token issuer is not the realm URL.
+- An `auth` that is present but invalid stops the app: `main.ts` shows the problems instead of signing in against the
+  build's realm.
+- Without `auth` the build's environment signs in, as local builds do; the TEST build's `environment.test.ts` keeps
+  FIO's realm and client only until its deployment serves `/config.json`.
+- Without `jiraBaseUrl` the Backlog shows no Jira link.
 
 ## Dev server and proxy (task 0.6)
 
