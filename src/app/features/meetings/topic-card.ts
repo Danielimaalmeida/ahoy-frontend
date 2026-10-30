@@ -70,10 +70,23 @@ export const NOTE_MAX = 4000;
     }
     .head {
       display: flex;
+      align-items: flex-start;
+      gap: 8px 16px;
+      padding: 11px 16px;
+    }
+    .title {
+      flex: 1;
+      min-width: 0;
+      min-height: 28px;
+      display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 8px 10px;
-      padding: 11px 16px;
+      gap: 6px 10px;
+    }
+    @media (max-width: 640px) {
+      .head {
+        flex-wrap: wrap;
+      }
     }
     h3 {
       margin: 0;
@@ -88,11 +101,16 @@ export const NOTE_MAX = 4000;
       color: var(--status-sendback-fg);
     }
     .actions {
+      flex: none;
       margin-left: auto;
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       align-items: center;
+    }
+    .actions .ah-btn--ghost:disabled {
+      background: transparent;
+      border-color: transparent;
     }
     ul {
       margin: 0;
@@ -164,6 +182,7 @@ export const NOTE_MAX = 4000;
     }
     ul.answers {
       padding: 4px 0 0 22px;
+      list-style: none;
     }
     .reply {
       flex: none;
@@ -248,21 +267,23 @@ export const NOTE_MAX = 4000;
       (drop)="drop($event)"
     >
       <div class="head">
-        <h3 [id]="'topic-' + t.id">{{ t.title }}</h3>
-        <span
-          class="ah-tag"
-          [class.ah-tag--accent]="t.raisedBy === 'us'"
-          [class.them]="t.raisedBy === 'them'"
-          >{{ raisedBy() }}</span
-        >
-        <span class="ah-hint">{{ when() }}</span>
-        @if (t.carriedFrom; as from) {
-          <a
-            class="ah-tag ah-tag--outline"
-            [routerLink]="['/meetings', from.meetingId]"
-            >From {{ day(from.meetingStartsAt) }}</a
+        <div class="title">
+          <h3 [id]="'topic-' + t.id">{{ t.title }}</h3>
+          <span
+            class="ah-tag"
+            [class.ah-tag--accent]="t.raisedBy === 'us'"
+            [class.them]="t.raisedBy === 'them'"
+            >{{ raisedBy() }}</span
           >
-        }
+          <span class="ah-hint">{{ when() }}</span>
+          @if (t.carriedFrom; as from) {
+            <a
+              class="ah-tag ah-tag--outline"
+              [routerLink]="['/meetings', from.meetingId]"
+              >From {{ day(from.meetingStartsAt) }}</a
+            >
+          }
+        </div>
         <div class="actions">
           @if (t.movedTo; as to) {
             <span class="ah-hint">Moved to</span>
@@ -294,26 +315,28 @@ export const NOTE_MAX = 4000;
                 Keep
               </button>
             } @else {
-              <button
-                ahButton="ghost"
-                size="sm"
-                type="button"
-                [attr.aria-label]="'Move ' + t.title + ' up'"
-                [disabled]="busy() || first()"
-                (click)="up()"
-              >
-                ↑
-              </button>
-              <button
-                ahButton="ghost"
-                size="sm"
-                type="button"
-                [attr.aria-label]="'Move ' + t.title + ' down'"
-                [disabled]="busy() || last()"
-                (click)="down()"
-              >
-                ↓
-              </button>
+              @if (!(first() && last())) {
+                <button
+                  ahButton="ghost"
+                  size="sm"
+                  type="button"
+                  [attr.aria-label]="'Move ' + t.title + ' up'"
+                  [disabled]="busy() || first()"
+                  (click)="up()"
+                >
+                  ↑
+                </button>
+                <button
+                  ahButton="ghost"
+                  size="sm"
+                  type="button"
+                  [attr.aria-label]="'Move ' + t.title + ' down'"
+                  [disabled]="busy() || last()"
+                  (click)="down()"
+                >
+                  ↓
+                </button>
+              }
               @if (canMoveToNext()) {
                 <button
                   ahButton="ghost"
@@ -642,15 +665,9 @@ export const NOTE_MAX = 4000;
                 <span class="ah-key">{{ d.jiraKey }}</span>
               }
             } @else {
-              <span
-                class="ah-tag"
-                [class.ah-tag--accent]="
-                  d.status === 'ready' || d.status === 'asking'
-                "
-                >{{
-                  chip(d.status, d.mode === 'grill' && d.answers === null)
-                }}</span
-              >
+              <span class="ah-tag">{{
+                chip(d.status, d.mode === 'grill' && d.answers === null)
+              }}</span>
               <button
                 [ahButton]="
                   d.status === 'ready' || d.status === 'asking'
