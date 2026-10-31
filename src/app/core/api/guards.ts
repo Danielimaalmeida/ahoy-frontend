@@ -32,7 +32,6 @@ import {
   CREW_RECORDED_MODES,
   CREW_ROLES,
   CREW_SPRINT_STATES,
-  SONAR_MANAGED_BY,
   DIAGNOSIS_ACTORS,
   DIAGNOSIS_KINDS,
   EFFORT_SOURCES,
@@ -1278,8 +1277,6 @@ const sonarRepository = shape<SonarRepository>({
 export const isSonarSettings = guard<SonarSettings>(
   'SonarSettings',
   shape<SonarSettings>({
-    managedBy: oneOf(SONAR_MANAGED_BY),
-    deploymentHosts: arrayOf(nonEmptyText),
     canEdit: flag,
     secretsConfigured: flag,
     servers: arrayOf(sonarServer),

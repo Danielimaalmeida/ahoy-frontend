@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: c137a3a1b8f5006f30ca2f937a20b10b5871fa8d
+# Commit: 810541341b29ec083ccb10a0bc4229236365a049
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2186,11 +2186,9 @@ paths:
       tags: [settings]
       summary: The SonarQube servers CI fixes read, and which repository is on which.
       description: |
-        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A token is never returned: only its
-        last four characters (`tokenHint`, empty for a token shorter than 12). When the deployment sets SonarQube
-        (`SONAR_HOST_URL`, `SONAR_TOKEN`, `SONAR_PROJECTS`), that wins: `managedBy` is `deployment`, `deploymentHosts`
-        names its hosts, and every change answers `409 invalid_state`. A repository no row names is read on the
-        default server. 0 AIU.
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place SonarQube
+        is configured. A token is never returned: only its last four characters (`tokenHint`, empty for a token shorter
+        than 12). A repository no row names is read on the default server. 0 AIU.
       responses:
         '200':
           description: The SonarQube settings.
@@ -5420,22 +5418,12 @@ components:
     SonarSettings:
       type: object
       additionalProperties: false
-      required:
-        [
-          managedBy,
-          deploymentHosts,
-          canEdit,
-          secretsConfigured,
-          servers,
-          repositories,
-        ]
+      required: [canEdit, secretsConfigured, servers, repositories]
       properties:
-        managedBy: { type: string, enum: [ui, deployment] }
-        deploymentHosts: { type: array, items: { type: string } }
         canEdit:
           {
             type: boolean,
-            description: 'An admin, and the deployment does not set SonarQube.',
+            description: 'Whether the person is an admin, who may change them.',
           }
         secretsConfigured:
           {

@@ -3825,7 +3825,7 @@
         "operationId": "getSonarSettings",
         "tags": ["settings"],
         "summary": "The SonarQube servers CI fixes read, and which repository is on which.",
-        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A token is never returned: only its\nlast four characters (`tokenHint`, empty for a token shorter than 12). When the deployment sets SonarQube\n(`SONAR_HOST_URL`, `SONAR_TOKEN`, `SONAR_PROJECTS`), that wins: `managedBy` is `deployment`, `deploymentHosts`\nnames its hosts, and every change answers `409 invalid_state`. A repository no row names is read on the\ndefault server. 0 AIU.\n",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place SonarQube\nis configured. A token is never returned: only its last four characters (`tokenHint`, empty for a token shorter\nthan 12). A repository no row names is read on the default server. 0 AIU.\n",
         "responses": {
           "200": {
             "description": "The SonarQube settings.",
@@ -9249,28 +9249,11 @@
       "SonarSettings": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "managedBy",
-          "deploymentHosts",
-          "canEdit",
-          "secretsConfigured",
-          "servers",
-          "repositories"
-        ],
+        "required": ["canEdit", "secretsConfigured", "servers", "repositories"],
         "properties": {
-          "managedBy": {
-            "type": "string",
-            "enum": ["ui", "deployment"]
-          },
-          "deploymentHosts": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "canEdit": {
             "type": "boolean",
-            "description": "An admin, and the deployment does not set SonarQube."
+            "description": "Whether the person is an admin, who may change them."
           },
           "secretsConfigured": {
             "type": "boolean",

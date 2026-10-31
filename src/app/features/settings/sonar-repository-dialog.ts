@@ -54,6 +54,7 @@ export interface SonarRepositoryData {
           ? 'Edit ' + repository.repository
           : 'Put a repository on a server'
       "
+      [subtitle]="subtitle"
       [confirmLabel]="repository ? 'Save' : 'Add repository'"
       busyLabel="Saving…"
       [busy]="busy()"
@@ -97,6 +98,7 @@ export interface SonarRepositoryData {
             formControlName="projectKey"
             autocomplete="off"
             maxlength="400"
+            placeholder="Found by the reconciler"
           />
         </ah-field>
       </form>
@@ -138,6 +140,9 @@ export class SonarRepositoryDialog {
 
   protected readonly repository = this.data.repository;
   protected readonly servers = this.data.servers;
+  protected readonly subtitle = this.repository
+    ? `On ${this.data.store.serverName(this.repository.serverId)}`
+    : "Only needed when it is not on the default server, or its key can't be found";
   protected readonly form = new FormGroup({
     repository: new FormControl(this.repository?.repository ?? '', {
       nonNullable: true,

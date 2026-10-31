@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { describeSettingsEvent, projectKeyLabel, tokenLabel } from './settings';
 
 describe('settings in words', () => {
-  it('shows a token only as its last four characters, or as set when none were kept', () => {
-    expect(tokenLabel('cdef')).toBe('…cdef');
-    expect(tokenLabel('')).toBe('set');
+  it('shows a token only as four dots and its last four characters, or the dots alone when none were kept', () => {
+    expect(tokenLabel('cdef')).toBe('••••cdef');
+    expect(tokenLabel('')).toBe('••••');
   });
 
   it('says the reconciler finds a project key the row leaves out', () => {
@@ -21,14 +21,14 @@ describe('settings in words', () => {
         tokenHint: '1b2c',
       })
     ).toBe(
-      'Added SonarQube server Main (https://sonar.example.com), the default, token …1b2c'
+      'Added SonarQube server Main (https://sonar.example.com), the default, token ••••1b2c'
     );
     expect(
       describeSettingsEvent('sonar_server.updated', {
         name: 'Main',
         changes: { tokenHint: { from: '1b2c', to: '9f3a' } },
       })
-    ).toBe('Changed SonarQube server Main: token …1b2c → …9f3a');
+    ).toBe('Changed SonarQube server Main: token ••••1b2c → ••••9f3a');
     expect(
       describeSettingsEvent('sonar_repository.created', {
         repository: 'acme/web',

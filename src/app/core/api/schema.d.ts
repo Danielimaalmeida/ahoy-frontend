@@ -1764,11 +1764,9 @@ export interface paths {
     };
     /**
      * The SonarQube servers CI fixes read, and which repository is on which.
-     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A token is never returned: only its
-     *     last four characters (`tokenHint`, empty for a token shorter than 12). When the deployment sets SonarQube
-     *     (`SONAR_HOST_URL`, `SONAR_TOKEN`, `SONAR_PROJECTS`), that wins: `managedBy` is `deployment`, `deploymentHosts`
-     *     names its hosts, and every change answers `409 invalid_state`. A repository no row names is read on the
-     *     default server. 0 AIU.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place SonarQube
+     *     is configured. A token is never returned: only its last four characters (`tokenHint`, empty for a token shorter
+     *     than 12). A repository no row names is read on the default server. 0 AIU.
      */
     readonly get: operations['getSonarSettings'];
     readonly put?: never;
@@ -3464,10 +3462,7 @@ export interface components {
       readonly admin: boolean;
     };
     readonly SonarSettings: {
-      /** @enum {string} */
-      readonly managedBy: 'ui' | 'deployment';
-      readonly deploymentHosts: readonly string[];
-      /** @description An admin, and the deployment does not set SonarQube. */
+      /** @description Whether the person is an admin, who may change them. */
       readonly canEdit: boolean;
       /** @description Whether the server can save a token (`AHOY_SECRETS_KEY`). */
       readonly secretsConfigured: boolean;

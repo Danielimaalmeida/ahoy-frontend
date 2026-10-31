@@ -752,10 +752,6 @@ export type CrewChangeRequest = Schemas['CrewChangeRequest'];
 /** Answer of `getMe`: the signed-in person, and whether they may change the team's settings. */
 export type Me = Schemas['Me'];
 
-/** Who decides SonarQube: the team settings in the UI, or the deployment's `SONAR_*` (read-only here). */
-export type SonarManagedBy = Schemas['SonarSettings']['managedBy'];
-export const SONAR_MANAGED_BY = listOf<SonarManagedBy>()(['ui', 'deployment']);
-
 /** Answer of `getSonarSettings`: the servers and repositories, and whether the person may change them. */
 export type SonarSettings = Schemas['SonarSettings'];
 

@@ -1,7 +1,7 @@
 # Ahoy frontend · progress
 
 Updated 2026-10-31 (Team settings: SonarQube servers and repositories that admins change in the UI, with
-`ahoy-hosted`'s D19; tested on the mock HTTP backend only). One page:
+`ahoy-hosted`'s D19, laid out as the approved design; tested on the mock HTTP backend only). One page:
 replace it, do not append; git history is the archive (the 3,692-line page before this one:
 `git show b1f9b88:docs/progress.md`). The review of both repositories, with its
 proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its
@@ -10,12 +10,15 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 ## Where we are
 
 - **This branch (`feat/team-settings`, 2026-10-31):** the Team settings page (`/settings`, linked from the account
-  menu), with `ahoy-hosted`'s branch of the same name. It lists the SonarQube servers (the token only as its last four
-  characters, who set it and when), the repositories put on a server and the history of changes in words. Admins add,
-  edit and remove servers and repositories in dialogs: the token is a password field typed once, editing keeps it
-  unless a new one is typed, a new host needs it again, and a server with repositories cannot be removed. Others read
-  only; when the deployment sets `SONAR_*` the page says so and offers nothing; without `AHOY_SECRETS_KEY` Add server is
-  off and says why. The contract sync also brought the knowledge reviews' `pullRequestUrl` and `pullRequestError`
+  menu), with `ahoy-hosted`'s branch of the same name, laid out as the design the user approved (the "Ahoy Team
+  settings" canvas: Main, the two dialogs and the states). It lists the SonarQube servers (the token as `••••` and its
+  last four characters, who set it and when, the last change), the repositories put on a server, and the history in
+  words in a side panel with each author's initials. Admins (shown by a tag) add, edit and remove servers and
+  repositories in dialogs with a subtitle: the token is a password field typed once, editing keeps it unless a new one
+  is typed, a new host asks for it again before Save is offered, and a server with repositories shows Remove off with
+  the reason. Others read only; without `AHOY_SECRETS_KEY` Add server is off and says why. SonarQube is set only here
+  (`ahoy-hosted` no longer reads `SONAR_*`), so the page has no read-only "set by the deployment" state. `ah-dialog`
+  takes an optional `subtitle`; `domain/time` adds `absoluteDay` and `absoluteDayTime` ("Thu 29 Oct 09:02"). The contract sync also brought the knowledge reviews' `pullRequestUrl` and `pullRequestError`
   (`ahoy-hosted` 0025) into the guard, the mock and the fixtures.
 - **Merged on 2026-10-30:** one image for every team, toward a Helm chart (PR #48, F17, architecture "Runtime
   configuration"): `/config.json` read once before bootstrap. `environment.test.ts` still holds FIO's realm and client
@@ -30,7 +33,7 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   (PR #42, with `ahoy-hosted` #64, restyled in PR #43), the user's local changes (`f4ec304`), Meetings' cancel, mark
   done without Start and stakeholders by name (PR #44, with `ahoy-hosted` #65) and answers to questions (PR #45, whose
   `ahoy-hosted` side, #67, is not merged yet).
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/team-settings`, with the redaction
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/team-settings` (`8105413`), with the redaction
   placeholders kept; `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migrations 0025 and
   0026, `AHOY_SECRETS_KEY` and `AHOY_ADMIN_QNUMBERS`. Merge and deploy with the `ahoy-hosted` pull request.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
@@ -42,8 +45,8 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 - **Last full run** (2026-10-31, `feat/team-settings`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` and `@acme-fedev/playwright-helpers` copied into `node_modules` because the private registry is
   not reachable, dependencies installed without the lock file, with `@angular/compiler-cli`, `build` and `cli` at the
-  locked 22.2.1): Vitest 171 files, 3,081 tests, all passed (new: the Team settings page 12, `domain/settings` 5, the
-  account menu's link 1); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint) and
+  locked 22.2.1): Vitest 171 files, 3,083 tests, all passed (new: the Team settings page 11, `domain/settings` 5,
+  `domain/time` 2, the dialog's subtitle 1, the account menu's link 1); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint) and
   `ng build` passed (the `crew-page.ts` and `metrics.scss` styles are over the 4 kB warning budget, as on `main`).
   `prettier --check` flags only `docs/architecture.md` and `src/app/features/meetings/meetings.spec.ts`, which fail on
   `main` too. Not run: Node 24, the real `@acme-fedev/auth`, nginx, Playwright, a browser, and the page against a real

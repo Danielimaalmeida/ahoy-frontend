@@ -1,6 +1,4 @@
 {
-  "managedBy": "ui",
-  "deploymentHosts": [],
   "canEdit": true,
   "secretsConfigured": true,
   "servers": [

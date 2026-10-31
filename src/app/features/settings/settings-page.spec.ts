@@ -140,8 +140,14 @@ describe('the Team settings page', () => {
       'Payments SonarQube',
     ]);
     expect(text(servers[0])).toContain('https://sonar.example.com');
-    expect(text(servers[0])).toContain('…9f3a by Alex Example');
-    expect(text(servers[1])).toContain('set by Alex Example');
+    const tokens = servers.map((r) => r.children[2]);
+    expect(tokens.map((c) => text(c?.querySelector('.ah-mono')))).toEqual([
+      '••••9f3a',
+      '••••',
+    ]);
+    expect(text(tokens[0]?.querySelector('.ah-cell-sub'))).toMatch(
+      /^Set by Alex Example · \w{3} \d{1,2} \w{3}$/
+    );
     const repositories = [
       ...root.querySelectorAll('[aria-label="Repositories"] tbody tr'),
     ];
@@ -151,12 +157,20 @@ describe('the Team settings page', () => {
     const changes = [
       ...root.querySelectorAll('[aria-label="Changes to team settings"] li'),
     ];
-    expect(changes.map((c) => text(c.firstElementChild))).toEqual([
+    expect(
+      changes.map((c) => text(c.querySelector('.history__text > span')))
+    ).toEqual([
       'Put acme/orders-web on Main SonarQube, project key acme_orders_web',
-      'Changed SonarQube server Main SonarQube: token …1b2c → …9f3a',
-      'Added SonarQube server Main SonarQube (https://sonar.example.com), the default, token …1b2c',
+      'Changed SonarQube server Main SonarQube: token ••••1b2c → ••••9f3a',
+      'Added SonarQube server Main SonarQube (https://sonar.example.com), the default, token ••••1b2c',
     ]);
     expect(text(changes[2])).toContain('alex@example.com ·');
+    expect(text(changes[2]?.querySelector('.ah-avatar'))).toBe('AL');
+    expect(text(root.querySelector('.side'))).toContain(
+      'Kept for good. A token shows only its last four characters.'
+    );
+    expect(text(root)).toContain('Account › Team settings');
+    expect(text(root)).toContain('You can change these · admin');
     expect(buttonNamed(root, 'Add server').disabled).toBe(false);
     expect(buttonNamed(root, 'Edit Main SonarQube')).toBeDefined();
   });
@@ -164,25 +178,10 @@ describe('the Team settings page', () => {
   it('lets someone who is not an admin read the settings and change nothing', async () => {
     await answer({ ...getSonarSettings, canEdit: false });
     expect(text(root)).toContain('Only admins change these');
+    expect(text(root)).not.toContain('You can change these');
     expect(buttonsNamed(root, 'Add server')).toHaveLength(0);
     expect(buttonsNamed(root, 'Add repository')).toHaveLength(0);
     expect(buttonsNamed(root, 'Edit Main SonarQube')).toHaveLength(0);
-  });
-
-  it('shows SonarQube as set by the deployment, with its hosts, and offers no change', async () => {
-    await answer({
-      ...getSonarSettings,
-      managedBy: 'deployment',
-      deploymentHosts: ['https://sonar.env.example'],
-      canEdit: false,
-      servers: [],
-      repositories: [],
-    });
-    expect(text(root)).toContain('Set by the deployment');
-    expect(text(root)).toContain('Hosts: https://sonar.env.example.');
-    expect(text(root)).toContain('The deployment names the servers.');
-    expect(text(root)).not.toContain('Only admins change these');
-    expect(root.querySelectorAll('button')).toHaveLength(0);
   });
 
   it('turns Add server off and says why while the API cannot seal a token', async () => {
@@ -229,16 +228,28 @@ describe('the Team settings page', () => {
     await answer();
     buttonNamed(root, 'Edit Main SonarQube').click();
     await settle();
-    expect(field<HTMLInputElement>(dialog(), 'Token').value).toBe('');
-    expect(text(dialog())).toContain('Kept as …9f3a');
-    expect(text(dialog())).toContain('This is the default server');
+    const token = field<HTMLInputElement>(dialog(), 'New token');
+    expect(token.value).toBe('');
+    expect(token.placeholder).toBe('Leave empty to keep ••••9f3a');
+    expect(text(dialog())).toContain('The default server · 1 repository on it');
+    expect(text(dialog())).toContain('Set by Alex Example on ');
+    expect(text(dialog())).toContain(
+      'To change it, make another server the default.'
+    );
     expect(text(dialog())).toContain('1 repository is on this server');
-    expect(buttonsNamed(dialog(), 'Remove this server…')).toHaveLength(0);
+    expect(buttonNamed(dialog(), 'Remove this server…').disabled).toBe(true);
+    expect(text(dialog())).not.toContain('Type the token again');
     type(field(dialog(), 'Host'), 'https://sonar2.example.com');
-    await confirm('Save');
+    await settle();
     expect(text(dialog())).toContain('Type the token again');
+    expect(text(dialog())).toContain('Was https://sonar.example.com');
+    expect(buttonNamed(dialog(), 'Save').disabled).toBe(true);
+    buttonNamed(dialog(), 'Save').click();
+    await settle();
     http.expectNone(`${BASE}/settings/sonar/servers/${MAIN.id}`);
-    type(field(dialog(), 'Token'), 'squ_new_token_9999');
+    type(field(dialog(), 'New token'), 'squ_new_token_9999');
+    await settle();
+    expect(text(dialog())).not.toContain('Type the token again');
     await confirm('Save');
     const change = http.expectOne({
       method: 'PATCH',
@@ -277,6 +288,7 @@ describe('the Team settings page', () => {
     await answer();
     buttonNamed(root, 'Edit Payments SonarQube').click();
     await settle();
+    expect(text(dialog())).toContain('No repository on it');
     buttonNamed(dialog(), 'Remove this server…').click();
     await settle();
     expect(text(dialog())).toContain('Its token is deleted with it.');
@@ -296,6 +308,12 @@ describe('the Team settings page', () => {
     await answer();
     buttonNamed(root, 'Add repository').click();
     await settle();
+    expect(text(dialog())).toContain(
+      'Only needed when it is not on the default server'
+    );
+    expect(field<HTMLInputElement>(dialog(), 'Project key').placeholder).toBe(
+      'Found by the reconciler'
+    );
     const server = field<HTMLSelectElement>(dialog(), 'Server');
     expect(server.value).toBe(MAIN.id);
     expect([...server.options].map((o) => text(o))).toEqual([
@@ -325,6 +343,7 @@ describe('the Team settings page', () => {
     await answer();
     buttonNamed(root, 'Edit acme/orders-web').click();
     await settle();
+    expect(text(dialog())).toContain('On Main SonarQube');
     const server = field<HTMLSelectElement>(dialog(), 'Server');
     server.value = getSonarSettings.servers[1]!.id;
     server.dispatchEvent(new Event('change'));

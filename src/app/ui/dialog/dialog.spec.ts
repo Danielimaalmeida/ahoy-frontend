@@ -310,6 +310,7 @@ describe('ah-dialog on the CDK dialog', () => {
   template: `
     <ah-dialog
       heading="Models per phase"
+      [subtitle]="subtitle()"
       icon="wheel"
       confirmLabel="Save models"
       [confirmDisabled]="invalid()"
@@ -324,6 +325,7 @@ describe('ah-dialog on the CDK dialog', () => {
 })
 class InlineHost {
   readonly invalid = signal(true);
+  readonly subtitle = signal('');
   confirms = 0;
   dismissals = 0;
 }
@@ -360,5 +362,22 @@ describe('ah-dialog inline (gallery, no CDK)', () => {
     cancel!.click();
     expect(f.componentInstance.confirms).toBe(1);
     expect(f.componentInstance.dismissals).toBe(1);
+  });
+
+  it('puts a subtitle under the title only when it is given, and keeps the title as the label', async () => {
+    const f = TestBed.createComponent(InlineHost);
+    await f.whenStable();
+    const root = f.nativeElement as HTMLElement;
+    expect(root.querySelector('.ah-dialog__head .ah-hint')).toBeNull();
+    f.componentInstance.subtitle.set('Phases planning and review');
+    await f.whenStable();
+    const titles = root.querySelector('.ah-dialog__titles')!;
+    expect(titles.querySelector('h2')!.textContent).toBe('Models per phase');
+    expect(titles.querySelector('.ah-hint')!.textContent).toBe(
+      'Phases planning and review'
+    );
+    expect(
+      root.querySelector('.ah-dialog')!.getAttribute('aria-labelledby')
+    ).toBe(titles.querySelector('h2')!.id);
   });
 });

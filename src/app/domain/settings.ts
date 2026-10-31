@@ -27,9 +27,9 @@ function textOf(
   return typeof value === 'string' ? value : fallback;
 }
 
-/** How a token is shown: its last four characters after an ellipsis, or "set" when the API kept none. */
+/** How a token is shown: four dots, then its last four characters when the API kept them (a long enough token). */
 export function tokenLabel(hint: string): string {
-  return hint === '' ? 'set' : `…${hint}`;
+  return `••••${hint}`;
 }
 
 /** A project key in words: the key, or how the reconciler finds it when the row sets none. */

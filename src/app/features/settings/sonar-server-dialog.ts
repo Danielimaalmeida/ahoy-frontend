@@ -1,5 +1,6 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
@@ -7,12 +8,14 @@ import {
   Validators,
 } from '@angular/forms';
 import type { ApiError, ApiResult } from '@core/api/api-error';
-import type { CommandErrorView } from '@core/commands/command-error';
 import type { SonarServer, SonarServerChange } from '@core/api/types';
 import { tokenLabel } from '@domain/settings';
+import { absoluteDay } from '@domain/time';
+import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
+import { Icon } from '@ui/icon/icon';
 import { ToastService } from '@ui/toast/toast';
 import { settingsErrorView } from './settings-errors';
 import type { SettingsStore } from './settings-store';
@@ -30,6 +33,20 @@ function hostOf(text: string): string {
   return text.trim().replace(/\/+$/, '');
 }
 
+/** "1 repository" or "3 repositories". */
+function repositories(count: number): string {
+  return count === 1 ? '1 repository' : `${count} repositories`;
+}
+
+/** The dialog's subtitle when editing: whether it is the default, and how many repositories are on it. */
+function subtitleOf(server: SonarServer): string {
+  const on =
+    server.repositoryCount === 0
+      ? 'No repository on it'
+      : `${repositories(server.repositoryCount)} on it`;
+  return server.isDefault ? `The default server · ${on}` : on;
+}
+
 /**
  * Adds a SonarQube server or edits one: its name, host, token and whether it is the default, and removing it. The
  * token is typed once and never shown again: editing keeps it unless a new one is typed, and a new host needs it typed
@@ -37,7 +54,15 @@ function hostOf(text: string): string {
  */
 @Component({
   selector: 'ah-sonar-server-dialog',
-  imports: [Button, DialogShell, Field, FieldControl, ReactiveFormsModule],
+  imports: [
+    Banner,
+    Button,
+    DialogShell,
+    Field,
+    FieldControl,
+    Icon,
+    ReactiveFormsModule,
+  ],
   styles: `
     form {
       display: flex;
@@ -53,23 +78,56 @@ function hostOf(text: string): string {
       display: flex;
       flex-direction: column;
     }
+    .is-default {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--surface-sunken);
+    }
+    .is-default ah-icon {
+      flex: none;
+      margin-top: 1px;
+    }
+    .is-default__text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .is-default__title {
+      font-weight: 600;
+    }
     .remove {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
       margin-top: 16px;
       padding-top: 12px;
       border-top: 1px solid var(--line-soft);
+    }
+    .remove p {
+      margin: 0;
     }
   `,
   template: `
     <ah-dialog
       icon="lock"
       [heading]="server ? 'Edit ' + server.name : 'Add a SonarQube server'"
+      [subtitle]="subtitle"
       [confirmLabel]="server ? 'Save' : 'Add server'"
       busyLabel="Saving…"
       [busy]="busy()"
-      [confirmDisabled]="form.invalid"
+      [confirmDisabled]="form.invalid || needsToken()"
       [error]="error()"
       (confirm)="submit()"
     >
+      @if (needsToken()) {
+        <ah-banner variant="notice" heading="Type the token again">
+          A new host needs its token, so the old one never goes there.
+        </ah-banner>
+      }
       <form [formGroup]="form" (submit)="$event.preventDefault(); submit()">
         <ah-field label="Name" required hint="How the team calls it.">
           <input
@@ -79,11 +137,7 @@ function hostOf(text: string): string {
             maxlength="100"
           />
         </ah-field>
-        <ah-field
-          label="Host"
-          required
-          hint="The address of SonarQube, such as https://sonar.example.com."
-        >
+        <ah-field label="Host" required [hint]="hostHint()">
           <input
             ahInput
             mono
@@ -94,9 +148,8 @@ function hostOf(text: string): string {
           />
         </ah-field>
         <ah-field
-          label="Token"
-          [required]="!server"
-          [optional]="server !== null"
+          [label]="server ? 'New token' : 'Token'"
+          [required]="!server || needsToken()"
           [hint]="tokenHint"
         >
           <input
@@ -107,13 +160,22 @@ function hostOf(text: string): string {
             autocomplete="new-password"
             spellcheck="false"
             maxlength="1000"
+            [attr.placeholder]="
+              server ? 'Leave empty to keep ' + token(server.tokenHint) : null
+            "
           />
         </ah-field>
         @if (server?.isDefault) {
-          <span class="ah-hint"
-            >This is the default server, for the repositories not listed below.
-            To change that, make another server the default.</span
-          >
+          <div class="is-default">
+            <ah-icon name="check" />
+            <span class="is-default__text">
+              <span class="is-default__title">The default server</span>
+              <span class="ah-hint"
+                >For every repository not listed under Repositories. To change
+                it, make another server the default.</span
+              >
+            </span>
+          </div>
         } @else {
           <label class="check">
             <input type="checkbox" formControlName="isDefault" />
@@ -128,18 +190,18 @@ function hostOf(text: string): string {
       </form>
       @if (server) {
         <div class="remove">
+          <span class="ah-label">Remove</span>
           @if (server.repositoryCount > 0) {
             <span class="ah-hint"
-              >{{ server.repositoryCount }}
-              {{
-                server.repositoryCount === 1
-                  ? 'repository is'
-                  : 'repositories are'
-              }}
+              >{{ repositoryCount }}
+              {{ server.repositoryCount === 1 ? 'is' : 'are' }}
               on this server. Move or remove
               {{ server.repositoryCount === 1 ? 'it' : 'them' }} before removing
               the server.</span
             >
+            <button ahButton="danger-outline" size="sm" type="button" disabled>
+              Remove this server…
+            </button>
           } @else if (confirmingRemove()) {
             <p>
               Remove {{ server.name }}? Its token is deleted with it.
@@ -158,8 +220,12 @@ function hostOf(text: string): string {
               Remove {{ server.name }}
             </button>
           } @else {
+            <span class="ah-hint"
+              >No repository is listed on it. Its token is deleted with
+              it.</span
+            >
             <button
-              ahButton="ghost"
+              ahButton="danger-outline"
               size="sm"
               type="button"
               (click)="confirmingRemove.set(true)"
@@ -178,9 +244,18 @@ export class SonarServerDialog {
   private readonly toasts = inject(ToastService);
 
   protected readonly server = this.data.server;
-  protected readonly tokenHint = this.server
-    ? `Kept as ${tokenLabel(this.server.tokenHint)} unless you type a new one. A new host needs it again.`
-    : 'A SonarQube user token that can read the projects. It is stored encrypted and never shown again.';
+  protected readonly token = tokenLabel;
+  protected readonly subtitle = this.server
+    ? subtitleOf(this.server)
+    : 'CI fixes read its findings with this token';
+  protected readonly repositoryCount = repositories(
+    this.server?.repositoryCount ?? 0
+  );
+  protected readonly tokenHint =
+    'A SonarQube user token that can read the projects. Stored encrypted; never shown again.' +
+    (this.server
+      ? ` Set by ${this.server.tokenSetByName ?? this.server.tokenSetBy} on ${absoluteDay(this.server.tokenSetAt)}.`
+      : '');
   protected readonly form = new FormGroup({
     name: new FormControl(this.server?.name ?? '', {
       nonNullable: true,
@@ -203,13 +278,31 @@ export class SonarServerDialog {
       nonNullable: true,
     }),
   });
+  private readonly value = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue(),
+  });
+  /** Whether the host was changed without a new token: the old one never goes to a new host. */
+  protected readonly needsToken = computed(() => {
+    const value = this.value();
+    return (
+      this.server !== null &&
+      hostOf(value.hostUrl ?? '') !== this.server.hostUrl &&
+      (value.token ?? '').trim() === ''
+    );
+  });
+  /** The host's hint: what it was when it changed, else an example. */
+  protected readonly hostHint = computed(() =>
+    this.server !== null &&
+    hostOf(this.value().hostUrl ?? '') !== this.server.hostUrl
+      ? `Was ${this.server.hostUrl}`
+      : 'The address of SonarQube, such as https://sonar.example.com.'
+  );
   protected readonly busy = signal(false);
   protected readonly confirmingRemove = signal(false);
   private readonly failure = signal<ApiError | null>(null);
-  private readonly refusal = signal<CommandErrorView | null>(null);
   protected readonly error = computed(() => {
     const failure = this.failure();
-    return failure === null ? this.refusal() : settingsErrorView(failure);
+    return failure === null ? null : settingsErrorView(failure);
   });
 
   /** Adds or saves the server and closes; a refusal keeps the dialog open with the reason. */
@@ -244,15 +337,7 @@ export class SonarServerDialog {
       this.ref.close(false);
       return;
     }
-    if (change.hostUrl !== undefined && change.token === undefined) {
-      this.failure.set(null);
-      this.refusal.set({
-        variant: 'error',
-        heading: 'Type the token again',
-        text: 'A new host needs its token, so the old one never goes there.',
-      });
-      return;
-    }
+    if (change.hostUrl !== undefined && change.token === undefined) return;
     const id = this.server.id;
     await this.send(
       () => this.data.store.updateServer(id, change),
@@ -297,7 +382,6 @@ export class SonarServerDialog {
     const result = await request();
     this.busy.set(false);
     if (!result.ok) {
-      this.refusal.set(null);
       this.failure.set(result.error);
       return;
     }
