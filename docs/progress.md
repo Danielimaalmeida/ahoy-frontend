@@ -1,8 +1,7 @@
 # Ahoy frontend · progress
 
-Updated 2026-10-28 (review fixes to Meetings' answers to questions, merged the same day as PR #45; before that the
-same day, the Crew page restyled to its design, and Meetings' cancel, mark done without Start and stakeholders by
-name). One page:
+Updated 2026-10-31 (Team settings: SonarQube servers and repositories that admins change in the UI, with
+`ahoy-hosted`'s D19; tested on the mock HTTP backend only). One page:
 replace it, do not append; git history is the archive (the 3,692-line page before this one:
 `git show b1f9b88:docs/progress.md`). The review of both repositories, with its
 proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its
@@ -10,13 +9,17 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/runtime-config`, 2026-10-30):** one image for every team, toward a Helm chart (F17,
-  architecture "Runtime configuration"). `main.ts` reads `/config.json` once before bootstrap: the WebEAM realm and
-  client (`auth`) give every endpoint, the redirects default to the page's origin or take the client's registered ones,
-  debug logging is off unless asked, and an invalid `auth` stops the app with its problems on screen; the rest of the
-  document goes to `initAppConfig` without a second fetch. The Backlog's Jira link has no acme default (no
-  `jiraBaseUrl`, no link). `environment.test.ts` still
-  holds FIO's realm and client as the fallback until the TEST deployment mounts `/config.json`.
+- **This branch (`feat/team-settings`, 2026-10-31):** the Team settings page (`/settings`, linked from the account
+  menu), with `ahoy-hosted`'s branch of the same name. It lists the SonarQube servers (the token only as its last four
+  characters, who set it and when), the repositories put on a server and the history of changes in words. Admins add,
+  edit and remove servers and repositories in dialogs: the token is a password field typed once, editing keeps it
+  unless a new one is typed, a new host needs it again, and a server with repositories cannot be removed. Others read
+  only; when the deployment sets `SONAR_*` the page says so and offers nothing; without `AHOY_SECRETS_KEY` Add server is
+  off and says why. The contract sync also brought the knowledge reviews' `pullRequestUrl` and `pullRequestError`
+  (`ahoy-hosted` 0025) into the guard, the mock and the fixtures.
+- **Merged on 2026-10-30:** one image for every team, toward a Helm chart (PR #48, F17, architecture "Runtime
+  configuration"): `/config.json` read once before bootstrap. `environment.test.ts` still holds FIO's realm and client
+  as the fallback until the TEST deployment mounts `/config.json`.
 - **On `main`:** the shell with All hands and Needs you, Voyages, Set sail with the model catalogue, the Docks (the Jira
   backlog with readiness, harness fit and Refine), the voyage page (header with Stop, Resume, Budget, Models, Unblock,
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
@@ -27,26 +30,24 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   (PR #42, with `ahoy-hosted` #64, restyled in PR #43), the user's local changes (`f4ec304`), Meetings' cancel, mark
   done without Start and stakeholders by name (PR #44, with `ahoy-hosted` #65) and answers to questions (PR #45, whose
   `ahoy-hosted` side, #67, is not merged yet).
-- **This branch (`fix/meeting-answers-review`, 2026-10-28):** the review's fixes to answers. Removing a question's last
-  answer marks it open again, on the page and in the mock, as the API now does; moving or removing a topic, and
-  editing a note, refresh the open actions and questions; one of the two lists failing no longer drops the other; and
-  an image refused on an answer after the meeting ended now says why.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted` `36e7243` (branch `feat/meeting-answers`, PR
-  #67, not merged), with the redaction placeholders kept. Needs on the API: migrations 0021, 0022 and 0024 applied and
-  `JIRA_BOARD_ID` set. Merge and deploy with the `ahoy-hosted` pull request.
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/team-settings`, with the redaction
+  placeholders kept; `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migrations 0025 and
+  0026, `AHOY_SECRETS_KEY` and `AHOY_ADMIN_QNUMBERS`. Merge and deploy with the `ahoy-hosted` pull request.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
-  checked by unit and component tests on the mock backend only (Crew over `HttpTestingController`).
+  checked by unit and component tests on the mock backend only (Crew and Team settings over
+  `HttpTestingController`).
 
 ## Proof
 
-- **Last full run** (2026-10-30, `feat/runtime-config`, cloud container, Node 24.22.2 through `npx node@24`, a local
-  stand-in for `@acme-fedev/auth` and `@acme-fedev/playwright-helpers` because the private registry is not reachable,
-  dependencies installed without the lock file and with `--ignore-scripts`, with `@angular/compiler-cli`, `build` and
-  `cli` at the locked 22.2.1): Vitest 169 files, 3,056 tests, all passed; `npm run typecheck` (app, specs,
-  `check-boundaries`), `npm run lint` (eslint, stylelint) and `ng build` passed (the `crew-page.ts`, `docks.ts` and
-  `metrics.scss` styles are over the 4 kB warning budget, as on `main`). `prettier --check` flags only
-  `docs/architecture.md` and `src/app/features/meetings/meetings.spec.ts`, which fail on `main` too. Not run: the
-  real `@acme-fedev/auth` (so a sign-in against a realm from `/config.json` is unproven), nginx, Playwright, a browser.
+- **Last full run** (2026-10-31, `feat/team-settings`, cloud container, Node 22, a local stand-in for
+  `@acme-fedev/auth` and `@acme-fedev/playwright-helpers` copied into `node_modules` because the private registry is
+  not reachable, dependencies installed without the lock file, with `@angular/compiler-cli`, `build` and `cli` at the
+  locked 22.2.1): Vitest 171 files, 3,081 tests, all passed (new: the Team settings page 12, `domain/settings` 5, the
+  account menu's link 1); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint) and
+  `ng build` passed (the `crew-page.ts` and `metrics.scss` styles are over the 4 kB warning budget, as on `main`).
+  `prettier --check` flags only `docs/architecture.md` and `src/app/features/meetings/meetings.spec.ts`, which fail on
+  `main` too. Not run: Node 24, the real `@acme-fedev/auth`, nginx, Playwright, a browser, and the page against a real
+  API.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
   `npm run api:types` is byte-identical to the committed file.
@@ -71,16 +72,17 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. Merge the `ahoy-hosted` answers pull request (migration 0024), then this branch. On a machine with the private registry and Node 24, repeat the full
+1. Merge `ahoy-hosted`'s `feat/team-settings` (migrations 0025 and 0026), then this branch. On a machine with the private registry and Node 24, repeat the full
    check with the real `@acme-fedev/auth`: `npm ci`, then
    `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop `test:scripts`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0024): start a
+3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0026): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
    Meetings (migrations 0018, 0019 and 0022: an action ticked done, two browsers on one meeting in progress, a
    screenshot pasted into a note and opened large, a meeting cancelled and one marked done, a question answered after
    its meeting ended and reopened) and Crew (migration 0021 and `JIRA_BOARD_ID`: add the team, a swap for a
-   holiday, its Undo).
+   holiday, its Undo) and Team settings (`AHOY_SECRETS_KEY`, `AHOY_ADMIN_QNUMBERS`: add a server, put a
+   repository on it, change its host with the token, and read the history).
 4. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
    then publishing to Confluence through its API (today the page copies wiki markup).
 5. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the

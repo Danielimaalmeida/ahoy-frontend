@@ -56,6 +56,8 @@ function aReview(
     patch: succeeded
       ? 'diff --git a/knowledge/lessons.md b/knowledge/lessons.md\n'
       : null,
+    pullRequestUrl: null,
+    pullRequestError: null,
     ...changes,
   };
 }

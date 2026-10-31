@@ -52,6 +52,9 @@
     },
     {
       "name": "crew"
+    },
+    {
+      "name": "settings"
     }
   ],
   "paths": {
@@ -109,7 +112,7 @@
         "operationId": "listJiraBacklog",
         "tags": ["jira"],
         "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
-        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:\n`project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, \"In Specification\", Open, \"In Test\")\nAND \"Feature Team\" = OTHER_COMPANY AND Team in (34115) ORDER BY Rank ASC`.\n\nThe default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile\nboard backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
+        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` is the team's server-side query; there is no default, and without it the endpoint answers\n`503 unavailable`. Teams usually use their start-page availability filter, not the Jira Agile board backlog\n(which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
         "responses": {
           "200": {
             "description": "Complete backlog in Jira rank order.",
@@ -3790,6 +3793,349 @@
           }
         }
       }
+    },
+    "/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": ["settings"],
+        "summary": "Who the signed-in person is, and whether they may change the team's settings.",
+        "description": "An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).",
+        "responses": {
+          "200": {
+            "description": "The signed-in person.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/sonar": {
+      "get": {
+        "operationId": "getSonarSettings",
+        "tags": ["settings"],
+        "summary": "The SonarQube servers CI fixes read, and which repository is on which.",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A token is never returned: only its\nlast four characters (`tokenHint`, empty for a token shorter than 12). When the deployment sets SonarQube\n(`SONAR_HOST_URL`, `SONAR_TOKEN`, `SONAR_PROJECTS`), that wins: `managedBy` is `deployment`, `deploymentHosts`\nnames its hosts, and every change answers `409 invalid_state`. A repository no row names is read on the\ndefault server. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The SonarQube settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SonarSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/sonar/servers": {
+      "post": {
+        "operationId": "addSonarServer",
+        "tags": ["settings"],
+        "summary": "Add a SonarQube server with the token Ahoy reads it with. Admins only.",
+        "description": "The token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored, and only sent to `hostUrl`. The\nfirst server is the default unless `isDefault` is false; making one the default makes the others not.\n`403 forbidden` for someone who is not an admin, `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SonarServerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SonarServer"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/sonar/servers/{serverId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SonarServerId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateSonarServer",
+        "tags": ["settings"],
+        "summary": "Rename a server, move it, give it a new token, or make it the default. Admins only.",
+        "description": "Moving it to another `hostUrl` needs `token` in the same request, so the old token never goes to a new host.\nA server stops being the default only when another one becomes it. `409 stale_version` when `version` is not\nthe server's.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SonarServerChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The server, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SonarServer"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSonarServer",
+        "tags": ["settings"],
+        "summary": "Remove a server no repository is on. Admins only.",
+        "description": "`409 invalid_state` while a repository is on it.",
+        "responses": {
+          "204": {
+            "description": "The server and its token are gone."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/sonar/repositories": {
+      "post": {
+        "operationId": "addSonarRepository",
+        "tags": ["settings"],
+        "summary": "Put a repository on a server. Admins only.",
+        "description": "`repository` is a plan alias, `owner/name` or `host/owner/name`; each repository is named once. Without\n`projectKey`, the project is found from the agent mapping's `sonar project` row, the failing check's link\ninto the server, or the repository's `sonar-project.properties`.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SonarRepositoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The repository.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SonarRepository"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/sonar/repositories/{repositoryId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SonarRepositoryId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateSonarRepository",
+        "tags": ["settings"],
+        "summary": "Move a repository to another server, or set its project key (null clears it). Admins only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SonarRepositoryChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The repository, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SonarRepository"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSonarRepository",
+        "tags": ["settings"],
+        "summary": "Take a repository off its server, so it is read on the default one. Admins only.",
+        "responses": {
+          "204": {
+            "description": "The repository is off its server."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/events": {
+      "get": {
+        "operationId": "listSettingsEvents",
+        "tags": ["settings"],
+        "summary": "Who changed which team setting and when, newest first.",
+        "description": "A token appears only as its last four characters. Page with `before`, the last `id` seen.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsEventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3937,6 +4283,24 @@
       },
       "MeetingStoryDraftId": {
         "name": "draftId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "SonarServerId": {
+        "name": "serverId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "SonarRepositoryId": {
+        "name": "repositoryId",
         "in": "path",
         "required": true,
         "schema": {
@@ -5778,7 +6142,9 @@
           "content",
           "proposal",
           "lessons",
-          "patch"
+          "patch",
+          "pullRequestUrl",
+          "pullRequestError"
         ],
         "additionalProperties": false,
         "properties": {
@@ -5873,6 +6239,15 @@
           "patch": {
             "type": ["string", "null"],
             "description": "Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content repository; null exactly when both `proposal` and `lessons` are."
+          },
+          "pullRequestUrl": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "The pull request the reconciler opened with the proposed files on the content repository (`AHOY_KNOWLEDGE_REPO`), for a person to review and merge; null until it is open, and always null when no content repository is configured or the review proposed nothing."
+          },
+          "pullRequestError": {
+            "type": ["string", "null"],
+            "description": "Why the last attempt to open the pull request failed (the reconciler retries for a day after the review ended); null once it is open, and before any attempt."
           }
         }
       },
@@ -8851,6 +9226,331 @@
           "reason": {
             "type": "string",
             "maxLength": 200
+          }
+        }
+      },
+      "Me": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["actor", "name", "admin"],
+        "properties": {
+          "actor": {
+            "type": "string"
+          },
+          "name": {
+            "type": ["string", "null"]
+          },
+          "admin": {
+            "type": "boolean",
+            "description": "Whether the person may change the team's settings."
+          }
+        }
+      },
+      "SonarSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "managedBy",
+          "deploymentHosts",
+          "canEdit",
+          "secretsConfigured",
+          "servers",
+          "repositories"
+        ],
+        "properties": {
+          "managedBy": {
+            "type": "string",
+            "enum": ["ui", "deployment"]
+          },
+          "deploymentHosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "canEdit": {
+            "type": "boolean",
+            "description": "An admin, and the deployment does not set SonarQube."
+          },
+          "secretsConfigured": {
+            "type": "boolean",
+            "description": "Whether the server can save a token (`AHOY_SECRETS_KEY`)."
+          },
+          "servers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SonarServer"
+            }
+          },
+          "repositories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SonarRepository"
+            }
+          }
+        }
+      },
+      "SonarServer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "hostUrl",
+          "isDefault",
+          "tokenHint",
+          "tokenSetBy",
+          "tokenSetByName",
+          "tokenSetAt",
+          "repositoryCount",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "hostUrl": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "tokenHint": {
+            "type": "string",
+            "maxLength": 4,
+            "description": "The token's last four characters; never the token."
+          },
+          "tokenSetBy": {
+            "type": "string"
+          },
+          "tokenSetByName": {
+            "type": ["string", "null"]
+          },
+          "tokenSetAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "repositoryCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SonarServerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "hostUrl", "token"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "\\S"
+          },
+          "hostUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "writeOnly": true
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SonarServerChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version"],
+        "minProperties": 2,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "\\S"
+          },
+          "hostUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "writeOnly": true
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SonarRepository": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "repository",
+          "serverId",
+          "projectKey",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectKey": {
+            "type": ["string", "null"]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SonarRepositoryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository", "serverId"],
+        "properties": {
+          "repository": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectKey": {
+            "type": ["string", "null"],
+            "maxLength": 400
+          }
+        }
+      },
+      "SonarRepositoryChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version"],
+        "minProperties": 2,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "serverId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectKey": {
+            "type": ["string", "null"],
+            "maxLength": 400
+          }
+        }
+      },
+      "SettingsEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "actor",
+          "actorName",
+          "subject",
+          "payload",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string",
+            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`."
+          },
+          "actor": {
+            "type": "string"
+          },
+          "actorName": {
+            "type": ["string", "null"]
+          },
+          "subject": {
+            "type": "string",
+            "description": "The row changed, such as `sonar_server:<id>`."
+          },
+          "payload": {
+            "type": "object",
+            "description": "What changed; a token only as `tokenHint`."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SettingsEventPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsEvent"
+            }
           }
         }
       }

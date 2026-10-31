@@ -52,13 +52,25 @@ export class KnowledgeDesk {
 
   private withFiles(
     id: string,
-    review: Omit<KnowledgeReview, 'proposal' | 'lessons' | 'patch'>
+    review: Omit<
+      KnowledgeReview,
+      'proposal' | 'lessons' | 'patch' | 'pullRequestUrl' | 'pullRequestError'
+    >
   ): KnowledgeReview {
+    // The mock has no content repository (`AHOY_KNOWLEDGE_REPO`), so it never opens a pull request.
+    const pullRequest = { pullRequestUrl: null, pullRequestError: null };
     if (review.status !== 'succeeded')
-      return { ...review, proposal: null, lessons: null, patch: null };
+      return {
+        ...review,
+        proposal: null,
+        lessons: null,
+        patch: null,
+        ...pullRequest,
+      };
     return {
       ...review,
       ...knowledgeFiles(review.key, this.rulesOf.get(id) ?? false),
+      ...pullRequest,
     };
   }
 }

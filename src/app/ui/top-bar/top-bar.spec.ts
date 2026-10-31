@@ -257,6 +257,21 @@ describe('ah-top-bar, person and search', () => {
     expect(root.querySelector('.account__menu')).toBeNull();
   });
 
+  it('links Team settings from the dropdown and closes it on the way there', async () => {
+    const { fixture, root } = await render();
+    root.querySelector<HTMLButtonElement>('.account__trigger')!.click();
+    fixture.detectChanges();
+    const link = root.querySelector<HTMLAnchorElement>('.account__item')!;
+    expect(link.getAttribute('href')).toBe('/settings');
+    expect(link.textContent!.trim()).toBe('Team settings');
+    link.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/settings');
+    expect(root.querySelector('.account__menu')).toBeNull();
+    expect(fixture.componentInstance.logouts()).toBe(0);
+  });
+
   it('dismisses on outside click and Escape, restoring focus for Escape', async () => {
     const { fixture, root } = await render();
     const trigger = root.querySelector<HTMLButtonElement>('.account__trigger')!;

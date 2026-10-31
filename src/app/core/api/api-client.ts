@@ -32,6 +32,11 @@ import {
   isCrew,
   isCrewMember,
   isCrewTimeOff,
+  isMe,
+  isSettingsEventPage,
+  isSonarRepository,
+  isSonarServer,
+  isSonarSettings,
   isEndMeetingResult,
   isMeeting,
   isMeetingList,
@@ -79,6 +84,15 @@ import type {
   CrewRole,
   CrewTimeOff,
   CrewTimeOffRequest,
+  Me,
+  SettingsEventPage,
+  SonarRepository,
+  SonarRepositoryChange,
+  SonarRepositoryRequest,
+  SonarServer,
+  SonarServerChange,
+  SonarServerRequest,
+  SonarSettings,
   CreateMeetingSeriesRequest,
   DecisionRequest,
   EndMeetingRequest,
@@ -1181,6 +1195,100 @@ export class ApiClient {
     return this.delete(
       'clearCrewSprintChange',
       `/crew/sprints/${segment(startsOn)}/${segment(role)}`
+    );
+  }
+
+  /** Who the signed-in person is, and whether they may change the team's settings. */
+  getMe(): Promise<ApiResult<Me>> {
+    return this.get('getMe', '/me', isMe);
+  }
+
+  /** The SonarQube servers CI fixes read and which repository is on which. No token comes back. */
+  getSonarSettings(): Promise<ApiResult<SonarSettings>> {
+    return this.get('getSonarSettings', '/settings/sonar', isSonarSettings);
+  }
+
+  /** Adds a SonarQube server with its token (admins only). The answer (201) is the server, without the token. */
+  addSonarServer(body: SonarServerRequest): Promise<ApiResult<SonarServer>> {
+    return this.post(
+      'addSonarServer',
+      '/settings/sonar/servers',
+      body,
+      isSonarServer
+    );
+  }
+
+  /** Renames, moves, re-keys or makes a server the default (admins only); a new host needs the token again. */
+  updateSonarServer(
+    serverId: string,
+    body: SonarServerChange
+  ): Promise<ApiResult<SonarServer>> {
+    return this.send(
+      'updateSonarServer',
+      isSonarServer,
+      this.http.patch<unknown>(
+        this.url(`/settings/sonar/servers/${segment(serverId)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Removes a server no repository is on (admins only). The answer (204) has no body. */
+  deleteSonarServer(serverId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteSonarServer',
+      `/settings/sonar/servers/${segment(serverId)}`
+    );
+  }
+
+  /** Puts a repository on a server (admins only). The answer (201) is the repository. */
+  addSonarRepository(
+    body: SonarRepositoryRequest
+  ): Promise<ApiResult<SonarRepository>> {
+    return this.post(
+      'addSonarRepository',
+      '/settings/sonar/repositories',
+      body,
+      isSonarRepository
+    );
+  }
+
+  /** Moves a repository to another server or changes its project key (admins only). */
+  updateSonarRepository(
+    repositoryId: string,
+    body: SonarRepositoryChange
+  ): Promise<ApiResult<SonarRepository>> {
+    return this.send(
+      'updateSonarRepository',
+      isSonarRepository,
+      this.http.patch<unknown>(
+        this.url(`/settings/sonar/repositories/${segment(repositoryId)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Takes a repository off its server (admins only). The answer (204) has no body. */
+  deleteSonarRepository(repositoryId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteSonarRepository',
+      `/settings/sonar/repositories/${segment(repositoryId)}`
+    );
+  }
+
+  /** Who changed which team setting and when, newest first. */
+  listSettingsEvents(limit?: number): Promise<ApiResult<SettingsEventPage>> {
+    const params =
+      limit !== undefined
+        ? new HttpParams().set('limit', String(limit))
+        : undefined;
+    return this.get(
+      'listSettingsEvents',
+      '/settings/events',
+      isSettingsEventPage,
+      params
     );
   }
 

@@ -749,6 +749,40 @@ export type CrewTimeOffRequest = Schemas['CrewTimeOffRequest'];
 /** Body of `changeCrewSprint`. */
 export type CrewChangeRequest = Schemas['CrewChangeRequest'];
 
+/** Answer of `getMe`: the signed-in person, and whether they may change the team's settings. */
+export type Me = Schemas['Me'];
+
+/** Who decides SonarQube: the team settings in the UI, or the deployment's `SONAR_*` (read-only here). */
+export type SonarManagedBy = Schemas['SonarSettings']['managedBy'];
+export const SONAR_MANAGED_BY = listOf<SonarManagedBy>()(['ui', 'deployment']);
+
+/** Answer of `getSonarSettings`: the servers and repositories, and whether the person may change them. */
+export type SonarSettings = Schemas['SonarSettings'];
+
+/** A SonarQube server; its token is never sent back, only its last four characters (`tokenHint`). */
+export type SonarServer = Schemas['SonarServer'];
+
+/** Body of `addSonarServer`. */
+export type SonarServerRequest = Schemas['SonarServerRequest'];
+
+/** Body of `updateSonarServer`: the server's `version`, and what changes. */
+export type SonarServerChange = Schemas['SonarServerChange'];
+
+/** A repository and the server its SonarQube project is on. */
+export type SonarRepository = Schemas['SonarRepository'];
+
+/** Body of `addSonarRepository`. */
+export type SonarRepositoryRequest = Schemas['SonarRepositoryRequest'];
+
+/** Body of `updateSonarRepository`: `projectKey: null` clears the key. */
+export type SonarRepositoryChange = Schemas['SonarRepositoryChange'];
+
+/** One change to a team setting: who, when, which row and what changed (a token only as its last four characters). */
+export type SettingsEvent = Schemas['SettingsEvent'];
+
+/** Answer of `listSettingsEvents`, newest first. */
+export type SettingsEventPage = Schemas['SettingsEventPage'];
+
 /** Query of `listMeetingNotes`: one kind, optionally of one series or meeting, and open or done actions. */
 export type ListMeetingNotesQuery =
   operations['listMeetingNotes']['parameters']['query'];

@@ -63,12 +63,9 @@ export interface paths {
      * All Jira Stories, Tasks and Bugs matching the configured backlog query.
      * @description Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
      *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
-     *     `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-     *     `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-     *     AND "Feature Team" = OTHER_COMPANY AND Team in (34115) ORDER BY Rank ASC`.
-     *
-     *     The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
-     *     board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
+     *     `JIRA_BACKLOG_JQL` is the team's server-side query; there is no default, and without it the endpoint answers
+     *     `503 unavailable`. Teams usually use their start-page availability filter, not the Jira Agile board backlog
+     *     (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
      *     issues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters
      *     are accepted. The backend follows all Jira search pages and preserves rank order; `total` equals
      *     the number of returned items. Issues already started in Ahoy are not excluded.
@@ -1738,6 +1735,162 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/me': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Who the signed-in person is, and whether they may change the team's settings.
+     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).
+     */
+    readonly get: operations['getMe'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/sonar': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The SonarQube servers CI fixes read, and which repository is on which.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A token is never returned: only its
+     *     last four characters (`tokenHint`, empty for a token shorter than 12). When the deployment sets SonarQube
+     *     (`SONAR_HOST_URL`, `SONAR_TOKEN`, `SONAR_PROJECTS`), that wins: `managedBy` is `deployment`, `deploymentHosts`
+     *     names its hosts, and every change answers `409 invalid_state`. A repository no row names is read on the
+     *     default server. 0 AIU.
+     */
+    readonly get: operations['getSonarSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/sonar/servers': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Add a SonarQube server with the token Ahoy reads it with. Admins only.
+     * @description The token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored, and only sent to `hostUrl`. The
+     *     first server is the default unless `isDefault` is false; making one the default makes the others not.
+     *     `403 forbidden` for someone who is not an admin, `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+     */
+    readonly post: operations['addSonarServer'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/sonar/servers/{serverId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly serverId: components['parameters']['SonarServerId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Remove a server no repository is on. Admins only.
+     * @description `409 invalid_state` while a repository is on it.
+     */
+    readonly delete: operations['deleteSonarServer'];
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Rename a server, move it, give it a new token, or make it the default. Admins only.
+     * @description Moving it to another `hostUrl` needs `token` in the same request, so the old token never goes to a new host.
+     *     A server stops being the default only when another one becomes it. `409 stale_version` when `version` is not
+     *     the server's.
+     */
+    readonly patch: operations['updateSonarServer'];
+    readonly trace?: never;
+  };
+  readonly '/settings/sonar/repositories': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Put a repository on a server. Admins only.
+     * @description `repository` is a plan alias, `owner/name` or `host/owner/name`; each repository is named once. Without
+     *     `projectKey`, the project is found from the agent mapping's `sonar project` row, the failing check's link
+     *     into the server, or the repository's `sonar-project.properties`.
+     */
+    readonly post: operations['addSonarRepository'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/sonar/repositories/{repositoryId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly repositoryId: components['parameters']['SonarRepositoryId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    readonly post?: never;
+    /** Take a repository off its server, so it is read on the default one. Admins only. */
+    readonly delete: operations['deleteSonarRepository'];
+    readonly options?: never;
+    readonly head?: never;
+    /** Move a repository to another server, or set its project key (null clears it). Admins only. */
+    readonly patch: operations['updateSonarRepository'];
+    readonly trace?: never;
+  };
+  readonly '/settings/events': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Who changed which team setting and when, newest first.
+     * @description A token appears only as its last four characters. Page with `before`, the last `id` seen.
+     */
+    readonly get: operations['listSettingsEvents'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2337,6 +2490,13 @@ export interface components {
       readonly lessons: string | null;
       /** @description Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content repository; null exactly when both `proposal` and `lessons` are. */
       readonly patch: string | null;
+      /**
+       * Format: uri
+       * @description The pull request the reconciler opened with the proposed files on the content repository (`AHOY_KNOWLEDGE_REPO`), for a person to review and merge; null until it is open, and always null when no content repository is configured or the review proposed nothing.
+       */
+      readonly pullRequestUrl: string | null;
+      /** @description Why the last attempt to open the pull request failed (the reconciler retries for a day after the review ended); null once it is open, and before any attempt. */
+      readonly pullRequestError: string | null;
     };
     readonly KnowledgeReviewList: {
       readonly key: components['schemas']['StoryKey'];
@@ -3297,6 +3457,96 @@ export interface components {
       readonly mode: 'swap' | 'skip' | 'restart';
       readonly reason?: string;
     };
+    readonly Me: {
+      readonly actor: string;
+      readonly name: string | null;
+      /** @description Whether the person may change the team's settings. */
+      readonly admin: boolean;
+    };
+    readonly SonarSettings: {
+      /** @enum {string} */
+      readonly managedBy: 'ui' | 'deployment';
+      readonly deploymentHosts: readonly string[];
+      /** @description An admin, and the deployment does not set SonarQube. */
+      readonly canEdit: boolean;
+      /** @description Whether the server can save a token (`AHOY_SECRETS_KEY`). */
+      readonly secretsConfigured: boolean;
+      readonly servers: readonly components['schemas']['SonarServer'][];
+      readonly repositories: readonly components['schemas']['SonarRepository'][];
+    };
+    readonly SonarServer: {
+      /** Format: uuid */
+      readonly id: string;
+      readonly name: string;
+      readonly hostUrl: string;
+      readonly isDefault: boolean;
+      /** @description The token's last four characters; never the token. */
+      readonly tokenHint: string;
+      readonly tokenSetBy: string;
+      readonly tokenSetByName: string | null;
+      /** Format: date-time */
+      readonly tokenSetAt: string;
+      readonly repositoryCount: number;
+      readonly version: number;
+      readonly updatedBy: string;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly SonarServerRequest: {
+      readonly name: string;
+      readonly hostUrl: string;
+      readonly token: string;
+      readonly isDefault?: boolean;
+    };
+    readonly SonarServerChange: {
+      readonly version: number;
+      readonly name?: string;
+      readonly hostUrl?: string;
+      readonly token?: string;
+      readonly isDefault?: boolean;
+    };
+    readonly SonarRepository: {
+      /** Format: uuid */
+      readonly id: string;
+      readonly repository: string;
+      /** Format: uuid */
+      readonly serverId: string;
+      readonly projectKey: string | null;
+      readonly version: number;
+      readonly updatedBy: string;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly SonarRepositoryRequest: {
+      readonly repository: string;
+      /** Format: uuid */
+      readonly serverId: string;
+      readonly projectKey?: string | null;
+    };
+    readonly SonarRepositoryChange: {
+      readonly version: number;
+      /** Format: uuid */
+      readonly serverId?: string;
+      readonly projectKey?: string | null;
+    };
+    readonly SettingsEvent: {
+      readonly id: number;
+      /** @description `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`. */
+      readonly type: string;
+      readonly actor: string;
+      readonly actorName: string | null;
+      /** @description The row changed, such as `sonar_server:<id>`. */
+      readonly subject: string;
+      /** @description What changed; a token only as `tokenHint`. */
+      readonly payload: Record<string, never>;
+      /** Format: date-time */
+      readonly createdAt: string;
+    };
+    readonly SettingsEventPage: {
+      readonly items: readonly components['schemas']['SettingsEvent'][];
+    };
   };
   responses: {
     /** @description An error, as RFC 9457 problem details. */
@@ -3329,6 +3579,8 @@ export interface components {
     readonly MeetingNoteId: string;
     readonly MeetingSeriesId: string;
     readonly MeetingStoryDraftId: string;
+    readonly SonarServerId: string;
+    readonly SonarRepositoryId: string;
     readonly CrewMemberId: string;
     readonly CrewTimeOffId: string;
     /** @description The sprint's first day. */
@@ -5765,6 +6017,246 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly getMe: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The signed-in person. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Me'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly getSonarSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The SonarQube settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['SonarSettings'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly addSonarServer: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['SonarServerRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The server. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['SonarServer'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly deleteSonarServer: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly serverId: components['parameters']['SonarServerId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The server and its token are gone. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly updateSonarServer: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly serverId: components['parameters']['SonarServerId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['SonarServerChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The server, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['SonarServer'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly addSonarRepository: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['SonarRepositoryRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The repository. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['SonarRepository'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly deleteSonarRepository: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly repositoryId: components['parameters']['SonarRepositoryId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The repository is off its server. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly updateSonarRepository: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly repositoryId: components['parameters']['SonarRepositoryId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['SonarRepositoryChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The repository, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['SonarRepository'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly listSettingsEvents: {
+    readonly parameters: {
+      readonly query?: {
+        readonly limit?: number;
+        readonly before?: number;
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The changes. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['SettingsEventPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
 }

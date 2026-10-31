@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 36e7243423eef04f9e4870dc052879679c4650f2
+# Commit: c137a3a1b8f5006f30ca2f937a20b10b5871fa8d
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -51,6 +51,7 @@ tags:
   - name: metrics
   - name: meetings
   - name: crew
+  - name: settings
 paths:
   /health:
     get:
@@ -100,12 +101,9 @@ paths:
       description: |
         Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
         WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
-        `JIRA_BACKLOG_JQL` overrides the server-side query. When unset, the default JQL is:
-        `project = LUTA AND issuetype in (Story, Task, Bug) AND status in (New, "In Specification", Open, "In Test")
-        AND "Feature Team" = OTHER_COMPANY AND Team in (34115) ORDER BY Rank ASC`.
-
-        The default is the workspace's start-page availability filter with Stories, Tasks and Bugs, not the Jira Agile
-        board backlog (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
+        `JIRA_BACKLOG_JQL` is the team's server-side query; there is no default, and without it the endpoint answers
+        `503 unavailable`. Teams usually use their start-page availability filter, not the Jira Agile board backlog
+        (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
         issues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters
         are accepted. The backend follows all Jira search pages and preserves rank order; `total` equals
         the number of returned items. Issues already started in Ahoy are not excluded.
@@ -2168,6 +2166,188 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /me:
+    get:
+      operationId: getMe
+      tags: [settings]
+      summary: Who the signed-in person is, and whether they may change the team's settings.
+      description: An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).
+      responses:
+        '200':
+          description: The signed-in person.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /settings/sonar:
+    get:
+      operationId: getSonarSettings
+      tags: [settings]
+      summary: The SonarQube servers CI fixes read, and which repository is on which.
+      description: |
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A token is never returned: only its
+        last four characters (`tokenHint`, empty for a token shorter than 12). When the deployment sets SonarQube
+        (`SONAR_HOST_URL`, `SONAR_TOKEN`, `SONAR_PROJECTS`), that wins: `managedBy` is `deployment`, `deploymentHosts`
+        names its hosts, and every change answers `409 invalid_state`. A repository no row names is read on the
+        default server. 0 AIU.
+      responses:
+        '200':
+          description: The SonarQube settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SonarSettings' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /settings/sonar/servers:
+    post:
+      operationId: addSonarServer
+      tags: [settings]
+      summary: Add a SonarQube server with the token Ahoy reads it with. Admins only.
+      description: |
+        The token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored, and only sent to `hostUrl`. The
+        first server is the default unless `isDefault` is false; making one the default makes the others not.
+        `403 forbidden` for someone who is not an admin, `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SonarServerRequest' }
+      responses:
+        '201':
+          description: The server.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SonarServer' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /settings/sonar/servers/{serverId}:
+    parameters:
+      - $ref: '#/components/parameters/SonarServerId'
+    patch:
+      operationId: updateSonarServer
+      tags: [settings]
+      summary: Rename a server, move it, give it a new token, or make it the default. Admins only.
+      description: |
+        Moving it to another `hostUrl` needs `token` in the same request, so the old token never goes to a new host.
+        A server stops being the default only when another one becomes it. `409 stale_version` when `version` is not
+        the server's.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SonarServerChange' }
+      responses:
+        '200':
+          description: The server, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SonarServer' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteSonarServer
+      tags: [settings]
+      summary: Remove a server no repository is on. Admins only.
+      description: '`409 invalid_state` while a repository is on it.'
+      responses:
+        '204':
+          description: The server and its token are gone.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /settings/sonar/repositories:
+    post:
+      operationId: addSonarRepository
+      tags: [settings]
+      summary: Put a repository on a server. Admins only.
+      description: |
+        `repository` is a plan alias, `owner/name` or `host/owner/name`; each repository is named once. Without
+        `projectKey`, the project is found from the agent mapping's `sonar project` row, the failing check's link
+        into the server, or the repository's `sonar-project.properties`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SonarRepositoryRequest' }
+      responses:
+        '201':
+          description: The repository.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SonarRepository' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /settings/sonar/repositories/{repositoryId}:
+    parameters:
+      - $ref: '#/components/parameters/SonarRepositoryId'
+    patch:
+      operationId: updateSonarRepository
+      tags: [settings]
+      summary: Move a repository to another server, or set its project key (null clears it). Admins only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SonarRepositoryChange' }
+      responses:
+        '200':
+          description: The repository, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SonarRepository' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteSonarRepository
+      tags: [settings]
+      summary: Take a repository off its server, so it is read on the default one. Admins only.
+      responses:
+        '204':
+          description: The repository is off its server.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /settings/events:
+    get:
+      operationId: listSettingsEvents
+      tags: [settings]
+      summary: Who changed which team setting and when, newest first.
+      description: A token appears only as its last four characters. Page with `before`, the last `id` seen.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: before
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: The changes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SettingsEventPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     webeam:
@@ -2252,6 +2432,16 @@ components:
       schema: { type: string, format: uuid }
     MeetingStoryDraftId:
       name: draftId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SonarServerId:
+      name: serverId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SonarRepositoryId:
+      name: repositoryId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -3357,6 +3547,8 @@ components:
           proposal,
           lessons,
           patch,
+          pullRequestUrl,
+          pullRequestError,
         ]
       additionalProperties: false
       properties:
@@ -3409,6 +3601,18 @@ components:
           description: >-
             Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content
             repository; null exactly when both `proposal` and `lessons` are.
+        pullRequestUrl:
+          type: [string, 'null']
+          format: uri
+          description: >-
+            The pull request the reconciler opened with the proposed files on the content repository
+            (`AHOY_KNOWLEDGE_REPO`), for a person to review and merge; null until it is open, and always null when no
+            content repository is configured or the review proposed nothing.
+        pullRequestError:
+          type: [string, 'null']
+          description: >-
+            Why the last attempt to open the pull request failed (the reconciler retries for a day after the review
+            ended); null once it is open, and before any attempt.
     KnowledgeReviewList:
       type: object
       required: [key, items]
@@ -5201,3 +5405,174 @@ components:
         memberId: { type: string, format: uuid }
         mode: { type: string, enum: [swap, skip, restart], default: swap }
         reason: { type: string, maxLength: 200 }
+    Me:
+      type: object
+      additionalProperties: false
+      required: [actor, name, admin]
+      properties:
+        actor: { type: string }
+        name: { type: [string, 'null'] }
+        admin:
+          {
+            type: boolean,
+            description: "Whether the person may change the team's settings.",
+          }
+    SonarSettings:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          managedBy,
+          deploymentHosts,
+          canEdit,
+          secretsConfigured,
+          servers,
+          repositories,
+        ]
+      properties:
+        managedBy: { type: string, enum: [ui, deployment] }
+        deploymentHosts: { type: array, items: { type: string } }
+        canEdit:
+          {
+            type: boolean,
+            description: 'An admin, and the deployment does not set SonarQube.',
+          }
+        secretsConfigured:
+          {
+            type: boolean,
+            description: 'Whether the server can save a token (`AHOY_SECRETS_KEY`).',
+          }
+        servers:
+          { type: array, items: { $ref: '#/components/schemas/SonarServer' } }
+        repositories:
+          {
+            type: array,
+            items: { $ref: '#/components/schemas/SonarRepository' },
+          }
+    SonarServer:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          name,
+          hostUrl,
+          isDefault,
+          tokenHint,
+          tokenSetBy,
+          tokenSetByName,
+          tokenSetAt,
+          repositoryCount,
+          version,
+          updatedBy,
+          updatedByName,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 100 }
+        hostUrl: { type: string }
+        isDefault: { type: boolean }
+        tokenHint:
+          {
+            type: string,
+            maxLength: 4,
+            description: "The token's last four characters; never the token.",
+          }
+        tokenSetBy: { type: string }
+        tokenSetByName: { type: [string, 'null'] }
+        tokenSetAt: { type: string, format: date-time }
+        repositoryCount: { type: integer, minimum: 0 }
+        version: { type: integer, minimum: 1 }
+        updatedBy: { type: string }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: string, format: date-time }
+    SonarServerRequest:
+      type: object
+      additionalProperties: false
+      required: [name, hostUrl, token]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100, pattern: "\\S" }
+        hostUrl: { type: string, minLength: 1, maxLength: 500 }
+        token: { type: string, minLength: 1, maxLength: 1000, writeOnly: true }
+        isDefault: { type: boolean }
+    SonarServerChange:
+      type: object
+      additionalProperties: false
+      required: [version]
+      minProperties: 2
+      properties:
+        version: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1, maxLength: 100, pattern: "\\S" }
+        hostUrl: { type: string, minLength: 1, maxLength: 500 }
+        token: { type: string, minLength: 1, maxLength: 1000, writeOnly: true }
+        isDefault: { type: boolean }
+    SonarRepository:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          repository,
+          serverId,
+          projectKey,
+          version,
+          updatedBy,
+          updatedByName,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        repository: { type: string }
+        serverId: { type: string, format: uuid }
+        projectKey: { type: [string, 'null'] }
+        version: { type: integer, minimum: 1 }
+        updatedBy: { type: string }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: string, format: date-time }
+    SonarRepositoryRequest:
+      type: object
+      additionalProperties: false
+      required: [repository, serverId]
+      properties:
+        repository: { type: string, minLength: 1, maxLength: 200 }
+        serverId: { type: string, format: uuid }
+        projectKey: { type: [string, 'null'], maxLength: 400 }
+    SonarRepositoryChange:
+      type: object
+      additionalProperties: false
+      required: [version]
+      minProperties: 2
+      properties:
+        version: { type: integer, minimum: 1 }
+        serverId: { type: string, format: uuid }
+        projectKey: { type: [string, 'null'], maxLength: 400 }
+    SettingsEvent:
+      type: object
+      additionalProperties: false
+      required: [id, type, actor, actorName, subject, payload, createdAt]
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          description: '`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`.'
+        actor: { type: string }
+        actorName: { type: [string, 'null'] }
+        subject:
+          {
+            type: string,
+            description: 'The row changed, such as `sonar_server:<id>`.',
+          }
+        payload:
+          {
+            type: object,
+            description: 'What changed; a token only as `tokenHint`.',
+          }
+        createdAt: { type: string, format: date-time }
+    SettingsEventPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          { type: array, items: { $ref: '#/components/schemas/SettingsEvent' } }

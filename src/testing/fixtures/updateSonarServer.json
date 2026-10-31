@@ -1,0 +1,15 @@
+{
+  "id": "5e1a0c2e-7d3b-4f6a-9c11-0a1b2c3d4e01",
+  "name": "Main server",
+  "hostUrl": "https://sonar.example.com",
+  "isDefault": true,
+  "tokenHint": "9f3a",
+  "tokenSetBy": "alex@example.com",
+  "tokenSetByName": "Alex Example",
+  "tokenSetAt": "2026-10-31T09:00:00.000Z",
+  "repositoryCount": 1,
+  "version": 2,
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-10-31T09:10:00.000Z"
+}
