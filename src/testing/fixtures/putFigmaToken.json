@@ -1,0 +1,15 @@
+{
+  "token": {
+    "hint": "77aa",
+    "setBy": "alex@example.com",
+    "setByName": "Alex Example",
+    "setAt": "2026-10-31T09:20:00.000Z",
+    "lastTest": null
+  },
+  "uiAgents": ["ahoy-frontend-developer"],
+  "selectorPrefix": "ds-",
+  "version": 3,
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-10-31T09:20:00.000Z"
+}

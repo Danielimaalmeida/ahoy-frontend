@@ -827,6 +827,78 @@ export type JiraFieldPage = Schemas['JiraFieldPage'];
 /** One of Jira's fields, found by `listJiraFields`. */
 export type JiraField = JiraFieldPage['items'][number];
 
+/** Answer of `getTeamsSettings`: the crew's channel (null while it is off), and what the person and the API can do. */
+export type TeamsSettingsPage = Schemas['TeamsSettingsPage'];
+
+/** The crew's Teams channel: the webhook only as its host, the UI's address and the last card posted. */
+export type TeamsSettings = Schemas['TeamsSettings'];
+
+/** The last card Ahoy posted to the channel, and whether Teams took it. */
+export type TeamsLastCard = NonNullable<TeamsSettings['lastCard']>;
+
+/** Whether Teams took a card. */
+export type TeamsCardResult = TeamsLastCard['result'];
+export const TEAMS_CARD_RESULTS = listOf<TeamsCardResult>()([
+  'posted',
+  'failed',
+]);
+
+/** Body of `putTeamsWebhook`: connect the channel, or give it a new webhook. */
+export type TeamsWebhookRequest = Schemas['TeamsWebhookRequest'];
+
+/** Body of `updateTeamsSettings`: the UI's address the cards' button opens; null drops it. */
+export type TeamsSettingsChange = Schemas['TeamsSettingsChange'];
+
+/** Answer of `sendTeamsTestCard`: whether Teams took the test card. */
+export type TeamsCardOutcome = Schemas['TeamsCardOutcome'];
+
+/** Answer of `getFigmaSettings`: Figma as saved, or the defaults, and what the person and the API can do. */
+export type FigmaSettingsPage = Schemas['FigmaSettingsPage'];
+
+/** Figma's settings: the token only as its last four characters, the UI builders and the design kit's prefix. */
+export type FigmaSettings = Schemas['FigmaSettings'];
+
+/** The saved Figma token, as the API shows it. */
+export type FigmaToken = NonNullable<FigmaSettings['token']>;
+
+/** What "Test token" found, kept as the last test. */
+export type FigmaTest = Schemas['FigmaTest'];
+
+/** What a token test can find. */
+export type FigmaTestResult = FigmaTest['result'];
+export const FIGMA_TEST_RESULTS = listOf<FigmaTestResult>()([
+  'ok',
+  'refused',
+  'unreachable',
+]);
+
+/** Body of `putFigmaToken`. */
+export type FigmaTokenRequest = Schemas['FigmaTokenRequest'];
+
+/** Body of `updateFigmaSettings`: the UI builders or the design kit's prefix. */
+export type FigmaSettingsChange = Schemas['FigmaSettingsChange'];
+
+/** Answer of `getAgentSettings`: who runs each job, the profiles at the content repository's HEAD, and those gone. */
+export type AgentSettingsPage = Schemas['AgentSettingsPage'];
+
+/** Who runs each of the agents' jobs; a null profile turns Story drafts or Business-rule review off. */
+export type AgentSettings = Schemas['AgentSettings'];
+
+/** One of the agents' jobs whose profile is a setting. */
+export type AgentJob = Schemas['AgentJob'];
+export const AGENT_JOBS = listOf<AgentJob>()([
+  'refinementAgent',
+  'diagnosisAgent',
+  'storyDraftAgent',
+  'knowledgeAgent',
+]);
+
+/** A job whose profile the content repository's HEAD no longer has. */
+export type AgentMissingProfile = AgentSettingsPage['missing'][number];
+
+/** Body of `updateAgentSettings`; turning on a job that spends AIU needs `confirmSpend: true`. */
+export type AgentSettingsChange = Schemas['AgentSettingsChange'];
+
 /** Query of `listMeetingNotes`: one kind, optionally of one series or meeting, and open or done actions. */
 export type ListMeetingNotesQuery =
   operations['listMeetingNotes']['parameters']['query'];

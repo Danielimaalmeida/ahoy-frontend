@@ -1,0 +1,24 @@
+{
+  "canEdit": true,
+  "secretsConfigured": true,
+  "webhookReadable": true,
+  "teams": {
+    "webhook": {
+      "host": "prod-12.westeurope.logic.example.com",
+      "setBy": "bea@example.com",
+      "setByName": "Bea Example",
+      "setAt": "2026-10-30T11:48:00.000Z"
+    },
+    "uiUrl": "https://ahoy.example.com",
+    "lastCard": {
+      "title": "🚀 Sprint 41 starts today",
+      "result": "posted",
+      "detail": null,
+      "at": "2026-10-26T07:00:00.000Z"
+    },
+    "version": 3,
+    "updatedBy": "bea@example.com",
+    "updatedByName": "Bea Example",
+    "updatedAt": "2026-10-30T11:48:00.000Z"
+  }
+}

@@ -155,6 +155,9 @@ export class SettingsShell {
   protected readonly sections: readonly Section[] = [
     { path: 'sonar', label: 'SonarQube', state: () => this.summary.sonar() },
     { path: 'jira', label: 'Jira', state: () => this.summary.jira() },
+    { path: 'teams', label: 'Teams', state: () => this.summary.teams() },
+    { path: 'figma', label: 'Figma', state: () => this.summary.figma() },
+    { path: 'agents', label: 'Agents', state: () => this.summary.agents() },
   ];
 
   constructor() {

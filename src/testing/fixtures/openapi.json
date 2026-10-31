@@ -1704,7 +1704,7 @@
         "operationId": "requestAgentDiagnosis",
         "tags": ["stories"],
         "summary": "Ask an agent to diagnose a halted story. May spend AIU.",
-        "description": "For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis\nagent (`AHOY_DIAGNOSIS_AGENT`) for the story, pinned to the control repo's HEAD now. The agent reads the evidence\nAhoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the\ncontrol repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and\nwho takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it\nchanges nothing about the story: the halt reason, the status and the version stay as they are.\n\nThe story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 100 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for\nthe outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request\nanswers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.\n",
+        "description": "For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis\nagent (Team settings › Agents) for the story, pinned to the control repo's HEAD now. The agent reads the evidence\nAhoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the\ncontrol repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and\nwho takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it\nchanges nothing about the story: the halt reason, the status and the version stay as they are.\n\nThe story must be `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 100 AIU), else the server's diagnosis cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listAgentDiagnoses` for\nthe outcome; it sends no events. One agent diagnosis per story is in progress at a time: another request\nanswers `409 invalid_state`. `503 unavailable` when it is not configured or the control repo cannot be read.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -1804,7 +1804,7 @@
         "operationId": "listKnowledgeReviews",
         "tags": ["stories"],
         "summary": "Every knowledge review of one story, newest first, with the proposed business rules and lessons.",
-        "description": "When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs\nthem (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,\nthe approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its\nhalts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content\nrepository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is\n`content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files\nat `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`\nwhen it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request\nthere with the patch, and the rules are approved in that pull request. A story without one answers `200` with no\nitems. `404` when the story does not exist.\n",
+        "description": "When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs\nthem (Business-rule review, on in Team settings › Agents): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,\nthe approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its\nhalts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content\nrepository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is\n`content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files\nat `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`\nwhen it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request\nthere with the patch, and the rules are approved in that pull request. A story without one answers `200` with no\nitems. `404` when the story does not exist.\n",
         "responses": {
           "200": {
             "description": "The story's knowledge reviews, newest first.",
@@ -2084,7 +2084,7 @@
         "operationId": "requestRefinement",
         "tags": ["refinements"],
         "summary": "Ask an agent to pre-refine a Jira backlog item. May spend AIU.",
-        "description": "Queues one worker run of the server's refinement agent (`AHOY_REFINEMENT_AGENT`) for the issue, pinned to the\ncontrol repo's HEAD now. The agent reads the issue through the Jira and Confluence MCP servers (and, by\ndefault, read-only clones of the mapped child repositories) and replies with a pre-refinement in Markdown:\nverdict, summary, proposed story, acceptance criteria, open questions, assumptions, risks, suggested split and\naffected repositories. The reply is kept in Ahoy only; nothing is written to Jira, Confluence or GitHub, and\nthe agent writes no files. The issue need not have been started in Ahoy.\n\n`confirmSpend` must be true. The run is capped at `budgetNanoAiu`, else the server's refinement cap; it is not\ncharged to any story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll\n`getRefinements` for the outcome; refinements send no events. One refinement per issue is in progress at a\ntime: another request answers `409 invalid_state`. `503 unavailable` when refinement is not configured or the\ncontrol repo cannot be read.\n",
+        "description": "Queues one worker run of the refinement agent of Team settings › Agents for the issue, pinned to the\ncontrol repo's HEAD now. The agent reads the issue through the Jira and Confluence MCP servers (and, by\ndefault, read-only clones of the mapped child repositories) and replies with a pre-refinement in Markdown:\nverdict, summary, proposed story, acceptance criteria, open questions, assumptions, risks, suggested split and\naffected repositories. The reply is kept in Ahoy only; nothing is written to Jira, Confluence or GitHub, and\nthe agent writes no files. The issue need not have been started in Ahoy.\n\n`confirmSpend` must be true. The run is capped at `budgetNanoAiu`, else the server's refinement cap; it is not\ncharged to any story. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll\n`getRefinements` for the outcome; refinements send no events. One refinement per issue is in progress at a\ntime: another request answers `409 invalid_state`. `503 unavailable` when refinement is not configured or the\ncontrol repo cannot be read.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -3315,7 +3315,7 @@
         "operationId": "requestMeetingStoryDraft",
         "tags": ["meetings"],
         "summary": "Ask an agent to draft a user story from a topic. May spend AIU.",
-        "description": "Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It\nreads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)\nand replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never\nwrites to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll\n`getMeetingStoryDraft` until it is not `drafting`.\n\nWith `mode: grill` the run asks first: it replies with 1–6 questions, each with 2–4 answer options and one\nrecommended, and the draft becomes `asking`. `answerMeetingStoryQuestions` then queues a second run that writes\nthe story from the answers.\n\n`409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503\nunavailable` when story drafts are not configured or the control repo cannot be read.\n",
+        "description": "Queues one worker run of the story draft agent of Team settings › Agents, labelled `MEET-<n>`. It\nreads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)\nand replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never\nwrites to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll\n`getMeetingStoryDraft` until it is not `drafting`.\n\nWith `mode: grill` the run asks first: it replies with 1–6 questions, each with 2–4 answer options and one\nrecommended, and the draft becomes `asking`. `answerMeetingStoryQuestions` then queues a second run that writes\nthe story from the answers.\n\n`409 invalid_state` when the topic already has an open draft or was moved to the next meeting; `503\nunavailable` when story drafts are not configured or the control repo cannot be read.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -4352,6 +4352,408 @@
         }
       }
     },
+    "/settings/teams": {
+      "get": {
+        "operationId": "getTeamsSettings",
+        "tags": ["settings"],
+        "summary": "The crew's Teams channel, where Ahoy posts who is on each sprint.",
+        "description": "Anyone allowed into Ahoy reads it; only an admin changes it (`canEdit`). It is the only place the channel is\nconfigured. `teams` is null while no card is posted. The webhook's address holds its signature: it is never\nreturned, only its host. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The Teams settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsSettingsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateTeamsSettings",
+        "tags": ["settings"],
+        "summary": "Set or clear the UI's address the cards' \"Open Crew\" button opens. Admins only.",
+        "description": "`uiUrl: null` posts the cards without the button. `409 invalid_state` while the channel is not connected,\n`409 stale_version` when `version` is not the settings'.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamsSettingsChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteTeamsSettings",
+        "tags": ["settings"],
+        "summary": "Disconnect the crew's channel, removing its webhook. Admins only.",
+        "description": "No card is posted until the channel is connected again.",
+        "responses": {
+          "204": {
+            "description": "The channel is disconnected."
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/teams/webhook": {
+      "put": {
+        "operationId": "putTeamsWebhook",
+        "tags": ["settings"],
+        "summary": "Connect the crew's channel, or give it a new Workflows webhook. Admins only.",
+        "description": "Once connected, `version` is required. The address is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is\nstored, and only its host is kept in clear. A new webhook clears the last card. `503 unavailable` when the\nserver has no `AHOY_SECRETS_KEY`.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamsWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/teams/test": {
+      "post": {
+        "operationId": "sendTeamsTestCard",
+        "tags": ["settings"],
+        "summary": "Send a test card to the crew's channel, saying who sent it, and keep it as the last card. Admins only.",
+        "description": "Everyone in the channel sees it. A card Teams does not take answers `200` with `result: failed` and why;\nTeams' own text and the webhook's address are never returned. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "What came of the card.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsCardOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/figma": {
+      "get": {
+        "operationId": "getFigmaSettings",
+        "tags": ["settings"],
+        "summary": "Figma, which the design phase reads a story's frames with, and the agents that get a story's design.",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place Figma is\nconfigured. Before an admin saves anything, `figma` holds the defaults (`version: null`). `figma.token` is\nnull while Figma is off: a story that links a Figma design then halts `figma_not_configured`. The token is\nnever returned: only its last four characters. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The Figma settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FigmaSettingsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateFigmaSettings",
+        "tags": ["settings"],
+        "summary": "Change the UI builders or the design kit's prefix. Admins only.",
+        "description": "`uiAgents` are the implementer profiles whose packages get the design; each must be at the content\nrepository's HEAD (`400`). `version` is required once the settings are saved, and absent before\n(`409 stale_version` otherwise).\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FigmaSettingsChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FigmaSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/figma/token": {
+      "put": {
+        "operationId": "putFigmaToken",
+        "tags": ["settings"],
+        "summary": "Save Figma's token, the first or a new one. Admins only.",
+        "description": "The token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored, and only sent to api.figma.com. A\nnew token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FigmaTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FigmaSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFigmaToken",
+        "tags": ["settings"],
+        "summary": "Remove Figma's token, turning Figma off. Admins only.",
+        "description": "A story that links a Figma design halts until a token is saved again; the other settings stay.",
+        "responses": {
+          "200": {
+            "description": "The settings, without a token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FigmaSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/figma/test": {
+      "post": {
+        "operationId": "testFigmaToken",
+        "tags": ["settings"],
+        "summary": "Ask Figma who the stored token is, and keep the answer as the last test. Admins only.",
+        "description": "`GET https://api.figma.com/v1/me` with the stored token. Figma's own text is never returned. 0 AIU.",
+        "responses": {
+          "200": {
+            "description": "What Figma answered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FigmaTest"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/agents": {
+      "get": {
+        "operationId": "getAgentSettings",
+        "tags": ["settings"],
+        "summary": "Which of the content repository's agent profiles runs each job, and whether the spending jobs are on.",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place the jobs\nare configured. `profiles` are the profiles at the content repository's HEAD; `missing` names the jobs whose\nprofile is no longer there, whose runs fail their preflight until an admin picks another. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The agents' settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSettingsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAgentSettings",
+        "tags": ["settings"],
+        "summary": "Change who runs a job, turn Story drafts or Business-rule review on or off, or set the knowledge repository.",
+        "description": "Admins only. A profile the change names must be at the content repository's HEAD (`400`). `null` turns\nStory drafts or Business-rule review off. Turning either on spends AIU outside a story's budget from then on\n(Business-rule review after every story that reaches done), so it needs `confirmSpend: true` (`400`\notherwise). `version` is required once the settings are saved, and absent before (`409 stale_version`).\n`503` when the content repository cannot be read.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSettingsChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSettingsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/settings/events": {
       "get": {
         "operationId": "listSettingsEvents",
@@ -4386,7 +4788,7 @@
             "description": "Only this section's changes.",
             "schema": {
               "type": "string",
-              "enum": ["sonar", "jira"]
+              "enum": ["sonar", "jira", "teams", "figma", "agents"]
             }
           }
         ],
@@ -6519,7 +6921,7 @@
           "pullRequestUrl": {
             "type": ["string", "null"],
             "format": "uri",
-            "description": "The pull request the reconciler opened with the proposed files on the content repository (`AHOY_KNOWLEDGE_REPO`), for a person to review and merge; null until it is open, and always null when no content repository is configured or the review proposed nothing."
+            "description": "The pull request the reconciler opened with the proposed files on the content repository (Team settings › Agents), for a person to review and merge; null until it is open, and always null when no content repository is configured or the review proposed nothing."
           },
           "pullRequestError": {
             "type": ["string", "null"],
@@ -10078,6 +10480,499 @@
           }
         }
       },
+      "TeamsSettingsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "canEdit",
+          "secretsConfigured",
+          "webhookReadable",
+          "teams"
+        ],
+        "properties": {
+          "canEdit": {
+            "type": "boolean",
+            "description": "Whether the person is an admin, who may change them."
+          },
+          "secretsConfigured": {
+            "type": "boolean",
+            "description": "Whether the server can save a webhook (`AHOY_SECRETS_KEY`)."
+          },
+          "webhookReadable": {
+            "type": "boolean",
+            "description": "Whether the stored webhook opens with the server's key; false means it has to be entered again."
+          },
+          "teams": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TeamsSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "TeamsSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "webhook",
+          "uiUrl",
+          "lastCard",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "webhook": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["host", "setBy", "setByName", "setAt"],
+            "properties": {
+              "host": {
+                "type": "string",
+                "description": "The webhook's host; never its address, which holds its signature."
+              },
+              "setBy": {
+                "type": "string"
+              },
+              "setByName": {
+                "type": ["string", "null"]
+              },
+              "setAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "uiUrl": {
+            "type": ["string", "null"],
+            "description": "The UI's address; the cards' Open Crew button goes to its Crew page. Null: no button."
+          },
+          "lastCard": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["title", "result", "detail", "at"],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "The card's first line."
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": ["posted", "failed"]
+                  },
+                  "detail": {
+                    "type": ["string", "null"],
+                    "description": "Why Teams did not take it."
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamsWebhookRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["webhookUrl"],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "webhookUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "writeOnly": true
+          }
+        }
+      },
+      "TeamsSettingsChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "uiUrl"],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "uiUrl": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "TeamsCardOutcome": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["result", "detail", "at"],
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": ["posted", "failed"]
+          },
+          "detail": {
+            "type": ["string", "null"],
+            "description": "Why Teams did not take it, such as `Teams webhook answered HTTP 404`."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FigmaSettingsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["canEdit", "secretsConfigured", "tokenReadable", "figma"],
+        "properties": {
+          "canEdit": {
+            "type": "boolean",
+            "description": "Whether the person is an admin, who may change them."
+          },
+          "secretsConfigured": {
+            "type": "boolean",
+            "description": "Whether the server can save a token (`AHOY_SECRETS_KEY`)."
+          },
+          "tokenReadable": {
+            "type": "boolean",
+            "description": "Whether a stored token opens with the server's key; false while there is none or it must be entered again."
+          },
+          "figma": {
+            "$ref": "#/components/schemas/FigmaSettings"
+          }
+        }
+      },
+      "FigmaSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token",
+          "uiAgents",
+          "selectorPrefix",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "token": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["hint", "setBy", "setByName", "setAt", "lastTest"],
+                "properties": {
+                  "hint": {
+                    "type": "string",
+                    "maxLength": 4,
+                    "description": "The token's last four characters; never the token."
+                  },
+                  "setBy": {
+                    "type": "string"
+                  },
+                  "setByName": {
+                    "type": ["string", "null"]
+                  },
+                  "setAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "lastTest": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/FigmaTest"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "uiAgents": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "The implementer profiles whose packages build UI, and so get the design."
+          },
+          "selectorPrefix": {
+            "type": "string",
+            "description": "Components whose selector starts with it are the design kit's."
+          },
+          "version": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Null until an admin saves anything."
+          },
+          "updatedBy": {
+            "type": ["string", "null"]
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "FigmaTest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["result", "detail", "at"],
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": ["ok", "refused", "unreachable"]
+          },
+          "detail": {
+            "type": ["string", "null"],
+            "description": "Who Figma says the token is, the HTTP status it refused with, or why it could not be reached."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FigmaTokenRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["token"],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "writeOnly": true
+          }
+        }
+      },
+      "FigmaSettingsChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "uiAgents": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          "selectorPrefix": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          }
+        }
+      },
+      "AgentSettingsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["canEdit", "agents", "profiles", "missing"],
+        "properties": {
+          "canEdit": {
+            "type": "boolean",
+            "description": "Whether the person is an admin, who may change them."
+          },
+          "agents": {
+            "$ref": "#/components/schemas/AgentSettings"
+          },
+          "profiles": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["commit", "names", "problem"],
+            "properties": {
+              "commit": {
+                "type": ["string", "null"],
+                "description": "The content repository's HEAD the profiles are read at."
+              },
+              "names": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The agent profiles at HEAD, by name."
+              },
+              "problem": {
+                "type": ["string", "null"],
+                "description": "Why the content repository could not be read."
+              }
+            }
+          },
+          "missing": {
+            "type": "array",
+            "description": "The jobs whose profile HEAD no longer has; their runs fail the preflight.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["job", "name", "profile"],
+              "properties": {
+                "job": {
+                  "$ref": "#/components/schemas/AgentJob"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The job in words, such as `Story drafts`."
+                },
+                "profile": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AgentJob": {
+        "type": "string",
+        "enum": [
+          "refinementAgent",
+          "diagnosisAgent",
+          "storyDraftAgent",
+          "knowledgeAgent"
+        ]
+      },
+      "AgentSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "refinementAgent",
+          "diagnosisAgent",
+          "storyDraftAgent",
+          "knowledgeAgent",
+          "knowledgeRepo",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "refinementAgent": {
+            "type": "string",
+            "description": "Pre-refinement, when someone asks."
+          },
+          "diagnosisAgent": {
+            "type": "string",
+            "description": "Halt diagnosis, when someone asks."
+          },
+          "storyDraftAgent": {
+            "type": ["string", "null"],
+            "description": "Story drafts from a meeting topic, when someone asks; null: off."
+          },
+          "knowledgeAgent": {
+            "type": ["string", "null"],
+            "description": "Business-rule review after every story that reaches done; null: off."
+          },
+          "knowledgeRepo": {
+            "type": ["string", "null"],
+            "description": "Where a business-rule review opens its pull request (`owner/name`); null: none is opened."
+          },
+          "version": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Null until an admin saves anything."
+          },
+          "updatedBy": {
+            "type": ["string", "null"]
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "AgentSettingsChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "refinementAgent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "diagnosisAgent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "storyDraftAgent": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "knowledgeAgent": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "knowledgeRepo": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "confirmSpend": {
+            "type": "boolean",
+            "description": "Must be true when the change turns on Story drafts or Business-rule review, which spend AIU."
+          }
+        }
+      },
       "SettingsEvent": {
         "type": "object",
         "additionalProperties": false,
@@ -10096,7 +10991,7 @@
           },
           "type": {
             "type": "string",
-            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;\n`jira_settings.connected`, `.updated`, `.disconnected`.\n"
+            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;\n`jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,\n`.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;\n`agent_settings.updated`.\n"
           },
           "actor": {
             "type": "string"
@@ -10110,7 +11005,7 @@
           },
           "payload": {
             "type": "object",
-            "description": "What changed; a token only as `tokenHint`."
+            "description": "What changed; a token only as `tokenHint`, a webhook only as `webhookHost`."
           },
           "createdAt": {
             "type": "string",

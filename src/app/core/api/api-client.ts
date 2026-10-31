@@ -38,6 +38,13 @@ import {
   isJiraSettings,
   isJiraSettingsPage,
   isJiraTest,
+  isAgentSettingsPage,
+  isFigmaSettings,
+  isFigmaSettingsPage,
+  isFigmaTest,
+  isTeamsCardOutcome,
+  isTeamsSettings,
+  isTeamsSettingsPage,
   isSettingsEventPage,
   isSonarRepository,
   isSonarServer,
@@ -97,6 +104,18 @@ import type {
   JiraSettingsChange,
   JiraSettingsPage,
   JiraTest,
+  AgentSettingsChange,
+  AgentSettingsPage,
+  FigmaSettings,
+  FigmaSettingsChange,
+  FigmaSettingsPage,
+  FigmaTest,
+  FigmaTokenRequest,
+  TeamsCardOutcome,
+  TeamsSettings,
+  TeamsSettingsChange,
+  TeamsSettingsPage,
+  TeamsWebhookRequest,
   SettingsEventPage,
   SettingsSection,
   SonarRepository,
@@ -1360,6 +1379,133 @@ export class ApiClient {
       '/settings/jira/fields',
       isJiraFieldPage,
       params
+    );
+  }
+
+  /** The crew's Teams channel as the team set it (null while it is off). The webhook comes back only as its host. */
+  getTeamsSettings(): Promise<ApiResult<TeamsSettingsPage>> {
+    return this.get('getTeamsSettings', '/settings/teams', isTeamsSettingsPage);
+  }
+
+  /** Connects the crew's channel, or gives it a new webhook (admins only); the address is sealed and never returned. */
+  putTeamsWebhook(
+    body: TeamsWebhookRequest
+  ): Promise<ApiResult<TeamsSettings>> {
+    return this.send(
+      'putTeamsWebhook',
+      isTeamsSettings,
+      this.http.put<unknown>(this.url('/settings/teams/webhook'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Sets or clears the UI's address the cards' "Open Crew" button opens (admins only). */
+  updateTeamsSettings(
+    body: TeamsSettingsChange
+  ): Promise<ApiResult<TeamsSettings>> {
+    return this.send(
+      'updateTeamsSettings',
+      isTeamsSettings,
+      this.http.patch<unknown>(this.url('/settings/teams'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Disconnects the crew's channel (admins only). The answer (204) has no body. */
+  deleteTeamsSettings(): Promise<ApiResult<null>> {
+    return this.delete('deleteTeamsSettings', '/settings/teams');
+  }
+
+  /** Posts a test card to the whole channel (admins only); Teams' refusal is an outcome, not an error. 0 AIU. */
+  sendTeamsTestCard(): Promise<ApiResult<TeamsCardOutcome>> {
+    return this.post(
+      'sendTeamsTestCard',
+      '/settings/teams/test',
+      null,
+      isTeamsCardOutcome
+    );
+  }
+
+  /** Figma as the team saved it, or the defaults; the token comes back only as its last four characters. */
+  getFigmaSettings(): Promise<ApiResult<FigmaSettingsPage>> {
+    return this.get('getFigmaSettings', '/settings/figma', isFigmaSettingsPage);
+  }
+
+  /** Saves Figma's token, the first or a new one (admins only). */
+  putFigmaToken(body: FigmaTokenRequest): Promise<ApiResult<FigmaSettings>> {
+    return this.send(
+      'putFigmaToken',
+      isFigmaSettings,
+      this.http.put<unknown>(this.url('/settings/figma/token'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Removes Figma's token (admins only), keeping the UI builders and the prefix. */
+  deleteFigmaToken(): Promise<ApiResult<FigmaSettings>> {
+    return this.send(
+      'deleteFigmaToken',
+      isFigmaSettings,
+      this.http.delete<unknown>(this.url('/settings/figma/token'), {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Changes the UI builders or the design kit's prefix (admins only). */
+  updateFigmaSettings(
+    body: FigmaSettingsChange
+  ): Promise<ApiResult<FigmaSettings>> {
+    return this.send(
+      'updateFigmaSettings',
+      isFigmaSettings,
+      this.http.patch<unknown>(this.url('/settings/figma'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Asks Figma who the stored token is and keeps the answer as the last test (admins only). 0 AIU. */
+  testFigmaToken(): Promise<ApiResult<FigmaTest>> {
+    return this.post(
+      'testFigmaToken',
+      '/settings/figma/test',
+      null,
+      isFigmaTest
+    );
+  }
+
+  /** Who runs each of the agents' jobs, the profiles at the content repository's HEAD and the jobs whose profile is gone. */
+  getAgentSettings(): Promise<ApiResult<AgentSettingsPage>> {
+    return this.get(
+      'getAgentSettings',
+      '/settings/agents',
+      isAgentSettingsPage
+    );
+  }
+
+  /**
+   * Changes who runs a job, turns Story drafts or Business-rule review on or off, or sets the knowledge repository
+   * (admins only). Turning a job on spends AIU outside a story's budget from then on, so it needs `confirmSpend: true`.
+   */
+  updateAgentSettings(
+    body: AgentSettingsChange
+  ): Promise<ApiResult<AgentSettingsPage>> {
+    return this.send(
+      'updateAgentSettings',
+      isAgentSettingsPage,
+      this.http.patch<unknown>(this.url('/settings/agents'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
     );
   }
 

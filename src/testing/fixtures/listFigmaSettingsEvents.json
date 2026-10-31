@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "id": 41,
+      "type": "figma_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "figma_settings:1",
+      "payload": {
+        "changes": {
+          "selectorPrefix": {
+            "from": "cma-",
+            "to": "ds-"
+          }
+        }
+      },
+      "createdAt": "2026-10-30T15:10:00.000Z"
+    },
+    {
+      "id": 40,
+      "type": "figma_settings.token_set",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "figma_settings:1",
+      "payload": {
+        "tokenHint": "c9d4",
+        "previousTokenHint": "1f2e"
+      },
+      "createdAt": "2026-10-29T18:00:00.000Z"
+    },
+    {
+      "id": 39,
+      "type": "figma_settings.token_removed",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "figma_settings:1",
+      "payload": {
+        "tokenHint": "1f2e"
+      },
+      "createdAt": "2026-10-28T18:31:00.000Z"
+    }
+  ]
+}

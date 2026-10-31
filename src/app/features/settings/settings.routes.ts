@@ -1,9 +1,15 @@
 import type { Routes } from '@angular/router';
+import { AgentSettingsPage } from './agent-settings-page';
+import { FigmaSettingsPage } from './figma-settings-page';
 import { JiraSettingsPage } from './jira-settings-page';
 import { SettingsPage } from './settings-page';
 import { SettingsShell } from './settings-shell';
+import { TeamsSettingsPage } from './teams-settings-page';
 
-/** Team settings: SonarQube and Jira, kept in the database and changed by admins, one section per page. 0 AIU. */
+/**
+ * Team settings: SonarQube, Jira, the crew's Teams channel, Figma and the agents' jobs, kept in the database and
+ * changed by admins, one section per page. Reading and changing them is 0 AIU.
+ */
 export const SETTINGS_ROUTES: Routes = [
   {
     path: '',
@@ -19,6 +25,21 @@ export const SETTINGS_ROUTES: Routes = [
         path: 'jira',
         title: 'Jira · Team settings · Ahoy',
         component: JiraSettingsPage,
+      },
+      {
+        path: 'teams',
+        title: 'Teams · Team settings · Ahoy',
+        component: TeamsSettingsPage,
+      },
+      {
+        path: 'figma',
+        title: 'Figma · Team settings · Ahoy',
+        component: FigmaSettingsPage,
+      },
+      {
+        path: 'agents',
+        title: 'Agents · Team settings · Ahoy',
+        component: AgentSettingsPage,
       },
     ],
   },

@@ -1,0 +1,19 @@
+{
+  "token": {
+    "hint": "c9d4",
+    "setBy": "alex@example.com",
+    "setByName": "Alex Example",
+    "setAt": "2026-10-29T18:00:00.000Z",
+    "lastTest": {
+      "result": "ok",
+      "detail": "design-bot@example.com",
+      "at": "2026-10-29T18:01:00.000Z"
+    }
+  },
+  "uiAgents": ["ahoy-frontend-developer", "mobile-developer"],
+  "selectorPrefix": "cma-",
+  "version": 3,
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-10-31T09:30:00.000Z"
+}

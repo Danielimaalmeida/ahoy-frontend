@@ -1,0 +1,14 @@
+{
+  "webhook": {
+    "host": "prod-12.westeurope.logic.example.com",
+    "setBy": "alex@example.com",
+    "setByName": "Alex Example",
+    "setAt": "2026-10-31T09:00:00.000Z"
+  },
+  "uiUrl": "https://ahoy.example.com",
+  "lastCard": null,
+  "version": 4,
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-10-31T09:00:00.000Z"
+}
