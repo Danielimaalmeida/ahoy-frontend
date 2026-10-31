@@ -54,8 +54,8 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   8, `domain/figma-settings` 6, `domain/agent-settings` 6, the three sections' guards and client 8, eleven contract
   fixtures); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint) and `ng build`
   passed (the `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and two meetings
-  dialogs warn NG8011, as on `main`). `prettier --check` flags only `docs/architecture.md` and
-  `src/app/features/meetings/meetings.spec.ts`, which fail on `main` too. Not run: Node 24, the real
+  dialogs warn NG8011, as on `main`). `prettier --check .` passes: the commit hook formatted
+  `docs/architecture.md` and `meetings.spec.ts`, which fail on `main`. Not run: Node 24, the real
   `@acme-fedev/auth`, nginx, Playwright, a browser, and the pages against a real API.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
