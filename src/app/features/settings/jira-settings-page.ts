@@ -1,4 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import type { ApiError } from '@core/api/api-error';
 import { initialsOf } from '@core/auth/current-user';
 import type {
@@ -778,8 +785,8 @@ export class JiraSettingsPage {
     // The typed query follows the saved one until the person edits it; a save or a change elsewhere moves it on.
     effect(() => {
       const saved = this.store.jira()?.backlogJql ?? null;
-      const typedWasSaved = !this.backlogDirty();
-      if (saved !== this.savedJql()) {
+      const typedWasSaved = untracked(() => !this.backlogDirty());
+      if (saved !== untracked(this.savedJql)) {
         this.savedJql.set(saved);
         if (typedWasSaved) this.jql.set(saved ?? '');
       }
@@ -882,7 +889,11 @@ export class JiraSettingsPage {
   protected connection(jira: JiraSettings | null): void {
     this.testError.set(null);
     this.dialogs.open<boolean, JiraConnectionData>(JiraConnectionDialog, {
-      data: { store: this.store, jira },
+      data: {
+        store: this.store,
+        jira,
+        tokenReadable: this.store.page()?.tokenReadable !== false,
+      },
       width: '520px',
     });
   }

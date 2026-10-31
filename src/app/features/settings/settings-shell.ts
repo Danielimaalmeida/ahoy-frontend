@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, afterNextRender, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Icon } from '@ui/icon/icon';
 import { SettingsSummary, type SectionState } from './settings-summary';
@@ -158,6 +158,7 @@ export class SettingsShell {
   ];
 
   constructor() {
-    void this.summary.load();
+    // After the first render, which creates the routed section, so it has claimed the settings it reads itself.
+    afterNextRender(() => void this.summary.load());
   }
 }

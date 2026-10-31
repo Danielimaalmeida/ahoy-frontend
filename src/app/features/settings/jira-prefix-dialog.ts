@@ -1,9 +1,18 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  ReactiveFormsModule,
+  Validators,
+  type ValidatorFn,
+} from '@angular/forms';
 import type { JiraSettings } from '@core/api/types';
-import { MAX_SUMMARY_PREFIX_CHARS, prefixExample } from '@domain/jira-settings';
+import {
+  hasControlCharacter,
+  MAX_SUMMARY_PREFIX_CHARS,
+  prefixExample,
+} from '@domain/jira-settings';
 import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { ToastService } from '@ui/toast/toast';
@@ -15,6 +24,12 @@ export interface JiraPrefixData {
   readonly store: JiraSettingsStore;
   readonly jira: JiraSettings;
 }
+
+/** Refuses a prefix with a control character (a tab, a line break), as the API does. */
+const oneLine: ValidatorFn = (control) =>
+  typeof control.value === 'string' && hasControlCharacter(control.value)
+    ? { control: true }
+    : null;
 
 /**
  * Sets the text every story created from a meeting starts its summary with, such as "[PROJ] ". It is kept as typed,
@@ -41,7 +56,7 @@ export interface JiraPrefixData {
           optional
           [hint]="example()"
           [errorMessages]="{
-            pattern: 'One line, without tabs.',
+            control: 'One line, without tabs or other control characters.',
             maxlength: 'At most ' + max + ' characters.',
           }"
         >
@@ -67,10 +82,7 @@ export class JiraPrefixDialog {
     this.data.jira.storySummaryPrefix,
     {
       nonNullable: true,
-      validators: [
-        Validators.maxLength(MAX_SUMMARY_PREFIX_CHARS),
-        Validators.pattern(/^[^\t\n\r]*$/),
-      ],
+      validators: [Validators.maxLength(MAX_SUMMARY_PREFIX_CHARS), oneLine],
     }
   );
   private readonly typed = toSignal(this.prefix.valueChanges, {

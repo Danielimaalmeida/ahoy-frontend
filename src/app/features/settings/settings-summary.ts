@@ -15,16 +15,21 @@ export function sonarState(settings: SonarSettings): SectionState {
   return { label: n === 1 ? '1 server' : `${n} servers`, off: false };
 }
 
-/** "On" while Jira is connected, "Off" otherwise. */
+/** "On" while Jira is connected and its token opens, "Off" otherwise. */
 export function jiraState(page: JiraSettingsPage): SectionState {
-  return page.jira === null
-    ? { label: 'Off', off: true }
-    : { label: 'On', off: false };
+  if (page.jira === null) return { label: 'Off', off: true };
+  return page.tokenReadable
+    ? { label: 'On', off: false }
+    : { label: 'Token needed', off: true };
 }
 
+/** A section the frame shows a state for. */
+type Section = 'sonar' | 'jira';
+
 /**
- * What the Team settings' frame shows around a section: whether the person is an admin and each section's state. It
- * reads them once when the settings open; each section's store tells it what it read since, so they stay current.
+ * What the Team settings' frame shows around a section: whether the person is an admin and each section's state. The
+ * section on show reads its own settings and tells the summary (`claim`, then `…Read`); the summary reads only the
+ * other sections, once, so no request is sent twice.
  */
 @Injectable()
 export class SettingsSummary {
@@ -37,14 +42,22 @@ export class SettingsSummary {
   /** Jira's state, once read. */
   readonly jira = signal<SectionState | null>(null);
 
-  /** Reads every section's state; a section that cannot be read shows none. */
+  /** The sections whose page reads them itself. */
+  private readonly claimed = new Set<Section>();
+
+  /** Says a section's page reads its settings, so the summary does not. */
+  claim(section: Section): void {
+    this.claimed.add(section);
+  }
+
+  /** Reads the state of every section no page has claimed; a section that cannot be read shows none. */
   async load(): Promise<void> {
     const [sonar, jira] = await Promise.all([
-      this.api.getSonarSettings(),
-      this.api.getJiraSettings(),
+      this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
+      this.claimed.has('jira') ? null : this.api.getJiraSettings(),
     ]);
-    if (sonar.ok && this.sonar() === null) this.sonarRead(sonar.value);
-    if (jira.ok && this.jira() === null) this.jiraRead(jira.value);
+    if (sonar?.ok && this.sonar() === null) this.sonarRead(sonar.value);
+    if (jira?.ok && this.jira() === null) this.jiraRead(jira.value);
   }
 
   /** What the SonarQube section read. */

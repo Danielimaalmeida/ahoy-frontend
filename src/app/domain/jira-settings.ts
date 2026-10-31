@@ -30,13 +30,31 @@ export function isReservedJiraField(id: string): boolean {
   );
 }
 
+/** Whether a text holds an ASCII control character (U+0000 to U+001F, or U+007F), which the API refuses in a prefix. */
+export function hasControlCharacter(text: string): boolean {
+  for (const ch of text) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (code < 0x20 || code === 0x7f) return true;
+  }
+  return false;
+}
+
 /** A fixed field's value read from what was typed: the value, or why it is not one. */
 export type FieldValueReading =
   | { readonly ok: true; readonly value: unknown }
   | { readonly ok: false; readonly problem: string };
 
-/** The closing brackets a JSON text still owes at its end, innermost first; strings are skipped. */
-function unclosedBrackets(text: string): string[] {
+/** How a JSON text's brackets stand: the closers it still owes (innermost first), or the first one that is wrong. */
+type BracketReading =
+  | { readonly kind: 'owed'; readonly closers: readonly string[] }
+  | {
+      readonly kind: 'wrong';
+      readonly found: string;
+      readonly expected: string | null;
+    };
+
+/** Reads a JSON text's brackets, skipping strings. */
+function bracketsOf(text: string): BracketReading {
   const open: string[] = [];
   let inString = false;
   let escaped = false;
@@ -50,10 +68,25 @@ function unclosedBrackets(text: string): string[] {
     if (ch === '"') inString = true;
     else if (ch === '[') open.push(']');
     else if (ch === '{') open.push('}');
-    else if ((ch === ']' || ch === '}') && open.at(-1) === ch) open.pop();
+    else if (ch === ']' || ch === '}') {
+      const expected = open.pop() ?? null;
+      if (expected !== ch) return { kind: 'wrong', found: ch, expected };
+    }
   }
   if (inString) open.push('"');
-  return open.reverse();
+  return { kind: 'owed', closers: open.reverse() };
+}
+
+/** Why a text that is not JSON is not, in words. */
+function notJsonProblem(text: string): string {
+  const brackets = bracketsOf(text);
+  if (brackets.kind === 'wrong')
+    return brackets.expected === null
+      ? `Not valid JSON: a ${brackets.found} closes nothing.`
+      : `Not valid JSON: a ${brackets.found} stands where its ${brackets.expected} should close.`;
+  if (brackets.closers.length > 0)
+    return `Not valid JSON: the value ends before its ${closersLabel(brackets.closers)}.`;
+  return 'Not valid JSON: check the quotes, commas and brackets. Text goes in double quotes, such as "4211".';
 }
 
 /** "closing } and ]" for the closers a text still owes, in the order they are typed. */
@@ -78,21 +111,21 @@ export function fieldValueOf(typed: string): FieldValueReading {
   try {
     value = JSON.parse(text);
   } catch {
-    const closers = unclosedBrackets(text);
-    return {
-      ok: false,
-      problem:
-        closers.length > 0
-          ? `Not valid JSON: the value ends before its ${closersLabel(closers)}.`
-          : 'Not valid JSON: check the quotes, commas and brackets. Text goes in double quotes, such as "4211".',
-    };
+    return { ok: false, problem: notJsonProblem(text) };
   }
   if (value === null)
     return {
       ok: false,
       problem: 'null is not a value: remove the field instead.',
     };
-  if (JSON.stringify(value).length > MAX_FIXED_FIELD_JSON_CHARS)
+  const json = JSON.stringify(value);
+  // Postgres' jsonb takes no NUL character, so the API refuses one (ahoy-hosted `fixedFieldsOf`).
+  if (json.includes('\\u0000'))
+    return {
+      ok: false,
+      problem: 'The value must not hold a NUL character (\\u0000).',
+    };
+  if (json.length > MAX_FIXED_FIELD_JSON_CHARS)
     return {
       ok: false,
       problem: `At most ${MAX_FIXED_FIELD_JSON_CHARS.toLocaleString('en-GB')} characters of JSON.`,

@@ -131,6 +131,16 @@ const FIELD_ID = /^[A-Za-z]\w{0,79}$/;
                 {{ problem.text }}
               </ah-banner>
             }
+            @if (!picked() && typedId(); as id) {
+              <button
+                ahButton="ghost"
+                size="sm"
+                type="button"
+                (click)="pick({ id: id, name: id, type: null })"
+              >
+                Use the id {{ id }}
+              </button>
+            }
             @if (!picked() && choices().length > 0) {
               <ul class="results" aria-label="Fields found in Jira">
                 @for (f of choices(); track f.id) {
@@ -230,17 +240,19 @@ export class JiraFieldDialog {
   });
   /** The field chosen from the search, or typed as an id. */
   protected readonly picked = signal<JiraField | null>(null);
-  /** The fields to choose from: what Jira found, and the text itself when it reads as an id Jira did not list. */
-  protected readonly choices = computed(() => {
+  /** The fields Jira found, to choose from. */
+  protected readonly choices = this.found.asReadonly();
+  /**
+   * The text itself as a field id, when it reads as one and Jira did not list it (`components`, or any field while
+   * the search cannot reach Jira); null otherwise.
+   */
+  protected readonly typedId = computed(() => {
     const typed = this.query().trim();
-    const list = this.found();
-    if (
-      FIELD_ID.test(typed) &&
-      /\d|_/.test(typed) &&
-      !list.some((f) => f.id === typed)
-    )
-      return [...list, { id: typed, name: typed, type: null }];
-    return list;
+    if (!FIELD_ID.test(typed)) return null;
+    const lower = typed.toLowerCase();
+    return this.found().some((f) => f.id.toLowerCase() === lower)
+      ? null
+      : typed;
   });
   /** Why the chosen field cannot be fixed. */
   protected readonly fieldProblem = computed(() => {
@@ -291,6 +303,9 @@ export class JiraFieldDialog {
     this.query.set(target.value);
     this.picked.set(null);
     clearTimeout(this.timer);
+    // Whatever is in flight answers what was typed before: drop it.
+    this.searches++;
+    this.searching.set(false);
     const q = target.value.trim();
     if (q === '') {
       this.found.set([]);

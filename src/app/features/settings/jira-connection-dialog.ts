@@ -23,6 +23,8 @@ import { hostOf } from './settings-url';
 export interface JiraConnectionData {
   readonly store: JiraSettingsStore;
   readonly jira: JiraSettings | null;
+  /** Whether the API's key opens the stored token; when it does not, the token must be typed again. */
+  readonly tokenReadable: boolean;
 }
 
 /** An https URL without credentials, query or fragment, as the API takes Jira's base URL. */
@@ -76,7 +78,11 @@ const BASE_URL = /^\s*https:\/\/[^\s/?#@]+(?:\/[^\s?#]*)?\s*$/i;
     >
       @if (needsToken()) {
         <ah-banner variant="notice" heading="Type the token again">
-          A new base URL needs its token, so the old one never goes there.
+          {{
+            lostToken
+              ? "The API's key no longer opens the stored token, so Jira stays off until it is typed again."
+              : 'A new base URL needs its token, so the old one never goes there.'
+          }}
         </ah-banner>
       }
       <form [formGroup]="form" (submit)="$event.preventDefault(); submit()">
@@ -112,7 +118,7 @@ const BASE_URL = /^\s*https:\/\/[^\s/?#@]+(?:\/[^\s?#]*)?\s*$/i;
             spellcheck="false"
             maxlength="1000"
             [attr.placeholder]="
-              jira
+              jira && !lostToken
                 ? 'Leave empty to keep ' + token(jira.connection.tokenHint)
                 : null
             "
@@ -184,12 +190,18 @@ export class JiraConnectionDialog {
   private readonly value = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
   });
-  /** Whether the base URL changed without a new token: the old one never goes to a new host. */
+  /** Whether the stored token can no longer be opened, so keeping it keeps Jira off. */
+  protected readonly lostToken = this.jira !== null && !this.data.tokenReadable;
+  /**
+   * Whether a new token is needed and not typed: the base URL changed (the old token never goes to a new host), or
+   * the stored one can no longer be opened.
+   */
   protected readonly needsToken = computed(() => {
     const value = this.value();
     return (
       this.jira !== null &&
-      hostOf(value.baseUrl ?? '') !== this.jira.connection.baseUrl &&
+      (this.lostToken ||
+        hostOf(value.baseUrl ?? '') !== this.jira.connection.baseUrl) &&
       (value.token ?? '').trim() === ''
     );
   });

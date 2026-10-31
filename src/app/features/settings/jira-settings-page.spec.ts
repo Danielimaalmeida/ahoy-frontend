@@ -547,7 +547,7 @@ describe('the Jira section of Team settings', () => {
       .expectOne((r) => r.url === `${BASE}/settings/jira/fields`)
       .flush({ items: [] });
     await settle();
-    buttonNamed(dialog(), 'customfield_11100 customfield_11100').click();
+    buttonNamed(dialog(), 'Use the id customfield_11100').click();
     await settle();
     expect(text(dialog())).toContain(
       "customfield_11100 can't be fixed: Ahoy writes it from the story."
@@ -596,9 +596,72 @@ describe('the Jira section of Team settings', () => {
     await reply(remove, updateJiraSettings);
   });
 
-  it("says when the stored token can't be opened with the API's key", async () => {
+  it("asks for the token again when the API's key no longer opens the stored one", async () => {
     await answer({ ...getJiraSettings, tokenReadable: false });
     expect(text(root)).toContain("The stored token can't be opened");
+    buttonNamed(root, 'Edit').click();
+    await settle();
+    expect(text(dialog())).toContain('Type the token again');
+    expect(buttonNamed(dialog(), 'Save').disabled).toBe(true);
+    expect(field(dialog(), 'New token').getAttribute('placeholder')).toBeNull();
+    type(field(dialog(), 'New token'), 'the-same-token');
+    await settle();
+    buttonNamed(dialog(), 'Save').click();
+    await settle();
+    const put = http.expectOne({
+      method: 'PUT',
+      url: `${BASE}/settings/jira/connection`,
+    });
+    expect(put.request.body).toEqual({
+      version: JIRA.version,
+      baseUrl: JIRA.connection.baseUrl,
+      token: 'the-same-token',
+    });
+    await reply(put, putJiraConnection);
+  });
+
+  it('drops a field search that was in flight when the search was cleared or changed', async () => {
+    await answer();
+    buttonNamed(root, 'Add a fixed field').click();
+    await settle();
+    type(field(dialog(), 'Field'), 'Team');
+    await new Promise((resolve) =>
+      setTimeout(resolve, FIELD_SEARCH_DEBOUNCE_MS + 20)
+    );
+    const late = http.expectOne(
+      (r) => r.url === `${BASE}/settings/jira/fields`
+    );
+    type(field(dialog(), 'Field'), '');
+    await settle();
+    late.flush(listJiraFields);
+    await settle();
+    expect(
+      dialog().querySelector('[aria-label="Fields found in Jira"]')
+    ).toBeNull();
+    expect(text(dialog())).not.toContain('No field of Jira matches');
+  });
+
+  it('offers a system field typed as its id when Jira cannot be searched', async () => {
+    await answer();
+    buttonNamed(root, 'Add a fixed field').click();
+    await settle();
+    type(field(dialog(), 'Field'), 'components');
+    await new Promise((resolve) =>
+      setTimeout(resolve, FIELD_SEARCH_DEBOUNCE_MS + 20)
+    );
+    http
+      .expectOne((r) => r.url === `${BASE}/settings/jira/fields`)
+      .flush(problem('unavailable'), {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'content-type': 'application/problem+json' },
+      });
+    await settle();
+    buttonNamed(dialog(), 'Use the id components').click();
+    await settle();
+    type(field(dialog(), 'Value'), '[{"name": "Checkout"}]');
+    await settle();
+    expect(buttonNamed(dialog(), 'Add field').disabled).toBe(false);
   });
 
   it('shows a refused read as a read failure, with Try again', async () => {

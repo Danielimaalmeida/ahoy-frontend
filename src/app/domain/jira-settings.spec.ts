@@ -4,6 +4,7 @@ import {
   fieldTypeLabel,
   fieldValueOf,
   fieldValueText,
+  hasControlCharacter,
   isReservedJiraField,
   jiraTestView,
   prefixExample,
@@ -29,6 +30,27 @@ describe('a fixed field value typed as JSON', () => {
       ok: false,
       problem: 'Not valid JSON: the value ends before its closing quote.',
     });
+  });
+
+  it('names a bracket that closes the wrong thing, rather than asking for one already typed', () => {
+    expect(fieldValueOf('[{"value": "Checkout"]')).toEqual({
+      ok: false,
+      problem: 'Not valid JSON: a ] stands where its } should close.',
+    });
+    expect(fieldValueOf('"a"]')).toEqual({
+      ok: false,
+      problem: 'Not valid JSON: a ] closes nothing.',
+    });
+  });
+
+  it('refuses a NUL character, which the API cannot store', () => {
+    expect(fieldValueOf('"a\\u0000b"')).toEqual({
+      ok: false,
+      problem: 'The value must not hold a NUL character (\\u0000).',
+    });
+    expect(hasControlCharacter('[PROJ]\t')).toBe(true);
+    expect(hasControlCharacter('[PROJ]\u007f')).toBe(true);
+    expect(hasControlCharacter('[PROJ] é')).toBe(false);
   });
 
   it('refuses words without quotes, null, nothing and a value too long', () => {

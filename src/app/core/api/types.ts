@@ -785,7 +785,6 @@ export type SettingsSection = NonNullable<
     operations['listSettingsEvents']['parameters']['query']
   >['section']
 >;
-export const SETTINGS_SECTIONS = listOf<SettingsSection>()(['sonar', 'jira']);
 
 /** Answer of `getJiraSettings`: Jira as set (null while it is off), and what the person and the API can do. */
 export type JiraSettingsPage = Schemas['JiraSettingsPage'];

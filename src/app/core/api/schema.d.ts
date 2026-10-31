@@ -61,9 +61,9 @@ export interface paths {
     };
     /**
      * All Jira Stories, Tasks and Bugs matching the configured backlog query.
-     * @description Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's
-     *     WebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.
-     *     `JIRA_BACKLOG_JQL` is the team's server-side query; there is no default, and without it the endpoint answers
+     * @description Read-only Jira Server REST search, authenticated with the token stored in the team settings
+     *     (`/settings/jira`), not the client's WebEAM token; it is never returned. The query is the settings'
+     *     `backlogJql`; there is no default, and while Jira is not connected or the query is empty the endpoint answers
      *     `503 unavailable`. Teams usually use their start-page availability filter, not the Jira Agile board backlog
      *     (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
      *     issues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters
@@ -1604,7 +1604,7 @@ export interface paths {
     /**
      * The crew page, with who is on in the current sprint and the next five.
      * @description The team's members alphabetically, with their time off, and the sprints from the current one: Jira's active
-     *     sprint, read from the team's board (`JIRA_BOARD_ID`) and kept; future sprints without dates follow at the
+     *     sprint, read from the team's board (the `board` of `/settings/jira`) and kept; future sprints without dates follow at the
      *     team's cadence (`datesEstimated`), and after Jira's last sprint come `projected` ones. Each sprint names who is
      *     on for each role (`sprint_person`, the devs; `lunch_host`, anyone), in alphabetical turns from where the role's
      *     order started, with the changes people made. A role nobody started starts on the current sprint with the first

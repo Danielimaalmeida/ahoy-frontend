@@ -20,7 +20,9 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   space, the fixed fields with a field search in Jira, the value checked as JSON while typed and the fields Ahoy writes
   itself refused before asking); and Jira's own history (`section=jira`). SonarQube's history now asks for
   `section=sonar`. Non-admins read everything and change nothing; without `AHOY_SECRETS_KEY` Connect Jira is off and
-  says why; a token the API's key cannot open says so.
+  says why; a token the API's key cannot open says so (the navigation shows "Token needed"). After the code review:
+  each section's settings are read once, the token is asked for again when the stored one cannot be opened, a field
+  search that Jira cannot answer still offers the typed id, and the prefix refuses control characters.
 - **Merged on 2026-10-31:** Team settings › SonarQube (PR #49, with `ahoy-hosted` #72).
 - **Merged on 2026-10-30:** one image for every team, toward a Helm chart (PR #48, F17, architecture "Runtime
   configuration"): `/config.json` read once before bootstrap. `environment.test.ts` still holds FIO's realm and client
@@ -35,7 +37,7 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   (PR #42, with `ahoy-hosted` #64, restyled in PR #43), the user's local changes (`f4ec304`), Meetings' cancel, mark
   done without Start and stakeholders by name (PR #44, with `ahoy-hosted` #65) and answers to questions (PR #45, whose
   `ahoy-hosted` side, #67, is not merged yet).
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/jira-settings` (`f9477a5`; the commit
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/jira-settings` (`0052e4a`; the commit
   in its header changes if that branch moves before merging), formatted with this repository's Prettier;
   `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migrations 0025 to 0027,
   `AHOY_SECRETS_KEY` and `AHOY_ADMIN_QNUMBERS`. Merge and deploy with the `ahoy-hosted` pull request.
@@ -47,9 +49,9 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 - **Last full run** (2026-10-31, `feat/jira-settings`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed without
-  the lock file, with `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 176 files, 3,127 tests,
-  all passed (new: the Jira page 16, the frame 2, `domain/jira-settings` 10, the Jira guards and client 5, six contract fixtures; the
-  SonarQube page's 13 now check `section=sonar`); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint`
+  the lock file, with `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 176 files, 3,133 tests,
+  all passed (new: the Jira page 18, the frame 4, `domain/jira-settings` 12, the Jira guards and client 5, six contract
+  fixtures; the SonarQube page's 13 now check `section=sonar`); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint`
   (eslint, stylelint) and `ng build` passed (the `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the
   4 kB warning budget and two meetings dialogs warn NG8011, as on `main`). `prettier --check` flags only
   `docs/architecture.md` and `src/app/features/meetings/meetings.spec.ts`, which fail on `main` too. Not run: Node 24,

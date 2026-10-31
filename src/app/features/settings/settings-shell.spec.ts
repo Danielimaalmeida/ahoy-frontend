@@ -89,6 +89,25 @@ describe('the Team settings frame', () => {
     expect(links[0]?.getAttribute('aria-current')).toBeNull();
   });
 
+  it('reads each section once: the one on show for itself, the others for the navigation', async () => {
+    await harness.navigateByUrl('/settings/jira');
+    await settle();
+    expect(http.match(`${BASE}/settings/jira`)).toHaveLength(1);
+    expect(http.match(`${BASE}/settings/sonar`)).toHaveLength(1);
+    for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
+      r.flush({ items: [] });
+  });
+
+  it('shows Jira as needing its token when the API cannot open the stored one', async () => {
+    await harness.navigateByUrl('/settings/sonar');
+    await settle();
+    answerAll({ ...getJiraSettings, tokenReadable: false });
+    await settle();
+    expect(
+      text(document.querySelector('[aria-label="Settings sections"]'))
+    ).toContain('Jira Token needed');
+  });
+
   it("shows Jira as off, and keeps the section's state current after it reads again", async () => {
     await harness.navigateByUrl('/settings/jira');
     answerAll({ ...getJiraSettings, jira: null, canEdit: false });

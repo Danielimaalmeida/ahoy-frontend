@@ -48,6 +48,7 @@ export class JiraSettingsStore {
 
   /** Reads the settings and Jira's history together; a failure keeps what was shown and says why. */
   async load(): Promise<void> {
+    this.summary?.claim('jira');
     const read = ++this.reads;
     this.loading.set(true);
     const [page, history] = await Promise.all([

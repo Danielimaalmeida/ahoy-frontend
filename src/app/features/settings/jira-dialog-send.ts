@@ -30,6 +30,7 @@ export class DialogSend {
   ): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
+    this.failure.set(null);
     const result = await request();
     this.busy.set(false);
     if (!result.ok) {

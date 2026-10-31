@@ -55,6 +55,7 @@ export class SettingsStore {
    * only the latest one's answer is kept, so an older answer never replaces a newer one.
    */
   async load(): Promise<void> {
+    this.summary?.claim('sonar');
     const read = ++this.reads;
     this.loading.set(true);
     const [sonar, history] = await Promise.all([
