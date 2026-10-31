@@ -88,6 +88,11 @@ let nextDialogId = 0;
       max-width: none;
       max-height: calc(100dvh - 32px);
     }
+    .ah-dialog__titles {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
     .ah-dialog--overlay .ah-dialog__head,
     .ah-dialog--overlay .ah-dialog__foot {
       flex-shrink: 0;
@@ -116,7 +121,12 @@ let nextDialogId = 0;
           [class.ah-dialog__icon--sendback]="kind() === 'sendback'"
           ><ah-icon [name]="iconName()" [size]="18"
         /></span>
-        <h2 class="ah-dialog__title" [id]="titleId">{{ heading() }}</h2>
+        <div class="ah-dialog__titles">
+          <h2 class="ah-dialog__title" [id]="titleId">{{ heading() }}</h2>
+          @if (subtitle()) {
+            <span class="ah-hint">{{ subtitle() }}</span>
+          }
+        </div>
         <button
           class="ah-dialog__close"
           type="button"
@@ -169,6 +179,8 @@ let nextDialogId = 0;
 export class DialogShell {
   /** The title: asks or states the action ("Weigh anchor and resume?"). */
   readonly heading = input.required<string>();
+  /** A hint under the title, such as what the thing being edited holds ("The default server · 2 repositories on it"). */
+  readonly subtitle = input('');
   /** The icon tile's colour, and a `danger` confirm for destructive actions. */
   readonly kind = input<DialogKind>('default');
   /** Another icon than the kind's own (`sail` for resume, `wheel` for models, `aground` for reject). */

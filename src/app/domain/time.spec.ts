@@ -1,4 +1,6 @@
 import {
+  absoluteDay,
+  absoluteDayTime,
   absoluteTime,
   formatDuration,
   relativeTime,
@@ -66,6 +68,27 @@ describe('absoluteTime', () => {
 
   it('shows an em dash for an invalid date', () => {
     expect(absoluteTime('nope')).toBe('—');
+  });
+});
+
+describe('absoluteDay and absoluteDayTime', () => {
+  it('show a record kept for long with its day and month, and the time when asked', () => {
+    expect(absoluteDay(new Date(2026, 9, 29, 9, 2), NOW)).toBe('Thu 29 Oct');
+    expect(absoluteDayTime(new Date(2026, 9, 29, 9, 2), NOW)).toBe(
+      'Thu 29 Oct 09:02'
+    );
+  });
+
+  it('add the year to a record from another year', () => {
+    expect(absoluteDay(new Date(2025, 9, 29), NOW)).toBe('Wed 29 Oct 2025');
+    expect(absoluteDayTime(new Date(2027, 0, 4, 17, 40), NOW)).toBe(
+      'Mon 4 Jan 2027 17:40'
+    );
+  });
+
+  it('show an em dash for an invalid date', () => {
+    expect(absoluteDay('nope', NOW)).toBe('—');
+    expect(absoluteDayTime('nope', NOW)).toBe('—');
   });
 });
 

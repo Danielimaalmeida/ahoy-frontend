@@ -27,7 +27,9 @@
       "content": null,
       "proposal": null,
       "lessons": null,
-      "patch": null
+      "patch": null,
+      "pullRequestUrl": null,
+      "pullRequestError": null
     },
     {
       "id": "proj-097-knowledge-001-5c2e",
@@ -55,7 +57,9 @@
       "content": "## Rules\n- Added: the mobile app shows an order's status only after payment is confirmed (from the plan gate).\n\n## Lessons\n- All repositories: name the child repository in the Jira issue (the plan gate sent the plan back once).\n- orders-api: its tests need Docker on the runner (the story halted once in implementation).\n\n## Left out\nNothing.",
       "proposal": "# Business context\n\n## Orders\n- The mobile app shows an order's status only after payment is confirmed. (PROJ-097, decided at the plan gate by sam@example.com)\n",
       "lessons": "# Lessons\n\n## All repositories\n- (PROJ-097) Name the child repository in the Jira issue: the planner guessed it and the plan gate sent it back.\n\n## orders-api\n- (PROJ-097) The orders-api tests need Docker on the runner; say so in the plan's validation commands.\n",
-      "patch": "diff --git a/knowledge/business-context.md b/knowledge/business-context.md\n--- a/knowledge/business-context.md\n+++ b/knowledge/business-context.md\n@@ -1,2 +1,5 @@\n # Business context\n \n+## Orders\n+- The mobile app shows an order's status only after payment is confirmed. (PROJ-097, decided at the plan gate by sam@example.com)\ndiff --git a/knowledge/lessons.md b/knowledge/lessons.md\nnew file mode 100644\n--- /dev/null\n+++ b/knowledge/lessons.md\n@@ -0,0 +1,7 @@\n+# Lessons\n+\n+## All repositories\n+- (PROJ-097) Name the child repository in the Jira issue: the planner guessed it and the plan gate sent it back.\n+\n+## orders-api\n+- (PROJ-097) The orders-api tests need Docker on the runner; say so in the plan's validation commands.\n"
+      "patch": "diff --git a/knowledge/business-context.md b/knowledge/business-context.md\n--- a/knowledge/business-context.md\n+++ b/knowledge/business-context.md\n@@ -1,2 +1,5 @@\n # Business context\n \n+## Orders\n+- The mobile app shows an order's status only after payment is confirmed. (PROJ-097, decided at the plan gate by sam@example.com)\ndiff --git a/knowledge/lessons.md b/knowledge/lessons.md\nnew file mode 100644\n--- /dev/null\n+++ b/knowledge/lessons.md\n@@ -0,0 +1,7 @@\n+# Lessons\n+\n+## All repositories\n+- (PROJ-097) Name the child repository in the Jira issue: the planner guessed it and the plan gate sent it back.\n+\n+## orders-api\n+- (PROJ-097) The orders-api tests need Docker on the runner; say so in the plan's validation commands.\n",
+      "pullRequestUrl": null,
+      "pullRequestError": null
     }
   ]
 }

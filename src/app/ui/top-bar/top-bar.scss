@@ -92,6 +92,7 @@
   color: var(--ink-muted);
 }
 
+.account__item,
 .account__logout {
   display: flex;
   align-items: center;
@@ -107,13 +108,15 @@
   font-weight: 600;
   text-align: left;
   cursor: pointer;
+  text-decoration: none;
 
   &:hover {
     background: var(--surface-hover);
   }
 }
 
-.account button:focus-visible {
+.account button:focus-visible,
+.account__item:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }

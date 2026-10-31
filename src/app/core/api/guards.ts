@@ -61,6 +61,12 @@ import {
   TOPIC_STATUSES,
   type AgentDiagnosisList,
   type Crew,
+  type Me,
+  type SettingsEvent,
+  type SettingsEventPage,
+  type SonarRepository,
+  type SonarServer,
+  type SonarSettings,
   type CrewAssignment,
   type CrewMember,
   type CrewSprint,
@@ -493,6 +499,8 @@ const knowledgeReview: Check = (value, at) => {
     proposal: nullable(text),
     lessons: nullable(text),
     patch: nullable(text),
+    pullRequestUrl: nullable(nonEmptyText),
+    pullRequestError: nullable(text),
   })(value, at);
   if (why !== null || !isRecord(value)) return why;
   if ((value['status'] === 'succeeded') !== (value['content'] !== null))
@@ -1230,4 +1238,75 @@ export const isCrewTimeOff = guard<CrewTimeOff>('CrewTimeOff', crewTimeOff);
 /** The empty body of a `204 No Content` answer, which the HTTP client reads as null. */
 export const isNoContent = guard<null>('No content', (value, at) =>
   value === null ? null : `${at} must be empty`
+);
+
+/** The signed-in person, as `getMe` answers it. */
+export const isMe = guard<Me>(
+  'Me',
+  shape<Me>({ actor, name: nullable(text), admin: flag })
+);
+
+const sonarServer = shape<SonarServer>({
+  id: uuid,
+  name: nonEmptyText,
+  hostUrl: nonEmptyText,
+  isDefault: flag,
+  tokenHint: boundedText('at most four characters', 0, 4),
+  tokenSetBy: actor,
+  tokenSetByName: nullable(text),
+  tokenSetAt: timestamp,
+  repositoryCount: wholeNumber('a count of repositories', 0),
+  version: wholeNumber('a version', 1),
+  updatedBy: actor,
+  updatedByName: nullable(text),
+  updatedAt: timestamp,
+});
+
+const sonarRepository = shape<SonarRepository>({
+  id: uuid,
+  repository: nonEmptyText,
+  serverId: uuid,
+  projectKey: nullable(nonEmptyText),
+  version: wholeNumber('a version', 1),
+  updatedBy: actor,
+  updatedByName: nullable(text),
+  updatedAt: timestamp,
+});
+
+/** The SonarQube settings, as `getSonarSettings` answers them. */
+export const isSonarSettings = guard<SonarSettings>(
+  'SonarSettings',
+  shape<SonarSettings>({
+    canEdit: flag,
+    secretsConfigured: flag,
+    servers: arrayOf(sonarServer),
+    repositories: arrayOf(sonarRepository),
+  })
+);
+
+/** A server, as `addSonarServer` and `updateSonarServer` answer it. */
+export const isSonarServer = guard<SonarServer>('SonarServer', sonarServer);
+
+/** A repository, as `addSonarRepository` and `updateSonarRepository` answer it. */
+export const isSonarRepository = guard<SonarRepository>(
+  'SonarRepository',
+  sonarRepository
+);
+
+/** The changes to team settings, as `listSettingsEvents` answers them. */
+export const isSettingsEventPage = guard<SettingsEventPage>(
+  'SettingsEventPage',
+  shape<SettingsEventPage>({
+    items: arrayOf(
+      shape<SettingsEvent>({
+        id: wholeNumber('an event id', 1),
+        type: nonEmptyText,
+        actor,
+        actorName: nullable(text),
+        subject: nonEmptyText,
+        payload: record,
+        createdAt: timestamp,
+      })
+    ),
+  })
 );

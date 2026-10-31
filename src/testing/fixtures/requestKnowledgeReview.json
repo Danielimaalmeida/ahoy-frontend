@@ -24,5 +24,7 @@
   "content": null,
   "proposal": null,
   "lessons": null,
-  "patch": null
+  "patch": null,
+  "pullRequestUrl": null,
+  "pullRequestError": null
 }

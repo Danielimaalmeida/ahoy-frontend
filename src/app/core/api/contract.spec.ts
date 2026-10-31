@@ -1,5 +1,12 @@
 import addCrewMember from '@testing/fixtures/addCrewMember.json';
 import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
+import addSonarRepository from '@testing/fixtures/addSonarRepository.json';
+import addSonarServer from '@testing/fixtures/addSonarServer.json';
+import getMe from '@testing/fixtures/getMe.json';
+import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
+import listSettingsEvents from '@testing/fixtures/listSettingsEvents.json';
+import updateSonarRepository from '@testing/fixtures/updateSonarRepository.json';
+import updateSonarServer from '@testing/fixtures/updateSonarServer.json';
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
 import addMeetingNoteAnswer from '@testing/fixtures/addMeetingNoteAnswer.json';
 import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
@@ -183,6 +190,13 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['addCrewMember', addCrewMember],
   ['updateCrewMember', updateCrewMember],
   ['addCrewTimeOff', addCrewTimeOff],
+  ['getMe', getMe],
+  ['getSonarSettings', getSonarSettings],
+  ['addSonarServer', addSonarServer],
+  ['updateSonarServer', updateSonarServer],
+  ['addSonarRepository', addSonarRepository],
+  ['updateSonarRepository', updateSonarRepository],
+  ['listSettingsEvents', listSettingsEvents],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -195,6 +209,8 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteCrewTimeOff',
   'changeCrewSprint',
   'clearCrewSprintChange',
+  'deleteSonarServer',
+  'deleteSonarRepository',
 ];
 
 /**
@@ -228,7 +244,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      76
+      85
     );
   });
 

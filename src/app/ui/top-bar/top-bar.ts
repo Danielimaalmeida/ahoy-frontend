@@ -192,6 +192,16 @@ const BAT_PATH =
                   }
                 </div>
               </div>
+              <a
+                class="account__item"
+                routerLink="/settings"
+                (click)="closeMenu()"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4" />
+                </svg>
+                Team settings
+              </a>
               <button type="button" class="account__logout" (click)="logOut()">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path

@@ -2,6 +2,20 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
 
 /** Milliseconds from `at` to `now`, clamped at zero; `null` when a date is invalid. */
 function elapsedMs(at: Date | string, now: Date): number | null {
@@ -38,6 +52,28 @@ export function absoluteTime(at: Date | string): string {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${day} ${hours}:${minutes}`;
+}
+
+/**
+ * The day of a record kept for long, such as who set a token: "Thu 29 Oct", with the year when it is not `now`'s
+ * ("Wed 29 Oct 2025"), in the browser's time zone.
+ */
+export function absoluteDay(at: Date | string, now: Date): string {
+  const date = at instanceof Date ? at : new Date(at);
+  if (Number.isNaN(date.getTime())) return '—';
+  const day = `${WEEKDAYS[date.getDay()] ?? ''} ${date.getDate()} ${MONTHS[date.getMonth()] ?? ''}`;
+  return date.getFullYear() === now.getFullYear()
+    ? day
+    : `${day} ${date.getFullYear()}`;
+}
+
+/** The day and time of a record kept for long, such as a settings change: "Thu 29 Oct 09:02". */
+export function absoluteDayTime(at: Date | string, now: Date): string {
+  const date = at instanceof Date ? at : new Date(at);
+  if (Number.isNaN(date.getTime())) return '—';
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${absoluteDay(date, now)} ${hours}:${minutes}`;
 }
 
 /** How long a voyage has waited, for the "Waiting" column: "just now", "48 m", "2 h 10 m", "9 d". */
