@@ -416,15 +416,15 @@ export class SettingsPage {
   protected readonly store = inject(SettingsStore);
   private readonly dialogs = inject(DialogService);
   protected readonly token = tokenLabel;
-  protected readonly day = absoluteDay;
-  protected readonly moment = absoluteDayTime;
+  /** When the page opened, so a date from another year shows its year. */
+  private readonly now = new Date();
   protected readonly failure = computed(() => {
     const error = this.store.loadError();
-    return error === null ? null : settingsErrorView(error);
+    return error === null ? null : settingsErrorView(error, 'read');
   });
   protected readonly historyFailure = computed(() => {
     const error = this.store.historyError();
-    return error === null ? null : settingsErrorView(error);
+    return error === null ? null : settingsErrorView(error, 'read');
   });
   /** The history in words, with who made each change. */
   protected readonly history = computed(() =>
@@ -442,6 +442,16 @@ export class SettingsPage {
 
   constructor() {
     void this.store.load();
+  }
+
+  /** The day of a record, such as when a token was set. */
+  protected day(at: string): string {
+    return absoluteDay(at, this.now);
+  }
+
+  /** The day and time of a change. */
+  protected moment(at: string): string {
+    return absoluteDayTime(at, this.now);
   }
 
   /** Opens the server dialog: a new server, or one to edit. */

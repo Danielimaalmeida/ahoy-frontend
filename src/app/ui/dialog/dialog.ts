@@ -121,14 +121,12 @@ let nextDialogId = 0;
           [class.ah-dialog__icon--sendback]="kind() === 'sendback'"
           ><ah-icon [name]="iconName()" [size]="18"
         /></span>
-        @if (subtitle()) {
-          <div class="ah-dialog__titles">
-            <h2 class="ah-dialog__title" [id]="titleId">{{ heading() }}</h2>
-            <span class="ah-hint">{{ subtitle() }}</span>
-          </div>
-        } @else {
+        <div class="ah-dialog__titles">
           <h2 class="ah-dialog__title" [id]="titleId">{{ heading() }}</h2>
-        }
+          @if (subtitle()) {
+            <span class="ah-hint">{{ subtitle() }}</span>
+          }
+        </div>
         <button
           class="ah-dialog__close"
           type="button"

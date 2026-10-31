@@ -18,7 +18,11 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   is typed, a new host asks for it again before Save is offered, and a server with repositories shows Remove off with
   the reason. Others read only; without `AHOY_SECRETS_KEY` Add server is off and says why. SonarQube is set only here
   (`ahoy-hosted` no longer reads `SONAR_*`), so the page has no read-only "set by the deployment" state. `ah-dialog`
-  takes an optional `subtitle`; `domain/time` adds `absoluteDay` and `absoluteDayTime` ("Thu 29 Oct 09:02"). The contract sync also brought the knowledge reviews' `pullRequestUrl` and `pullRequestError`
+  takes an optional `subtitle`; `domain/time` adds `absoluteDay` and `absoluteDayTime` ("Thu 29 Oct 09:02", with the
+  year when it is not this one). After a code review: the page reads the settings again after every command, refused
+  or not, and keeps only the latest of overlapping reads; a refused read is not shown as "only admins change"; a host
+  typed another way (case, default port) is the same host; an http host warns that the token would travel
+  unencrypted. The contract sync also brought the knowledge reviews' `pullRequestUrl` and `pullRequestError`
   (`ahoy-hosted` 0025) into the guard, the mock and the fixtures.
 - **Merged on 2026-10-30:** one image for every team, toward a Helm chart (PR #48, F17, architecture "Runtime
   configuration"): `/config.json` read once before bootstrap. `environment.test.ts` still holds FIO's realm and client
@@ -45,8 +49,8 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 - **Last full run** (2026-10-31, `feat/team-settings`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` and `@acme-fedev/playwright-helpers` copied into `node_modules` because the private registry is
   not reachable, dependencies installed without the lock file, with `@angular/compiler-cli`, `build` and `cli` at the
-  locked 22.2.1): Vitest 171 files, 3,083 tests, all passed (new: the Team settings page 11, `domain/settings` 5,
-  `domain/time` 2, the dialog's subtitle 1, the account menu's link 1); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint) and
+  locked 22.2.1): Vitest 172 files, 3,088 tests, all passed (new: the Team settings page 13, its store 2,
+  `domain/settings` 5, `domain/time` 3, the dialog's subtitle 1, the account menu's link 1); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint) and
   `ng build` passed (the `crew-page.ts` and `metrics.scss` styles are over the 4 kB warning budget, as on `main`).
   `prettier --check` flags only `docs/architecture.md` and `src/app/features/meetings/meetings.spec.ts`, which fail on
   `main` too. Not run: Node 24, the real `@acme-fedev/auth`, nginx, Playwright, a browser, and the page against a real

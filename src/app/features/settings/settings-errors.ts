@@ -21,10 +21,14 @@ function detailOr(error: ApiError, fallback: string): string {
 }
 
 /**
- * What the Team settings page shows for an API error: plain words first, the technical line last. A `503` that says
- * why (no `AHOY_SECRETS_KEY`) reads as that, not as Ahoy being down; a tooling failure never reads like a setting.
+ * What the Team settings page shows for an API error while reading the settings or changing them: plain words first,
+ * the technical line last. A `503` that says why (no `AHOY_SECRETS_KEY`) reads as that, not as Ahoy being down; a
+ * tooling failure never reads like a setting; a refused read is not taken for a refused change.
  */
-export function settingsErrorView(error: ApiError): CommandErrorView {
+export function settingsErrorView(
+  error: ApiError,
+  action: 'read' | 'change' = 'change'
+): CommandErrorView {
   const tech = techLine(error);
   const why = hasProblemCode(error, 'unavailable') ? detailOr(error, '') : '';
   if (why !== '')
@@ -56,12 +60,19 @@ export function settingsErrorView(error: ApiError): CommandErrorView {
       tech,
     };
   if (isForbidden(error))
-    return {
-      variant: 'error',
-      heading: 'Only admins change team settings',
-      text: detailOr(error, 'Ask an admin.'),
-      tech,
-    };
+    return action === 'read'
+      ? {
+          variant: 'error',
+          heading: "You can't read the team settings",
+          text: detailOr(error, 'Ahoy refused to show them to you.'),
+          tech,
+        }
+      : {
+          variant: 'error',
+          heading: 'Only admins change team settings',
+          text: detailOr(error, 'Ask an admin.'),
+          tech,
+        };
   if (isStale(error))
     return {
       variant: 'notice',

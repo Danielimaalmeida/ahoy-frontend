@@ -268,7 +268,7 @@ describe('the Team settings page', () => {
     await answer();
   });
 
-  it('keeps the dialog open and says so when someone changed the server first', async () => {
+  it('keeps the dialog open, says someone changed the server first, and reads the settings again behind it', async () => {
     await answer();
     buttonNamed(root, 'Edit Main SonarQube').click();
     await settle();
@@ -279,9 +279,33 @@ describe('the Team settings page', () => {
       .expectOne(`${BASE}/settings/sonar/servers/${MAIN.id}`)
       .flush(stale, { status: 409, statusText: 'Conflict' });
     await settle();
+    const now = {
+      ...getSonarSettings,
+      servers: [
+        { ...MAIN, name: 'Main SQ', version: 2 },
+        getSonarSettings.servers[1],
+      ],
+    };
+    await answer(now);
     expect(text(dialog())).toContain(
       'Someone changed this since you opened it'
     );
+    expect(buttonsNamed(root, 'Edit Main SQ')).toHaveLength(1);
+  });
+
+  it('takes the same host typed another way as the same host, and warns before a token goes over plain http', async () => {
+    await answer();
+    buttonNamed(root, 'Edit Main SonarQube').click();
+    await settle();
+    type(field(dialog(), 'Host'), ' https://SONAR.example.com:443/ ');
+    await settle();
+    expect(text(dialog())).not.toContain('Type the token again');
+    expect(buttonNamed(dialog(), 'Save').disabled).toBe(false);
+    expect(text(dialog())).not.toContain('This host is not HTTPS');
+    type(field(dialog(), 'Host'), 'http://sonar.internal:9000');
+    await settle();
+    expect(text(dialog())).toContain('This host is not HTTPS');
+    expect(text(dialog())).toContain('Type the token again');
   });
 
   it('removes a server no repository is on, after asking', async () => {
@@ -381,6 +405,17 @@ describe('the Team settings page', () => {
     buttonNamed(root, 'Try again').click();
     await answer();
     expect(root.querySelector('ah-banner')).toBeNull();
+  });
+
+  it('says a refused read is a refused read, not a refused change', async () => {
+    const forbidden = problems.find((p) => p.code === 'forbidden')!;
+    settingsRead().flush(forbidden, { status: 403, statusText: 'Forbidden' });
+    historyRead().flush(listSettingsEvents);
+    await settle();
+    expect(text(root.querySelector('ah-banner'))).toContain(
+      "You can't read the team settings"
+    );
+    expect(text(root)).not.toContain('Only admins change team settings');
   });
 
   it('still shows the settings when only the history could not be read', async () => {

@@ -34,7 +34,7 @@ export class SettingsStore {
   /** Whether the settings are being read. */
   readonly loading = signal(false);
 
-  /** Whether the person may change the settings: an admin, and the deployment does not set SonarQube. */
+  /** Whether the person may change the settings: an admin. */
   readonly canEdit = computed(() => this.sonar()?.canEdit === true);
   /** Whether a server can be added: the person may edit, and the API can seal a token. */
   readonly canAddServer = computed(
@@ -45,13 +45,21 @@ export class SettingsStore {
     () => new Map((this.sonar()?.servers ?? []).map((s) => [s.id, s.name]))
   );
 
-  /** Reads the settings and the history together; a failure keeps what was shown and says why. */
+  /** How many reads have started: only the latest one's answer is shown. */
+  private reads = 0;
+
+  /**
+   * Reads the settings and the history together; a failure keeps what was shown and says why. When reads overlap,
+   * only the latest one's answer is kept, so an older answer never replaces a newer one.
+   */
   async load(): Promise<void> {
+    const read = ++this.reads;
     this.loading.set(true);
     const [sonar, history] = await Promise.all([
       this.api.getSonarSettings(),
       this.api.listSettingsEvents(HISTORY_LIMIT),
     ]);
+    if (read !== this.reads) return;
     this.loading.set(false);
     if (sonar.ok) {
       this.loadError.set(null);
@@ -110,11 +118,15 @@ export class SettingsStore {
     return this.reloadAfter(this.api.deleteSonarRepository(id));
   }
 
+  /**
+   * Sends a command, then reads the settings again whatever the answer: a refused change (someone changed it first,
+   * it is gone, an unreadable answer) means the page is out of date too.
+   */
   private async reloadAfter<T>(
     request: Promise<ApiResult<T>>
   ): Promise<ApiResult<T>> {
     const result = await request;
-    if (result.ok) await this.load();
+    await this.load();
     return result;
   }
 }

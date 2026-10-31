@@ -28,9 +28,19 @@ export interface SonarServerData {
   readonly first: boolean;
 }
 
-/** A host URL without its trailing slashes, as the API keeps it. */
+/**
+ * A host URL as the API keeps it: parsed (the host in lower case, a default port dropped) and without trailing
+ * slashes, so the same host typed another way is not taken for a new one. Text that does not parse is only trimmed.
+ */
 function hostOf(text: string): string {
-  return text.trim().replace(/\/+$/, '');
+  const trimmed = text.trim();
+  let href = trimmed;
+  try {
+    href = new URL(trimmed).href;
+  } catch {
+    // The validator refuses it; keep the text as typed.
+  }
+  return href.replace(/\/+$/, '');
 }
 
 /** "1 repository" or "3 repositories". */
@@ -126,6 +136,12 @@ function subtitleOf(server: SonarServer): string {
       @if (needsToken()) {
         <ah-banner variant="notice" heading="Type the token again">
           A new host needs its token, so the old one never goes there.
+        </ah-banner>
+      }
+      @if (plainHttp()) {
+        <ah-banner variant="notice" heading="This host is not HTTPS">
+          The reconciler would send the token to it unencrypted. Use its https
+          address if it has one.
         </ah-banner>
       }
       <form [formGroup]="form" (submit)="$event.preventDefault(); submit()">
@@ -254,7 +270,7 @@ export class SonarServerDialog {
   protected readonly tokenHint =
     'A SonarQube user token that can read the projects. Stored encrypted; never shown again.' +
     (this.server
-      ? ` Set by ${this.server.tokenSetByName ?? this.server.tokenSetBy} on ${absoluteDay(this.server.tokenSetAt)}.`
+      ? ` Set by ${this.server.tokenSetByName ?? this.server.tokenSetBy} on ${absoluteDay(this.server.tokenSetAt, new Date())}.`
       : '');
   protected readonly form = new FormGroup({
     name: new FormControl(this.server?.name ?? '', {
@@ -290,6 +306,10 @@ export class SonarServerDialog {
       (value.token ?? '').trim() === ''
     );
   });
+  /** Whether the host is plain http, so the token would travel unencrypted. */
+  protected readonly plainHttp = computed(() =>
+    /^http:\/\//i.test((this.value().hostUrl ?? '').trim())
+  );
   /** The host's hint: what it was when it changed, else an example. */
   protected readonly hostHint = computed(() =>
     this.server !== null &&
