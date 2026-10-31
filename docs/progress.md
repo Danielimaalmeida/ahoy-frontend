@@ -23,8 +23,10 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   outside a story's budget and asks for a confirmation before the change is sent with `confirmSpend: true` (D19 as the
   user agreed it); a job whose profile is gone shows as paused; the knowledge repository as owner/name. Each section
   has its own history. Non-admins read everything and change nothing; without `AHOY_SECRETS_KEY` the webhook and the
-  token cannot be saved, and say why; a webhook or token the API's key cannot open is asked for again. The Copilot
-  token page waits on security and is not built.
+  token cannot be saved, and say why; a webhook or token the API's key cannot open is asked for again. After the code
+  review: the forms are typed Reactive Forms; without the key the card links still change and the Figma token can
+  still be removed; an Agents save that another admin beat shows their jobs instead of sending over them; a sample
+  sprint-start card previews what the channel gets. The Copilot token page waits on security and is not built.
 - **Open, merging first:** Team settings › Jira (PR #50, with `ahoy-hosted` #73).
 - **Merged on 2026-10-31:** Team settings › SonarQube (PR #49, with `ahoy-hosted` #72).
 - **Merged on 2026-10-30:** one image for every team, toward a Helm chart (PR #48, F17, architecture "Runtime
@@ -47,8 +49,8 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 - **Last full run** (2026-10-31, `feat/teams-figma-agents-settings`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed without
-  the lock file, with `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 183 files, 3,206 tests,
-  all passed (new: the Teams page 11, the Figma page 11, the Agents page 10, the frame 2 more, `domain/teams-settings`
+  the lock file, with `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 183 files, 3,211 tests,
+  all passed (new: the Teams page 13, the Figma page 12, the Agents page 12, the frame 2 more, `domain/teams-settings`
   8, `domain/figma-settings` 6, `domain/agent-settings` 6, the three sections' guards and client 8, eleven contract
   fixtures); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint) and `ng build`
   passed (the `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and two meetings

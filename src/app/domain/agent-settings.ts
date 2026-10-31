@@ -3,6 +3,8 @@
  * of the knowledge repository, and what one entry of the agents' history says. Pure.
  */
 
+import { isRecord } from './records';
+
 /** A job whose profile is a setting, as the API names it. */
 export type AgentJobKey =
   'refinementAgent' | 'diagnosisAgent' | 'storyDraftAgent' | 'knowledgeAgent';
@@ -25,6 +27,8 @@ export interface AgentJobWords {
   readonly spends: string;
   /** Whether it can be off: the two jobs that spend AIU outside a story's budget. */
   readonly optional: boolean;
+  /** What turning it on will spend, for the warning and the confirmation; null for a job that cannot be off. */
+  readonly warning: string | null;
 }
 
 /** The jobs, in the order the page lists them. */
@@ -35,6 +39,7 @@ export const AGENT_JOB_WORDS: readonly AgentJobWords[] = [
     when: 'When someone asks Ahoy to refine a backlog item',
     spends: 'Each time someone asks, after they confirm',
     optional: false,
+    warning: null,
   },
   {
     key: 'diagnosisAgent',
@@ -42,6 +47,7 @@ export const AGENT_JOB_WORDS: readonly AgentJobWords[] = [
     when: 'When a story halts and someone asks why',
     spends: 'Each time someone asks, after they confirm',
     optional: false,
+    warning: null,
   },
   {
     key: 'storyDraftAgent',
@@ -49,6 +55,8 @@ export const AGENT_JOB_WORDS: readonly AgentJobWords[] = [
     when: 'When someone drafts a story from a meeting topic',
     spends: 'Each draft, when on',
     optional: true,
+    warning:
+      'Anyone can then draft a story from a meeting topic; each draft is a run that spends AIU outside any story’s budget.',
   },
   {
     key: 'knowledgeAgent',
@@ -56,8 +64,13 @@ export const AGENT_JOB_WORDS: readonly AgentJobWords[] = [
     when: 'After each story that reaches done',
     spends: 'After every finished story, when on',
     optional: true,
+    warning:
+      'A review run starts by itself each time a story reaches done, and spends AIU outside that story’s budget.',
   },
 ];
+
+/** The most characters of the knowledge repository, as the API takes it. */
+export const MAX_KNOWLEDGE_REPO_CHARS = 200;
 
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 
@@ -71,13 +84,6 @@ export function jobsTurnedOn(
   );
 }
 
-/** What turning jobs on will spend, in one sentence per job, for the warning and the confirmation. */
-export function spendWarning(job: AgentJobWords): string {
-  return job.key === 'knowledgeAgent'
-    ? 'A review run starts by itself each time a story reaches done, and spends AIU outside that story’s budget.'
-    : 'Anyone can then draft a story from a meeting topic; each draft is a run that spends AIU outside any story’s budget.';
-}
-
 /** "2 of 4 on": how many jobs run, for the side navigation. */
 export function jobsOnLabel(jobs: AgentJobChoice): string {
   const on = AGENT_JOB_WORDS.filter((job) => jobs[job.key] !== null).length;
@@ -89,16 +95,12 @@ export function knowledgeRepoProblem(typed: string): string | null {
   const repo = typed.trim();
   if (repo === '') return null;
   if (
-    repo.length > 200 ||
+    repo.length > MAX_KNOWLEDGE_REPO_CHARS ||
     !REPOSITORY.test(repo) ||
     repo.split('/').some((part) => part === '.' || part === '..')
   )
     return 'Give it as owner/name, such as acme/business-rules.';
   return null;
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** A profile in words: its name, or "off". */

@@ -2,6 +2,7 @@
  * Team settings › Teams in words: the checks of what an admin types before it is sent, the last card, and what one
  * entry of the channel's history says. Pure: payloads come from the API as `unknown` and are read field by field.
  */
+import { isRecord } from './records';
 import { hasControlCharacter } from './jira-settings';
 
 /** The most characters of a webhook's address, as the API takes it. */
@@ -12,10 +13,6 @@ export const MAX_UI_URL_CHARS = 500;
 /** Whether a text holds white space or an ASCII control character: none belongs in an address. */
 export function hasSpaceOrControl(text: string): boolean {
   return /\s/.test(text) || hasControlCharacter(text);
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function parsed(text: string): URL | null {
@@ -66,9 +63,15 @@ export function uiUrlProblem(typed: string): string | null {
   return null;
 }
 
+/** The UI's address as the API keeps it: trimmed, without trailing slashes; null when empty. */
+export function uiUrlAsKept(typed: string): string | null {
+  const url = typed.trim().replace(/\/+$/, '');
+  return url === '' ? null : url;
+}
+
 /** The crew page the cards' "Open Crew" button opens, under the UI's address as kept. */
 export function crewPageOf(uiUrl: string): string {
-  return `${uiUrl.replace(/\/+$/, '')}/crew`;
+  return `${uiUrlAsKept(uiUrl) ?? ''}/crew`;
 }
 
 /** The last card in a word: "Posted" or "Not posted". */

@@ -17,8 +17,16 @@ export class AgentSettingsStore extends SectionStore<AgentSettingsPage> {
     summary.agentsRead(page);
   }
 
-  /** Changes who runs the jobs; turning a job on needs `confirmSpend: true`. Reads the page again either way. */
-  change(body: AgentSettingsChange): Promise<ApiResult<AgentSettingsPage>> {
-    return this.reloadAfter(this.api.updateAgentSettings(body));
+  /**
+   * Changes who runs the jobs; turning a job on needs `confirmSpend: true`. The answer is the whole page, so it is shown
+   * at once, and the page and its history are read again either way.
+   */
+  async change(
+    body: AgentSettingsChange
+  ): Promise<ApiResult<AgentSettingsPage>> {
+    const result = await this.api.updateAgentSettings(body);
+    if (result.ok) this.page.set(result.value);
+    await this.load();
+    return result;
   }
 }

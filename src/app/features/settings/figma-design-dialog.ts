@@ -1,5 +1,7 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { ApiError } from '@core/api/api-error';
 import type { FigmaSettings, FigmaSettingsChange } from '@core/api/types';
 import {
@@ -13,7 +15,7 @@ import { Field, FieldControl } from '@ui/field/field';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { ToastService } from '@ui/toast/toast';
 import type { FigmaSettingsStore } from './figma-settings-store';
-import { DialogSend } from './jira-dialog-send';
+import { DialogSend } from './dialog-send';
 import { settingsErrorView } from './settings-errors';
 
 /** What the design phase dialog is opened with: the page's store and Figma's settings as they are. */
@@ -34,7 +36,14 @@ type ProfilesState =
  */
 @Component({
   selector: 'ah-figma-design-dialog',
-  imports: [Banner, DialogShell, Field, FieldControl, Skeleton],
+  imports: [
+    Banner,
+    DialogShell,
+    Field,
+    FieldControl,
+    ReactiveFormsModule,
+    Skeleton,
+  ],
   styles: `
     form {
       display: flex;
@@ -128,8 +137,7 @@ type ProfilesState =
             autocomplete="off"
             spellcheck="false"
             [attr.maxlength]="maxPrefix"
-            [value]="prefix()"
-            (input)="typePrefix($event)"
+            [formControl]="prefixControl"
           />
         </ah-field>
       </form>
@@ -147,7 +155,13 @@ export class FigmaDesignDialog {
   protected readonly chosen = signal<readonly string[]>(
     this.data.figma.uiAgents
   );
-  protected readonly prefix = signal(this.data.figma.selectorPrefix);
+  protected readonly prefixControl = new FormControl(
+    this.data.figma.selectorPrefix,
+    { nonNullable: true }
+  );
+  private readonly prefix = toSignal(this.prefixControl.valueChanges, {
+    initialValue: this.prefixControl.value,
+  });
   protected readonly prefixError = computed(() =>
     selectorPrefixProblem(this.prefix())
   );
@@ -202,11 +216,6 @@ export class FigmaDesignDialog {
     if (!(target instanceof HTMLInputElement)) return;
     const others = this.chosen().filter((a) => a !== name);
     this.chosen.set(target.checked ? [...others, name] : others);
-  }
-
-  protected typePrefix(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) this.prefix.set(target.value);
   }
 
   /** Saves what changed and closes; nothing changed closes without a request. */

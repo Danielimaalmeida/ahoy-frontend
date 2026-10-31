@@ -5,7 +5,6 @@ import {
   jobsOnLabel,
   jobsTurnedOn,
   knowledgeRepoProblem,
-  spendWarning,
   type AgentJobChoice,
 } from './agent-settings';
 import { describeSettingsEvent } from './settings';
@@ -52,8 +51,9 @@ describe('the agents’ jobs', () => {
   });
 
   it('warn that each job spends AIU outside a story’s budget, and count the jobs on', () => {
-    for (const job of AGENT_JOB_WORDS.filter((j) => j.optional))
-      expect(spendWarning(job)).toMatch(/spends AIU outside/);
+    for (const job of AGENT_JOB_WORDS)
+      if (job.optional) expect(job.warning).toMatch(/spends AIU outside/);
+      else expect(job.warning).toBeNull();
     expect(jobsOnLabel(SAVED)).toBe('2 of 4 on');
     expect(
       jobsOnLabel({

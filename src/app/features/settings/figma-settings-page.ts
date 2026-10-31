@@ -62,7 +62,11 @@ import { SettingsHistory } from './settings-history';
     }
 
     @if (store.loading() && !store.page()) {
-      <div class="ah-panel loading" aria-label="Loading the Figma settings">
+      <div
+        class="ah-panel loading"
+        role="status"
+        aria-label="Loading the Figma settings"
+      >
         <ah-skeleton width="40%" />
         <ah-skeleton width="70%" />
         <ah-skeleton width="55%" />
@@ -73,13 +77,19 @@ import { SettingsHistory } from './settings-history';
           You can read the team settings. Ask an admin to add you to
           AHOY_ADMIN_QNUMBERS.
         </ah-banner>
-      } @else if (!page.secretsConfigured) {
+      } @else if (!page.secretsConfigured && !page.figma.token) {
         <ah-banner variant="notice" heading="Tokens can't be saved yet">
           The API needs AHOY_SECRETS_KEY to store a token encrypted. Until it is
           set, Figma stays off.
         </ah-banner>
       }
-      @if (page.figma.token && !page.tokenReadable) {
+      @if (page.figma.token && !page.secretsConfigured) {
+        <ah-banner variant="error" heading="Figma is off">
+          The token is stored encrypted, and the API has no AHOY_SECRETS_KEY to
+          open it. The deployment needs the key again; the token can still be
+          removed.
+        </ah-banner>
+      } @else if (page.figma.token && !page.tokenReadable) {
         <ah-banner variant="error" heading="The stored token can't be opened">
           The API's key no longer opens it, so Figma is off until an admin saves
           the token again (Replace).
@@ -108,7 +118,6 @@ import { SettingsHistory } from './settings-history';
                     ahButton="ghost"
                     size="sm"
                     type="button"
-                    [disabled]="!store.canSaveToken()"
                     (click)="token(page.figma, page.tokenReadable)"
                   >
                     Replace
@@ -317,7 +326,12 @@ export class FigmaSettingsPage {
   protected token(figma: FigmaSettings, tokenReadable: boolean): void {
     this.testError.set(null);
     this.dialogs.open<boolean, FigmaTokenData>(FigmaTokenDialog, {
-      data: { store: this.store, figma, tokenReadable },
+      data: {
+        store: this.store,
+        figma,
+        tokenReadable,
+        secretsConfigured: this.store.page()?.secretsConfigured === true,
+      },
       width: '520px',
     });
   }

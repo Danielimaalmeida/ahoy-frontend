@@ -244,6 +244,53 @@ describe('the Agents section of Team settings', () => {
     await answer();
   });
 
+  it('keeps what was saved, with its new version, when the page cannot be read again after the save', async () => {
+    await answer();
+    choose(select('Pre-refinement'), 'story-refiner-v2');
+    await settle();
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const saved = {
+      ...getAgentSettings,
+      agents: { ...AGENTS, refinementAgent: 'story-refiner-v2', version: 3 },
+    };
+    await respond(patches()[0]!, saved);
+    settingsRead().flush(problem('internal_error'), {
+      status: 500,
+      statusText: 'Error',
+      headers: { 'content-type': 'application/problem+json' },
+    });
+    historyRead().flush(listAgentSettingsEvents);
+    await settle();
+    expect(select('Pre-refinement').value).toBe('story-refiner-v2');
+    expect(text(root)).not.toContain('Unsaved changes');
+
+    choose(select('Halt diagnosis'), 'story-refiner');
+    await settle();
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [next] = patches();
+    expect(next?.request.body).toEqual({
+      version: 3,
+      diagnosisAgent: 'story-refiner',
+    });
+    await respond(next!, saved);
+    await answer(saved);
+  });
+
+  it('lets nothing else be pressed while the spend confirmation is open', async () => {
+    await answer();
+    choose(select('Story drafts'), 'story-drafter');
+    await settle();
+    buttonNamed(root, 'Save…').click();
+    await settle();
+    expect(buttonNamed(root, 'Save…').disabled).toBe(true);
+    expect(select('Story drafts').disabled).toBe(true);
+    buttonNamed(dialog(), 'Cancel').click();
+    await settle();
+    expect(select('Story drafts').disabled).toBe(false);
+  });
+
   it('refuses a knowledge repository that is not owner/name before sending it', async () => {
     await answer();
     type(field(root, 'Knowledge repository'), 'https://github.com/acme/rules');
@@ -252,7 +299,7 @@ describe('the Agents section of Team settings', () => {
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
   });
 
-  it('says someone else changed the jobs first, and keeps the draft', async () => {
+  it('says another admin saved first, and shows their jobs instead of sending the change over them', async () => {
     await answer();
     choose(select('Halt diagnosis'), 'story-refiner');
     await settle();
@@ -267,9 +314,15 @@ describe('the Agents section of Team settings', () => {
       },
       409
     );
-    await answer();
-    expect(select('Halt diagnosis').value).toBe('story-refiner');
+    const theirs = {
+      ...getAgentSettings,
+      agents: { ...AGENTS, diagnosisAgent: 'story-refiner-v2', version: 3 },
+    };
+    await answer(theirs);
+    expect(select('Halt diagnosis').value).toBe('story-refiner-v2');
     expect(text(root)).toContain('Someone changed this since you opened it');
+    expect(text(root)).toContain('The page now shows theirs');
+    expect(text(root)).not.toContain('Unsaved changes');
   });
 
   it('says which job is paused when its profile is gone, and marks the profile gone', async () => {
@@ -316,7 +369,7 @@ describe('the Agents section of Team settings', () => {
     ].map((c) => text(c));
     expect(cells).toEqual(['story-refiner', 'halt-diagnoser', 'Off', 'Off']);
     expect(text(root)).toContain(
-      'Knowledge repository: none (a person opens the pull requests)'
+      'Knowledge repository: none (the proposals stay on the reviews)'
     );
   });
 });

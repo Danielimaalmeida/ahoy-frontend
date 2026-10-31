@@ -1,5 +1,7 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { FigmaSettings } from '@core/api/types';
 import {
   figmaTokenProblem,
@@ -12,7 +14,7 @@ import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { ToastService } from '@ui/toast/toast';
 import type { FigmaSettingsStore } from './figma-settings-store';
-import { DialogSend } from './jira-dialog-send';
+import { DialogSend } from './dialog-send';
 
 /** What the token dialog is opened with: the page's store and Figma's settings as they are. */
 export interface FigmaTokenData {
@@ -20,6 +22,8 @@ export interface FigmaTokenData {
   readonly figma: FigmaSettings;
   /** Whether the API's key opens the stored token. */
   readonly tokenReadable: boolean;
+  /** Whether the API has `AHOY_SECRETS_KEY`: without it no token can be saved, but the stored one can be removed. */
+  readonly secretsConfigured: boolean;
 }
 
 /**
@@ -28,7 +32,14 @@ export interface FigmaTokenData {
  */
 @Component({
   selector: 'ah-figma-token-dialog',
-  imports: [Banner, Button, DialogShell, Field, FieldControl],
+  imports: [
+    Banner,
+    Button,
+    DialogShell,
+    Field,
+    FieldControl,
+    ReactiveFormsModule,
+  ],
   styles: `
     .remove {
       display: flex;
@@ -51,11 +62,15 @@ export interface FigmaTokenData {
       confirmLabel="Save token"
       busyLabel="Saving…"
       [busy]="send.busy()"
-      [confirmDisabled]="problem() !== null"
+      [confirmDisabled]="problem() !== null || !data.secretsConfigured"
       [error]="send.error()"
       (confirm)="submit()"
     >
-      @if (token && !data.tokenReadable) {
+      @if (!data.secretsConfigured) {
+        <ah-banner variant="notice" heading="A token can't be saved now">
+          The API has no AHOY_SECRETS_KEY to store it encrypted.
+        </ah-banner>
+      } @else if (token && !data.tokenReadable) {
         <ah-banner variant="notice" heading="Paste the token again">
           The API's key no longer opens the stored token, so Figma stays off
           until a token is saved again.
@@ -76,8 +91,7 @@ export interface FigmaTokenData {
             spellcheck="false"
             [attr.maxlength]="maxToken"
             [attr.placeholder]="token ? 'Replaces ' + label(token.hint) : null"
-            [value]="typed()"
-            (input)="type($event)"
+            [formControl]="control"
           />
         </ah-field>
       </form>
@@ -122,20 +136,26 @@ export class FigmaTokenDialog {
   protected readonly token = this.data.figma.token;
   protected readonly label = tokenLabel;
   protected readonly maxToken = MAX_FIGMA_TOKEN_CHARS;
-  protected readonly typed = signal('');
+  protected readonly control = new FormControl(
+    { value: '', disabled: !this.data.secretsConfigured },
+    { nonNullable: true }
+  );
+  private readonly typed = toSignal(this.control.valueChanges, {
+    initialValue: '',
+  });
   protected readonly touched = signal(false);
   protected readonly confirmingRemove = signal(false);
   protected readonly problem = computed(() => figmaTokenProblem(this.typed()));
 
-  protected type(event: Event): void {
-    const target = event.target;
-    if (target instanceof HTMLInputElement) this.typed.set(target.value);
-  }
-
   /** Saves the token and closes; a refusal keeps the dialog open with the reason. */
   async submit(): Promise<void> {
     this.touched.set(true);
-    if (this.problem() !== null || this.send.busy()) return;
+    if (
+      this.problem() !== null ||
+      this.send.busy() ||
+      !this.data.secretsConfigured
+    )
+      return;
     const version = this.data.figma.version;
     await this.send.run(
       () =>

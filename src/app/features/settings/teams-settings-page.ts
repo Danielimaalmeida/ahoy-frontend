@@ -61,6 +61,39 @@ import {
       .cards strong {
         font-weight: 600;
       }
+      .kinds {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .kinds .cards {
+        flex: 1 1 280px;
+      }
+      .preview {
+        flex: 0 1 300px;
+        margin: 12px 16px;
+        padding: 12px 14px;
+        border: 1px solid var(--line-soft);
+        border-radius: 6px;
+        background: var(--surface, #fff);
+        box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .preview dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 10px;
+        margin: 0;
+      }
+      .preview dd {
+        margin: 0;
+      }
+      .preview .open {
+        align-self: flex-start;
+      }
     `,
   ],
   template: `
@@ -85,7 +118,11 @@ import {
     }
 
     @if (store.loading() && !store.page()) {
-      <div class="ah-panel loading" aria-label="Loading the Teams settings">
+      <div
+        class="ah-panel loading"
+        role="status"
+        aria-label="Loading the Teams settings"
+      >
         <ah-skeleton width="40%" />
         <ah-skeleton width="70%" />
         <ah-skeleton width="55%" />
@@ -96,13 +133,19 @@ import {
           You can read the team settings. Ask an admin to add you to
           AHOY_ADMIN_QNUMBERS.
         </ah-banner>
-      } @else if (!page.secretsConfigured) {
+      } @else if (!page.secretsConfigured && !page.teams) {
         <ah-banner variant="notice" heading="A webhook can't be saved yet">
           The API needs AHOY_SECRETS_KEY to store the webhook encrypted. Until
           it is set, the crew's channel cannot be connected.
         </ah-banner>
       }
-      @if (page.teams && !page.webhookReadable) {
+      @if (page.teams && !page.secretsConfigured) {
+        <ah-banner variant="error" heading="No card is posted">
+          The webhook is stored encrypted, and the API has no AHOY_SECRETS_KEY
+          to open it. The deployment needs the key again; the address the cards
+          link to can still change.
+        </ah-banner>
+      } @else if (page.teams && !page.webhookReadable) {
         <ah-banner variant="error" heading="The stored webhook can't be opened">
           The API's key no longer opens it, so no card is posted until an admin
           pastes the webhook again (Edit the channel).
@@ -240,23 +283,47 @@ import {
               heading="Cards the channel gets"
               subtitle="Ahoy sends these two; there is nothing to switch on."
             />
-            <ul class="cards">
-              <li>
-                <strong>A sprint starts</strong>
-                <span class="ah-hint"
-                  >Who is on and who is next. Posted on the sprint's first day
-                  from 07:00 UTC, and skipped when Ahoy is more than 3 days
-                  late.</span
-                >
-              </li>
-              <li>
-                <strong>Someone changes who is on</strong>
-                <span class="ah-hint"
-                  >Who is on now, who was, why, who changed it, and who is on
-                  for the sprints after.</span
-                >
-              </li>
-            </ul>
+            <div class="kinds">
+              <ul class="cards">
+                <li>
+                  <strong>A sprint starts</strong>
+                  <span class="ah-hint"
+                    >Who is on and who is next. Posted on the sprint's first day
+                    from 07:00 UTC, and skipped when Ahoy is more than 3 days
+                    late.</span
+                  >
+                </li>
+                <li>
+                  <strong>Someone changes who is on</strong>
+                  <span class="ah-hint"
+                    >Who is on now, who was, why, who changed it, and who is on
+                    for the sprints after.</span
+                  >
+                </li>
+              </ul>
+              <div class="preview" aria-label="Preview of a sprint-start card">
+                <span class="ah-hint"><b>Preview · in the channel</b></span>
+                <strong>🚀 Sprint 41 starts today</strong>
+                <dl>
+                  <dt>🚀 Sprint person</dt>
+                  <dd>Who is on · their release day</dd>
+                  <dt>🍕 Lunch &amp; retro host</dt>
+                  <dd>Who is on · their lunch day</dd>
+                </dl>
+                <b>Up next</b>
+                <dl>
+                  <dt>Sprint 42</dt>
+                  <dd>🚀 the next pair · 🍕</dd>
+                </dl>
+                @if (store.teams()?.uiUrl) {
+                  <span class="ah-tag ah-tag--outline open">Open Crew</span>
+                } @else {
+                  <span class="ah-hint"
+                    >No Open Crew button: no address is set.</span
+                  >
+                }
+              </div>
+            </div>
           </ah-panel>
         </div>
 
@@ -306,6 +373,7 @@ export class TeamsSettingsPage {
         store: this.store,
         teams,
         webhookReadable: this.store.page()?.webhookReadable !== false,
+        secretsConfigured: this.store.page()?.secretsConfigured === true,
       },
       width: '520px',
     });

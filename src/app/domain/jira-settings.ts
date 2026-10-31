@@ -4,6 +4,8 @@
  * from the API as `unknown` and are read field by field. Mirrors `ahoy-hosted`'s `domain/jira-settings.ts`.
  */
 
+import { isRecord } from './records';
+
 /** The fields Ahoy writes from the story itself, so none can be fixed (`ahoy-hosted` `RESERVED_STORY_FIELDS`). */
 export const RESERVED_JIRA_FIELDS = [
   'project',
@@ -183,10 +185,6 @@ export function prefixExample(
   return prefix === ''
     ? 'No prefix: the summary is the story’s title.'
     : `As in “${prefix}${summary}”`;
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** The `name` of each `{ id, name }` in a list of fields a change names. */

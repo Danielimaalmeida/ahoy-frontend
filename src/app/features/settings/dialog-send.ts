@@ -5,7 +5,7 @@ import type { ToastService } from '@ui/toast/toast';
 import { settingsErrorView } from './settings-errors';
 
 /**
- * How the Jira dialogs send a change: one at a time, a refusal kept in the dialog with its reason, and a toast and a
+ * How a settings dialog sends a change: one at a time, a refusal kept in the dialog with its reason, and a toast and a
  * close once it went through.
  */
 export class DialogSend {

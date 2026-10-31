@@ -1,10 +1,14 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { map } from 'rxjs';
 import { ok, type ApiResult } from '@core/api/api-error';
 import type { TeamsSettings } from '@core/api/types';
 import {
   MAX_UI_URL_CHARS,
   MAX_WEBHOOK_CHARS,
+  uiUrlAsKept,
   uiUrlProblem,
   webhookHost,
   webhookProblem,
@@ -14,7 +18,7 @@ import { Button } from '@ui/button/button';
 import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { ToastService } from '@ui/toast/toast';
-import { DialogSend } from './jira-dialog-send';
+import { DialogSend } from './dialog-send';
 import type { TeamsSettingsStore } from './teams-settings-store';
 
 /** What the channel dialog is opened with: the page's store and the channel as set, or null to connect it. */
@@ -23,11 +27,8 @@ export interface TeamsChannelData {
   readonly teams: TeamsSettings | null;
   /** Whether the API's key opens the stored webhook; when it does not, the webhook must be pasted again. */
   readonly webhookReadable: boolean;
-}
-
-/** The UI's address as the API keeps it: trimmed, without trailing slashes. */
-function uiUrlOf(typed: string): string {
-  return typed.trim().replace(/\/+$/, '');
+  /** Whether the API has `AHOY_SECRETS_KEY`: without it no webhook can be saved, but the address still can. */
+  readonly secretsConfigured: boolean;
 }
 
 /**
@@ -36,7 +37,14 @@ function uiUrlOf(typed: string): string {
  */
 @Component({
   selector: 'ah-teams-channel-dialog',
-  imports: [Banner, Button, DialogShell, Field, FieldControl],
+  imports: [
+    Banner,
+    Button,
+    DialogShell,
+    Field,
+    FieldControl,
+    ReactiveFormsModule,
+  ],
   styles: `
     form {
       display: flex;
@@ -76,7 +84,7 @@ function uiUrlOf(typed: string): string {
           until it is pasted again.
         </ah-banner>
       }
-      <form (submit)="$event.preventDefault(); submit()">
+      <form [formGroup]="form" (submit)="$event.preventDefault(); submit()">
         <ah-field
           [label]="connected() ? 'New webhook' : 'Webhook'"
           [required]="webhookRequired()"
@@ -90,14 +98,13 @@ function uiUrlOf(typed: string): string {
             autocomplete="off"
             spellcheck="false"
             [attr.maxlength]="maxWebhook"
+            formControlName="webhook"
             [attr.placeholder]="
-              connected() && !lostWebhook
+              connected() && !lostWebhook && data.secretsConfigured
                 ? 'Leave empty to keep the webhook on ' +
-                  (teams?.webhook?.host ?? '')
+                  (teams?.webhook.host ?? '')
                 : null
             "
-            [value]="webhook()"
-            (input)="typed($event, 'webhook')"
           />
         </ah-field>
         <ah-field
@@ -113,8 +120,7 @@ function uiUrlOf(typed: string): string {
             autocomplete="off"
             spellcheck="false"
             [attr.maxlength]="maxUiUrl"
-            [value]="uiUrl()"
-            (input)="typed($event, 'uiUrl')"
+            formControlName="uiUrl"
           />
         </ah-field>
       </form>
@@ -150,7 +156,7 @@ function uiUrlOf(typed: string): string {
   `,
 })
 export class TeamsChannelDialog {
-  private readonly data = inject<TeamsChannelData>(DIALOG_DATA);
+  protected readonly data = inject<TeamsChannelData>(DIALOG_DATA);
   private readonly ref = inject<DialogRef<boolean>>(DialogRef);
   protected readonly send = new DialogSend(this.ref, inject(ToastService));
 
@@ -160,12 +166,23 @@ export class TeamsChannelDialog {
   protected readonly subtitle = this.teams
     ? `Cards go to ${this.teams.webhook.host}`
     : 'A Teams Workflows webhook: “Post to a channel when a webhook request is received”';
-  /** Whether the stored webhook can no longer be opened, so keeping it keeps the channel off. */
+  /** Whether the API's key no longer opens the stored webhook, so keeping it keeps the channel off. */
   protected readonly lostWebhook =
-    this.teams !== null && !this.data.webhookReadable;
-
-  protected readonly webhook = signal('');
-  protected readonly uiUrl = signal(this.teams?.uiUrl ?? '');
+    this.teams !== null &&
+    this.data.secretsConfigured &&
+    !this.data.webhookReadable;
+  protected readonly form = new FormGroup({
+    webhook: new FormControl(
+      { value: '', disabled: !this.data.secretsConfigured },
+      { nonNullable: true }
+    ),
+    uiUrl: new FormControl(this.teams?.uiUrl ?? '', { nonNullable: true }),
+  });
+  /** The form's whole value, the disabled webhook too, as a signal. */
+  private readonly value = toSignal(
+    this.form.valueChanges.pipe(map(() => this.form.getRawValue())),
+    { initialValue: this.form.getRawValue() }
+  );
   protected readonly touched = signal(false);
   protected readonly confirmingOff = signal(false);
   /** The channel's version once saved: a webhook saved by this dialog moves it on before the address is saved. */
@@ -177,35 +194,35 @@ export class TeamsChannelDialog {
   protected readonly webhookRequired = computed(
     () => !this.connected() || this.lostWebhook
   );
-  protected readonly webhookError = computed(() =>
-    this.webhook().trim() === '' && !this.webhookRequired()
+  protected readonly webhookError = computed(() => {
+    const webhook = this.value().webhook;
+    return webhook.trim() === '' && !this.webhookRequired()
       ? null
-      : webhookProblem(this.webhook())
+      : webhookProblem(webhook);
+  });
+  protected readonly uiUrlError = computed(() =>
+    uiUrlProblem(this.value().uiUrl)
   );
-  protected readonly uiUrlError = computed(() => uiUrlProblem(this.uiUrl()));
   protected readonly invalid = computed(
     () => this.webhookError() !== null || this.uiUrlError() !== null
   );
   protected readonly webhookHint = computed(() => {
-    const host = webhookHost(this.webhook());
-    return host !== null && webhookProblem(this.webhook()) === null
+    if (!this.data.secretsConfigured)
+      return "The API has no AHOY_SECRETS_KEY, so a webhook can't be saved. The address below still can.";
+    const webhook = this.value().webhook;
+    const host = webhookHost(webhook);
+    return host !== null && webhookProblem(webhook) === null
       ? `Cards will go to ${host}. Stored encrypted; only its host is shown again.`
       : 'Anyone who has it can post to the channel, so it is stored encrypted and only its host is shown again.';
   });
-
-  protected typed(event: Event, field: 'webhook' | 'uiUrl'): void {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    (field === 'webhook' ? this.webhook : this.uiUrl).set(target.value);
-  }
 
   /** Saves the webhook, then the address, and closes; a refusal keeps the dialog open with the reason. */
   async submit(): Promise<void> {
     this.touched.set(true);
     if (this.invalid() || this.send.busy()) return;
-    const webhookUrl = this.webhook().trim();
-    const typedUiUrl = uiUrlOf(this.uiUrl());
-    const uiUrl = typedUiUrl === '' ? null : typedUiUrl;
+    const { webhook, uiUrl: typedUiUrl } = this.form.getRawValue();
+    const webhookUrl = this.data.secretsConfigured ? webhook.trim() : '';
+    const uiUrl = uiUrlAsKept(typedUiUrl);
     const uiChanged = uiUrl !== this.savedUiUrl();
     if (webhookUrl === '' && !uiChanged) {
       this.ref.close(false);
@@ -226,7 +243,7 @@ export class TeamsChannelDialog {
           }
           this.version.set(put.value.version);
           this.savedUiUrl.set(put.value.uiUrl);
-          this.webhook.set('');
+          this.form.controls.webhook.setValue('');
         }
         const version = this.version();
         if (uiUrl !== this.savedUiUrl() && version !== null) {

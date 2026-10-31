@@ -6,6 +6,7 @@ import {
   describeTeamsEvent,
   hasSpaceOrControl,
   MAX_WEBHOOK_CHARS,
+  uiUrlAsKept,
   uiUrlProblem,
   webhookHost,
   webhookProblem,
@@ -72,6 +73,10 @@ describe('the address the cards’ Open Crew button opens', () => {
     expect(crewPageOf('https://ahoy.example.com/team//')).toBe(
       'https://ahoy.example.com/team/crew'
     );
+    expect(uiUrlAsKept('  https://ahoy.example.com/team// ')).toBe(
+      'https://ahoy.example.com/team'
+    );
+    expect(uiUrlAsKept('   ')).toBeNull();
     expect(cardResultLabel('posted')).toBe('Posted');
     expect(cardResultLabel('failed')).toBe('Not posted');
   });

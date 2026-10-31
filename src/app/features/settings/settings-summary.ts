@@ -56,7 +56,6 @@ export function agentsState(page: AgentSettingsPage): SectionState {
 /** A section the frame shows a state for. */
 export type SettingsSectionKey =
   'sonar' | 'jira' | 'teams' | 'figma' | 'agents';
-type Section = SettingsSectionKey;
 
 /**
  * What the Team settings' frame shows around a section: whether the person is an admin and each section's state. The
@@ -81,10 +80,10 @@ export class SettingsSummary {
   readonly agents = signal<SectionState | null>(null);
 
   /** The sections whose page reads them itself. */
-  private readonly claimed = new Set<Section>();
+  private readonly claimed = new Set<SettingsSectionKey>();
 
   /** Says a section's page reads its settings, so the summary does not. */
-  claim(section: Section): void {
+  claim(section: SettingsSectionKey): void {
     this.claimed.add(section);
   }
 

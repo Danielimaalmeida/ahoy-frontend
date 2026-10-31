@@ -3,6 +3,8 @@
  * one entry of Figma's history says. Pure: payloads come from the API as `unknown` and are read field by field.
  */
 
+import { isRecord } from './records';
+
 /** The most UI builders the API takes. */
 export const MAX_UI_AGENTS = 20;
 /** The most characters of the design kit's prefix. */
@@ -12,10 +14,6 @@ export const MAX_FIGMA_TOKEN_CHARS = 1000;
 
 const PRINTABLE_WORD = /^[!-~]+$/;
 const SELECTOR_PREFIX = /^[a-z][a-z0-9]*-?$/;
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** Why a pasted token would be refused, or null when the API should take it. */
 export function figmaTokenProblem(typed: string): string | null {

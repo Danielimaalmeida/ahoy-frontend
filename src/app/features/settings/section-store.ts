@@ -5,7 +5,7 @@ import type { SettingsEvent, SettingsSection } from '@core/api/types';
 import { HISTORY_LIMIT } from './settings-store';
 import { SettingsSummary, type SettingsSectionKey } from './settings-summary';
 
-/** What every section page reads: whether the person may change it and whether the API can seal a secret. */
+/** What every section page carries: whether the person may change it. */
 interface SectionPage {
   readonly canEdit: boolean;
 }

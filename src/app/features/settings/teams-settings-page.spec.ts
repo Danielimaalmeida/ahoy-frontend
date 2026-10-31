@@ -79,6 +79,16 @@ describe('the Teams section of Team settings', () => {
     await settle();
   }
 
+  /** Opens the page again on `page`. */
+  async function reloadWith(page: object): Promise<void> {
+    fixture.destroy();
+    fixture = TestBed.createComponent(TeamsSettingsPage);
+    root = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    await settle();
+    await answer(page);
+  }
+
   const toasts = () =>
     TestBed.inject(ToastService)
       .toasts()
@@ -304,6 +314,50 @@ describe('the Teams section of Team settings', () => {
     type(field(dialog(), 'Card links open'), 'https://ahoy.example.com');
     await settle();
     expect(buttonNamed(dialog(), 'Save').disabled).toBe(true);
+  });
+
+  it('says no card is posted without the API’s key, and still lets the card links change', async () => {
+    await answer({
+      ...getTeamsSettings,
+      secretsConfigured: false,
+      webhookReadable: false,
+    });
+    expect(text(root)).toContain('No card is posted');
+    expect(text(root)).toContain('has no AHOY_SECRETS_KEY');
+    expect(text(root)).not.toContain("The stored webhook can't be opened");
+    buttonNamed(root, 'Edit').click();
+    await settle();
+    expect(field(dialog(), 'New webhook').disabled).toBe(true);
+    expect(text(dialog())).not.toContain('Paste the webhook again');
+    type(field(dialog(), 'Card links open'), 'https://ahoy.example.com/team');
+    await settle();
+    buttonNamed(dialog(), 'Save').click();
+    await settle();
+    http.expectNone({ method: 'PUT', url: `${BASE}/settings/teams/webhook` });
+    const patch = http.expectOne({
+      method: 'PATCH',
+      url: `${BASE}/settings/teams`,
+    });
+    expect(patch.request.body).toEqual({
+      version: TEAMS.version,
+      uiUrl: 'https://ahoy.example.com/team',
+    });
+    await respond(patch, updateTeamsSettings);
+    await answer({
+      ...getTeamsSettings,
+      secretsConfigured: false,
+      webhookReadable: false,
+    });
+  });
+
+  it('previews a sprint-start card, with the Open Crew button only when card links are set', async () => {
+    await answer();
+    const preview = () =>
+      root.querySelector('[aria-label="Preview of a sprint-start card"]');
+    expect(text(preview())).toContain('Sprint 41 starts today');
+    expect(text(preview())).toContain('Open Crew');
+    await reloadWith({ ...getTeamsSettings, teams: { ...TEAMS, uiUrl: null } });
+    expect(text(preview())).toContain('No Open Crew button');
   });
 
   it('shows the channel without buttons to someone who is not an admin', async () => {

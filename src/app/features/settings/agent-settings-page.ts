@@ -1,6 +1,8 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import type { ApiError } from '@core/api/api-error';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { firstValueFrom, map } from 'rxjs';
+import { isStale, type ApiError } from '@core/api/api-error';
 import type {
   AgentSettings,
   AgentSettingsChange,
@@ -10,7 +12,7 @@ import {
   AGENT_JOB_WORDS,
   jobsTurnedOn,
   knowledgeRepoProblem,
-  spendWarning,
+  MAX_KNOWLEDGE_REPO_CHARS,
   type AgentJobChoice,
   type AgentJobKey,
 } from '@domain/agent-settings';
@@ -28,21 +30,33 @@ import { SECTION_STYLES } from './section-styles';
 import { settingsErrorView } from './settings-errors';
 import { SettingsHistory } from './settings-history';
 
-/** The jobs as chosen on the page, with the knowledge repository as typed. */
-interface Draft extends AgentJobChoice {
-  readonly knowledgeRepo: string;
-}
+/** The form's value: each job's profile ('' is "Off") and the knowledge repository as typed. */
+type FormValue = Readonly<Record<AgentJobKey | 'knowledgeRepo', string>>;
 
 /** The value of the "Off" choice of a job that can be off. */
 const OFF = '';
 
-function draftOf(agents: AgentSettings): Draft {
+/** The saved jobs as the form shows them. */
+function formValueOf(agents: AgentSettings): FormValue {
   return {
     refinementAgent: agents.refinementAgent,
     diagnosisAgent: agents.diagnosisAgent,
-    storyDraftAgent: agents.storyDraftAgent,
-    knowledgeAgent: agents.knowledgeAgent,
+    storyDraftAgent: agents.storyDraftAgent ?? OFF,
+    knowledgeAgent: agents.knowledgeAgent ?? OFF,
     knowledgeRepo: agents.knowledgeRepo ?? '',
+  };
+}
+
+/** The jobs a form value chooses; "Off" is null, and a job that cannot be off keeps its saved profile. */
+function choiceOf(value: FormValue, saved: AgentSettings): AgentJobChoice {
+  const or = (typed: string, fallback: string) =>
+    typed === OFF ? fallback : typed;
+  return {
+    refinementAgent: or(value.refinementAgent, saved.refinementAgent),
+    diagnosisAgent: or(value.diagnosisAgent, saved.diagnosisAgent),
+    storyDraftAgent:
+      value.storyDraftAgent === OFF ? null : value.storyDraftAgent,
+    knowledgeAgent: value.knowledgeAgent === OFF ? null : value.knowledgeAgent,
   };
 }
 
@@ -61,6 +75,7 @@ function draftOf(agents: AgentSettings): Draft {
     Panel,
     PanelFoot,
     PanelHead,
+    ReactiveFormsModule,
     SettingsHistory,
     Skeleton,
     Table,
@@ -113,7 +128,11 @@ function draftOf(agents: AgentSettings): Draft {
     }
 
     @if (store.loading() && !store.page()) {
-      <div class="ah-panel loading" aria-label="Loading the agents' settings">
+      <div
+        class="ah-panel loading"
+        role="status"
+        aria-label="Loading the agents' settings"
+      >
         <ah-skeleton width="40%" />
         <ah-skeleton width="70%" />
         <ah-skeleton width="55%" />
@@ -179,23 +198,14 @@ function draftOf(agents: AgentSettings): Draft {
                           <select
                             ahInput
                             mono
+                            [formControl]="form.controls[job.key]"
                             [attr.aria-label]="job.name + ' profile'"
-                            [disabled]="saving()"
-                            (change)="choose(job.key, $event)"
                           >
                             @if (job.optional) {
-                              <option
-                                [value]="off"
-                                [selected]="chosen(job.key) === null"
-                              >
-                                Off
-                              </option>
+                              <option [value]="off">Off</option>
                             }
                             @for (name of choices(page, job.key); track name) {
-                              <option
-                                [value]="name"
-                                [selected]="chosen(job.key) === name"
-                              >
+                              <option [value]="name">
                                 {{ name
                                 }}{{ isGone(page, name) ? ' (gone)' : '' }}
                               </option>
@@ -225,7 +235,7 @@ function draftOf(agents: AgentSettings): Draft {
                     ' spends AIU outside a story’s budget'
                   "
                 >
-                  {{ warning(job) }} Saving asks you to confirm.
+                  {{ job.warning }} Saving asks you to confirm.
                 </ah-banner>
               }
               @if (store.canEdit()) {
@@ -233,7 +243,7 @@ function draftOf(agents: AgentSettings): Draft {
                   <ah-field
                     label="Knowledge repository"
                     optional
-                    hint="Where Business-rule review opens its pull requests (owner/name). Empty, a person opens them from the review."
+                    hint="Where Business-rule review opens its pull requests (owner/name). Empty, no pull request is opened: the proposal stays on the review."
                     [errorText]="repoError() ?? ''"
                   >
                     <input
@@ -242,10 +252,8 @@ function draftOf(agents: AgentSettings): Draft {
                       type="text"
                       autocomplete="off"
                       spellcheck="false"
-                      maxlength="200"
-                      [value]="draft()?.knowledgeRepo ?? ''"
-                      [disabled]="saving()"
-                      (input)="typeRepo($event)"
+                      [attr.maxlength]="maxRepo"
+                      [formControl]="form.controls.knowledgeRepo"
                     />
                   </ah-field>
                 </div>
@@ -254,7 +262,7 @@ function draftOf(agents: AgentSettings): Draft {
                   >Knowledge repository:
                   <span class="ah-mono">{{
                     page.agents.knowledgeRepo ??
-                      'none (a person opens the pull requests)'
+                      'none (the proposals stay on the reviews)'
                   }}</span></span
                 >
               }
@@ -274,7 +282,7 @@ function draftOf(agents: AgentSettings): Draft {
                   <button
                     ahButton="ghost"
                     type="button"
-                    [disabled]="!dirty() || saving()"
+                    [disabled]="!dirty() || busy()"
                     (click)="reset()"
                   >
                     Cancel
@@ -282,7 +290,7 @@ function draftOf(agents: AgentSettings): Draft {
                   <button
                     ahButton="primary"
                     type="button"
-                    [disabled]="!dirty() || saving() || repoError() !== null"
+                    [disabled]="!dirty() || busy() || repoError() !== null"
                     (click)="save(page.agents)"
                   >
                     {{
@@ -317,38 +325,57 @@ export class AgentSettingsPage {
   private readonly toasts = inject(ToastService);
   protected readonly jobs = AGENT_JOB_WORDS;
   protected readonly off = OFF;
-  protected readonly warning = spendWarning;
+  protected readonly maxRepo = MAX_KNOWLEDGE_REPO_CHARS;
 
-  /** The jobs as chosen; they follow the saved ones until the admin changes one. */
-  protected readonly draft = signal<Draft | null>(null);
-  /** The saved jobs the draft started from. */
-  private readonly saved = computed(() => {
-    const agents = this.store.page()?.agents;
-    return agents === undefined ? null : draftOf(agents);
+  /** The jobs as chosen and the repository as typed; it follows the saved jobs until the admin changes one. */
+  protected readonly form = new FormGroup({
+    refinementAgent: new FormControl(OFF, { nonNullable: true }),
+    diagnosisAgent: new FormControl(OFF, { nonNullable: true }),
+    storyDraftAgent: new FormControl(OFF, { nonNullable: true }),
+    knowledgeAgent: new FormControl(OFF, { nonNullable: true }),
+    knowledgeRepo: new FormControl('', { nonNullable: true }),
   });
+  /** The form's whole value, disabled controls too, as a signal. */
+  private readonly value = toSignal(
+    this.form.valueChanges.pipe(map(() => this.form.getRawValue())),
+    { initialValue: this.form.getRawValue() }
+  );
+  /** The saved jobs, as the API last answered them. */
+  private readonly agents = computed(() => this.store.page()?.agents ?? null);
   protected readonly dirty = computed(() => {
-    const saved = this.saved();
-    const draft = this.draft();
-    if (saved === null || draft === null) return false;
+    const agents = this.agents();
+    if (agents === null) return false;
+    const saved = formValueOf(agents);
+    const value = this.value();
     return (
-      AGENT_JOB_WORDS.some((job) => saved[job.key] !== draft[job.key]) ||
-      saved.knowledgeRepo !== draft.knowledgeRepo.trim()
+      AGENT_JOB_WORDS.some((job) => saved[job.key] !== value[job.key]) ||
+      saved.knowledgeRepo !== value.knowledgeRepo.trim()
     );
   });
-  /** The jobs the draft turns on: saving them asks for a confirmation. */
+  /** The jobs the form turns on: saving them asks for a confirmation. */
   protected readonly turnedOn = computed(() => {
-    const saved = this.saved();
-    const draft = this.draft();
-    return saved === null || draft === null ? [] : jobsTurnedOn(saved, draft);
+    const agents = this.agents();
+    if (agents === null) return [];
+    return jobsTurnedOn(agents, choiceOf(this.value(), agents));
   });
   protected readonly repoError = computed(() =>
-    knowledgeRepoProblem(this.draft()?.knowledgeRepo ?? '')
+    knowledgeRepoProblem(this.value().knowledgeRepo)
   );
+  /** Waiting for the admin to confirm what turning a job on spends. */
+  private readonly confirming = signal(false);
   protected readonly saving = signal(false);
+  /** Saving, or asking first: nothing else can be pressed. */
+  protected readonly busy = computed(() => this.saving() || this.confirming());
   private readonly saveError = signal<ApiError | null>(null);
   protected readonly saveFailure = computed(() => {
     const error = this.saveError();
-    return error === null ? null : settingsErrorView(error);
+    if (error === null) return null;
+    return isStale(error)
+      ? {
+          ...settingsErrorView(error),
+          text: 'Another admin saved the agents’ jobs first. The page now shows theirs: make your change again.',
+        }
+      : settingsErrorView(error);
   });
   protected readonly failure = computed(() => {
     const error = this.store.loadError();
@@ -357,22 +384,15 @@ export class AgentSettingsPage {
 
   constructor() {
     void this.store.load();
-    // The draft follows the saved jobs until the admin changes one; a save or a change elsewhere moves it on.
-    let last: Draft | null = null;
+    // The form follows the saved jobs until the admin changes one; a save or a change elsewhere moves it on.
     effect(() => {
-      const saved = this.saved();
-      if (saved === null) return;
-      const draft = this.draft();
-      const untouched =
-        draft === null || last === null || sameDraft(draft, last);
-      last = saved;
-      if (untouched) this.draft.set(saved);
+      const agents = this.agents();
+      if (agents !== null && this.form.pristine) this.show(agents);
     });
-  }
-
-  /** The profile a job has in the draft; undefined before the page is read. */
-  protected chosen(job: AgentJobKey): string | null | undefined {
-    return this.draft()?.[job];
+    effect(() => {
+      if (this.busy()) this.form.disable({ emitEvent: false });
+      else this.form.enable({ emitEvent: false });
+    });
   }
 
   /** "Profiles from the content repository at a1b2c3d." */
@@ -406,46 +426,36 @@ export class AgentSettingsPage {
     return saved !== null && !names.includes(saved) ? [saved, ...names] : names;
   }
 
-  protected choose(job: AgentJobKey, event: Event): void {
-    const target = event.target;
-    const draft = this.draft();
-    if (!(target instanceof HTMLSelectElement) || draft === null) return;
-    const value = target.value === OFF ? null : target.value;
-    if (value === null && !this.isOptional(job)) return;
-    this.draft.set(withJob(draft, job, value));
-    this.saveError.set(null);
-  }
-
-  protected typeRepo(event: Event): void {
-    const target = event.target;
-    const draft = this.draft();
-    if (!(target instanceof HTMLInputElement) || draft === null) return;
-    this.draft.set({ ...draft, knowledgeRepo: target.value });
-  }
-
   /** Puts the saved jobs back. */
   protected reset(): void {
-    const saved = this.saved();
-    if (saved !== null) this.draft.set(saved);
+    const agents = this.agents();
+    if (agents !== null) this.show(agents);
     this.saveError.set(null);
+  }
+
+  /** Shows the saved jobs, as yet unchanged. */
+  private show(agents: AgentSettings): void {
+    this.form.reset(formValueOf(agents));
   }
 
   /** Saves what changed; a change that turns a job on asks first and is sent with `confirmSpend`. */
   protected async save(agents: AgentSettings): Promise<void> {
-    const draft = this.draft();
-    const saved = this.saved();
-    if (draft === null || saved === null || this.saving() || !this.dirty())
-      return;
+    if (this.busy() || !this.dirty()) return;
+    const value = this.form.getRawValue();
+    const draft = choiceOf(value, agents);
     const turnedOn = this.turnedOn();
     if (turnedOn.length > 0) {
+      this.confirming.set(true);
       const ref = this.dialogs.open<boolean, AgentsSpendData>(
         AgentsSpendDialog,
         { data: { jobs: turnedOn }, width: '480px' }
       );
-      if ((await firstValueFrom(ref.closed)) !== true) return;
+      const confirmed = (await firstValueFrom(ref.closed)) === true;
+      this.confirming.set(false);
+      if (!confirmed) return;
     }
-    const repo = draft.knowledgeRepo.trim();
-    const changed = (job: AgentJobKey) => draft[job] !== saved[job];
+    const repo = value.knowledgeRepo.trim();
+    const changed = (job: AgentJobKey) => draft[job] !== agents[job];
     const body: AgentSettingsChange = {
       ...(agents.version !== null ? { version: agents.version } : {}),
       ...(changed('refinementAgent')
@@ -460,7 +470,7 @@ export class AgentSettingsPage {
       ...(changed('knowledgeAgent')
         ? { knowledgeAgent: draft.knowledgeAgent }
         : {}),
-      ...(repo !== saved.knowledgeRepo
+      ...(repo !== (agents.knowledgeRepo ?? '')
         ? { knowledgeRepo: repo === '' ? null : repo }
         : {}),
       ...(turnedOn.length > 0 ? { confirmSpend: true } : {}),
@@ -471,35 +481,16 @@ export class AgentSettingsPage {
     this.saving.set(false);
     if (!result.ok) {
       this.saveError.set(result.error);
+      // Someone else saved first: show theirs rather than send this change over it with their version.
+      const now = this.agents();
+      if (isStale(result.error) && now !== null) this.show(now);
       return;
     }
-    this.draft.set(draftOf(result.value.agents));
+    this.show(result.value.agents);
     this.toasts.show(
       turnedOn.length > 0
         ? `${turnedOn.map((j) => j.name).join(' and ')} on. Agents' jobs saved.`
         : "Agents' jobs saved."
     );
-  }
-}
-
-/** Whether two drafts choose the same. */
-function sameDraft(a: Draft, b: Draft): boolean {
-  return (
-    AGENT_JOB_WORDS.every((job) => a[job.key] === b[job.key]) &&
-    a.knowledgeRepo === b.knowledgeRepo
-  );
-}
-
-/** The draft with one job's profile changed; a job that cannot be off keeps its profile. */
-function withJob(draft: Draft, job: AgentJobKey, value: string | null): Draft {
-  switch (job) {
-    case 'refinementAgent':
-      return value === null ? draft : { ...draft, refinementAgent: value };
-    case 'diagnosisAgent':
-      return value === null ? draft : { ...draft, diagnosisAgent: value };
-    case 'storyDraftAgent':
-      return { ...draft, storyDraftAgent: value };
-    case 'knowledgeAgent':
-      return { ...draft, knowledgeAgent: value };
   }
 }

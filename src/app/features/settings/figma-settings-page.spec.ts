@@ -335,6 +335,35 @@ describe('the Figma section of Team settings', () => {
     expect(text(dialog())).toContain('Paste the token again');
   });
 
+  it('says Figma is off without the API’s key, saves no token, and still removes the stored one', async () => {
+    await answer({
+      ...getFigmaSettings,
+      secretsConfigured: false,
+      tokenReadable: false,
+    });
+    expect(text(root)).toContain('has no AHOY_SECRETS_KEY');
+    expect(text(root)).not.toContain("The stored token can't be opened");
+    buttonNamed(root, 'Replace').click();
+    await settle();
+    expect(field(dialog(), 'Personal access token').disabled).toBe(true);
+    expect(buttonNamed(dialog(), 'Save token').disabled).toBe(true);
+    buttonNamed(dialog(), 'Remove the token…').click();
+    await settle();
+    buttonNamed(dialog(), 'Remove the token').click();
+    await settle();
+    await respond(
+      http.expectOne({ method: 'DELETE', url: `${BASE}/settings/figma/token` }),
+      deleteFigmaToken
+    );
+    await answer({
+      ...getFigmaSettings,
+      secretsConfigured: false,
+      tokenReadable: false,
+      figma: deleteFigmaToken,
+    });
+    expect(text(root)).toContain('Figma is off');
+  });
+
   it('shows the settings without buttons to someone who is not an admin', async () => {
     await answer({ ...getFigmaSettings, canEdit: false });
     expect(text(root)).toContain('Only admins change these');
