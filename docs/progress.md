@@ -10,6 +10,13 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
+- **This branch (`feat/runtime-config`, 2026-10-30):** one image for every team, toward a Helm chart (F17,
+  architecture "Runtime configuration"). `main.ts` reads `/config.json` once before bootstrap: the WebEAM realm and
+  client (`auth`) give every endpoint, the redirects default to the page's origin or take the client's registered ones,
+  debug logging is off unless asked, and an invalid `auth` stops the app with its problems on screen; the rest of the
+  document goes to `initAppConfig` without a second fetch. The Backlog's Jira link has no acme default (no
+  `jiraBaseUrl`, no link). `environment.test.ts` still
+  holds FIO's realm and client as the fallback until the TEST deployment mounts `/config.json`.
 - **On `main`:** the shell with All hands and Needs you, Voyages, Set sail with the model catalogue, the Docks (the Jira
   backlog with readiness, harness fit and Refine), the voyage page (header with Stop, Resume, Budget, Models, Unblock,
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
@@ -32,16 +39,14 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Proof
 
-- **Last full run** (2026-10-28, `fix/meeting-answers-review`, cloud container, Node 24, a local stand-in for
-  `@acme-fedev/auth` because the private registry is not reachable, dependencies installed without the lock file, with
-  `@angular/compiler-cli`, `build` and `cli` at the locked 22.2.1): Vitest 166 files, 3,016 tests, all passed; `tsc`
-  for app and specs, `check-boundaries`, `eslint`, `stylelint`, `ng build` and `openapi-mirror --check` passed
-  (`crew-page.ts` and `docks.ts` styles are over the 4 kB warning budget, as on `main`). `prettier --check` flags only
-  `docs/architecture.md`, which fails on `main` too. `npm run test:scripts` cannot run (`main` removed
-  `scripts/redact.mjs` but `package.json` still names it). Answers are proven by component tests on the mock backend
-  (answer, Reopen, the panel, after the meeting ended with an image and a refused one, removing the last answer, the
-  Confluence text) and by the guards, mock and contract specs; not run in a browser or against an API; Playwright was
-  not run.
+- **Last full run** (2026-10-30, `feat/runtime-config`, cloud container, Node 24.22.2 through `npx node@24`, a local
+  stand-in for `@acme-fedev/auth` and `@acme-fedev/playwright-helpers` because the private registry is not reachable,
+  dependencies installed without the lock file and with `--ignore-scripts`, with `@angular/compiler-cli`, `build` and
+  `cli` at the locked 22.2.1): Vitest 169 files, 3,056 tests, all passed; `npm run typecheck` (app, specs,
+  `check-boundaries`), `npm run lint` (eslint, stylelint) and `ng build` passed (the `crew-page.ts`, `docks.ts` and
+  `metrics.scss` styles are over the 4 kB warning budget, as on `main`). `prettier --check` flags only
+  `docs/architecture.md` and `src/app/features/meetings/meetings.spec.ts`, which fail on `main` too. Not run: the
+  real `@acme-fedev/auth` (so a sign-in against a realm from `/config.json` is unproven), nginx, Playwright, a browser.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
   `npm run api:types` is byte-identical to the committed file.
@@ -59,6 +64,11 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   a test helper, is a runtime dependency. Changing either is a dependency change and needs approval.
 
 ## Next, in order
+
+- **Before the next TEST deploy of the front end** (2026-10-30): mount a `/config.json` with FIO's `auth` (realm and
+  client from `environment.test.ts`, and the three redirect URIs exactly as FIO's client registered them: today's
+  build sends `<origin>/`, and `<origin>//ui/oauth/silent-refresh.html` for silent refresh), `jiraBaseUrl` (`https://atc.acmegroup.net/jira`) and `allowedQnumbers`, then
+  sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
 1. Merge the `ahoy-hosted` answers pull request (migration 0024), then this branch. On a machine with the private registry and Node 24, repeat the full

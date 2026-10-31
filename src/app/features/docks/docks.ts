@@ -1195,11 +1195,12 @@ export class Docks {
     ).length;
   }
 
-  /** The team's Jira issue page, with an optional runtime override for another Jira. */
-  protected jiraUrl(key: string): string {
-    const base =
-      this.config.config().jiraBaseUrl ?? 'https://atc.acmegroup.net/jira';
-    return `${base}/browse/${encodeURIComponent(key)}`;
+  /** The team's Jira issue page, or null (no link) when `/config.json` names no Jira. */
+  protected jiraUrl(key: string): string | null {
+    const base = this.config.config().jiraBaseUrl;
+    return base === undefined
+      ? null
+      : `${base}/browse/${encodeURIComponent(key)}`;
   }
 
   protected readonly activeRefinement = isActiveRefinement;

@@ -1,8 +1,15 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal, type Signal } from '@angular/core';
+import {
+  InjectionToken,
+  Injectable,
+  inject,
+  signal,
+  type Signal,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { isRecord } from '@core/api/guard-kit';
 import { normalizeQnumber } from '@domain/access';
+import { readBaseUrl, readLine } from '@domain/config-values';
 
 /**
  * Runtime configuration, read from `/config.json` at start-up. In production whatever serves the app (the nginx of the
@@ -17,7 +24,7 @@ export interface AppConfig {
    * or "(you)", the avatar and the owner checks will disagree with what the API records.
    */
   readonly actor: string;
-  /** Optional Jira base URL override; Backlog defaults to `https://atc.acmegroup.net/jira`. */
+  /** The team's Jira base URL, for the Backlog's issue links; without it the Backlog shows no Jira link. */
   readonly jiraBaseUrl?: string;
   /**
    * The qnumbers allowed to use the app, lower-cased. Anyone else sees "Access denied". Without it the app does not
@@ -61,35 +68,6 @@ function readApiBase(value: unknown): string | null {
   return trimmed === '' ? null : trimmed;
 }
 
-/** The `actor` for a document value: 1 to 200 characters without control characters, or null. */
-function readActor(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length >= 1 &&
-    trimmed.length <= 200 &&
-    !/\p{Cc}/u.test(trimmed)
-    ? trimmed
-    : null;
-}
-
-/** The `jiraBaseUrl` for a document value: an http(s) URL without credentials, query or fragment, or null. */
-function readJiraBaseUrl(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  try {
-    const url = new URL(value);
-    const plain =
-      url.username === '' &&
-      url.password === '' &&
-      url.search === '' &&
-      url.hash === '';
-    if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !plain)
-      return null;
-    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * The `allowedQnumbers` for a document value: an array of qnumbers, or a text with them separated by commas or spaces.
  * Lower-cased; null when it is neither, or when any entry is not a qnumber (one typo must not open or close the app
@@ -117,7 +95,7 @@ const isSet = (value: unknown): boolean =>
 
 /**
  * Reads a `/config.json` document. Everything in it is untrusted: a field that is not set (missing, `null`, or an empty
- * `jiraBaseUrl`, which leaves the Backlog's Jira default in force) takes its default, and so does one that is invalid, with a note in
+ * `jiraBaseUrl`, which leaves the Backlog without Jira links) takes its default, and so does one that is invalid, with a note in
  * `problems`. Fields the app does not know are ignored.
  */
 export function parseAppConfig(document: unknown): ParsedAppConfig {
@@ -132,7 +110,7 @@ export function parseAppConfig(document: unknown): ParsedAppConfig {
   if (isSet(document['apiBase']) && apiBase === null) {
     problems.push('apiBase must be a path on this origin, such as /api/v1');
   }
-  const actor = readActor(document['actor']);
+  const actor = readLine(document['actor']);
   if (isSet(document['actor']) && actor === null) {
     problems.push(
       'actor must be 1 to 200 characters without control characters'
@@ -141,7 +119,7 @@ export function parseAppConfig(document: unknown): ParsedAppConfig {
   const jiraBaseUrl =
     document['jiraBaseUrl'] === ''
       ? null
-      : readJiraBaseUrl(document['jiraBaseUrl']);
+      : readBaseUrl(document['jiraBaseUrl'], 'any');
   if (
     isSet(document['jiraBaseUrl']) &&
     document['jiraBaseUrl'] !== '' &&
@@ -220,11 +198,26 @@ export class AppConfigStore {
   }
 }
 
+/** The `/config.json` document `main.ts` already read before start-up; `undefined` when there was none to read. */
+export interface PreloadedAppConfig {
+  readonly document: unknown;
+}
+
+/** Provided by `main.ts`, which reads `/config.json` for the sign-in, so that start-up does not fetch it twice. */
+export const PRELOADED_APP_CONFIG = new InjectionToken<PreloadedAppConfig>(
+  'PRELOADED_APP_CONFIG'
+);
+
 /** App initializer: reads `/config.json` before the app opens, so that nothing runs on defaults by accident. */
 export async function initAppConfig(): Promise<void> {
-  const http = inject(HttpClient);
   const store = inject(AppConfigStore);
-  const { config, problems } = await loadAppConfig(http);
+  const preloaded = inject(PRELOADED_APP_CONFIG, { optional: true });
+  const { config, problems } =
+    preloaded === null
+      ? await loadAppConfig(inject(HttpClient))
+      : preloaded.document === undefined
+        ? { config: DEFAULT_APP_CONFIG, problems: [] }
+        : parseAppConfig(preloaded.document);
   for (const problem of problems)
     console.warn(`config.json: ${problem}; using the default`);
   store.set(config);
