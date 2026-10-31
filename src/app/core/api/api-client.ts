@@ -33,6 +33,11 @@ import {
   isCrewMember,
   isCrewTimeOff,
   isMe,
+  isJiraBacklogPreview,
+  isJiraFieldPage,
+  isJiraSettings,
+  isJiraSettingsPage,
+  isJiraTest,
   isSettingsEventPage,
   isSonarRepository,
   isSonarServer,
@@ -85,7 +90,15 @@ import type {
   CrewTimeOff,
   CrewTimeOffRequest,
   Me,
+  JiraBacklogPreview,
+  JiraConnectionRequest,
+  JiraFieldPage,
+  JiraSettings,
+  JiraSettingsChange,
+  JiraSettingsPage,
+  JiraTest,
   SettingsEventPage,
+  SettingsSection,
   SonarRepository,
   SonarRepositoryChange,
   SonarRepositoryRequest,
@@ -1278,17 +1291,91 @@ export class ApiClient {
     );
   }
 
-  /** Who changed which team setting and when, newest first. */
-  listSettingsEvents(limit?: number): Promise<ApiResult<SettingsEventPage>> {
+  /** Jira as the team set it (null while it is off), and whether the person may change it. No token comes back. */
+  getJiraSettings(): Promise<ApiResult<JiraSettingsPage>> {
+    return this.get('getJiraSettings', '/settings/jira', isJiraSettingsPage);
+  }
+
+  /** Connects Jira, or changes its base URL or token (admins only); moving to another URL needs the token again. */
+  putJiraConnection(
+    body: JiraConnectionRequest
+  ): Promise<ApiResult<JiraSettings>> {
+    return this.send(
+      'putJiraConnection',
+      isJiraSettings,
+      this.http.put<unknown>(this.url('/settings/jira/connection'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Changes the backlog query, the crew's board or the meeting stories' prefix and fields (admins only). */
+  updateJiraSettings(
+    body: JiraSettingsChange
+  ): Promise<ApiResult<JiraSettings>> {
+    return this.send(
+      'updateJiraSettings',
+      isJiraSettings,
+      this.http.patch<unknown>(this.url('/settings/jira'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Turns Jira off (admins only). The answer (204) has no body. */
+  deleteJiraSettings(): Promise<ApiResult<null>> {
+    return this.delete('deleteJiraSettings', '/settings/jira');
+  }
+
+  /** Asks Jira who the stored token is and keeps the answer as the last test (admins only). 0 AIU. */
+  testJiraConnection(): Promise<ApiResult<JiraTest>> {
+    return this.post(
+      'testJiraConnection',
+      '/settings/jira/test',
+      null,
+      isJiraTest
+    );
+  }
+
+  /** How many issues a backlog query matches, and the first, before it is saved (admins only). 0 AIU. */
+  previewJiraBacklog(jql: string): Promise<ApiResult<JiraBacklogPreview>> {
+    return this.post(
+      'previewJiraBacklog',
+      '/settings/jira/backlog-preview',
+      { jql },
+      isJiraBacklogPreview
+    );
+  }
+
+  /** Jira's fields whose name or id holds `q`, at most 25, for adding a fixed field (admins only). 0 AIU. */
+  listJiraFields(q?: string): Promise<ApiResult<JiraFieldPage>> {
     const params =
-      limit !== undefined
-        ? new HttpParams().set('limit', String(limit))
+      q !== undefined && q.trim() !== ''
+        ? new HttpParams().set('q', q.trim())
         : undefined;
+    return this.get(
+      'listJiraFields',
+      '/settings/jira/fields',
+      isJiraFieldPage,
+      params
+    );
+  }
+
+  /** Who changed which team setting and when, newest first; `section` keeps one part of the settings. */
+  listSettingsEvents(
+    limit?: number,
+    section?: SettingsSection
+  ): Promise<ApiResult<SettingsEventPage>> {
+    let params = new HttpParams();
+    if (limit !== undefined) params = params.set('limit', String(limit));
+    if (section !== undefined) params = params.set('section', section);
     return this.get(
       'listSettingsEvents',
       '/settings/events',
       isSettingsEventPage,
-      params
+      params.keys().length > 0 ? params : undefined
     );
   }
 

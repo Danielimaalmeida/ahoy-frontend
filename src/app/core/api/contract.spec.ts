@@ -3,7 +3,13 @@ import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
 import addSonarRepository from '@testing/fixtures/addSonarRepository.json';
 import addSonarServer from '@testing/fixtures/addSonarServer.json';
 import getMe from '@testing/fixtures/getMe.json';
+import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
 import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
+import listJiraFields from '@testing/fixtures/listJiraFields.json';
+import previewJiraBacklog from '@testing/fixtures/previewJiraBacklog.json';
+import putJiraConnection from '@testing/fixtures/putJiraConnection.json';
+import testJiraConnection from '@testing/fixtures/testJiraConnection.json';
+import updateJiraSettings from '@testing/fixtures/updateJiraSettings.json';
 import listSettingsEvents from '@testing/fixtures/listSettingsEvents.json';
 import updateSonarRepository from '@testing/fixtures/updateSonarRepository.json';
 import updateSonarServer from '@testing/fixtures/updateSonarServer.json';
@@ -197,6 +203,12 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['addSonarRepository', addSonarRepository],
   ['updateSonarRepository', updateSonarRepository],
   ['listSettingsEvents', listSettingsEvents],
+  ['getJiraSettings', getJiraSettings],
+  ['putJiraConnection', putJiraConnection],
+  ['updateJiraSettings', updateJiraSettings],
+  ['testJiraConnection', testJiraConnection],
+  ['previewJiraBacklog', previewJiraBacklog],
+  ['listJiraFields', listJiraFields],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -211,6 +223,7 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'clearCrewSprintChange',
   'deleteSonarServer',
   'deleteSonarRepository',
+  'deleteJiraSettings',
 ];
 
 /**
@@ -244,7 +257,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      85
+      92
     );
   });
 

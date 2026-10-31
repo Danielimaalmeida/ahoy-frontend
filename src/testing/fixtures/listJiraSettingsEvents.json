@@ -1,0 +1,85 @@
+{
+  "items": [
+    {
+      "id": 14,
+      "type": "jira_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "jira_settings:1",
+      "payload": {
+        "changes": {
+          "backlogJql": {
+            "from": "project = PROJ",
+            "to": "project = PROJ ORDER BY Rank ASC"
+          }
+        }
+      },
+      "createdAt": "2026-10-31T10:20:00.000Z"
+    },
+    {
+      "id": 13,
+      "type": "jira_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "jira_settings:1",
+      "payload": {
+        "changes": {
+          "board": {
+            "from": null,
+            "to": 87022,
+            "name": "Checkout board"
+          }
+        }
+      },
+      "createdAt": "2026-10-30T16:02:00.000Z"
+    },
+    {
+      "id": 12,
+      "type": "jira_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "jira_settings:1",
+      "payload": {
+        "changes": {
+          "tokenHint": {
+            "from": "02be",
+            "to": "7c21"
+          }
+        }
+      },
+      "createdAt": "2026-10-29T09:30:00.000Z"
+    },
+    {
+      "id": 11,
+      "type": "jira_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "jira_settings:1",
+      "payload": {
+        "changes": {
+          "storyFields": {
+            "added": [
+              {
+                "id": "customfield_14300",
+                "name": "Epic link"
+              }
+            ]
+          }
+        }
+      },
+      "createdAt": "2026-10-28T17:22:00.000Z"
+    },
+    {
+      "id": 10,
+      "type": "jira_settings.connected",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "jira_settings:1",
+      "payload": {
+        "baseUrl": "https://jira.example.com/jira",
+        "tokenHint": "02be"
+      },
+      "createdAt": "2026-10-28T17:10:00.000Z"
+    }
+  ]
+}

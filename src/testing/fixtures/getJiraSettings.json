@@ -1,0 +1,56 @@
+{
+  "canEdit": true,
+  "secretsConfigured": true,
+  "tokenReadable": true,
+  "jira": {
+    "connection": {
+      "baseUrl": "https://jira.example.com/jira",
+      "tokenHint": "7c21",
+      "tokenSetBy": "alex@example.com",
+      "tokenSetByName": "Alex Example",
+      "tokenSetAt": "2026-10-29T09:30:00.000Z",
+      "lastTest": {
+        "result": "ok",
+        "detail": "Ahoy service (svc-ahoy)",
+        "at": "2026-10-31T10:14:00.000Z"
+      }
+    },
+    "backlogJql": "project = PROJ AND issuetype in (Story, Task, Bug)\nAND status in (Open, \"In Specification\", \"In Test\")\nORDER BY Rank ASC",
+    "board": {
+      "id": 87022,
+      "name": "Checkout board",
+      "type": "scrum"
+    },
+    "currentSprint": {
+      "name": "PROJ Sprint 41",
+      "startsOn": "2026-10-26",
+      "endsOn": "2026-11-06"
+    },
+    "storySummaryPrefix": "[PROJ] ",
+    "storyFields": [
+      {
+        "id": "customfield_11400",
+        "name": "Feature team",
+        "value": [
+          {
+            "value": "Checkout"
+          }
+        ]
+      },
+      {
+        "id": "customfield_11200",
+        "name": "Team",
+        "value": "4211"
+      },
+      {
+        "id": "customfield_14300",
+        "name": "Epic link",
+        "value": ["PROJ-6"]
+      }
+    ],
+    "version": 5,
+    "updatedBy": "alex@example.com",
+    "updatedByName": "Alex Example",
+    "updatedAt": "2026-10-31T10:20:00.000Z"
+  }
+}

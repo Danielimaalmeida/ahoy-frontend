@@ -1,0 +1,47 @@
+{
+  "connection": {
+    "baseUrl": "https://jira.example.com/jira",
+    "tokenHint": "9f3a",
+    "tokenSetBy": "alex@example.com",
+    "tokenSetByName": "Alex Example",
+    "tokenSetAt": "2026-10-31T11:00:00.000Z",
+    "lastTest": null
+  },
+  "backlogJql": "project = PROJ AND issuetype in (Story, Task, Bug)\nAND status in (Open, \"In Specification\", \"In Test\")\nORDER BY Rank ASC",
+  "board": {
+    "id": 87022,
+    "name": "Checkout board",
+    "type": "scrum"
+  },
+  "currentSprint": {
+    "name": "PROJ Sprint 41",
+    "startsOn": "2026-10-26",
+    "endsOn": "2026-11-06"
+  },
+  "storySummaryPrefix": "[PROJ] ",
+  "storyFields": [
+    {
+      "id": "customfield_11400",
+      "name": "Feature team",
+      "value": [
+        {
+          "value": "Checkout"
+        }
+      ]
+    },
+    {
+      "id": "customfield_11200",
+      "name": "Team",
+      "value": "4211"
+    },
+    {
+      "id": "customfield_14300",
+      "name": "Epic link",
+      "value": ["PROJ-6"]
+    }
+  ],
+  "version": 6,
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-10-31T10:20:00.000Z"
+}

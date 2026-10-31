@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "id": "customfield_14300",
+      "name": "Epic link",
+      "type": "any"
+    },
+    {
+      "id": "customfield_11400",
+      "name": "Feature team",
+      "type": "array"
+    },
+    {
+      "id": "customfield_14301",
+      "name": "Release train",
+      "type": "array"
+    }
+  ]
+}

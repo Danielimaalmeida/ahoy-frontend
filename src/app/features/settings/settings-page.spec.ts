@@ -63,7 +63,7 @@ function type(control: HTMLInputElement, value: string): void {
   control.dispatchEvent(new Event('input'));
 }
 
-describe('the Team settings page', () => {
+describe('the SonarQube section of Team settings', () => {
   let fixture: ComponentFixture<SettingsPage>;
   let http: HttpTestingController;
   let root: HTMLElement;
@@ -129,6 +129,7 @@ describe('the Team settings page', () => {
     ).not.toBeNull();
     const history = historyRead();
     expect(history.request.params.get('limit')).toBe('50');
+    expect(history.request.params.get('section')).toBe('sonar');
     settingsRead().flush(getSonarSettings);
     history.flush(listSettingsEvents);
     await settle();
@@ -155,7 +156,7 @@ describe('the Team settings page', () => {
       [...(repositories[0]?.children ?? [])].slice(0, 3).map((c) => text(c))
     ).toEqual(['acme/orders-web', 'Main SonarQube', 'acme_orders_web']);
     const changes = [
-      ...root.querySelectorAll('[aria-label="Changes to team settings"] li'),
+      ...root.querySelectorAll('[aria-label="Changes to SonarQube"] li'),
     ];
     expect(
       changes.map((c) => text(c.querySelector('.history__text > span')))
@@ -169,8 +170,7 @@ describe('the Team settings page', () => {
     expect(text(root.querySelector('.side'))).toContain(
       'Kept for good. A token shows only its last four characters.'
     );
-    expect(text(root)).toContain('Account › Team settings');
-    expect(text(root)).toContain('You can change these · admin');
+    expect(text(root.querySelector('h2'))).toBe('SonarQube');
     expect(buttonNamed(root, 'Add server').disabled).toBe(false);
     expect(buttonNamed(root, 'Edit Main SonarQube')).toBeDefined();
   });

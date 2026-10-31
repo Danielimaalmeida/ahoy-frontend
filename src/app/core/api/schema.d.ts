@@ -1869,6 +1869,123 @@ export interface paths {
     readonly patch: operations['updateSonarRepository'];
     readonly trace?: never;
   };
+  readonly '/settings/jira': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The team's Jira, which the backlog, intake, the crew's sprints and stories from meetings read.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place Jira is
+     *     configured. `jira` is null while Jira is off. The token is never returned: only its last four characters.
+     *     `currentSprint` is the board's active sprint (else its next), when Jira answers within 3 seconds. 0 AIU.
+     */
+    readonly get: operations['getJiraSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Turn Jira off, removing its settings and token. Admins only.
+     * @description The backlog, intake and stories from meetings stop until Jira is connected again.
+     */
+    readonly delete: operations['deleteJiraSettings'];
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Change the backlog query, the crew's board, the summary prefix or the fixed fields. Admins only.
+     * @description `backlogJql: null` turns the Backlog page off and `boardId: null` the crew's sprints. A new board is looked up
+     *     in Jira: one the token cannot see is refused (`400`); when Jira does not answer it is saved without its name.
+     *     `storyFields` replaces the list; a field Ahoy writes itself (project, issuetype, summary, description, labels,
+     *     acceptance criteria) is refused. `409 invalid_state` while Jira is not connected, `409 stale_version` when
+     *     `version` is not the settings'.
+     */
+    readonly patch: operations['updateJiraSettings'];
+    readonly trace?: never;
+  };
+  readonly '/settings/jira/connection': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Connect Jira, or move it or give it a new token. Admins only.
+     * @description Connecting needs `token`; once connected, `version` is required. Moving Jira to another `baseUrl` needs
+     *     `token` in the same request, so the old token never goes to a new host. The token is sealed (AES-256-GCM,
+     *     `AHOY_SECRETS_KEY`) before it is stored, and only sent to `baseUrl`. Either change clears the last test.
+     *     `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+     */
+    readonly put: operations['putJiraConnection'];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/jira/test': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask Jira who the stored token is, and keep the answer as the last test. Admins only.
+     * @description `GET /rest/api/2/myself` with the stored token. Jira's own text is never returned. 0 AIU.
+     */
+    readonly post: operations['testJiraConnection'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/jira/backlog-preview': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * How many issues a backlog query matches, and the first, before it is saved. Admins only.
+     * @description `400` when Jira does not accept the query, `503` when Jira refuses the token or does not answer. 0 AIU.
+     */
+    readonly post: operations['previewJiraBacklog'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/jira/fields': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Jira's fields whose name or id holds `q`, for adding a fixed field. Admins only.
+     * @description At most 25, by name. 0 AIU.
+     */
+    readonly get: operations['listJiraFields'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/settings/events': {
     readonly parameters: {
       readonly query?: never;
@@ -3526,13 +3643,103 @@ export interface components {
       readonly serverId?: string;
       readonly projectKey?: string | null;
     };
+    readonly JiraSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description Whether the server can save a token (`AHOY_SECRETS_KEY`). */
+      readonly secretsConfigured: boolean;
+      /** @description Whether the stored token opens with the server's key; false means it has to be entered again. */
+      readonly tokenReadable: boolean;
+      readonly jira: components['schemas']['JiraSettings'] | null;
+    };
+    readonly JiraSettings: {
+      readonly connection: {
+        readonly baseUrl: string;
+        /** @description The token's last four characters; never the token. */
+        readonly tokenHint: string;
+        readonly tokenSetBy: string;
+        readonly tokenSetByName: string | null;
+        /** Format: date-time */
+        readonly tokenSetAt: string;
+        readonly lastTest: components['schemas']['JiraTest'] | null;
+      };
+      /** @description The Backlog page's query; null turns the page off. */
+      readonly backlogJql: string | null;
+      readonly board: {
+        readonly id: number;
+        /** @description As Jira named it when it was set; null if Jira did not answer. */
+        readonly name: string | null;
+        /** @description `scrum` or `kanban`. */
+        readonly type: string | null;
+      } | null;
+      readonly currentSprint: {
+        readonly name: string;
+        /** Format: date */
+        readonly startsOn: string | null;
+        /** Format: date */
+        readonly endsOn: string | null;
+      } | null;
+      readonly storySummaryPrefix: string;
+      readonly storyFields: readonly components['schemas']['JiraFixedField'][];
+      readonly version: number;
+      readonly updatedBy: string;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly JiraFixedField: {
+      /** @description Such as `customfield_11400`. */
+      readonly id: string;
+      /** @description The field's name in Jira, for people. */
+      readonly name: string;
+      /** @description The value as Jira's create takes it, such as `[{"value": "Checkout"}]`. */
+      readonly value: unknown;
+    };
+    readonly JiraTest: {
+      /** @enum {string} */
+      readonly result: 'ok' | 'refused' | 'unreachable';
+      /** @description Who Jira says the token is, the HTTP status it refused with, or why it could not be reached. */
+      readonly detail: string | null;
+      /** Format: date-time */
+      readonly at: string;
+    };
+    readonly JiraConnectionRequest: {
+      readonly version?: number;
+      readonly baseUrl: string;
+      readonly token?: string;
+    };
+    readonly JiraSettingsChange: {
+      readonly version: number;
+      readonly backlogJql?: string | null;
+      readonly boardId?: number | null;
+      readonly storySummaryPrefix?: string;
+      readonly storyFields?: readonly components['schemas']['JiraFixedField'][];
+    };
+    readonly JiraBacklogPreview: {
+      readonly total: number;
+      readonly first: {
+        readonly key: string;
+        readonly summary: string;
+      } | null;
+    };
+    readonly JiraFieldPage: {
+      readonly items: readonly {
+        readonly id: string;
+        readonly name: string;
+        /** @description Jira's schema type, such as `array` or `option`. */
+        readonly type: string | null;
+      }[];
+    };
     readonly SettingsEvent: {
       readonly id: number;
-      /** @description `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`. */
+      /**
+       * @description `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;
+       *     `jira_settings.connected`, `.updated`, `.disconnected`.
+       */
       readonly type: string;
       readonly actor: string;
       readonly actorName: string | null;
-      /** @description The row changed, such as `sonar_server:<id>`. */
+      /** @description The row changed, such as `sonar_server:<id>` or `jira_settings:1`. */
       readonly subject: string;
       /** @description What changed; a token only as `tokenHint`. */
       readonly payload: Record<string, never>;
@@ -6228,11 +6435,196 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly getJiraSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The Jira settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['JiraSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly deleteJiraSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description Jira is off. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly updateJiraSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['JiraSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['JiraSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly putJiraConnection: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['JiraConnectionRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['JiraSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly testJiraConnection: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description What Jira answered. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['JiraTest'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly previewJiraBacklog: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': {
+          readonly jql: string;
+        };
+      };
+    };
+    readonly responses: {
+      /** @description The query's count and first issue. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['JiraBacklogPreview'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly listJiraFields: {
+    readonly parameters: {
+      readonly query?: {
+        readonly q?: string;
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The fields. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['JiraFieldPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
   readonly listSettingsEvents: {
     readonly parameters: {
       readonly query?: {
         readonly limit?: number;
         readonly before?: number;
+        /** @description Only this section's changes. */
+        readonly section?: 'sonar' | 'jira';
       };
       readonly header?: never;
       readonly path?: never;
