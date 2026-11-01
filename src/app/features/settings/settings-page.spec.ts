@@ -147,7 +147,7 @@ describe('the SonarQube section of Team settings', () => {
       '••••',
     ]);
     expect(text(tokens[0]?.querySelector('.ah-cell-sub'))).toMatch(
-      /^Set by Alex Example · \w{3} \d{1,2} \w{3}$/
+      /^Set \w{3} \d{1,2} \w{3} by Alex Example$/
     );
     const repositories = [
       ...root.querySelectorAll('[aria-label="Repositories"] tbody tr'),

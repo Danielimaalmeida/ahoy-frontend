@@ -899,6 +899,42 @@ export type AgentMissingProfile = AgentSettingsPage['missing'][number];
 /** Body of `updateAgentSettings`; turning on a job that spends AIU needs `confirmSpend: true`. */
 export type AgentSettingsChange = Schemas['AgentSettingsChange'];
 
+/**
+ * Answer of `getPhaseSettings`: each phase as its runs use it now, what the deployment gives it, what an admin set, and
+ * the model catalogue.
+ */
+export type PhaseSettingsPage = Schemas['PhaseSettingsPage'];
+
+/** One phase on the Phases page. */
+export type PhaseSettingsRow = PhaseSettingsPage['phases'][number];
+
+/** A phase's model, effort, AIU cap per run, timeout and wait for CI; null where it has none. */
+export type PhaseValues = Schemas['PhaseValues'];
+
+/** A field of a phase the team settings can set. */
+export type PhaseSettingField = Schemas['PhaseSettingField'];
+export const PHASE_SETTING_FIELDS = listOf<PhaseSettingField>()([
+  'model',
+  'reasoningEffort',
+  'budgetNanoAiu',
+  'timeoutSeconds',
+  'ciWaitMinutes',
+]);
+
+/** Where the model catalogue comes from. */
+export type CatalogSource = ModelCatalog['source'];
+export const CATALOG_SOURCES = listOf<CatalogSource>()([
+  'built_in',
+  'file',
+  'settings',
+]);
+
+/** One phase's change: a value sets a field, null gives it back to the deployment. */
+export type PhaseChange = Schemas['PhaseChange'];
+
+/** Body of `updatePhaseSettings`; raising any phase's AIU cap needs `confirmSpend: true`. */
+export type PhaseSettingsChange = Schemas['PhaseSettingsChange'];
+
 /** Query of `listMeetingNotes`: one kind, optionally of one series or meeting, and open or done actions. */
 export type ListMeetingNotesQuery =
   operations['listMeetingNotes']['parameters']['query'];

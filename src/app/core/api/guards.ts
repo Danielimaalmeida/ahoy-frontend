@@ -40,6 +40,8 @@ import {
   GATE_SOURCES,
   JIRA_ISSUE_TYPES,
   AGENT_JOBS,
+  CATALOG_SOURCES,
+  PHASE_SETTING_FIELDS,
   FIGMA_TEST_RESULTS,
   TEAMS_CARD_RESULTS,
   MEETING_NOTE_IMAGE_TYPES,
@@ -77,6 +79,9 @@ import {
   type JiraTest,
   type AgentMissingProfile,
   type AgentSettings,
+  type PhaseSettingsPage,
+  type PhaseSettingsRow,
+  type PhaseValues,
   type AgentSettingsPage,
   type FigmaSettings,
   type FigmaSettingsPage,
@@ -173,7 +178,11 @@ const artifactPath = patterned(
   /^[A-Za-z0-9_][A-Za-z0-9_.-]*(?:\/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$/,
   300
 );
-const modelId = patterned('a model id', /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/, 200);
+/** What a model id looks like, as the contract's `ModelId` says, and its longest length. */
+export const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
+export const MODEL_ID_MAX = 200;
+
+const modelId = patterned('a model id', MODEL_ID, MODEL_ID_MAX);
 const nanoAiu = wholeNumber('a whole number of nano-AIU, 0 or more', 0);
 const count = wholeNumber('a whole number, 0 or more', 0);
 const positive = wholeNumber('a whole number, 1 or more', 1);
@@ -559,7 +568,7 @@ export const isRefinementSummaryList = guard<ItemList<RefinementSummary>>(
 export const isModelCatalog = guard<ModelCatalog>(
   'ModelCatalog',
   shape<ModelCatalog>({
-    source: oneOf(['built_in', 'file']),
+    source: oneOf(CATALOG_SOURCES),
     models: (value, at) =>
       Array.isArray(value) && value.length === 0
         ? `${at} must contain at least one model`
@@ -1552,6 +1561,44 @@ export const isAgentSettingsPage = guard<AgentSettingsPage>(
         profile: nonEmptyText,
       })
     ),
+  })
+);
+
+const phaseValues = shape<PhaseValues>({
+  model: nullable(modelId),
+  reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+  budgetNanoAiu: nullable(positive),
+  timeoutSeconds: nullable(positive),
+  ciWaitMinutes: nullable(positive),
+});
+
+/** The phases page, as `getPhaseSettings` and `updatePhaseSettings` answer it. */
+export const isPhaseSettingsPage = guard<PhaseSettingsPage>(
+  'PhaseSettingsPage',
+  shape<PhaseSettingsPage>({
+    canEdit: flag,
+    maxBudgetNanoAiu: nullable(nanoAiu),
+    phases: arrayOf(
+      shape<PhaseSettingsRow>({
+        phase: nonEmptyText,
+        runsOn: phaseValues,
+        deployment: phaseValues,
+        saved: phaseValues,
+        pinned: arrayOf(oneOf(PHASE_SETTING_FIELDS)),
+        fields: arrayOf(oneOf(PHASE_SETTING_FIELDS)),
+        budgetCapNanoAiu: nanoAiu,
+      })
+    ),
+    catalog: shape<PhaseSettingsPage['catalog']>({
+      source: oneOf(CATALOG_SOURCES),
+      editable: flag,
+      saved: nullable(arrayOf(catalogModel)),
+      models: arrayOf(catalogModel),
+    }),
+    version: nullable(wholeNumber('a version', 1)),
+    updatedBy: nullable(actor),
+    updatedByName: nullable(text),
+    updatedAt: nullable(timestamp),
   })
 );
 

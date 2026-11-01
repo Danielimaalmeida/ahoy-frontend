@@ -1,0 +1,151 @@
+{
+  "canEdit": true,
+  "maxBudgetNanoAiu": 100000000000,
+  "phases": [
+    {
+      "phase": "intake",
+      "runsOn": {
+        "model": "claude-haiku-4.5",
+        "reasoningEffort": null,
+        "budgetNanoAiu": 5000000000,
+        "timeoutSeconds": 900,
+        "ciWaitMinutes": null
+      },
+      "deployment": {
+        "model": "claude-haiku-4.5",
+        "reasoningEffort": null,
+        "budgetNanoAiu": 10000000000,
+        "timeoutSeconds": 900,
+        "ciWaitMinutes": null
+      },
+      "saved": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": 5000000000,
+        "timeoutSeconds": null,
+        "ciWaitMinutes": null
+      },
+      "pinned": [],
+      "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
+      "budgetCapNanoAiu": 100000000000
+    },
+    {
+      "phase": "planning",
+      "runsOn": {
+        "model": "claude-sonnet-5",
+        "reasoningEffort": "high",
+        "budgetNanoAiu": 40000000000,
+        "timeoutSeconds": 1800,
+        "ciWaitMinutes": null
+      },
+      "deployment": {
+        "model": "gpt-5.6-luna",
+        "reasoningEffort": null,
+        "budgetNanoAiu": 60000000000,
+        "timeoutSeconds": 1800,
+        "ciWaitMinutes": null
+      },
+      "saved": {
+        "model": "claude-sonnet-5",
+        "reasoningEffort": "high",
+        "budgetNanoAiu": 40000000000,
+        "timeoutSeconds": null,
+        "ciWaitMinutes": null
+      },
+      "pinned": [],
+      "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
+      "budgetCapNanoAiu": 100000000000
+    },
+    {
+      "phase": "implementation",
+      "runsOn": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": 60000000000,
+        "timeoutSeconds": 3600,
+        "ciWaitMinutes": 30
+      },
+      "deployment": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": 60000000000,
+        "timeoutSeconds": 3600,
+        "ciWaitMinutes": 30
+      },
+      "saved": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": null,
+        "timeoutSeconds": null,
+        "ciWaitMinutes": null
+      },
+      "pinned": ["ciWaitMinutes"],
+      "fields": [
+        "model",
+        "reasoningEffort",
+        "budgetNanoAiu",
+        "timeoutSeconds",
+        "ciWaitMinutes"
+      ],
+      "budgetCapNanoAiu": 100000000000
+    },
+    {
+      "phase": "pr_review",
+      "runsOn": {
+        "model": "claude-sonnet-5",
+        "reasoningEffort": null,
+        "budgetNanoAiu": 30000000000,
+        "timeoutSeconds": 1800,
+        "ciWaitMinutes": null
+      },
+      "deployment": {
+        "model": "claude-sonnet-5",
+        "reasoningEffort": null,
+        "budgetNanoAiu": 30000000000,
+        "timeoutSeconds": 1800,
+        "ciWaitMinutes": null
+      },
+      "saved": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": null,
+        "timeoutSeconds": null,
+        "ciWaitMinutes": null
+      },
+      "pinned": [],
+      "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
+      "budgetCapNanoAiu": 100000000000
+    }
+  ],
+  "catalog": {
+    "source": "built_in",
+    "editable": true,
+    "saved": null,
+    "models": [
+      {
+        "id": "claude-haiku-4.5",
+        "label": "Claude Haiku 4.5",
+        "reasoningEfforts": []
+      },
+      {
+        "id": "claude-sonnet-5",
+        "label": "Claude Sonnet 5",
+        "reasoningEfforts": ["low", "medium", "high", "xhigh", "max"]
+      },
+      {
+        "id": "gpt-5.6-terra",
+        "label": "GPT-5.6 Terra",
+        "reasoningEfforts": null
+      },
+      {
+        "id": "gpt-5.6-luna",
+        "label": "gpt-5.6-luna",
+        "reasoningEfforts": null
+      }
+    ]
+  },
+  "version": 4,
+  "updatedBy": "bea@example.com",
+  "updatedByName": "Bea Example",
+  "updatedAt": "2026-11-01T10:00:00.000Z"
+}

@@ -158,6 +158,7 @@ export class SettingsShell {
     { path: 'teams', label: 'Teams', state: () => this.summary.teams() },
     { path: 'figma', label: 'Figma', state: () => this.summary.figma() },
     { path: 'agents', label: 'Agents', state: () => this.summary.agents() },
+    { path: 'phases', label: 'Phases', state: () => this.summary.phases() },
   ];
 
   constructor() {

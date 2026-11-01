@@ -86,12 +86,18 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
       font-weight: 600;
     }
     .name .ah-tag {
-      margin-left: 6px;
+      display: block;
+      width: fit-content;
+      margin-top: 4px;
     }
     .token {
       display: inline-flex;
       gap: 6px;
       align-items: center;
+    }
+    .token,
+    .token-set {
+      white-space: nowrap;
     }
     .history {
       list-style: none;
@@ -190,7 +196,7 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
                       <th scope="col">Name</th>
                       <th scope="col">Host</th>
                       <th scope="col">Token</th>
-                      <th scope="col" class="num">Repositories</th>
+                      <th scope="col" class="num">Repos</th>
                       <th scope="col">Last change</th>
                       @if (store.canEdit()) {
                         <th scope="col"><span class="ah-sr">Actions</span></th>
@@ -216,9 +222,15 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
                               >{{ token(s.tokenHint) }}</span
                             ></span
                           >
-                          <span class="ah-cell-sub"
-                            >Set by {{ s.tokenSetByName ?? s.tokenSetBy }} ·
-                            {{ day(s.tokenSetAt) }}</span
+                          <span
+                            class="ah-cell-sub token-set"
+                            [title]="
+                              'Set by ' + (s.tokenSetByName ?? s.tokenSetBy)
+                            "
+                            >Set {{ day(s.tokenSetAt)
+                            }}<span class="ah-sr">
+                              by {{ s.tokenSetByName ?? s.tokenSetBy }}</span
+                            ></span
                           >
                         </td>
                         <td class="num">{{ s.repositoryCount }}</td>

@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "id": 61,
+      "type": "phase_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "phase_settings:1",
+      "payload": {
+        "changes": {
+          "planning.model": {
+            "from": null,
+            "to": "claude-sonnet-5",
+            "ranOn": "gpt-5.6-luna",
+            "runsOn": "claude-sonnet-5"
+          },
+          "planning.budgetNanoAiu": {
+            "from": null,
+            "to": 40000000000,
+            "ranOn": 60000000000,
+            "runsOn": 40000000000
+          }
+        }
+      },
+      "createdAt": "2026-10-31T09:15:00.000Z"
+    }
+  ]
+}

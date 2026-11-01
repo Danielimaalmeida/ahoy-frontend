@@ -10,6 +10,7 @@ import { API_BASE } from '@core/api/api-base';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
+import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
 import getTeamsSettings from '@testing/fixtures/getTeamsSettings.json';
 import listJiraSettingsEvents from '@testing/fixtures/listJiraSettingsEvents.json';
@@ -18,14 +19,21 @@ import { SETTINGS_ROUTES } from './settings.routes';
 import {
   isAgentSettingsPage,
   isFigmaSettingsPage,
+  isPhaseSettingsPage,
   isTeamsSettingsPage,
 } from '@core/api/guards';
 import type {
   AgentSettingsPage,
   FigmaSettingsPage,
+  PhaseSettingsPage,
   TeamsSettingsPage,
 } from '@core/api/types';
-import { agentsState, figmaState, teamsState } from './settings-summary';
+import {
+  agentsState,
+  figmaState,
+  phasesState,
+  teamsState,
+} from './settings-summary';
 
 /** A fixture as the type its guard proves. */
 function proven<T>(guard: (v: unknown) => v is T, value: unknown): T {
@@ -36,6 +44,8 @@ const teams = (v: unknown): TeamsSettingsPage => proven(isTeamsSettingsPage, v);
 const figma = (v: unknown): FigmaSettingsPage => proven(isFigmaSettingsPage, v);
 const agents = (v: unknown): AgentSettingsPage =>
   proven(isAgentSettingsPage, v);
+const phases = (v: unknown): PhaseSettingsPage =>
+  proven(isPhaseSettingsPage, v);
 
 const BASE = '/api/v1';
 
@@ -70,6 +80,8 @@ describe('the Team settings frame', () => {
       r.flush(getFigmaSettings);
     for (const r of http.match(`${BASE}/settings/agents`))
       r.flush(getAgentSettings);
+    for (const r of http.match(`${BASE}/settings/phases`))
+      r.flush(getPhaseSettings);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
       r.flush(
         r.request.params.get('section') === 'jira'
@@ -107,6 +119,7 @@ describe('the Team settings frame', () => {
       'Teams On',
       'Figma On',
       'Agents 2 of 4 on',
+      'Phases 1 changed',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(text(document.querySelector('h1'))).toBe('Team settings');
@@ -125,7 +138,14 @@ describe('the Team settings frame', () => {
   it('reads each section once: the one on show for itself, the others for the navigation', async () => {
     await harness.navigateByUrl('/settings/jira');
     await settle();
-    for (const section of ['jira', 'sonar', 'teams', 'figma', 'agents'])
+    for (const section of [
+      'jira',
+      'sonar',
+      'teams',
+      'figma',
+      'agents',
+      'phases',
+    ])
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
         1
       );
@@ -154,7 +174,7 @@ describe('the Team settings frame', () => {
   });
 });
 
-describe('the state of the Teams, Figma and Agents sections in the navigation', () => {
+describe('the state of the Teams, Figma, Agents and Phases sections in the navigation', () => {
   it('says Off, On, or what is needed for the channel and the token', () => {
     expect(teamsState(teams({ ...getTeamsSettings, teams: null }))).toEqual({
       label: 'Off',
@@ -201,5 +221,31 @@ describe('the state of the Teams, Figma and Agents sections in the navigation', 
         })
       )
     ).toEqual({ label: '1 paused', off: true });
+  });
+
+  it('says the phases are as deployed, or how many an admin changed', () => {
+    expect(phasesState(phases(getPhaseSettings))).toEqual({
+      label: '1 changed',
+      off: false,
+    });
+    const asDeployed = getPhaseSettings.phases.map((p) => ({
+      ...p,
+      saved: getPhaseSettings.phases[0]?.saved,
+    }));
+    expect(
+      phasesState(phases({ ...getPhaseSettings, phases: asDeployed }))
+    ).toEqual({ label: 'As deployed', off: false });
+    expect(
+      phasesState(
+        phases({
+          ...getPhaseSettings,
+          phases: asDeployed,
+          catalog: {
+            ...getPhaseSettings.catalog,
+            saved: getPhaseSettings.catalog.models,
+          },
+        })
+      )
+    ).toEqual({ label: 'Models changed', off: false });
   });
 });

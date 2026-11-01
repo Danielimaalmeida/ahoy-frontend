@@ -7,6 +7,7 @@ import { isRecord } from './records';
 import { describeAgentEvent } from './agent-settings';
 import { describeFigmaEvent } from './figma-settings';
 import { describeJiraEvent } from './jira-settings';
+import { describePhaseEvent } from './phase-settings';
 import { describeTeamsEvent } from './teams-settings';
 
 /** One change of a field, as the API records it: `{ from, to }`. */
@@ -114,6 +115,7 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
         describeTeamsEvent(type, payload) ??
         describeFigmaEvent(type, payload) ??
         describeAgentEvent(type, payload) ??
+        describePhaseEvent(type, payload) ??
         type
       );
   }
