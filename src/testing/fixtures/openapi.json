@@ -4754,6 +4754,72 @@
         }
       }
     },
+    "/settings/phases": {
+      "get": {
+        "operationId": "getPhaseSettings",
+        "tags": ["settings"],
+        "summary": "Each phase's default model and effort, AIU cap per run, timeout and wait for CI, and the model catalogue.",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). For each phase, `runsOn` is what\nits runs use now, `deployment` what the deployment gives it (the built-in phases and `AHOY_PHASE_CONFIG`),\n`saved` what an admin set (null: the deployment's), and `pinned` the fields `AHOY_PHASE_CONFIG` sets, which\nonly the deployment can change. The reconciler and the API read a change within seconds, without a restart.\n0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The phases' settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhaseSettingsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePhaseSettings",
+        "tags": ["settings"],
+        "summary": "Change a phase's model, effort, AIU cap, timeout or wait for CI, or the model catalogue.",
+        "description": "Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model\nmust be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed\n`budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`, else the deployment's own cap, and never a phase's own limit).\nRaising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`\notherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused\n(`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhaseSettingsChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhaseSettingsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/settings/events": {
       "get": {
         "operationId": "listSettingsEvents",
@@ -4788,7 +4854,7 @@
             "description": "Only this section's changes.",
             "schema": {
               "type": "string",
-              "enum": ["sonar", "jira", "teams", "figma", "agents"]
+              "enum": ["sonar", "jira", "teams", "figma", "agents", "phases"]
             }
           }
         ],
@@ -6164,8 +6230,8 @@
         "properties": {
           "source": {
             "type": "string",
-            "enum": ["built_in", "file"],
-            "description": "Where the list came from; neither is checked against a Copilot account."
+            "enum": ["built_in", "file", "settings"],
+            "description": "Where the list came from (`settings`: the team settings, `file`: `AHOY_MODEL_CATALOG`); none is checked\nagainst a Copilot account.\n"
           },
           "models": {
             "type": "array",
@@ -10973,6 +11039,288 @@
           }
         }
       },
+      "PhaseSettingField": {
+        "type": "string",
+        "enum": [
+          "model",
+          "reasoningEffort",
+          "budgetNanoAiu",
+          "timeoutSeconds",
+          "ciWaitMinutes"
+        ]
+      },
+      "PhaseValues": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "model",
+          "reasoningEffort",
+          "budgetNanoAiu",
+          "timeoutSeconds",
+          "ciWaitMinutes"
+        ],
+        "properties": {
+          "model": {
+            "type": ["string", "null"],
+            "description": "Null: the agent profile's model."
+          },
+          "reasoningEffort": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningEffort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "budgetNanoAiu": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "The AIU cap of one run, in nano-AIU."
+          },
+          "timeoutSeconds": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "ciWaitMinutes": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Implementation only: how long a delivered package waits for a deferred CI check."
+          }
+        }
+      },
+      "PhaseSettingsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "canEdit",
+          "maxBudgetNanoAiu",
+          "phases",
+          "catalog",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "canEdit": {
+            "type": "boolean",
+            "description": "Whether the person is an admin, who may change them."
+          },
+          "maxBudgetNanoAiu": {
+            "type": ["integer", "null"],
+            "description": "`AHOY_MAX_PHASE_BUDGET_AIU` in nano-AIU; null: a phase's cap may only be lowered."
+          },
+          "phases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "phase",
+                "runsOn",
+                "deployment",
+                "saved",
+                "pinned",
+                "fields",
+                "budgetCapNanoAiu"
+              ],
+              "properties": {
+                "phase": {
+                  "type": "string"
+                },
+                "runsOn": {
+                  "$ref": "#/components/schemas/PhaseValues"
+                },
+                "deployment": {
+                  "$ref": "#/components/schemas/PhaseValues"
+                },
+                "saved": {
+                  "$ref": "#/components/schemas/PhaseValues"
+                },
+                "pinned": {
+                  "type": "array",
+                  "description": "The fields `AHOY_PHASE_CONFIG` sets, which the team settings cannot change.",
+                  "items": {
+                    "$ref": "#/components/schemas/PhaseSettingField"
+                  }
+                },
+                "fields": {
+                  "type": "array",
+                  "description": "The fields the phase takes (only implementation waits for CI).",
+                  "items": {
+                    "$ref": "#/components/schemas/PhaseSettingField"
+                  }
+                },
+                "budgetCapNanoAiu": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The most an admin may cap one run at."
+                }
+              }
+            }
+          },
+          "catalog": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "editable", "saved", "models"],
+            "properties": {
+              "source": {
+                "type": "string",
+                "enum": ["built_in", "file", "settings"]
+              },
+              "editable": {
+                "type": "boolean",
+                "description": "False when `AHOY_MODEL_CATALOG` sets the catalogue."
+              },
+              "saved": {
+                "description": "The catalogue an admin saved; null: none.",
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/CatalogModel"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "models": {
+                "type": "array",
+                "description": "The models people may choose now, with each model a phase names.",
+                "items": {
+                  "$ref": "#/components/schemas/CatalogModel"
+                }
+              }
+            }
+          },
+          "version": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Null until an admin saves anything."
+          },
+          "updatedBy": {
+            "type": ["string", "null"]
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "PhaseChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "model": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ModelId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reasoningEffort": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReasoningEffort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "budgetNanoAiu": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "timeoutSeconds": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "ciWaitMinutes": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          }
+        }
+      },
+      "PhaseSettingsChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "phases": {
+            "type": "object",
+            "maxProperties": 50,
+            "propertyNames": {
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "maxLength": 50
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PhaseChange"
+            }
+          },
+          "models": {
+            "description": "The models people may choose; null gives the list back to the built-in one.",
+            "oneOf": [
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 100,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id"],
+                  "properties": {
+                    "id": {
+                      "$ref": "#/components/schemas/ModelId"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "reasoningEfforts": {
+                      "oneOf": [
+                        {
+                          "type": "array",
+                          "maxItems": 5,
+                          "items": {
+                            "$ref": "#/components/schemas/ReasoningEffort"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confirmSpend": {
+            "type": "boolean",
+            "description": "Must be true when the change raises any phase's AIU cap per run."
+          }
+        }
+      },
       "SettingsEvent": {
         "type": "object",
         "additionalProperties": false,
@@ -10991,7 +11339,7 @@
           },
           "type": {
             "type": "string",
-            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;\n`jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,\n`.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;\n`agent_settings.updated`.\n"
+            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;\n`jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,\n`.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;\n`agent_settings.updated`; `phase_settings.updated`.\n"
           },
           "actor": {
             "type": "string"

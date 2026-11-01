@@ -4,6 +4,7 @@ import type {
   AgentSettingsPage,
   FigmaSettingsPage,
   JiraSettingsPage,
+  PhaseSettingsPage,
   SonarSettings,
   TeamsSettingsPage,
 } from '@core/api/types';
@@ -53,9 +54,22 @@ export function agentsState(page: AgentSettingsPage): SectionState {
   return { label: jobsOnLabel(page.agents), off: false };
 }
 
+/** "3 changed": how many phases an admin changed from the deployment's, or "As deployed". */
+export function phasesState(page: PhaseSettingsPage): SectionState {
+  const changed = page.phases.filter((p) =>
+    Object.values(p.saved).some((value) => value !== null)
+  ).length;
+  if (changed === 0 && page.catalog.saved === null)
+    return { label: 'As deployed', off: false };
+  return {
+    label: changed === 0 ? 'Models changed' : `${changed} changed`,
+    off: false,
+  };
+}
+
 /** A section the frame shows a state for. */
 export type SettingsSectionKey =
-  'sonar' | 'jira' | 'teams' | 'figma' | 'agents';
+  'sonar' | 'jira' | 'teams' | 'figma' | 'agents' | 'phases';
 
 /**
  * What the Team settings' frame shows around a section: whether the person is an admin and each section's state. The
@@ -78,6 +92,8 @@ export class SettingsSummary {
   readonly figma = signal<SectionState | null>(null);
   /** The agents' jobs' state, once read. */
   readonly agents = signal<SectionState | null>(null);
+  /** The phases' state, once read. */
+  readonly phases = signal<SectionState | null>(null);
 
   /** The sections whose page reads them itself. */
   private readonly claimed = new Set<SettingsSectionKey>();
@@ -89,18 +105,20 @@ export class SettingsSummary {
 
   /** Reads the state of every section no page has claimed; a section that cannot be read shows none. */
   async load(): Promise<void> {
-    const [sonar, jira, teams, figma, agents] = await Promise.all([
+    const [sonar, jira, teams, figma, agents, phases] = await Promise.all([
       this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
       this.claimed.has('jira') ? null : this.api.getJiraSettings(),
       this.claimed.has('teams') ? null : this.api.getTeamsSettings(),
       this.claimed.has('figma') ? null : this.api.getFigmaSettings(),
       this.claimed.has('agents') ? null : this.api.getAgentSettings(),
+      this.claimed.has('phases') ? null : this.api.getPhaseSettings(),
     ]);
     if (sonar?.ok && this.sonar() === null) this.sonarRead(sonar.value);
     if (jira?.ok && this.jira() === null) this.jiraRead(jira.value);
     if (teams?.ok && this.teams() === null) this.teamsRead(teams.value);
     if (figma?.ok && this.figma() === null) this.figmaRead(figma.value);
     if (agents?.ok && this.agents() === null) this.agentsRead(agents.value);
+    if (phases?.ok && this.phases() === null) this.phasesRead(phases.value);
   }
 
   /** What the SonarQube section read. */
@@ -131,5 +149,11 @@ export class SettingsSummary {
   agentsRead(page: AgentSettingsPage): void {
     this.admin.set(page.canEdit);
     this.agents.set(agentsState(page));
+  }
+
+  /** What the Phases section read. */
+  phasesRead(page: PhaseSettingsPage): void {
+    this.admin.set(page.canEdit);
+    this.phases.set(phasesState(page));
   }
 }

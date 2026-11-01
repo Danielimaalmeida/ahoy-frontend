@@ -2164,6 +2164,39 @@ export interface paths {
     readonly patch: operations['updateAgentSettings'];
     readonly trace?: never;
   };
+  readonly '/settings/phases': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Each phase's default model and effort, AIU cap per run, timeout and wait for CI, and the model catalogue.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). For each phase, `runsOn` is what
+     *     its runs use now, `deployment` what the deployment gives it (the built-in phases and `AHOY_PHASE_CONFIG`),
+     *     `saved` what an admin set (null: the deployment's), and `pinned` the fields `AHOY_PHASE_CONFIG` sets, which
+     *     only the deployment can change. The reconciler and the API read a change within seconds, without a restart.
+     *     0 AIU.
+     */
+    readonly get: operations['getPhaseSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Change a phase's model, effort, AIU cap, timeout or wait for CI, or the model catalogue.
+     * @description Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model
+     *     must be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed
+     *     `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`, else the deployment's own cap, and never a phase's own limit).
+     *     Raising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`
+     *     otherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused
+     *     (`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).
+     */
+    readonly patch: operations['updatePhaseSettings'];
+    readonly trace?: never;
+  };
   readonly '/settings/events': {
     readonly parameters: {
       readonly query?: never;
@@ -2549,10 +2582,11 @@ export interface components {
     };
     readonly ModelCatalog: {
       /**
-       * @description Where the list came from; neither is checked against a Copilot account.
+       * @description Where the list came from (`settings`: the team settings, `file`: `AHOY_MODEL_CATALOG`); none is checked
+       *     against a Copilot account.
        * @enum {string}
        */
-      readonly source: 'built_in' | 'file';
+      readonly source: 'built_in' | 'file' | 'settings';
       readonly models: readonly components['schemas']['CatalogModel'][];
       /** @description Every effort `startStory` and `setStoryModels` accept; a model may take fewer. */
       readonly reasoningEfforts: readonly components['schemas']['ReasoningEffort'][];
@@ -4061,13 +4095,89 @@ export interface components {
       /** @description Must be true when the change turns on Story drafts or Business-rule review, which spend AIU. */
       readonly confirmSpend?: boolean;
     };
+    /** @enum {string} */
+    readonly PhaseSettingField:
+      | 'model'
+      | 'reasoningEffort'
+      | 'budgetNanoAiu'
+      | 'timeoutSeconds'
+      | 'ciWaitMinutes';
+    readonly PhaseValues: {
+      /** @description Null: the agent profile's model. */
+      readonly model: string | null;
+      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
+      /** @description The AIU cap of one run, in nano-AIU. */
+      readonly budgetNanoAiu: number | null;
+      readonly timeoutSeconds: number | null;
+      /** @description Implementation only: how long a delivered package waits for a deferred CI check. */
+      readonly ciWaitMinutes: number | null;
+    };
+    readonly PhaseSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description `AHOY_MAX_PHASE_BUDGET_AIU` in nano-AIU; null: a phase's cap may only be lowered. */
+      readonly maxBudgetNanoAiu: number | null;
+      readonly phases: readonly {
+        readonly phase: string;
+        readonly runsOn: components['schemas']['PhaseValues'];
+        readonly deployment: components['schemas']['PhaseValues'];
+        readonly saved: components['schemas']['PhaseValues'];
+        /** @description The fields `AHOY_PHASE_CONFIG` sets, which the team settings cannot change. */
+        readonly pinned: readonly components['schemas']['PhaseSettingField'][];
+        /** @description The fields the phase takes (only implementation waits for CI). */
+        readonly fields: readonly components['schemas']['PhaseSettingField'][];
+        /** @description The most an admin may cap one run at. */
+        readonly budgetCapNanoAiu: number;
+      }[];
+      readonly catalog: {
+        /** @enum {string} */
+        readonly source: 'built_in' | 'file' | 'settings';
+        /** @description False when `AHOY_MODEL_CATALOG` sets the catalogue. */
+        readonly editable: boolean;
+        /** @description The catalogue an admin saved; null: none. */
+        readonly saved: readonly components['schemas']['CatalogModel'][] | null;
+        /** @description The models people may choose now, with each model a phase names. */
+        readonly models: readonly components['schemas']['CatalogModel'][];
+      };
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly PhaseChange: {
+      readonly model?: components['schemas']['ModelId'] | null;
+      readonly reasoningEffort?:
+        components['schemas']['ReasoningEffort'] | null;
+      readonly budgetNanoAiu?: number | null;
+      readonly timeoutSeconds?: number | null;
+      readonly ciWaitMinutes?: number | null;
+    };
+    readonly PhaseSettingsChange: {
+      readonly version?: number;
+      readonly phases?: {
+        readonly [key: string]: components['schemas']['PhaseChange'];
+      };
+      /** @description The models people may choose; null gives the list back to the built-in one. */
+      readonly models?:
+        | readonly {
+            readonly id: components['schemas']['ModelId'];
+            readonly label?: string;
+            readonly reasoningEfforts?:
+              readonly components['schemas']['ReasoningEffort'][] | null;
+          }[]
+        | null;
+      /** @description Must be true when the change raises any phase's AIU cap per run. */
+      readonly confirmSpend?: boolean;
+    };
     readonly SettingsEvent: {
       readonly id: number;
       /**
        * @description `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;
        *     `jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,
        *     `.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;
-       *     `agent_settings.updated`.
+       *     `agent_settings.updated`; `phase_settings.updated`.
        */
       readonly type: string;
       readonly actor: string;
@@ -7252,13 +7362,64 @@ export interface operations {
       readonly 503: components['responses']['Problem'];
     };
   };
+  readonly getPhaseSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The phases' settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PhaseSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updatePhaseSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['PhaseSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PhaseSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly listSettingsEvents: {
     readonly parameters: {
       readonly query?: {
         readonly limit?: number;
         readonly before?: number;
         /** @description Only this section's changes. */
-        readonly section?: 'sonar' | 'jira' | 'teams' | 'figma' | 'agents';
+        readonly section?:
+          'sonar' | 'jira' | 'teams' | 'figma' | 'agents' | 'phases';
       };
       readonly header?: never;
       readonly path?: never;

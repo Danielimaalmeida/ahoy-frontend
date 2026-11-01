@@ -39,6 +39,7 @@ import {
   isJiraSettingsPage,
   isJiraTest,
   isAgentSettingsPage,
+  isPhaseSettingsPage,
   isFigmaSettings,
   isFigmaSettingsPage,
   isFigmaTest,
@@ -106,6 +107,8 @@ import type {
   JiraTest,
   AgentSettingsChange,
   AgentSettingsPage,
+  PhaseSettingsChange,
+  PhaseSettingsPage,
   FigmaSettings,
   FigmaSettingsChange,
   FigmaSettingsPage,
@@ -1503,6 +1506,32 @@ export class ApiClient {
       'updateAgentSettings',
       isAgentSettingsPage,
       this.http.patch<unknown>(this.url('/settings/agents'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Each phase as its runs use it now, what the deployment gives it, what an admin set, and the model catalogue. */
+  getPhaseSettings(): Promise<ApiResult<PhaseSettingsPage>> {
+    return this.get(
+      'getPhaseSettings',
+      '/settings/phases',
+      isPhaseSettingsPage
+    );
+  }
+
+  /**
+   * Changes a phase's model, effort, AIU cap per run, timeout or wait for CI, or the model catalogue (admins only).
+   * Raising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true`.
+   */
+  updatePhaseSettings(
+    body: PhaseSettingsChange
+  ): Promise<ApiResult<PhaseSettingsPage>> {
+    return this.send(
+      'updatePhaseSettings',
+      isPhaseSettingsPage,
+      this.http.patch<unknown>(this.url('/settings/phases'), body, {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })
