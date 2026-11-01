@@ -243,7 +243,11 @@ type PreviewState =
     }
 
     @if (store.loading() && !store.page()) {
-      <div class="ah-panel loading" aria-label="Loading the Jira settings">
+      <div
+        class="ah-panel loading"
+        role="status"
+        aria-label="Loading the Jira settings"
+      >
         <ah-skeleton width="40%" />
         <ah-skeleton width="70%" />
         <ah-skeleton width="55%" />

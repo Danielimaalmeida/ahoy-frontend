@@ -15,7 +15,7 @@ import { Button } from '@ui/button/button';
 import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { ToastService } from '@ui/toast/toast';
-import { DialogSend } from './jira-dialog-send';
+import { DialogSend } from './dialog-send';
 import type { JiraSettingsStore } from './jira-settings-store';
 import { hostOf } from './settings-url';
 

@@ -1,3 +1,14 @@
+import getTeamsSettings from '@testing/fixtures/getTeamsSettings.json';
+import putTeamsWebhook from '@testing/fixtures/putTeamsWebhook.json';
+import updateTeamsSettings from '@testing/fixtures/updateTeamsSettings.json';
+import sendTeamsTestCard from '@testing/fixtures/sendTeamsTestCard.json';
+import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
+import putFigmaToken from '@testing/fixtures/putFigmaToken.json';
+import deleteFigmaToken from '@testing/fixtures/deleteFigmaToken.json';
+import updateFigmaSettings from '@testing/fixtures/updateFigmaSettings.json';
+import testFigmaToken from '@testing/fixtures/testFigmaToken.json';
+import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
+import updateAgentSettings from '@testing/fixtures/updateAgentSettings.json';
 import addCrewMember from '@testing/fixtures/addCrewMember.json';
 import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
 import addSonarRepository from '@testing/fixtures/addSonarRepository.json';
@@ -209,6 +220,17 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['testJiraConnection', testJiraConnection],
   ['previewJiraBacklog', previewJiraBacklog],
   ['listJiraFields', listJiraFields],
+  ['getTeamsSettings', getTeamsSettings],
+  ['putTeamsWebhook', putTeamsWebhook],
+  ['updateTeamsSettings', updateTeamsSettings],
+  ['sendTeamsTestCard', sendTeamsTestCard],
+  ['getFigmaSettings', getFigmaSettings],
+  ['putFigmaToken', putFigmaToken],
+  ['deleteFigmaToken', deleteFigmaToken],
+  ['updateFigmaSettings', updateFigmaSettings],
+  ['testFigmaToken', testFigmaToken],
+  ['getAgentSettings', getAgentSettings],
+  ['updateAgentSettings', updateAgentSettings],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -224,6 +246,7 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteSonarServer',
   'deleteSonarRepository',
   'deleteJiraSettings',
+  'deleteTeamsSettings',
 ];
 
 /**
@@ -257,7 +280,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      92
+      104
     );
   });
 

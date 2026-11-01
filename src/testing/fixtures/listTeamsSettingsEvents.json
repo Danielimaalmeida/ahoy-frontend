@@ -1,0 +1,58 @@
+{
+  "items": [
+    {
+      "id": 31,
+      "type": "teams_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "teams_settings:1",
+      "payload": {
+        "changes": {
+          "webhookHost": {
+            "from": "prod-00.westeurope.logic.example.com",
+            "to": "prod-12.westeurope.logic.example.com"
+          }
+        }
+      },
+      "createdAt": "2026-10-30T11:48:00.000Z"
+    },
+    {
+      "id": 30,
+      "type": "teams_settings.test_sent",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "teams_settings:1",
+      "payload": {
+        "result": "posted"
+      },
+      "createdAt": "2026-10-29T10:03:00.000Z"
+    },
+    {
+      "id": 29,
+      "type": "teams_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "teams_settings:1",
+      "payload": {
+        "changes": {
+          "uiUrl": {
+            "from": null,
+            "to": "https://ahoy.example.com"
+          }
+        }
+      },
+      "createdAt": "2026-10-29T10:01:00.000Z"
+    },
+    {
+      "id": 28,
+      "type": "teams_settings.connected",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "teams_settings:1",
+      "payload": {
+        "webhookHost": "prod-00.westeurope.logic.example.com"
+      },
+      "createdAt": "2026-10-29T10:00:00.000Z"
+    }
+  ]
+}

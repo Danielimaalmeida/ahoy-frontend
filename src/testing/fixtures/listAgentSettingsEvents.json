@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": 52,
+      "type": "agent_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "agent_settings:1",
+      "payload": {
+        "changes": {
+          "refinementAgent": {
+            "from": "story-refiner-v2",
+            "to": "story-refiner"
+          }
+        }
+      },
+      "createdAt": "2026-10-30T12:40:00.000Z"
+    },
+    {
+      "id": 51,
+      "type": "agent_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "agent_settings:1",
+      "payload": {
+        "changes": {
+          "refinementAgent": {
+            "from": "story-refiner",
+            "to": "story-refiner-v2"
+          }
+        }
+      },
+      "createdAt": "2026-10-28T09:15:00.000Z"
+    }
+  ]
+}

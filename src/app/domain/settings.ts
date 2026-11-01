@@ -3,16 +3,16 @@
  * payloads come from the API as `unknown` and are read field by field.
  */
 
+import { isRecord } from './records';
+import { describeAgentEvent } from './agent-settings';
+import { describeFigmaEvent } from './figma-settings';
 import { describeJiraEvent } from './jira-settings';
+import { describeTeamsEvent } from './teams-settings';
 
 /** One change of a field, as the API records it: `{ from, to }`. */
 interface FieldChange {
   readonly from: unknown;
   readonly to: unknown;
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isFieldChange(value: unknown): value is FieldChange {
@@ -109,6 +109,12 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
     case 'sonar_repository.deleted':
       return `Took ${repository} off its server`;
     default:
-      return describeJiraEvent(type, payload) ?? type;
+      return (
+        describeJiraEvent(type, payload) ??
+        describeTeamsEvent(type, payload) ??
+        describeFigmaEvent(type, payload) ??
+        describeAgentEvent(type, payload) ??
+        type
+      );
   }
 }

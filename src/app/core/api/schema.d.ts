@@ -774,7 +774,7 @@ export interface paths {
     /**
      * Ask an agent to diagnose a halted story. May spend AIU.
      * @description For what the fixed rules of `getStoryDiagnosis` cannot explain. Queues one worker run of the server's diagnosis
-     *     agent (`AHOY_DIAGNOSIS_AGENT`) for the story, pinned to the control repo's HEAD now. The agent reads the evidence
+     *     agent (Team settings › Agents) for the story, pinned to the control repo's HEAD now. The agent reads the evidence
      *     Ahoy seeds (the rules' findings, the halt, the runs, gate verdicts and runtime facts, all untrusted text) and the
      *     control repo's agents and configuration, and replies in Markdown with the cause, the evidence, what fixes it and
      *     who takes it. The reply is kept in Ahoy only. The agent has no MCP server, no shell and writes no files, and it
@@ -829,7 +829,7 @@ export interface paths {
     /**
      * Every knowledge review of one story, newest first, with the proposed business rules and lessons.
      * @description When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs
-     *     them (`AHOY_KNOWLEDGE_AGENT`): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
+     *     them (Business-rule review, on in Team settings › Agents): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
      *     the approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its
      *     halts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content
      *     repository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is
@@ -968,7 +968,7 @@ export interface paths {
     readonly put?: never;
     /**
      * Ask an agent to pre-refine a Jira backlog item. May spend AIU.
-     * @description Queues one worker run of the server's refinement agent (`AHOY_REFINEMENT_AGENT`) for the issue, pinned to the
+     * @description Queues one worker run of the refinement agent of Team settings › Agents for the issue, pinned to the
      *     control repo's HEAD now. The agent reads the issue through the Jira and Confluence MCP servers (and, by
      *     default, read-only clones of the mapped child repositories) and replies with a pre-refinement in Markdown:
      *     verdict, summary, proposed story, acceptance criteria, open questions, assumptions, risks, suggested split and
@@ -1494,7 +1494,7 @@ export interface paths {
     readonly put?: never;
     /**
      * Ask an agent to draft a user story from a topic. May spend AIU.
-     * @description Queues one worker run of the server's story draft agent (`AHOY_STORY_DRAFT_AGENT`), labelled `MEET-<n>`. It
+     * @description Queues one worker run of the story draft agent of Team settings › Agents, labelled `MEET-<n>`. It
      *     reads the topic, who raised it and the chosen notes (`noteIds`; all of the topic's notes when absent or empty)
      *     and replies with the story in a fixed template, which Ahoy checks. It has no MCP server, writes no file and never
      *     writes to Jira. `confirmSpend` must be true; the run is capped at `budgetNanoAiu`, else the server's cap. Poll
@@ -1984,6 +1984,184 @@ export interface paths {
     readonly options?: never;
     readonly head?: never;
     readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/teams': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The crew's Teams channel, where Ahoy posts who is on each sprint.
+     * @description Anyone allowed into Ahoy reads it; only an admin changes it (`canEdit`). It is the only place the channel is
+     *     configured. `teams` is null while no card is posted. The webhook's address holds its signature: it is never
+     *     returned, only its host. 0 AIU.
+     */
+    readonly get: operations['getTeamsSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Disconnect the crew's channel, removing its webhook. Admins only.
+     * @description No card is posted until the channel is connected again.
+     */
+    readonly delete: operations['deleteTeamsSettings'];
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Set or clear the UI's address the cards' "Open Crew" button opens. Admins only.
+     * @description `uiUrl: null` posts the cards without the button. `409 invalid_state` while the channel is not connected,
+     *     `409 stale_version` when `version` is not the settings'.
+     */
+    readonly patch: operations['updateTeamsSettings'];
+    readonly trace?: never;
+  };
+  readonly '/settings/teams/webhook': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Connect the crew's channel, or give it a new Workflows webhook. Admins only.
+     * @description Once connected, `version` is required. The address is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is
+     *     stored, and only its host is kept in clear. A new webhook clears the last card. `503 unavailable` when the
+     *     server has no `AHOY_SECRETS_KEY`.
+     */
+    readonly put: operations['putTeamsWebhook'];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/teams/test': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Send a test card to the crew's channel, saying who sent it, and keep it as the last card. Admins only.
+     * @description Everyone in the channel sees it. A card Teams does not take answers `200` with `result: failed` and why;
+     *     Teams' own text and the webhook's address are never returned. 0 AIU.
+     */
+    readonly post: operations['sendTeamsTestCard'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/figma': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Figma, which the design phase reads a story's frames with, and the agents that get a story's design.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place Figma is
+     *     configured. Before an admin saves anything, `figma` holds the defaults (`version: null`). `figma.token` is
+     *     null while Figma is off: a story that links a Figma design then halts `figma_not_configured`. The token is
+     *     never returned: only its last four characters. 0 AIU.
+     */
+    readonly get: operations['getFigmaSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Change the UI builders or the design kit's prefix. Admins only.
+     * @description `uiAgents` are the implementer profiles whose packages get the design; each must be at the content
+     *     repository's HEAD (`400`). `version` is required once the settings are saved, and absent before
+     *     (`409 stale_version` otherwise).
+     */
+    readonly patch: operations['updateFigmaSettings'];
+    readonly trace?: never;
+  };
+  readonly '/settings/figma/token': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Save Figma's token, the first or a new one. Admins only.
+     * @description The token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored, and only sent to api.figma.com. A
+     *     new token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+     */
+    readonly put: operations['putFigmaToken'];
+    readonly post?: never;
+    /**
+     * Remove Figma's token, turning Figma off. Admins only.
+     * @description A story that links a Figma design halts until a token is saved again; the other settings stay.
+     */
+    readonly delete: operations['deleteFigmaToken'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/figma/test': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask Figma who the stored token is, and keep the answer as the last test. Admins only.
+     * @description `GET https://api.figma.com/v1/me` with the stored token. Figma's own text is never returned. 0 AIU.
+     */
+    readonly post: operations['testFigmaToken'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/agents': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Which of the content repository's agent profiles runs each job, and whether the spending jobs are on.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place the jobs
+     *     are configured. `profiles` are the profiles at the content repository's HEAD; `missing` names the jobs whose
+     *     profile is no longer there, whose runs fail their preflight until an admin picks another. 0 AIU.
+     */
+    readonly get: operations['getAgentSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Change who runs a job, turn Story drafts or Business-rule review on or off, or set the knowledge repository.
+     * @description Admins only. A profile the change names must be at the content repository's HEAD (`400`). `null` turns
+     *     Story drafts or Business-rule review off. Turning either on spends AIU outside a story's budget from then on
+     *     (Business-rule review after every story that reaches done), so it needs `confirmSpend: true` (`400`
+     *     otherwise). `version` is required once the settings are saved, and absent before (`409 stale_version`).
+     *     `503` when the content repository cannot be read.
+     */
+    readonly patch: operations['updateAgentSettings'];
     readonly trace?: never;
   };
   readonly '/settings/events': {
@@ -2607,7 +2785,7 @@ export interface components {
       readonly patch: string | null;
       /**
        * Format: uri
-       * @description The pull request the reconciler opened with the proposed files on the content repository (`AHOY_KNOWLEDGE_REPO`), for a person to review and merge; null until it is open, and always null when no content repository is configured or the review proposed nothing.
+       * @description The pull request the reconciler opened with the proposed files on the content repository (Team settings › Agents), for a person to review and merge; null until it is open, and always null when no content repository is configured or the review proposed nothing.
        */
       readonly pullRequestUrl: string | null;
       /** @description Why the last attempt to open the pull request failed (the reconciler retries for a day after the review ended); null once it is open, and before any attempt. */
@@ -3730,18 +3908,173 @@ export interface components {
         readonly type: string | null;
       }[];
     };
+    readonly TeamsSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description Whether the server can save a webhook (`AHOY_SECRETS_KEY`). */
+      readonly secretsConfigured: boolean;
+      /** @description Whether the stored webhook opens with the server's key; false means it has to be entered again. */
+      readonly webhookReadable: boolean;
+      readonly teams: components['schemas']['TeamsSettings'] | null;
+    };
+    readonly TeamsSettings: {
+      readonly webhook: {
+        /** @description The webhook's host; never its address, which holds its signature. */
+        readonly host: string;
+        readonly setBy: string;
+        readonly setByName: string | null;
+        /** Format: date-time */
+        readonly setAt: string;
+      };
+      /** @description The UI's address; the cards' Open Crew button goes to its Crew page. Null: no button. */
+      readonly uiUrl: string | null;
+      readonly lastCard: {
+        /** @description The card's first line. */
+        readonly title: string;
+        /** @enum {string} */
+        readonly result: 'posted' | 'failed';
+        /** @description Why Teams did not take it. */
+        readonly detail: string | null;
+        /** Format: date-time */
+        readonly at: string;
+      } | null;
+      readonly version: number;
+      readonly updatedBy: string;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly TeamsWebhookRequest: {
+      readonly version?: number;
+      readonly webhookUrl: string;
+    };
+    readonly TeamsSettingsChange: {
+      readonly version: number;
+      readonly uiUrl: string | null;
+    };
+    readonly TeamsCardOutcome: {
+      /** @enum {string} */
+      readonly result: 'posted' | 'failed';
+      /** @description Why Teams did not take it, such as `Teams webhook answered HTTP 404`. */
+      readonly detail: string | null;
+      /** Format: date-time */
+      readonly at: string;
+    };
+    readonly FigmaSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description Whether the server can save a token (`AHOY_SECRETS_KEY`). */
+      readonly secretsConfigured: boolean;
+      /** @description Whether a stored token opens with the server's key; false while there is none or it must be entered again. */
+      readonly tokenReadable: boolean;
+      readonly figma: components['schemas']['FigmaSettings'];
+    };
+    readonly FigmaSettings: {
+      readonly token: {
+        /** @description The token's last four characters; never the token. */
+        readonly hint: string;
+        readonly setBy: string;
+        readonly setByName: string | null;
+        /** Format: date-time */
+        readonly setAt: string;
+        readonly lastTest: components['schemas']['FigmaTest'] | null;
+      } | null;
+      /** @description The implementer profiles whose packages build UI, and so get the design. */
+      readonly uiAgents: readonly string[];
+      /** @description Components whose selector starts with it are the design kit's. */
+      readonly selectorPrefix: string;
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly FigmaTest: {
+      /** @enum {string} */
+      readonly result: 'ok' | 'refused' | 'unreachable';
+      /** @description Who Figma says the token is, the HTTP status it refused with, or why it could not be reached. */
+      readonly detail: string | null;
+      /** Format: date-time */
+      readonly at: string;
+    };
+    readonly FigmaTokenRequest: {
+      readonly version?: number;
+      readonly token: string;
+    };
+    readonly FigmaSettingsChange: {
+      readonly version?: number;
+      readonly uiAgents?: readonly string[];
+      readonly selectorPrefix?: string;
+    };
+    readonly AgentSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      readonly agents: components['schemas']['AgentSettings'];
+      readonly profiles: {
+        /** @description The content repository's HEAD the profiles are read at. */
+        readonly commit: string | null;
+        /** @description The agent profiles at HEAD, by name. */
+        readonly names: readonly string[];
+        /** @description Why the content repository could not be read. */
+        readonly problem: string | null;
+      };
+      /** @description The jobs whose profile HEAD no longer has; their runs fail the preflight. */
+      readonly missing: readonly {
+        readonly job: components['schemas']['AgentJob'];
+        /** @description The job in words, such as `Story drafts`. */
+        readonly name: string;
+        readonly profile: string;
+      }[];
+    };
+    /** @enum {string} */
+    readonly AgentJob:
+      | 'refinementAgent'
+      | 'diagnosisAgent'
+      | 'storyDraftAgent'
+      | 'knowledgeAgent';
+    readonly AgentSettings: {
+      /** @description Pre-refinement, when someone asks. */
+      readonly refinementAgent: string;
+      /** @description Halt diagnosis, when someone asks. */
+      readonly diagnosisAgent: string;
+      /** @description Story drafts from a meeting topic, when someone asks; null: off. */
+      readonly storyDraftAgent: string | null;
+      /** @description Business-rule review after every story that reaches done; null: off. */
+      readonly knowledgeAgent: string | null;
+      /** @description Where a business-rule review opens its pull request (`owner/name`); null: none is opened. */
+      readonly knowledgeRepo: string | null;
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly AgentSettingsChange: {
+      readonly version?: number;
+      readonly refinementAgent?: string;
+      readonly diagnosisAgent?: string;
+      readonly storyDraftAgent?: string | null;
+      readonly knowledgeAgent?: string | null;
+      readonly knowledgeRepo?: string | null;
+      /** @description Must be true when the change turns on Story drafts or Business-rule review, which spend AIU. */
+      readonly confirmSpend?: boolean;
+    };
     readonly SettingsEvent: {
       readonly id: number;
       /**
        * @description `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;
-       *     `jira_settings.connected`, `.updated`, `.disconnected`.
+       *     `jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,
+       *     `.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;
+       *     `agent_settings.updated`.
        */
       readonly type: string;
       readonly actor: string;
       readonly actorName: string | null;
       /** @description The row changed, such as `sonar_server:<id>` or `jira_settings:1`. */
       readonly subject: string;
-      /** @description What changed; a token only as `tokenHint`. */
+      /** @description What changed; a token only as `tokenHint`, a webhook only as `webhookHost`. */
       readonly payload: Record<string, never>;
       /** Format: date-time */
       readonly createdAt: string;
@@ -6618,13 +6951,314 @@ export interface operations {
       readonly 503: components['responses']['Problem'];
     };
   };
+  readonly getTeamsSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The Teams settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['TeamsSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly deleteTeamsSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The channel is disconnected. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly updateTeamsSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['TeamsSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['TeamsSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly putTeamsWebhook: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['TeamsWebhookRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['TeamsSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly sendTeamsTestCard: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description What came of the card. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['TeamsCardOutcome'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getFigmaSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The Figma settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FigmaSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updateFigmaSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['FigmaSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FigmaSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly putFigmaToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['FigmaTokenRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FigmaSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly deleteFigmaToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The settings, without a token. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FigmaSettings'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly testFigmaToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description What Figma answered. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FigmaTest'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly getAgentSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The agents' settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['AgentSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updateAgentSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['AgentSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['AgentSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
   readonly listSettingsEvents: {
     readonly parameters: {
       readonly query?: {
         readonly limit?: number;
         readonly before?: number;
         /** @description Only this section's changes. */
-        readonly section?: 'sonar' | 'jira';
+        readonly section?: 'sonar' | 'jira' | 'teams' | 'figma' | 'agents';
       };
       readonly header?: never;
       readonly path?: never;

@@ -39,6 +39,9 @@ import {
   GATE_RESULTS,
   GATE_SOURCES,
   JIRA_ISSUE_TYPES,
+  AGENT_JOBS,
+  FIGMA_TEST_RESULTS,
+  TEAMS_CARD_RESULTS,
   MEETING_NOTE_IMAGE_TYPES,
   MEETING_NOTE_KINDS,
   MEETING_STATUSES,
@@ -72,6 +75,17 @@ import {
   type JiraSettings,
   type JiraSettingsPage,
   type JiraTest,
+  type AgentMissingProfile,
+  type AgentSettings,
+  type AgentSettingsPage,
+  type FigmaSettings,
+  type FigmaSettingsPage,
+  type FigmaTest,
+  type FigmaToken,
+  type TeamsCardOutcome,
+  type TeamsLastCard,
+  type TeamsSettings,
+  type TeamsSettingsPage,
   type SettingsEvent,
   type SettingsEventPage,
   type SonarRepository,
@@ -1397,6 +1411,145 @@ export const isJiraFieldPage = guard<JiraFieldPage>(
         id: nonEmptyText,
         name: text,
         type: nullable(text),
+      })
+    ),
+  })
+);
+
+const teamsCardOutcome = shape<TeamsCardOutcome>({
+  result: oneOf(TEAMS_CARD_RESULTS),
+  detail: nullable(text),
+  at: timestamp,
+});
+
+const teamsSettings = shape<TeamsSettings>({
+  webhook: shape<TeamsSettings['webhook']>({
+    host: nonEmptyText,
+    setBy: actor,
+    setByName: nullable(text),
+    setAt: timestamp,
+  }),
+  uiUrl: nullable(nonEmptyText),
+  lastCard: nullable(
+    shape<TeamsLastCard>({
+      title: text,
+      result: oneOf(TEAMS_CARD_RESULTS),
+      detail: nullable(text),
+      at: timestamp,
+    })
+  ),
+  version: wholeNumber('a version', 1),
+  updatedBy: actor,
+  updatedByName: nullable(text),
+  updatedAt: timestamp,
+});
+
+/** The crew's Teams channel, as `getTeamsSettings` answers it. */
+export const isTeamsSettingsPage = guard<TeamsSettingsPage>(
+  'TeamsSettingsPage',
+  shape<TeamsSettingsPage>({
+    canEdit: flag,
+    secretsConfigured: flag,
+    webhookReadable: flag,
+    teams: nullable(teamsSettings),
+  })
+);
+
+/** The channel's settings, as `putTeamsWebhook` and `updateTeamsSettings` answer them. */
+export const isTeamsSettings = guard<TeamsSettings>(
+  'TeamsSettings',
+  teamsSettings
+);
+
+/** Whether Teams took the test card, as `sendTeamsTestCard` answers it. */
+export const isTeamsCardOutcome = guard<TeamsCardOutcome>(
+  'TeamsCardOutcome',
+  teamsCardOutcome
+);
+
+const figmaTest = shape<FigmaTest>({
+  result: oneOf(FIGMA_TEST_RESULTS),
+  detail: nullable(text),
+  at: timestamp,
+});
+
+/** One or more names: the UI builders are never none. */
+const someNames: Check = (value, at) => {
+  if (!Array.isArray(value) || value.length === 0)
+    return `${at} must be a list of at least one name`;
+  return arrayOf(nonEmptyText)(value, at);
+};
+
+const figmaSettings = shape<FigmaSettings>({
+  token: nullable(
+    shape<FigmaToken>({
+      hint: boundedText('at most four characters', 0, 4),
+      setBy: actor,
+      setByName: nullable(text),
+      setAt: timestamp,
+      lastTest: nullable(figmaTest),
+    })
+  ),
+  uiAgents: someNames,
+  selectorPrefix: nonEmptyText,
+  version: nullable(wholeNumber('a version', 1)),
+  updatedBy: nullable(actor),
+  updatedByName: nullable(text),
+  updatedAt: nullable(timestamp),
+});
+
+/** Figma's settings page, as `getFigmaSettings` answers it. */
+export const isFigmaSettingsPage = guard<FigmaSettingsPage>(
+  'FigmaSettingsPage',
+  shape<FigmaSettingsPage>({
+    canEdit: flag,
+    secretsConfigured: flag,
+    tokenReadable: flag,
+    figma: figmaSettings,
+  })
+);
+
+/** Figma's settings, as `putFigmaToken`, `deleteFigmaToken` and `updateFigmaSettings` answer them. */
+export const isFigmaSettings = guard<FigmaSettings>(
+  'FigmaSettings',
+  figmaSettings
+);
+
+/** What a token test found, as `testFigmaToken` answers it. */
+export const isFigmaTest = guard<FigmaTest>('FigmaTest', figmaTest);
+
+const profileName = boundedText(
+  'a profile name of 1 to 100 characters',
+  1,
+  100
+);
+
+/** The agents' jobs page, as `getAgentSettings` and `updateAgentSettings` answer it. */
+export const isAgentSettingsPage = guard<AgentSettingsPage>(
+  'AgentSettingsPage',
+  shape<AgentSettingsPage>({
+    canEdit: flag,
+    agents: shape<AgentSettings>({
+      refinementAgent: profileName,
+      diagnosisAgent: profileName,
+      storyDraftAgent: nullable(profileName),
+      knowledgeAgent: nullable(profileName),
+      knowledgeRepo: nullable(nonEmptyText),
+      version: nullable(wholeNumber('a version', 1)),
+      updatedBy: nullable(actor),
+      updatedByName: nullable(text),
+      updatedAt: nullable(timestamp),
+    }),
+    profiles: shape<AgentSettingsPage['profiles']>({
+      commit: nullable(nonEmptyText),
+      names: arrayOf(nonEmptyText),
+      problem: nullable(text),
+    }),
+    missing: arrayOf(
+      shape<AgentMissingProfile>({
+        job: oneOf(AGENT_JOBS),
+        name: nonEmptyText,
+        profile: nonEmptyText,
       })
     ),
   })

@@ -1,0 +1,24 @@
+{
+  "canEdit": true,
+  "secretsConfigured": true,
+  "tokenReadable": true,
+  "figma": {
+    "token": {
+      "hint": "c9d4",
+      "setBy": "alex@example.com",
+      "setByName": "Alex Example",
+      "setAt": "2026-10-29T18:00:00.000Z",
+      "lastTest": {
+        "result": "ok",
+        "detail": "design-bot@example.com",
+        "at": "2026-10-29T18:01:00.000Z"
+      }
+    },
+    "uiAgents": ["ahoy-frontend-developer"],
+    "selectorPrefix": "ds-",
+    "version": 2,
+    "updatedBy": "bea@example.com",
+    "updatedByName": "Bea Example",
+    "updatedAt": "2026-10-30T15:10:00.000Z"
+  }
+}
