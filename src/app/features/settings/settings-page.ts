@@ -20,7 +20,7 @@ import {
 import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
 
 /**
- * Team settings: the SonarQube servers the CI fixes read, which repository is on which, and who changed what. Admins
+ * Team settings › SonarQube: the servers the CI fixes read, which repository is on which, and who changed what. Admins
  * change them here; everyone else reads them. They are the only place SonarQube is set. Tokens are typed once and
  * shown only as their last four characters. 0 AIU.
  */
@@ -44,37 +44,17 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
     :host {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
     .head {
       display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .head__text {
-      display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
-    .head h1 {
+    .head h2 {
       margin: 0;
-      font-size: 30px;
+      font-size: 20px;
       font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-    .head p {
-      margin: 0;
-      max-width: 640px;
-    }
-    .crumbs {
-      font-size: 12px;
-    }
-    .admin {
-      display: inline-flex;
-      gap: 6px;
-      align-items: center;
     }
     .layout {
       display: flex;
@@ -138,20 +118,10 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
   `,
   template: `
     <div class="head">
-      <div class="head__text">
-        <span class="crumbs ah-muted">Account › Team settings</span>
-        <h1>Team settings</h1>
-        <p class="ah-muted">
-          The SonarQube servers that CI fixes read, and which repository is on
-          which. Every change is recorded with who made it.
-        </p>
-      </div>
-      @if (store.canEdit()) {
-        <span class="ah-tag ah-tag--accent admin"
-          ><ah-icon name="check" [size]="12" />You can change these ·
-          admin</span
-        >
-      }
+      <h2>SonarQube</h2>
+      <span class="ah-muted"
+        >The servers that CI fixes read, and which repository is on which.</span
+      >
     </div>
 
     @if (failure(); as problem) {
@@ -369,7 +339,7 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
           <ah-panel>
             <ah-panel-head
               heading="History"
-              subtitle="The latest changes first"
+              subtitle="SonarQube, the latest first"
             />
             <ah-panel-body>
               @if (historyFailure(); as problem) {
@@ -383,7 +353,7 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
               } @else if (history().length === 0) {
                 <span class="ah-hint">No change yet.</span>
               } @else {
-                <ol class="history" aria-label="Changes to team settings">
+                <ol class="history" aria-label="Changes to SonarQube">
                   @for (e of history(); track e.id) {
                     <li>
                       <span class="ah-avatar" aria-hidden="true">{{

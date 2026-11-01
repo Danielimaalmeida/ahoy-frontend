@@ -11,6 +11,7 @@ import type {
   SonarServerRequest,
   SonarSettings,
 } from '@core/api/types';
+import { SettingsSummary } from './settings-summary';
 
 /** How many entries of the settings history the page shows. */
 export const HISTORY_LIMIT = 50;
@@ -22,6 +23,7 @@ export const HISTORY_LIMIT = 50;
 @Injectable()
 export class SettingsStore {
   private readonly api = inject(ApiClient);
+  private readonly summary = inject(SettingsSummary, { optional: true });
 
   /** The SonarQube settings, once read. */
   readonly sonar = signal<SonarSettings | null>(null);
@@ -53,17 +55,19 @@ export class SettingsStore {
    * only the latest one's answer is kept, so an older answer never replaces a newer one.
    */
   async load(): Promise<void> {
+    this.summary?.claim('sonar');
     const read = ++this.reads;
     this.loading.set(true);
     const [sonar, history] = await Promise.all([
       this.api.getSonarSettings(),
-      this.api.listSettingsEvents(HISTORY_LIMIT),
+      this.api.listSettingsEvents(HISTORY_LIMIT, 'sonar'),
     ]);
     if (read !== this.reads) return;
     this.loading.set(false);
     if (sonar.ok) {
       this.loadError.set(null);
       this.sonar.set(sonar.value);
+      this.summary?.sonarRead(sonar.value);
     } else {
       this.loadError.set(sonar.error);
     }

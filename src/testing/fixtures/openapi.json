@@ -112,7 +112,7 @@
         "operationId": "listJiraBacklog",
         "tags": ["jira"],
         "summary": "All Jira Stories, Tasks and Bugs matching the configured backlog query.",
-        "description": "Read-only Jira Server REST search, authenticated with the server's `JIRA_PAT`, not the client's\nWebEAM token. Requires `JIRA_BASE_URL` (HTTPS) and `JIRA_PAT` on the API process; neither is returned.\n`JIRA_BACKLOG_JQL` is the team's server-side query; there is no default, and without it the endpoint answers\n`503 unavailable`. Teams usually use their start-page availability filter, not the Jira Agile board backlog\n(which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
+        "description": "Read-only Jira Server REST search, authenticated with the token stored in the team settings\n(`/settings/jira`), not the client's WebEAM token; it is never returned. The query is the settings'\n`backlogJql`; there is no default, and while Jira is not connected or the query is empty the endpoint answers\n`503 unavailable`. Teams usually use their start-page availability filter, not the Jira Agile board backlog\n(which excludes sprint-assigned issues). The query must select only Story, Task and Bug\nissues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters\nare accepted. The backend follows all Jira search pages and preserves rank order; `total` equals\nthe number of returned items. Issues already started in Ahoy are not excluded.\n\nA successful result is cached on the server for 30 seconds. No stale or partial result is served.\nMissing configuration, Jira HTTP errors (including PAT rejection or rate limiting), network/timeout\nerrors, malformed responses or pagination inconsistencies return `503 unavailable`.\nThis lookup never starts a delivery or spends AIU.\n\nEach item carries `readiness`, fixed rules over its description, labels and \"is blocked by\" links (the\ndescription itself is not returned): `missing` when intake would stop it (no description, no acceptance\ncriteria section or no items in it, under 200 characters, blocked by an unresolved issue), `attention` when\nthe harness may not suit it (a spike or investigation, CI or pipeline changes), else `ready`. Whether a story is\nworth running through the harness is told from its plan (`getStoryPlanFit`).\n",
         "responses": {
           "200": {
             "description": "Complete backlog in Jira rank order.",
@@ -3521,7 +3521,7 @@
         "operationId": "getCrew",
         "tags": ["crew"],
         "summary": "The crew page, with who is on in the current sprint and the next five.",
-        "description": "The team's members alphabetically, with their time off, and the sprints from the current one: Jira's active\nsprint, read from the team's board (`JIRA_BOARD_ID`) and kept; future sprints without dates follow at the\nteam's cadence (`datesEstimated`), and after Jira's last sprint come `projected` ones. Each sprint names who is\non for each role (`sprint_person`, the devs; `lunch_host`, anyone), in alphabetical turns from where the role's\norder started, with the changes people made. A role nobody started starts on the current sprint with the first\nmember alphabetically. When Jira cannot be read, the sprints last seen are used and `sprintsProblem` says why.\n0 AIU.\n",
+        "description": "The team's members alphabetically, with their time off, and the sprints from the current one: Jira's active\nsprint, read from the team's board (the `board` of `/settings/jira`) and kept; future sprints without dates follow at the\nteam's cadence (`datesEstimated`), and after Jira's last sprint come `projected` ones. Each sprint names who is\non for each role (`sprint_person`, the devs; `lunch_host`, anyone), in alphabetical turns from where the role's\norder started, with the changes people made. A role nobody started starts on the current sprint with the first\nmember alphabetically. When Jira cannot be read, the sprints last seen are used and `sprintsProblem` says why.\n0 AIU.\n",
         "responses": {
           "200": {
             "description": "The crew page.",
@@ -4086,6 +4086,272 @@
         }
       }
     },
+    "/settings/jira": {
+      "get": {
+        "operationId": "getJiraSettings",
+        "tags": ["settings"],
+        "summary": "The team's Jira, which the backlog, intake, the crew's sprints and stories from meetings read.",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place Jira is\nconfigured. `jira` is null while Jira is off. The token is never returned: only its last four characters.\n`currentSprint` is the board's active sprint (else its next), when Jira answers within 3 seconds. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The Jira settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JiraSettingsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateJiraSettings",
+        "tags": ["settings"],
+        "summary": "Change the backlog query, the crew's board, the summary prefix or the fixed fields. Admins only.",
+        "description": "`backlogJql: null` turns the Backlog page off and `boardId: null` the crew's sprints. A new board is looked up\nin Jira: one the token cannot see is refused (`400`); when Jira does not answer it is saved without its name.\n`storyFields` replaces the list; a field Ahoy writes itself (project, issuetype, summary, description, labels,\nacceptance criteria) is refused. `409 invalid_state` while Jira is not connected, `409 stale_version` when\n`version` is not the settings'.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JiraSettingsChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JiraSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteJiraSettings",
+        "tags": ["settings"],
+        "summary": "Turn Jira off, removing its settings and token. Admins only.",
+        "description": "The backlog, intake and stories from meetings stop until Jira is connected again.",
+        "responses": {
+          "204": {
+            "description": "Jira is off."
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/jira/connection": {
+      "put": {
+        "operationId": "putJiraConnection",
+        "tags": ["settings"],
+        "summary": "Connect Jira, or move it or give it a new token. Admins only.",
+        "description": "Connecting needs `token`; once connected, `version` is required. Moving Jira to another `baseUrl` needs\n`token` in the same request, so the old token never goes to a new host. The token is sealed (AES-256-GCM,\n`AHOY_SECRETS_KEY`) before it is stored, and only sent to `baseUrl`. Either change clears the last test.\n`503 unavailable` when the server has no `AHOY_SECRETS_KEY`.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JiraConnectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JiraSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/jira/test": {
+      "post": {
+        "operationId": "testJiraConnection",
+        "tags": ["settings"],
+        "summary": "Ask Jira who the stored token is, and keep the answer as the last test. Admins only.",
+        "description": "`GET /rest/api/2/myself` with the stored token. Jira's own text is never returned. 0 AIU.",
+        "responses": {
+          "200": {
+            "description": "What Jira answered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JiraTest"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/jira/backlog-preview": {
+      "post": {
+        "operationId": "previewJiraBacklog",
+        "tags": ["settings"],
+        "summary": "How many issues a backlog query matches, and the first, before it is saved. Admins only.",
+        "description": "`400` when Jira does not accept the query, `503` when Jira refuses the token or does not answer. 0 AIU.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["jql"],
+                "properties": {
+                  "jql": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The query's count and first issue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JiraBacklogPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/jira/fields": {
+      "get": {
+        "operationId": "listJiraFields",
+        "tags": ["settings"],
+        "summary": "Jira's fields whose name or id holds `q`, for adding a fixed field. Admins only.",
+        "description": "At most 25, by name. 0 AIU.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JiraFieldPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/settings/events": {
       "get": {
         "operationId": "listSettingsEvents",
@@ -4111,6 +4377,16 @@
             "schema": {
               "type": "integer",
               "minimum": 1
+            }
+          },
+          {
+            "name": "section",
+            "in": "query",
+            "required": false,
+            "description": "Only this section's changes.",
+            "schema": {
+              "type": "string",
+              "enum": ["sonar", "jira"]
             }
           }
         ],
@@ -9484,6 +9760,324 @@
           }
         }
       },
+      "JiraSettingsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["canEdit", "secretsConfigured", "tokenReadable", "jira"],
+        "properties": {
+          "canEdit": {
+            "type": "boolean",
+            "description": "Whether the person is an admin, who may change them."
+          },
+          "secretsConfigured": {
+            "type": "boolean",
+            "description": "Whether the server can save a token (`AHOY_SECRETS_KEY`)."
+          },
+          "tokenReadable": {
+            "type": "boolean",
+            "description": "Whether the stored token opens with the server's key; false means it has to be entered again."
+          },
+          "jira": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "JiraSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "connection",
+          "backlogJql",
+          "board",
+          "currentSprint",
+          "storySummaryPrefix",
+          "storyFields",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "connection": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "baseUrl",
+              "tokenHint",
+              "tokenSetBy",
+              "tokenSetByName",
+              "tokenSetAt",
+              "lastTest"
+            ],
+            "properties": {
+              "baseUrl": {
+                "type": "string"
+              },
+              "tokenHint": {
+                "type": "string",
+                "maxLength": 4,
+                "description": "The token's last four characters; never the token."
+              },
+              "tokenSetBy": {
+                "type": "string"
+              },
+              "tokenSetByName": {
+                "type": ["string", "null"]
+              },
+              "tokenSetAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastTest": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/JiraTest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "backlogJql": {
+            "type": ["string", "null"],
+            "description": "The Backlog page's query; null turns the page off."
+          },
+          "board": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "name", "type"],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "name": {
+                    "type": ["string", "null"],
+                    "description": "As Jira named it when it was set; null if Jira did not answer."
+                  },
+                  "type": {
+                    "type": ["string", "null"],
+                    "description": "`scrum` or `kanban`."
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currentSprint": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "startsOn", "endsOn"],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "startsOn": {
+                    "type": ["string", "null"],
+                    "format": "date"
+                  },
+                  "endsOn": {
+                    "type": ["string", "null"],
+                    "format": "date"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "storySummaryPrefix": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "storyFields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JiraFixedField"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JiraFixedField": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "value"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,79}$",
+            "description": "Such as `customfield_11400`."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "The field's name in Jira, for people."
+          },
+          "value": {
+            "description": "The value as Jira's create takes it, such as `[{\"value\": \"Checkout\"}]`."
+          }
+        }
+      },
+      "JiraTest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["result", "detail", "at"],
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": ["ok", "refused", "unreachable"]
+          },
+          "detail": {
+            "type": ["string", "null"],
+            "description": "Who Jira says the token is, the HTTP status it refused with, or why it could not be reached."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JiraConnectionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["baseUrl"],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "writeOnly": true
+          }
+        }
+      },
+      "JiraSettingsChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version"],
+        "minProperties": 2,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "backlogJql": {
+            "type": ["string", "null"],
+            "maxLength": 4000
+          },
+          "boardId": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "storySummaryPrefix": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "storyFields": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "$ref": "#/components/schemas/JiraFixedField"
+            }
+          }
+        }
+      },
+      "JiraBacklogPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["total", "first"],
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "first": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key", "summary"],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "JiraFieldPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "name", "type"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": ["string", "null"],
+                  "description": "Jira's schema type, such as `array` or `option`."
+                }
+              }
+            }
+          }
+        }
+      },
       "SettingsEvent": {
         "type": "object",
         "additionalProperties": false,
@@ -9502,7 +10096,7 @@
           },
           "type": {
             "type": "string",
-            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`."
+            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;\n`jira_settings.connected`, `.updated`, `.disconnected`.\n"
           },
           "actor": {
             "type": "string"
@@ -9512,7 +10106,7 @@
           },
           "subject": {
             "type": "string",
-            "description": "The row changed, such as `sonar_server:<id>`."
+            "description": "The row changed, such as `sonar_server:<id>` or `jira_settings:1`."
           },
           "payload": {
             "type": "object",

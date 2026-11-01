@@ -62,6 +62,16 @@ import {
   type AgentDiagnosisList,
   type Crew,
   type Me,
+  JIRA_TEST_RESULTS,
+  type JiraBacklogPreview,
+  type JiraBoard,
+  type JiraCurrentSprint,
+  type JiraField,
+  type JiraFieldPage,
+  type JiraFixedField,
+  type JiraSettings,
+  type JiraSettingsPage,
+  type JiraTest,
   type SettingsEvent,
   type SettingsEventPage,
   type SonarRepository,
@@ -1291,6 +1301,105 @@ export const isSonarServer = guard<SonarServer>('SonarServer', sonarServer);
 export const isSonarRepository = guard<SonarRepository>(
   'SonarRepository',
   sonarRepository
+);
+
+/** Any JSON value but `null`: a fixed field's value as Jira's create takes it. */
+const jsonValue: Check = (value, at) =>
+  value === undefined || value === null ? `${at} must be a JSON value` : null;
+
+const jiraFieldId = patterned(
+  'a Jira field id like customfield_11400',
+  /^[A-Za-z]\w{0,79}$/,
+  80
+);
+
+const jiraTest = shape<JiraTest>({
+  result: oneOf(JIRA_TEST_RESULTS),
+  detail: nullable(text),
+  at: timestamp,
+});
+
+const jiraFixedField = shape<JiraFixedField>({
+  id: jiraFieldId,
+  name: boundedText('at most 100 characters', 0, 100),
+  value: jsonValue,
+});
+
+const jiraSettings = shape<JiraSettings>({
+  connection: shape<JiraSettings['connection']>({
+    baseUrl: nonEmptyText,
+    tokenHint: boundedText('at most four characters', 0, 4),
+    tokenSetBy: actor,
+    tokenSetByName: nullable(text),
+    tokenSetAt: timestamp,
+    lastTest: nullable(jiraTest),
+  }),
+  backlogJql: nullable(text),
+  board: nullable(
+    shape<JiraBoard>({
+      id: wholeNumber('a board id', 1),
+      name: nullable(text),
+      type: nullable(text),
+    })
+  ),
+  currentSprint: nullable(
+    shape<JiraCurrentSprint>({
+      name: text,
+      startsOn: nullable(isoDate),
+      endsOn: nullable(isoDate),
+    })
+  ),
+  storySummaryPrefix: boundedText('at most 40 characters', 0, 40),
+  storyFields: arrayOf(jiraFixedField),
+  version: wholeNumber('a version', 1),
+  updatedBy: actor,
+  updatedByName: nullable(text),
+  updatedAt: timestamp,
+});
+
+/** Jira's settings page, as `getJiraSettings` answers it. */
+export const isJiraSettingsPage = guard<JiraSettingsPage>(
+  'JiraSettingsPage',
+  shape<JiraSettingsPage>({
+    canEdit: flag,
+    secretsConfigured: flag,
+    tokenReadable: flag,
+    jira: nullable(jiraSettings),
+  })
+);
+
+/** Jira's settings, as `putJiraConnection` and `updateJiraSettings` answer them. */
+export const isJiraSettings = guard<JiraSettings>('JiraSettings', jiraSettings);
+
+/** What a connection test found, as `testJiraConnection` answers it. */
+export const isJiraTest = guard<JiraTest>('JiraTest', jiraTest);
+
+/** A backlog query's count and first issue, as `previewJiraBacklog` answers them. */
+export const isJiraBacklogPreview = guard<JiraBacklogPreview>(
+  'JiraBacklogPreview',
+  shape<JiraBacklogPreview>({
+    total: wholeNumber('a count of issues', 0),
+    first: nullable(
+      shape<NonNullable<JiraBacklogPreview['first']>>({
+        key: nonEmptyText,
+        summary: text,
+      })
+    ),
+  })
+);
+
+/** Jira's fields that match a search, as `listJiraFields` answers them. */
+export const isJiraFieldPage = guard<JiraFieldPage>(
+  'JiraFieldPage',
+  shape<JiraFieldPage>({
+    items: arrayOf(
+      shape<JiraField>({
+        id: nonEmptyText,
+        name: text,
+        type: nullable(text),
+      })
+    ),
+  })
 );
 
 /** The changes to team settings, as `listSettingsEvents` answers them. */

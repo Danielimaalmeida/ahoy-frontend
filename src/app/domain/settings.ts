@@ -3,6 +3,8 @@
  * payloads come from the API as `unknown` and are read field by field.
  */
 
+import { describeJiraEvent } from './jira-settings';
+
 /** One change of a field, as the API records it: `{ from, to }`. */
 interface FieldChange {
   readonly from: unknown;
@@ -107,6 +109,6 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
     case 'sonar_repository.deleted':
       return `Took ${repository} off its server`;
     default:
-      return type;
+      return describeJiraEvent(type, payload) ?? type;
   }
 }

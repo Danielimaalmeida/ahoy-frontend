@@ -779,6 +779,54 @@ export type SettingsEvent = Schemas['SettingsEvent'];
 /** Answer of `listSettingsEvents`, newest first. */
 export type SettingsEventPage = Schemas['SettingsEventPage'];
 
+/** Which part of the team settings a history entry belongs to. */
+export type SettingsSection = NonNullable<
+  NonNullable<
+    operations['listSettingsEvents']['parameters']['query']
+  >['section']
+>;
+
+/** Answer of `getJiraSettings`: Jira as set (null while it is off), and what the person and the API can do. */
+export type JiraSettingsPage = Schemas['JiraSettingsPage'];
+
+/** Jira's settings: the connection (its token only as the last four characters), the backlog, board and story fields. */
+export type JiraSettings = Schemas['JiraSettings'];
+
+/** A field every story created from a meeting carries, with its value as Jira's create takes it. */
+export type JiraFixedField = Schemas['JiraFixedField'];
+
+/** What "Test connection" found, kept as the last test. */
+export type JiraTest = Schemas['JiraTest'];
+
+/** What a connection test can find. */
+export type JiraTestResult = JiraTest['result'];
+export const JIRA_TEST_RESULTS = listOf<JiraTestResult>()([
+  'ok',
+  'refused',
+  'unreachable',
+]);
+
+/** The crew's board, as Jira named it when it was set. */
+export type JiraBoard = NonNullable<JiraSettings['board']>;
+
+/** The board's active sprint, or its next one. */
+export type JiraCurrentSprint = NonNullable<JiraSettings['currentSprint']>;
+
+/** Body of `putJiraConnection`: the base URL and, to connect or move, the token. */
+export type JiraConnectionRequest = Schemas['JiraConnectionRequest'];
+
+/** Body of `updateJiraSettings`: the version and what changes. */
+export type JiraSettingsChange = Schemas['JiraSettingsChange'];
+
+/** Answer of `previewJiraBacklog`: how many issues a query matches, and the first. */
+export type JiraBacklogPreview = Schemas['JiraBacklogPreview'];
+
+/** Answer of `listJiraFields`: the fields whose name or id holds the search. */
+export type JiraFieldPage = Schemas['JiraFieldPage'];
+
+/** One of Jira's fields, found by `listJiraFields`. */
+export type JiraField = JiraFieldPage['items'][number];
+
 /** Query of `listMeetingNotes`: one kind, optionally of one series or meeting, and open or done actions. */
 export type ListMeetingNotesQuery =
   operations['listMeetingNotes']['parameters']['query'];

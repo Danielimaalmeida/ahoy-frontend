@@ -18,6 +18,7 @@ import { Field, FieldControl } from '@ui/field/field';
 import { Icon } from '@ui/icon/icon';
 import { ToastService } from '@ui/toast/toast';
 import { settingsErrorView } from './settings-errors';
+import { hostOf } from './settings-url';
 import type { SettingsStore } from './settings-store';
 
 /** What the server dialog is opened with: the page's store and the server to edit, or null to add one. */
@@ -26,21 +27,6 @@ export interface SonarServerData {
   readonly server: SonarServer | null;
   /** Whether this would be the first server, which is then the default. */
   readonly first: boolean;
-}
-
-/**
- * A host URL as the API keeps it: parsed (the host in lower case, a default port dropped) and without trailing
- * slashes, so the same host typed another way is not taken for a new one. Text that does not parse is only trimmed.
- */
-function hostOf(text: string): string {
-  const trimmed = text.trim();
-  let href = trimmed;
-  try {
-    href = new URL(trimmed).href;
-  } catch {
-    // The validator refuses it; keep the text as typed.
-  }
-  return href.replace(/\/+$/, '');
 }
 
 /** "1 repository" or "3 repositories". */
