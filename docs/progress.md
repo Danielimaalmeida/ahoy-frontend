@@ -10,18 +10,20 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 ## Where we are
 
 - **This branch (`feat/phase-settings`, 2026-11-01, on `main` after #51):** Team settings has a sixth section,
-  **Phases** (`/settings/phases`, "As deployed", "1 changed" or "Models changed" in the navigation). An admin sets each
-  phase's default model and effort (from the catalogue; the efforts the chosen model takes), the AIU cap of one run,
-  the timeout in minutes and, for implementation, how long it waits for CI; "Default" or an empty field is the deployment's
-  value, which shows in grey under the field. A field `AHOY_PHASE_CONFIG` sets shows as text with "Set by the deployment". A
-  cap above the most allowed (`AHOY_MAX_PHASE_BUDGET_AIU`, else the deployment's own cap: a banner says caps can only be
-  lowered) or a timeout that is not whole minutes is refused under its field before anything is sent. Raising a cap,
-  including giving a lowered one back to the deployment's, shows a banner, asks in a dialog ("Raise and save") and is
-  sent with `confirmSpend: true`; lowering one saves at once. The model catalogue is edited as a list (id, label,
-  efforts), saved whole, or given back to the built-in list; it is text when `AHOY_MODEL_CATALOG` sets it. An admin's
-  save that another beat shows theirs; non-admins read everything; the history reads each field in words. The
-  SonarQube servers table keeps a token on one line ("Set" and the day under it, who set it on hover), puts Default
-  under the server's name and heads the count "Repos", so it fits at 1440 px without scrolling.
+  **Phases** (`/settings/phases`, "As deployed", "1 changed" or "Models changed" in the navigation). An admin sets
+  each phase's default model and effort (from the catalogue; the efforts the chosen model takes), the AIU cap of one
+  run, the timeout in minutes and, for implementation, how long it waits for CI; "Default" or an empty field is the
+  deployment's value, which shows in grey under the field. A field `AHOY_PHASE_CONFIG` sets shows as text with "Set by
+  the deployment". A cap above the phase's most allowed (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap,
+  whichever is higher; unset, a banner says caps can only be lowered) or a timeout that is not whole minutes is
+  refused under its field before anything is sent, and so is an effort the chosen model does not take; only the fields
+  the admin changed are judged. Raising a cap, including giving a lowered one back to the deployment's, shows a
+  banner, asks in a dialog ("Raise and save") and is sent with `confirmSpend: true`; lowering one saves at once. The
+  model catalogue is edited as a list (id, label, efforts), saved whole, or given back to the built-in list; it is
+  text when `AHOY_MODEL_CATALOG` sets it. An admin's save that another beat shows theirs; non-admins read everything;
+  the history reads each field in words. The SonarQube servers table keeps a token on one line ("Set" and the day
+  under it, who set it on hover and to screen readers), puts Default under the server's name and heads the count
+  "Repos", so it fits at 1440 px without scrolling.
 - **Merged on 2026-11-01:** Team settings › Teams, Figma and Agents (PR #51, with `ahoy-hosted`'s
   `feat/teams-figma-agents-settings`): the channel's webhook and test card, the Figma token and UI builders, and who
   runs the four agents' jobs, turning on the two that spend AIU after a confirmation.
@@ -35,7 +37,7 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/phase-settings` (`8b443f9`, PR #75;
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/phase-settings` (`92bf13b`, PR #75;
   the commit in its header changes if that branch moves before merging), formatted with this repository's Prettier; `schema.d.ts` and the test mirror are regenerated
   from it. Needs on the API: migrations 0025 to 0031, `AHOY_SECRETS_KEY` and `AHOY_ADMIN_QNUMBERS`, and optionally
   `AHOY_MAX_PHASE_BUDGET_AIU`. Merge and deploy with the `ahoy-hosted` pull request.
@@ -48,10 +50,10 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 - **Last full run** (2026-11-01, `feat/phase-settings`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from the
-  lock file with the `@acme-fedev` entries left out): Vitest 186 files, 3,239 tests, all passed (new: the Phases page
-  11, `domain/phase-settings` 9, its guard and client 5, the frame's Phases state 1, two contract fixtures; the frame's
-  four tests and the contract's operation list now include Phases); `npm run typecheck` (app, specs,
-  `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .` passed (the
+  lock file with the `@acme-fedev` entries left out), after the code review's high and medium findings were fixed:
+  Vitest 186 files, 3,242 tests, all passed (new: the Phases page 14, `domain/phase-settings` 9, its guard and client
+  5, the frame's Phases state 1, two contract fixtures; the frame's four tests and the contract's operation list now
+  include Phases); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .` passed (the
   `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and two meetings dialogs warn
   NG8011, as on `main`). Not run: Node 24, the real `@acme-fedev/auth`, nginx, the Playwright suite, and the page against a
   real API (the pages were only looked at in Chromium over fixtures).

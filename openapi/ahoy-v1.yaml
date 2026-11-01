@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 8b443f9562fb3e8ef15f8fa92bdf4e9353397f10
+# Commit: 92bf13ba3883b1a25dabad9c50edb9ba41673417
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2724,7 +2724,8 @@ paths:
       description: |
         Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model
         must be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed
-        `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`, else the deployment's own cap, and never a phase's own limit).
+        `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap, whichever is higher, and never a
+        phase's own limit).
         Raising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`
         otherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused
         (`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).

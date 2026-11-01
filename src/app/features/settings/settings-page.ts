@@ -227,7 +227,10 @@ import { SonarServerDialog, type SonarServerData } from './sonar-server-dialog';
                             [title]="
                               'Set by ' + (s.tokenSetByName ?? s.tokenSetBy)
                             "
-                            >Set {{ day(s.tokenSetAt) }}</span
+                            >Set {{ day(s.tokenSetAt)
+                            }}<span class="ah-sr">
+                              by {{ s.tokenSetByName ?? s.tokenSetBy }}</span
+                            ></span
                           >
                         </td>
                         <td class="num">{{ s.repositoryCount }}</td>

@@ -18,9 +18,10 @@ import {
   type PhaseSettingsRow,
   type ReasoningEffort,
 } from '@core/api/types';
-import { formatAiu } from '@domain/aiu';
+import { MODEL_ID, MODEL_ID_MAX } from '@core/api/guards';
 import {
   aiuLabel,
+  aiuNumber,
   capsRaised,
   isStoryPhase,
   MAX_CI_WAIT_MINUTES,
@@ -71,6 +72,36 @@ type ModelGroup = FormGroup<{ [K in keyof ModelText]: FormControl<string> }>;
 /** The deployment's value: an empty control. */
 const DEPLOYMENT = '';
 
+/** What a catalogue model's efforts read as when it takes none (`[]`); empty is any effort (`null`). */
+const NO_EFFORT = 'none';
+
+/** A phase's change while it is built: the API's shape, field by field. */
+type MutablePhaseChange = {
+  -readonly [K in keyof PhaseChange]: PhaseChange[K];
+};
+
+/** One phase as typed, read once. */
+interface RowRead {
+  readonly phase: string;
+  /** Why a changed field is refused, by field of the form. */
+  readonly problems: ReadonlyMap<keyof PhaseText, string>;
+  /** Its cap before and after, when the admin changed it. */
+  readonly cap?: CapChange;
+  /** What changed, as the API takes it; absent when nothing did. */
+  readonly change?: PhaseChange;
+}
+
+/** Whether a typed word is an effort a run can ask for. */
+function isEffort(word: string): word is ReasoningEffort {
+  return (REASONING_EFFORTS as readonly string[]).includes(word);
+}
+
+/** A model's efforts in words: "low, high", "none" for no effort, empty for any. */
+function effortsText(efforts: CatalogModel['reasoningEfforts']): string {
+  if (efforts === null) return '';
+  return efforts.length === 0 ? NO_EFFORT : efforts.join(', ');
+}
+
 /** A phase's saved fields as the form shows them. */
 function phaseTextOf(row: PhaseSettingsRow): PhaseText {
   const { saved } = row;
@@ -80,7 +111,7 @@ function phaseTextOf(row: PhaseSettingsRow): PhaseText {
     budget:
       saved.budgetNanoAiu === null
         ? DEPLOYMENT
-        : formatAiu(saved.budgetNanoAiu, 9).replace(/\.?0+$/, ''),
+        : aiuNumber(saved.budgetNanoAiu),
     timeout:
       saved.timeoutSeconds === null
         ? DEPLOYMENT
@@ -95,7 +126,7 @@ function modelTextOf(model: CatalogModel): ModelText {
   return {
     id: model.id,
     label: model.label === model.id ? '' : model.label,
-    efforts: model.reasoningEfforts?.join(', ') ?? '',
+    efforts: effortsText(model.reasoningEfforts),
   };
 }
 
@@ -121,8 +152,6 @@ function modelGroup(text: ModelText): ModelGroup {
   });
 }
 
-const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
-
 /** A typed catalogue as the API takes it, or why it is refused. */
 function catalogOf(
   typed: readonly ModelText[]
@@ -134,7 +163,7 @@ function catalogOf(
   const models = [];
   for (const [i, m] of typed.entries()) {
     const id = m.id.trim();
-    if (!MODEL_ID.test(id) || id.length > 200)
+    if (!MODEL_ID.test(id) || id.length > MODEL_ID_MAX)
       return {
         problem: `Model ${i + 1}: give a model id, such as claude-sonnet-5.`,
       };
@@ -146,16 +175,16 @@ function catalogOf(
       return { problem: `${id}: keep the label to 80 characters.` };
     const words = m.efforts
       .split(/[\s,]+/)
-      .map((w) => w.trim())
+      .map((w) => w.trim().toLowerCase())
       .filter(Boolean);
+    const none = words.length === 1 && words[0] === NO_EFFORT;
     const efforts: ReasoningEffort[] = [];
-    for (const w of words) {
-      if (!(REASONING_EFFORTS as readonly string[]).includes(w))
+    for (const w of none ? [] : words) {
+      if (!isEffort(w))
         return {
-          problem: `${id}: ${w} is not an effort (${REASONING_EFFORTS.join(', ')}).`,
+          problem: `${id}: ${w} is not an effort (${REASONING_EFFORTS.join(', ')}, or ${NO_EFFORT}).`,
         };
-      if (!efforts.includes(w as ReasoningEffort))
-        efforts.push(w as ReasoningEffort);
+      if (!efforts.includes(w)) efforts.push(w);
     }
     models.push({
       id,
@@ -331,9 +360,13 @@ function catalogOf(
                                 <option [value]="m">{{ m }}</option>
                               }
                             </select>
-                            <span class="ah-hint">{{
-                              deploymentModel(row)
-                            }}</span>
+                            @if (errors().get(row.phase + '.model'); as e) {
+                              <span class="err">{{ e }}</span>
+                            } @else {
+                              <span class="ah-hint">{{
+                                deploymentModel(row)
+                              }}</span>
+                            }
                           </span>
                         } @else {
                           <span class="cell">
@@ -359,9 +392,16 @@ function catalogOf(
                                 <option [value]="e">{{ e }}</option>
                               }
                             </select>
-                            <span class="ah-hint">{{
-                              deploymentEffort(row)
-                            }}</span>
+                            @if (
+                              errors().get(row.phase + '.reasoningEffort');
+                              as e
+                            ) {
+                              <span class="err">{{ e }}</span>
+                            } @else {
+                              <span class="ah-hint">{{
+                                deploymentEffort(row)
+                              }}</span>
+                            }
                           </span>
                         } @else {
                           <span class="cell">
@@ -564,7 +604,7 @@ function catalogOf(
                     <th scope="col">Efforts it takes</th>
                     @if (catalogEditable(page)) {
                       <th scope="col">
-                        <span class="ah-sr-only">Remove</span>
+                        <span class="ah-sr">Remove</span>
                       </th>
                     }
                   </tr>
@@ -627,7 +667,7 @@ function catalogOf(
                       <tr>
                         <td class="ah-mono">{{ m.id }}</td>
                         <td>{{ m.label }}</td>
-                        <td>{{ m.reasoningEfforts?.join(', ') ?? 'Any' }}</td>
+                        <td>{{ effortsShown(m) }}</td>
                       </tr>
                     }
                   }
@@ -637,9 +677,9 @@ function catalogOf(
             @if (catalogEditable(page)) {
               <div class="body warnings">
                 <span class="ah-hint"
-                  >Efforts as a list, such as "low, medium, high"; empty, any
-                  effort. A model a phase runs on stays one people can
-                  pick.</span
+                  >Efforts as a list, such as "low, medium, high"; "none" for a
+                  model that takes no effort; empty, any effort. A model a phase
+                  runs on stays one people can pick.</span
                 >
                 @if (catalogProblem(); as problem) {
                   <span class="err">{{ problem }}</span>
@@ -757,62 +797,32 @@ export class PhaseSettingsPage {
     });
   });
 
-  /** Why a typed field would be refused, by `<phase>.<field>`. */
-  protected readonly errors = computed((): ReadonlyMap<string, string> => {
+  /** Each phase as typed, read once: what changed, why a field is refused and the change the API would take. */
+  private readonly reads = computed((): readonly RowRead[] => {
     const page = this.page();
-    const out = new Map<string, string>();
-    if (page === null) return out;
+    if (page === null) return [];
     const typed = this.typed();
-    for (const row of page.phases) {
+    return page.phases.flatMap((row) => {
       const t = typed[row.phase];
-      if (t === undefined) continue;
-      if (t.budget.trim() !== '' && this.editable(page, row, 'budgetNanoAiu')) {
-        const read = readBudget(t.budget, row.budgetCapNanoAiu);
-        if ('problem' in read) out.set(`${row.phase}.budget`, read.problem);
-      }
-      if (
-        t.timeout.trim() !== '' &&
-        this.editable(page, row, 'timeoutSeconds')
-      ) {
-        const read = readMinutes(
-          t.timeout,
-          MIN_TIMEOUT_MINUTES,
-          MAX_TIMEOUT_MINUTES
-        );
-        if ('problem' in read) out.set(`${row.phase}.timeout`, read.problem);
-      }
-      if (t.ciWait.trim() !== '' && this.editable(page, row, 'ciWaitMinutes')) {
-        const read = readMinutes(t.ciWait, 1, MAX_CI_WAIT_MINUTES);
-        if ('problem' in read) out.set(`${row.phase}.ciWait`, read.problem);
-      }
-    }
+      return t === undefined ? [] : [this.readRow(page, row, t)];
+    });
+  });
+
+  /** Why a changed field would be refused, by `<phase>.<field>`; a saved value the admin did not touch is not judged. */
+  protected readonly errors = computed((): ReadonlyMap<string, string> => {
+    const out = new Map<string, string>();
+    for (const read of this.reads())
+      for (const [field, problem] of read.problems)
+        out.set(`${read.phase}.${field}`, problem);
     return out;
   });
 
-  /** The phases whose cap the typed change raises: saving them asks for a confirmation. */
-  protected readonly raised = computed((): CapChange[] => {
-    const page = this.page();
-    if (page === null || this.errors().size > 0) return [];
-    const typed = this.typed();
-    return capsRaised(
-      page.phases.flatMap((row) => {
-        const t = typed[row.phase];
-        const from = row.runsOn.budgetNanoAiu;
-        if (t === undefined || from === null) return [];
-        const read =
-          t.budget.trim() === ''
-            ? null
-            : readBudget(t.budget, row.budgetCapNanoAiu);
-        const to =
-          read === null
-            ? row.deployment.budgetNanoAiu
-            : 'nanoAiu' in read
-              ? read.nanoAiu
-              : null;
-        return to === null ? [] : [{ phase: row.phase, from, to }];
-      })
-    );
-  });
+  /** The phases whose cap the admin's change raises: saving them asks for a confirmation. */
+  protected readonly raised = computed((): CapChange[] =>
+    this.errors().size > 0
+      ? []
+      : capsRaised(this.reads().flatMap((read) => read.cap ?? []))
+  );
 
   /** The catalogue as typed. */
   private readonly typedModels = computed((): readonly ModelText[] => {
@@ -903,11 +913,11 @@ export class PhaseSettingsPage {
     return seconds === null ? '—' : minutesLabel(Math.round(seconds / 60));
   }
 
-  /** "Caps up to 150 AIU per run, set by the deployment." */
+  /** "Caps up to 150 AIU per run, or a phase's deployment cap where that is higher." */
   protected capsLine(page: PhasesPage): string {
     return page.maxBudgetNanoAiu === null
       ? "Caps may only go down from the deployment's."
-      : `Caps up to ${aiuLabel(page.maxBudgetNanoAiu)} per run, set by the deployment.`;
+      : `Caps up to ${aiuLabel(page.maxBudgetNanoAiu)} per run, or a phase's deployment cap where that is higher.`;
   }
 
   protected catalogLine(page: PhasesPage): string {
@@ -940,6 +950,12 @@ export class PhaseSettingsPage {
     return page.canEdit && page.catalog.editable;
   }
 
+  /** A catalogue model's efforts on the read-only table. */
+  protected effortsShown(model: CatalogModel): string {
+    const text = effortsText(model.reasoningEfforts);
+    return text === '' ? 'Any' : text === NO_EFFORT ? 'None' : text;
+  }
+
   protected deploymentModel(row: PhaseSettingsRow): string {
     return row.deployment.model ?? 'agent profile';
   }
@@ -955,14 +971,19 @@ export class PhaseSettingsPage {
     return saved !== null && !ids.includes(saved) ? [saved, ...ids] : ids;
   }
 
-  /** The efforts the chosen model takes, or every effort when the catalogue does not say. */
+  /** The efforts the chosen model takes (every effort when the catalogue does not say), with the one typed now. */
   protected effortChoices(page: PhasesPage, row: PhaseSettingsRow): string[] {
-    const typed = this.typed()[row.phase]?.model ?? DEPLOYMENT;
-    const model = typed === DEPLOYMENT ? row.deployment.model : typed;
+    const t = this.typed()[row.phase];
+    const model =
+      t === undefined ? row.deployment.model : this.runningModel(row, t);
     const efforts = page.catalog.models.find(
       (m) => m.id === model
     )?.reasoningEfforts;
-    return [...(efforts ?? REASONING_EFFORTS)];
+    const choices: string[] = [...(efforts ?? REASONING_EFFORTS)];
+    const typed = t?.reasoningEffort.trim() ?? DEPLOYMENT;
+    return typed !== DEPLOYMENT && !choices.includes(typed)
+      ? [typed, ...choices]
+      : choices;
   }
 
   protected phaseForm(phase: string): PhaseGroup {
@@ -1025,34 +1046,114 @@ export class PhaseSettingsPage {
       : settingsErrorView(error);
   }
 
-  /** What changed in one phase, as the API takes it; undefined when nothing did. */
-  private changeOf(
+  /** One phase as typed: the fields the admin changed, each checked, and the change as the API takes it. */
+  private readRow(
     page: PhasesPage,
     row: PhaseSettingsRow,
     t: PhaseText
-  ): PhaseChange | undefined {
+  ): RowRead {
     const saved = phaseTextOf(row);
-    const change: Record<string, string | number | null> = {};
-    const set = (
+    const problems = new Map<keyof PhaseText, string>();
+    const change: MutablePhaseChange = {};
+    const changed = (
       field: PhaseField,
-      key: keyof PhaseText,
-      value: () => string | number
-    ) => {
+      key: keyof PhaseText
+    ): string | null => {
       const typed = t[key].trim();
-      if (typed === saved[key] || !this.editable(page, row, field)) return;
-      change[field] = typed === DEPLOYMENT ? null : value();
+      return typed !== saved[key] && this.editable(page, row, field)
+        ? typed
+        : null;
     };
-    set('model', 'model', () => t.model);
-    set('reasoningEffort', 'reasoningEffort', () => t.reasoningEffort);
-    set('budgetNanoAiu', 'budget', () => {
-      const read = readBudget(t.budget, row.budgetCapNanoAiu);
-      return 'nanoAiu' in read ? read.nanoAiu : 0;
-    });
-    set('timeoutSeconds', 'timeout', () => Number(t.timeout.trim()) * 60);
-    set('ciWaitMinutes', 'ciWait', () => Number(t.ciWait.trim()));
-    return Object.keys(change).length === 0
-      ? undefined
-      : (change as PhaseChange);
+
+    const model = changed('model', 'model');
+    if (model !== null) change.model = model === DEPLOYMENT ? null : model;
+    const effort = changed('reasoningEffort', 'reasoningEffort');
+    if (effort !== null)
+      change.reasoningEffort = isEffort(effort) ? effort : null;
+    if (model !== null || effort !== null) {
+      const problem = this.effortProblem(page, row, t);
+      if (problem !== null)
+        problems.set(
+          this.editable(page, row, 'reasoningEffort')
+            ? 'reasoningEffort'
+            : 'model',
+          problem
+        );
+    }
+
+    let cap: CapChange | undefined;
+    const budget = changed('budgetNanoAiu', 'budget');
+    if (budget !== null) {
+      const read =
+        budget === DEPLOYMENT ? null : readBudget(budget, row.budgetCapNanoAiu);
+      if (read !== null && 'problem' in read)
+        problems.set('budget', read.problem);
+      else {
+        change.budgetNanoAiu = read === null ? null : read.nanoAiu;
+        const from = row.runsOn.budgetNanoAiu;
+        const to = read === null ? row.deployment.budgetNanoAiu : read.nanoAiu;
+        if (from !== null && to !== null) cap = { phase: row.phase, from, to };
+      }
+    }
+    const timeout = changed('timeoutSeconds', 'timeout');
+    if (timeout !== null) {
+      const read =
+        timeout === DEPLOYMENT
+          ? null
+          : readMinutes(timeout, MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES);
+      if (read !== null && 'problem' in read)
+        problems.set('timeout', read.problem);
+      else change.timeoutSeconds = read === null ? null : read.minutes * 60;
+    }
+    const ciWait = changed('ciWaitMinutes', 'ciWait');
+    if (ciWait !== null) {
+      const read =
+        ciWait === DEPLOYMENT
+          ? null
+          : readMinutes(ciWait, 1, MAX_CI_WAIT_MINUTES);
+      if (read !== null && 'problem' in read)
+        problems.set('ciWait', read.problem);
+      else change.ciWaitMinutes = read === null ? null : read.minutes;
+    }
+    return {
+      phase: row.phase,
+      problems,
+      ...(cap !== undefined ? { cap } : {}),
+      ...(Object.keys(change).length > 0 ? { change } : {}),
+    };
+  }
+
+  /** Why the effort a phase would run on is not one the model it would run on takes, or null. */
+  private effortProblem(
+    page: PhasesPage,
+    row: PhaseSettingsRow,
+    t: PhaseText
+  ): string | null {
+    const model = this.runningModel(row, t);
+    const effort =
+      t.reasoningEffort.trim() === DEPLOYMENT ||
+      !this.editable(page, row, 'reasoningEffort')
+        ? row.deployment.reasoningEffort
+        : t.reasoningEffort.trim();
+    if (model === null || effort === null) return null;
+    const efforts = page.catalog.models.find(
+      (m) => m.id === model
+    )?.reasoningEfforts;
+    if (
+      efforts === undefined ||
+      efforts === null ||
+      efforts.includes(effort as ReasoningEffort)
+    )
+      return null;
+    return efforts.length === 0
+      ? `${model} takes no effort.`
+      : `${model} takes only ${efforts.join(', ')}.`;
+  }
+
+  /** The model a phase would run on with what is typed: the typed one, else the deployment's. */
+  private runningModel(row: PhaseSettingsRow, t: PhaseText): string | null {
+    const typed = t.model.trim();
+    return typed === DEPLOYMENT ? row.deployment.model : typed;
   }
 
   /** Saves what changed; a change that raises a cap asks first and is sent with `confirmSpend`. */
@@ -1069,13 +1170,9 @@ export class PhaseSettingsPage {
       this.confirming.set(false);
       if (!confirmed) return;
     }
-    const typed = this.phasesForm.getRawValue();
     const phases: Record<string, PhaseChange> = {};
-    for (const row of page.phases) {
-      const t = typed[row.phase];
-      const change = t === undefined ? undefined : this.changeOf(page, row, t);
-      if (change !== undefined) phases[row.phase] = change;
-    }
+    for (const read of this.reads())
+      if (read.change !== undefined) phases[read.phase] = read.change;
     await this.send(
       {
         ...(page.version !== null ? { version: page.version } : {}),

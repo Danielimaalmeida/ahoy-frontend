@@ -178,7 +178,11 @@ const artifactPath = patterned(
   /^[A-Za-z0-9_][A-Za-z0-9_.-]*(?:\/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$/,
   300
 );
-const modelId = patterned('a model id', /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/, 200);
+/** What a model id looks like, as the contract's `ModelId` says, and its longest length. */
+export const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
+export const MODEL_ID_MAX = 200;
+
+const modelId = patterned('a model id', MODEL_ID, MODEL_ID_MAX);
 const nanoAiu = wholeNumber('a whole number of nano-AIU, 0 or more', 0);
 const count = wholeNumber('a whole number, 0 or more', 0);
 const positive = wholeNumber('a whole number, 1 or more', 1);

@@ -14,15 +14,6 @@ export type PhaseField =
   | 'timeoutSeconds'
   | 'ciWaitMinutes';
 
-/** The fields in words, for the table and the history. */
-export const PHASE_FIELD_NAMES: Readonly<Record<PhaseField, string>> = {
-  model: 'Model',
-  reasoningEffort: 'Effort',
-  budgetNanoAiu: 'AIU cap per run',
-  timeoutSeconds: 'Timeout',
-  ciWaitMinutes: 'Wait for CI',
-};
-
 /** The phases in words, in the order a story meets them; a phase the deployment adds keeps its own name. */
 const PHASE_NAMES: Readonly<Record<string, string>> = {
   intake: 'Intake',
@@ -43,7 +34,7 @@ const FIELD_WORDS: Readonly<Record<string, string>> = {
   budgetNanoAiu: 'AIU cap per run',
   timeoutSeconds: 'timeout',
   ciWaitMinutes: 'wait for CI',
-};
+} satisfies Record<PhaseField, string>;
 
 /** A phase's name, for the page. */
 export function phaseName(phase: string): string {
@@ -103,9 +94,15 @@ export function readBudget(
   return { nanoAiu };
 }
 
+/** "60", "2.5": an amount of AIU without trailing zeros, as an admin types it. */
+export function aiuNumber(nanoAiu: number): string {
+  const text = formatAiu(nanoAiu, 9);
+  return text.includes('.') ? text.replace(/\.?0+$/, '') : text;
+}
+
 /** "60 AIU", "2.5 AIU": an amount without trailing zeros. */
 export function aiuLabel(nanoAiu: number): string {
-  return `${formatAiu(nanoAiu, 9).replace(/\.?0+$/, '')} AIU`;
+  return `${aiuNumber(nanoAiu)} AIU`;
 }
 
 /** "15 min", "1 h", "1 h 30 min". */

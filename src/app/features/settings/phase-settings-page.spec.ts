@@ -128,7 +128,7 @@ describe('the Phases section of Team settings', () => {
       'ReviewStory phase',
     ]);
     expect(text(root)).toContain(
-      'Caps up to 100 AIU per run, set by the deployment.'
+      "Caps up to 100 AIU per run, or a phase's deployment cap where that is higher."
     );
     expect(options('Intake model')[0]).toBe('Default');
     expect(
@@ -385,9 +385,86 @@ describe('the Phases section of Team settings', () => {
     expect(text(root)).toContain('Set by the deployment (AHOY_MODEL_CATALOG).');
     expect(root.querySelector('[aria-label="Model 1 id"]')).toBeNull();
     expect(buttonsNamed(root, 'Save catalogue')).toEqual([]);
+    const efforts = [
+      ...root.querySelectorAll('[aria-label="Model catalogue"] tbody tr'),
+    ].map((r) => [text(r.children[0]), text(r.children[2])]);
+    expect(efforts).toContainEqual(['claude-haiku-4.5', 'None']);
+    expect(efforts).toContainEqual(['gpt-5.6-terra', 'Any']);
+  });
+
+  it('keeps a model that takes no effort as "none" when the catalogue is saved again', async () => {
+    await answer();
+    expect(control('Model 1 efforts').value).toBe('none');
+    expect(control('Model 3 efforts').value).toBe('');
+    type(control('Model 3 label'), 'Terra');
+    await settle();
+    buttonNamed(root, 'Save catalogue').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body.models[0]).toEqual({
+      id: 'claude-haiku-4.5',
+      label: 'Claude Haiku 4.5',
+      reasoningEfforts: [],
+    });
+    expect(patch?.request.body.models[2]).toEqual({
+      id: 'gpt-5.6-terra',
+      label: 'Terra',
+    });
     expect(
-      text(root.querySelector('[aria-label="Model catalogue"]'))
-    ).toContain('claude-haiku-4.5');
+      requestViolations('updatePhaseSettings', patch?.request.body)
+    ).toEqual([]);
+    await respond(patch!, updatePhaseSettings);
+    await answer(updatePhaseSettings);
+  });
+
+  it('refuses a model that does not take the effort the phase would run on, and keeps that effort in its select', async () => {
+    await answer();
+    choose(control<HTMLSelectElement>('Planning model'), 'claude-haiku-4.5');
+    await settle();
+    expect(text(row('Planning'))).toContain(
+      'claude-haiku-4.5 takes no effort.'
+    );
+    expect(control<HTMLSelectElement>('Planning effort').value).toBe('high');
+    expect(options('Planning effort')).toEqual(['Default', 'high']);
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    choose(control<HTMLSelectElement>('Planning effort'), '');
+    await settle();
+    expect(text(row('Planning'))).not.toContain('takes no effort');
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 3,
+      phases: {
+        planning: { model: 'claude-haiku-4.5', reasoningEffort: null },
+      },
+    });
+    await respond(patch!, getPhaseSettings);
+    await answer();
+  });
+
+  it('judges only what the admin changed: a saved cap above a lowered maximum blocks nothing and is no raise', async () => {
+    const lowered = {
+      ...getPhaseSettings,
+      phases: getPhaseSettings.phases.map((p) =>
+        p.phase === 'planning' ? { ...p, budgetCapNanoAiu: 20 * AIU } : p
+      ),
+    };
+    await answer(lowered);
+    type(control('Review timeout'), '45');
+    await settle();
+    expect(text(row('Planning'))).not.toContain('The most allowed');
+    expect(bannerHeadings(root)).toEqual([]);
+    buttonNamed(root, 'Save').click();
+    await settle();
+    expect(openDialog()).toBeNull();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 3,
+      phases: { pr_review: { timeoutSeconds: 45 * 60 } },
+    });
+    await respond(patch!, getPhaseSettings);
+    await answer();
   });
 
   it('shows the phases as text, without controls, to someone who is not an admin', async () => {

@@ -2189,7 +2189,8 @@ export interface paths {
      * Change a phase's model, effort, AIU cap, timeout or wait for CI, or the model catalogue.
      * @description Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model
      *     must be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed
-     *     `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`, else the deployment's own cap, and never a phase's own limit).
+     *     `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap, whichever is higher, and never a
+     *     phase's own limit).
      *     Raising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`
      *     otherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused
      *     (`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).

@@ -4783,7 +4783,7 @@
         "operationId": "updatePhaseSettings",
         "tags": ["settings"],
         "summary": "Change a phase's model, effort, AIU cap, timeout or wait for CI, or the model catalogue.",
-        "description": "Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model\nmust be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed\n`budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`, else the deployment's own cap, and never a phase's own limit).\nRaising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`\notherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused\n(`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).\n",
+        "description": "Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model\nmust be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed\n`budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap, whichever is higher, and never a\nphase's own limit).\nRaising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`\notherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused\n(`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).\n",
         "requestBody": {
           "required": true,
           "content": {
