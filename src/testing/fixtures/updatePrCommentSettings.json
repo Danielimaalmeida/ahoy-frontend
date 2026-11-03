@@ -1,0 +1,13 @@
+{
+  "canEdit": true,
+  "prComments": {
+    "repliesOn": true,
+    "commentsPerRound": 6,
+    "version": 1,
+    "updatedBy": "bea@example.com",
+    "updatedByName": "Bea Example",
+    "updatedAt": "2026-11-03T14:10:00.000Z"
+  },
+  "repliesPostable": true,
+  "maxCommentsPerRound": 10
+}

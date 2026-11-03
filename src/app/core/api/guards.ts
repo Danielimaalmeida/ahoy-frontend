@@ -83,6 +83,8 @@ import {
   type PhaseSettingsRow,
   type PhaseValues,
   type AgentSettingsPage,
+  type PrCommentSettings,
+  type PrCommentSettingsPage,
   type FigmaSettings,
   type FigmaSettingsPage,
   type FigmaTest,
@@ -1608,6 +1610,24 @@ export const isAgentSettingsPage = guard<AgentSettingsPage>(
         profile: nonEmptyText,
       })
     ),
+  })
+);
+
+/** The pull request comments page, as `getPrCommentSettings` and `updatePrCommentSettings` answer it. */
+export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
+  'PrCommentSettingsPage',
+  shape<PrCommentSettingsPage>({
+    canEdit: flag,
+    prComments: shape<PrCommentSettings>({
+      repliesOn: flag,
+      commentsPerRound: wholeNumber('a count of comments', 1),
+      version: nullable(wholeNumber('a version', 1)),
+      updatedBy: nullable(actor),
+      updatedByName: nullable(text),
+      updatedAt: nullable(timestamp),
+    }),
+    repliesPostable: flag,
+    maxCommentsPerRound: wholeNumber('a count of comments', 1),
   })
 );
 

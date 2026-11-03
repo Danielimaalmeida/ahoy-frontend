@@ -946,6 +946,18 @@ export type AgentMissingProfile = AgentSettingsPage['missing'][number];
 export type AgentSettingsChange = Schemas['AgentSettingsChange'];
 
 /**
+ * Answer of `getPrCommentSettings`: whether Ahoy posts its replies to pull request comments, the comments per review
+ * round, and whether this deployment's reconciler can post at all.
+ */
+export type PrCommentSettingsPage = Schemas['PrCommentSettingsPage'];
+
+/** Whether replies are on and how many comments a review round is given. */
+export type PrCommentSettings = Schemas['PrCommentSettings'];
+
+/** Body of `updatePrCommentSettings`; turning replies on needs `confirmReplies: true`. */
+export type PrCommentSettingsChange = Schemas['PrCommentSettingsChange'];
+
+/**
  * Answer of `getPhaseSettings`: each phase as its runs use it now, what the deployment gives it, what an admin set, and
  * the model catalogue.
  */

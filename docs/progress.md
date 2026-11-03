@@ -1,9 +1,9 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-03 (Assess comments and the pull request comments panel, with `ahoy-hosted`'s
-`feat/pr-comment-triage`, PR #79; tested on fakes and the mock HTTP backend only). One page: replace it, do not append;
-git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of
-both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
+Updated 2026-11-03 (Assess comments, the pull request comments panel and Team settings › Pull request comments, with
+`ahoy-hosted`'s `feat/pr-comment-triage`, PR #79; tested on fakes and the mock HTTP backend only). One page: replace it,
+do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
+The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
@@ -18,7 +18,11 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Copilot's during the loop too: who wrote the comment and where, accepted (with its severity), declined or a question,
   the reviewer's reason, and where Ahoy's reply is (waiting for the fix, waiting to be posted, refused by GitHub with
   the reason, replied, none). Comment text is plain text. It is hidden while the voyage is under way with nothing ruled.
-  The mock backend serves no comments and refuses Assess comments (it has no pull requests).
+  The mock backend serves no comments and refuses Assess comments (it has no pull requests). Team settings has a new
+  section, **Pull request comments** (`/settings/pr-comments`): replies on GitHub on or off and the comments per review
+  round (1 to 10); turning replies on asks the admin to confirm (it posts on colleagues' pull requests) and is sent
+  with `confirmReplies: true`, and the page says when the deployment cannot post. The side navigation shows "Replies
+  off", "Replies on" or "Cannot post".
 - **Merged before:** Team settings › Phases (`feat/phase-settings`).
 - **Merged on 2026-11-01:** Team settings › Teams, Figma and Agents (PR #51, with `ahoy-hosted`'s
   `feat/teams-figma-agents-settings`): the channel's webhook and test card, the Figma token and UI builders, and who
@@ -33,13 +37,13 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/pr-comment-triage` (`26edceb`, PR #79;
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/pr-comment-triage` (`f2aec95`, PR #79;
   the commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
-  `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0033 (and 0025 to 0032 before
-  it). Merge and deploy with the `ahoy-hosted` pull request.
+  `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migrations 0033 and 0034 (and 0025 to
+  0032 before them). Merge and deploy with the `ahoy-hosted` pull request.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
   checked by unit and component tests on the mock backend only (Crew and Team settings over
-  `HttpTestingController`). No Teams, Figma or Jira was called. On 2026-11-01 the six Team settings sections were
+  `HttpTestingController`). No Teams, Figma or Jira was called. On 2026-11-01 the first six Team settings sections were
   also opened in Chromium (Playwright) on `ng serve`, with the test fixtures as every API answer, for screenshots.
 
 ## Proof
@@ -47,7 +51,8 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 - **Last full run** (2026-11-03, `feat/assess-comments`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from the
   lock file with the `@acme-fedev` entries left out and the platform binaries the lock resolves to the private
-  registry fetched from npmjs): Vitest 189 files, 3,264 tests, all passed (new: the panel and its dialog 10,
+  registry fetched from npmjs): Vitest 191 files, 3,278 tests, all passed (new: Team settings › Pull request comments 7 and its words 6, the
+  navigation with the new section, the panel and its dialog 10,
   including a done voyage not counted yet, Try again and a read after a refused request, `domain/pr-comments` 7, the
   guard 3, taking every ruling the contract allows, and the contract's two operations and the Assess comments request); `npm run
 typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .`
@@ -78,11 +83,11 @@ typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint),
   sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. Merge `ahoy-hosted`'s `feat/pr-comment-triage` (PR #79, migration 0033) and this branch together. On a machine with the
+1. Merge `ahoy-hosted`'s `feat/pr-comment-triage` (PR #79, migrations 0033 and 0034) and this branch together. On a machine with the
    private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`: `npm ci`, then
    `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop `test:scripts`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0033): start a
+3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0034): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
    Meetings (migrations 0018, 0019 and 0022: an action ticked done, two browsers on one meeting in progress, a
    screenshot pasted into a note and opened large, a meeting cancelled and one marked done, a question answered after

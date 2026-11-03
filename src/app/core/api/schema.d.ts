@@ -2217,6 +2217,37 @@ export interface paths {
     readonly patch: operations['updateAgentSettings'];
     readonly trace?: never;
   };
+  readonly '/settings/pr-comments': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Whether Ahoy posts its replies to pull request comments, and how many comments a review round is given.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place these are
+     *     configured. `repliesPostable` says whether this deployment's reconciler can post at all (it dispatches with
+     *     Docker or Kubernetes); where it cannot, replies wait in Ahoy whatever `repliesOn` says. The reconciler reads a
+     *     change on its next pass, without a restart. 0 AIU.
+     */
+    readonly get: operations['getPrCommentSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Turn Ahoy's replies to pull request comments on or off, or set the comments per review round.
+     * @description Admins only. Turning replies on posts the replies waiting, and every later one, on the pull requests people
+     *     commented on, with the reconciler's `gh` login, so it needs `confirmReplies: true` (`400` otherwise); turning
+     *     them off needs none, and the replies written meanwhile wait. `commentsPerRound` is 1 to
+     *     `maxCommentsPerRound` (`400`). `version` is required once the settings are saved, and absent before
+     *     (`409 stale_version`).
+     */
+    readonly patch: operations['updatePrCommentSettings'];
+    readonly trace?: never;
+  };
   readonly '/settings/phases': {
     readonly parameters: {
       readonly query?: never;
@@ -4198,6 +4229,34 @@ export interface components {
       /** @description Must be true when the change turns on Story drafts or Business-rule review, which spend AIU. */
       readonly confirmSpend?: boolean;
     };
+    readonly PrCommentSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      readonly prComments: components['schemas']['PrCommentSettings'];
+      /** @description Whether this deployment's reconciler can post replies (Docker or Kubernetes dispatch). */
+      readonly repliesPostable: boolean;
+      /** @description The most comments a round may be given. */
+      readonly maxCommentsPerRound: number;
+    };
+    readonly PrCommentSettings: {
+      /** @description Whether the reconciler posts the replies that wait; false (the default): they wait in Ahoy. */
+      readonly repliesOn: boolean;
+      /** @description The most comments one review round is given, oldest first (default the maximum). */
+      readonly commentsPerRound: number;
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly PrCommentSettingsChange: {
+      readonly version?: number;
+      readonly repliesOn?: boolean;
+      readonly commentsPerRound?: number;
+      /** @description Must be true when the change turns replies on, which posts on colleagues' pull requests. */
+      readonly confirmReplies?: boolean;
+    };
     /** @enum {string} */
     readonly PhaseSettingField:
       | 'model'
@@ -4280,7 +4339,7 @@ export interface components {
        * @description `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;
        *     `jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,
        *     `.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;
-       *     `agent_settings.updated`; `phase_settings.updated`.
+       *     `agent_settings.updated`; `phase_settings.updated`; `pr_comment_settings.updated`.
        */
       readonly type: string;
       readonly actor: string;
@@ -7522,6 +7581,56 @@ export interface operations {
       readonly 503: components['responses']['Problem'];
     };
   };
+  readonly getPrCommentSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The pull request comment settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PrCommentSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updatePrCommentSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['PrCommentSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PrCommentSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly getPhaseSettings: {
     readonly parameters: {
       readonly query?: never;
@@ -7579,7 +7688,13 @@ export interface operations {
         readonly before?: number;
         /** @description Only this section's changes. */
         readonly section?:
-          'sonar' | 'jira' | 'teams' | 'figma' | 'agents' | 'phases';
+          | 'sonar'
+          | 'jira'
+          | 'teams'
+          | 'figma'
+          | 'agents'
+          | 'phases'
+          | 'pr_comments';
       };
       readonly header?: never;
       readonly path?: never;

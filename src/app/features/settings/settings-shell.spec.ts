@@ -11,6 +11,7 @@ import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
+import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
 import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
 import getTeamsSettings from '@testing/fixtures/getTeamsSettings.json';
 import listJiraSettingsEvents from '@testing/fixtures/listJiraSettingsEvents.json';
@@ -82,6 +83,8 @@ describe('the Team settings frame', () => {
       r.flush(getAgentSettings);
     for (const r of http.match(`${BASE}/settings/phases`))
       r.flush(getPhaseSettings);
+    for (const r of http.match(`${BASE}/settings/pr-comments`))
+      r.flush(getPrCommentSettings);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
       r.flush(
         r.request.params.get('section') === 'jira'
@@ -120,6 +123,7 @@ describe('the Team settings frame', () => {
       'Figma On',
       'Agents 2 of 4 on',
       'Phases 1 changed',
+      'Pull request comments Replies off',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(text(document.querySelector('h1'))).toBe('Team settings');
@@ -145,6 +149,7 @@ describe('the Team settings frame', () => {
       'figma',
       'agents',
       'phases',
+      'pr-comments',
     ])
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
         1

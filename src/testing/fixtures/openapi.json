@@ -4841,6 +4841,72 @@
         }
       }
     },
+    "/settings/pr-comments": {
+      "get": {
+        "operationId": "getPrCommentSettings",
+        "tags": ["settings"],
+        "summary": "Whether Ahoy posts its replies to pull request comments, and how many comments a review round is given.",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place these are\nconfigured. `repliesPostable` says whether this deployment's reconciler can post at all (it dispatches with\nDocker or Kubernetes); where it cannot, replies wait in Ahoy whatever `repliesOn` says. The reconciler reads a\nchange on its next pass, without a restart. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The pull request comment settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrCommentSettingsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePrCommentSettings",
+        "tags": ["settings"],
+        "summary": "Turn Ahoy's replies to pull request comments on or off, or set the comments per review round.",
+        "description": "Admins only. Turning replies on posts the replies waiting, and every later one, on the pull requests people\ncommented on, with the reconciler's `gh` login, so it needs `confirmReplies: true` (`400` otherwise); turning\nthem off needs none, and the replies written meanwhile wait. `commentsPerRound` is 1 to\n`maxCommentsPerRound` (`400`). `version` is required once the settings are saved, and absent before\n(`409 stale_version`).\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrCommentSettingsChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The settings, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrCommentSettingsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/settings/phases": {
       "get": {
         "operationId": "getPhaseSettings",
@@ -4941,7 +5007,15 @@
             "description": "Only this section's changes.",
             "schema": {
               "type": "string",
-              "enum": ["sonar", "jira", "teams", "figma", "agents", "phases"]
+              "enum": [
+                "sonar",
+                "jira",
+                "teams",
+                "figma",
+                "agents",
+                "phases",
+                "pr_comments"
+              ]
             }
           }
         ],
@@ -11275,6 +11349,95 @@
           }
         }
       },
+      "PrCommentSettingsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "canEdit",
+          "prComments",
+          "repliesPostable",
+          "maxCommentsPerRound"
+        ],
+        "properties": {
+          "canEdit": {
+            "type": "boolean",
+            "description": "Whether the person is an admin, who may change them."
+          },
+          "prComments": {
+            "$ref": "#/components/schemas/PrCommentSettings"
+          },
+          "repliesPostable": {
+            "type": "boolean",
+            "description": "Whether this deployment's reconciler can post replies (Docker or Kubernetes dispatch)."
+          },
+          "maxCommentsPerRound": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The most comments a round may be given."
+          }
+        }
+      },
+      "PrCommentSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repliesOn",
+          "commentsPerRound",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "repliesOn": {
+            "type": "boolean",
+            "description": "Whether the reconciler posts the replies that wait; false (the default): they wait in Ahoy."
+          },
+          "commentsPerRound": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The most comments one review round is given, oldest first (default the maximum)."
+          },
+          "version": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Null until an admin saves anything."
+          },
+          "updatedBy": {
+            "type": ["string", "null"]
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "PrCommentSettingsChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "repliesOn": {
+            "type": "boolean"
+          },
+          "commentsPerRound": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "confirmReplies": {
+            "type": "boolean",
+            "description": "Must be true when the change turns replies on, which posts on colleagues' pull requests."
+          }
+        }
+      },
       "PhaseSettingField": {
         "type": "string",
         "enum": [
@@ -11575,7 +11738,7 @@
           },
           "type": {
             "type": "string",
-            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;\n`jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,\n`.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;\n`agent_settings.updated`; `phase_settings.updated`.\n"
+            "description": "`sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;\n`jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,\n`.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;\n`agent_settings.updated`; `phase_settings.updated`; `pr_comment_settings.updated`.\n"
           },
           "actor": {
             "type": "string"
