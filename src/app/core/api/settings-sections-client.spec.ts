@@ -10,6 +10,9 @@ import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getTeamsSettings from '@testing/fixtures/getTeamsSettings.json';
 import listAgentSettingsEvents from '@testing/fixtures/listAgentSettingsEvents.json';
+import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
+import listPrCommentSettingsEvents from '@testing/fixtures/listPrCommentSettingsEvents.json';
+import updatePrCommentSettings from '@testing/fixtures/updatePrCommentSettings.json';
 import listFigmaSettingsEvents from '@testing/fixtures/listFigmaSettingsEvents.json';
 import listTeamsSettingsEvents from '@testing/fixtures/listTeamsSettingsEvents.json';
 import { withField } from '@testing/fixtures/mutate';
@@ -25,6 +28,7 @@ import { API_BASE } from './api-base';
 import { ApiClient } from './api-client';
 import {
   isAgentSettingsPage,
+  isPrCommentSettingsPage,
   isFigmaSettings,
   isFigmaSettingsPage,
   isFigmaTest,
@@ -61,10 +65,21 @@ describe("the Teams, Figma and Agents settings' guards", () => {
     expect(isFigmaTest(testFigmaToken)).toBe(true);
     expect(isAgentSettingsPage(getAgentSettings)).toBe(true);
     expect(isAgentSettingsPage(updateAgentSettings)).toBe(true);
+    expect(isPrCommentSettingsPage(getPrCommentSettings)).toBe(true);
+    expect(isPrCommentSettingsPage(updatePrCommentSettings)).toBe(true);
+    expect(
+      isPrCommentSettingsPage(
+        withField(getPrCommentSettings, 'prComments', {
+          ...getPrCommentSettings.prComments,
+          commentsPerRound: 0,
+        })
+      )
+    ).toBe(false);
     for (const page of [
       listTeamsSettingsEvents,
       listFigmaSettingsEvents,
       listAgentSettingsEvents,
+      listPrCommentSettingsEvents,
     ])
       expect(isSettingsEventPage(page)).toBe(true);
   });

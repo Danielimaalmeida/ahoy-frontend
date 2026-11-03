@@ -83,6 +83,8 @@ import {
   type PhaseSettingsRow,
   type PhaseValues,
   type AgentSettingsPage,
+  type PrCommentSettings,
+  type PrCommentSettingsPage,
   type FigmaSettings,
   type FigmaSettingsPage,
   type FigmaTest,
@@ -123,6 +125,13 @@ import {
   type JiraBacklogIssue,
   type KnowledgeReview,
   type KnowledgeReviewList,
+  PR_COMMENT_KINDS,
+  PR_COMMENT_REPLY_STATUSES,
+  PR_COMMENT_RULINGS,
+  PR_COMMENT_SOURCES,
+  type PrCommentCount,
+  type PrCommentRuling,
+  type StoryPrComments,
   type Meeting,
   type MeetingList,
   type MeetingNote,
@@ -556,6 +565,46 @@ export const isKnowledgeReview = guard<KnowledgeReview>(
 export const isKnowledgeReviewList = guard<KnowledgeReviewList>(
   'KnowledgeReviewList',
   shape<KnowledgeReviewList>({ key: storyKey, items: arrayOf(knowledgeReview) })
+);
+
+const prCommentCount = shape<PrCommentCount>({
+  waiting: wholeNumber('a count', 0),
+  openPrs: wholeNumber('a count', 0),
+  checkedAt: timestamp,
+  error: nullable(text),
+});
+
+/** One ruling on a comment, as the contract states it: nothing stricter, so a row the API may send is never refused. */
+const prCommentRuling = shape<PrCommentRuling>({
+  id: text,
+  repo: text,
+  slug: text,
+  prNumber: wholeNumber('a pull request number', 1),
+  kind: oneOf(PR_COMMENT_KINDS),
+  source: oneOf(PR_COMMENT_SOURCES),
+  author: text,
+  excerpt: text,
+  path: nullable(text),
+  line: nullable(wholeNumber('a line number', Number.MIN_SAFE_INTEGER)),
+  ruling: oneOf(PR_COMMENT_RULINGS),
+  reason: text,
+  severity: nullable(text),
+  status: oneOf(PR_COMMENT_REPLY_STATUSES),
+  replyBody: nullable(text),
+  resolveThread: flag,
+  ruledAt: timestamp,
+  repliedAt: nullable(timestamp),
+  replyError: nullable(text),
+});
+
+/** A story's pull request comments: the waiting count and the rulings so far. */
+export const isStoryPrComments = guard<StoryPrComments>(
+  'StoryPrComments',
+  shape<StoryPrComments>({
+    key: storyKey,
+    count: nullable(prCommentCount),
+    rulings: arrayOf(prCommentRuling),
+  })
 );
 
 /** The newest refinement of each refined issue, without content. */
@@ -1561,6 +1610,24 @@ export const isAgentSettingsPage = guard<AgentSettingsPage>(
         profile: nonEmptyText,
       })
     ),
+  })
+);
+
+/** The pull request comments page, as `getPrCommentSettings` and `updatePrCommentSettings` answer it. */
+export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
+  'PrCommentSettingsPage',
+  shape<PrCommentSettingsPage>({
+    canEdit: flag,
+    prComments: shape<PrCommentSettings>({
+      repliesOn: flag,
+      commentsPerRound: wholeNumber('a count of comments', 1),
+      version: nullable(wholeNumber('a version', 1)),
+      updatedBy: nullable(actor),
+      updatedByName: nullable(text),
+      updatedAt: nullable(timestamp),
+    }),
+    repliesPostable: flag,
+    maxCommentsPerRound: wholeNumber('a count of comments', 1),
   })
 );
 

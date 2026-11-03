@@ -5,10 +5,12 @@ import type {
   FigmaSettingsPage,
   JiraSettingsPage,
   PhaseSettingsPage,
+  PrCommentSettingsPage,
   SonarSettings,
   TeamsSettingsPage,
 } from '@core/api/types';
 import { jobsOnLabel } from '@domain/agent-settings';
+import { prCommentsStateLabel } from '@domain/pr-comment-settings';
 
 /** One section in the settings' side navigation: its state in a word, and whether it is off. */
 export interface SectionState {
@@ -67,9 +69,14 @@ export function phasesState(page: PhaseSettingsPage): SectionState {
   };
 }
 
+/** "Replies on", "Replies off", or "Cannot post" where the deployment's reconciler cannot post. */
+export function prCommentsState(page: PrCommentSettingsPage): SectionState {
+  return prCommentsStateLabel(page.prComments, page.repliesPostable);
+}
+
 /** A section the frame shows a state for. */
 export type SettingsSectionKey =
-  'sonar' | 'jira' | 'teams' | 'figma' | 'agents' | 'phases';
+  'sonar' | 'jira' | 'teams' | 'figma' | 'agents' | 'phases' | 'pr_comments';
 
 /**
  * What the Team settings' frame shows around a section: whether the person is an admin and each section's state. The
@@ -94,6 +101,8 @@ export class SettingsSummary {
   readonly agents = signal<SectionState | null>(null);
   /** The phases' state, once read. */
   readonly phases = signal<SectionState | null>(null);
+  /** The pull request comments' state, once read. */
+  readonly prComments = signal<SectionState | null>(null);
 
   /** The sections whose page reads them itself. */
   private readonly claimed = new Set<SettingsSectionKey>();
@@ -105,20 +114,26 @@ export class SettingsSummary {
 
   /** Reads the state of every section no page has claimed; a section that cannot be read shows none. */
   async load(): Promise<void> {
-    const [sonar, jira, teams, figma, agents, phases] = await Promise.all([
-      this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
-      this.claimed.has('jira') ? null : this.api.getJiraSettings(),
-      this.claimed.has('teams') ? null : this.api.getTeamsSettings(),
-      this.claimed.has('figma') ? null : this.api.getFigmaSettings(),
-      this.claimed.has('agents') ? null : this.api.getAgentSettings(),
-      this.claimed.has('phases') ? null : this.api.getPhaseSettings(),
-    ]);
+    const [sonar, jira, teams, figma, agents, phases, prComments] =
+      await Promise.all([
+        this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
+        this.claimed.has('jira') ? null : this.api.getJiraSettings(),
+        this.claimed.has('teams') ? null : this.api.getTeamsSettings(),
+        this.claimed.has('figma') ? null : this.api.getFigmaSettings(),
+        this.claimed.has('agents') ? null : this.api.getAgentSettings(),
+        this.claimed.has('phases') ? null : this.api.getPhaseSettings(),
+        this.claimed.has('pr_comments')
+          ? null
+          : this.api.getPrCommentSettings(),
+      ]);
     if (sonar?.ok && this.sonar() === null) this.sonarRead(sonar.value);
     if (jira?.ok && this.jira() === null) this.jiraRead(jira.value);
     if (teams?.ok && this.teams() === null) this.teamsRead(teams.value);
     if (figma?.ok && this.figma() === null) this.figmaRead(figma.value);
     if (agents?.ok && this.agents() === null) this.agentsRead(agents.value);
     if (phases?.ok && this.phases() === null) this.phasesRead(phases.value);
+    if (prComments?.ok && this.prComments() === null)
+      this.prCommentsRead(prComments.value);
   }
 
   /** What the SonarQube section read. */
@@ -155,5 +170,11 @@ export class SettingsSummary {
   phasesRead(page: PhaseSettingsPage): void {
     this.admin.set(page.canEdit);
     this.phases.set(phasesState(page));
+  }
+
+  /** What the Pull request comments section read. */
+  prCommentsRead(page: PrCommentSettingsPage): void {
+    this.admin.set(page.canEdit);
+    this.prComments.set(prCommentsState(page));
   }
 }

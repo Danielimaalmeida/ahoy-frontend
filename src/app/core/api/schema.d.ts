@@ -581,6 +581,60 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/assess-comments': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Have the reviewer rule on the pull request comments people left. May spend AIU.
+     * @description Human-triggered, while the story waits at the delivery gate (left undecided, it opens again after the review)
+     *     or is done with a pull request still open as the reconciler last counted (`GET /stories/{key}/pr-comments`),
+     *     with no active run. Comments by people are never acted on by themselves; Copilot's are part of every review
+     *     round. The story goes back to the review phase for a fresh review at the current heads that rules on every
+     *     comment without a ruling, people's and Copilot's: `accepted` as a finding (medium or above goes to rework, then
+     *     a re-review), `declined` with a reason, or a `question` that halts the story for a person. Ahoy replies on
+     *     GitHub when replies are turned on. `note` reaches the reviewer as a person's decision. confirmSpend must be
+     *     true; the request itself spends nothing.
+     */
+    readonly post: operations['assessComments'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/pr-comments': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The story's pull request comments as Ahoy weighs them, and how many by people wait for Assess comments.
+     * @description `count` is what the reconciler last counted (0 AIU, every 5 minutes, for a story at the delivery gate or done
+     *     with a pull request still open), null before the first count. `rulings` are the reviewer's rulings on
+     *     comments, newest first, with where each reply is: `awaiting_fix` (an accepted comment whose reply waits for
+     *     the re-review of its fix), `reply_pending`, `replied`, or `no_reply`. Spends nothing.
+     */
+    readonly get: operations['getStoryPrComments'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/anchors': {
     readonly parameters: {
       readonly query?: never;
@@ -2163,6 +2217,37 @@ export interface paths {
     readonly patch: operations['updateAgentSettings'];
     readonly trace?: never;
   };
+  readonly '/settings/pr-comments': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Whether Ahoy posts its replies to pull request comments, and how many comments a review round is given.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place these are
+     *     configured. `repliesPostable` says whether this deployment's reconciler can post at all (it dispatches with
+     *     Docker or Kubernetes); where it cannot, replies wait in Ahoy whatever `repliesOn` says. The reconciler reads a
+     *     change on its next pass, without a restart. 0 AIU.
+     */
+    readonly get: operations['getPrCommentSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Turn Ahoy's replies to pull request comments on or off, or set the comments per review round.
+     * @description Admins only. Turning replies on posts the replies waiting, and every later one, on the pull requests people
+     *     commented on, with the reconciler's `gh` login, so it needs `confirmReplies: true` (`400` otherwise); turning
+     *     them off needs none, and the replies written meanwhile wait. `commentsPerRound` is 1 to
+     *     `maxCommentsPerRound` (`400`). `version` is required once the settings are saved, and absent before
+     *     (`409 stale_version`).
+     */
+    readonly patch: operations['updatePrCommentSettings'];
+    readonly trace?: never;
+  };
   readonly '/settings/phases': {
     readonly parameters: {
       readonly query?: never;
@@ -2425,6 +2510,57 @@ export interface components {
       readonly figmaLinks: readonly string[];
       /** @constant */
       readonly confirmSpend: true;
+    };
+    readonly AssessCommentsRequest: {
+      readonly expectedVersion: components['schemas']['Version'];
+      /** @description What the reviewer should know, as a person's decision (which comment matters, and why). */
+      readonly note?: string;
+      /** @constant */
+      readonly confirmSpend: true;
+    };
+    readonly StoryPrComments: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly count: components['schemas']['PrCommentCount'] | null;
+      readonly rulings: readonly components['schemas']['PrCommentRuling'][];
+    };
+    readonly PrCommentCount: {
+      /** @description Comments by people without a ruling on open pull requests. */
+      readonly waiting: number;
+      readonly openPrs: number;
+      /** Format: date-time */
+      readonly checkedAt: string;
+      /** @description Why the last count could not be read; the counts are the ones before. */
+      readonly error: string | null;
+    };
+    readonly PrCommentRuling: {
+      readonly id: string;
+      readonly repo: string;
+      readonly slug: string;
+      readonly prNumber: number;
+      /** @enum {string} */
+      readonly kind: 'thread' | 'review' | 'conversation';
+      /** @enum {string} */
+      readonly source: 'person' | 'copilot';
+      readonly author: string;
+      /** @description The comment ruled on, as the reviewer read it (untrusted text). */
+      readonly excerpt: string;
+      readonly path: string | null;
+      readonly line: number | null;
+      /** @enum {string} */
+      readonly ruling: 'accepted' | 'declined' | 'question';
+      /** @description The reviewer's reason, which a reply quotes. */
+      readonly reason: string;
+      readonly severity: string | null;
+      /** @enum {string} */
+      readonly status:
+        'awaiting_fix' | 'reply_pending' | 'replied' | 'no_reply';
+      readonly replyBody: string | null;
+      readonly resolveThread: boolean;
+      /** Format: date-time */
+      readonly ruledAt: string;
+      /** Format: date-time */
+      readonly repliedAt: string | null;
+      readonly replyError: string | null;
     };
     readonly AmendAnchorsRequest: {
       readonly amendments: readonly components['schemas']['AnchorAmendment'][];
@@ -4093,6 +4229,34 @@ export interface components {
       /** @description Must be true when the change turns on Story drafts or Business-rule review, which spend AIU. */
       readonly confirmSpend?: boolean;
     };
+    readonly PrCommentSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      readonly prComments: components['schemas']['PrCommentSettings'];
+      /** @description Whether this deployment's reconciler can post replies (Docker or Kubernetes dispatch). */
+      readonly repliesPostable: boolean;
+      /** @description The most comments a round may be given. */
+      readonly maxCommentsPerRound: number;
+    };
+    readonly PrCommentSettings: {
+      /** @description Whether the reconciler posts the replies that wait; false (the default): they wait in Ahoy. */
+      readonly repliesOn: boolean;
+      /** @description The most comments one review round is given, oldest first (default the maximum). */
+      readonly commentsPerRound: number;
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly PrCommentSettingsChange: {
+      readonly version?: number;
+      readonly repliesOn?: boolean;
+      readonly commentsPerRound?: number;
+      /** @description Must be true when the change turns replies on, which posts on colleagues' pull requests. */
+      readonly confirmReplies?: boolean;
+    };
     /** @enum {string} */
     readonly PhaseSettingField:
       | 'model'
@@ -4175,7 +4339,7 @@ export interface components {
        * @description `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;
        *     `jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,
        *     `.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;
-       *     `agent_settings.updated`; `phase_settings.updated`.
+       *     `agent_settings.updated`; `phase_settings.updated`; `pr_comment_settings.updated`.
        */
       readonly type: string;
       readonly actor: string;
@@ -5010,6 +5174,63 @@ export interface operations {
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 422: components['responses']['Problem'];
+    };
+  };
+  readonly assessComments: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['AssessCommentsRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The review is scheduled; the story is ready in the review phase. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Story'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 422: components['responses']['Problem'];
+    };
+  };
+  readonly getStoryPrComments: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The count and the rulings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['StoryPrComments'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
     };
   };
   readonly amendAnchors: {
@@ -7360,6 +7581,56 @@ export interface operations {
       readonly 503: components['responses']['Problem'];
     };
   };
+  readonly getPrCommentSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The pull request comment settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PrCommentSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updatePrCommentSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['PrCommentSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PrCommentSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly getPhaseSettings: {
     readonly parameters: {
       readonly query?: never;
@@ -7417,7 +7688,13 @@ export interface operations {
         readonly before?: number;
         /** @description Only this section's changes. */
         readonly section?:
-          'sonar' | 'jira' | 'teams' | 'figma' | 'agents' | 'phases';
+          | 'sonar'
+          | 'jira'
+          | 'teams'
+          | 'figma'
+          | 'agents'
+          | 'phases'
+          | 'pr_comments';
       };
       readonly header?: never;
       readonly path?: never;

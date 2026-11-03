@@ -668,6 +668,19 @@ export class MockAhoyServer {
           )
         );
       }
+      case 'getStoryPrComments':
+        // The mock has no pull requests: nothing counted, nothing ruled.
+        return jsonResponse(200, {
+          key: this.voyage(call).story.key,
+          count: null,
+          rulings: [],
+        });
+      case 'assessComments':
+        this.voyage(call);
+        throw new MockProblem(
+          'invalid_state',
+          'The mock backend has no pull request comments to assess'
+        );
       case 'listKnowledgeReviews': {
         const key = this.voyage(call).story.key;
         return jsonResponse(200, {

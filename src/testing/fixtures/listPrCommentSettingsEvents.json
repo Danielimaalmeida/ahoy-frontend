@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "id": 61,
+      "type": "pr_comment_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "pr_comment_settings:1",
+      "payload": {
+        "changes": {
+          "repliesOn": { "from": false, "to": true },
+          "commentsPerRound": { "from": 10, "to": 6 }
+        },
+        "confirmReplies": true
+      },
+      "createdAt": "2026-11-03T14:10:00.000Z"
+    }
+  ]
+}

@@ -39,6 +39,7 @@ import {
   isJiraSettingsPage,
   isJiraTest,
   isAgentSettingsPage,
+  isPrCommentSettingsPage,
   isPhaseSettingsPage,
   isFigmaSettings,
   isFigmaSettingsPage,
@@ -77,12 +78,14 @@ import {
   isStory,
   isStoryPage,
   isStoryPlanFit,
+  isStoryPrComments,
   isStoryStateDocument,
 } from './guards';
 import type {
   AddMeetingTopicRequest,
   AgentDiagnosisList,
   AgentDiagnosisRequest,
+  AssessCommentsRequest,
   AnswerAccepted,
   AnswerRequest,
   ArtifactContent,
@@ -107,6 +110,8 @@ import type {
   JiraTest,
   AgentSettingsChange,
   AgentSettingsPage,
+  PrCommentSettingsChange,
+  PrCommentSettingsPage,
   PhaseSettingsChange,
   PhaseSettingsPage,
   FigmaSettings,
@@ -185,6 +190,7 @@ import type {
   Story,
   StoryPage,
   StoryPlanFit,
+  StoryPrComments,
   StoryStateDocument,
   UpdateCrewMemberRequest,
   UpdateMeetingRequest,
@@ -585,6 +591,31 @@ export class ApiClient {
       `/stories/${segment(key)}/knowledge-reviews`,
       body,
       isKnowledgeReview
+    );
+  }
+
+  /** How many comments by people wait on the story's open pull requests, and the rulings so far. Spends nothing. */
+  getStoryPrComments(key: string): Promise<ApiResult<StoryPrComments>> {
+    return this.get(
+      'getStoryPrComments',
+      `/stories/${segment(key)}/pr-comments`,
+      isStoryPrComments
+    );
+  }
+
+  /**
+   * Asks the reviewer to rule on the pull requests' comments, people's among them, at the delivery gate or on a done
+   * story with an open pull request. May spend AIU. The answer (202) is the story, queued for the review.
+   */
+  assessComments(
+    key: string,
+    body: AssessCommentsRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'assessComments',
+      `/stories/${segment(key)}/assess-comments`,
+      body,
+      isStory
     );
   }
 
@@ -1506,6 +1537,32 @@ export class ApiClient {
       'updateAgentSettings',
       isAgentSettingsPage,
       this.http.patch<unknown>(this.url('/settings/agents'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Whether Ahoy posts its replies to pull request comments, the comments per review round, and whether it can post. */
+  getPrCommentSettings(): Promise<ApiResult<PrCommentSettingsPage>> {
+    return this.get(
+      'getPrCommentSettings',
+      '/settings/pr-comments',
+      isPrCommentSettingsPage
+    );
+  }
+
+  /**
+   * Turns Ahoy's replies to pull request comments on or off, or sets the comments per review round (admins only).
+   * Turning replies on posts on colleagues' pull requests from then on, so it needs `confirmReplies: true`.
+   */
+  updatePrCommentSettings(
+    body: PrCommentSettingsChange
+  ): Promise<ApiResult<PrCommentSettingsPage>> {
+    return this.send(
+      'updatePrCommentSettings',
+      isPrCommentSettingsPage,
+      this.http.patch<unknown>(this.url('/settings/pr-comments'), body, {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })

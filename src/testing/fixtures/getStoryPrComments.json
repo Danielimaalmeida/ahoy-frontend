@@ -1,0 +1,53 @@
+{
+  "key": "PROJ-123",
+  "count": {
+    "waiting": 2,
+    "openPrs": 1,
+    "checkedAt": "2026-10-08T14:25:00.000Z",
+    "error": null
+  },
+  "rulings": [
+    {
+      "id": "1",
+      "repo": "web",
+      "slug": "github.example.com/acme/web-app",
+      "prNumber": 42,
+      "kind": "thread",
+      "source": "copilot",
+      "author": "copilot-pull-request-reviewer",
+      "excerpt": "The due date can be null here; the template reads it unguarded.",
+      "path": "src/app/billing/invoice-row.ts",
+      "line": 18,
+      "ruling": "accepted",
+      "reason": "The row will show a dash when an invoice has no due date.",
+      "severity": "medium",
+      "status": "replied",
+      "replyBody": "<!-- ahoy:comment-reply -->\n**Ahoy:** fixed in 1a2b3c4. The row shows a dash without a due date.",
+      "resolveThread": true,
+      "ruledAt": "2026-10-08T13:10:00.000Z",
+      "repliedAt": "2026-10-08T14:02:00.000Z",
+      "replyError": null
+    },
+    {
+      "id": "2",
+      "repo": "web",
+      "slug": "github.example.com/acme/web-app",
+      "prNumber": 42,
+      "kind": "conversation",
+      "source": "person",
+      "author": "sam",
+      "excerpt": "Could we also show the due date on the PDF export?",
+      "path": null,
+      "line": null,
+      "ruling": "declined",
+      "reason": "The PDF export is outside this story; it shows the billing page only.",
+      "severity": null,
+      "status": "reply_pending",
+      "replyBody": "<!-- ahoy:comment-reply -->\n> Could we also show the due date on the PDF export?\n\n**Ahoy:** not changing this. The PDF export is outside this story; it shows the billing page only.",
+      "resolveThread": false,
+      "ruledAt": "2026-10-08T14:20:00.000Z",
+      "repliedAt": null,
+      "replyError": null
+    }
+  ]
+}

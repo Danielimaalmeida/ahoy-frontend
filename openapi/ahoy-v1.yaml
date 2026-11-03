@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 9e84fe6191e86aa95a41cf08b08d1dcfa9409a84
+# Commit: f2aec95ad7a7366088b529d08b2ae763c9db85fa
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -759,6 +759,60 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '422': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/assess-comments:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: assessComments
+      tags: [decisions]
+      summary: Have the reviewer rule on the pull request comments people left. May spend AIU.
+      description: |
+        Human-triggered, while the story waits at the delivery gate (left undecided, it opens again after the review)
+        or is done with a pull request still open as the reconciler last counted (`GET /stories/{key}/pr-comments`),
+        with no active run. Comments by people are never acted on by themselves; Copilot's are part of every review
+        round. The story goes back to the review phase for a fresh review at the current heads that rules on every
+        comment without a ruling, people's and Copilot's: `accepted` as a finding (medium or above goes to rework, then
+        a re-review), `declined` with a reason, or a `question` that halts the story for a person. Ahoy replies on
+        GitHub when replies are turned on. `note` reaches the reviewer as a person's decision. confirmSpend must be
+        true; the request itself spends nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssessCommentsRequest' }
+      responses:
+        '202':
+          description: The review is scheduled; the story is ready in the review phase.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/pr-comments:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    get:
+      operationId: getStoryPrComments
+      tags: [stories]
+      summary: The story's pull request comments as Ahoy weighs them, and how many by people wait for Assess comments.
+      description: |
+        `count` is what the reconciler last counted (0 AIU, every 5 minutes, for a story at the delivery gate or done
+        with a pull request still open), null before the first count. `rulings` are the reviewer's rulings on
+        comments, newest first, with where each reply is: `awaiting_fix` (an accepted comment whose reply waits for
+        the re-review of its fix), `reply_pending`, `replied`, or `no_reply`. Spends nothing.
+      responses:
+        '200':
+          description: The count and the rulings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoryPrComments' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/anchors:
     parameters:
       - $ref: '#/components/parameters/StoryKey'
@@ -2697,6 +2751,49 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
+  /settings/pr-comments:
+    get:
+      operationId: getPrCommentSettings
+      tags: [settings]
+      summary: Whether Ahoy posts its replies to pull request comments, and how many comments a review round is given.
+      description: |
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). They are the only place these are
+        configured. `repliesPostable` says whether this deployment's reconciler can post at all (it dispatches with
+        Docker or Kubernetes); where it cannot, replies wait in Ahoy whatever `repliesOn` says. The reconciler reads a
+        change on its next pass, without a restart. 0 AIU.
+      responses:
+        '200':
+          description: The pull request comment settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrCommentSettingsPage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updatePrCommentSettings
+      tags: [settings]
+      summary: Turn Ahoy's replies to pull request comments on or off, or set the comments per review round.
+      description: |
+        Admins only. Turning replies on posts the replies waiting, and every later one, on the pull requests people
+        commented on, with the reconciler's `gh` login, so it needs `confirmReplies: true` (`400` otherwise); turning
+        them off needs none, and the replies written meanwhile wait. `commentsPerRound` is 1 to
+        `maxCommentsPerRound` (`400`). `version` is required once the settings are saved, and absent before
+        (`409 stale_version`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrCommentSettingsChange' }
+      responses:
+        '200':
+          description: The settings, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrCommentSettingsPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /settings/phases:
     get:
       operationId: getPhaseSettings
@@ -2763,7 +2860,10 @@ paths:
           required: false
           description: Only this section's changes.
           schema:
-            { type: string, enum: [sonar, jira, teams, figma, agents, phases] }
+            {
+              type: string,
+              enum: [sonar, jira, teams, figma, agents, phases, pr_comments],
+            }
       responses:
         '200':
           description: The changes.
@@ -3258,6 +3358,103 @@ components:
           description: The new Figma frames, each a figma.com /design/, /file/ or /proto/ link with its node-id.
           items: { type: string, minLength: 1, maxLength: 2000 }
         confirmSpend: { type: boolean, const: true }
+    AssessCommentsRequest:
+      type: object
+      required: [expectedVersion, confirmSpend]
+      additionalProperties: false
+      properties:
+        expectedVersion: { $ref: '#/components/schemas/Version' }
+        note:
+          type: string
+          maxLength: 2000
+          description: What the reviewer should know, as a person's decision (which comment matters, and why).
+        confirmSpend: { type: boolean, const: true }
+    StoryPrComments:
+      type: object
+      additionalProperties: false
+      required: [key, count, rulings]
+      properties:
+        key: { $ref: '#/components/schemas/StoryKey' }
+        count:
+          oneOf:
+            - $ref: '#/components/schemas/PrCommentCount'
+            - type: 'null'
+        rulings:
+          type: array
+          items: { $ref: '#/components/schemas/PrCommentRuling' }
+    PrCommentCount:
+      type: object
+      additionalProperties: false
+      required: [waiting, openPrs, checkedAt, error]
+      properties:
+        waiting:
+          {
+            type: integer,
+            minimum: 0,
+            description: Comments by people without a ruling on open pull requests.,
+          }
+        openPrs: { type: integer, minimum: 0 }
+        checkedAt: { type: string, format: date-time }
+        error:
+          type: ['string', 'null']
+          description: Why the last count could not be read; the counts are the ones before.
+    PrCommentRuling:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          repo,
+          slug,
+          prNumber,
+          kind,
+          source,
+          author,
+          excerpt,
+          path,
+          line,
+          ruling,
+          reason,
+          severity,
+          status,
+          replyBody,
+          resolveThread,
+          ruledAt,
+          repliedAt,
+          replyError,
+        ]
+      properties:
+        id: { type: string }
+        repo: { type: string }
+        slug: { type: string }
+        prNumber: { type: integer, minimum: 1 }
+        kind: { type: string, enum: [thread, review, conversation] }
+        source: { type: string, enum: [person, copilot] }
+        author: { type: string }
+        excerpt:
+          {
+            type: string,
+            description: 'The comment ruled on, as the reviewer read it (untrusted text).',
+          }
+        path: { type: ['string', 'null'] }
+        line: { type: ['integer', 'null'] }
+        ruling: { type: string, enum: [accepted, declined, question] }
+        reason:
+          {
+            type: string,
+            description: "The reviewer's reason, which a reply quotes.",
+          }
+        severity: { type: ['string', 'null'] }
+        status:
+          {
+            type: string,
+            enum: [awaiting_fix, reply_pending, replied, no_reply],
+          }
+        replyBody: { type: ['string', 'null'] }
+        resolveThread: { type: boolean }
+        ruledAt: { type: string, format: date-time }
+        repliedAt: { type: ['string', 'null'], format: date-time }
+        replyError: { type: ['string', 'null'] }
     AmendAnchorsRequest:
       type: object
       required: [amendments, reason, expectedVersion]
@@ -6452,6 +6649,66 @@ components:
         confirmSpend:
           type: boolean
           description: 'Must be true when the change turns on Story drafts or Business-rule review, which spend AIU.'
+    PrCommentSettingsPage:
+      type: object
+      additionalProperties: false
+      required: [canEdit, prComments, repliesPostable, maxCommentsPerRound]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        prComments: { $ref: '#/components/schemas/PrCommentSettings' }
+        repliesPostable:
+          type: boolean
+          description: "Whether this deployment's reconciler can post replies (Docker or Kubernetes dispatch)."
+        maxCommentsPerRound:
+          {
+            type: integer,
+            minimum: 1,
+            description: 'The most comments a round may be given.',
+          }
+    PrCommentSettings:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          repliesOn,
+          commentsPerRound,
+          version,
+          updatedBy,
+          updatedByName,
+          updatedAt,
+        ]
+      properties:
+        repliesOn:
+          type: boolean
+          description: 'Whether the reconciler posts the replies that wait; false (the default): they wait in Ahoy.'
+        commentsPerRound:
+          type: integer
+          minimum: 1
+          description: 'The most comments one review round is given, oldest first (default the maximum).'
+        version:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            description: 'Null until an admin saves anything.',
+          }
+        updatedBy: { type: [string, 'null'] }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: [string, 'null'], format: date-time }
+    PrCommentSettingsChange:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        version: { type: integer, minimum: 1 }
+        repliesOn: { type: boolean }
+        commentsPerRound: { type: integer, minimum: 1, maximum: 10 }
+        confirmReplies:
+          type: boolean
+          description: "Must be true when the change turns replies on, which posts on colleagues' pull requests."
     PhaseSettingField:
       type: string
       enum:
@@ -6631,7 +6888,7 @@ components:
             `sonar_server.created`, `.updated`, `.deleted`; `sonar_repository.created`, `.updated`, `.deleted`;
             `jira_settings.connected`, `.updated`, `.disconnected`; `teams_settings.connected`, `.updated`,
             `.disconnected`, `.test_sent`; `figma_settings.token_set`, `.token_removed`, `.updated`;
-            `agent_settings.updated`; `phase_settings.updated`.
+            `agent_settings.updated`; `phase_settings.updated`; `pr_comment_settings.updated`.
         actor: { type: string }
         actorName: { type: [string, 'null'] }
         subject:

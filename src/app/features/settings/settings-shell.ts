@@ -159,6 +159,11 @@ export class SettingsShell {
     { path: 'figma', label: 'Figma', state: () => this.summary.figma() },
     { path: 'agents', label: 'Agents', state: () => this.summary.agents() },
     { path: 'phases', label: 'Phases', state: () => this.summary.phases() },
+    {
+      path: 'pr-comments',
+      label: 'Pull request comments',
+      state: () => this.summary.prComments(),
+    },
   ];
 
   constructor() {

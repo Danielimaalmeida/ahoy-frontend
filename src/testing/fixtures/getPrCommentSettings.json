@@ -1,0 +1,13 @@
+{
+  "canEdit": true,
+  "prComments": {
+    "repliesOn": false,
+    "commentsPerRound": 10,
+    "version": null,
+    "updatedBy": null,
+    "updatedByName": null,
+    "updatedAt": null
+  },
+  "repliesPostable": true,
+  "maxCommentsPerRound": 10
+}
