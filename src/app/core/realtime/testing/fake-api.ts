@@ -31,6 +31,7 @@ export type FakeApiOps = Pick<
   | 'refreshDesign'
   | 'getStoryPrComments'
   | 'assessComments'
+  | 'getJiraSettings'
 >;
 
 /** A call the fake saw. */
@@ -208,5 +209,10 @@ export class FakeApi implements FakeApiOps {
   assessComments: FakeApiOps['assessComments'] = (key, body) => {
     this.calls.push({ op: 'assessComments', args: [key, body] });
     return this.handlers.assessComments?.(key, body) ?? unreachable();
+  };
+
+  getJiraSettings: FakeApiOps['getJiraSettings'] = () => {
+    this.calls.push({ op: 'getJiraSettings', args: [] });
+    return this.handlers.getJiraSettings?.() ?? unreachable();
   };
 }

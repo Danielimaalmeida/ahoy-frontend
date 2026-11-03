@@ -2,7 +2,7 @@ import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { fail, ok, type ApiResult } from '@core/api/api-error';
-import type { Refinement, Story } from '@core/api/types';
+import type { JiraSettingsPage, Refinement, Story } from '@core/api/types';
 import { AppConfigStore } from '@core/config/app-config';
 import { aStory } from '@core/realtime/testing/events';
 import { FakeApi } from '@core/realtime/testing/fake-api';
@@ -491,6 +491,46 @@ describe('Docks', () => {
       ).toBeNull();
     });
 
+    it('links to the Jira connected in Settings, ahead of /config.json', async () => {
+      api.on('getJiraSettings', () =>
+        Promise.resolve(
+          ok<JiraSettingsPage>({
+            canEdit: false,
+            secretsConfigured: true,
+            tokenReadable: true,
+            jira: {
+              connection: {
+                baseUrl: 'https://jira.team.example/jira/',
+                tokenHint: '02be',
+                tokenSetBy: 'admin@example.com',
+                tokenSetByName: null,
+                tokenSetAt: '2026-10-01T08:00:00.000Z',
+                lastTest: null,
+              },
+              backlogJql: 'project = PROJ',
+              board: null,
+              currentSprint: null,
+              storySummaryPrefix: '',
+              storyFields: [],
+              version: 1,
+              updatedBy: 'admin@example.com',
+              updatedByName: null,
+              updatedAt: '2026-10-01T08:00:00.000Z',
+            },
+          })
+        )
+      );
+      const f = await mount(
+        new FakeBacklog([anItem('PROJ-145')]),
+        'https://jira.example.com'
+      );
+      expect(
+        root(f)
+          .querySelector<HTMLAnchorElement>('a[title="Open in Jira"]')!
+          .getAttribute('href')
+      ).toBe('https://jira.team.example/jira/browse/PROJ-145');
+    });
+
     it('links to the configured Jira', async () => {
       const f = await mount(
         new FakeBacklog([anItem('PROJ-145')]),
@@ -739,16 +779,16 @@ describe('Docks', () => {
       expect(backlog.queries.at(-1)).toEqual({
         readiness: 'missing',
         scope: 'all',
-        limit: 25,
+        limit: 100,
       });
       await choose(f, 'Harness readiness', '');
-      expect(backlog.queries.at(-1)).toEqual({ scope: 'all', limit: 25 });
+      expect(backlog.queries.at(-1)).toEqual({ scope: 'all', limit: 100 });
     });
 
     it('asks for the first page, with the page size and the scope, and no empty filters', async () => {
       const backlog = new FakeBacklog([anItem('PROJ-1')]);
       await mount(backlog);
-      expect(backlog.queries).toEqual([{ scope: 'all', limit: 25 }]);
+      expect(backlog.queries).toEqual([{ scope: 'all', limit: 100 }]);
     });
 
     it('asks with each filter the person sets, and with the keys of the voyages for a scope', async () => {
@@ -766,7 +806,7 @@ describe('Docks', () => {
         assignee: null,
         scope: 'in_ahoy',
         ahoyKeys: ['PROJ-1', 'PROJ-2'],
-        limit: 25,
+        limit: 100,
       });
     });
 
