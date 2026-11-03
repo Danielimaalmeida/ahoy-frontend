@@ -9,19 +9,13 @@ import {
 import type { ModelSlot } from './types';
 
 describe('MODEL_SLOTS', () => {
-  it('lists the four slots in table order', () => {
-    expect(MODEL_SLOTS).toEqual([
-      'intake',
-      'planning',
-      'implementation',
-      'review',
-    ]);
+  it('lists the three slots in table order: intake reads Jira and has none', () => {
+    expect(MODEL_SLOTS).toEqual(['planning', 'implementation', 'review']);
   });
 });
 
 describe('CREW', () => {
   const CASES: readonly (readonly [ModelSlot, string])[] = [
-    ['intake', 'Navigator'],
     ['planning', 'Cartographer'],
     ['implementation', 'Implementer'],
     ['review', 'Lookout'],
@@ -69,6 +63,11 @@ describe('crewLabel', () => {
     expect(crewLabel('design', 'density-reader')).toBe('Designer');
     expect(crewLabel('design')).toBe('Designer');
     expect(isModelSlot('design')).toBe(false);
+  });
+
+  it('names intake Navigator, though intake has no model slot', () => {
+    expect(crewLabel('intake')).toBe('Navigator');
+    expect(isModelSlot('intake')).toBe(false);
   });
 
   it('names the crew member of a slot', () => {

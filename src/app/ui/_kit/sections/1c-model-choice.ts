@@ -35,12 +35,6 @@ function slot(model = '', effort: EffortChoice = ''): ModelChoiceControls {
 })
 export class KitModelChoice {
   protected readonly rows: readonly ModelChoiceRowSpec[] = [
-    {
-      slot: 'intake',
-      defaultModel: 'gpt-5.6-terra',
-      defaultEffort: 'medium',
-      source: 'Server default',
-    },
     { slot: 'planning', source: 'Chosen for this voyage', chosen: true },
     {
       slot: 'implementation',
@@ -50,7 +44,6 @@ export class KitModelChoice {
     { slot: 'review', defaultEffort: 'high', source: 'Server default' },
   ];
   protected readonly controls: Record<ModelSlot, ModelChoiceControls> = {
-    intake: slot(),
     planning: slot('claude-sonnet-5', 'high'),
     implementation: slot(),
     review: slot('claude-sonnet-5'),

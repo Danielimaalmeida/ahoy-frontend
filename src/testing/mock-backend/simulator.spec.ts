@@ -64,7 +64,7 @@ describe('Simulator · a voyage from set sail to done', () => {
     clock.advance(1_000); // dispatched
     expect(call(server, 'GET', `/runs/${intakeRun}`).body).toMatchObject({
       status: 'running',
-      model: 'claude-haiku-4.5',
+      model: null,
     });
     clock.advance(2_000); // two batches: intake is done
     expect(story(server, 'DEMO-1')).toMatchObject({

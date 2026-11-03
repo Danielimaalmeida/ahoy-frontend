@@ -56,7 +56,6 @@ export interface ModelChoiceRowSpec {
 
 /** The API phase each slot runs in, as the ModelChoice preview labels the rows. */
 const SLOT_PHASES: Readonly<Record<ModelSlot, string>> = {
-  intake: 'intake',
   planning: 'planning',
   implementation: 'implementation',
   review: 'pr_review',
@@ -64,7 +63,6 @@ const SLOT_PHASES: Readonly<Record<ModelSlot, string>> = {
 
 /** The slot's name in accessible labels ("Review model", "Reset review to default"). */
 const SLOT_NAMES: Readonly<Record<ModelSlot, string>> = {
-  intake: 'Intake',
   planning: 'Planning',
   implementation: 'Implementation',
   review: 'Review',

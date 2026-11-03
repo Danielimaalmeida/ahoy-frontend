@@ -167,7 +167,6 @@ export const REASONING_EFFORTS = listOf<ReasoningEffort>()([
 /** The parts of a story that run on one model (`ModelSlot`). */
 export type ModelSlot = Schemas['ModelSlot'];
 export const MODEL_SLOTS = listOf<ModelSlot>()([
-  'intake',
   'planning',
   'implementation',
   'review',

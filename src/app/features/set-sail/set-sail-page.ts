@@ -427,7 +427,6 @@ export class SetSailPage {
       validators: [budgetValidator],
     }),
     models: new FormGroup({
-      intake: modelGroup(),
       planning: modelGroup(),
       implementation: modelGroup(),
       review: modelGroup(),
@@ -438,7 +437,6 @@ export class SetSailPage {
   protected readonly modelControls: Readonly<
     Record<ModelSlot, ModelChoiceControls>
   > = {
-    intake: this.form.controls.models.controls.intake.controls,
     planning: this.form.controls.models.controls.planning.controls,
     implementation: this.form.controls.models.controls.implementation.controls,
     review: this.form.controls.models.controls.review.controls,

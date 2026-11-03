@@ -65,7 +65,7 @@ export type GateOutcome =
   | 'send_back';
 
 /** Slot that holds the model for a phase. */
-export type ModelSlot = 'intake' | 'planning' | 'implementation' | 'review';
+export type ModelSlot = 'planning' | 'implementation' | 'review';
 
 /** Reasoning effort a model can be asked for; null means the model's own default. */
 export type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';

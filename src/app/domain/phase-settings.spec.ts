@@ -73,7 +73,7 @@ describe('what an admin types', () => {
   it('finds the changes that raise a cap, and only those', () => {
     expect(
       capsRaised([
-        { phase: 'intake', from: 10 * AIU, to: 5 * AIU },
+        { phase: 'design', from: 10 * AIU, to: 5 * AIU },
         { phase: 'planning', from: 60 * AIU, to: 80 * AIU },
         { phase: 'pr_review', from: 30 * AIU, to: 30 * AIU },
       ])

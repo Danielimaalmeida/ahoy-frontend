@@ -121,14 +121,12 @@ export class ChangeModelsDialog {
   protected readonly controls: Readonly<
     Record<ModelSlot, ModelChoiceControls>
   > = ((initial: SlotDrafts) => ({
-    intake: slotControls(initial.intake),
     planning: slotControls(initial.planning),
     implementation: slotControls(initial.implementation),
     review: slotControls(initial.review),
   }))(draftsOf(this.context.models()));
   /** The same controls as one form, to read them together and hear any change. */
   private readonly form = new FormGroup({
-    intake: new FormGroup(this.controls.intake),
     planning: new FormGroup(this.controls.planning),
     implementation: new FormGroup(this.controls.implementation),
     review: new FormGroup(this.controls.review),

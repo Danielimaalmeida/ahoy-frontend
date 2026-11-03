@@ -110,7 +110,6 @@ export const PHASE_TABLE: Readonly<Record<string, PhaseRow>> = {
 export const SLOT_PHASE: Readonly<
   Record<ModelSlot, { readonly phase: string }>
 > = {
-  intake: { phase: 'intake' },
   planning: { phase: 'planning' },
   implementation: { phase: 'implementation' },
   review: { phase: 'pr_review' },
@@ -118,7 +117,6 @@ export const SLOT_PHASE: Readonly<
 
 /** The slots in the order `getStoryModels` lists them. */
 export const SLOTS: readonly ModelSlot[] = [
-  'intake',
   'planning',
   'implementation',
   'review',
@@ -134,12 +132,6 @@ interface SlotDefault {
 
 /** The mock's defaults per slot (fictional model ids, as in the wireframes). */
 export const SLOT_DEFAULTS: Readonly<Record<ModelSlot, SlotDefault>> = {
-  intake: {
-    model: 'claude-haiku-4.5',
-    modelSource: 'configuration',
-    effort: null,
-    effortSource: 'model_default',
-  },
   planning: {
     model: 'claude-sonnet-5',
     modelSource: 'configuration',
@@ -159,6 +151,14 @@ export const SLOT_DEFAULTS: Readonly<Record<ModelSlot, SlotDefault>> = {
     effortSource: 'configuration',
   },
 };
+
+/** What a run of a phase without a model slot (intake, which reads Jira) is started with: no model of its own. */
+export const NO_SLOT_MODEL = {
+  model: null,
+  reasoningEffort: null,
+  modelSource: 'agent_profile',
+  effortSource: 'model_default',
+} as const;
 
 /** The model and effort a slot's next run gets, and where each comes from. A choice applies as a pair. */
 export function resolveSlot(

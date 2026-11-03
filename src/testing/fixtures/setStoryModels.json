@@ -3,15 +3,6 @@
   "version": 10,
   "slots": [
     {
-      "slot": "intake",
-      "phase": "intake",
-      "chosen": null,
-      "model": "claude-haiku-4.5",
-      "reasoningEffort": null,
-      "modelSource": "configuration",
-      "effortSource": "model_default"
-    },
-    {
       "slot": "planning",
       "phase": "planning",
       "chosen": {

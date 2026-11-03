@@ -26,6 +26,7 @@ import { runIdFor, type RunProgress, type Simulator } from './simulator';
 import {
   artifactFile,
   DEFAULT_CONTROL_SHA,
+  NO_SLOT_MODEL,
   PHASE_TABLE,
   PLAN_FILE,
   resolveSlot,
@@ -195,8 +196,12 @@ class SeedBuilder {
       spec.attempt
     );
     const slot =
-      spec.slot ?? (spec.phase as 'intake' | 'planning' | 'implementation');
-    const plan = resolveSlot(slot, voyage.chosen[slot]);
+      spec.slot ??
+      (spec.phase === 'intake'
+        ? null
+        : (spec.phase as 'planning' | 'implementation'));
+    const plan =
+      slot === null ? NO_SLOT_MODEL : resolveSlot(slot, voyage.chosen[slot]);
     const nanoAiu = Math.round(spec.aiu * AIU);
     const gateName = PHASE_TABLE[spec.phase]?.gate ?? spec.phase;
     const verdict = spec.gate;

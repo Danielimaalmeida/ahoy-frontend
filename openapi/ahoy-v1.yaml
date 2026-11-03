@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 92bf13ba3883b1a25dabad9c50edb9ba41673417
+# Commit: 9e84fe6191e86aa95a41cf08b08d1dcfa9409a84
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -224,12 +224,12 @@ paths:
       tags: [stories]
       summary: Start a story at intake. The actor becomes its owner and runs bill the owner's token.
       description: |
-        `models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,
-        `implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase
-        configuration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows
-        what each phase will get. Intake runs no model: the reconciler reads the issue from Jira over REST, so a choice
-        for `intake` is kept but unused. A `models` that names an unknown slot, an empty choice, a model or effort no
-        run can take, or `null` answers `400 validation_failed`, and no story is created.
+        `models` may choose the model and reasoning effort of each phase from the start (`planning`, `implementation`
+        and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase configuration, then
+        the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows what each phase will
+        get. Intake runs no model (the reconciler reads the issue from Jira over REST), so it has no slot. A `models`
+        that names an unknown slot, an empty choice, a model or effort no run can take, or `null` answers
+        `400 validation_failed`, and no story is created.
       requestBody:
         required: true
         content:
@@ -387,9 +387,8 @@ paths:
       tags: [stories]
       summary: The model and reasoning effort each phase of the story runs on, and where each comes from.
       description: |
-        One entry per slot of the story's model plan: `intake` (which runs no model: it reads Jira over REST),
-        `planning`, `implementation`, and `review` (the one reviewer of `pr_review`). `chosen` is what a person chose
-        for the story;
+        One entry per slot of the story's model plan: `planning`, `implementation`, and `review` (the one reviewer of
+        `pr_review`). Intake runs no model: it reads Jira over REST. `chosen` is what a person chose for the story;
         `model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the
         pinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another
         model is not carried onto a model a person chose, which then runs at its own default effort. Whether the
@@ -3388,7 +3387,7 @@ components:
         reason: { type: string, minLength: 1, maxLength: 2000 }
     ModelSlot:
       type: string
-      enum: [intake, planning, implementation, review]
+      enum: [planning, implementation, review]
       description: A part of the story that runs on one model, by phase; `review` is the one reviewer of `pr_review`.
     ModelId:
       type: string
@@ -3413,7 +3412,6 @@ components:
       additionalProperties: false
       description: A choice per slot.
       properties:
-        intake: { $ref: '#/components/schemas/ModelChoice' }
         planning: { $ref: '#/components/schemas/ModelChoice' }
         implementation: { $ref: '#/components/schemas/ModelChoice' }
         review: { $ref: '#/components/schemas/ModelChoice' }
@@ -3423,11 +3421,6 @@ components:
       additionalProperties: false
       description: A choice per slot to change; `null` gives a slot back to the configured defaults.
       properties:
-        intake:
-          {
-            oneOf:
-              [{ $ref: '#/components/schemas/ModelChoice' }, { type: 'null' }],
-          }
         planning:
           {
             oneOf:

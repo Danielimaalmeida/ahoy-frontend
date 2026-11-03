@@ -26,7 +26,7 @@ export interface SlotDraft {
   readonly effort: EffortChoice;
 }
 
-/** The drafts of the four slots. */
+/** The drafts of the three slots. */
 export type SlotDrafts = Readonly<Record<ModelSlot, SlotDraft>>;
 
 function slotOf(
@@ -44,10 +44,9 @@ export function draftOf(slot: SlotModel | undefined): SlotDraft {
   };
 }
 
-/** The drafts of all four slots, from the plan as it stands. */
+/** The drafts of all three slots, from the plan as it stands. */
 export function draftsOf(plan: ModelPlan | null): SlotDrafts {
   return {
-    intake: draftOf(slotOf(plan, 'intake')),
     planning: draftOf(slotOf(plan, 'planning')),
     implementation: draftOf(slotOf(plan, 'implementation')),
     review: draftOf(slotOf(plan, 'review')),

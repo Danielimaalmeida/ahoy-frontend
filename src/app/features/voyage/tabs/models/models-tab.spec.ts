@@ -156,11 +156,10 @@ afterEach(() => {
 });
 
 describe('ModelsTab on the mock backend', () => {
-  it('shows Models per phase for PROJ-118: four rows with their crew and the sources of each value', async () => {
+  it('shows Models per phase for PROJ-118: three rows with their crew and the sources of each value', async () => {
     const page = await open('/voyages/PROJ-118/models');
     const rows = [...page.root.querySelectorAll('tbody tr')];
     expect(rows.map((r) => r.getAttribute('data-slot'))).toEqual([
-      'intake',
       'planning',
       'implementation',
       'review',
@@ -207,7 +206,7 @@ describe('ModelsTab on the mock backend', () => {
       expect(
         dialog().closest<HTMLElement>('.cdk-overlay-pane')!.style.width
       ).toBe('960px');
-      expect(dialog().querySelectorAll('ah-model-choice-row')).toHaveLength(4);
+      expect(dialog().querySelectorAll('ah-model-choice-row')).toHaveLength(3);
     });
 
     it('sends only the slot that changed, with its model and effort, and shows it as chosen', async () => {
@@ -257,14 +256,14 @@ describe('ModelsTab on the mock backend', () => {
       const page = await open('/voyages/PROJ-118/models');
       buttonNamed(page.root, 'Change models').click();
       await flush(page);
-      type(modelInput('Intake'), 'claude-sonnet-5');
+      type(modelInput('Implementation'), 'claude-sonnet-5');
       await flush(page);
       buttonNamed(dialog(), 'Save models').click();
       await flush(page);
       expect(
         (commands(page)[0]?.body as Record<string, unknown>)['models']
       ).toEqual({
-        intake: { model: 'claude-sonnet-5' },
+        implementation: { model: 'claude-sonnet-5' },
       });
       expect(commands(page)[0]?.body).not.toHaveProperty('reason');
     });

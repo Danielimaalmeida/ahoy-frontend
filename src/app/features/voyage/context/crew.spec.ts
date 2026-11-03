@@ -57,7 +57,6 @@ const PLAN: ModelPlan = {
   storyKey: 'PROJ-123',
   version: 3,
   slots: [
-    slot('intake', 'intake', 'gpt-5.6-terra', 'medium'),
     slot('planning', 'planning', 'claude-sonnet-5', 'high'),
     slot('implementation', 'implementation', 'claude-sonnet-5', null),
     slot('review', 'pr_review', null, null),
@@ -79,9 +78,9 @@ describe('slotsForPhase', () => {
 
 describe('modelLabel', () => {
   it('words the model and effort as the Models table does', () => {
-    expect(modelLabel(PLAN.slots[1]!)).toBe('claude-sonnet-5 · high');
-    expect(modelLabel(PLAN.slots[2]!)).toBe('claude-sonnet-5 · default');
-    expect(modelLabel(PLAN.slots[3]!)).toBe("the agent's own model · default");
+    expect(modelLabel(PLAN.slots[0]!)).toBe('claude-sonnet-5 · high');
+    expect(modelLabel(PLAN.slots[1]!)).toBe('claude-sonnet-5 · default');
+    expect(modelLabel(PLAN.slots[2]!)).toBe("the agent's own model · default");
   });
 });
 

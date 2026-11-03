@@ -27,7 +27,6 @@ function values(
     title: '',
     budget: '25',
     models: {
-      intake: BLANK,
       planning: BLANK,
       implementation: BLANK,
       review: BLANK,
@@ -124,13 +123,13 @@ describe('the request the form sends', () => {
     const request = buildStartRequest(
       values({
         models: {
-          intake: { model: ' gpt-5.6-terra ', effort: '' },
+          planning: { model: ' gpt-5.6-terra ', effort: '' },
           implementation: { model: '  ', effort: 'max' },
         },
       })
     );
     expect(request?.models).toEqual({
-      intake: { model: 'gpt-5.6-terra' },
+      planning: { model: 'gpt-5.6-terra' },
       implementation: { reasoningEffort: 'max' },
     });
   });
