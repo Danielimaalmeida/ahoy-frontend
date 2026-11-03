@@ -66,17 +66,6 @@ describe('JiraBacklogAdapter', () => {
 
     expect((await page(adapter)).items).toEqual([
       {
-        key: 'PROJ-145',
-        summary: 'Show the VAT number on exported invoices',
-        type: 'Story',
-        jiraStatus: 'Open',
-        priority: 'High',
-        assignee: null,
-        updatedAt: '2026-10-06T08:00:00.000Z',
-        sprint: null,
-        readiness: { verdict: 'ready', reasons: [] },
-      },
-      {
         key: 'PROJ-140',
         summary: 'Fix the audit trail',
         type: 'Bug',
@@ -86,6 +75,17 @@ describe('JiraBacklogAdapter', () => {
         updatedAt: '2026-10-06T07:00:00.000Z',
         sprint: { id: 12, name: 'Sprint 12', state: 'active' },
         readiness: BACKLOG.items[1]!.readiness,
+      },
+      {
+        key: 'PROJ-145',
+        summary: 'Show the VAT number on exported invoices',
+        type: 'Story',
+        jiraStatus: 'Open',
+        priority: 'High',
+        assignee: null,
+        updatedAt: '2026-10-06T08:00:00.000Z',
+        sprint: null,
+        readiness: { verdict: 'ready', reasons: [] },
       },
     ]);
     await page(adapter, { q: 'audit' });
@@ -160,6 +160,39 @@ describe('JiraBacklogAdapter', () => {
       cursor: first.nextCursor!,
     });
     expect(second.items.map((item) => item.key)).toEqual(['PROJ-141']);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it('pages sprint by sprint in the order the screen shows them, keeping rank inside each sprint', async () => {
+    const api = new FakeJiraApi();
+    const base = BACKLOG.items[1]!;
+    const closed = { id: 10, name: 'Sprint 10', state: 'closed' } as const;
+    const active = { id: 12, name: 'Sprint 12', state: 'active' } as const;
+    const future = { id: 13, name: 'Sprint 13', state: 'future' } as const;
+    api.answer = ok({
+      items: [
+        { ...base, key: 'PROJ-1', sprint: future },
+        { ...base, key: 'PROJ-2', sprint: null },
+        { ...base, key: 'PROJ-3', sprint: active },
+        { ...base, key: 'PROJ-4', sprint: closed },
+        { ...base, key: 'PROJ-5', sprint: future },
+        { ...base, key: 'PROJ-6', sprint: active },
+      ],
+      total: 6,
+    });
+    const adapter = new JiraBacklogAdapter(api);
+    const first = await page(adapter, { limit: 3 });
+    expect(first.items.map((item) => item.key)).toEqual([
+      'PROJ-3',
+      'PROJ-6',
+      'PROJ-1',
+    ]);
+    const second = await page(adapter, { limit: 3, cursor: first.nextCursor! });
+    expect(second.items.map((item) => item.key)).toEqual([
+      'PROJ-5',
+      'PROJ-4',
+      'PROJ-2',
+    ]);
     expect(second.nextCursor).toBeNull();
   });
 

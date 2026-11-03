@@ -9,6 +9,7 @@ import type {
   BacklogPort,
   BacklogQuery,
 } from './backlog-port';
+import { compareSprints } from './sprint-order';
 
 /** The default page size used when the Docks query does not specify one. */
 export const DEFAULT_JIRA_BACKLOG_PAGE_SIZE = 50;
@@ -31,7 +32,11 @@ export class JiraBacklogAdapter implements BacklogPort {
   list(query: BacklogQuery): Promise<ApiResult<BacklogPage>> {
     return this.load().then((result) => {
       if (!result.ok) return fail(result.error);
-      const matching = result.value.filter((item) => matches(item, query));
+      // Page in the order the screen groups by (Array.sort is stable, so Jira's rank holds inside a sprint): a page then
+      // completes one sprint before it starts the next, and "Load more" never adds stories to a sprint already shown.
+      const matching = result.value
+        .filter((item) => matches(item, query))
+        .sort((a, b) => compareSprints(a.sprint, b.sprint));
       const from = offsetOf(query.cursor);
       const to =
         from + Math.max(1, query.limit ?? DEFAULT_JIRA_BACKLOG_PAGE_SIZE);

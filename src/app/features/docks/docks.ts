@@ -16,6 +16,7 @@ import {
   readinessSummary,
   type FitPresentation,
 } from '@domain/harness-fit';
+import { ApiClient } from '@core/api/api-client';
 import { AppConfigStore } from '@core/config/app-config';
 import { StoriesStore } from '@core/stores/stories-store';
 import { Banner } from '@ui/banner/banner';
@@ -38,6 +39,7 @@ import {
   type BacklogScope,
   type BacklogSprint,
 } from './backlog-port';
+import { compareSprints } from './sprint-order';
 import {
   isActiveRefinement,
   refinementLabel,
@@ -48,7 +50,7 @@ import { RefinementDetails } from './refinement-details';
 import { RefinementDialogs } from './refinement-dialogs';
 
 /** How many backlog items one page asks for. */
-export const DOCKS_PAGE_SIZE = 25;
+export const DOCKS_PAGE_SIZE = 100;
 
 /** The value of the Assignee select that stands for "nobody": it cannot be an e-mail, which always has an `@`. */
 export const UNASSIGNED = 'unassigned';
@@ -106,8 +108,6 @@ interface SprintGroup {
   readonly sprint: BacklogSprint | null;
   readonly items: BacklogItem[];
 }
-
-const SPRINT_ORDER = { active: 0, future: 1, closed: 2 } as const;
 
 /**
  * Backlog: every story of the team's Jira backlog, with its state in Ahoy beside it (lane 3C). The Ahoy column is real:
@@ -958,6 +958,9 @@ export class Docks {
   protected readonly store = inject(StoriesStore);
   protected readonly refinements = inject(BacklogRefinements);
   private readonly config = inject(AppConfigStore);
+  private readonly api = inject(ApiClient);
+  /** The Jira base URL set in Settings → Jira, or null while it is unread, off or not an http(s) URL. */
+  private readonly settingsJiraBase = signal<string | null>(null);
   private readonly refinementDialogs = inject(RefinementDialogs);
 
   protected readonly scopeTabs = SCOPE_TABS;
@@ -1015,9 +1018,7 @@ export class Docks {
   protected readonly loading = this.loadingSignal.asReadonly();
   protected readonly loadingMore = this.loadingMoreSignal.asReadonly();
   protected readonly sprintOptions = computed(() =>
-    [...this.facets().sprints].sort(
-      (a, b) => SPRINT_ORDER[a.state] - SPRINT_ORDER[b.state] || a.id - b.id
-    )
+    [...this.facets().sprints].sort(compareSprints)
   );
   protected readonly nextSprintId = computed(
     () => this.sprintOptions().find((sprint) => sprint.state === 'future')?.id
@@ -1036,11 +1037,8 @@ export class Docks {
           items: [item],
         });
     }
-    return [...groups.values()].sort(
-      (a, b) =>
-        (a.sprint === null ? 3 : SPRINT_ORDER[a.sprint.state]) -
-          (b.sprint === null ? 3 : SPRINT_ORDER[b.sprint.state]) ||
-        (a.sprint?.id ?? 0) - (b.sprint?.id ?? 0)
+    return [...groups.values()].sort((a, b) =>
+      compareSprints(a.sprint, b.sprint)
     );
   });
   private readonly openGroups = signal<Readonly<Record<string, boolean>>>({});
@@ -1151,6 +1149,7 @@ export class Docks {
   constructor() {
     this.store.use(inject(DestroyRef));
     void this.refinements.load();
+    void this.readJiraBase();
     effect(() => {
       const query = this.query();
       untracked(() => void this.start(query));
@@ -1195,9 +1194,12 @@ export class Docks {
     ).length;
   }
 
-  /** The team's Jira issue page, or null (no link) when `/config.json` names no Jira. */
+  /**
+   * The issue's page in the team's Jira: the Jira connected in Settings, else `jiraBaseUrl` from `/config.json`, else
+   * null (no link).
+   */
   protected jiraUrl(key: string): string | null {
-    const base = this.config.config().jiraBaseUrl;
+    const base = this.settingsJiraBase() ?? this.config.config().jiraBaseUrl;
     return base === undefined
       ? null
       : `${base}/browse/${encodeURIComponent(key)}`;
@@ -1280,6 +1282,22 @@ export class Docks {
     this.scopeId.set('all');
   }
 
+  /** Reads the Jira connected in Settings, for the issue links; a failure leaves the `/config.json` fallback. */
+  private async readJiraBase(): Promise<void> {
+    const result = await this.api.getJiraSettings();
+    if (!result.ok || result.value.jira === null) return;
+    const base = result.value.jira.connection.baseUrl;
+    try {
+      const { protocol } = new URL(base);
+      if (protocol !== 'https:' && protocol !== 'http:') return;
+    } catch {
+      return;
+    }
+    let end = base.length;
+    while (end > 0 && base[end - 1] === '/') end--;
+    this.settingsJiraBase.set(base.slice(0, end));
+  }
+
   /** Reads the list of voyages again after it failed. */
   protected retryStories(): void {
     void this.store.loadAll();
@@ -1326,7 +1344,7 @@ export class Docks {
     this.loadedSignal.set(false);
     let result = await this.port.list(query);
     const items: BacklogItem[] = [];
-    // Refinements are joined locally: read all matching pages before filtering, not just the first 25 rows.
+    // Refinements are joined locally: read all matching pages before filtering, not just the first page.
     while (result.ok) {
       items.push(...result.value.items);
       if (this.refinementValue() === '' || result.value.nextCursor === null)
