@@ -22,11 +22,12 @@ export interface CommentCountView {
 
 /** Why Assess comments is not offered, or null when it is. */
 export type AssessBlock =
-  'not_at_delivery' | 'running' | 'no_open_pr' | 'no_budget';
+  'not_at_delivery' | 'running' | 'not_counted' | 'no_open_pr' | 'no_budget';
 
 /**
  * Whether Assess comments may be asked for, as `assessComments` allows (it refuses the rest with `409 invalid_state`):
- * at the delivery gate, or once done while a pull request is still open as last counted, with budget left.
+ * at the delivery gate, or once done while a pull request is still open as last counted, with budget left. A done
+ * voyage not counted yet waits for its first count, which the API needs too.
  */
 export function assessBlock(
   story: { readonly status: StoryStatus; readonly phase: string },
@@ -39,7 +40,10 @@ export function assessBlock(
   const done = story.status === 'terminal' && story.phase === 'done';
   if (story.status === 'running') return 'running';
   if (!atDelivery && !done) return 'not_at_delivery';
-  if (done && (count?.openPrs ?? 0) === 0) return 'no_open_pr';
+  if (done) {
+    if (count === null) return 'not_counted';
+    if (count.openPrs === 0) return 'no_open_pr';
+  }
   if (remainingNanoAiu <= 0) return 'no_budget';
   return null;
 }

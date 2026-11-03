@@ -47,8 +47,9 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 - **Last full run** (2026-11-03, `feat/assess-comments`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from the
   lock file with the `@acme-fedev` entries left out and the platform binaries the lock resolves to the private
-  registry fetched from npmjs): Vitest 189 files, 3,262 tests, all passed (new: the panel and its dialog 7,
-  `domain/pr-comments` 7, the guard 3, and the contract's two operations and the Assess comments request); `npm run
+  registry fetched from npmjs): Vitest 189 files, 3,264 tests, all passed (new: the panel and its dialog 10,
+  including a done voyage not counted yet, Try again and a read after a refused request, `domain/pr-comments` 7, the
+  guard 3, taking every ruling the contract allows, and the contract's two operations and the Assess comments request); `npm run
 typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .`
   passed (the `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and a meetings
   dialog warns NG8011, as on `main`). Not run: Node 24, the real `@acme-fedev/auth`, nginx, the Playwright suite, and

@@ -253,12 +253,55 @@ describe('PrCommentsPanel', () => {
     expect(text(root)).toContain('a change now is a new story');
   });
 
-  it('still offers the button when the comments cannot be read, saying so', async () => {
+  it('says a done voyage not counted yet waits for its first count, without the button', async () => {
+    story = { ...story, phase: 'done', status: 'terminal' };
+    comments = { ...comments, count: null };
+    const root = await render();
+    expect(buttons(root)).not.toContain('Assess comments');
+    expect(text(root)).toContain('have not been counted yet');
+    expect(text(root)).not.toContain('merged or closed');
+  });
+
+  it('still offers the button when the comments cannot be read, saying so, and reads them again on Try again', async () => {
+    let failing = true;
     api.on('getStoryPrComments', () =>
-      Promise.resolve(fail({ kind: 'network' }))
+      Promise.resolve(failing ? fail({ kind: 'network' }) : ok(comments))
     );
     const root = await render();
     expect(text(root)).toContain('Could not read the pull request comments.');
     expect(buttons(root)).toContain('Assess comments');
+    failing = false;
+    [...root.querySelectorAll('button')]
+      .find((b) => text(b) === 'Try again')!
+      .click();
+    await flush();
+    expect(text(root)).toContain('2 comments to assess');
+    expect(buttons(root)).not.toContain('Try again');
+  });
+
+  it('reads the comments again when Assess comments is refused and the dialog closed', async () => {
+    api.on('assessComments', () =>
+      Promise.resolve(
+        fail({
+          kind: 'problem',
+          status: 409,
+          code: 'invalid_state',
+          title: 'Invalid state',
+        })
+      )
+    );
+    const root = await render();
+    [...root.querySelectorAll('button')]
+      .find((b) => text(b) === 'Assess comments')!
+      .click();
+    await flush();
+    confirm().click();
+    await flush();
+    const reads = api.callsOf('getStoryPrComments').length;
+    [...dialog().querySelectorAll('button')]
+      .find((b) => text(b) === 'Cancel')!
+      .click();
+    await flush();
+    expect(api.callsOf('getStoryPrComments').length).toBe(reads + 1);
   });
 });

@@ -9,24 +9,17 @@ describe('isStoryPrComments', () => {
     ).toBe(true);
   });
 
-  it('refuses a reply shown as posted without a time, or waiting without its text', () => {
+  it('takes every ruling the contract allows, a reply posted without its time too', () => {
     const [replied, pending] = fixture.rulings;
     expect(
-      isStoryPrComments.explain({
+      isStoryPrComments({
         ...fixture,
-        rulings: [{ ...replied, repliedAt: null }],
+        rulings: [
+          { ...replied, repliedAt: null, line: 0, repo: '' },
+          { ...pending, replyBody: null },
+        ],
       })
-    ).toBe(
-      'StoryPrComments.rulings[0].repliedAt must be set exactly when the reply was posted'
-    );
-    expect(
-      isStoryPrComments.explain({
-        ...fixture,
-        rulings: [{ ...pending, replyBody: null }],
-      })
-    ).toBe(
-      'StoryPrComments.rulings[0].replyBody must be set while the reply waits to be posted'
-    );
+    ).toBe(true);
   });
 
   it('refuses an unknown ruling, a negative count and a pull request number of 0', () => {

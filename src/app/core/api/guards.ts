@@ -572,40 +572,28 @@ const prCommentCount = shape<PrCommentCount>({
   error: nullable(text),
 });
 
-/**
- * One ruling on a comment. Besides the fields, the contract's store keeps a reply written for every reply waiting to be
- * posted, and a time exactly for a reply posted: a row that breaks either is refused, so the page never shows a reply
- * as sent that was not.
- */
-const prCommentRuling: Check = (value, at) => {
-  const why = shape<PrCommentRuling>({
-    id: nonEmptyText,
-    repo: nonEmptyText,
-    slug: nonEmptyText,
-    prNumber: wholeNumber('a pull request number', 1),
-    kind: oneOf(PR_COMMENT_KINDS),
-    source: oneOf(PR_COMMENT_SOURCES),
-    author: text,
-    excerpt: text,
-    path: nullable(text),
-    line: nullable(wholeNumber('a line number', 1)),
-    ruling: oneOf(PR_COMMENT_RULINGS),
-    reason: text,
-    severity: nullable(text),
-    status: oneOf(PR_COMMENT_REPLY_STATUSES),
-    replyBody: nullable(text),
-    resolveThread: flag,
-    ruledAt: timestamp,
-    repliedAt: nullable(timestamp),
-    replyError: nullable(text),
-  })(value, at);
-  if (why !== null || !isRecord(value)) return why;
-  if (value['status'] === 'reply_pending' && value['replyBody'] === null)
-    return `${at}.replyBody must be set while the reply waits to be posted`;
-  return (value['status'] === 'replied') === (value['repliedAt'] !== null)
-    ? null
-    : `${at}.repliedAt must be set exactly when the reply was posted`;
-};
+/** One ruling on a comment, as the contract states it: nothing stricter, so a row the API may send is never refused. */
+const prCommentRuling = shape<PrCommentRuling>({
+  id: text,
+  repo: text,
+  slug: text,
+  prNumber: wholeNumber('a pull request number', 1),
+  kind: oneOf(PR_COMMENT_KINDS),
+  source: oneOf(PR_COMMENT_SOURCES),
+  author: text,
+  excerpt: text,
+  path: nullable(text),
+  line: nullable(wholeNumber('a line number', Number.MIN_SAFE_INTEGER)),
+  ruling: oneOf(PR_COMMENT_RULINGS),
+  reason: text,
+  severity: nullable(text),
+  status: oneOf(PR_COMMENT_REPLY_STATUSES),
+  replyBody: nullable(text),
+  resolveThread: flag,
+  ruledAt: timestamp,
+  repliedAt: nullable(timestamp),
+  replyError: nullable(text),
+});
 
 /** A story's pull request comments: the waiting count and the rulings so far. */
 export const isStoryPrComments = guard<StoryPrComments>(

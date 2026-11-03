@@ -591,7 +591,7 @@ export class ApiClient {
     );
   }
 
-  /** How many comments by people wait on the story's open pull requests, and the reviewer's rulings so far. Spends nothing. */
+  /** How many comments by people wait on the story's open pull requests, and the rulings so far. Spends nothing. */
   getStoryPrComments(key: string): Promise<ApiResult<StoryPrComments>> {
     return this.get(
       'getStoryPrComments',

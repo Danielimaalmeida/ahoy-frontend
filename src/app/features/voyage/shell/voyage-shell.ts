@@ -21,11 +21,11 @@ import { VoyageHeader } from '../header/voyage-header';
 
 /**
  * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the CI wait banner while Ahoy waits for a
- * pull request's checks, the Anchored banner when halted, the
- * Knowledge panel when done or halted, the Pull request comments panel at the delivery gate or done, the section tabs (one URL each, with the counts) and the outlet the tabs render
- * in. It provides the page's {@link VoyageContext},
- * which every tab injects. Until the story is read it shows the header's skeleton; a 404 shows "This voyage doesn't
- * exist" and any other failure "Can't reach Ahoy" with Try again.
+ * pull request's checks, the Anchored banner when halted, the Knowledge panel when done or halted, the Pull request
+ * comments panel at the delivery gate or done, the section tabs (one URL each, with the counts) and the outlet the tabs
+ * render in. It provides the page's {@link VoyageContext}, which every tab injects. Until the story is read it shows
+ * the header's skeleton; a 404 shows "This voyage doesn't exist" and any other failure "Can't reach Ahoy" with Try
+ * again.
  */
 @Component({
   selector: 'ah-voyage-shell',

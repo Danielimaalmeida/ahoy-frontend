@@ -425,7 +425,7 @@ export type KnowledgeReviewRequest = Schemas['KnowledgeReviewRequest'];
 
 /**
  * The pull request comments of a story (`getStoryPrComments`): how many comments by people wait for Assess comments,
- * as the reconciler last counted them (null before the first count), and the reviewer's rulings so far, oldest first.
+ * as the reconciler last counted them (null before the first count), and the reviewer's rulings so far, newest first.
  */
 export type StoryPrComments = Schemas['StoryPrComments'];
 

@@ -31,7 +31,7 @@ describe('assessBlock', () => {
     const done = { status: 'terminal', phase: 'done' } as const;
     expect(assessBlock(done, null, counted(3), 1)).toBeNull();
     expect(assessBlock(done, null, counted(0, 0), 1)).toBe('no_open_pr');
-    expect(assessBlock(done, null, null, 1)).toBe('no_open_pr');
+    expect(assessBlock(done, null, null, 1)).toBe('not_counted');
   });
 
   it('refuses another gate, a voyage under way and a running one, as the API does', () => {

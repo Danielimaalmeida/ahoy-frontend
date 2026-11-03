@@ -21,6 +21,8 @@ const BLOCKED: Readonly<Record<AssessBlock, string>> = {
   not_at_delivery:
     'People’s comments can be assessed at the delivery gate, or once the voyage is done while a pull request is open.',
   running: 'A run is in progress; assess the comments once it has ended.',
+  not_counted:
+    'The pull requests have not been counted yet: Assess comments is offered once they are, within a few minutes.',
   no_open_pr:
     'Every pull request of this voyage is merged or closed: a change now is a new story.',
   no_budget: 'No budget left: raise the budget first.',
@@ -95,7 +97,17 @@ const BLOCKED: Readonly<Record<AssessBlock, string>> = {
                 </p>
               }
             } @else if (comments.state() === 'error') {
-              <p class="ah-muted">Could not read the pull request comments.</p>
+              <p class="ah-muted">
+                Could not read the pull request comments.
+                <button
+                  type="button"
+                  ahButton="ghost"
+                  size="sm"
+                  (click)="comments.load()"
+                >
+                  Try again
+                </button>
+              </p>
             } @else if (comments.state() === 'ready') {
               <p class="ah-muted">
                 People’s comments are counted every few minutes while the voyage
@@ -204,7 +216,9 @@ export class PrCommentsPanel {
     this.dialogs
       .assessComments({ context: this.context, waiting })
       .closed.subscribe((story) => {
-        if (story !== undefined) void this.comments.load();
+        // An accepted request moves the version, which reads the comments again; a refused one may mean the count
+        // is out of date (a pull request merged since), so it is read again here.
+        if (story === undefined) void this.comments.load();
       });
   }
 }
