@@ -77,12 +77,14 @@ import {
   isStory,
   isStoryPage,
   isStoryPlanFit,
+  isStoryPrComments,
   isStoryStateDocument,
 } from './guards';
 import type {
   AddMeetingTopicRequest,
   AgentDiagnosisList,
   AgentDiagnosisRequest,
+  AssessCommentsRequest,
   AnswerAccepted,
   AnswerRequest,
   ArtifactContent,
@@ -185,6 +187,7 @@ import type {
   Story,
   StoryPage,
   StoryPlanFit,
+  StoryPrComments,
   StoryStateDocument,
   UpdateCrewMemberRequest,
   UpdateMeetingRequest,
@@ -585,6 +588,31 @@ export class ApiClient {
       `/stories/${segment(key)}/knowledge-reviews`,
       body,
       isKnowledgeReview
+    );
+  }
+
+  /** How many comments by people wait on the story's open pull requests, and the reviewer's rulings so far. Spends nothing. */
+  getStoryPrComments(key: string): Promise<ApiResult<StoryPrComments>> {
+    return this.get(
+      'getStoryPrComments',
+      `/stories/${segment(key)}/pr-comments`,
+      isStoryPrComments
+    );
+  }
+
+  /**
+   * Asks the reviewer to rule on the pull requests' comments, people's among them, at the delivery gate or on a done
+   * story with an open pull request. May spend AIU. The answer (202) is the story, queued for the review.
+   */
+  assessComments(
+    key: string,
+    body: AssessCommentsRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'assessComments',
+      `/stories/${segment(key)}/assess-comments`,
+      body,
+      isStory
     );
   }
 

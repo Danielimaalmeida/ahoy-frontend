@@ -1305,6 +1305,93 @@
         }
       }
     },
+    "/stories/{key}/assess-comments": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "assessComments",
+        "tags": ["decisions"],
+        "summary": "Have the reviewer rule on the pull request comments people left. May spend AIU.",
+        "description": "Human-triggered, while the story waits at the delivery gate (left undecided, it opens again after the review)\nor is done with a pull request still open as the reconciler last counted (`GET /stories/{key}/pr-comments`),\nwith no active run. Comments by people are never acted on by themselves; Copilot's are part of every review\nround. The story goes back to the review phase for a fresh review at the current heads that rules on every\ncomment without a ruling, people's and Copilot's: `accepted` as a finding (medium or above goes to rework, then\na re-review), `declined` with a reason, or a `question` that halts the story for a person. Ahoy replies on\nGitHub when replies are turned on. `note` reaches the reviewer as a person's decision. confirmSpend must be\ntrue; the request itself spends nothing.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessCommentsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The review is scheduled; the story is ready in the review phase.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Story"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/pr-comments": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "get": {
+        "operationId": "getStoryPrComments",
+        "tags": ["stories"],
+        "summary": "The story's pull request comments as Ahoy weighs them, and how many by people wait for Assess comments.",
+        "description": "`count` is what the reconciler last counted (0 AIU, every 5 minutes, for a story at the delivery gate or done\nwith a pull request still open), null before the first count. `rulings` are the reviewer's rulings on\ncomments, newest first, with where each reply is: `awaiting_fix` (an accepted comment whose reply waits for\nthe re-review of its fix), `reply_pending`, `replied`, or `no_reply`. Spends nothing.\n",
+        "responses": {
+          "200": {
+            "description": "The count and the rulings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryPrComments"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories/{key}/anchors": {
       "parameters": [
         {
@@ -5709,6 +5796,168 @@
           "confirmSpend": {
             "type": "boolean",
             "const": true
+          }
+        }
+      },
+      "AssessCommentsRequest": {
+        "type": "object",
+        "required": ["expectedVersion", "confirmSpend"],
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "What the reviewer should know, as a person's decision (which comment matters, and why)."
+          },
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      },
+      "StoryPrComments": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "count", "rulings"],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "count": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PrCommentCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rulings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrCommentRuling"
+            }
+          }
+        }
+      },
+      "PrCommentCount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["waiting", "openPrs", "checkedAt", "error"],
+        "properties": {
+          "waiting": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Comments by people without a ruling on open pull requests."
+          },
+          "openPrs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error": {
+            "type": ["string", "null"],
+            "description": "Why the last count could not be read; the counts are the ones before."
+          }
+        }
+      },
+      "PrCommentRuling": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "repo",
+          "slug",
+          "prNumber",
+          "kind",
+          "source",
+          "author",
+          "excerpt",
+          "path",
+          "line",
+          "ruling",
+          "reason",
+          "severity",
+          "status",
+          "replyBody",
+          "resolveThread",
+          "ruledAt",
+          "repliedAt",
+          "replyError"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "prNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["thread", "review", "conversation"]
+          },
+          "source": {
+            "type": "string",
+            "enum": ["person", "copilot"]
+          },
+          "author": {
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "The comment ruled on, as the reviewer read it (untrusted text)."
+          },
+          "path": {
+            "type": ["string", "null"]
+          },
+          "line": {
+            "type": ["integer", "null"]
+          },
+          "ruling": {
+            "type": "string",
+            "enum": ["accepted", "declined", "question"]
+          },
+          "reason": {
+            "type": "string",
+            "description": "The reviewer's reason, which a reply quotes."
+          },
+          "severity": {
+            "type": ["string", "null"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["awaiting_fix", "reply_pending", "replied", "no_reply"]
+          },
+          "replyBody": {
+            "type": ["string", "null"]
+          },
+          "resolveThread": {
+            "type": "boolean"
+          },
+          "ruledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "repliedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "replyError": {
+            "type": ["string", "null"]
           }
         }
       },

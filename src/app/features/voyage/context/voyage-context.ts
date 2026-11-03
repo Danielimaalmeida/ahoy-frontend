@@ -343,6 +343,23 @@ export class VoyageContext {
     return outcome;
   }
 
+  /**
+   * Asks the reviewer to rule on the pull requests' comments, people's among them (`assessComments`), with an optional
+   * note, confirming that it may spend AIU. The `202` story goes to the store; the voyage is read again in the
+   * background, so the page shows the review queued without waiting for the event stream.
+   */
+  async assessComments(note: string): Promise<CommandOutcome<Story>> {
+    const outcome = await this.storyCommand((key, expectedVersion) =>
+      this.api.assessComments(key, {
+        expectedVersion,
+        ...(note !== '' ? { note } : {}),
+        confirmSpend: true,
+      })
+    );
+    if (outcome.kind === 'ok') void this.refresh();
+    return outcome;
+  }
+
   /** Sets the total cap: `setStoryBudget` with the new cap in nano-AIU and the reason. */
   setBudget(
     budgetNanoAiu: number,

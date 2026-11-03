@@ -16,12 +16,13 @@ import { VoyageContext } from '../context/voyage-context';
 import { AnchoredBanner } from '../header/anchored-banner';
 import { CiWaitBanner } from '../header/ci-wait-banner';
 import { KnowledgePanel } from '../header/knowledge-panel';
+import { PrCommentsPanel } from '../header/pr-comments-panel';
 import { VoyageHeader } from '../header/voyage-header';
 
 /**
  * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the CI wait banner while Ahoy waits for a
  * pull request's checks, the Anchored banner when halted, the
- * Knowledge panel when done or halted, the section tabs (one URL each, with the counts) and the outlet the tabs render
+ * Knowledge panel when done or halted, the Pull request comments panel at the delivery gate or done, the section tabs (one URL each, with the counts) and the outlet the tabs render
  * in. It provides the page's {@link VoyageContext},
  * which every tab injects. Until the story is read it shows the header's skeleton; a 404 shows "This voyage doesn't
  * exist" and any other failure "Can't reach Ahoy" with Try again.
@@ -32,6 +33,7 @@ import { VoyageHeader } from '../header/voyage-header';
     AnchoredBanner,
     CiWaitBanner,
     KnowledgePanel,
+    PrCommentsPanel,
     Banner,
     Button,
     EmptyState,
@@ -56,6 +58,7 @@ import { VoyageHeader } from '../header/voyage-header';
           <ah-ci-wait-banner />
           <ah-anchored-banner />
           <ah-knowledge-panel />
+          <ah-pr-comments-panel />
           <ah-section-tabs label="Voyage sections" [items]="tabs()" />
           <router-outlet />
         }

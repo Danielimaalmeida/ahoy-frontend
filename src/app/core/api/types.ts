@@ -423,6 +423,53 @@ export type KnowledgeReviewList = Schemas['KnowledgeReviewList'];
 /** Body of `requestKnowledgeReview`. May spend AIU: `confirmSpend` must be true; the cap is at most 100 AIU. */
 export type KnowledgeReviewRequest = Schemas['KnowledgeReviewRequest'];
 
+/**
+ * The pull request comments of a story (`getStoryPrComments`): how many comments by people wait for Assess comments,
+ * as the reconciler last counted them (null before the first count), and the reviewer's rulings so far, oldest first.
+ */
+export type StoryPrComments = Schemas['StoryPrComments'];
+
+/** The reconciler's last count of a story's comments by people without a ruling, on its open pull requests. */
+export type PrCommentCount = Schemas['PrCommentCount'];
+
+/** One ruling of the reviewer on a pull request comment, and where Ahoy's reply to it is. */
+export type PrCommentRuling = Schemas['PrCommentRuling'];
+
+/** Where a comment was written: a review thread, a review's own text, or the pull request's conversation. */
+export type PrCommentKind = PrCommentRuling['kind'];
+export const PR_COMMENT_KINDS = listOf<PrCommentKind>()([
+  'thread',
+  'review',
+  'conversation',
+]);
+
+/** Who wrote a comment: a person, or Copilot's reviewer. */
+export type PrCommentSource = PrCommentRuling['source'];
+export const PR_COMMENT_SOURCES = listOf<PrCommentSource>()([
+  'person',
+  'copilot',
+]);
+
+/** How the reviewer ruled on a comment. */
+export type PrCommentRulingKind = PrCommentRuling['ruling'];
+export const PR_COMMENT_RULINGS = listOf<PrCommentRulingKind>()([
+  'accepted',
+  'declined',
+  'question',
+]);
+
+/** Where Ahoy's reply to a ruled comment is. */
+export type PrCommentReplyStatus = PrCommentRuling['status'];
+export const PR_COMMENT_REPLY_STATUSES = listOf<PrCommentReplyStatus>()([
+  'awaiting_fix',
+  'reply_pending',
+  'replied',
+  'no_reply',
+]);
+
+/** Body of `assessComments`. May spend AIU: `confirmSpend` must be true. */
+export type AssessCommentsRequest = Schemas['AssessCommentsRequest'];
+
 /** Body of `setStoryBudget`. The new cap includes what is already spent. */
 export type SetStoryBudgetRequest = Schemas['SetStoryBudgetRequest'];
 

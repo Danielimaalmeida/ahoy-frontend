@@ -19,6 +19,10 @@ import {
   type AgentDiagnosisDialogData,
   type CancelAgentDiagnosisDialogData,
 } from './agent-diagnosis-dialogs';
+import {
+  AssessCommentsDialog,
+  type AssessCommentsDialogData,
+} from './assess-comments-dialog';
 import { BudgetDialog } from './budget-dialog';
 import {
   CancelKnowledgeReviewDialog,
@@ -82,6 +86,17 @@ export class VoyageDialogs {
       RefreshDesignDialog,
       { data: { context } }
     );
+  }
+
+  /** "Assess the comments on PROJ-123's pull requests?" Closes with the story. */
+  assessComments(
+    data: AssessCommentsDialogData
+  ): DialogRef<Story, AssessCommentsDialog> {
+    return this.dialogs.open<
+      Story,
+      AssessCommentsDialogData,
+      AssessCommentsDialog
+    >(AssessCommentsDialog, { data });
   }
 
   /** "Change the budget" */

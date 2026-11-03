@@ -123,6 +123,13 @@ import {
   type JiraBacklogIssue,
   type KnowledgeReview,
   type KnowledgeReviewList,
+  PR_COMMENT_KINDS,
+  PR_COMMENT_REPLY_STATUSES,
+  PR_COMMENT_RULINGS,
+  PR_COMMENT_SOURCES,
+  type PrCommentCount,
+  type PrCommentRuling,
+  type StoryPrComments,
   type Meeting,
   type MeetingList,
   type MeetingNote,
@@ -556,6 +563,58 @@ export const isKnowledgeReview = guard<KnowledgeReview>(
 export const isKnowledgeReviewList = guard<KnowledgeReviewList>(
   'KnowledgeReviewList',
   shape<KnowledgeReviewList>({ key: storyKey, items: arrayOf(knowledgeReview) })
+);
+
+const prCommentCount = shape<PrCommentCount>({
+  waiting: wholeNumber('a count', 0),
+  openPrs: wholeNumber('a count', 0),
+  checkedAt: timestamp,
+  error: nullable(text),
+});
+
+/**
+ * One ruling on a comment. Besides the fields, the contract's store keeps a reply written for every reply waiting to be
+ * posted, and a time exactly for a reply posted: a row that breaks either is refused, so the page never shows a reply
+ * as sent that was not.
+ */
+const prCommentRuling: Check = (value, at) => {
+  const why = shape<PrCommentRuling>({
+    id: nonEmptyText,
+    repo: nonEmptyText,
+    slug: nonEmptyText,
+    prNumber: wholeNumber('a pull request number', 1),
+    kind: oneOf(PR_COMMENT_KINDS),
+    source: oneOf(PR_COMMENT_SOURCES),
+    author: text,
+    excerpt: text,
+    path: nullable(text),
+    line: nullable(wholeNumber('a line number', 1)),
+    ruling: oneOf(PR_COMMENT_RULINGS),
+    reason: text,
+    severity: nullable(text),
+    status: oneOf(PR_COMMENT_REPLY_STATUSES),
+    replyBody: nullable(text),
+    resolveThread: flag,
+    ruledAt: timestamp,
+    repliedAt: nullable(timestamp),
+    replyError: nullable(text),
+  })(value, at);
+  if (why !== null || !isRecord(value)) return why;
+  if (value['status'] === 'reply_pending' && value['replyBody'] === null)
+    return `${at}.replyBody must be set while the reply waits to be posted`;
+  return (value['status'] === 'replied') === (value['repliedAt'] !== null)
+    ? null
+    : `${at}.repliedAt must be set exactly when the reply was posted`;
+};
+
+/** A story's pull request comments: the waiting count and the rulings so far. */
+export const isStoryPrComments = guard<StoryPrComments>(
+  'StoryPrComments',
+  shape<StoryPrComments>({
+    key: storyKey,
+    count: nullable(prCommentCount),
+    rulings: arrayOf(prCommentRuling),
+  })
 );
 
 /** The newest refinement of each refined issue, without content. */

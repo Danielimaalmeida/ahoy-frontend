@@ -29,6 +29,8 @@ export type FakeApiOps = Pick<
   | 'decideWorkPackage'
   | 'unblockStory'
   | 'refreshDesign'
+  | 'getStoryPrComments'
+  | 'assessComments'
 >;
 
 /** A call the fake saw. */
@@ -196,5 +198,15 @@ export class FakeApi implements FakeApiOps {
   refreshDesign: FakeApiOps['refreshDesign'] = (key, body) => {
     this.calls.push({ op: 'refreshDesign', args: [key, body] });
     return this.handlers.refreshDesign?.(key, body) ?? unreachable();
+  };
+
+  getStoryPrComments: FakeApiOps['getStoryPrComments'] = (key) => {
+    this.calls.push({ op: 'getStoryPrComments', args: [key] });
+    return this.handlers.getStoryPrComments?.(key) ?? unreachable();
+  };
+
+  assessComments: FakeApiOps['assessComments'] = (key, body) => {
+    this.calls.push({ op: 'assessComments', args: [key, body] });
+    return this.handlers.assessComments?.(key, body) ?? unreachable();
   };
 }

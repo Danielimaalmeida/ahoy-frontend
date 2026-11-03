@@ -1,29 +1,25 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-01 (Team settings › Phases, with `ahoy-hosted`'s `feat/phase-settings`; tested on the mock HTTP
-backend only). One page:
-replace it, do not append; git history is the archive (the 3,692-line page before this one:
-`git show b1f9b88:docs/progress.md`). The review of both repositories, with its
-proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its
-freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
+Updated 2026-11-03 (Assess comments and the pull request comments panel, with `ahoy-hosted`'s
+`feat/pr-comment-triage`, PR #79; tested on fakes and the mock HTTP backend only). One page: replace it, do not append;
+git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of
+both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
+kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/phase-settings`, 2026-11-01, on `main` after #51):** Team settings has a sixth section,
-  **Phases** (`/settings/phases`, "As deployed", "1 changed" or "Models changed" in the navigation). An admin sets
-  each phase's default model and effort (from the catalogue; the efforts the chosen model takes), the AIU cap of one
-  run, the timeout in minutes and, for implementation, how long it waits for CI; "Default" or an empty field is the
-  deployment's value, which shows in grey under the field. A field `AHOY_PHASE_CONFIG` sets shows as text with "Set by
-  the deployment". A cap above the phase's most allowed (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap,
-  whichever is higher; unset, a banner says caps can only be lowered) or a timeout that is not whole minutes is
-  refused under its field before anything is sent, and so is an effort the chosen model does not take; only the fields
-  the admin changed are judged. Raising a cap, including giving a lowered one back to the deployment's, shows a
-  banner, asks in a dialog ("Raise and save") and is sent with `confirmSpend: true`; lowering one saves at once. The
-  model catalogue is edited as a list (id, label, efforts), saved whole, or given back to the built-in list; it is
-  text when `AHOY_MODEL_CATALOG` sets it. An admin's save that another beat shows theirs; non-admins read everything;
-  the history reads each field in words. The SonarQube servers table keeps a token on one line ("Set" and the day
-  under it, who set it on hover and to screen readers), puts Default under the server's name and heads the count
-  "Repos", so it fits at 1440 px without scrolling.
+- **This branch (`feat/assess-comments`, 2026-11-03, on `main` after #53):** the voyage page has a **Pull request
+  comments** panel under the Knowledge panel (`ahoy-hosted` design §4, "PR comments", agreed with the user on
+  2026-11-03). At the delivery gate, or on a done voyage while a pull request is open as last counted, it shows how
+  many comments by people wait ("2 comments to assess", from `GET /stories/{key}/pr-comments`, which the reconciler
+  counts every 5 minutes) and offers **Assess comments**: a dialog with the AIU it may spend and an optional note for
+  the reviewer, sent as `POST /stories/{key}/assess-comments` with `confirmSpend: true`. A running voyage, one with no
+  budget left or a done one whose pull requests are all closed says why instead. The panel lists every ruling,
+  Copilot's during the loop too: who wrote the comment and where, accepted (with its severity), declined or a question,
+  the reviewer's reason, and where Ahoy's reply is (waiting for the fix, waiting to be posted, refused by GitHub with
+  the reason, replied, none). Comment text is plain text. It is hidden while the voyage is under way with nothing ruled.
+  The mock backend serves no comments and refuses Assess comments (it has no pull requests).
+- **Merged before:** Team settings › Phases (`feat/phase-settings`).
 - **Merged on 2026-11-01:** Team settings › Teams, Figma and Agents (PR #51, with `ahoy-hosted`'s
   `feat/teams-figma-agents-settings`): the channel's webhook and test card, the Figma token and UI builders, and who
   runs the four agents' jobs, turning on the two that spend AIU after a confirmation.
@@ -37,10 +33,10 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/phase-settings` (`92bf13b`, PR #75;
-  the commit in its header changes if that branch moves before merging), formatted with this repository's Prettier; `schema.d.ts` and the test mirror are regenerated
-  from it. Needs on the API: migrations 0025 to 0031, `AHOY_SECRETS_KEY` and `AHOY_ADMIN_QNUMBERS`, and optionally
-  `AHOY_MAX_PHASE_BUDGET_AIU`. Merge and deploy with the `ahoy-hosted` pull request.
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/pr-comment-triage` (`26edceb`, PR #79;
+  the commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
+  `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0033 (and 0025 to 0032 before
+  it). Merge and deploy with the `ahoy-hosted` pull request.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
   checked by unit and component tests on the mock backend only (Crew and Team settings over
   `HttpTestingController`). No Teams, Figma or Jira was called. On 2026-11-01 the six Team settings sections were
@@ -48,15 +44,15 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Proof
 
-- **Last full run** (2026-11-01, `feat/phase-settings`, cloud container, Node 22, a local stand-in for
+- **Last full run** (2026-11-03, `feat/assess-comments`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from the
-  lock file with the `@acme-fedev` entries left out), after the code review's high and medium findings were fixed:
-  Vitest 186 files, 3,242 tests, all passed (new: the Phases page 14, `domain/phase-settings` 9, its guard and client
-  5, the frame's Phases state 1, two contract fixtures; the frame's four tests and the contract's operation list now
-  include Phases); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .` passed (the
-  `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and two meetings dialogs warn
-  NG8011, as on `main`). Not run: Node 24, the real `@acme-fedev/auth`, nginx, the Playwright suite, and the page against a
-  real API (the pages were only looked at in Chromium over fixtures).
+  lock file with the `@acme-fedev` entries left out and the platform binaries the lock resolves to the private
+  registry fetched from npmjs): Vitest 189 files, 3,262 tests, all passed (new: the panel and its dialog 7,
+  `domain/pr-comments` 7, the guard 3, and the contract's two operations and the Assess comments request); `npm run
+typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .`
+  passed (the `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and a meetings
+  dialog warns NG8011, as on `main`). Not run: Node 24, the real `@acme-fedev/auth`, nginx, the Playwright suite, and
+  the page against a real API or in a browser.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
   `npm run api:types` is byte-identical to the committed file.
@@ -81,11 +77,11 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. Merge `ahoy-hosted`'s `feat/phase-settings` (migration 0031) and this branch together. On a machine with the
+1. Merge `ahoy-hosted`'s `feat/pr-comment-triage` (PR #79, migration 0033) and this branch together. On a machine with the
    private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`: `npm ci`, then
    `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop `test:scripts`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0031): start a
+3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0033): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
    Meetings (migrations 0018, 0019 and 0022: an action ticked done, two browsers on one meeting in progress, a
    screenshot pasted into a note and opened large, a meeting cancelled and one marked done, a question answered after
@@ -94,7 +90,7 @@ freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
    repository on it, change its host with the token, and read the history; connect a fake Jira, preview a query, set
    a board and add a fixed field; connect a fake Teams webhook and send a test card, save a fake Figma token and test it,
    turn Business-rule review on and see the confirmation; lower a phase's cap, raise one with the confirmation, and save
-   a catalogue). The Copilot token page waits on security.
+   a catalogue; at the delivery gate, Assess comments with a note). The Copilot token page waits on security.
 4. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
    then publishing to Confluence through its API (today the page copies wiki markup).
 5. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the

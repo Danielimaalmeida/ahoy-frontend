@@ -81,6 +81,8 @@ import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
 import refreshDesign from '@testing/fixtures/refreshDesign.json';
+import getStoryPrComments from '@testing/fixtures/getStoryPrComments.json';
+import assessComments from '@testing/fixtures/assessComments.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
@@ -156,6 +158,8 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['setStoryBudget', setStoryBudget],
   ['refreshIntake', refreshIntake],
   ['refreshDesign', refreshDesign],
+  ['getStoryPrComments', getStoryPrComments],
+  ['assessComments', assessComments],
   ['getStoryModels', getStoryModels],
   ['setStoryModels', setStoryModels],
   ['listStoryRuns', listStoryRuns],
@@ -284,7 +288,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      106
+      108
     );
   });
 
@@ -395,6 +399,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'decideWorkPackage',
       'refreshIntake',
       'refreshDesign',
+      'assessComments',
       'requestRefinement',
       'cancelRefinement',
       'requestAgentDiagnosis',
@@ -573,6 +578,17 @@ describe('the request bodies the client sends', () => {
     expect(requestViolations('refreshDesign', body)).toEqual([]);
     expect(
       requestViolations('refreshDesign', { ...body, figmaLinks: [] })
+    ).not.toEqual([]);
+  });
+
+  it('are valid for assessComments as the client sends it, with or without a note, and refuse one without the spend', () => {
+    const body = { expectedVersion: 23, confirmSpend: true };
+    expect(requestViolations('assessComments', body)).toEqual([]);
+    expect(
+      requestViolations('assessComments', { ...body, note: 'Sam is right' })
+    ).toEqual([]);
+    expect(
+      requestViolations('assessComments', { expectedVersion: 23 })
     ).not.toEqual([]);
   });
 
