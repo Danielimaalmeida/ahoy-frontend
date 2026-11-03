@@ -21,14 +21,6 @@
   "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
   "defaults": [
     {
-      "slot": "intake",
-      "phase": "intake",
-      "model": "claude-haiku-4.5",
-      "reasoningEffort": null,
-      "modelSource": "configuration",
-      "effortSource": "model_default"
-    },
-    {
       "slot": "planning",
       "phase": "planning",
       "model": "claude-sonnet-5",

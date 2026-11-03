@@ -1,20 +1,17 @@
 import type { EffortSource, ModelSlot, ModelSource } from './types';
 
 /** The model slots, in the order the Models table shows them (Set sail and Models). */
-export const MODEL_SLOTS = [
-  'intake',
-  'planning',
-  'implementation',
-  'review',
-] as const;
+export const MODEL_SLOTS = ['planning', 'implementation', 'review'] as const;
 
 /** Crew member that owns each slot, in the crew's words (G14). */
 export const CREW: Readonly<Record<ModelSlot, string>> = {
-  intake: 'Navigator',
   planning: 'Cartographer',
   implementation: 'Implementer',
   review: 'Lookout',
 };
+
+/** The crew member of intake, which reads the Jira issue over REST: intake runs no model, so it has no slot. */
+export const NAVIGATOR = 'Navigator';
 
 /** Where the model comes from, in the crew's words (`vocabulary.md`). */
 export const MODEL_SOURCE_LABELS: Readonly<Record<ModelSource, string>> = {
@@ -34,7 +31,7 @@ export const EFFORT_SOURCE_LABELS: Readonly<Record<EffortSource, string>> = {
   model_default: "Model's own",
 };
 
-/** True when the API value names one of the four model slots. */
+/** True when the API value names one of the three model slots. */
 export function isModelSlot(value: string): value is ModelSlot {
   return MODEL_SLOTS.some((slot) => slot === value);
 }
@@ -45,6 +42,7 @@ export function isModelSlot(value: string): value is ModelSlot {
  */
 export function crewLabel(slotOrPhase: string, apiAgent?: string): string {
   if (isModelSlot(slotOrPhase)) return CREW[slotOrPhase];
+  if (slotOrPhase === 'intake') return NAVIGATOR;
   if (slotOrPhase === 'design') return 'Designer';
   const agent = apiAgent?.trim() ?? '';
   return agent.length > 0 ? agent : slotOrPhase;

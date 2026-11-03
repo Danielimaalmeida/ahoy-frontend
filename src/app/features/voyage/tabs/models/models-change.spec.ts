@@ -33,7 +33,6 @@ function plan(
   overrides: Partial<Record<SlotModel['slot'], Partial<SlotModel>>> = {}
 ): ModelPlan {
   const base: Record<SlotModel['slot'], Partial<SlotModel>> = {
-    intake: {},
     planning: {},
     implementation: { model: 'claude-sonnet-5', reasoningEffort: null },
     review: { model: 'gpt-5.6-terra', reasoningEffort: 'high' },
@@ -77,7 +76,7 @@ describe('draftOf', () => {
       model: 'claude-sonnet-5',
       effort: 'high',
     });
-    expect(draftOf(slot({ slot: 'intake' }))).toEqual({
+    expect(draftOf(slot({ slot: 'review' }))).toEqual({
       model: '',
       effort: '',
     });
@@ -175,22 +174,21 @@ describe('rowSpecs', () => {
     });
     const specs = rowSpecs(current);
     expect(specs.map((s) => s.slot)).toEqual([
-      'intake',
       'planning',
       'implementation',
       'review',
     ]);
     expect(specs[0]).toMatchObject({
-      defaultModel: 'gpt-5.6-terra',
-      defaultEffort: 'medium',
-      chosen: false,
-    });
-    expect(specs[1]).toMatchObject({
       chosen: true,
       source: 'Chosen for this voyage',
     });
-    expect(specs[1]?.defaultModel).toBeUndefined();
-    expect(specs[1]?.defaultEffort).toBe('medium');
+    expect(specs[0]?.defaultModel).toBeUndefined();
+    expect(specs[0]?.defaultEffort).toBe('medium');
+    expect(specs[2]).toMatchObject({
+      defaultModel: 'gpt-5.6-terra',
+      defaultEffort: 'high',
+      chosen: false,
+    });
   });
 });
 

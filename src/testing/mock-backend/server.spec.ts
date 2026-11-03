@@ -451,7 +451,6 @@ describe('MockAhoyServer · reads', () => {
         s['effortSource'],
       ])
     ).toEqual([
-      ['intake', 'claude-haiku-4.5', 'configuration', null, 'model_default'],
       ['planning', 'claude-sonnet-5', 'story', 'high', 'story'],
       [
         'implementation',
@@ -578,13 +577,13 @@ describe('MockAhoyServer · commands', () => {
     });
     expect(set.status).toBe(202);
     const slots = field(set, 'slots') as Record<string, unknown>[];
-    expect(slots[1]).toMatchObject({
+    expect(slots[0]).toMatchObject({
       slot: 'planning',
       chosen: null,
       model: 'claude-sonnet-5',
       modelSource: 'configuration',
     });
-    expect(slots[2]).toMatchObject({
+    expect(slots[1]).toMatchObject({
       chosen: { model: 'claude-opus-5' },
       reasoningEffort: null,
       effortSource: 'model_default',

@@ -3,33 +3,6 @@
   "maxBudgetNanoAiu": 100000000000,
   "phases": [
     {
-      "phase": "intake",
-      "runsOn": {
-        "model": "claude-haiku-4.5",
-        "reasoningEffort": null,
-        "budgetNanoAiu": 5000000000,
-        "timeoutSeconds": 900,
-        "ciWaitMinutes": null
-      },
-      "deployment": {
-        "model": "claude-haiku-4.5",
-        "reasoningEffort": null,
-        "budgetNanoAiu": 10000000000,
-        "timeoutSeconds": 900,
-        "ciWaitMinutes": null
-      },
-      "saved": {
-        "model": null,
-        "reasoningEffort": null,
-        "budgetNanoAiu": 5000000000,
-        "timeoutSeconds": null,
-        "ciWaitMinutes": null
-      },
-      "pinned": [],
-      "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
-      "budgetCapNanoAiu": 100000000000
-    },
-    {
       "phase": "planning",
       "runsOn": {
         "model": "claude-sonnet-5",
@@ -49,6 +22,33 @@
         "model": "claude-sonnet-5",
         "reasoningEffort": "high",
         "budgetNanoAiu": 40000000000,
+        "timeoutSeconds": null,
+        "ciWaitMinutes": null
+      },
+      "pinned": [],
+      "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
+      "budgetCapNanoAiu": 100000000000
+    },
+    {
+      "phase": "design",
+      "runsOn": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": 2000000000,
+        "timeoutSeconds": 900,
+        "ciWaitMinutes": null
+      },
+      "deployment": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": 5000000000,
+        "timeoutSeconds": 900,
+        "ciWaitMinutes": null
+      },
+      "saved": {
+        "model": null,
+        "reasoningEffort": null,
+        "budgetNanoAiu": 2000000000,
         "timeoutSeconds": null,
         "ciWaitMinutes": null
       },

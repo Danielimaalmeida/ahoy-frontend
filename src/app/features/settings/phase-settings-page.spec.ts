@@ -28,7 +28,7 @@ import { PhaseSettingsPage } from './phase-settings-page';
 
 const BASE = '/api/v1';
 const AIU = 1_000_000_000;
-const [INTAKE, PLANNING, IMPLEMENTATION, REVIEW] = getPhaseSettings.phases;
+const [PLANNING, DESIGN, IMPLEMENTATION, REVIEW] = getPhaseSettings.phases;
 
 describe('the Phases section of Team settings', () => {
   let fixture: ComponentFixture<PhaseSettingsPage>;
@@ -74,7 +74,7 @@ describe('the Phases section of Team settings', () => {
     await settle();
   }
 
-  /** The control labelled `label`, such as "Intake AIU cap per run". */
+  /** The control labelled `label`, such as "Design AIU cap per run". */
   function control<T extends HTMLElement = HTMLInputElement>(label: string): T {
     const found = root.querySelector<T>(`[aria-label="${label}"]`);
     if (found === null) throw new Error(`no control labelled ${label}`);
@@ -122,25 +122,25 @@ describe('the Phases section of Team settings', () => {
 
     const rows = [...root.querySelectorAll('[aria-label="Phases"] tbody tr')];
     expect(rows.map((r) => text(r.querySelector('th')))).toEqual([
-      'IntakeStory phase',
       'PlanningStory phase',
+      'DesignStory phase',
       'ImplementationStory phase',
       'ReviewStory phase',
     ]);
     expect(text(root)).toContain(
       "Caps up to 100 AIU per run, or a phase's deployment cap where that is higher."
     );
-    expect(options('Intake model')[0]).toBe('Default');
+    expect(options('Design model')[0]).toBe('Default');
     expect(
-      text(row('Intake')?.querySelector('td:nth-of-type(1) .ah-hint'))
-    ).toBe('claude-haiku-4.5');
+      text(row('Review')?.querySelector('td:nth-of-type(1) .ah-hint'))
+    ).toBe('claude-sonnet-5');
     expect(
       text(row('Planning')?.querySelector('td:nth-of-type(2) .ah-hint'))
     ).toBe('model default');
     expect(
-      text(row('Intake')?.querySelector('td:nth-of-type(4) .ah-hint'))
+      text(row('Design')?.querySelector('td:nth-of-type(4) .ah-hint'))
     ).toBe('15 min');
-    expect(control<HTMLSelectElement>('Intake model').value).toBe('');
+    expect(control<HTMLSelectElement>('Design model').value).toBe('');
     expect(control<HTMLSelectElement>('Planning model').value).toBe(
       'claude-sonnet-5'
     );
@@ -154,9 +154,9 @@ describe('the Phases section of Team settings', () => {
     ]);
     expect(control<HTMLSelectElement>('Planning effort').value).toBe('high');
     expect(control('Planning AIU cap per run').value).toBe('40');
-    expect(control('Intake AIU cap per run').placeholder).toBe('10 AIU');
-    expect(text(row('Intake'))).toContain('Up to 100 AIU');
-    expect(text(row('Intake')?.querySelector('td:last-child'))).toBe('—');
+    expect(control('Design AIU cap per run').placeholder).toBe('5 AIU');
+    expect(text(row('Design'))).toContain('Up to 100 AIU');
+    expect(text(row('Design')?.querySelector('td:last-child'))).toBe('—');
     expect(
       root.querySelector('[aria-label="Implementation wait for CI"]')
     ).toBeNull();
@@ -175,7 +175,7 @@ describe('the Phases section of Team settings', () => {
 
   it('saves a lower cap and a longer timeout at once, with only what changed', async () => {
     await answer();
-    type(control('Intake AIU cap per run'), ' 5 ');
+    type(control('Design AIU cap per run'), ' 2 ');
     type(control('Review timeout'), '45');
     await settle();
     expect(text(root)).toContain('Unsaved changes');
@@ -187,7 +187,7 @@ describe('the Phases section of Team settings', () => {
     expect(patch?.request.body).toEqual({
       version: 3,
       phases: {
-        intake: { budgetNanoAiu: 5 * AIU },
+        design: { budgetNanoAiu: 2 * AIU },
         pr_review: { timeoutSeconds: 45 * 60 },
       },
     });
@@ -198,7 +198,7 @@ describe('the Phases section of Team settings', () => {
     await answer(updatePhaseSettings);
     expect(toasts()).toContain('Phases saved.');
     expect(text(root)).not.toContain('Unsaved changes');
-    expect(control('Intake AIU cap per run').value).toBe('5');
+    expect(control('Design AIU cap per run').value).toBe('2');
   });
 
   it('gives a field back to the deployment with null', async () => {
@@ -268,22 +268,22 @@ describe('the Phases section of Team settings', () => {
 
   it('refuses a cap above the most allowed, a timeout that is not whole minutes, and Cancel puts the saved values back', async () => {
     await answer();
-    type(control('Intake AIU cap per run'), '150');
-    type(control('Intake timeout'), '2.5');
+    type(control('Design AIU cap per run'), '150');
+    type(control('Design timeout'), '2.5');
     await settle();
-    expect(text(row('Intake'))).toContain('The most allowed is 100 AIU.');
-    expect(text(row('Intake'))).toContain('Give a whole number of minutes.');
+    expect(text(row('Design'))).toContain('The most allowed is 100 AIU.');
+    expect(text(row('Design'))).toContain('Give a whole number of minutes.');
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
     buttonNamed(root, 'Cancel').click();
     await settle();
-    expect(control('Intake AIU cap per run').value).toBe('');
-    expect(control('Intake timeout').value).toBe('');
+    expect(control('Design AIU cap per run').value).toBe('');
+    expect(control('Design timeout').value).toBe('');
     expect(text(root)).not.toContain('Unsaved changes');
   });
 
   it('says another admin saved first, and shows their phases instead of sending the change over them', async () => {
     await answer();
-    type(control('Intake timeout'), '20');
+    type(control('Design timeout'), '20');
     await settle();
     buttonNamed(root, 'Save').click();
     await settle();
@@ -296,8 +296,8 @@ describe('the Phases section of Team settings', () => {
       409
     );
     await answer(updatePhaseSettings);
-    expect(control('Intake AIU cap per run').value).toBe('5');
-    expect(control('Intake timeout').value).toBe('');
+    expect(control('Design AIU cap per run').value).toBe('2');
+    expect(control('Design timeout').value).toBe('');
     expect(text(root)).toContain('Another admin saved the phases first');
     expect(text(root)).not.toContain('Unsaved changes');
   });
@@ -307,8 +307,8 @@ describe('the Phases section of Team settings', () => {
       ...getPhaseSettings,
       maxBudgetNanoAiu: null,
       phases: [
-        { ...INTAKE, budgetCapNanoAiu: 10 * AIU },
         PLANNING,
+        { ...DESIGN, budgetCapNanoAiu: 5 * AIU },
         IMPLEMENTATION,
         REVIEW,
       ],
@@ -317,7 +317,7 @@ describe('the Phases section of Team settings', () => {
     expect(text(root)).toContain(
       "Caps may only go down from the deployment's."
     );
-    expect(text(row('Intake'))).toContain('Up to 10 AIU');
+    expect(text(row('Design'))).toContain('Up to 5 AIU');
   });
 
   it('saves a catalogue the admin types, and refuses an effort it does not know', async () => {

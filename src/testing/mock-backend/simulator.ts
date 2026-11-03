@@ -24,6 +24,7 @@ import {
 import { sha256Hex } from './sha256';
 import {
   artifactFile,
+  NO_SLOT_MODEL,
   PHASE_TABLE,
   PLAN_FILE,
   resolveSlot,
@@ -90,11 +91,11 @@ export function spentSoFar(
   return (share - (share % progress.totalTicks)) / progress.totalTicks;
 }
 
-/** The slot whose model a run of `phase` uses. */
-function slotOf(phase: string): ModelSlot {
+/** The slot whose model a run of `phase` uses; intake has none, since it reads Jira and runs no model. */
+function slotOf(phase: string): ModelSlot | null {
+  if (phase === 'intake') return null;
   if (phase === 'pr_review') return 'review';
-  if (phase === 'intake' || phase === 'planning' || phase === 'implementation')
-    return phase;
+  if (phase === 'planning' || phase === 'implementation') return phase;
   return 'implementation';
 }
 
@@ -218,7 +219,8 @@ export class Simulator {
     const attempt = (voyage.attempts[phase] ?? 0) + 1;
     voyage.attempts[phase] = attempt;
     const slot = slotOf(phase);
-    const plan = resolveSlot(slot, voyage.chosen[slot]);
+    const plan =
+      slot === null ? NO_SLOT_MODEL : resolveSlot(slot, voyage.chosen[slot]);
     const now = this.world.nowIso();
     const run: Writable<Run> = {
       id: runIdFor(story.key, phase, attempt),

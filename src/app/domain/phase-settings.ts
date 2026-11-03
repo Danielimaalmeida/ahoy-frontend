@@ -16,7 +16,6 @@ export type PhaseField =
 
 /** The phases in words, in the order a story meets them; a phase the deployment adds keeps its own name. */
 const PHASE_NAMES: Readonly<Record<string, string>> = {
-  intake: 'Intake',
   planning: 'Planning',
   design: 'Design',
   implementation: 'Implementation',
@@ -42,13 +41,7 @@ export function phaseName(phase: string): string {
 }
 
 /** The phases of a story, before the agents' jobs outside one. */
-const STORY_PHASES = [
-  'intake',
-  'planning',
-  'design',
-  'implementation',
-  'pr_review',
-];
+const STORY_PHASES = ['planning', 'design', 'implementation', 'pr_review'];
 
 /** Whether a phase runs inside a story (its runs spend the story's budget), not as one of the agents' jobs. */
 export function isStoryPhase(phase: string): boolean {

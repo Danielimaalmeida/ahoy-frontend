@@ -318,7 +318,7 @@
         "operationId": "startStory",
         "tags": ["stories"],
         "summary": "Start a story at intake. The actor becomes its owner and runs bill the owner's token.",
-        "description": "`models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,\n`implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase\nconfiguration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows\nwhat each phase will get. Intake runs no model: the reconciler reads the issue from Jira over REST, so a choice\nfor `intake` is kept but unused. A `models` that names an unknown slot, an empty choice, a model or effort no\nrun can take, or `null` answers `400 validation_failed`, and no story is created.\n",
+        "description": "`models` may choose the model and reasoning effort of each phase from the start (`planning`, `implementation`\nand `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase configuration, then\nthe pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows what each phase will\nget. Intake runs no model (the reconciler reads the issue from Jira over REST), so it has no slot. A `models`\nthat names an unknown slot, an empty choice, a model or effort no run can take, or `null` answers\n`400 validation_failed`, and no story is created.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -609,7 +609,7 @@
         "operationId": "getStoryModels",
         "tags": ["stories"],
         "summary": "The model and reasoning effort each phase of the story runs on, and where each comes from.",
-        "description": "One entry per slot of the story's model plan: `intake` (which runs no model: it reads Jira over REST),\n`planning`, `implementation`, and `review` (the one reviewer of `pr_review`). `chosen` is what a person chose\nfor the story;\n`model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the\npinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another\nmodel is not carried onto a model a person chose, which then runs at its own default effort. Whether the\nowner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker\nbefore it sends a prompt (0 AIU); a run refused there fails and the story halts.\n",
+        "description": "One entry per slot of the story's model plan: `planning`, `implementation`, and `review` (the one reviewer of\n`pr_review`). Intake runs no model: it reads Jira over REST. `chosen` is what a person chose for the story;\n`model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the\npinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another\nmodel is not carried onto a model a person chose, which then runs at its own default effort. Whether the\nowner's Copilot account may use the model, and whether the model takes the effort, is checked by the worker\nbefore it sends a prompt (0 AIU); a run refused there fails and the story halts.\n",
         "responses": {
           "200": {
             "description": "The story's model plan.",
@@ -5928,7 +5928,7 @@
       },
       "ModelSlot": {
         "type": "string",
-        "enum": ["intake", "planning", "implementation", "review"],
+        "enum": ["planning", "implementation", "review"],
         "description": "A part of the story that runs on one model, by phase; `review` is the one reviewer of `pr_review`."
       },
       "ModelId": {
@@ -5962,9 +5962,6 @@
         "additionalProperties": false,
         "description": "A choice per slot.",
         "properties": {
-          "intake": {
-            "$ref": "#/components/schemas/ModelChoice"
-          },
           "planning": {
             "$ref": "#/components/schemas/ModelChoice"
           },
@@ -5982,16 +5979,6 @@
         "additionalProperties": false,
         "description": "A choice per slot to change; `null` gives a slot back to the configured defaults.",
         "properties": {
-          "intake": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ModelChoice"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "planning": {
             "oneOf": [
               {

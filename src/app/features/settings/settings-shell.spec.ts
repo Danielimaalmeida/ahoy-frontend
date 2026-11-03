@@ -230,7 +230,7 @@ describe('the state of the Teams, Figma, Agents and Phases sections in the navig
     });
     const asDeployed = getPhaseSettings.phases.map((p) => ({
       ...p,
-      saved: getPhaseSettings.phases[0]?.saved,
+      saved: getPhaseSettings.phases[1]?.saved,
     }));
     expect(
       phasesState(phases({ ...getPhaseSettings, phases: asDeployed }))

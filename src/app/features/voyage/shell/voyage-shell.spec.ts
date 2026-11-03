@@ -194,7 +194,7 @@ describe('VoyageShell on the mock backend', () => {
       buttonNamed(header(page), label).click();
       await flush(page);
       expect(text(dialog().querySelector('h2'))).toBe('Models per phase');
-      expect(dialog().querySelectorAll('ah-model-choice-row')).toHaveLength(4);
+      expect(dialog().querySelectorAll('ah-model-choice-row')).toHaveLength(3);
       expect(
         dialog().closest<HTMLElement>('.cdk-overlay-pane')!.style.width
       ).toBe('960px');

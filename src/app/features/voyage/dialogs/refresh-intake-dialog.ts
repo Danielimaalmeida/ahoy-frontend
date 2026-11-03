@@ -4,7 +4,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import type { Story } from '@core/api/types';
 import { CurrentUser } from '@core/auth/current-user';
 import { formatAiu } from '@domain/aiu';
-import { CREW } from '@domain/models';
+import { CREW, NAVIGATOR } from '@domain/models';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import { DialogShell } from '@ui/dialog/dialog';
@@ -84,7 +84,7 @@ export class RefreshIntakeDialog {
   private readonly command = new CommandState<Story>();
   private readonly remainingNano = this.context.remainingNanoAiu;
 
-  protected readonly navigator = CREW.intake;
+  protected readonly navigator = NAVIGATOR;
   protected readonly cartographer = CREW.planning;
   protected readonly actor = inject(CurrentUser).id;
   protected readonly messages = REASON_MESSAGES;

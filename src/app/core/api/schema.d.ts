@@ -151,12 +151,12 @@ export interface paths {
     readonly put?: never;
     /**
      * Start a story at intake. The actor becomes its owner and runs bill the owner's token.
-     * @description `models` may choose the model and reasoning effort of each phase from the start (`intake`, `planning`,
-     *     `implementation` and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase
-     *     configuration, then the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows
-     *     what each phase will get. Intake runs no model: the reconciler reads the issue from Jira over REST, so a choice
-     *     for `intake` is kept but unused. A `models` that names an unknown slot, an empty choice, a model or effort no
-     *     run can take, or `null` answers `400 validation_failed`, and no story is created.
+     * @description `models` may choose the model and reasoning effort of each phase from the start (`planning`, `implementation`
+     *     and `review`, the one reviewer of `pr_review`); what is left out runs on the server's phase configuration, then
+     *     the pinned `phases.tsv`, then the agent's own profile. `GET /stories/{key}/models` shows what each phase will
+     *     get. Intake runs no model (the reconciler reads the issue from Jira over REST), so it has no slot. A `models`
+     *     that names an unknown slot, an empty choice, a model or effort no run can take, or `null` answers
+     *     `400 validation_failed`, and no story is created.
      */
     readonly post: operations['startStory'];
     readonly delete?: never;
@@ -295,9 +295,8 @@ export interface paths {
     };
     /**
      * The model and reasoning effort each phase of the story runs on, and where each comes from.
-     * @description One entry per slot of the story's model plan: `intake` (which runs no model: it reads Jira over REST),
-     *     `planning`, `implementation`, and `review` (the one reviewer of `pr_review`). `chosen` is what a person chose
-     *     for the story;
+     * @description One entry per slot of the story's model plan: `planning`, `implementation`, and `review` (the one reviewer of
+     *     `pr_review`). Intake runs no model: it reads Jira over REST. `chosen` is what a person chose for the story;
      *     `model` and `reasoningEffort` are what the slot's next run gets once the server's phase configuration and the
      *     pinned `phases.tsv` fill in what was not chosen. A choice applies as a pair: an effort configured for another
      *     model is not carried onto a model a person chose, which then runs at its own default effort. Whether the
@@ -2492,7 +2491,7 @@ export interface components {
      * @description A part of the story that runs on one model, by phase; `review` is the one reviewer of `pr_review`.
      * @enum {string}
      */
-    readonly ModelSlot: 'intake' | 'planning' | 'implementation' | 'review';
+    readonly ModelSlot: 'planning' | 'implementation' | 'review';
     /**
      * @description A Copilot model id, e.g. `claude-sonnet-5` or `gpt-5.6-terra`.
      * @example claude-sonnet-5
@@ -2511,14 +2510,12 @@ export interface components {
     };
     /** @description A choice per slot. */
     readonly ModelPlanRequest: {
-      readonly intake?: components['schemas']['ModelChoice'];
       readonly planning?: components['schemas']['ModelChoice'];
       readonly implementation?: components['schemas']['ModelChoice'];
       readonly review?: components['schemas']['ModelChoice'];
     };
     /** @description A choice per slot to change; `null` gives a slot back to the configured defaults. */
     readonly ModelPlanChange: {
-      readonly intake?: components['schemas']['ModelChoice'] | null;
       readonly planning?: components['schemas']['ModelChoice'] | null;
       readonly implementation?: components['schemas']['ModelChoice'] | null;
       readonly review?: components['schemas']['ModelChoice'] | null;

@@ -243,14 +243,18 @@ describe('the Set sail page', () => {
       expect(effort.options).toHaveLength(6);
     });
 
-    it('offers all efforts for a custom model even when the phase default takes none', async () => {
+    it('offers all efforts for a custom model even after a model that takes none', async () => {
       const page = await openPage();
+      page.type(
+        page.named<HTMLSelectElement>('Review model'),
+        'claude-haiku-4.5'
+      );
       expect(
-        page.named<HTMLSelectElement>('Intake effort').options
+        page.named<HTMLSelectElement>('Review effort').options
       ).toHaveLength(1);
-      page.type(page.named<HTMLSelectElement>('Intake model'), '__custom__');
+      page.type(page.named<HTMLSelectElement>('Review model'), '__custom__');
       expect(
-        page.named<HTMLSelectElement>('Intake effort').options
+        page.named<HTMLSelectElement>('Review effort').options
       ).toHaveLength(6);
     });
 

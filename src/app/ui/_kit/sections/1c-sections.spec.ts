@@ -52,7 +52,7 @@ describe('lane 1C gallery sections', () => {
 
   it('shows one review row without the removed dual-reviewer conflict', async () => {
     const root = await render(KitModelChoice);
-    expect(root.querySelectorAll('ah-model-choice-row')).toHaveLength(4);
+    expect(root.querySelectorAll('ah-model-choice-row')).toHaveLength(3);
     expect(root.querySelectorAll('.ah-field__error')).toHaveLength(0);
     expect(
       root.querySelector<HTMLButtonElement>('.kit-row button')!.disabled

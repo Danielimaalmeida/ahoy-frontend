@@ -18,19 +18,18 @@ function controls(model = '', effort: EffortChoice = ''): ModelChoiceControls {
 }
 
 const ROWS: readonly ModelChoiceRowSpec[] = [
-  {
-    slot: 'intake',
-    defaultModel: 'gpt-5.6-terra',
-    defaultEffort: 'medium',
-    source: 'Server default',
-  },
   { slot: 'planning', source: 'Chosen for this voyage', chosen: true },
   {
     slot: 'implementation',
     source: 'Agent config',
     error: 'Pick a model the account can use.',
   },
-  { slot: 'review', defaultModel: 'gpt-5.6-terra', source: 'Server default' },
+  {
+    slot: 'review',
+    defaultModel: 'gpt-5.6-terra',
+    defaultEffort: 'medium',
+    source: 'Server default',
+  },
 ];
 
 @Component({
@@ -44,7 +43,6 @@ const ROWS: readonly ModelChoiceRowSpec[] = [
 class TableHost {
   readonly rows = signal(ROWS);
   readonly form: Record<ModelSlot, ModelChoiceControls> = {
-    intake: controls(),
     planning: controls('claude-sonnet-5', 'high'),
     implementation: controls(),
     review: controls(),
@@ -82,37 +80,33 @@ describe('ah-model-choice-table', () => {
     expect(
       all.map((r) => r.querySelector('.ah-model__phase')!.textContent)
     ).toEqual([
-      'intakeNavigator',
       'planningCartographer',
       'implementationImplementer',
       'pr_reviewLookout',
     ]);
-    const intake = all[0]!;
-    const model = intake.querySelector('input')!;
+    const review = all[2]!;
+    const model = review.querySelector('input')!;
     expect(model.className).toContain('ah-input--mono');
-    expect(model.getAttribute('aria-label')).toBe('Intake model');
+    expect(model.getAttribute('aria-label')).toBe('Review model');
     expect(model.placeholder).toBe('Default: gpt-5.6-terra');
-    const select = intake.querySelector('select')!;
-    expect(select.getAttribute('aria-label')).toBe('Intake effort');
+    const select = review.querySelector('select')!;
+    expect(select.getAttribute('aria-label')).toBe('Review effort');
     expect(
       Array.from(select.options).map((o) => o.textContent?.trim())
     ).toEqual(['Default (medium)', 'low', 'medium', 'high', 'xhigh', 'max']);
-    expect(intake.querySelector('.ah-source')!.textContent).toBe(
+    expect(review.querySelector('.ah-source')!.textContent).toBe(
       'Server default'
     );
-    expect(intake.querySelector('button')).toBeNull();
+    expect(review.querySelector('button')).toBeNull();
     expect(
       all[1]!.querySelector('select')!.options[0]!.textContent?.trim()
     ).toBe('Default');
     expect(all[1]!.querySelector('input')!.placeholder).toBe('Default');
-    expect(all[3]!.querySelector('input')!.getAttribute('aria-label')).toBe(
-      'Review model'
-    );
   });
 
   it("shows the form's values and marks a chosen slot", async () => {
     const { root } = await render();
-    const planning = rows(root)[1]!;
+    const planning = rows(root)[0]!;
     expect(planning.querySelector('input')!.value).toBe('claude-sonnet-5');
     expect(planning.querySelector('select')!.value).toBe('high');
     expect(planning.querySelector('.ah-source')!.className).toBe(
@@ -125,7 +119,7 @@ describe('ah-model-choice-table', () => {
 
   it("reset clears the slot's controls and reports the slot, so the page sends null for it", async () => {
     const { root, host } = await render();
-    rows(root)[1]!.querySelector('button')!.click();
+    rows(root)[0]!.querySelector('button')!.click();
     await fixture.whenStable();
     expect(host.form.planning.model.value).toBe('');
     expect(host.form.planning.effort.value).toBe('');
@@ -135,7 +129,7 @@ describe('ah-model-choice-table', () => {
 
   it("shows a row's own error under it, linked from its model input", async () => {
     const { root } = await render();
-    const implementation = rows(root)[2]!;
+    const implementation = rows(root)[1]!;
     const error = errorAfter(implementation)!;
     expect(error.textContent).toBe('Pick a model the account can use.');
     const input = implementation.querySelector('input')!;
@@ -177,7 +171,7 @@ describe('ah-model-choice-table with some slots', () => {
 @Component({
   imports: [ModelChoiceRow],
   template: `<ah-model-choice-row
-    slot="intake"
+    slot="review"
     [controls]="c"
     [resettable]="true"
     (restoreDefault)="got.push($event)"
@@ -193,7 +187,7 @@ describe('ah-model-choice-row', () => {
     const f = TestBed.createComponent(RowHost);
     await f.whenStable();
     const button = (f.nativeElement as HTMLElement).querySelector('button')!;
-    expect(button.getAttribute('aria-label')).toBe('Reset intake to default');
+    expect(button.getAttribute('aria-label')).toBe('Reset review to default');
     button.click();
     expect(f.componentInstance.got).toEqual([null]);
     expect(f.componentInstance.c.model.value).toBe('');
