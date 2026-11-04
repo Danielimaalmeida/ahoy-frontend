@@ -41,7 +41,7 @@ const CHIPS = [
   ['Halted', 'ah-badge--halted', 'halted'],
   ['Blocked', 'ah-badge--blocked', 'terminal · blocked'],
   ['Ended', 'ah-badge--queued', 'terminal'],
-  ['Cancelled', 'ah-badge--queued', 'cancelled'],
+  ['Cancelled', 'ah-badge--cancelled', 'cancelled'],
 ] as const;
 
 describe('ah-filter-chips', () => {

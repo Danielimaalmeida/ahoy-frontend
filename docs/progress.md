@@ -12,7 +12,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   (`POST /stories/{key}/cancel`, `ahoy-hosted` design §4 "Cancel", asked for by the user on 2026-11-04 from R3DA-14682, which
   could only stay halted). The header has **Cancel voyage** on every voyage that is not over; its dialog needs a reason,
   says a run under way is cancelled in the background, that Jira and pull requests are left as they are, and that it
-  cannot be undone. The new status `cancelled` shows as a neutral **Cancelled** badge, has its own chip on the Voyages
+  cannot be undone. The new status `cancelled` shows as an outlined **Cancelled** badge (`ah-badge--cancelled`, the app's own, since the bundle has none), has its own chip on the Voyages
   board (it is out of Halted and Needs you), opens on the Activity tab, marks the phase it was cancelled in as stopped
   ("Cancelled at phase N"), and the row note says "Cancelled in <phase>". The mock backend answers `cancelStory`. In
   this cloud session `@acme-fedev/*` could not be installed: typecheck, lint, format and 190 of the 197 spec files

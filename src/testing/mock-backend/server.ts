@@ -50,6 +50,7 @@ import type {
   JiraBacklog,
 } from '@core/api/types';
 import { figmaLinksInput } from '@domain/figma-links';
+import { isOver } from '@domain/status';
 import { realClock, type MockClock } from './clock';
 import { agentDiagnosisMarkdown } from './content';
 import { diagnosisOf } from './diagnosis';
@@ -1137,6 +1138,12 @@ export class MockAhoyServer {
     this.simulator.cancelRun(voyage);
     story.status = 'cancelled';
     story.haltReason = null;
+    voyage.decisionLog.push({
+      timestamp: this.world.nowIso().replace(/\.\d{3}Z$/, 'Z'),
+      actor: 'human',
+      type: 'cancellation',
+      summary: `cancelled at phase ${story.phase} by ${call.actor}: ${body.reason.trim()}`,
+    });
     this.world.touch(voyage);
     this.world.append(voyage, 'story.cancelled', call.actor, {
       detail: body.reason.trim(),
@@ -1912,9 +1919,4 @@ function notesQuery(
     ...(meetingId !== undefined ? { meetingId } : {}),
     ...(status === 'open' || status === 'done' ? { status } : {}),
   };
-}
-
-/** A story that is over: done or blocked (`terminal`), or cancelled. The API refuses every command on it. */
-function isOver(status: string): boolean {
-  return status === 'terminal' || status === 'cancelled';
 }

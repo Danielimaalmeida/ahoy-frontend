@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 73877fab32159d6e4901d357da58fda621353231
+# Commit: 3ae6ec07a0f115c3ae01c7778a030b64bad9e152
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -298,7 +298,8 @@ paths:
       description: |
         From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it
         again, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run
-        is cancelled as Stop cancels it, asynchronously. The reason is required and goes into the decision log; the
+        is cancelled as Stop cancels it, asynchronously, and so is the story's agent diagnosis or knowledge review in
+        progress (their ids in the event's `stoppedAgentRuns`); a cancelled story's branches are not released. The reason is required and goes into the decision log; the
         event `story.cancelled` carries it as `detail`, with the phase, `previousStatus`, `previousHaltReason` and
         `runId`. Nothing is written to Jira or GitHub: an open pull request stays open.
       requestBody:

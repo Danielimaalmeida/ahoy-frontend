@@ -40,11 +40,10 @@ export function phaseProgress(
   status: StoryStatus,
   stoppedAt: string | null = null
 ): PhaseProgress {
-  const kind =
-    status === 'cancelled'
-      ? 'cancelled'
-      : statusPresentation(status, phase === 'blocked' ? 'blocked' : null)
-          .modifier;
+  const kind = statusPresentation(
+    status,
+    phase === 'blocked' ? 'blocked' : null
+  ).modifier;
   if (kind === 'done') {
     return {
       steps: PHASES.map((name, index) => ({

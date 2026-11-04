@@ -794,6 +794,14 @@ describe('VoyageShell on the mock backend', () => {
           .toasts()
           .map((t) => t.text)
       ).toEqual(['Voyage cancelled in planning.']);
+      const log = (
+        page.server.state.voyages.get('PROJ-126')?.decisionLog ?? []
+      ).at(-1);
+      expect([log?.actor, log?.type, log?.summary]).toEqual([
+        'human',
+        'cancellation',
+        'cancelled at phase planning by dev@example.com: Already implemented.',
+      ]);
     });
 
     it('cancels a running voyage and says its run is cancelled in the background', async () => {

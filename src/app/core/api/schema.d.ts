@@ -217,7 +217,8 @@ export interface paths {
      * Cancel the story for good. It cannot be undone, and spends nothing.
      * @description From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it
      *     again, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run
-     *     is cancelled as Stop cancels it, asynchronously. The reason is required and goes into the decision log; the
+     *     is cancelled as Stop cancels it, asynchronously, and so is the story's agent diagnosis or knowledge review in
+     *     progress (their ids in the event's `stoppedAgentRuns`); a cancelled story's branches are not released. The reason is required and goes into the decision log; the
      *     event `story.cancelled` carries it as `detail`, with the phase, `previousStatus`, `previousHaltReason` and
      *     `runId`. Nothing is written to Jira or GitHub: an open pull request stays open.
      */

@@ -1,4 +1,5 @@
 import type { Run, Story, StoryStatus } from '@core/api/types';
+import { isOver } from '@domain/status';
 import type { VoyageTab } from '../context/default-tab';
 
 /** The header's primary action: a link to a tab, or the Resume dialog. */
@@ -41,11 +42,6 @@ export interface HeaderActions {
   readonly stop: boolean;
   readonly budget: boolean;
   readonly cancel: boolean;
-}
-
-/** Whether a voyage is over: done or blocked (`terminal`), or cancelled. The API refuses every command on it. */
-export function isOver(status: StoryStatus): boolean {
-  return status === 'terminal' || status === 'cancelled';
 }
 
 /**

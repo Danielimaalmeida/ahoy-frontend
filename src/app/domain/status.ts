@@ -1,8 +1,15 @@
 import type { Phase, StoryStatus } from './types';
 
-/** Badge modifiers of the design system (`ah-badge--<modifier>`). */
+/** Badge modifiers of the design system (`ah-badge--<modifier>`); `cancelled` is the app's own (`_ahoy-angular.scss`). */
 export type StatusModifier =
-  'queued' | 'running' | 'input' | 'decision' | 'halted' | 'done' | 'blocked';
+  | 'queued'
+  | 'running'
+  | 'input'
+  | 'decision'
+  | 'halted'
+  | 'done'
+  | 'blocked'
+  | 'cancelled';
 
 /** What a status badge shows: the crew's words, the CSS modifier and the API status word. */
 export interface StatusPresentation {
@@ -35,6 +42,11 @@ export function boardStatus(
   return status === 'terminal' && phase === 'blocked' ? AGROUND : status;
 }
 
+/** Whether a voyage is over: done or blocked (`terminal`), or cancelled. The API refuses every command on it. */
+export function isOver(status: StoryStatus): boolean {
+  return status === 'terminal' || status === 'cancelled';
+}
+
 /** Whether a voyage is aground: terminal at phase `blocked`, not delivered. Whether it can be unblocked is in its events. */
 export function isAground(story: {
   readonly status: StoryStatus;
@@ -59,7 +71,7 @@ const BY_STATUS: Readonly<
     api: 'awaiting_decision',
   },
   halted: { label: 'Halted', modifier: 'halted', api: 'halted' },
-  cancelled: { label: 'Cancelled', modifier: 'queued', api: 'cancelled' },
+  cancelled: { label: 'Cancelled', modifier: 'cancelled', api: 'cancelled' },
 };
 
 /** Maps a story's status (and, for `terminal`, its phase) to the badge in `vocabulary.md`. */

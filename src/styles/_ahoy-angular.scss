@@ -69,3 +69,11 @@ ah-banner {
   flex-direction: column;
   gap: 6px;
 }
+
+// A cancelled voyage is over, not waiting: the design system has no badge for it, and the neutral `queued` one reads as
+// "about to run". So it is outlined, with no fill, in the muted ink, which no badge of the bundle uses.
+.ah-badge--cancelled {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink-muted);
+}
