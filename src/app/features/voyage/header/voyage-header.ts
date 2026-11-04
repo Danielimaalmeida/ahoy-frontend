@@ -111,6 +111,15 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
                   Stop
                 </button>
               }
+              @if (v.actions.cancel) {
+                <button
+                  type="button"
+                  ahButton="danger-outline"
+                  (click)="openCancel()"
+                >
+                  Cancel voyage
+                </button>
+              }
             </div>
           </div>
           <ah-phase-stepper
@@ -247,6 +256,10 @@ export class VoyageHeader {
 
   protected openStop(): void {
     this.dialogs.stop(this.context);
+  }
+
+  protected openCancel(): void {
+    this.dialogs.cancel(this.context);
   }
 
   protected openResume(): void {

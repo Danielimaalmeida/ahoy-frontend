@@ -248,6 +248,7 @@ describe('VoyageShell on the mock backend', () => {
         'Models',
         'Back to intake',
         'Stop',
+        'Cancel voyage',
       ]);
       expect(
         h
@@ -275,6 +276,7 @@ describe('VoyageShell on the mock backend', () => {
         'Models',
         'Back to intake',
         'Stop',
+        'Cancel voyage',
       ]);
     });
 
@@ -282,7 +284,12 @@ describe('VoyageShell on the mock backend', () => {
       const page = await open('/voyages/PROJ-140/runs');
       const h = header(page);
       expect(text(h.querySelector('ah-status-badge'))).toBe('Running running');
-      expect(buttonsIn(h)).toEqual(['Budget', 'Models', 'Stop']);
+      expect(buttonsIn(h)).toEqual([
+        'Budget',
+        'Models',
+        'Stop',
+        'Cancel voyage',
+      ]);
       expect(text(h.querySelector('.header__meta'))).toMatch(
         /Current run proj-140-planning-\S+ · Cartographer/
       );
@@ -295,7 +302,12 @@ describe('VoyageShell on the mock backend', () => {
       const page = await open('/voyages/PROJ-109/runs');
       const h = header(page);
       expect(text(h.querySelector('ah-status-badge'))).toBe('Queued ready');
-      expect(buttonsIn(h)).toEqual(['Budget', 'Models', 'Stop']);
+      expect(buttonsIn(h)).toEqual([
+        'Budget',
+        'Models',
+        'Stop',
+        'Cancel voyage',
+      ]);
       expect(text(h.querySelector('.header__meta'))).toContain(
         'Current run none'
       );
@@ -307,7 +319,12 @@ describe('VoyageShell on the mock backend', () => {
       expect(text(h.querySelector('ah-status-badge'))).toBe(
         'Halted halted · run_failed'
       );
-      expect(buttonsIn(h)).toEqual(['Resume…', 'Budget', 'Change models']);
+      expect(buttonsIn(h)).toEqual([
+        'Resume…',
+        'Budget',
+        'Change models',
+        'Cancel voyage',
+      ]);
       expect(text(h.querySelector('.header__meta'))).toMatch(
         /none · last proj-118-implementation-\S+ \(failed\)/
       );
@@ -567,6 +584,7 @@ describe('VoyageShell on the mock backend', () => {
         'Budget',
         'Models',
         'Stop',
+        'Cancel voyage',
       ]);
     });
 
@@ -730,6 +748,75 @@ describe('VoyageShell on the mock backend', () => {
       await flush(page);
       expect(commands(page)).toHaveLength(1);
       expect(hasDialog()).toBe(false);
+    });
+  });
+
+  describe('Cancel voyage', () => {
+    it('cancels a halted voyage for good with the reason: Cancelled, no actions left but Models', async () => {
+      const page = await open('/voyages/PROJ-126/models');
+      const version = storyOf(page.server, 'PROJ-126').version;
+      click(buttonNamed(header(page), 'Cancel voyage'));
+      await flush(page);
+
+      const d = dialog();
+      expect(text(d.querySelector('.ah-dialog__title'))).toBe(
+        'Cancel PROJ-126?'
+      );
+      expect(text(d)).toContain('The voyage ends for good in planning');
+      expect(text(d)).toContain("This can't be undone.");
+      click(buttonNamed(d, 'Cancel voyage'));
+      await flush(page);
+      expect(text(dialog().querySelector('.ah-field__error'))).toBe(
+        'A reason is required.'
+      );
+      expect(commands(page)).toHaveLength(0);
+
+      type(dialog().querySelector('textarea'), '  Already implemented.  ');
+      click(buttonNamed(dialog(), 'Cancel voyage'));
+      await flush(page);
+
+      const sent = commands(page);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.path).toBe('/stories/PROJ-126/cancel');
+      expect(sent[0]?.body).toEqual({
+        expectedVersion: version,
+        reason: 'Already implemented.',
+      });
+      expect(hasDialog()).toBe(false);
+      const h = header(page);
+      expect(text(h.querySelector('ah-status-badge'))).toBe(
+        'Cancelled cancelled'
+      );
+      expect(buttonsIn(h)).toEqual(['Models']);
+      expect(page.root.querySelector('ah-anchored-banner section')).toBeNull();
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .map((t) => t.text)
+      ).toEqual(['Voyage cancelled in planning.']);
+      const log = (
+        page.server.state.voyages.get('PROJ-126')?.decisionLog ?? []
+      ).at(-1);
+      expect([log?.actor, log?.type, log?.summary]).toEqual([
+        'human',
+        'cancellation',
+        'cancelled at phase planning by dev@example.com: Already implemented.',
+      ]);
+    });
+
+    it('cancels a running voyage and says its run is cancelled in the background', async () => {
+      const page = await open('/voyages/PROJ-140/runs');
+      click(buttonNamed(header(page), 'Cancel voyage'));
+      await flush(page);
+      expect(text(dialog())).toMatch(
+        /Run proj-140-planning-\S+ is cancelled in the background; what it has used stays spent\./
+      );
+      type(dialog().querySelector('textarea'), 'Duplicate of PROJ-123.');
+      click(buttonNamed(dialog(), 'Cancel voyage'));
+      await flush(page);
+      expect(text(header(page).querySelector('ah-status-badge'))).toBe(
+        'Cancelled cancelled'
+      );
     });
   });
 

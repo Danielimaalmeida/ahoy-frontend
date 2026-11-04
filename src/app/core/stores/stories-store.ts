@@ -101,6 +101,7 @@ export class StoriesStore {
       awaiting_decision: 0,
       halted: 0,
       terminal: 0,
+      cancelled: 0,
     };
     for (const story of this.byKey().values()) counts[story.status]++;
     return counts;
@@ -116,6 +117,7 @@ export class StoriesStore {
       halted: 0,
       blocked: 0,
       terminal: 0,
+      cancelled: 0,
     };
     for (const story of this.byKey().values())
       counts[boardStatus(story.status, story.phase)]++;

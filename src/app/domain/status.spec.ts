@@ -29,6 +29,7 @@ describe('statusPresentation', () => {
     ['halted', null, 'Halted', 'halted', 'halted'],
     ['terminal', 'done', 'Done', 'done', 'terminal'],
     ['terminal', 'blocked', 'Blocked', 'blocked', 'terminal'],
+    ['cancelled', null, 'Cancelled', 'cancelled', 'cancelled'],
   ];
 
   for (const [status, phase, label, modifier, api] of CASES) {

@@ -260,6 +260,13 @@ export class VoyageContext {
     );
   }
 
+  /** Scuttles the voyage for good: `cancelStory` with the reason. The `202` story goes to the store. */
+  cancel(reason: string): Promise<CommandOutcome<Story>> {
+    return this.storyCommand((key, expectedVersion) =>
+      this.api.cancelStory(key, { expectedVersion, reason })
+    );
+  }
+
   /** Weighs anchor: `resumeStory`, with the reason only when there is one. */
   resume(reason: string): Promise<CommandOutcome<Story>> {
     return this.storyCommand((key, expectedVersion) =>

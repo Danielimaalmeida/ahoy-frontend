@@ -51,6 +51,14 @@ const BODIES: Readonly<Record<string, readonly unknown[]>> = {
     { reason: 'x' },
     { expectedVersion: 3, reason: 'x'.repeat(2001) },
   ],
+  cancelStory: [
+    { expectedVersion: 3, reason: 'Already implemented' },
+    { expectedVersion: 0, reason: 'Already implemented' },
+    { expectedVersion: 3, reason: '' },
+    { expectedVersion: 3 },
+    { reason: 'x' },
+    { expectedVersion: 3, reason: 'x'.repeat(2001) },
+  ],
   resumeStory: [
     { expectedVersion: 3 },
     { expectedVersion: 3, reason: '' },

@@ -1,14 +1,23 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-04 (branch releases: "Deploy to TEST" on the Work packages tab and Team settings › Branch releases,
-with `ahoy-hosted`'s `feat/branch-release`, PR #82; tested on fakes and `HttpTestingController` only). One page: replace it,
+Updated 2026-11-04 (Cancel voyage, with `ahoy-hosted`'s `feat/cancel-story`; tested on fakes and the mock backend
+only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/branch-release`, 2026-11-04, on `main` after #56):** branch releases (`ahoy-hosted` design §4
+- **This branch (`feat/cancel-voyage`, 2026-11-04):** a person can cancel a voyage for good
+  (`POST /stories/{key}/cancel`, `ahoy-hosted` design §4 "Cancel", asked for by the user on 2026-11-04 from R3DA-14682, which
+  could only stay halted). The header has **Cancel voyage** on every voyage that is not over; its dialog needs a reason,
+  says a run under way is cancelled in the background, that Jira and pull requests are left as they are, and that it
+  cannot be undone. The new status `cancelled` shows as an outlined **Cancelled** badge (`ah-badge--cancelled`, the app's own, since the bundle has none), has its own chip on the Voyages
+  board (it is out of Halted and Needs you), opens on the Activity tab, marks the phase it was cancelled in as stopped
+  ("Cancelled at phase N"), and the row note says "Cancelled in <phase>". The mock backend answers `cancelStory`. In
+  this cloud session `@acme-fedev/*` could not be installed: typecheck, lint, format and 190 of the 197 spec files
+  (3,251 tests) pass without it; the 7 that import it, `ng build` and e2e were not run.
+- **Merged before (`feat/branch-release`, with `ahoy-hosted` #82):** branch releases (`ahoy-hosted` design §4
   "Branch releases", asked for by the user on 2026-11-04). On the voyage's Work packages tab, each package with an
   open pull request has a "TEST release" line: the latest release (Queued, Started on GitHub or Refused by GitHub,
   with the branch, who asked and when, and a link to the workflow's runs on GitHub), and **Deploy to TEST…** when its

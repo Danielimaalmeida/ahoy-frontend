@@ -2,7 +2,7 @@ import { aStory } from '@core/realtime/testing/events';
 import { chipCounts, filterOf, matchesFilter, matchesQuery } from './filters';
 
 describe('filterOf', () => {
-  it('accepts the six statuses the API has', () => {
+  it('accepts the seven statuses the API has', () => {
     for (const status of [
       'ready',
       'running',
@@ -10,6 +10,7 @@ describe('filterOf', () => {
       'awaiting_decision',
       'halted',
       'terminal',
+      'cancelled',
     ]) {
       expect(filterOf(status)).toBe(status);
     }
@@ -84,11 +85,16 @@ describe('chipCounts', () => {
       title: 'Alpha three',
     }),
     aStory('PROJ-5', { status: 'terminal', phase: 'blocked', title: 'Gamma' }),
+    aStory('PROJ-6', {
+      status: 'cancelled',
+      phase: 'plan_review',
+      title: 'Delta',
+    }),
   ];
 
   it('counts all of them and each status, a blocked voyage under Blocked and not under Ended', () => {
     expect(chipCounts(stories, '')).toEqual({
-      all: 5,
+      all: 6,
       ready: 0,
       running: 1,
       awaiting_input: 0,
@@ -96,6 +102,7 @@ describe('chipCounts', () => {
       halted: 2,
       blocked: 1,
       terminal: 1,
+      cancelled: 1,
     });
   });
 
@@ -109,6 +116,7 @@ describe('chipCounts', () => {
       halted: 1,
       blocked: 0,
       terminal: 1,
+      cancelled: 0,
     });
   });
 });

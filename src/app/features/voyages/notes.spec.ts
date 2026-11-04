@@ -168,6 +168,17 @@ describe('noteFor: Anchored', () => {
   });
 });
 
+describe('noteFor: Cancelled', () => {
+  it('says which phase a cancelled voyage was cancelled in', () => {
+    expect(
+      noteFor(
+        aStory('PROJ-140', { status: 'cancelled', phase: 'plan_review' }),
+        NONE
+      )
+    ).toBe('Cancelled in plan_review');
+  });
+});
+
 describe('noteFor: In port', () => {
   it('says a docked voyage was delivered', () => {
     expect(

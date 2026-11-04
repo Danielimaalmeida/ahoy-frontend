@@ -202,6 +202,33 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/cancel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Cancel the story for good. It cannot be undone, and spends nothing.
+     * @description From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it
+     *     again, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run
+     *     is cancelled as Stop cancels it, asynchronously, and so is the story's agent diagnosis or knowledge review in
+     *     progress (their ids in the event's `stoppedAgentRuns`); a cancelled story's branches are not released. The reason is required and goes into the decision log; the
+     *     event `story.cancelled` carries it as `detail`, with the phase, `previousStatus`, `previousHaltReason` and
+     *     `runId`. Nothing is written to Jira or GitHub: an open pull request stays open.
+     */
+    readonly post: operations['cancelStory'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/resume': {
     readonly parameters: {
       readonly query?: never;
@@ -2538,6 +2565,7 @@ export interface components {
      * @description `ready`: the reconciler will act. `running`: a worker run is active.
      *     `awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.
      *     `halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.
+     *     `cancelled`: a person cancelled it for good (`POST /stories/{key}/cancel`); the phase is where it stopped.
      * @enum {string}
      */
     readonly StoryStatus:
@@ -2546,7 +2574,8 @@ export interface components {
       | 'awaiting_input'
       | 'awaiting_decision'
       | 'halted'
-      | 'terminal';
+      | 'terminal'
+      | 'cancelled';
     readonly JiraSprint: {
       readonly id: number;
       readonly name: string;
@@ -2677,6 +2706,10 @@ export interface components {
       readonly models?: components['schemas']['ModelPlanRequest'];
     };
     readonly StopStoryRequest: {
+      readonly expectedVersion: components['schemas']['Version'];
+      readonly reason: string;
+    };
+    readonly CancelStoryRequest: {
       readonly expectedVersion: components['schemas']['Version'];
       readonly reason: string;
     };
@@ -3273,6 +3306,7 @@ export interface components {
      * @example story.started
      * @example story.halted
      * @example story.resumed
+     * @example story.cancelled
      * @example story.intake_refreshed
      * @example design.refreshed
      * @example story.budget_changed
@@ -5007,6 +5041,37 @@ export interface operations {
     };
     readonly responses: {
       /** @description The story is halted; cancellation of an active run completes asynchronously. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Story'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly cancelStory: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CancelStoryRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The story is cancelled; cancellation of an active run completes asynchronously. */
       readonly 202: {
         headers: {
           readonly [name: string]: unknown;

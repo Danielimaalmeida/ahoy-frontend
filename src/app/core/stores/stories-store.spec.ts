@@ -120,6 +120,7 @@ describe('StoriesStore', () => {
       awaiting_decision: 0,
       halted: 0,
       terminal: 0,
+      cancelled: 0,
     });
     await store.loadAll();
     expect(store.counts()).toEqual({
@@ -129,6 +130,7 @@ describe('StoriesStore', () => {
       awaiting_decision: 1,
       halted: 1,
       terminal: 2,
+      cancelled: 0,
     });
     expect(store.boardCounts()).toEqual({
       ready: 1,
@@ -138,6 +140,7 @@ describe('StoriesStore', () => {
       halted: 1,
       blocked: 1,
       terminal: 1,
+      cancelled: 0,
     });
     expect(store.inPort()).toBe(1);
   });

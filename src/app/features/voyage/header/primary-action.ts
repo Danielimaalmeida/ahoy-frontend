@@ -1,4 +1,5 @@
 import type { Run, Story, StoryStatus } from '@core/api/types';
+import { isOver } from '@domain/status';
 import type { VoyageTab } from '../context/default-tab';
 
 /** The header's primary action: a link to a tab, or the Resume dialog. */
@@ -28,21 +29,30 @@ export function primaryAction(
     case 'running':
     case 'ready':
     case 'terminal':
+    case 'cancelled':
       return null;
   }
 }
 
-/** Which of the secondary actions the header offers: Stop while the voyage is moving, Budget until it is done. */
+/**
+ * Which of the secondary actions the header offers: Stop while the voyage is moving, Budget until it is over, and Cancel
+ * voyage until it is over.
+ */
 export interface HeaderActions {
   readonly stop: boolean;
   readonly budget: boolean;
+  readonly cancel: boolean;
 }
 
-/** Stop is for a voyage that is not anchored or done; Budget for any voyage that is not done (plan, deliverable 4). */
+/**
+ * Stop is for a voyage that is not anchored or over; Budget and Cancel voyage for any voyage that is not over (plan,
+ * deliverable 4).
+ */
 export function headerActions(status: StoryStatus): HeaderActions {
   return {
-    stop: status !== 'halted' && status !== 'terminal',
-    budget: status !== 'terminal',
+    stop: status !== 'halted' && !isOver(status),
+    budget: !isOver(status),
+    cancel: !isOver(status),
   };
 }
 
@@ -62,7 +72,7 @@ export function canRefreshIntake(
     runs !== null &&
     REFRESHABLE_PHASES.includes(story.phase) &&
     story.status !== 'running' &&
-    story.status !== 'terminal' &&
+    !isOver(story.status) &&
     story.currentRunId === null &&
     !runs.some((run) => run.phase === 'implementation')
   );

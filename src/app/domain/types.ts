@@ -14,7 +14,8 @@ export type StoryStatus =
   | 'awaiting_input'
   | 'awaiting_decision'
   | 'halted'
-  | 'terminal';
+  | 'terminal'
+  | 'cancelled';
 
 /**
  * A phase of the pinned `phases.tsv`, or `blocked` (G12). The API sends any string, so this is not a closed union: the

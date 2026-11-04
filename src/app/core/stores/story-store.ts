@@ -50,6 +50,7 @@ export const STALE_AFTER: Readonly<
   'story.started': ['story', 'state', 'models'],
   'story.halted': ['story', 'state', 'runs'],
   'story.resumed': ['story', 'state'],
+  'story.cancelled': ['story', 'state', 'runs'],
   'story.budget_changed': ['story'],
   'story.models_changed': ['story', 'models'],
   'story.phase_changed': ['story', 'state'],

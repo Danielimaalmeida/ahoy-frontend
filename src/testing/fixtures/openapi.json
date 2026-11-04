@@ -449,6 +449,56 @@
         }
       }
     },
+    "/stories/{key}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "cancelStory",
+        "tags": ["stories"],
+        "summary": "Cancel the story for good. It cannot be undone, and spends nothing.",
+        "description": "From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it\nagain, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run\nis cancelled as Stop cancels it, asynchronously, and so is the story's agent diagnosis or knowledge review in\nprogress (their ids in the event's `stoppedAgentRuns`); a cancelled story's branches are not released. The reason is required and goes into the decision log; the\nevent `story.cancelled` carries it as `detail`, with the phase, `previousStatus`, `previousHaltReason` and\n`runId`. Nothing is written to Jira or GitHub: an open pull request stays open.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelStoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The story is cancelled; cancellation of an active run completes asynchronously.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Story"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories/{key}/resume": {
       "parameters": [
         {
@@ -5747,9 +5797,10 @@
           "awaiting_input",
           "awaiting_decision",
           "halted",
-          "terminal"
+          "terminal",
+          "cancelled"
         ],
-        "description": "`ready`: the reconciler will act. `running`: a worker run is active.\n`awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.\n`halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.\n"
+        "description": "`ready`: the reconciler will act. `running`: a worker run is active.\n`awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.\n`halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.\n`cancelled`: a person cancelled it for good (`POST /stories/{key}/cancel`); the phase is where it stopped.\n"
       },
       "JiraSprint": {
         "type": "object",
@@ -6153,6 +6204,21 @@
         }
       },
       "StopStoryRequest": {
+        "type": "object",
+        "required": ["expectedVersion", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      },
+      "CancelStoryRequest": {
         "type": "object",
         "required": ["expectedVersion", "reason"],
         "additionalProperties": false,
@@ -8091,6 +8157,7 @@
           "story.started",
           "story.halted",
           "story.resumed",
+          "story.cancelled",
           "story.intake_refreshed",
           "design.refreshed",
           "story.budget_changed",

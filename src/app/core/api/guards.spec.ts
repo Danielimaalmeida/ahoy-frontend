@@ -34,6 +34,7 @@ import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
 import startStory from '@testing/fixtures/startStory.json';
 import stopStory from '@testing/fixtures/stopStory.json';
+import cancelStory from '@testing/fixtures/cancelStory.json';
 import type { Guard } from './guard-kit';
 import {
   isAgentDiagnosisList,
@@ -121,6 +122,7 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['getStory', isStory, getStory],
     ['startStory', isStory, startStory],
     ['stopStory', isStory, stopStory],
+    ['cancelStory', isStory, cancelStory],
     ['resumeStory', isStory, resumeStory],
     ['decideWorkPackage', isStory, decideWorkPackage],
     ['setStoryBudget', isStory, setStoryBudget],

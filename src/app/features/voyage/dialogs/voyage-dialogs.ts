@@ -29,6 +29,7 @@ import {
   type BranchReleaseDialogData,
 } from './branch-release-dialog';
 import { BudgetDialog } from './budget-dialog';
+import { CancelVoyageDialog } from './cancel-voyage-dialog';
 import {
   CancelKnowledgeReviewDialog,
   KnowledgeReviewDialog,
@@ -59,6 +60,14 @@ export class VoyageDialogs {
     return this.dialogs.open<Story, VoyageDialogData, StopDialog>(StopDialog, {
       data: { context },
     });
+  }
+
+  /** "Cancel PROJ-140?" */
+  cancel(context: VoyageContext): DialogRef<Story, CancelVoyageDialog> {
+    return this.dialogs.open<Story, VoyageDialogData, CancelVoyageDialog>(
+      CancelVoyageDialog,
+      { data: { context } }
+    );
   }
 
   /** "Resume PROJ-118?" */

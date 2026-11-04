@@ -41,6 +41,7 @@ import type {
   SetStoryModelsRequest,
   StartStoryRequest,
   StopStoryRequest,
+  CancelStoryRequest,
   StoryPage,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
@@ -49,6 +50,7 @@ import type {
   JiraBacklog,
 } from '@core/api/types';
 import { figmaLinksInput } from '@domain/figma-links';
+import { isOver } from '@domain/status';
 import { realClock, type MockClock } from './clock';
 import { agentDiagnosisMarkdown } from './content';
 import { diagnosisOf } from './diagnosis';
@@ -621,6 +623,8 @@ export class MockAhoyServer {
         return jsonResponse(200, this.voyage(call).storyDto());
       case 'stopStory':
         return this.stopStory(call);
+      case 'cancelStory':
+        return this.cancelStory(call);
       case 'resumeStory':
         return this.resumeStory(call);
       case 'refreshIntake':
@@ -1100,7 +1104,7 @@ export class MockAhoyServer {
     const body = call.body as StopStoryRequest; // validated
     const voyage = this.lock(call, body.expectedVersion);
     const story = voyage.story;
-    if (story.status === 'halted' || story.status === 'terminal')
+    if (story.status === 'halted' || isOver(story.status))
       throw new MockProblem(
         'invalid_state',
         `Story ${story.key} is already ${story.status}`
@@ -1113,6 +1117,39 @@ export class MockAhoyServer {
     this.world.append(voyage, 'story.halted', call.actor, {
       reason: 'stopped_by_user',
       detail: body.reason,
+      runId,
+    });
+    return jsonResponse(202, voyage.storyDto());
+  }
+
+  /** Cancels a story for good, as `cancelStory` of `ahoy-hosted` does: from any status but `terminal`, phase kept. */
+  private cancelStory(call: Call): MockResponse {
+    const body = call.body as CancelStoryRequest; // validated
+    const voyage = this.lock(call, body.expectedVersion);
+    const story = voyage.story;
+    if (isOver(story.status))
+      throw new MockProblem(
+        'invalid_state',
+        `Story ${story.key} is already ${story.status}`
+      );
+    const runId = story.currentRunId;
+    const previousStatus = story.status;
+    const previousHaltReason = story.haltReason;
+    this.simulator.cancelRun(voyage);
+    story.status = 'cancelled';
+    story.haltReason = null;
+    voyage.decisionLog.push({
+      timestamp: this.world.nowIso().replace(/\.\d{3}Z$/, 'Z'),
+      actor: 'human',
+      type: 'cancellation',
+      summary: `cancelled at phase ${story.phase} by ${call.actor}: ${body.reason.trim()}`,
+    });
+    this.world.touch(voyage);
+    this.world.append(voyage, 'story.cancelled', call.actor, {
+      detail: body.reason.trim(),
+      phase: story.phase,
+      previousStatus,
+      ...(previousHaltReason !== null ? { previousHaltReason } : {}),
       runId,
     });
     return jsonResponse(202, voyage.storyDto());
@@ -1156,7 +1193,7 @@ export class MockAhoyServer {
     const story = voyage.story;
     if (
       !['planning', 'plan_review'].includes(story.phase) ||
-      story.status === 'terminal'
+      isOver(story.status)
     )
       throw new MockProblem(
         'invalid_state',
@@ -1329,8 +1366,11 @@ export class MockAhoyServer {
     const body = call.body as SetStoryBudgetRequest; // validated
     const voyage = this.lock(call, body.expectedVersion);
     const story = voyage.story;
-    if (story.status === 'terminal')
-      throw new MockProblem('invalid_state', `Story ${story.key} is terminal`);
+    if (isOver(story.status))
+      throw new MockProblem(
+        'invalid_state',
+        `Story ${story.key} is ${story.status}`
+      );
     if (body.budgetNanoAiu < story.spentNanoAiu)
       throw new MockProblem(
         'invalid_state',
@@ -1353,8 +1393,11 @@ export class MockAhoyServer {
     const body = call.body as SetStoryModelsRequest; // validated
     const voyage = this.lock(call, body.expectedVersion);
     const story = voyage.story;
-    if (story.status === 'terminal')
-      throw new MockProblem('invalid_state', `Story ${story.key} is terminal`);
+    if (isOver(story.status))
+      throw new MockProblem(
+        'invalid_state',
+        `Story ${story.key} is ${story.status}`
+      );
     const changes = new Map(Object.entries(body.models));
     const next: Partial<Record<ModelSlot, ModelChoice>> = {};
     for (const slot of SLOTS) {
