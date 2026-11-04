@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 78e3c004a5e0b9868438e83aef3213b4aab8c7cf
+# Commit: 73877fab32159d6e4901d357da58fda621353231
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -842,6 +842,55 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/branch-releases:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    get:
+      operationId: getStoryBranchReleases
+      tags: [stories]
+      summary: The work packages whose pull request branch can be released to TEST, and the story's releases.
+      description: |
+        `targets` are the work packages with a pull request the gates last saw open, each with its repository's
+        release workflow from Team settings › Branch releases (null: none set, so it cannot be released). `releases`
+        are the story's releases, newest first: `queued` until the reconciler starts the workflow, `dispatched` once
+        GitHub took it (the workflow's own outcome is on GitHub, at `runsUrl`), `failed` with GitHub's reason.
+        `dispatchable` says whether this deployment's reconciler starts workflows at all (Docker or Kubernetes
+        dispatch); where it does not, releases stay queued. Spends nothing.
+      responses:
+        '200':
+          description: The targets and the releases.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoryBranchReleases' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: requestBranchRelease
+      tags: [stories]
+      summary: Release a work package's pull request branch to TEST with its repository's workflow. 0 AIU.
+      description: |
+        Queues the repository's `workflow_dispatch` workflow on the package's pull request branch, with the inputs
+        Team settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow
+        deploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the
+        package has no open pull request, its repository has no release workflow, or a release of that repository
+        is still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy may release. Spends no AIU.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BranchReleaseRequest' }
+      responses:
+        '202':
+          description: The release, queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BranchRelease' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /stories/{key}/anchors:
     parameters:
       - $ref: '#/components/parameters/StoryKey'
@@ -2973,6 +3022,85 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /settings/branch-releases:
+    get:
+      operationId: getBranchReleaseSettings
+      tags: [settings]
+      summary: Which workflow of each child repository releases a pull request branch to TEST, and with which inputs.
+      description: |
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A work package whose repository
+        has a row offers a release on the story page while its pull request is open; the inputs are sent as written,
+        case included (`test` in one repository, `TEST` in another). `dispatchable` says whether this deployment's
+        reconciler starts workflows (Docker or Kubernetes dispatch). 0 AIU.
+      responses:
+        '200':
+          description: The branch release settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BranchReleaseSettingsPage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /settings/branch-releases/repositories:
+    post:
+      operationId: addBranchReleaseRepository
+      tags: [settings]
+      summary: Give a repository its release workflow and inputs. Admins only.
+      description: |
+        `repository` is `owner/name` or `host/owner/name`, not a plan alias; each repository is named once (`400`).
+        `workflow` is a file of `.github/workflows/` with a `workflow_dispatch` trigger (`branch-release.yaml`).
+        `inputs` are at most 25, by name; a boolean is sent as `true` or `false`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: '#/components/schemas/BranchReleaseRepositoryRequest' }
+      responses:
+        '201':
+          description: The repository's release workflow.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BranchReleaseRepository' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /settings/branch-releases/repositories/{repositoryId}:
+    parameters:
+      - $ref: '#/components/parameters/BranchReleaseRepositoryId'
+    patch:
+      operationId: updateBranchReleaseRepository
+      tags: [settings]
+      summary: Change a repository's release workflow or its inputs (all of them at once). Admins only.
+      description: "`409 stale_version` when `version` is not the row's."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: '#/components/schemas/BranchReleaseRepositoryChange' }
+      responses:
+        '200':
+          description: The repository's release workflow, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BranchReleaseRepository' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteBranchReleaseRepository
+      tags: [settings]
+      summary: Take a repository's release workflow away, so its work packages offer no release. Admins only.
+      responses:
+        '204':
+          description: The repository has no release workflow.
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /settings/events:
     get:
       operationId: listSettingsEvents
@@ -3005,6 +3133,7 @@ paths:
                   phases,
                   pr_comments,
                   defects,
+                  branch_releases,
                 ],
             }
       responses:
@@ -3114,6 +3243,11 @@ components:
       required: true
       schema: { type: string, format: uuid }
     SonarRepositoryId:
+      name: repositoryId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    BranchReleaseRepositoryId:
       name: repositoryId
       in: path
       required: true
@@ -7051,6 +7185,167 @@ components:
       additionalProperties: false
       properties:
         reason: { type: [string, 'null'], maxLength: 500 }
+    BranchReleaseInputs:
+      type: object
+      description: 'The `workflow_dispatch` inputs by name, each sent as `gh workflow run -f name=value`.'
+      maxProperties: 25
+      propertyNames: { pattern: '^[A-Za-z_][A-Za-z0-9_-]{0,99}$' }
+      additionalProperties: { type: string, maxLength: 500 }
+    BranchReleaseInputsRequest:
+      type: object
+      maxProperties: 25
+      propertyNames: { pattern: '^[A-Za-z_][A-Za-z0-9_-]{0,99}$' }
+      additionalProperties:
+        oneOf:
+          - { type: string, maxLength: 500 }
+          - { type: boolean }
+    BranchReleaseSettingsPage:
+      type: object
+      additionalProperties: false
+      required: [canEdit, dispatchable, repositories]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        dispatchable:
+          type: boolean
+          description: "Whether this deployment's reconciler starts workflows (Docker or Kubernetes dispatch)."
+        repositories:
+          type: array
+          items: { $ref: '#/components/schemas/BranchReleaseRepository' }
+    BranchReleaseRepository:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          repository,
+          workflow,
+          inputs,
+          version,
+          updatedBy,
+          updatedByName,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        repository: { type: string }
+        workflow:
+          { type: string, description: 'A file of `.github/workflows/`.' }
+        inputs: { $ref: '#/components/schemas/BranchReleaseInputs' }
+        version: { type: integer, minimum: 1 }
+        updatedBy: { type: string }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: string, format: date-time }
+    BranchReleaseRepositoryRequest:
+      type: object
+      additionalProperties: false
+      required: [repository, workflow]
+      properties:
+        repository: { type: string, minLength: 1, maxLength: 200 }
+        workflow: { type: string, minLength: 1, maxLength: 200 }
+        inputs: { $ref: '#/components/schemas/BranchReleaseInputsRequest' }
+    BranchReleaseRepositoryChange:
+      type: object
+      additionalProperties: false
+      required: [version]
+      minProperties: 2
+      properties:
+        version: { type: integer, minimum: 1 }
+        workflow: { type: string, minLength: 1, maxLength: 200 }
+        inputs: { $ref: '#/components/schemas/BranchReleaseInputsRequest' }
+    BranchReleaseRequest:
+      type: object
+      additionalProperties: false
+      required: [workPackageId, confirm]
+      properties:
+        workPackageId: { type: string, minLength: 1, maxLength: 200 }
+        confirm:
+          type: boolean
+          description: 'Must be true: the workflow deploys the branch to a shared environment.'
+    BranchReleaseTarget:
+      type: object
+      additionalProperties: false
+      required: [workPackageId, repo, slug, branch, prNumber, prUrl, workflow]
+      properties:
+        workPackageId: { type: string }
+        repo: { type: string, description: "The package's plan alias." }
+        slug: { type: string, description: '`host/owner/name`.' }
+        branch: { type: string }
+        prNumber: { type: integer, minimum: 1 }
+        prUrl: { type: string }
+        workflow:
+          description: "The repository's release workflow; null when Team settings › Branch releases has none."
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [repository, workflow, inputs]
+              properties:
+                repository:
+                  {
+                    type: string,
+                    description: "The settings row's repository name.",
+                  }
+                workflow: { type: string }
+                inputs: { $ref: '#/components/schemas/BranchReleaseInputs' }
+    BranchRelease:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workPackageId
+        - repo
+        - slug
+        - branch
+        - prNumber
+        - workflow
+        - inputs
+        - status
+        - error
+        - requestedBy
+        - requestedByName
+        - requestedAt
+        - dispatchedAt
+        - runsUrl
+      properties:
+        id: { type: string, format: uuid }
+        workPackageId: { type: string }
+        repo: { type: string }
+        slug: { type: string }
+        branch: { type: string }
+        prNumber: { type: integer, minimum: 1 }
+        workflow: { type: string }
+        inputs: { $ref: '#/components/schemas/BranchReleaseInputs' }
+        status:
+          type: string
+          enum: [queued, dispatched, failed]
+          description: "`queued` for the reconciler, `dispatched` once GitHub took it, `failed` with GitHub's reason."
+        error: { type: [string, 'null'] }
+        requestedBy: { type: string }
+        requestedByName: { type: [string, 'null'] }
+        requestedAt: { type: string, format: date-time }
+        dispatchedAt: { type: [string, 'null'], format: date-time }
+        runsUrl:
+          type: [string, 'null']
+          description: "The workflow's runs on the branch, on GitHub, where its outcome is."
+    StoryBranchReleases:
+      type: object
+      additionalProperties: false
+      required: [key, dispatchable, targets, releases]
+      properties:
+        key: { type: string }
+        dispatchable:
+          type: boolean
+          description: "Whether this deployment's reconciler starts workflows; where it does not, releases stay queued."
+        targets:
+          type: array
+          items: { $ref: '#/components/schemas/BranchReleaseTarget' }
+        releases:
+          type: array
+          items: { $ref: '#/components/schemas/BranchRelease' }
     PhaseSettingField:
       type: string
       enum:

@@ -14,6 +14,11 @@ import updatePhaseSettings from '@testing/fixtures/updatePhaseSettings.json';
 import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
 import updatePrCommentSettings from '@testing/fixtures/updatePrCommentSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
+import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
+import addBranchReleaseRepository from '@testing/fixtures/addBranchReleaseRepository.json';
+import updateBranchReleaseRepository from '@testing/fixtures/updateBranchReleaseRepository.json';
+import getStoryBranchReleases from '@testing/fixtures/getStoryBranchReleases.json';
+import requestBranchRelease from '@testing/fixtures/requestBranchRelease.json';
 import updateDefectSettings from '@testing/fixtures/updateDefectSettings.json';
 import listDefects from '@testing/fixtures/listDefects.json';
 import ignoreDefect from '@testing/fixtures/ignoreDefect.json';
@@ -251,6 +256,11 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['getPrCommentSettings', getPrCommentSettings],
   ['updatePrCommentSettings', updatePrCommentSettings],
   ['getDefectSettings', getDefectSettings],
+  ['getBranchReleaseSettings', getBranchReleaseSettings],
+  ['addBranchReleaseRepository', addBranchReleaseRepository],
+  ['updateBranchReleaseRepository', updateBranchReleaseRepository],
+  ['getStoryBranchReleases', getStoryBranchReleases],
+  ['requestBranchRelease', requestBranchRelease],
   ['updateDefectSettings', updateDefectSettings],
   ['listDefects', listDefects],
   ['ignoreDefect', ignoreDefect],
@@ -271,6 +281,7 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteSonarRepository',
   'deleteJiraSettings',
   'deleteTeamsSettings',
+  'deleteBranchReleaseRepository',
 ];
 
 /**
@@ -304,7 +315,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      116
+      122
     );
   });
 
@@ -417,6 +428,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'refreshIntake',
       'refreshDesign',
       'assessComments',
+      'requestBranchRelease',
       'requestRefinement',
       'cancelRefinement',
       'requestAgentDiagnosis',
@@ -606,6 +618,34 @@ describe('the request bodies the client sends', () => {
     ).toEqual([]);
     expect(
       requestViolations('assessComments', { expectedVersion: 23 })
+    ).not.toEqual([]);
+  });
+
+  it('are valid for the branch release commands as the client sends them, and refuse a release without confirm', () => {
+    expect(
+      requestViolations('requestBranchRelease', {
+        workPackageId: 'WP1',
+        confirm: true,
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('requestBranchRelease', { workPackageId: 'WP1' })
+    ).not.toEqual([]);
+    expect(
+      requestViolations('addBranchReleaseRepository', {
+        repository: 'example/api',
+        workflow: 'branch-release.yaml',
+        inputs: { environment: 'TEST', 'update-ops-tag': 'true' },
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('updateBranchReleaseRepository', {
+        version: 1,
+        inputs: { environment: 'INT' },
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('updateBranchReleaseRepository', { version: 1 })
     ).not.toEqual([]);
   });
 

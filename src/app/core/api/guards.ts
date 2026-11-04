@@ -86,6 +86,12 @@ import {
   type AgentSettingsPage,
   type PrCommentSettings,
   type PrCommentSettingsPage,
+  BRANCH_RELEASE_STATUSES,
+  type BranchRelease,
+  type BranchReleaseRepository,
+  type BranchReleaseSettingsPage,
+  type BranchReleaseTarget,
+  type StoryBranchReleases,
   type ComponentRepository,
   type Defect,
   type DefectList,
@@ -1709,6 +1715,87 @@ export const isDefectList = guard<DefectList>(
       })
     ),
     defects: arrayOf(defect),
+  })
+);
+
+/** A workflow's inputs: a map of text values by name. */
+const releaseInputs = recordOf(text);
+
+const branchReleaseRepository = shape<BranchReleaseRepository>({
+  id: uuid,
+  repository: nonEmptyText,
+  workflow: nonEmptyText,
+  inputs: releaseInputs,
+  version: wholeNumber('a version', 1),
+  updatedBy: actor,
+  updatedByName: nullable(text),
+  updatedAt: timestamp,
+});
+
+/** A repository's branch release workflow, as adding or changing one answers it. */
+export const isBranchReleaseRepository = guard<BranchReleaseRepository>(
+  'BranchReleaseRepository',
+  branchReleaseRepository
+);
+
+/** The Branch releases page, as `getBranchReleaseSettings` answers it. */
+export const isBranchReleaseSettingsPage = guard<BranchReleaseSettingsPage>(
+  'BranchReleaseSettingsPage',
+  shape<BranchReleaseSettingsPage>({
+    canEdit: flag,
+    dispatchable: flag,
+    repositories: arrayOf(branchReleaseRepository),
+  })
+);
+
+const branchRelease = shape<BranchRelease>({
+  id: uuid,
+  workPackageId: nonEmptyText,
+  repo: nonEmptyText,
+  slug: nonEmptyText,
+  branch: nonEmptyText,
+  prNumber: wholeNumber('a pull request number', 1),
+  workflow: nonEmptyText,
+  inputs: releaseInputs,
+  status: oneOf(BRANCH_RELEASE_STATUSES),
+  error: nullable(text),
+  requestedBy: actor,
+  requestedByName: nullable(text),
+  requestedAt: timestamp,
+  dispatchedAt: nullable(timestamp),
+  runsUrl: nullable(text),
+});
+
+/** A release, as `requestBranchRelease` answers it. */
+export const isBranchRelease = guard<BranchRelease>(
+  'BranchRelease',
+  branchRelease
+);
+
+const branchReleaseTarget = shape<BranchReleaseTarget>({
+  workPackageId: nonEmptyText,
+  repo: nonEmptyText,
+  slug: nonEmptyText,
+  branch: nonEmptyText,
+  prNumber: wholeNumber('a pull request number', 1),
+  prUrl: text,
+  workflow: nullable(
+    shape<NonNullable<BranchReleaseTarget['workflow']>>({
+      repository: nonEmptyText,
+      workflow: nonEmptyText,
+      inputs: releaseInputs,
+    })
+  ),
+});
+
+/** A story's branch releases: what each package can release, and the releases so far. */
+export const isStoryBranchReleases = guard<StoryBranchReleases>(
+  'StoryBranchReleases',
+  shape<StoryBranchReleases>({
+    key: storyKey,
+    dispatchable: flag,
+    targets: arrayOf(branchReleaseTarget),
+    releases: arrayOf(branchRelease),
   })
 );
 

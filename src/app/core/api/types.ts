@@ -982,6 +982,46 @@ export type DefectTriage = Defect['triage'];
 export const DEFECT_TRIAGES = listOf<DefectTriage>()(['can_try', 'out']);
 
 /**
+ * Answer of `getBranchReleaseSettings`: each repository's branch release workflow and its inputs, and whether this
+ * deployment's reconciler starts workflows at all.
+ */
+export type BranchReleaseSettingsPage = Schemas['BranchReleaseSettingsPage'];
+
+/** A repository and the `workflow_dispatch` workflow its pull request branches are released to TEST with. */
+export type BranchReleaseRepository = Schemas['BranchReleaseRepository'];
+
+/** Body of `addBranchReleaseRepository`. */
+export type BranchReleaseRepositoryRequest =
+  Schemas['BranchReleaseRepositoryRequest'];
+
+/** Body of `updateBranchReleaseRepository`: `inputs` replaces them all. */
+export type BranchReleaseRepositoryChange =
+  Schemas['BranchReleaseRepositoryChange'];
+
+/** A workflow's inputs by name, each sent as text. */
+export type BranchReleaseInputs = Schemas['BranchReleaseInputs'];
+
+/** Answer of `getStoryBranchReleases`: what each work package with an open pull request can release, and the past. */
+export type StoryBranchReleases = Schemas['StoryBranchReleases'];
+
+/** A work package whose pull request branch can be released, with its repository's workflow (null: none set). */
+export type BranchReleaseTarget = Schemas['BranchReleaseTarget'];
+
+/** A release a person asked for, and where it is. */
+export type BranchRelease = Schemas['BranchRelease'];
+
+/** Body of `requestBranchRelease`; `confirm` must be true. */
+export type BranchReleaseRequest = Schemas['BranchReleaseRequest'];
+
+/** Where a release is: queued for the reconciler, started on GitHub, or refused by it. */
+export type BranchReleaseStatus = BranchRelease['status'];
+export const BRANCH_RELEASE_STATUSES = listOf<BranchReleaseStatus>()([
+  'queued',
+  'dispatched',
+  'failed',
+]);
+
+/**
  * Answer of `getPhaseSettings`: each phase as its runs use it now, what the deployment gives it, what an admin set, and
  * the model catalogue.
  */

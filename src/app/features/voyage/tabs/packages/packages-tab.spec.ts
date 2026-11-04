@@ -3,6 +3,9 @@ import { provideRouter } from '@angular/router';
 import { fail, ok, type ApiResult } from '@core/api/api-error';
 import type {
   AhoyEvent,
+  BranchRelease,
+  BranchReleaseRequest,
+  StoryBranchReleases,
   Run,
   Story,
   WorkPackageDecisionRequest,
@@ -12,7 +15,9 @@ import { FakeApi } from '@core/realtime/testing/fake-api';
 import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
 import { FakeFetch } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
+import getStoryBranchReleases from '@testing/fixtures/getStoryBranchReleases.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
+import requestBranchRelease from '@testing/fixtures/requestBranchRelease.json';
 import { VoyageContext } from '../../context/voyage-context';
 import { PackagesTab } from './packages-tab';
 
@@ -110,6 +115,8 @@ describe('PackagesTab', () => {
   /** What `decideWorkPackage` answers next; the default takes the decision. */
   let answers: (() => Promise<ApiResult<Story>>)[];
   let fixture: ComponentFixture<PackagesTab>;
+  let stream: ReturnType<FakeFetch['stream']>;
+  let clock: FakeClock;
 
   const halted = (version = 14): Story =>
     aStory('PROJ-131', {
@@ -128,7 +135,8 @@ describe('PackagesTab', () => {
     events = EVENTS;
     answers = [];
     const net = new FakeFetch();
-    net.stream();
+    stream = net.stream();
+    clock = new FakeClock();
     api
       .on('getStory', () => Promise.resolve(ok(story)))
       .on('getStoryState', (key) =>
@@ -158,7 +166,7 @@ describe('PackagesTab', () => {
       });
     TestBed.configureTestingModule({
       providers: [
-        ...provideFakes({ api, clock: new FakeClock(), net }),
+        ...provideFakes({ api, clock, net }),
         provideRouter([]),
         VoyageContext,
       ],
@@ -566,5 +574,131 @@ describe('PackagesTab', () => {
     );
     expect(dialog().querySelector('textarea')?.value).toBe('Try again.');
     expect(decisions()).toHaveLength(3);
+  });
+  describe('Deploy to TEST', () => {
+    /** WP1's repository has a release workflow and was released before; WP3's has an open pull request and none. */
+    const releases = (
+      latest: Partial<BranchRelease> = {}
+    ): StoryBranchReleases => {
+      const base = getStoryBranchReleases as StoryBranchReleases;
+      return {
+        ...base,
+        key: 'PROJ-131',
+        targets: [
+          { ...base.targets[0]!, workPackageId: 'WP1', repo: 'billing-api' },
+          { ...base.targets[1]!, workPackageId: 'WP3', repo: 'billing-web' },
+        ],
+        releases: [{ ...base.releases[0]!, repo: 'billing-api', ...latest }],
+      };
+    };
+    let read: StoryBranchReleases;
+    let sent: BranchReleaseRequest[];
+
+    beforeEach(() => {
+      read = releases();
+      sent = [];
+      api
+        .on('getStoryBranchReleases', () => Promise.resolve(ok(read)))
+        .on('requestBranchRelease', (_key, body) => {
+          sent.push(body);
+          read = releases({ id: 'next', status: 'dispatched' });
+          return Promise.resolve(ok(requestBranchRelease as BranchRelease));
+        });
+    });
+
+    it('offers it only on a package whose repository has a workflow, with its newest release, and says why not elsewhere', async () => {
+      const root = await render();
+      const wp1 = card(root, 'WP1');
+      expect(button(wp1, /^Deploy to TEST/).disabled).toBe(false);
+      expect(text(wp1.querySelector('.packages__release'))).toContain(
+        'Started on GitHub · feature/PROJ-123-web, asked by Alex Example'
+      );
+      expect(
+        wp1.querySelector<HTMLAnchorElement>('.packages__release a')?.href
+      ).toContain('/actions/workflows/branch-release.yaml');
+      const wp3 = card(root, 'WP3');
+      expect(() => button(wp3, /^Deploy to TEST/)).toThrow();
+      expect(text(wp3.querySelector('.packages__release'))).toContain(
+        'billing-web has no release workflow'
+      );
+      expect(card(root, 'WP2').querySelector('.packages__release')).toBeNull();
+    });
+
+    it('asks first, shows the branch, workflow and inputs, then queues the release with confirm and reads again', async () => {
+      const root = await render();
+      button(card(root, 'WP1'), /^Deploy to TEST/).click();
+      await flush();
+      expect(text(dialog())).toContain('Deploy WP1’s branch to TEST?');
+      expect(text(dialog())).toContain(
+        'environment=test · update-ops-tag=true'
+      );
+      expect(sent).toEqual([]);
+      const before = api.callsOf('getStoryBranchReleases').length;
+      button(dialog(), /^Deploy to TEST$/).click();
+      await flush();
+      expect(sent).toEqual([{ workPackageId: 'WP1', confirm: true }]);
+      expect(hasDialog()).toBe(false);
+      expect(api.callsOf('getStoryBranchReleases').length).toBe(before + 1);
+    });
+
+    it('reads the releases again when the reconciler starts one, though the version does not move', async () => {
+      read = releases({ status: 'queued', dispatchedAt: null });
+      const root = await render();
+      expect(
+        text(card(root, 'WP1').querySelector('.packages__release'))
+      ).toContain('Queued');
+      read = releases({ status: 'dispatched' });
+      stream.sendEvent(
+        anEvent(
+          901,
+          'branch_release.dispatched',
+          { releaseId: 'r' },
+          'PROJ-131'
+        )
+      );
+      await settle();
+      await clock.advance(300);
+      await flush();
+      expect(
+        text(card(root, 'WP1').querySelector('.packages__release'))
+      ).toContain('Started on GitHub');
+    });
+
+    it('reads the releases again when the release is refused, to show the one already queued', async () => {
+      api.on('requestBranchRelease', () => {
+        read = releases({ id: 'theirs', status: 'queued', dispatchedAt: null });
+        return Promise.resolve(
+          fail({
+            kind: 'problem',
+            status: 409,
+            code: 'invalid_state',
+            title: 'Invalid state',
+            detail:
+              'A release of feature/PROJ-9-api (PROJ-9) on billing-api is already queued (theirs)',
+          })
+        );
+      });
+      const root = await render();
+      button(card(root, 'WP1'), /^Deploy to TEST/).click();
+      await flush();
+      button(dialog(), /^Deploy to TEST$/).click();
+      await flush();
+      expect(
+        text(card(root, 'WP1').querySelector('.packages__release'))
+      ).toContain('Queued');
+    });
+
+    it("shows GitHub's reason for a release it refused", async () => {
+      read = releases({
+        status: 'failed',
+        error: 'gh workflow run failed: HTTP 422: Unexpected inputs provided',
+      });
+      const root = await render();
+      const release = text(
+        card(root, 'WP1').querySelector('.packages__release')
+      );
+      expect(release).toContain('Refused by GitHub');
+      expect(release).toContain('Unexpected inputs provided');
+    });
   });
 });
