@@ -13,9 +13,9 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   open pull request has a "TEST release" line: the latest release (Queued, Started on GitHub or Refused by GitHub,
   with the branch, who asked and when, and a link to the workflow's runs on GitHub), and **Deploy to TEST…** when its
   repository has a release workflow. The button opens a confirmation with the branch, the pull request, the workflow
-  and its inputs, then `POST /stories/{key}/branch-releases` (`confirm: true`); the tab reads again every 5 seconds,
-  up to 12 times, while the release is queued. Without a workflow the line links to the settings. Team settings has a
-  new section, **Branch releases** (`/settings/branch-releases`): per repository, the workflow file
+  and its inputs, then `POST /stories/{key}/branch-releases` (`confirm: true`); the tab reads again on each `branch_release.*` event
+  (the reconciler's start or refusal) and, while a release is queued, every 5 seconds for a minute. Without a workflow the line links to the settings. Team settings has a
+  new section, **Branch releases** (`/settings/branch-releases`): per repository (`owner/name` or its slug, not a plan alias), the workflow file
   (`branch-release.yaml` by default) and its inputs, one `name=value` a line (`environment=test` and
   `update-ops-tag=true` by default; the backend and the importer take `TEST`), with its history; the navigation shows
   how many repositories or "Cannot start" when the API's dispatch never starts workflows. No workflow was started.
@@ -37,7 +37,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/branch-release` (`6716f2e`, PR #82; the
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/branch-release` (`d954b9c`, PR #82; the
   commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
   `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0036 (and 0025 to 0035 before
   it). Merge and deploy with the `ahoy-hosted` pull request.
@@ -51,8 +51,8 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 - **Last full run** (2026-11-04, `feat/branch-release` on `main` after #56, cloud container, Node 22, a local stand-in
   for `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from
-  the lock file with the `@acme-fedev` entries left out): Vitest 197 files, 3,341 tests, all passed (new: the Work
-  packages tab's Deploy to TEST 3, Team settings › Branch releases 5, `domain/branch-releases`, the client and request
+  the lock file with the `@acme-fedev` entries left out): Vitest 197 files, 3,344 tests, all passed (new: the Work
+  packages tab's Deploy to TEST 5, Team settings › Branch releases 6, `domain/branch-releases`, the client and request
   bodies of the six operations, the navigation with the new section and the contract's operation count, 121); `npm run typecheck` (app, specs,
   `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .` passed (the
   `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and a meetings dialog warns

@@ -137,6 +137,23 @@ describe('the Branch releases section of Team settings', () => {
     expect(buttonNamed(dialog(), 'Add repository').disabled).toBe(true);
   });
 
+  it('refuses a plan alias or a workflow that is not a file name before sending anything', async () => {
+    await answer();
+    buttonNamed(root, 'Add repository').click();
+    await settle();
+    type(field(dialog(), 'Repository'), 'api');
+    await settle();
+    expect(text(dialog())).toContain('owner/name or host/owner/name');
+    expect(buttonNamed(dialog(), 'Add repository').disabled).toBe(true);
+    type(field(dialog(), 'Repository'), 'example/api');
+    type(field(dialog(), 'Workflow'), 'deploy');
+    await settle();
+    expect(text(dialog())).toContain(
+      'A file name such as branch-release.yaml.'
+    );
+    expect(buttonNamed(dialog(), 'Add repository').disabled).toBe(true);
+  });
+
   it('sends only the inputs when they change, with the version it read', async () => {
     await answer();
     buttonNamed(root, 'Edit example/web-app').click();

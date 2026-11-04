@@ -351,7 +351,8 @@ export class PackagesTab {
     return this.releases.forPackage(row.pkg.id);
   }
 
-  protected releaseLabel = releaseStatusLabel;
+  /** A release's status in words. */
+  protected readonly releaseLabel = releaseStatusLabel;
 
   /** The tag's colour for a release's status. */
   protected releaseTone(status: string): 'active' | 'ok' | 'bad' {

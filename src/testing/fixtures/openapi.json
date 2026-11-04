@@ -1429,7 +1429,7 @@
         "operationId": "requestBranchRelease",
         "tags": ["stories"],
         "summary": "Release a work package's pull request branch to TEST with its repository's workflow. 0 AIU.",
-        "description": "Queues the repository's `workflow_dispatch` workflow on the package's pull request branch, with the inputs\nTeam settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow\ndeploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the\npackage has no open pull request, its repository has no release workflow, or a release of that repository\nis still queued. Anyone allowed into Ahoy may release. Spends no AIU.\n",
+        "description": "Queues the repository's `workflow_dispatch` workflow on the package's pull request branch, with the inputs\nTeam settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow\ndeploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the\npackage has no open pull request, its repository has no release workflow, or a release of that repository\nis still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy may release. Spends no AIU.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -5260,7 +5260,7 @@
         "operationId": "addBranchReleaseRepository",
         "tags": ["settings"],
         "summary": "Give a repository its release workflow and inputs. Admins only.",
-        "description": "`repository` is a plan alias, `owner/name` or `host/owner/name`; each repository is named once (`400`).\n`workflow` is a file of `.github/workflows/` with a `workflow_dispatch` trigger (`branch-release.yaml`).\n`inputs` are at most 25, by name; a boolean is sent as `true` or `false`.\n",
+        "description": "`repository` is `owner/name` or `host/owner/name`, not a plan alias; each repository is named once (`400`).\n`workflow` is a file of `.github/workflows/` with a `workflow_dispatch` trigger (`branch-release.yaml`).\n`inputs` are at most 25, by name; a boolean is sent as `true` or `false`.\n",
         "requestBody": {
           "required": true,
           "content": {

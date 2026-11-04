@@ -26,8 +26,11 @@ export interface BranchReleaseRepositoryData {
   readonly repository: BranchReleaseRepository | null;
 }
 
-/** The inputs a new repository starts with: FIO's "Create Test Image & Publish to ACR", deploying to TEST. */
+/** The inputs a new repository starts with: the test image deployed to TEST, with the ops repository's tag updated. */
 const STARTING_INPUTS = 'environment=test\nupdate-ops-tag=true';
+
+/** `owner/name` or `host/owner/name`, as the API takes it: never a plan alias, which could name a repository twice. */
+const REPOSITORY = /^\s*[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+){1,2}\s*$/;
 
 /**
  * Gives a repository the `workflow_dispatch` workflow its pull request branches are released to TEST with, and the
@@ -61,7 +64,9 @@ const STARTING_INPUTS = 'environment=test\nupdate-ops-tag=true';
       [confirmLabel]="repository ? 'Save' : 'Add repository'"
       busyLabel="Saving…"
       [busy]="send.busy()"
-      [confirmDisabled]="form.invalid || inputsProblem() !== null"
+      [confirmDisabled]="
+        form.invalid || inputsProblem() !== null || workflowProblem() !== ''
+      "
       [error]="send.error()"
       (confirm)="submit()"
     >
@@ -70,7 +75,8 @@ const STARTING_INPUTS = 'environment=test\nupdate-ops-tag=true';
           <ah-field
             label="Repository"
             required
-            hint="owner/name, its slug, or the plan's alias."
+            hint="owner/name or its host/owner/name slug, not the plan's alias."
+            [errorText]="repositoryProblem()"
           >
             <input
               ahInput
@@ -78,7 +84,7 @@ const STARTING_INPUTS = 'environment=test\nupdate-ops-tag=true';
               formControlName="repository"
               autocomplete="off"
               maxlength="200"
-              placeholder="sflp/r3da_cdm_frontend"
+              placeholder="example/web-app"
             />
           </ah-field>
         }
@@ -152,7 +158,7 @@ export class BranchReleaseRepositoryDialog {
   protected readonly form = new FormGroup({
     repository: new FormControl(this.repository?.repository ?? '', {
       nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/^\s*\S+\s*$/)],
+      validators: [Validators.required, Validators.pattern(REPOSITORY)],
     }),
     workflow: new FormControl(
       this.repository?.workflow ?? 'branch-release.yaml',
@@ -171,6 +177,12 @@ export class BranchReleaseRepositoryDialog {
   protected readonly inputsProblem = computed(() => {
     const read = inputsOf(this.value().inputs);
     return 'problem' in read ? read.problem : null;
+  });
+  protected readonly repositoryProblem = computed(() => {
+    const repository = this.value().repository.trim();
+    return repository === '' || REPOSITORY.test(repository)
+      ? ''
+      : 'owner/name or host/owner/name, such as example/web-app.';
   });
   protected readonly workflowProblem = computed(() =>
     workflowFileOf(this.value().workflow) === undefined

@@ -98,12 +98,12 @@ describe('describeBranchReleaseEvent', () => {
   it('says what each change of the section did, through the settings history', () => {
     expect(
       describeSettingsEvent('branch_release_repository.created', {
-        repository: 'sflp/r3da_cdm_backend',
+        repository: 'example/billing-api',
         workflow: 'branch-release.yaml',
         inputs: { environment: 'TEST', 'update-ops-tag': 'true' },
       })
     ).toBe(
-      'Gave sflp/r3da_cdm_backend the release workflow branch-release.yaml (environment=TEST · update-ops-tag=true)'
+      'Gave example/billing-api the release workflow branch-release.yaml (environment=TEST · update-ops-tag=true)'
     );
     expect(
       describeBranchReleaseEvent('branch_release_repository.updated', {

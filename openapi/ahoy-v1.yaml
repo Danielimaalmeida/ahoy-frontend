@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 6716f2ef0dd0ad9cd378fc339a1f655dd18d41a8
+# Commit: d954b9c9bef230f34795ee25d2d21ac01b906ceb
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -845,7 +845,7 @@ paths:
         Team settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow
         deploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the
         package has no open pull request, its repository has no release workflow, or a release of that repository
-        is still queued. Anyone allowed into Ahoy may release. Spends no AIU.
+        is still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy may release. Spends no AIU.
       requestBody:
         required: true
         content:
@@ -3017,7 +3017,7 @@ paths:
       tags: [settings]
       summary: Give a repository its release workflow and inputs. Admins only.
       description: |
-        `repository` is a plan alias, `owner/name` or `host/owner/name`; each repository is named once (`400`).
+        `repository` is `owner/name` or `host/owner/name`, not a plan alias; each repository is named once (`400`).
         `workflow` is a file of `.github/workflows/` with a `workflow_dispatch` trigger (`branch-release.yaml`).
         `inputs` are at most 25, by name; a boolean is sent as `true` or `false`.
       requestBody:

@@ -661,7 +661,7 @@ export interface paths {
      *     Team settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow
      *     deploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the
      *     package has no open pull request, its repository has no release workflow, or a release of that repository
-     *     is still queued. Anyone allowed into Ahoy may release. Spends no AIU.
+     *     is still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy may release. Spends no AIU.
      */
     readonly post: operations['requestBranchRelease'];
     readonly delete?: never;
@@ -2449,7 +2449,7 @@ export interface paths {
     readonly put?: never;
     /**
      * Give a repository its release workflow and inputs. Admins only.
-     * @description `repository` is a plan alias, `owner/name` or `host/owner/name`; each repository is named once (`400`).
+     * @description `repository` is `owner/name` or `host/owner/name`, not a plan alias; each repository is named once (`400`).
      *     `workflow` is a file of `.github/workflows/` with a `workflow_dispatch` trigger (`branch-release.yaml`).
      *     `inputs` are at most 25, by name; a boolean is sent as `true` or `false`.
      */
