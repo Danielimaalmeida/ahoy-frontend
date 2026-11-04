@@ -36,7 +36,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/defect-watch` (`24774cf`, PR #81; the
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/defect-watch` (`92196f1`, PR #81; the
   commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
   `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0035 (and 0025 to 0034 before
   it). Merge and deploy with the `ahoy-hosted` pull request.
@@ -50,8 +50,8 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 - **Last full run** (2026-11-04, `feat/defect-watch`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from the
-  lock file with the `@acme-fedev` entries left out): Vitest 195 files, 3,315 tests, all passed (new: Backlog › Defects
-  6, Team settings › Defects 7 and its words 9, `domain/defects` 4, the client and guards of the five operations, the
+  lock file with the `@acme-fedev` entries left out): Vitest 195 files, 3,320 tests, all passed (new: Backlog › Defects
+  9, Team settings › Defects 8 and its words 9, `domain/defects` 4, the client and guards of the five operations, the
   navigation with the new section and the contract's operation count); `npm run typecheck` (app, specs,
   `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .` passed (the
   `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and a meetings dialog warns

@@ -141,6 +141,18 @@ describe('the Defects section of Team settings', () => {
     expect(priorities().value).toBe('Highest, High, Medium');
   });
 
+  it('does not count a change of spacing alone as unsaved', async () => {
+    await answer(updateDefectSettings);
+    type(priorities(), 'Highest,High,  Medium');
+    type(components(), 'billing-api=billing-api\n\nweb-portal =  web-portal');
+    await settle();
+    expect(text(root)).not.toContain('Unsaved changes');
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    type(priorities(), 'Highest, High');
+    await settle();
+    expect(text(root)).toContain('Unsaved changes');
+  });
+
   it('refuses a component line it cannot read before sending anything', async () => {
     await answer();
     type(components(), 'billing-api = billing-api\nweb-portal');

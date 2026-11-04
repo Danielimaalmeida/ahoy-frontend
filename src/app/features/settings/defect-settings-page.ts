@@ -374,10 +374,17 @@ export class DefectSettingsPage {
   /** The saved settings, as the API last answered them. */
   private readonly saved = computed(() => this.store.page()?.defects ?? null);
   /** What the form would save, or null while a field is refused. */
+  /** The priorities and the component map as read from the form, each parsed once a change. */
+  private readonly prioritiesRead = computed(() =>
+    prioritiesOf(this.value().priorities)
+  );
+  private readonly componentsRead = computed(() =>
+    componentsOf(this.value().components)
+  );
   private readonly typed = computed(() => {
     const value = this.value();
-    const priorities = prioritiesOf(value.priorities);
-    const components = componentsOf(value.components);
+    const priorities = this.prioritiesRead();
+    const components = this.componentsRead();
     if ('problem' in priorities || 'problem' in components) return null;
     const jql = value.jql.trim();
     return {
@@ -387,14 +394,35 @@ export class DefectSettingsPage {
       components: components.value,
     };
   });
+  /** What saving would change, field by field, or null while a field is refused. */
+  private readonly changes = computed((): DefectSettingsChange | null => {
+    const saved = this.saved();
+    const typed = this.typed();
+    if (saved === null || typed === null) return null;
+    const same = (a: unknown, b: unknown) =>
+      JSON.stringify(a) === JSON.stringify(b);
+    return {
+      ...(typed.watchOn !== saved.watchOn ? { watchOn: typed.watchOn } : {}),
+      ...(typed.defectsJql !== saved.defectsJql
+        ? { defectsJql: typed.defectsJql }
+        : {}),
+      ...(!same(typed.priorities, saved.priorities)
+        ? { priorities: [...typed.priorities] }
+        : {}),
+      ...(!same(typed.components, saved.components)
+        ? { components: [...typed.components] }
+        : {}),
+    };
+  });
+  /** Whether the settings as read differ from the saved ones: spacing alone is no change. A refused field is one. */
   protected readonly dirty = computed(() => {
     const saved = this.saved();
     if (saved === null) return false;
+    const changes = this.changes();
+    if (changes !== null) return Object.keys(changes).length > 0;
     const was = formValueOf(saved);
     const value = this.value();
     return (
-      value.watch !== was.watch ||
-      value.jql.trim() !== was.jql ||
       value.priorities.trim() !== was.priorities ||
       value.components.trim() !== was.components
     );
@@ -405,11 +433,11 @@ export class DefectSettingsPage {
       : null
   );
   protected readonly prioritiesError = computed(() => {
-    const read = prioritiesOf(this.value().priorities);
+    const read = this.prioritiesRead();
     return 'problem' in read ? read.problem : null;
   });
   protected readonly componentsError = computed(() => {
-    const read = componentsOf(this.value().components);
+    const read = this.componentsRead();
     return 'problem' in read ? read.problem : null;
   });
   protected readonly invalid = computed(
@@ -491,22 +519,18 @@ export class DefectSettingsPage {
   /** Saves what changed, with the version the page read. */
   protected async save(saved: DefectSettings): Promise<void> {
     const typed = this.typed();
-    if (this.saving() || !this.dirty() || typed === null || this.invalid())
+    const changes = this.changes();
+    if (
+      this.saving() ||
+      !this.dirty() ||
+      typed === null ||
+      changes === null ||
+      this.invalid()
+    )
       return;
-    const same = (a: unknown, b: unknown) =>
-      JSON.stringify(a) === JSON.stringify(b);
     const body: DefectSettingsChange = {
       ...(saved.version !== null ? { version: saved.version } : {}),
-      ...(typed.watchOn !== saved.watchOn ? { watchOn: typed.watchOn } : {}),
-      ...(typed.defectsJql !== saved.defectsJql
-        ? { defectsJql: typed.defectsJql }
-        : {}),
-      ...(!same(typed.priorities, saved.priorities)
-        ? { priorities: [...typed.priorities] }
-        : {}),
-      ...(!same(typed.components, saved.components)
-        ? { components: [...typed.components] }
-        : {}),
+      ...changes,
     };
     this.saving.set(true);
     this.saveError.set(null);

@@ -1723,6 +1723,52 @@ describe('Docks', () => {
       expect(rows(f)).toHaveLength(4);
     });
 
+    it('says the watch never read Jira when it is off and has no pass, and that a failed check read nothing', async () => {
+      const never = await openDefects({
+        watchOn: false,
+        lastPass: null,
+        defects: [],
+      });
+      expect(text(root(never))).toContain('The watch has never read Jira.');
+      expect(text(root(never))).not.toContain('matched none');
+      never.destroy();
+    });
+
+    it('reads the list again when someone else ignored the defect first', async () => {
+      const f = await openDefects();
+      const theirs = {
+        ...LIST,
+        defects: LIST.defects.map((d) =>
+          d.key === 'PROJ-207'
+            ? {
+                ...d,
+                ignored: {
+                  by: 'sam@example.com',
+                  byName: 'Sam Example',
+                  at: '2026-11-04T11:00:00.000Z',
+                  reason: null,
+                },
+              }
+            : d
+        ),
+      };
+      api.on('listDefects', () => Promise.resolve(ok(theirs)));
+      api.on('ignoreDefect', () =>
+        Promise.resolve(
+          fail({
+            kind: 'problem' as const,
+            status: 409,
+            code: 'invalid_state',
+            title: 'Invalid state',
+          })
+        )
+      );
+      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      await refresh(f);
+      expect(text(root(f))).toContain('the list was read again');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Undo');
+    });
+
     it('goes back to the backlog with All', async () => {
       const f = await openDefects();
       pill(f, 'All').click();
@@ -1730,6 +1776,20 @@ describe('Docks', () => {
       expect(byLabel(f, 'Open defects')).toBeNull();
       expect(byLabel(f, 'Search the backlog')).not.toBeNull();
       expect(rows(f).map((r) => text(cell(r, 0)))).toEqual(['PROJ-1']);
+    });
+
+    it('keeps the backlog as it was read while Defects is open, without reading it again', async () => {
+      api.on('listDefects', () => Promise.resolve(ok(LIST)));
+      const backlog = new FakeBacklog([anItem('PROJ-1')]);
+      const f = await mount(backlog);
+      pill(f, 'Not started').click();
+      await refresh(f);
+      const reads = backlog.queries.length;
+      pill(f, 'Defects').click();
+      await refresh(f);
+      pill(f, 'Not started').click();
+      await refresh(f);
+      expect(backlog.queries.length).toBe(reads);
     });
   });
 });

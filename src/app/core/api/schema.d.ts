@@ -2278,7 +2278,7 @@ export interface paths {
       readonly query?: never;
       readonly header?: never;
       readonly path: {
-        readonly key: components['parameters']['StoryKey'];
+        readonly key: components['parameters']['JiraIssueKey'];
       };
       readonly cookie?: never;
     };
@@ -2301,7 +2301,7 @@ export interface paths {
       readonly query?: never;
       readonly header?: never;
       readonly path: {
-        readonly key: components['parameters']['StoryKey'];
+        readonly key: components['parameters']['JiraIssueKey'];
       };
       readonly cookie?: never;
     };
@@ -2405,6 +2405,8 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     readonly StoryKey: string;
+    /** @description A Jira issue key as Jira writes it; wider than StoryKey (an underscore, a one-letter project). */
+    readonly JiraIssueKey: string;
     readonly RunId: string;
     readonly EventId: string;
     readonly Actor: string;
@@ -4399,7 +4401,7 @@ export interface components {
       readonly defects: readonly components['schemas']['Defect'][];
     };
     readonly Defect: {
-      readonly key: components['schemas']['StoryKey'];
+      readonly key: components['schemas']['JiraIssueKey'];
       readonly summary: string;
       readonly priority: string | null;
       readonly jiraStatus: string;
@@ -4550,6 +4552,7 @@ export interface components {
     readonly MetricsRepo: string;
     readonly MetricsModel: string;
     readonly StoryKey: components['schemas']['StoryKey'];
+    readonly JiraIssueKey: components['schemas']['JiraIssueKey'];
     readonly WorkPackageId: components['schemas']['WorkPackageId'];
     readonly Limit: number;
     /** @description Opaque cursor returned as `nextCursor`. */
@@ -7833,7 +7836,7 @@ export interface operations {
       readonly query?: never;
       readonly header?: never;
       readonly path: {
-        readonly key: components['parameters']['StoryKey'];
+        readonly key: components['parameters']['JiraIssueKey'];
       };
       readonly cookie?: never;
     };
@@ -7864,7 +7867,7 @@ export interface operations {
       readonly query?: never;
       readonly header?: never;
       readonly path: {
-        readonly key: components['parameters']['StoryKey'];
+        readonly key: components['parameters']['JiraIssueKey'];
       };
       readonly cookie?: never;
     };

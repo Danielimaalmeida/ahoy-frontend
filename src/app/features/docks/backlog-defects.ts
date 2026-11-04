@@ -1,13 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiClient } from '@core/api/api-client';
-import type { ApiError } from '@core/api/api-error';
+import { isInvalidState, isNotFound, type ApiError } from '@core/api/api-error';
 import {
   STORY_STATUSES,
   type Defect,
   type DefectList,
   type StoryStatus,
 } from '@core/api/types';
+import { techLine } from '@core/commands/command-error';
 import { defectTriageView, defectsLabel } from '@domain/defects';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -23,13 +24,6 @@ type ListState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'ready'; readonly list: DefectList }
   | { readonly kind: 'failed'; readonly error: ApiError };
-
-/** The technical line of an error, for a banner. */
-function techOf(error: ApiError): string {
-  if (error.kind === 'problem')
-    return `${error.status} ${error.code}${error.detail ? `: ${error.detail}` : ''}`;
-  return error.kind === 'network' ? 'network' : error.what;
-}
 
 /**
  * Backlog › Defects (`ahoy-hosted` design §5 "Defect watch"): the open defects the watch read from Jira on its last
@@ -136,16 +130,26 @@ function techOf(error: ApiError): string {
               [heading]="failure.heading"
               [tech]="tech(failure.error)"
             >
-              Nothing changed. Try again.
+              {{
+                failure.reread
+                  ? 'Someone changed it first, or the watch no longer lists it: the list was read again.'
+                  : 'Nothing changed. Try again.'
+              }}
             </ah-banner>
           }
 
           @if (list.defects.length === 0) {
             <ah-empty-state heading="No open defects" icon="compass">
-              @if (list.watchOn && list.lastPass === null) {
-                The watch has not read Jira yet; it does every 15 minutes.
-              } @else {
+              @if (list.lastPass === null) {
+                @if (list.watchOn) {
+                  The watch has not read Jira yet; it does every 15 minutes.
+                } @else {
+                  The watch has never read Jira.
+                }
+              } @else if (list.lastPass.error === null) {
                 The defects query matched none on the last check.
+              } @else {
+                Nothing was read before the check that failed.
               }
             </ah-empty-state>
           } @else {
@@ -296,6 +300,7 @@ export class BacklogDefects {
   protected readonly actionError = signal<{
     readonly heading: string;
     readonly error: ApiError;
+    readonly reread: boolean;
   } | null>(null);
 
   constructor() {
@@ -322,7 +327,7 @@ export class BacklogDefects {
   }
 
   protected tech(error: ApiError): string {
-    return techOf(error);
+    return techLine(error);
   }
 
   /** The voyage's status as the badge knows it, or null for a word this version does not. */
@@ -355,7 +360,10 @@ export class BacklogDefects {
     const result = await call();
     this.busy.set(null);
     if (!result.ok) {
-      this.actionError.set({ heading, error: result.error });
+      // Someone else ignored or undid it first, or the watch let it go: show the list as it is now.
+      const reread = isInvalidState(result.error) || isNotFound(result.error);
+      this.actionError.set({ heading, error: result.error, reread });
+      if (reread) await this.load();
       return;
     }
     const updated = result.value;

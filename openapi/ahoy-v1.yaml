@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 24774cfc67d26d3e1940b4a52a478405cb0caf2a
+# Commit: 92196f1688ac2512e982c822e848b55610b645af
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2816,7 +2816,7 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
   /defects/{key}/ignore:
     parameters:
-      - $ref: '#/components/parameters/StoryKey'
+      - $ref: '#/components/parameters/JiraIssueKey'
     post:
       operationId: ignoreDefect
       tags: [jira]
@@ -2842,7 +2842,7 @@ paths:
         '409': { $ref: '#/components/responses/Problem' }
   /defects/{key}/unignore:
     parameters:
-      - $ref: '#/components/parameters/StoryKey'
+      - $ref: '#/components/parameters/JiraIssueKey'
     post:
       operationId: unignoreDefect
       tags: [jira]
@@ -3027,6 +3027,11 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/StoryKey' }
+    JiraIssueKey:
+      name: key
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/JiraIssueKey' }
     WorkPackageId:
       name: workPackageId
       in: path
@@ -3115,6 +3120,11 @@ components:
     StoryKey:
       type: string
       pattern: '^[A-Z][A-Z0-9]+-[0-9]+$'
+      maxLength: 40
+    JiraIssueKey:
+      description: A Jira issue key as Jira writes it; wider than StoryKey (an underscore, a one-letter project).
+      type: string
+      pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$'
       maxLength: 40
     RunId:
       type: string
@@ -6950,7 +6960,7 @@ components:
           voyage,
         ]
       properties:
-        key: { $ref: '#/components/schemas/StoryKey' }
+        key: { $ref: '#/components/schemas/JiraIssueKey' }
         summary: { type: string }
         priority: { type: [string, 'null'] }
         jiraStatus: { type: string }

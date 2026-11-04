@@ -182,6 +182,12 @@ const storyKey = patterned(
   /^[A-Z][A-Z0-9]+-[0-9]+$/,
   40
 );
+/** A Jira issue key as Jira writes it (`JiraIssueKey`): wider than a story key, with `_` and one-letter projects. */
+const jiraIssueKey = patterned(
+  'a Jira issue key like PROJ-123',
+  /^[A-Z][A-Z0-9_]*-[1-9][0-9]*$/,
+  40
+);
 const runId = patterned('a run id', /^[A-Za-z0-9_.-]+$/, 120);
 const actor = boundedText('an actor of 1 to 200 characters', 1, 200);
 const sha1 = patterned('a 40-character commit sha', /^[0-9a-f]{40}$/, 40);
@@ -1661,7 +1667,7 @@ export const isDefectSettingsPage = guard<DefectSettingsPage>(
 );
 
 const defect = shape<Defect>({
-  key: storyKey,
+  key: jiraIssueKey,
   summary: text,
   priority: nullable(text),
   jiraStatus: text,

@@ -49,7 +49,8 @@ describe("the defect watch's guards", () => {
   it('refuse an unknown triage, a blank component and a key that is not a Jira key', () => {
     const first = listDefects.defects[0]!;
     expect(isDefect({ ...first, triage: 'maybe' })).toBe(false);
-    expect(isDefect({ ...first, key: 'proj-1' })).toBe(false);
+    for (const key of ['proj-1', 'PROJ-0', '1PROJ-2', 'PROJ_12'])
+      expect(isDefect({ ...first, key }), key).toBe(false);
     expect(
       isDefectSettingsPage(
         withField(getDefectSettings, 'defects', {
@@ -78,6 +79,12 @@ describe("ApiClient's defect watch", () => {
   });
 
   afterEach(() => http.verify());
+
+  it('take every key Jira writes, wider than a story key', () => {
+    const first = listDefects.defects[0]!;
+    for (const key of ['MY_APP-12', 'A-7', 'PROJ-123'])
+      expect(isDefect({ ...first, key }), key).toBe(true);
+  });
 
   it('reads and changes the settings on their own path, as the contract takes them', async () => {
     const read = api.getDefectSettings();

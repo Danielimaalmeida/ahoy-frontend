@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
 } from '@angular/core';
@@ -1069,9 +1070,13 @@ export class Docks {
   /** Whether the Defects pill is on: it shows the defect watch's list instead of the backlog. */
   protected readonly defectsOpen = computed(() => this.scopeId() === 'defects');
 
-  private readonly scope = computed<BacklogScope>(() => {
-    const id = this.scopeId();
-    return id === 'not_started' || id === 'in_ahoy' ? id : 'all';
+  /** The backlog's scope; while the Defects pill is on it keeps the last one, so the backlog stays as it was read. */
+  private readonly scope = linkedSignal<string | null, BacklogScope>({
+    source: this.scopeId,
+    computation: (id, previous) => {
+      if (id === 'defects') return previous?.value ?? 'all';
+      return id === 'not_started' || id === 'in_ahoy' ? id : 'all';
+    },
   });
 
   /** The "Not started" and "In Ahoy" filters cannot be applied while the voyages could not be read. */
@@ -1095,7 +1100,6 @@ export class Docks {
    * list of voyages, and a guess would show wrong rows.
    */
   private readonly query = computed<BacklogQuery | null>(() => {
-    if (this.defectsOpen()) return null;
     const scope = this.scope();
     if (this.refinementValue() !== '' && this.refinements.status() !== 'ready')
       return null;
