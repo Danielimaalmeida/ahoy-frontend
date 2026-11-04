@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": 71,
+      "type": "defect_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "defect_settings:1",
+      "payload": {
+        "changes": {
+          "watchOn": { "from": false, "to": true },
+          "defectsJql": {
+            "from": null,
+            "to": "project = PROJ AND issuetype = Defect"
+          },
+          "components": {
+            "from": [],
+            "to": [{ "component": "billing-api", "repository": "billing-api" }]
+          }
+        }
+      },
+      "createdAt": "2026-11-04T10:05:00.000Z"
+    }
+  ]
+}

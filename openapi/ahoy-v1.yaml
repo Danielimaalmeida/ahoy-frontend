@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: f2aec95ad7a7366088b529d08b2ae763c9db85fa
+# Commit: 92196f1688ac2512e982c822e848b55610b645af
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2794,6 +2794,110 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /defects:
+    get:
+      operationId: listDefects
+      tags: [jira]
+      summary: The team's open defects as the defect watch last read them, each with its triage.
+      description: |
+        Anyone allowed into Ahoy. While Team settings › Defects turns the watch on, the reconciler reads the defects
+        query every 15 minutes with the team settings' Jira and fixed rules judge each defect: `can_try` (with what
+        made it fit and the one repository that would fix it) or `out` (with every rule it failed). `lastPass` says
+        when Jira was last read and how many defects matched, or why Jira could not be read. A defect the query no
+        longer matches leaves the list. `voyage` is the story of the same key, if one was started. Nothing here
+        starts a story. 0 AIU.
+      responses:
+        '200':
+          description: The open defects, the latest seen first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefectList' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /defects/{key}/ignore:
+    parameters:
+      - $ref: '#/components/parameters/JiraIssueKey'
+    post:
+      operationId: ignoreDefect
+      tags: [jira]
+      summary: Mark a defect as one Ahoy should never try, until someone undoes it.
+      description: |
+        Anyone allowed into Ahoy. The defect stays listed, marked with who ignored it, when and why. `404` for a
+        defect the watch has not seen, `409 invalid_state` when it is already ignored. Writes nothing to Jira.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IgnoreDefectRequest' }
+      responses:
+        '200':
+          description: The defect, ignored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Defect' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /defects/{key}/unignore:
+    parameters:
+      - $ref: '#/components/parameters/JiraIssueKey'
+    post:
+      operationId: unignoreDefect
+      tags: [jira]
+      summary: Undo a defect's Ignore.
+      description: 'Anyone allowed into Ahoy. `404` for a defect the watch has not seen, `409` when it is not ignored.'
+      responses:
+        '200':
+          description: The defect, no longer ignored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Defect' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /settings/defects:
+    get:
+      operationId: getDefectSettings
+      tags: [settings]
+      summary: The defect watch's settings - whether it is on, its query, the priorities tried and the repositories.
+      description: |
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). The reconciler reads a change on
+        its next pass, without a restart. The query can be previewed with `POST /settings/jira/backlog-preview`. 0 AIU.
+      responses:
+        '200':
+          description: The defect settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefectSettingsPage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateDefectSettings
+      tags: [settings]
+      summary: Turn the defect watch on or off, or change its query, priorities or component repositories.
+      description: |
+        Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no
+        confirmation; it needs a query (`400`). Each component appears once, case ignored (`400`). `version` is
+        required once the settings are saved, and absent before (`409 stale_version`). Every change is in
+        `settings_events` (`defect_settings.updated`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DefectSettingsChange' }
+      responses:
+        '200':
+          description: The settings, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefectSettingsPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /settings/phases:
     get:
       operationId: getPhaseSettings
@@ -2862,7 +2966,17 @@ paths:
           schema:
             {
               type: string,
-              enum: [sonar, jira, teams, figma, agents, phases, pr_comments],
+              enum:
+                [
+                  sonar,
+                  jira,
+                  teams,
+                  figma,
+                  agents,
+                  phases,
+                  pr_comments,
+                  defects,
+                ],
             }
       responses:
         '200':
@@ -2913,6 +3027,11 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/StoryKey' }
+    JiraIssueKey:
+      name: key
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/JiraIssueKey' }
     WorkPackageId:
       name: workPackageId
       in: path
@@ -3001,6 +3120,11 @@ components:
     StoryKey:
       type: string
       pattern: '^[A-Z][A-Z0-9]+-[0-9]+$'
+      maxLength: 40
+    JiraIssueKey:
+      description: A Jira issue key as Jira writes it; wider than StoryKey (an underscore, a one-letter project).
+      type: string
+      pattern: '^[A-Z][A-Z0-9_]*-[1-9][0-9]*$'
       maxLength: 40
     RunId:
       type: string
@@ -6709,6 +6833,178 @@ components:
         confirmReplies:
           type: boolean
           description: "Must be true when the change turns replies on, which posts on colleagues' pull requests."
+    DefectSettingsPage:
+      type: object
+      additionalProperties: false
+      required: [canEdit, defects]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        defects: { $ref: '#/components/schemas/DefectSettings' }
+    ComponentRepository:
+      type: object
+      additionalProperties: false
+      required: [component, repository]
+      properties:
+        component:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 200,
+            description: 'A Jira component, case ignored.',
+          }
+        repository:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 200,
+            description: 'The repository that fixes it.',
+          }
+    DefectSettings:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          watchOn,
+          defectsJql,
+          priorities,
+          components,
+          version,
+          updatedBy,
+          updatedByName,
+          updatedAt,
+        ]
+      properties:
+        watchOn:
+          {
+            type: boolean,
+            description: 'Whether the reconciler reads the defects query (default false).',
+          }
+        defectsJql: { type: [string, 'null'], maxLength: 4000 }
+        priorities:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 60 }
+          description: 'The Jira priorities a defect may have to be tried; empty: any.'
+        components:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/ComponentRepository' }
+        version:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            description: 'Null until an admin saves anything.',
+          }
+        updatedBy: { type: [string, 'null'] }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: [string, 'null'], format: date-time }
+    DefectSettingsChange:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        version: { type: integer, minimum: 1 }
+        watchOn: { type: boolean }
+        defectsJql: { type: [string, 'null'], minLength: 1, maxLength: 4000 }
+        priorities:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 60 }
+        components:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/ComponentRepository' }
+    DefectList:
+      type: object
+      additionalProperties: false
+      required: [watchOn, lastPass, defects]
+      properties:
+        watchOn: { type: boolean }
+        lastPass:
+          oneOf:
+            - { type: 'null' }
+            - type: object
+              additionalProperties: false
+              required: [checkedAt, matched, error]
+              properties:
+                checkedAt: { type: string, format: date-time }
+                matched: { type: [integer, 'null'], minimum: 0 }
+                error:
+                  {
+                    type: [string, 'null'],
+                    description: 'Why Jira could not be read; then no defect left.',
+                  }
+        defects:
+          type: array
+          items: { $ref: '#/components/schemas/Defect' }
+    Defect:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          key,
+          summary,
+          priority,
+          jiraStatus,
+          components,
+          triage,
+          reasons,
+          repository,
+          firstSeenAt,
+          lastSeenAt,
+          ignored,
+          voyage,
+        ]
+      properties:
+        key: { $ref: '#/components/schemas/JiraIssueKey' }
+        summary: { type: string }
+        priority: { type: [string, 'null'] }
+        jiraStatus: { type: string }
+        components: { type: array, items: { type: string } }
+        triage:
+          type: string
+          enum: [can_try, out]
+          description: 'Fixed rules at 0 AIU: whether Ahoy could try to fix it.'
+        reasons:
+          type: array
+          items: { type: string }
+          description: 'For can_try, what made it fit; for out, every rule it failed.'
+        repository:
+          {
+            type: [string, 'null'],
+            description: 'The one repository its components map to (can_try).',
+          }
+        firstSeenAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time }
+        ignored:
+          oneOf:
+            - { type: 'null' }
+            - type: object
+              additionalProperties: false
+              required: [by, byName, at, reason]
+              properties:
+                by: { type: string }
+                byName: { type: [string, 'null'] }
+                at: { type: string, format: date-time }
+                reason: { type: [string, 'null'] }
+        voyage:
+          oneOf:
+            - { type: 'null' }
+            - type: object
+              additionalProperties: false
+              required: [status, phase]
+              properties:
+                status: { type: string }
+                phase: { type: [string, 'null'] }
+    IgnoreDefectRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: { type: [string, 'null'], maxLength: 500 }
     PhaseSettingField:
       type: string
       enum:

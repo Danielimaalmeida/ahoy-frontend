@@ -1,0 +1,71 @@
+{
+  "watchOn": true,
+  "lastPass": {
+    "checkedAt": "2026-11-04T10:58:00.000Z",
+    "matched": 4,
+    "error": null
+  },
+  "defects": [
+    {
+      "key": "PROJ-212",
+      "summary": "Invoice total ignores the discount when the currency is GBP",
+      "priority": "High",
+      "jiraStatus": "Open",
+      "components": ["billing-api"],
+      "triage": "can_try",
+      "reasons": ["1 repository", "steps to reproduce", "expected result"],
+      "repository": "billing-api",
+      "firstSeenAt": "2026-11-04T10:45:00.000Z",
+      "lastSeenAt": "2026-11-04T10:58:00.000Z",
+      "ignored": null,
+      "voyage": { "status": "running", "phase": "implementation" }
+    },
+    {
+      "key": "PROJ-207",
+      "summary": "Export to CSV drops rows with an apostrophe in the name",
+      "priority": "Medium",
+      "jiraStatus": "Open",
+      "components": ["web-portal"],
+      "triage": "can_try",
+      "reasons": ["1 repository", "steps to reproduce"],
+      "repository": "web-portal",
+      "firstSeenAt": "2026-11-04T08:00:00.000Z",
+      "lastSeenAt": "2026-11-04T10:58:00.000Z",
+      "ignored": null,
+      "voyage": null
+    },
+    {
+      "key": "PROJ-201",
+      "summary": "Login loops back to the start page on Safari",
+      "priority": "Highest",
+      "jiraStatus": "Reopened",
+      "components": ["web-portal", "billing-api"],
+      "triage": "out",
+      "reasons": ["Touches 2 repositories"],
+      "repository": null,
+      "firstSeenAt": "2026-11-03T09:00:00.000Z",
+      "lastSeenAt": "2026-11-04T10:58:00.000Z",
+      "ignored": null,
+      "voyage": null
+    },
+    {
+      "key": "PROJ-190",
+      "summary": "Typo in the onboarding e-mail",
+      "priority": "Low",
+      "jiraStatus": "Open",
+      "components": ["emails"],
+      "triage": "out",
+      "reasons": ["No repository for emails", "Priority Low is not tried"],
+      "repository": null,
+      "firstSeenAt": "2026-11-01T09:00:00.000Z",
+      "lastSeenAt": "2026-11-04T10:58:00.000Z",
+      "ignored": {
+        "by": "sam@example.com",
+        "byName": "Sam Example",
+        "at": "2026-11-02T14:00:00.000Z",
+        "reason": "The copy is being rewritten"
+      },
+      "voyage": null
+    }
+  ]
+}

@@ -32,6 +32,9 @@ export type FakeApiOps = Pick<
   | 'getStoryPrComments'
   | 'assessComments'
   | 'getJiraSettings'
+  | 'listDefects'
+  | 'ignoreDefect'
+  | 'unignoreDefect'
 >;
 
 /** A call the fake saw. */
@@ -214,5 +217,20 @@ export class FakeApi implements FakeApiOps {
   getJiraSettings: FakeApiOps['getJiraSettings'] = () => {
     this.calls.push({ op: 'getJiraSettings', args: [] });
     return this.handlers.getJiraSettings?.() ?? unreachable();
+  };
+
+  listDefects: FakeApiOps['listDefects'] = () => {
+    this.calls.push({ op: 'listDefects', args: [] });
+    return this.handlers.listDefects?.() ?? unreachable();
+  };
+
+  ignoreDefect: FakeApiOps['ignoreDefect'] = (key, reason) => {
+    this.calls.push({ op: 'ignoreDefect', args: [key, reason] });
+    return this.handlers.ignoreDefect?.(key, reason) ?? unreachable();
+  };
+
+  unignoreDefect: FakeApiOps['unignoreDefect'] = (key) => {
+    this.calls.push({ op: 'unignoreDefect', args: [key] });
+    return this.handlers.unignoreDefect?.(key) ?? unreachable();
   };
 }

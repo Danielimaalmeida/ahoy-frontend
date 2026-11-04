@@ -29,6 +29,7 @@ import {
   type Check,
 } from './guard-kit';
 import {
+  DEFECT_TRIAGES,
   CREW_RECORDED_MODES,
   CREW_ROLES,
   CREW_SPRINT_STATES,
@@ -85,6 +86,11 @@ import {
   type AgentSettingsPage,
   type PrCommentSettings,
   type PrCommentSettingsPage,
+  type ComponentRepository,
+  type Defect,
+  type DefectList,
+  type DefectSettings,
+  type DefectSettingsPage,
   type FigmaSettings,
   type FigmaSettingsPage,
   type FigmaTest,
@@ -174,6 +180,12 @@ import {
 const storyKey = patterned(
   'a story key like PROJ-123',
   /^[A-Z][A-Z0-9]+-[0-9]+$/,
+  40
+);
+/** A Jira issue key as Jira writes it (`JiraIssueKey`): wider than a story key, with `_` and one-letter projects. */
+const jiraIssueKey = patterned(
+  'a Jira issue key like PROJ-123',
+  /^[A-Z][A-Z0-9_]*-[1-9][0-9]*$/,
   40
 );
 const runId = patterned('a run id', /^[A-Za-z0-9_.-]+$/, 120);
@@ -1628,6 +1640,75 @@ export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
     }),
     repliesPostable: flag,
     maxCommentsPerRound: wholeNumber('a count of comments', 1),
+  })
+);
+
+const componentRepository = shape<ComponentRepository>({
+  component: nonEmptyText,
+  repository: nonEmptyText,
+});
+
+/** The defect watch's settings page, as `getDefectSettings` and `updateDefectSettings` answer it. */
+export const isDefectSettingsPage = guard<DefectSettingsPage>(
+  'DefectSettingsPage',
+  shape<DefectSettingsPage>({
+    canEdit: flag,
+    defects: shape<DefectSettings>({
+      watchOn: flag,
+      defectsJql: nullable(nonEmptyText),
+      priorities: arrayOf(nonEmptyText),
+      components: arrayOf(componentRepository),
+      version: nullable(wholeNumber('a version', 1)),
+      updatedBy: nullable(actor),
+      updatedByName: nullable(text),
+      updatedAt: nullable(timestamp),
+    }),
+  })
+);
+
+const defect = shape<Defect>({
+  key: jiraIssueKey,
+  summary: text,
+  priority: nullable(text),
+  jiraStatus: text,
+  components: arrayOf(text),
+  triage: oneOf(DEFECT_TRIAGES),
+  reasons: arrayOf(text),
+  repository: nullable(nonEmptyText),
+  firstSeenAt: timestamp,
+  lastSeenAt: timestamp,
+  ignored: nullable(
+    shape<NonNullable<Defect['ignored']>>({
+      by: actor,
+      byName: nullable(text),
+      at: timestamp,
+      reason: nullable(text),
+    })
+  ),
+  voyage: nullable(
+    shape<NonNullable<Defect['voyage']>>({
+      status: nonEmptyText,
+      phase: nullable(text),
+    })
+  ),
+});
+
+/** One defect, as `ignoreDefect` and `unignoreDefect` answer it. */
+export const isDefect = guard<Defect>('Defect', defect);
+
+/** The open defects, as `listDefects` answers them. */
+export const isDefectList = guard<DefectList>(
+  'DefectList',
+  shape<DefectList>({
+    watchOn: flag,
+    lastPass: nullable(
+      shape<NonNullable<DefectList['lastPass']>>({
+        checkedAt: timestamp,
+        matched: nullable(count),
+        error: nullable(text),
+      })
+    ),
+    defects: arrayOf(defect),
   })
 );
 

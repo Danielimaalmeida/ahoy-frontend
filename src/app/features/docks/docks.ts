@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
 } from '@angular/core';
@@ -45,6 +46,7 @@ import {
   refinementLabel,
   refinementStateLabel,
 } from '@domain/refinement';
+import { BacklogDefects } from './backlog-defects';
 import { BacklogRefinements } from './backlog-refinements';
 import { RefinementDetails } from './refinement-details';
 import { RefinementDialogs } from './refinement-dialogs';
@@ -82,6 +84,7 @@ const SCOPE_TABS: readonly SectionTab[] = [
   { id: 'all', label: 'All' },
   { id: 'not_started', label: 'Not started' },
   { id: 'in_ahoy', label: 'In Ahoy' },
+  { id: 'defects', label: 'Defects' },
 ];
 
 const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
@@ -131,6 +134,7 @@ interface SprintGroup {
     Key,
     Api,
     RefinementDetails,
+    BacklogDefects,
   ],
   providers: [BacklogRefinements],
   styles: `
@@ -507,69 +511,71 @@ interface SprintGroup {
       }
 
       <div class="docks__filters">
-        <input
-          class="ah-input docks__search"
-          type="search"
-          aria-label="Search the backlog"
-          placeholder="Search by key or text"
-          [formControl]="search"
-        />
-        <select
-          class="ah-input docks__select"
-          aria-label="Sprint"
-          [formControl]="sprint"
-        >
-          <option value="">Sprint: all</option>
-          @for (option of sprintOptions(); track option.id) {
-            <option [value]="option.id">
-              {{ option.name }} ({{ option.state }})
-            </option>
-          }
-          <option value="no_sprint">No sprint</option>
-        </select>
-        <select
-          class="ah-input docks__select"
-          aria-label="Jira status"
-          [formControl]="jiraStatus"
-        >
-          <option value="">Jira status: all</option>
-          @for (status of facets().jiraStatuses; track status) {
-            <option [value]="status">{{ status }}</option>
-          }
-        </select>
-        <select
-          class="ah-input docks__select"
-          aria-label="Assignee"
-          [formControl]="assignee"
-        >
-          <option value="">Assignee: anyone</option>
-          @for (email of facets().assignees; track email) {
-            <option [value]="email">{{ email }}</option>
-          }
-          <option [value]="unassigned">Unassigned</option>
-        </select>
-        <select
-          class="ah-input docks__select"
-          aria-label="Refinement"
-          [formControl]="refinement"
-        >
-          <option value="">Refinement: any</option>
-          <option value="refined">Refined</option>
-          <option value="not_refined">Not refined</option>
-          <option value="in_progress">In progress</option>
-          <option value="failed">Failed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select
-          class="ah-input docks__select"
-          aria-label="Harness readiness"
-          [formControl]="readiness"
-        >
-          <option value="">Harness: any</option>
-          <option value="ready">Ready</option>
-          <option value="attention">Check fit</option>
-          <option value="missing">Not ready</option>
-        </select>
+        @if (!defectsOpen()) {
+          <input
+            class="ah-input docks__search"
+            type="search"
+            aria-label="Search the backlog"
+            placeholder="Search by key or text"
+            [formControl]="search"
+          />
+          <select
+            class="ah-input docks__select"
+            aria-label="Sprint"
+            [formControl]="sprint"
+          >
+            <option value="">Sprint: all</option>
+            @for (option of sprintOptions(); track option.id) {
+              <option [value]="option.id">
+                {{ option.name }} ({{ option.state }})
+              </option>
+            }
+            <option value="no_sprint">No sprint</option>
+          </select>
+          <select
+            class="ah-input docks__select"
+            aria-label="Jira status"
+            [formControl]="jiraStatus"
+          >
+            <option value="">Jira status: all</option>
+            @for (status of facets().jiraStatuses; track status) {
+              <option [value]="status">{{ status }}</option>
+            }
+          </select>
+          <select
+            class="ah-input docks__select"
+            aria-label="Assignee"
+            [formControl]="assignee"
+          >
+            <option value="">Assignee: anyone</option>
+            @for (email of facets().assignees; track email) {
+              <option [value]="email">{{ email }}</option>
+            }
+            <option [value]="unassigned">Unassigned</option>
+          </select>
+          <select
+            class="ah-input docks__select"
+            aria-label="Refinement"
+            [formControl]="refinement"
+          >
+            <option value="">Refinement: any</option>
+            <option value="refined">Refined</option>
+            <option value="not_refined">Not refined</option>
+            <option value="in_progress">In progress</option>
+            <option value="failed">Failed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select
+            class="ah-input docks__select"
+            aria-label="Harness readiness"
+            [formControl]="readiness"
+          >
+            <option value="">Harness: any</option>
+            <option value="ready">Ready</option>
+            <option value="attention">Check fit</option>
+            <option value="missing">Not ready</option>
+          </select>
+        }
         <ah-section-tabs
           variant="pill"
           label="Ahoy state"
@@ -577,61 +583,47 @@ interface SprintGroup {
           [(selected)]="scopeId"
         />
       </div>
-      <div class="docks__summary">
-        <span class="ah-muted" aria-live="polite">{{ summary() }}</span>
-        @if (groups().length > 0) {
-          <button
-            ahButton="ghost"
-            size="sm"
-            type="button"
-            (click)="toggleAll()"
-          >
-            {{ allCollapsed() ? 'Expand all' : 'Collapse all' }}
-          </button>
-        }
-      </div>
-
-      <section
-        class="docks__results"
-        aria-label="Backlog"
-        [attr.aria-busy]="loading()"
-      >
-        @if (failed()) {
-          <div class="ah-panel ah-panel__body">
-            <ah-banner variant="error" heading="Could not read the backlog">
-              Nothing you did is lost.
-              <button ahButton size="sm" type="button" (click)="retry()">
-                Try again
-              </button>
-            </ah-banner>
-          </div>
-        } @else if (blocked()) {
-          <ah-empty-state
-            [heading]="
-              refinementValue() !== '' && refinements.status() === 'error'
-                ? 'These filters need the refinements'
-                : 'These filters need the voyages from Ahoy'
-            "
-            icon="offline"
-          >
-            Try again above, or clear the filters.
+      @if (defectsOpen()) {
+        <ah-backlog-defects />
+      } @else {
+        <div class="docks__summary">
+          <span class="ah-muted" aria-live="polite">{{ summary() }}</span>
+          @if (groups().length > 0) {
             <button
-              ahButton
-              ahEmptyAction
+              ahButton="ghost"
+              size="sm"
               type="button"
-              (click)="clearFilters()"
+              (click)="toggleAll()"
             >
-              Clear filters
+              {{ allCollapsed() ? 'Expand all' : 'Collapse all' }}
             </button>
-          </ah-empty-state>
-        } @else if (!loaded()) {
-          <div class="ah-panel ah-panel__body">
-            <ah-skeleton-rows [rows]="6" [columns]="skeletonColumns" />
-          </div>
-        } @else if (items().length === 0) {
-          @if (filtered()) {
-            <ah-empty-state heading="No stories match" icon="compass">
-              Nothing in the backlog fits these filters.
+          }
+        </div>
+
+        <section
+          class="docks__results"
+          aria-label="Backlog"
+          [attr.aria-busy]="loading()"
+        >
+          @if (failed()) {
+            <div class="ah-panel ah-panel__body">
+              <ah-banner variant="error" heading="Could not read the backlog">
+                Nothing you did is lost.
+                <button ahButton size="sm" type="button" (click)="retry()">
+                  Try again
+                </button>
+              </ah-banner>
+            </div>
+          } @else if (blocked()) {
+            <ah-empty-state
+              [heading]="
+                refinementValue() !== '' && refinements.status() === 'error'
+                  ? 'These filters need the refinements'
+                  : 'These filters need the voyages from Ahoy'
+              "
+              icon="offline"
+            >
+              Try again above, or clear the filters.
               <button
                 ahButton
                 ahEmptyAction
@@ -641,315 +633,338 @@ interface SprintGroup {
                 Clear filters
               </button>
             </ah-empty-state>
-          } @else {
-            <ah-empty-state heading="The backlog is empty"
-              >There are no stories in it to set sail on.</ah-empty-state
-            >
-          }
-        } @else {
-          @for (group of groups(); track group.id) {
-            <details
-              class="ah-panel docks__sprint"
-              [open]="groupOpen(group)"
-              (toggle)="onSprintToggle(group.id, $event)"
-            >
-              <summary>
-                <svg
-                  class="docks__chevron"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
+          } @else if (!loaded()) {
+            <div class="ah-panel ah-panel__body">
+              <ah-skeleton-rows [rows]="6" [columns]="skeletonColumns" />
+            </div>
+          } @else if (items().length === 0) {
+            @if (filtered()) {
+              <ah-empty-state heading="No stories match" icon="compass">
+                Nothing in the backlog fits these filters.
+                <button
+                  ahButton
+                  ahEmptyAction
+                  type="button"
+                  (click)="clearFilters()"
                 >
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
-                <span class="docks__sprint-name">{{ group.name }}</span>
-                @if (group.sprint; as sprint) {
-                  <span
-                    class="docks__sprint-state"
-                    [class.docks__sprint-state--active]="
-                      sprint.state === 'active'
-                    "
+                  Clear filters
+                </button>
+              </ah-empty-state>
+            } @else {
+              <ah-empty-state heading="The backlog is empty"
+                >There are no stories in it to set sail on.</ah-empty-state
+              >
+            }
+          } @else {
+            @for (group of groups(); track group.id) {
+              <details
+                class="ah-panel docks__sprint"
+                [open]="groupOpen(group)"
+                (toggle)="onSprintToggle(group.id, $event)"
+              >
+                <summary>
+                  <svg
+                    class="docks__chevron"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
                   >
-                    {{
-                      sprint.state === 'active'
-                        ? 'Active'
-                        : sprint.state === 'future'
-                          ? sprint.id === nextSprintId()
-                            ? 'Next'
-                            : 'Future'
-                          : 'Closed'
-                    }}
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                  <span class="docks__sprint-name">{{ group.name }}</span>
+                  @if (group.sprint; as sprint) {
+                    <span
+                      class="docks__sprint-state"
+                      [class.docks__sprint-state--active]="
+                        sprint.state === 'active'
+                      "
+                    >
+                      {{
+                        sprint.state === 'active'
+                          ? 'Active'
+                          : sprint.state === 'future'
+                            ? sprint.id === nextSprintId()
+                              ? 'Next'
+                              : 'Future'
+                            : 'Closed'
+                      }}
+                    </span>
+                  } @else {
+                    <span class="ah-muted docks__sprint-description"
+                      >Stories in the backlog that no sprint has picked up
+                      yet</span
+                    >
+                  }
+                  <span class="ah-muted docks__sprint-meta">
+                    <b>{{ group.items.length }}</b>
+                    {{ group.items.length === 1 ? 'story' : 'stories' }}
+                    @if (nextCursor() !== null) {
+                      shown
+                    }
+                    @if (refinements.status() === 'ready') {
+                      · <b>{{ refinedCount(group.items) }}</b> refined
+                    }
+                    @if (storeSettled()) {
+                      · <b>{{ inAhoy(group) }}</b> in Ahoy
+                    }
+                    @if (doneInJira(group) > 0) {
+                      · <b>{{ doneInJira(group) }}</b> done in Jira
+                    }
                   </span>
-                } @else {
-                  <span class="ah-muted docks__sprint-description"
-                    >Stories in the backlog that no sprint has picked up
-                    yet</span
-                  >
-                }
-                <span class="ah-muted docks__sprint-meta">
-                  <b>{{ group.items.length }}</b>
-                  {{ group.items.length === 1 ? 'story' : 'stories' }}
-                  @if (nextCursor() !== null) {
-                    shown
-                  }
-                  @if (refinements.status() === 'ready') {
-                    · <b>{{ refinedCount(group.items) }}</b> refined
-                  }
-                  @if (storeSettled()) {
-                    · <b>{{ inAhoy(group) }}</b> in Ahoy
-                  }
-                  @if (doneInJira(group) > 0) {
-                    · <b>{{ doneInJira(group) }}</b> done in Jira
-                  }
-                </span>
-              </summary>
-              <div class="docks__table">
-                <table ahTable [attr.aria-label]="group.name">
-                  <thead>
-                    <tr>
-                      <th>Key</th>
-                      <th>Summary</th>
-                      <th>Jira status</th>
-                      <th>Priority</th>
-                      <th>Assignee</th>
-                      <th>Updated</th>
-                      <th>Refinement</th>
-                      <th>Harness</th>
-                      <th>Ahoy</th>
-                      <th class="docks__actions">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (item of group.items; track item.key) {
+                </summary>
+                <div class="docks__table">
+                  <table ahTable [attr.aria-label]="group.name">
+                    <thead>
                       <tr>
-                        <td ahNowrap>
-                          <span ahKey>{{ item.key }}</span>
-                        </td>
-                        <td>{{ item.summary }}</td>
-                        <td ahNowrap data-label="Jira status">
-                          <span class="ah-tag">{{ item.jiraStatus }}</span>
-                        </td>
-                        <td ahNowrap data-label="Priority">
-                          <span
-                            class="docks__prio docks__prio--{{ trend(item) }}"
-                          >
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 12 12"
-                              aria-hidden="true"
-                            >
-                              @switch (trend(item)) {
-                                @case ('up') {
-                                  <path
-                                    d="M2 8l4-4 4 4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                  />
-                                }
-                                @case ('down') {
-                                  <path
-                                    d="M2 4l4 4 4-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                  />
-                                }
-                                @default {
-                                  <path
-                                    d="M2 6h8"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                  />
-                                }
-                              }
-                            </svg>
-                            {{ item.priority }}
-                          </span>
-                        </td>
-                        <td ahNowrap data-label="Assignee">
-                          {{ item.assignee ?? 'Unassigned' }}
-                        </td>
-                        <td ahNowrap data-label="Updated">
-                          {{ item.updatedAt | ahRelative }}
-                        </td>
-                        <td data-label="Refinement">
-                          @if (refinements.latest(item.key); as refinement) {
-                            <button
-                              class="ah-tag docks__refinement-toggle"
-                              [class.docks__refinement-toggle--refined]="
-                                refinement.status === 'succeeded'
-                              "
-                              [class.docks__refinement-toggle--active]="
-                                activeRefinement(refinement.status)
-                              "
-                              [class.docks__refinement-toggle--failed]="
-                                refinementLabel(refinement.status) === 'Failed'
-                              "
-                              type="button"
-                              [attr.aria-expanded]="
-                                refinements.isOpen(item.key)
-                              "
-                              [attr.aria-controls]="
-                                refinements.isOpen(item.key)
-                                  ? refinementRowId(item.key)
-                                  : null
-                              "
-                              [attr.aria-label]="
-                                refinementStateLabel(refinement) +
-                                ' for ' +
-                                item.key
-                              "
-                              (click)="refinements.toggle(item.key)"
-                            >
-                              @if (refinement.status === 'succeeded') {
-                                <span aria-hidden="true">✓</span>
-                              }
-                              {{ refinementStateLabel(refinement) }}
-                            </button>
-                          } @else if (refinements.status() === 'ready') {
-                            <button
-                              ahButton
-                              size="sm"
-                              type="button"
-                              [attr.aria-label]="'Refine ' + item.key"
-                              (click)="refine(item)"
-                            >
-                              Refine
-                            </button>
-                          } @else if (refinements.status() === 'error') {
-                            <span class="ah-muted">Unknown</span>
-                          } @else {
-                            <ah-skeleton width="80px" [height]="20" />
-                          }
-                        </td>
-                        <td ahNowrap data-label="Harness">
-                          @if (item.readiness; as readiness) {
-                            <span
-                              class="ah-tag docks__fit--{{
-                                readinessOf(readiness).tone
-                              }}"
-                              [attr.title]="readinessText(readiness)"
-                              [attr.aria-label]="readinessText(readiness)"
-                              >{{ readinessOf(readiness).label }}</span
-                            >
-                          } @else {
-                            <span class="ah-muted">—</span>
-                          }
-                        </td>
-                        <td ahNowrap data-label="Ahoy">
-                          @if (store.find(item.key); as story) {
-                            <a
-                              class="docks__ahoy"
-                              [routerLink]="['/voyages', item.key]"
-                            >
-                              <ah-status-badge
-                                [status]="story.status"
-                                [phase]="story.phase"
-                              />&ngsp;
-                              <span ahApi>{{ story.phase }}</span>
-                            </a>
-                          } @else if (storeSettled()) {
-                            <span class="ah-tag ah-tag--outline"
-                              >Not started</span
-                            >
-                          } @else if (store.status() === 'error') {
-                            <span class="ah-tag ah-tag--outline">Unknown</span>
-                          } @else {
-                            <ah-skeleton width="90px" [height]="20" />
-                          }
-                        </td>
-                        <td ahNowrap class="docks__actions">
-                          @if (jiraUrl(item.key); as url) {
-                            <a
-                              ahButton="ghost"
-                              size="sm"
-                              title="Open in Jira"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              [attr.aria-label]="
-                                'Open ' + item.key + ' in Jira (new tab)'
-                              "
-                              [href]="url"
-                              >Jira ↗</a
-                            >
-                          }
-                          @if (store.find(item.key)) {
-                            <a
-                              ahButton="soft"
-                              size="sm"
-                              [routerLink]="['/voyages', item.key]"
-                              >Open voyage</a
-                            >
-                          } @else if (storeSettled()) {
-                            <a
-                              ahButton="primary"
-                              size="sm"
-                              routerLink="/voyages/new"
-                              [queryParams]="{
-                                key: item.key,
-                                title: item.summary,
-                              }"
-                              >Start voyage</a
-                            >
-                          }
-                        </td>
+                        <th>Key</th>
+                        <th>Summary</th>
+                        <th>Jira status</th>
+                        <th>Priority</th>
+                        <th>Assignee</th>
+                        <th>Updated</th>
+                        <th>Refinement</th>
+                        <th>Harness</th>
+                        <th>Ahoy</th>
+                        <th class="docks__actions">Actions</th>
                       </tr>
-                      @if (openRefinement(item.key); as refinement) {
-                        <tr
-                          class="docks__refinement"
-                          [id]="refinementRowId(item.key)"
-                        >
-                          <td colspan="10">
-                            <ah-refinement-details
-                              [summary]="refinement"
-                              [refinement]="refinements.newest(item.key)"
-                              [failed]="
-                                refinements.history(item.key)?.failed ?? false
-                              "
-                              (cancelRefinement)="cancelRefinement(refinement)"
-                              (refineAgain)="refine(item)"
-                              (retry)="refinements.readHistory(item.key)"
-                            />
+                    </thead>
+                    <tbody>
+                      @for (item of group.items; track item.key) {
+                        <tr>
+                          <td ahNowrap>
+                            <span ahKey>{{ item.key }}</span>
+                          </td>
+                          <td>{{ item.summary }}</td>
+                          <td ahNowrap data-label="Jira status">
+                            <span class="ah-tag">{{ item.jiraStatus }}</span>
+                          </td>
+                          <td ahNowrap data-label="Priority">
+                            <span
+                              class="docks__prio docks__prio--{{ trend(item) }}"
+                            >
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 12 12"
+                                aria-hidden="true"
+                              >
+                                @switch (trend(item)) {
+                                  @case ('up') {
+                                    <path
+                                      d="M2 8l4-4 4 4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                      stroke-linecap="round"
+                                    />
+                                  }
+                                  @case ('down') {
+                                    <path
+                                      d="M2 4l4 4 4-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                      stroke-linecap="round"
+                                    />
+                                  }
+                                  @default {
+                                    <path
+                                      d="M2 6h8"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      stroke-width="2"
+                                      stroke-linecap="round"
+                                    />
+                                  }
+                                }
+                              </svg>
+                              {{ item.priority }}
+                            </span>
+                          </td>
+                          <td ahNowrap data-label="Assignee">
+                            {{ item.assignee ?? 'Unassigned' }}
+                          </td>
+                          <td ahNowrap data-label="Updated">
+                            {{ item.updatedAt | ahRelative }}
+                          </td>
+                          <td data-label="Refinement">
+                            @if (refinements.latest(item.key); as refinement) {
+                              <button
+                                class="ah-tag docks__refinement-toggle"
+                                [class.docks__refinement-toggle--refined]="
+                                  refinement.status === 'succeeded'
+                                "
+                                [class.docks__refinement-toggle--active]="
+                                  activeRefinement(refinement.status)
+                                "
+                                [class.docks__refinement-toggle--failed]="
+                                  refinementLabel(refinement.status) ===
+                                  'Failed'
+                                "
+                                type="button"
+                                [attr.aria-expanded]="
+                                  refinements.isOpen(item.key)
+                                "
+                                [attr.aria-controls]="
+                                  refinements.isOpen(item.key)
+                                    ? refinementRowId(item.key)
+                                    : null
+                                "
+                                [attr.aria-label]="
+                                  refinementStateLabel(refinement) +
+                                  ' for ' +
+                                  item.key
+                                "
+                                (click)="refinements.toggle(item.key)"
+                              >
+                                @if (refinement.status === 'succeeded') {
+                                  <span aria-hidden="true">✓</span>
+                                }
+                                {{ refinementStateLabel(refinement) }}
+                              </button>
+                            } @else if (refinements.status() === 'ready') {
+                              <button
+                                ahButton
+                                size="sm"
+                                type="button"
+                                [attr.aria-label]="'Refine ' + item.key"
+                                (click)="refine(item)"
+                              >
+                                Refine
+                              </button>
+                            } @else if (refinements.status() === 'error') {
+                              <span class="ah-muted">Unknown</span>
+                            } @else {
+                              <ah-skeleton width="80px" [height]="20" />
+                            }
+                          </td>
+                          <td ahNowrap data-label="Harness">
+                            @if (item.readiness; as readiness) {
+                              <span
+                                class="ah-tag docks__fit--{{
+                                  readinessOf(readiness).tone
+                                }}"
+                                [attr.title]="readinessText(readiness)"
+                                [attr.aria-label]="readinessText(readiness)"
+                                >{{ readinessOf(readiness).label }}</span
+                              >
+                            } @else {
+                              <span class="ah-muted">—</span>
+                            }
+                          </td>
+                          <td ahNowrap data-label="Ahoy">
+                            @if (store.find(item.key); as story) {
+                              <a
+                                class="docks__ahoy"
+                                [routerLink]="['/voyages', item.key]"
+                              >
+                                <ah-status-badge
+                                  [status]="story.status"
+                                  [phase]="story.phase"
+                                />&ngsp;
+                                <span ahApi>{{ story.phase }}</span>
+                              </a>
+                            } @else if (storeSettled()) {
+                              <span class="ah-tag ah-tag--outline"
+                                >Not started</span
+                              >
+                            } @else if (store.status() === 'error') {
+                              <span class="ah-tag ah-tag--outline"
+                                >Unknown</span
+                              >
+                            } @else {
+                              <ah-skeleton width="90px" [height]="20" />
+                            }
+                          </td>
+                          <td ahNowrap class="docks__actions">
+                            @if (jiraUrl(item.key); as url) {
+                              <a
+                                ahButton="ghost"
+                                size="sm"
+                                title="Open in Jira"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                [attr.aria-label]="
+                                  'Open ' + item.key + ' in Jira (new tab)'
+                                "
+                                [href]="url"
+                                >Jira ↗</a
+                              >
+                            }
+                            @if (store.find(item.key)) {
+                              <a
+                                ahButton="soft"
+                                size="sm"
+                                [routerLink]="['/voyages', item.key]"
+                                >Open voyage</a
+                              >
+                            } @else if (storeSettled()) {
+                              <a
+                                ahButton="primary"
+                                size="sm"
+                                routerLink="/voyages/new"
+                                [queryParams]="{
+                                  key: item.key,
+                                  title: item.summary,
+                                }"
+                                >Start voyage</a
+                              >
+                            }
                           </td>
                         </tr>
+                        @if (openRefinement(item.key); as refinement) {
+                          <tr
+                            class="docks__refinement"
+                            [id]="refinementRowId(item.key)"
+                          >
+                            <td colspan="10">
+                              <ah-refinement-details
+                                [summary]="refinement"
+                                [refinement]="refinements.newest(item.key)"
+                                [failed]="
+                                  refinements.history(item.key)?.failed ?? false
+                                "
+                                (cancelRefinement)="
+                                  cancelRefinement(refinement)
+                                "
+                                (refineAgain)="refine(item)"
+                                (retry)="refinements.readHistory(item.key)"
+                              />
+                            </td>
+                          </tr>
+                        }
                       }
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </details>
-          }
-          <div class="ah-panel__foot docks__foot">
-            <span class="ah-muted"
-              >Showing {{ items().length }} of {{ total() }} · no bulk start:
-              every voyage needs its own budget</span
-            >
-            @if (nextCursor() !== null) {
-              <button
-                ahButton
-                size="sm"
-                type="button"
-                [disabled]="loadingMore()"
-                (click)="loadMore()"
-              >
-                Load more
-              </button>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
             }
-          </div>
-        }
-      </section>
+            <div class="ah-panel__foot docks__foot">
+              <span class="ah-muted"
+                >Showing {{ items().length }} of {{ total() }} · no bulk start:
+                every voyage needs its own budget</span
+              >
+              @if (nextCursor() !== null) {
+                <button
+                  ahButton
+                  size="sm"
+                  type="button"
+                  [disabled]="loadingMore()"
+                  (click)="loadMore()"
+                >
+                  Load more
+                </button>
+              }
+            </div>
+          }
+        </section>
+      }
     </div>
   `,
 })
@@ -1052,9 +1067,16 @@ export class Docks {
     () => this.store.status() === 'ready'
   );
 
-  private readonly scope = computed<BacklogScope>(() => {
-    const id = this.scopeId();
-    return id === 'not_started' || id === 'in_ahoy' ? id : 'all';
+  /** Whether the Defects pill is on: it shows the defect watch's list instead of the backlog. */
+  protected readonly defectsOpen = computed(() => this.scopeId() === 'defects');
+
+  /** The backlog's scope; while the Defects pill is on it keeps the last one, so the backlog stays as it was read. */
+  private readonly scope = linkedSignal<string | null, BacklogScope>({
+    source: this.scopeId,
+    computation: (id, previous) => {
+      if (id === 'defects') return previous?.value ?? 'all';
+      return id === 'not_started' || id === 'in_ahoy' ? id : 'all';
+    },
   });
 
   /** The "Not started" and "In Ahoy" filters cannot be applied while the voyages could not be read. */

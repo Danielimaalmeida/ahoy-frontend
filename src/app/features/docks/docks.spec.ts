@@ -2,7 +2,13 @@ import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { fail, ok, type ApiResult } from '@core/api/api-error';
-import type { JiraSettingsPage, Refinement, Story } from '@core/api/types';
+import type {
+  Defect,
+  DefectList,
+  JiraSettingsPage,
+  Refinement,
+  Story,
+} from '@core/api/types';
 import { AppConfigStore } from '@core/config/app-config';
 import { aStory } from '@core/realtime/testing/events';
 import { FakeApi } from '@core/realtime/testing/fake-api';
@@ -10,6 +16,7 @@ import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
 import { FakeFetch } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
 import { StoriesStore } from '@core/stores/stories-store';
+import listDefects from '@testing/fixtures/listDefects.json';
 import { CLOCK as UI_CLOCK } from '@ui/pipes/clock';
 import {
   BACKLOG_PORT,
@@ -1610,6 +1617,179 @@ describe('Docks', () => {
       expect(text(detail(f, 'PROJ-1')!.querySelector('ah-markdown'))).toContain(
         'NEEDS WORK'
       );
+    });
+  });
+  describe('the Defects pill', () => {
+    const LIST = listDefects as DefectList;
+    const find = (key: string): Defect =>
+      LIST.defects.find((d) => d.key === key)!;
+
+    async function openDefects(
+      list: DefectList = LIST
+    ): Promise<ComponentFixture<Docks>> {
+      api.on('listDefects', () => Promise.resolve(ok(list)));
+      const backlog = new FakeBacklog([anItem('PROJ-1')]);
+      const f = await mount(backlog);
+      pill(f, 'Defects').click();
+      await refresh(f);
+      return f;
+    }
+
+    it('lists the open defects with their triage and voyage instead of the backlog', async () => {
+      const f = await openDefects();
+      expect(byLabel(f, 'Search the backlog')).toBeNull();
+      expect(byLabel(f, 'Open defects')).not.toBeNull();
+      expect(rows(f).map((r) => text(cell(r, 0)))).toEqual([
+        'PROJ-212',
+        'PROJ-207',
+        'PROJ-201',
+        'PROJ-190',
+      ]);
+      expect(text(cell(rowOf(f, 'PROJ-212'), 5))).toBe(
+        'Ahoy can try 1 repository · steps to reproduce · expected result'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-212'), 6))).toContain('implementation');
+      expect(text(cell(rowOf(f, 'PROJ-212'), 7))).toBe('Open voyage');
+      expect(text(cell(rowOf(f, 'PROJ-201'), 3))).toBe(
+        'web-portal + billing-api'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-201'), 5))).toBe(
+        'Not for Ahoy Touches 2 repositories'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-190'), 5))).toContain(
+        'Ignored by Sam Example'
+      );
+      expect(text(cell(rowOf(f, 'PROJ-190'), 7))).toBe('Undo');
+      expect(text(root(f))).not.toContain('Try to fix');
+    });
+
+    it('ignores a defect and undoes it, with no reason, writing the answer into its row', async () => {
+      const f = await openDefects();
+      const ignored = {
+        ...find('PROJ-207'),
+        ignored: {
+          by: 'alex@example.com',
+          byName: 'Alex Example',
+          at: '2026-11-04T11:00:00.000Z',
+          reason: null,
+        },
+      };
+      api.on('ignoreDefect', () => Promise.resolve(ok(ignored)));
+      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      await refresh(f);
+      expect(api.calls.filter((c) => c.op === 'ignoreDefect')).toEqual([
+        { op: 'ignoreDefect', args: ['PROJ-207', null] },
+      ]);
+      expect(text(cell(rowOf(f, 'PROJ-207'), 5))).toBe(
+        'Ignored by Alex Example'
+      );
+      api.on('unignoreDefect', () => Promise.resolve(ok(find('PROJ-207'))));
+      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      await refresh(f);
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Ignore');
+    });
+
+    it('says when ignoring fails, and keeps the row as it was', async () => {
+      const f = await openDefects();
+      api.on('ignoreDefect', () =>
+        Promise.resolve(fail({ kind: 'network' as const }))
+      );
+      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      await refresh(f);
+      expect(text(root(f))).toContain('Could not ignore PROJ-207');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Ignore');
+    });
+
+    it('says when the watch is off or the last check could not read Jira', async () => {
+      const off = await openDefects({ ...LIST, watchOn: false, defects: [] });
+      expect(text(root(off))).toContain('The defect watch is off');
+      expect(
+        root(off).querySelector('a[href="/settings/defects"]')
+      ).not.toBeNull();
+      expect(text(root(off))).toContain('No open defects');
+      off.destroy();
+    });
+
+    it('says the last check could not read Jira, keeping what it read before', async () => {
+      const f = await openDefects({
+        ...LIST,
+        lastPass: {
+          checkedAt: '2026-10-06T09:45:00.000Z',
+          matched: null,
+          error: 'Jira answered 401',
+        },
+      });
+      expect(text(root(f))).toContain('Could not read Jira on the last check');
+      expect(rows(f)).toHaveLength(4);
+    });
+
+    it('says the watch never read Jira when it is off and has no pass, and that a failed check read nothing', async () => {
+      const never = await openDefects({
+        watchOn: false,
+        lastPass: null,
+        defects: [],
+      });
+      expect(text(root(never))).toContain('The watch has never read Jira.');
+      expect(text(root(never))).not.toContain('matched none');
+      never.destroy();
+    });
+
+    it('reads the list again when someone else ignored the defect first', async () => {
+      const f = await openDefects();
+      const theirs = {
+        ...LIST,
+        defects: LIST.defects.map((d) =>
+          d.key === 'PROJ-207'
+            ? {
+                ...d,
+                ignored: {
+                  by: 'sam@example.com',
+                  byName: 'Sam Example',
+                  at: '2026-11-04T11:00:00.000Z',
+                  reason: null,
+                },
+              }
+            : d
+        ),
+      };
+      api.on('listDefects', () => Promise.resolve(ok(theirs)));
+      api.on('ignoreDefect', () =>
+        Promise.resolve(
+          fail({
+            kind: 'problem' as const,
+            status: 409,
+            code: 'invalid_state',
+            title: 'Invalid state',
+          })
+        )
+      );
+      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      await refresh(f);
+      expect(text(root(f))).toContain('the list was read again');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Undo');
+    });
+
+    it('goes back to the backlog with All', async () => {
+      const f = await openDefects();
+      pill(f, 'All').click();
+      await refresh(f);
+      expect(byLabel(f, 'Open defects')).toBeNull();
+      expect(byLabel(f, 'Search the backlog')).not.toBeNull();
+      expect(rows(f).map((r) => text(cell(r, 0)))).toEqual(['PROJ-1']);
+    });
+
+    it('keeps the backlog as it was read while Defects is open, without reading it again', async () => {
+      api.on('listDefects', () => Promise.resolve(ok(LIST)));
+      const backlog = new FakeBacklog([anItem('PROJ-1')]);
+      const f = await mount(backlog);
+      pill(f, 'Not started').click();
+      await refresh(f);
+      const reads = backlog.queries.length;
+      pill(f, 'Defects').click();
+      await refresh(f);
+      pill(f, 'Not started').click();
+      await refresh(f);
+      expect(backlog.queries.length).toBe(reads);
     });
   });
 });

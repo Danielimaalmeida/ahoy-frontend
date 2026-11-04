@@ -2248,6 +2248,104 @@ export interface paths {
     readonly patch: operations['updatePrCommentSettings'];
     readonly trace?: never;
   };
+  readonly '/defects': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The team's open defects as the defect watch last read them, each with its triage.
+     * @description Anyone allowed into Ahoy. While Team settings › Defects turns the watch on, the reconciler reads the defects
+     *     query every 15 minutes with the team settings' Jira and fixed rules judge each defect: `can_try` (with what
+     *     made it fit and the one repository that would fix it) or `out` (with every rule it failed). `lastPass` says
+     *     when Jira was last read and how many defects matched, or why Jira could not be read. A defect the query no
+     *     longer matches leaves the list. `voyage` is the story of the same key, if one was started. Nothing here
+     *     starts a story. 0 AIU.
+     */
+    readonly get: operations['listDefects'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/defects/{key}/ignore': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Mark a defect as one Ahoy should never try, until someone undoes it.
+     * @description Anyone allowed into Ahoy. The defect stays listed, marked with who ignored it, when and why. `404` for a
+     *     defect the watch has not seen, `409 invalid_state` when it is already ignored. Writes nothing to Jira.
+     */
+    readonly post: operations['ignoreDefect'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/defects/{key}/unignore': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Undo a defect's Ignore.
+     * @description Anyone allowed into Ahoy. `404` for a defect the watch has not seen, `409` when it is not ignored.
+     */
+    readonly post: operations['unignoreDefect'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/defects': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The defect watch's settings - whether it is on, its query, the priorities tried and the repositories.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). The reconciler reads a change on
+     *     its next pass, without a restart. The query can be previewed with `POST /settings/jira/backlog-preview`. 0 AIU.
+     */
+    readonly get: operations['getDefectSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Turn the defect watch on or off, or change its query, priorities or component repositories.
+     * @description Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no
+     *     confirmation; it needs a query (`400`). Each component appears once, case ignored (`400`). `version` is
+     *     required once the settings are saved, and absent before (`409 stale_version`). Every change is in
+     *     `settings_events` (`defect_settings.updated`).
+     */
+    readonly patch: operations['updateDefectSettings'];
+    readonly trace?: never;
+  };
   readonly '/settings/phases': {
     readonly parameters: {
       readonly query?: never;
@@ -2307,6 +2405,8 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     readonly StoryKey: string;
+    /** @description A Jira issue key as Jira writes it; wider than StoryKey (an underscore, a one-letter project). */
+    readonly JiraIssueKey: string;
     readonly RunId: string;
     readonly EventId: string;
     readonly Actor: string;
@@ -4257,6 +4357,83 @@ export interface components {
       /** @description Must be true when the change turns replies on, which posts on colleagues' pull requests. */
       readonly confirmReplies?: boolean;
     };
+    readonly DefectSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      readonly defects: components['schemas']['DefectSettings'];
+    };
+    readonly ComponentRepository: {
+      /** @description A Jira component, case ignored. */
+      readonly component: string;
+      /** @description The repository that fixes it. */
+      readonly repository: string;
+    };
+    readonly DefectSettings: {
+      /** @description Whether the reconciler reads the defects query (default false). */
+      readonly watchOn: boolean;
+      readonly defectsJql: string | null;
+      /** @description The Jira priorities a defect may have to be tried; empty: any. */
+      readonly priorities: readonly string[];
+      readonly components: readonly components['schemas']['ComponentRepository'][];
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly DefectSettingsChange: {
+      readonly version?: number;
+      readonly watchOn?: boolean;
+      readonly defectsJql?: string | null;
+      readonly priorities?: readonly string[];
+      readonly components?: readonly components['schemas']['ComponentRepository'][];
+    };
+    readonly DefectList: {
+      readonly watchOn: boolean;
+      readonly lastPass: null | {
+        /** Format: date-time */
+        readonly checkedAt: string;
+        readonly matched: number | null;
+        /** @description Why Jira could not be read; then no defect left. */
+        readonly error: string | null;
+      };
+      readonly defects: readonly components['schemas']['Defect'][];
+    };
+    readonly Defect: {
+      readonly key: components['schemas']['JiraIssueKey'];
+      readonly summary: string;
+      readonly priority: string | null;
+      readonly jiraStatus: string;
+      readonly components: readonly string[];
+      /**
+       * @description Fixed rules at 0 AIU: whether Ahoy could try to fix it.
+       * @enum {string}
+       */
+      readonly triage: 'can_try' | 'out';
+      /** @description For can_try, what made it fit; for out, every rule it failed. */
+      readonly reasons: readonly string[];
+      /** @description The one repository its components map to (can_try). */
+      readonly repository: string | null;
+      /** Format: date-time */
+      readonly firstSeenAt: string;
+      /** Format: date-time */
+      readonly lastSeenAt: string;
+      readonly ignored: null | {
+        readonly by: string;
+        readonly byName: string | null;
+        /** Format: date-time */
+        readonly at: string;
+        readonly reason: string | null;
+      };
+      readonly voyage: null | {
+        readonly status: string;
+        readonly phase: string | null;
+      };
+    };
+    readonly IgnoreDefectRequest: {
+      readonly reason?: string | null;
+    };
     /** @enum {string} */
     readonly PhaseSettingField:
       | 'model'
@@ -4375,6 +4552,7 @@ export interface components {
     readonly MetricsRepo: string;
     readonly MetricsModel: string;
     readonly StoryKey: components['schemas']['StoryKey'];
+    readonly JiraIssueKey: components['schemas']['JiraIssueKey'];
     readonly WorkPackageId: components['schemas']['WorkPackageId'];
     readonly Limit: number;
     /** @description Opaque cursor returned as `nextCursor`. */
@@ -7631,6 +7809,135 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly listDefects: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The open defects, the latest seen first. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['DefectList'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly ignoreDefect: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['IgnoreDefectRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The defect, ignored. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Defect'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly unignoreDefect: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The defect, no longer ignored. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Defect'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getDefectSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The defect settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['DefectSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updateDefectSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['DefectSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['DefectSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly getPhaseSettings: {
     readonly parameters: {
       readonly query?: never;
@@ -7694,7 +8001,8 @@ export interface operations {
           | 'figma'
           | 'agents'
           | 'phases'
-          | 'pr_comments';
+          | 'pr_comments'
+          | 'defects';
       };
       readonly header?: never;
       readonly path?: never;

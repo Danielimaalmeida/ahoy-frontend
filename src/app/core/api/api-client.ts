@@ -40,6 +40,9 @@ import {
   isJiraTest,
   isAgentSettingsPage,
   isPrCommentSettingsPage,
+  isDefect,
+  isDefectList,
+  isDefectSettingsPage,
   isPhaseSettingsPage,
   isFigmaSettings,
   isFigmaSettingsPage,
@@ -112,6 +115,10 @@ import type {
   AgentSettingsPage,
   PrCommentSettingsChange,
   PrCommentSettingsPage,
+  Defect,
+  DefectList,
+  DefectSettingsChange,
+  DefectSettingsPage,
   PhaseSettingsChange,
   PhaseSettingsPage,
   FigmaSettings,
@@ -1566,6 +1573,60 @@ export class ApiClient {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })
+    );
+  }
+
+  /** The defect watch's settings: whether it is on, its query, the priorities tried and the component repositories. */
+  getDefectSettings(): Promise<ApiResult<DefectSettingsPage>> {
+    return this.get(
+      'getDefectSettings',
+      '/settings/defects',
+      isDefectSettingsPage
+    );
+  }
+
+  /** Turns the defect watch on or off, or changes its query, priorities or component repositories (admins only). */
+  updateDefectSettings(
+    body: DefectSettingsChange
+  ): Promise<ApiResult<DefectSettingsPage>> {
+    return this.send(
+      'updateDefectSettings',
+      isDefectSettingsPage,
+      this.http.patch<unknown>(this.url('/settings/defects'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** The team's open defects as the watch last read them, each with its triage and voyage. 0 AIU. */
+  listDefects(): Promise<ApiResult<DefectList>> {
+    return this.get('listDefects', '/defects', isDefectList);
+  }
+
+  /** Marks a defect as one Ahoy should never try, until someone undoes it. Writes nothing to Jira. */
+  ignoreDefect(key: string, reason: string | null): Promise<ApiResult<Defect>> {
+    return this.send(
+      'ignoreDefect',
+      isDefect,
+      this.http.post<unknown>(
+        this.url(`/defects/${encodeURIComponent(key)}/ignore`),
+        reason === null ? {} : { reason },
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Undoes a defect's Ignore. */
+  unignoreDefect(key: string): Promise<ApiResult<Defect>> {
+    return this.send(
+      'unignoreDefect',
+      isDefect,
+      this.http.post<unknown>(
+        this.url(`/defects/${encodeURIComponent(key)}/unignore`),
+        null,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
     );
   }
 

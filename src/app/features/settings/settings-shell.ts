@@ -164,6 +164,11 @@ export class SettingsShell {
       label: 'Pull request comments',
       state: () => this.summary.prComments(),
     },
+    {
+      path: 'defects',
+      label: 'Defects',
+      state: () => this.summary.defects(),
+    },
   ];
 
   constructor() {

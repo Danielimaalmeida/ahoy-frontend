@@ -1,28 +1,27 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-03 (Assess comments, the pull request comments panel and Team settings › Pull request comments, with
-`ahoy-hosted`'s `feat/pr-comment-triage`, PR #79; tested on fakes and the mock HTTP backend only). One page: replace it,
+Updated 2026-11-04 (the defect watch: Backlog › Defects and Team settings › Defects, with `ahoy-hosted`'s
+`feat/defect-watch`, PR #81; tested on fakes and `HttpTestingController` only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/assess-comments`, 2026-11-03, on `main` after #53):** the voyage page has a **Pull request
-  comments** panel under the Knowledge panel (`ahoy-hosted` design §4, "PR comments", agreed with the user on
-  2026-11-03). At the delivery gate, or on a done voyage while a pull request is open as last counted, it shows how
-  many comments by people wait ("2 comments to assess", from `GET /stories/{key}/pr-comments`, which the reconciler
-  counts every 5 minutes) and offers **Assess comments**: a dialog with the AIU it may spend and an optional note for
-  the reviewer, sent as `POST /stories/{key}/assess-comments` with `confirmSpend: true`. A running voyage, one with no
-  budget left or a done one whose pull requests are all closed says why instead. The panel lists every ruling,
-  Copilot's during the loop too: who wrote the comment and where, accepted (with its severity), declined or a question,
-  the reviewer's reason, and where Ahoy's reply is (waiting for the fix, waiting to be posted, refused by GitHub with
-  the reason, replied, none). Comment text is plain text. It is hidden while the voyage is under way with nothing ruled.
-  The mock backend serves no comments and refuses Assess comments (it has no pull requests). Team settings has a new
-  section, **Pull request comments** (`/settings/pr-comments`): replies on GitHub on or off and the comments per review
-  round (1 to 10); turning replies on asks the admin to confirm (it posts on colleagues' pull requests) and is sent
-  with `confirmReplies: true`, and the page says when the deployment cannot post. The side navigation shows "Replies
-  off", "Replies on" or "Cannot post".
+- **This branch (`feat/defect-watch`, 2026-11-04, on `main` after #55):** slice 1 of the defect watch (`ahoy-hosted`
+  design §5 "Defect watch", D21, asked for by the user on 2026-11-04). The Backlog has a fourth pill, **Defects**: it
+  hides the backlog's filters and lists the open defects the reconciler read from the team's defects query on its last
+  pass (`GET /defects`), the latest first, with the priority, the components, when the watch first saw it, the triage
+  by fixed rules ("Ahoy can try" with what made it fit, "Not for Ahoy" with every rule it failed, or "Ignored" by whom
+  and why) and the voyage of the same key. **Ignore** and **Undo** (`POST /defects/{key}/ignore` and `/unignore`) write
+  nothing to Jira; the page sends no reason yet. It says when the watch is off (with a link to the settings) and when
+  the last check could not read Jira. Team settings has a new section, **Defects** (`/settings/defects`): the watch on
+  or off, the defects query with Preview (the Jira backlog's preview, 0 AIU), the priorities tried (comma-separated,
+  empty for any) and the component map (one `component = repository` a line, each component once); the navigation
+  shows "Watching" or "Off". Nothing here starts a voyage or spends AIU: **Try to fix**, the automatic start and the
+  reproduction gate are later slices, not built.
+- **Merged before:** Assess comments, the pull request comments panel and Team settings › Pull request comments
+  (`feat/assess-comments`, with `ahoy-hosted` #79).
 - **Merged before:** Team settings › Phases (`feat/phase-settings`).
 - **Merged on 2026-11-01:** Team settings › Teams, Figma and Agents (PR #51, with `ahoy-hosted`'s
   `feat/teams-figma-agents-settings`): the channel's webhook and test card, the Figma token and UI builders, and who
@@ -37,28 +36,27 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/pr-comment-triage` (`f2aec95`, PR #79;
-  the commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
-  `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migrations 0033 and 0034 (and 0025 to
-  0032 before them). Merge and deploy with the `ahoy-hosted` pull request.
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/defect-watch` (`92196f1`, PR #81; the
+  commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
+  `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0035 (and 0025 to 0034 before
+  it). Merge and deploy with the `ahoy-hosted` pull request.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
   checked by unit and component tests on the mock backend only (Crew and Team settings over
   `HttpTestingController`). No Teams, Figma or Jira was called. On 2026-11-01 the first six Team settings sections were
-  also opened in Chromium (Playwright) on `ng serve`, with the test fixtures as every API answer, for screenshots.
+  also opened in Chromium (Playwright) on `ng serve`, with the test fixtures as every API answer, for screenshots. The
+  Defects tab and section were never opened in a browser.
 
 ## Proof
 
-- **Last full run** (2026-11-03, `feat/assess-comments`, cloud container, Node 22, a local stand-in for
+- **Last full run** (2026-11-04, `feat/defect-watch`, cloud container, Node 22, a local stand-in for
   `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from the
-  lock file with the `@acme-fedev` entries left out and the platform binaries the lock resolves to the private
-  registry fetched from npmjs): Vitest 191 files, 3,278 tests, all passed (new: Team settings › Pull request comments 7 and its words 6, the
-  navigation with the new section, the panel and its dialog 10,
-  including a done voyage not counted yet, Try again and a read after a refused request, `domain/pr-comments` 7, the
-  guard 3, taking every ruling the contract allows, and the contract's two operations and the Assess comments request); `npm run
-typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .`
-  passed (the `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and a meetings
-  dialog warns NG8011, as on `main`). Not run: Node 24, the real `@acme-fedev/auth`, nginx, the Playwright suite, and
-  the page against a real API or in a browser.
+  lock file with the `@acme-fedev` entries left out): Vitest 195 files, 3,320 tests, all passed (new: Backlog › Defects
+  9, Team settings › Defects 8 and its words 9, `domain/defects` 4, the client and guards of the five operations, the
+  navigation with the new section and the contract's operation count); `npm run typecheck` (app, specs,
+  `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .` passed (the
+  `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and a meetings dialog warns
+  NG8011, as on `main`). Not run: Node 24, the real `@acme-fedev/auth`, nginx, the Playwright suite, and the pages
+  against a real API or in a browser.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
   `npm run api:types` is byte-identical to the committed file.
@@ -83,11 +81,11 @@ typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint),
   sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. Merge `ahoy-hosted`'s `feat/pr-comment-triage` (PR #79, migrations 0033 and 0034) and this branch together. On a machine with the
+1. Merge `ahoy-hosted`'s `feat/defect-watch` (PR #81, migration 0035) and this branch together. On a machine with the
    private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`: `npm ci`, then
    `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop `test:scripts`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0034): start a
+3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0035): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
    Meetings (migrations 0018, 0019 and 0022: an action ticked done, two browsers on one meeting in progress, a
    screenshot pasted into a note and opened large, a meeting cancelled and one marked done, a question answered after
@@ -96,7 +94,8 @@ typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint, stylelint),
    repository on it, change its host with the token, and read the history; connect a fake Jira, preview a query, set
    a board and add a fixed field; connect a fake Teams webhook and send a test card, save a fake Figma token and test it,
    turn Business-rule review on and see the confirmation; lower a phase's cap, raise one with the confirmation, and save
-   a catalogue; at the delivery gate, Assess comments with a note). The Copilot token page waits on security.
+   a catalogue; at the delivery gate, Assess comments with a note; set a defects query and a component map, wait
+   for a pass, ignore a defect and undo it). The Copilot token page waits on security.
 4. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
    then publishing to Confluence through its API (today the page copies wiki markup).
 5. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
