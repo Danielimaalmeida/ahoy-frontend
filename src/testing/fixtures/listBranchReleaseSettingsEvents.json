@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "id": 71,
+      "type": "branch_release_repository.created",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "branch_release_repository:6f0e5e7a-8d1b-4b6e-9c55-0a7f3e2b9d10",
+      "payload": {
+        "repository": "example/web-app",
+        "workflow": "branch-release.yaml",
+        "inputs": { "environment": "test", "update-ops-tag": "true" }
+      },
+      "createdAt": "2026-11-04T10:00:00.000Z"
+    }
+  ]
+}

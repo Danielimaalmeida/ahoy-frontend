@@ -8,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { API_BASE } from '@core/api/api-base';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
+import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
@@ -88,6 +89,8 @@ describe('the Team settings frame', () => {
       r.flush(getPrCommentSettings);
     for (const r of http.match(`${BASE}/settings/defects`))
       r.flush(getDefectSettings);
+    for (const r of http.match(`${BASE}/settings/branch-releases`))
+      r.flush(getBranchReleaseSettings);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
       r.flush(
         r.request.params.get('section') === 'jira'
@@ -128,6 +131,7 @@ describe('the Team settings frame', () => {
       'Phases 1 changed',
       'Pull request comments Replies off',
       'Defects Off',
+      'Branch releases 1 repository',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(text(document.querySelector('h1'))).toBe('Team settings');
@@ -155,6 +159,7 @@ describe('the Team settings frame', () => {
       'phases',
       'pr-comments',
       'defects',
+      'branch-releases',
     ])
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
         1

@@ -1,0 +1,47 @@
+{
+  "key": "PROJ-123",
+  "dispatchable": true,
+  "targets": [
+    {
+      "workPackageId": "WP1",
+      "repo": "web",
+      "slug": "github.example.com/example/web-app",
+      "branch": "feature/PROJ-123-web",
+      "prNumber": 42,
+      "prUrl": "https://github.example.com/example/web-app/pull/42",
+      "workflow": {
+        "repository": "example/web-app",
+        "workflow": "branch-release.yaml",
+        "inputs": { "environment": "test", "update-ops-tag": "true" }
+      }
+    },
+    {
+      "workPackageId": "WP2",
+      "repo": "api",
+      "slug": "github.example.com/example/api",
+      "branch": "feature/PROJ-123-api",
+      "prNumber": 7,
+      "prUrl": "https://github.example.com/example/api/pull/7",
+      "workflow": null
+    }
+  ],
+  "releases": [
+    {
+      "id": "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e",
+      "workPackageId": "WP1",
+      "repo": "web",
+      "slug": "github.example.com/example/web-app",
+      "branch": "feature/PROJ-123-web",
+      "prNumber": 42,
+      "workflow": "branch-release.yaml",
+      "inputs": { "environment": "test", "update-ops-tag": "true" },
+      "status": "dispatched",
+      "error": null,
+      "requestedBy": "alex@example.com",
+      "requestedByName": "Alex Example",
+      "requestedAt": "2026-11-04T09:00:00.000Z",
+      "dispatchedAt": "2026-11-04T09:00:03.000Z",
+      "runsUrl": "https://github.example.com/example/web-app/actions/workflows/branch-release.yaml?query=branch%3Afeature%2FPROJ-123-web"
+    }
+  ]
+}

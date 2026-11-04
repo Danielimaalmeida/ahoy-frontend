@@ -40,6 +40,10 @@ import {
   isJiraTest,
   isAgentSettingsPage,
   isPrCommentSettingsPage,
+  isBranchRelease,
+  isBranchReleaseRepository,
+  isBranchReleaseSettingsPage,
+  isStoryBranchReleases,
   isDefect,
   isDefectList,
   isDefectSettingsPage,
@@ -115,6 +119,13 @@ import type {
   AgentSettingsPage,
   PrCommentSettingsChange,
   PrCommentSettingsPage,
+  BranchRelease,
+  BranchReleaseRepository,
+  BranchReleaseRepositoryChange,
+  BranchReleaseRepositoryRequest,
+  BranchReleaseRequest,
+  BranchReleaseSettingsPage,
+  StoryBranchReleases,
   Defect,
   DefectList,
   DefectSettingsChange,
@@ -598,6 +609,31 @@ export class ApiClient {
       `/stories/${segment(key)}/knowledge-reviews`,
       body,
       isKnowledgeReview
+    );
+  }
+
+  /** The work packages whose pull request branch can be released to TEST, and the story's releases. Spends nothing. */
+  getStoryBranchReleases(key: string): Promise<ApiResult<StoryBranchReleases>> {
+    return this.get(
+      'getStoryBranchReleases',
+      `/stories/${segment(key)}/branch-releases`,
+      isStoryBranchReleases
+    );
+  }
+
+  /**
+   * Queues a release of a work package's pull request branch with its repository's workflow, which deploys it to TEST.
+   * 0 AIU. The answer (202) is the release, queued for the reconciler.
+   */
+  requestBranchRelease(
+    key: string,
+    body: BranchReleaseRequest
+  ): Promise<ApiResult<BranchRelease>> {
+    return this.post(
+      'requestBranchRelease',
+      `/stories/${segment(key)}/branch-releases`,
+      body,
+      isBranchRelease
     );
   }
 
@@ -1627,6 +1663,55 @@ export class ApiClient {
         null,
         { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
       )
+    );
+  }
+
+  /** Each repository's branch release workflow and inputs, and whether this deployment starts workflows. */
+  getBranchReleaseSettings(): Promise<ApiResult<BranchReleaseSettingsPage>> {
+    return this.get(
+      'getBranchReleaseSettings',
+      '/settings/branch-releases',
+      isBranchReleaseSettingsPage
+    );
+  }
+
+  /** Gives a repository its branch release workflow and inputs (admins only). The answer (201) is the row. */
+  addBranchReleaseRepository(
+    body: BranchReleaseRepositoryRequest
+  ): Promise<ApiResult<BranchReleaseRepository>> {
+    return this.post(
+      'addBranchReleaseRepository',
+      '/settings/branch-releases/repositories',
+      body,
+      isBranchReleaseRepository
+    );
+  }
+
+  /** Changes a repository's branch release workflow or replaces its inputs (admins only). */
+  updateBranchReleaseRepository(
+    repositoryId: string,
+    body: BranchReleaseRepositoryChange
+  ): Promise<ApiResult<BranchReleaseRepository>> {
+    return this.send(
+      'updateBranchReleaseRepository',
+      isBranchReleaseRepository,
+      this.http.patch<unknown>(
+        this.url(
+          `/settings/branch-releases/repositories/${segment(repositoryId)}`
+        ),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Takes a repository's branch release workflow away (admins only). The answer (204) has no body. */
+  deleteBranchReleaseRepository(
+    repositoryId: string
+  ): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteBranchReleaseRepository',
+      `/settings/branch-releases/repositories/${segment(repositoryId)}`
     );
   }
 

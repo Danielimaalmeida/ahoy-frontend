@@ -169,6 +169,11 @@ export class SettingsShell {
       label: 'Defects',
       state: () => this.summary.defects(),
     },
+    {
+      path: 'branch-releases',
+      label: 'Branch releases',
+      state: () => this.summary.branchReleases(),
+    },
   ];
 
   constructor() {
