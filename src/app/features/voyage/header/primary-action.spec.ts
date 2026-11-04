@@ -47,23 +47,40 @@ describe('primaryAction', () => {
 });
 
 describe('headerActions', () => {
-  it('offers Stop and Budget while the voyage moves or waits on people', () => {
+  it('offers Stop, Budget and Cancel voyage while the voyage moves or waits on people', () => {
     for (const status of [
       'ready',
       'running',
       'awaiting_input',
       'awaiting_decision',
     ] as const) {
-      expect(headerActions(status)).toEqual({ stop: true, budget: true });
+      expect(headerActions(status)).toEqual({
+        stop: true,
+        budget: true,
+        cancel: true,
+      });
     }
   });
 
-  it('offers Budget but not Stop for an anchored voyage', () => {
-    expect(headerActions('halted')).toEqual({ stop: false, budget: true });
+  it('offers Budget and Cancel voyage but not Stop for an anchored voyage', () => {
+    expect(headerActions('halted')).toEqual({
+      stop: false,
+      budget: true,
+      cancel: true,
+    });
   });
 
-  it('offers neither for a voyage that is done', () => {
-    expect(headerActions('terminal')).toEqual({ stop: false, budget: false });
+  it('offers none for a voyage that is done or cancelled', () => {
+    for (const status of ['terminal', 'cancelled'] as const)
+      expect(headerActions(status)).toEqual({
+        stop: false,
+        budget: false,
+        cancel: false,
+      });
+  });
+
+  it('has no primary action for a cancelled voyage', () => {
+    expect(primaryAction('cancelled', null)).toBeNull();
   });
 });
 

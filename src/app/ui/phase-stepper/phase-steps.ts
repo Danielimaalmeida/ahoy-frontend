@@ -28,6 +28,7 @@ export interface PhaseProgress {
  *
  * - Docked: every step is done, none is current.
  * - Anchored: the phase it is in is `stopped`, replacing `current`; the ones before are done.
+ * - Cancelled: as Anchored, the phase it was cancelled in is `stopped`; the label says "Cancelled at phase N".
  * - Aground: the phase is `blocked`, so the position comes from `stoppedAt` (the `from` of the last
  *   `story.phase_changed`, G12); without it no step is marked and the label says only "Blocked".
  * - Everything else: the phase it is in is `current`, the ones before are done, the rest are ahead.
@@ -39,10 +40,11 @@ export function phaseProgress(
   status: StoryStatus,
   stoppedAt: string | null = null
 ): PhaseProgress {
-  const kind = statusPresentation(
-    status,
-    phase === 'blocked' ? 'blocked' : null
-  ).modifier;
+  const kind =
+    status === 'cancelled'
+      ? 'cancelled'
+      : statusPresentation(status, phase === 'blocked' ? 'blocked' : null)
+          .modifier;
   if (kind === 'done') {
     return {
       steps: PHASES.map((name, index) => ({
@@ -56,7 +58,9 @@ export function phaseProgress(
   }
   const position = phaseIndex(phase === 'blocked' ? (stoppedAt ?? '') : phase);
   const marker =
-    kind === 'halted' || kind === 'blocked' ? 'stopped' : 'current';
+    kind === 'halted' || kind === 'blocked' || kind === 'cancelled'
+      ? 'stopped'
+      : 'current';
   const steps = PHASES.map((name, index): PhaseStep => {
     const n = index + 1;
     return {
@@ -83,5 +87,6 @@ function positionLabel(
     return kind === 'blocked' ? 'Blocked' : `Phase ${phase}`;
   if (kind === 'blocked') return `Blocked at phase ${position}`;
   if (kind === 'halted') return `Stopped at phase ${position}`;
+  if (kind === 'cancelled') return `Cancelled at phase ${position}`;
   return `Phase ${position} of ${PHASES.length}`;
 }

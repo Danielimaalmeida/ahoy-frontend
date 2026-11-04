@@ -419,6 +419,16 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   post(`/meetings/${oneOff.id}/cancel`, { carryOver: [] });
   get('/meetings/00000000-0000-4000-8000-ffffffffffff');
   post('/meetings', { startsAt: '2026-10-20T09:00:00.000Z' });
+  post('/stories', { key: 'CXL-1', budgetNanoAiu: 5 * AIU });
+  post('/stories/CXL-1/cancel', { expectedVersion: version('CXL-1') });
+  post('/stories/CXL-1/cancel', {
+    expectedVersion: version('CXL-1'),
+    reason: 'Already implemented',
+  });
+  post('/stories/CXL-1/cancel', {
+    expectedVersion: version('CXL-1'),
+    reason: 'Again',
+  });
 }
 
 describe('the mock against openapi/ahoy-v1.yaml', () => {
@@ -436,6 +446,7 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'startStory',
       'getStory',
       'stopStory',
+      'cancelStory',
       'resumeStory',
       'setStoryBudget',
       'getStoryModels',

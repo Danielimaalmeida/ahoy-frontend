@@ -75,6 +75,7 @@ export const STORY_STATUSES = listOf<StoryStatus>()([
   'awaiting_decision',
   'halted',
   'terminal',
+  'cancelled',
 ]);
 
 /** The states a run can be in (`RunStatus`). */
@@ -362,6 +363,7 @@ export type StartStoryRequest = Schemas['StartStoryRequest'];
 
 /** Body of `stopStory`. */
 export type StopStoryRequest = Schemas['StopStoryRequest'];
+export type CancelStoryRequest = Schemas['CancelStoryRequest'];
 
 /** Body of `resumeStory`. */
 export type ResumeStoryRequest = Schemas['ResumeStoryRequest'];

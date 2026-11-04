@@ -20,7 +20,7 @@ export const IN_PORT_LABEL = 'Ended';
 
 /**
  * The statuses that get a chip, in the order of the Voyages board: those that move, those that wait for a person
- * (Blocked among them), then `terminal`, the "Ended" chip.
+ * (Blocked among them), then `terminal`, the "Ended" chip, and the voyages a person cancelled.
  */
 export const CHIP_STATUSES: readonly BoardStatus[] = [
   'ready',
@@ -30,6 +30,7 @@ export const CHIP_STATUSES: readonly BoardStatus[] = [
   'halted',
   AGROUND,
   IN_PORT,
+  'cancelled',
 ];
 
 interface Chip {

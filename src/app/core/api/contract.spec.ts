@@ -100,6 +100,7 @@ import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
 import startStory from '@testing/fixtures/startStory.json';
 import stopStory from '@testing/fixtures/stopStory.json';
+import cancelStory from '@testing/fixtures/cancelStory.json';
 
 const jiraBacklog = {
   items: [
@@ -161,6 +162,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['startStory', startStory],
   ['getStory', getStory],
   ['stopStory', stopStory],
+  ['cancelStory', cancelStory],
   ['resumeStory', resumeStory],
   ['setStoryBudget', setStoryBudget],
   ['refreshIntake', refreshIntake],
@@ -302,7 +304,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      115
+      116
     );
   });
 
@@ -405,6 +407,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
     expect(statusOf('startStory')).toEqual(['201']);
     for (const id of [
       'stopStory',
+      'cancelStory',
       'resumeStory',
       'setStoryBudget',
       'setStoryModels',

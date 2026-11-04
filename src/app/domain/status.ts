@@ -59,6 +59,7 @@ const BY_STATUS: Readonly<
     api: 'awaiting_decision',
   },
   halted: { label: 'Halted', modifier: 'halted', api: 'halted' },
+  cancelled: { label: 'Cancelled', modifier: 'queued', api: 'cancelled' },
 };
 
 /** Maps a story's status (and, for `terminal`, its phase) to the badge in `vocabulary.md`. */

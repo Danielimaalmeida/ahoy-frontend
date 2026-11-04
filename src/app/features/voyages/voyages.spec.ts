@@ -284,7 +284,7 @@ describe('Voyages', () => {
   });
 
   describe('chips', () => {
-    it('show All, the six statuses and Blocked with the API word and the count of each', async () => {
+    it('show All, the seven statuses and Blocked with the API word and the count of each', async () => {
       const { chips } = await open('/voyages');
       expect(chips().map((chip) => chip.text)).toEqual([
         'All 8',
@@ -295,6 +295,7 @@ describe('Voyages', () => {
         'Halted halted 2',
         'Blocked terminal · blocked 1',
         'Ended terminal 1',
+        'Cancelled cancelled 0',
       ]);
     });
 
@@ -422,6 +423,7 @@ describe('Voyages', () => {
         'Halted halted 2',
         'Blocked terminal · blocked 0',
         'Ended terminal 0',
+        'Cancelled cancelled 0',
       ]);
     });
 
@@ -635,6 +637,7 @@ describe('Voyages', () => {
         'Halted halted',
         'Blocked terminal · blocked',
         'Ended terminal',
+        'Cancelled cancelled',
       ]);
       expect(root.querySelector('table')).toBeNull();
       expect(text(root)).not.toContain('No voyages');

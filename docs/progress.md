@@ -1,14 +1,23 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-04 (the defect watch: Backlog › Defects and Team settings › Defects, with `ahoy-hosted`'s
-`feat/defect-watch`, PR #81; tested on fakes and `HttpTestingController` only). One page: replace it,
+Updated 2026-11-04 (Cancel voyage, with `ahoy-hosted`'s `feat/cancel-story`; tested on fakes and the mock backend
+only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/defect-watch`, 2026-11-04, on `main` after #55):** slice 1 of the defect watch (`ahoy-hosted`
+- **This branch (`feat/cancel-voyage`, 2026-11-04):** a person can cancel a voyage for good
+  (`POST /stories/{key}/cancel`, `ahoy-hosted` design §4 "Cancel", asked for by the user on 2026-11-04 from R3DA-14682, which
+  could only stay halted). The header has **Cancel voyage** on every voyage that is not over; its dialog needs a reason,
+  says a run under way is cancelled in the background, that Jira and pull requests are left as they are, and that it
+  cannot be undone. The new status `cancelled` shows as a neutral **Cancelled** badge, has its own chip on the Voyages
+  board (it is out of Halted and Needs you), opens on the Activity tab, marks the phase it was cancelled in as stopped
+  ("Cancelled at phase N"), and the row note says "Cancelled in <phase>". The mock backend answers `cancelStory`. In
+  this cloud session `@acme-fedev/*` could not be installed: typecheck, lint, format and 188 of the 195 spec files
+  (3,227 tests) pass without it; the 7 that import it, `ng build` and e2e were not run.
+- **Before, on `feat/defect-watch` (2026-11-04, on `main` after #55):** slice 1 of the defect watch (`ahoy-hosted`
   design §5 "Defect watch", D21, asked for by the user on 2026-11-04). The Backlog has a fourth pill, **Defects**: it
   hides the backlog's filters and lists the open defects the reconciler read from the team's defects query on its last
   pass (`GET /defects`), the latest first, with the priority, the components, when the watch first saw it, the triage

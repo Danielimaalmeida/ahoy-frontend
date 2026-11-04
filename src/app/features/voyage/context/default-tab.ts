@@ -47,6 +47,8 @@ export function defaultTab(status: StoryStatus): VoyageTab {
       return 'models';
     case 'terminal':
       return 'plan';
+    case 'cancelled':
+      return 'log';
   }
 }
 

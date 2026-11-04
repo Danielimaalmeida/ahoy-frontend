@@ -194,6 +194,7 @@ import type {
   SetStoryModelsRequest,
   StartStoryRequest,
   StopStoryRequest,
+  CancelStoryRequest,
   Story,
   StoryPage,
   StoryPlanFit,
@@ -386,6 +387,22 @@ export class ApiClient {
     return this.post(
       'stopStory',
       `/stories/${segment(key)}/stop`,
+      body,
+      isStory
+    );
+  }
+
+  /**
+   * Cancels a story for good, from any status but `terminal`: it is never stepped again and waits for nobody. An active
+   * run is cancelled as Stop cancels it. It spends nothing and cannot be undone. The answer (202) is the story.
+   */
+  cancelStory(
+    key: string,
+    body: CancelStoryRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'cancelStory',
+      `/stories/${segment(key)}/cancel`,
       body,
       isStory
     );

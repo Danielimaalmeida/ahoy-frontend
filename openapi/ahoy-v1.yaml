@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 92196f1688ac2512e982c822e848b55610b645af
+# Commit: 78e3c004a5e0b9868438e83aef3213b4aab8c7cf
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -280,6 +280,35 @@ paths:
       responses:
         '202':
           description: The story is halted; cancellation of an active run completes asynchronously.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: cancelStory
+      tags: [stories]
+      summary: Cancel the story for good. It cannot be undone, and spends nothing.
+      description: |
+        From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it
+        again, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run
+        is cancelled as Stop cancels it, asynchronously. The reason is required and goes into the decision log; the
+        event `story.cancelled` carries it as `detail`, with the phase, `previousStatus`, `previousHaltReason` and
+        `runId`. Nothing is written to Jira or GitHub: an open pull request stays open.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelStoryRequest' }
+      responses:
+        '202':
+          description: The story is cancelled; cancellation of an active run completes asynchronously.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Story' }
@@ -3165,11 +3194,20 @@ components:
     StoryStatus:
       type: string
       enum:
-        [ready, running, awaiting_input, awaiting_decision, halted, terminal]
+        [
+          ready,
+          running,
+          awaiting_input,
+          awaiting_decision,
+          halted,
+          terminal,
+          cancelled,
+        ]
       description: |
         `ready`: the reconciler will act. `running`: a worker run is active.
         `awaiting_input`: questions need answers. `awaiting_decision`: a human gate is open.
         `halted`: stopped for `haltReason` until a person resumes it. `terminal`: done or blocked.
+        `cancelled`: a person cancelled it for good (`POST /stories/{key}/cancel`); the phase is where it stopped.
     JiraSprint:
       type: object
       additionalProperties: false
@@ -3394,6 +3432,13 @@ components:
             The model and reasoning effort for each phase; a slot left out runs on the server's configured defaults.
             Can be changed later with `setStoryModels`.
     StopStoryRequest:
+      type: object
+      required: [expectedVersion, reason]
+      additionalProperties: false
+      properties:
+        expectedVersion: { $ref: '#/components/schemas/Version' }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+    CancelStoryRequest:
       type: object
       required: [expectedVersion, reason]
       additionalProperties: false
@@ -4567,6 +4612,7 @@ components:
         - story.started
         - story.halted
         - story.resumed
+        - story.cancelled
         - story.intake_refreshed
         - design.refreshed
         - story.budget_changed

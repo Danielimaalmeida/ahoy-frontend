@@ -9,7 +9,7 @@ import { CHIP_STATUSES, FilterChips } from './filter-chips';
 })
 class Host {
   readonly counts = signal<StatusCounts>({
-    all: 8,
+    all: 9,
     ready: 1,
     running: 1,
     awaiting_input: 1,
@@ -17,6 +17,7 @@ class Host {
     halted: 2,
     blocked: 1,
     terminal: 1,
+    cancelled: 1,
   });
   readonly selected = signal<StatusFilter>('all');
 }
@@ -40,15 +41,16 @@ const CHIPS = [
   ['Halted', 'ah-badge--halted', 'halted'],
   ['Blocked', 'ah-badge--blocked', 'terminal · blocked'],
   ['Ended', 'ah-badge--queued', 'terminal'],
+  ['Cancelled', 'ah-badge--queued', 'cancelled'],
 ] as const;
 
 describe('ah-filter-chips', () => {
-  it('is a labelled group of eight chips: All, then the six statuses and Blocked in the order of the board', () => {
+  it('is a labelled group of nine chips: All, then the seven statuses and Blocked in the order of the board', () => {
     const { root, chips } = render();
     const group = root.querySelector('.ah-chips')!;
     expect(group.getAttribute('role')).toBe('group');
     expect(group.getAttribute('aria-label')).toBe('Filter by status');
-    expect(chips().length).toBe(8);
+    expect(chips().length).toBe(9);
     expect(
       chips().every((chip) => chip.getAttribute('type') === 'button')
     ).toBe(true);
@@ -60,6 +62,7 @@ describe('ah-filter-chips', () => {
       'halted',
       'blocked',
       'terminal',
+      'cancelled',
     ]);
   });
 
@@ -79,7 +82,7 @@ describe('ah-filter-chips', () => {
 
   it('shows All with the total and no badge or API word', () => {
     const all = render().chips()[0]!;
-    expect(all.textContent!.replace(/\s+/g, ' ').trim()).toBe('All 8');
+    expect(all.textContent!.replace(/\s+/g, ' ').trim()).toBe('All 9');
     expect(all.querySelector('.ah-badge, .ah-chip__api')).toBeNull();
   });
 
@@ -90,13 +93,24 @@ describe('ah-filter-chips', () => {
     const counts = chips().map(
       (chip) => chip.querySelector('.ah-chip__count')?.textContent ?? null
     );
-    expect(counts).toEqual([null, null, null, null, null, '0', null, null]);
+    expect(counts).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+      '0',
+      null,
+      null,
+      null,
+    ]);
   });
 
   it('presses exactly one chip at a time, starting with All', () => {
     const { pressed } = render();
     expect(pressed()).toEqual([
       'true',
+      'false',
       'false',
       'false',
       'false',
@@ -121,12 +135,14 @@ describe('ah-filter-chips', () => {
       'true',
       'false',
       'false',
+      'false',
     ]);
     chips()[0]!.click();
     fixture.detectChanges();
     expect(fixture.componentInstance.selected()).toBe('all');
     expect(pressed()).toEqual([
       'true',
+      'false',
       'false',
       'false',
       'false',
@@ -167,6 +183,7 @@ describe('ah-filter-chips', () => {
       'false',
       'false',
       'true',
+      'false',
       'false',
       'false',
       'false',

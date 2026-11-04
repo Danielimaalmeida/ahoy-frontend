@@ -43,6 +43,7 @@ const TITLES: Readonly<Record<string, string>> = {
   'story.started': 'Voyage started',
   'story.halted': 'Halted',
   'story.resumed': 'Resumed',
+  'story.cancelled': 'Voyage cancelled',
   'story.intake_refreshed': 'Sent back to intake',
   'design.refreshed': 'Design refreshed',
   'story.budget_changed': 'Budget changed',

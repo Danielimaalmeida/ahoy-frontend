@@ -37,6 +37,7 @@ export function chipCounts(
     halted: 0,
     blocked: 0,
     terminal: 0,
+    cancelled: 0,
   };
   for (const story of stories) {
     if (!matchesQuery(story, query)) continue;

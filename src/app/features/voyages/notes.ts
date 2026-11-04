@@ -79,6 +79,8 @@ export function noteFor(story: Story, detail: NoteDetail): string {
       return haltedNote(story, detail.halt);
     case 'terminal':
       return portNote(story, detail.rejection);
+    case 'cancelled':
+      return `Cancelled in ${story.phase}`;
   }
 }
 

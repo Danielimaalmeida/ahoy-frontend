@@ -103,6 +103,18 @@ describe('ah-phase-stepper: every status in every phase', () => {
     })
   );
 
+  PHASES.forEach((phase, index) =>
+    it(`cancelled in ${phase}: that step is stopped and the label says it was cancelled there`, () => {
+      const { states, root } = render(phase, 'cancelled');
+      expect(states).toEqual(expectedAt(index + 1, 'stopped'));
+      expect(root.querySelectorAll('.ah-step--current').length).toBe(0);
+      const compact = render(phase, 'cancelled', { compact: true });
+      expect(
+        compact.root.querySelector('.ah-dots')!.getAttribute('aria-label')
+      ).toBe(`Cancelled at phase ${index + 1}`);
+    })
+  );
+
   for (const phase of PHASES)
     it(`terminal in ${phase}: Done, every step is done and none is current`, () => {
       const { states, root, fixture } = render(phase, 'terminal');

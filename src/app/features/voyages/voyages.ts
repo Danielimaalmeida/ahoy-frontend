@@ -67,6 +67,7 @@ const NOTHING_BY_STATUS: Readonly<
     'No voyage has run out of rework rounds or CI fixes.',
   ],
   terminal: ['No ended voyages', 'No voyage is done yet.'],
+  cancelled: ['No cancelled voyages', 'Nobody has cancelled a voyage.'],
 };
 
 /** What the page says when the list cannot be read: the heading, the sentence and the technical line. */
