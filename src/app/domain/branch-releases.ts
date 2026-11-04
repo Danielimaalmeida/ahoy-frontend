@@ -114,6 +114,40 @@ export function latestReleaseOf<T extends { readonly repo: string }>(
   return releases.find((r) => r.repo === repo);
 }
 
+/** What a release of the whole voyage answered, as much as the toast needs. */
+export interface ReleaseBatchWords {
+  readonly released: readonly { readonly repo: string }[];
+  readonly skipped: readonly {
+    readonly repo: string;
+    readonly reason: 'no_workflow' | 'queued';
+  }[];
+}
+
+/**
+ * What a release of the whole voyage did, in one sentence: "Releases of web and api queued; left out: docs (no
+ * release workflow)." or "Nothing queued; left out: api (a release is still queued)."
+ */
+export function releasesQueuedText(batch: ReleaseBatchWords): string {
+  const queued = batch.released.map((r) => r.repo);
+  const done =
+    queued.length === 0
+      ? 'Nothing queued'
+      : `${queued.length === 1 ? 'Release' : 'Releases'} of ${listInWords(queued)} queued`;
+  if (batch.skipped.length === 0)
+    return `${done}: the reconciler starts ${queued.length === 1 ? 'its workflow' : 'their workflows'} on GitHub.`;
+  const left = batch.skipped.map(
+    (s) =>
+      `${s.repo} (${s.reason === 'queued' ? 'a release is still queued' : 'no release workflow'})`
+  );
+  return `${done}; left out: ${left.join(', ')}.`;
+}
+
+/** "a", "a and b", "a, b and c". */
+function listInWords(items: readonly string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1] ?? ''}`;
+}
+
 /** What one Branch releases entry of the settings history says happened, or undefined for another section's. */
 export function describeBranchReleaseEvent(
   type: string,

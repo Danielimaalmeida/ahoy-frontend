@@ -88,6 +88,9 @@ import {
   type PrCommentSettingsPage,
   BRANCH_RELEASE_STATUSES,
   type BranchRelease,
+  type BranchReleaseBatch,
+  type BranchReleaseSkip,
+  BRANCH_RELEASE_SKIP_REASONS,
   type BranchReleaseRepository,
   type BranchReleaseSettingsPage,
   type BranchReleaseTarget,
@@ -1770,6 +1773,21 @@ const branchRelease = shape<BranchRelease>({
 export const isBranchRelease = guard<BranchRelease>(
   'BranchRelease',
   branchRelease
+);
+
+export const isBranchReleaseBatch = guard<BranchReleaseBatch>(
+  'BranchReleaseBatch',
+  shape<BranchReleaseBatch>({
+    released: arrayOf(branchRelease),
+    skipped: arrayOf(
+      shape<BranchReleaseSkip>({
+        repo: nonEmptyText,
+        branch: text,
+        reason: oneOf(BRANCH_RELEASE_SKIP_REASONS),
+        detail: text,
+      })
+    ),
+  })
 );
 
 const branchReleaseTarget = shape<BranchReleaseTarget>({

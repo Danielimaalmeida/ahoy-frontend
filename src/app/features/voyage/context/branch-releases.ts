@@ -10,16 +10,30 @@ import {
 import { ApiClient } from '@core/api/api-client';
 import type {
   BranchRelease,
+  BranchReleaseBatch,
   BranchReleaseTarget,
   StoryBranchReleases,
 } from '@core/api/types';
 import type { CommandOutcome } from '@core/commands/command-runner';
 import { latestReleaseOf } from '@domain/branch-releases';
-import { VoyageContext } from '../../context/voyage-context';
+import { VoyageContext } from './voyage-context';
 
 /** How often a queued release is read again until the reconciler has started it, and for how many reads at most. */
 export const RELEASE_FOLLOW_MS = 5_000;
 export const RELEASE_FOLLOW_READS = 12;
+
+/** A target whose repository has a release workflow. */
+export type ReleasableTarget = BranchReleaseTarget & {
+  readonly workflow: NonNullable<BranchReleaseTarget['workflow']>;
+};
+
+/** What "Release to TEST" would do: one release per repository with a workflow, and the repositories left out. */
+export interface AllReleases {
+  /** The first package of each repository with a workflow, in plan order: a repository's packages share its branch. */
+  readonly releasable: readonly ReleasableTarget[];
+  /** The repositories with an open pull request and no release workflow. */
+  readonly withoutWorkflow: readonly BranchReleaseTarget[];
+}
 
 /** What a work package can release, and its repository's newest release. */
 export interface PackageRelease {
@@ -33,7 +47,8 @@ export interface PackageRelease {
  * releases so far. Read when the voyage opens, when its version moves and when a `branch_release.*` event arrives (the
  * reconciler's start or refusal, or someone else's request, none of which moves the version); while a release is
  * queued, also read every few seconds for a minute, in case the event stream is down. A failed read keeps what was
- * read before. 0 AIU.
+ * read before. Provided by the voyage's shell, so the header's Release to TEST and the Work packages tab share one
+ * read. 0 AIU.
  */
 @Injectable()
 export class BranchReleases {
@@ -102,6 +117,23 @@ export class BranchReleases {
     return found;
   });
 
+  /** What a release of the whole voyage would queue, one per repository, and which repositories it leaves out. */
+  readonly all = computed((): AllReleases => {
+    const seen = new Set<string>();
+    if (this.context.story()?.status === 'cancelled')
+      return { releasable: [], withoutWorkflow: [] };
+    const releasable: ReleasableTarget[] = [];
+    const withoutWorkflow: BranchReleaseTarget[] = [];
+    for (const target of this.releases()?.targets ?? []) {
+      if (seen.has(target.repo)) continue;
+      seen.add(target.repo);
+      const workflow = target.workflow;
+      if (workflow === null) withoutWorkflow.push(target);
+      else releasable.push({ ...target, workflow });
+    }
+    return { releasable, withoutWorkflow };
+  });
+
   /** What a work package can release, or undefined when it has no open pull request. */
   forPackage(workPackageId: string): PackageRelease | undefined {
     return this.byPackage().get(workPackageId);
@@ -128,6 +160,21 @@ export class BranchReleases {
     if (key === null) return { kind: 'skipped' };
     const outcome = await this.context.commands.run(() =>
       this.api.requestBranchRelease(key, { workPackageId, confirm: true })
+    );
+    if (outcome.kind !== 'skipped') await this.load(key);
+    return outcome;
+  }
+
+  /**
+   * Asks for a release of every repository with an open pull request and a workflow, once each, confirmed by the
+   * person. The API leaves out a repository whose release is still queued and says so. The releases are read again
+   * whatever the answer.
+   */
+  async requestAll(): Promise<CommandOutcome<BranchReleaseBatch>> {
+    const key = this.context.key();
+    if (key === null) return { kind: 'skipped' };
+    const outcome = await this.context.commands.run(() =>
+      this.api.requestAllBranchReleases(key, { confirm: true })
     );
     if (outcome.kind !== 'skipped') await this.load(key);
     return outcome;

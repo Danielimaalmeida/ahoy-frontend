@@ -9,6 +9,7 @@ import type { StoryPullRequest } from '@core/api/story-state';
 import { currentRunView } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
+import { DeployAllButton } from './deploy-all-button';
 import {
   canRefreshDesign,
   canRefreshIntake,
@@ -26,12 +27,20 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
  * The voyage header (wireframes `PlanReview` and `Halted`): key, status badge with the API words (`awaiting_decision ·
  * plan_accepted`, `halted · run_failed`), title, the primary action for the status with Budget, Models, Back to intake
  * (in planning and plan review), Refresh design (with a design read, halted in implementation or review or at the
- * delivery gate, or halted in design after a refresh) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
+ * delivery gate, or halted in design after a refresh), Release to TEST (while a repository has an open pull request
+ * and a release workflow) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
  * round, the pull requests the harness opened, agent config). Shown once the story is read.
  */
 @Component({
   selector: 'ah-voyage-header',
-  imports: [BudgetMeter, Button, PhaseStepper, RouterLink, StatusBadge],
+  imports: [
+    BudgetMeter,
+    Button,
+    DeployAllButton,
+    PhaseStepper,
+    RouterLink,
+    StatusBadge,
+  ],
   styleUrl: './voyage-header.scss',
   template: `
     @if (view(); as v) {
@@ -79,6 +88,7 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
                   </button>
                 }
               }
+              <ah-deploy-all-button />
               @if (v.actions.budget) {
                 <button type="button" ahButton (click)="openBudget()">
                   Budget

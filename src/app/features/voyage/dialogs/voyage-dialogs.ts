@@ -2,6 +2,7 @@ import type { DialogRef } from '@angular/cdk/dialog';
 import { Injectable, inject } from '@angular/core';
 import type {
   BranchRelease,
+  BranchReleaseBatch,
   KnowledgeReview,
   ModelPlan,
   ModelSlot,
@@ -24,6 +25,10 @@ import {
   AssessCommentsDialog,
   type AssessCommentsDialogData,
 } from './assess-comments-dialog';
+import {
+  BranchReleaseAllDialog,
+  type BranchReleaseAllDialogData,
+} from './branch-release-all-dialog';
 import {
   BranchReleaseDialog,
   type BranchReleaseDialogData,
@@ -122,6 +127,17 @@ export class VoyageDialogs {
       BranchReleaseDialogData,
       BranchReleaseDialog
     >(BranchReleaseDialog, { data, width: '520px' });
+  }
+
+  /** "Deploy N repositories' branches to TEST?" */
+  branchReleaseAll(
+    data: BranchReleaseAllDialogData
+  ): DialogRef<BranchReleaseBatch, BranchReleaseAllDialog> {
+    return this.dialogs.open<
+      BranchReleaseBatch,
+      BranchReleaseAllDialogData,
+      BranchReleaseAllDialog
+    >(BranchReleaseAllDialog, { data, width: '560px' });
   }
 
   /** "Change the budget" */

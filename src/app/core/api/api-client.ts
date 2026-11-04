@@ -41,6 +41,7 @@ import {
   isAgentSettingsPage,
   isPrCommentSettingsPage,
   isBranchRelease,
+  isBranchReleaseBatch,
   isBranchReleaseRepository,
   isBranchReleaseSettingsPage,
   isStoryBranchReleases,
@@ -124,6 +125,8 @@ import type {
   BranchReleaseRepositoryChange,
   BranchReleaseRepositoryRequest,
   BranchReleaseRequest,
+  BranchReleaseAllRequest,
+  BranchReleaseBatch,
   BranchReleaseSettingsPage,
   StoryBranchReleases,
   Defect,
@@ -651,6 +654,22 @@ export class ApiClient {
       `/stories/${segment(key)}/branch-releases`,
       body,
       isBranchRelease
+    );
+  }
+
+  /**
+   * Asks for a release of every repository of the story with an open pull request, once each, confirmed by the
+   * person. 0 AIU. The answer (202) is the releases queued and the repositories left out, with the reason.
+   */
+  requestAllBranchReleases(
+    key: string,
+    body: BranchReleaseAllRequest
+  ): Promise<ApiResult<BranchReleaseBatch>> {
+    return this.post(
+      'requestAllBranchReleases',
+      `/stories/${segment(key)}/branch-releases/all`,
+      body,
+      isBranchReleaseBatch
     );
   }
 

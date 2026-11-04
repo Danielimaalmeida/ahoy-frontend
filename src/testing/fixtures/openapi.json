@@ -1479,7 +1479,7 @@
         "operationId": "requestBranchRelease",
         "tags": ["stories"],
         "summary": "Release a work package's pull request branch to TEST with its repository's workflow. 0 AIU.",
-        "description": "Queues the repository's `workflow_dispatch` workflow on the package's pull request branch, with the inputs\nTeam settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow\ndeploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the\npackage has no open pull request, its repository has no release workflow, or a release of that repository\nis still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy may release. Spends no AIU.\n",
+        "description": "Queues the repository's `workflow_dispatch` workflow on the package's pull request branch, with the inputs\nTeam settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow\ndeploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the\npackage has no open pull request, its repository has no release workflow, or a release of that repository\nis still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy\nmay release. Spends no AIU.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -1497,6 +1497,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BranchRelease"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/branch-releases/all": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "requestAllBranchReleases",
+        "tags": ["stories"],
+        "summary": "Release every pull request branch of the story to TEST, one per repository, in one click. 0 AIU.",
+        "description": "Queues, for each repository of the story with a pull request the gates last saw open, its `workflow_dispatch`\nworkflow on that branch with the inputs Team settings › Branch releases holds now, as `requestBranchRelease`\ndoes for one package (a repository's packages share its branch, so it is released once, for its first\npackage). A repository without a release workflow, or with a release still queued from any story, is left out\nand listed in `skipped` with the reason; the others are queued together. `confirm` must be true (`400`).\n`409 invalid_state` when the story is cancelled or none of its pull requests is open. Anyone allowed into\nAhoy may release. Spends no AIU.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BranchReleaseAllRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The releases queued, and the repositories left out.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchReleaseBatch"
                 }
               }
             }
@@ -12359,6 +12409,61 @@
           "confirm": {
             "type": "boolean",
             "description": "Must be true: the workflow deploys the branch to a shared environment."
+          }
+        }
+      },
+      "BranchReleaseAllRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["confirm"],
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "Must be true: each workflow deploys its branch to a shared environment."
+          }
+        }
+      },
+      "BranchReleaseBatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["released", "skipped"],
+        "properties": {
+          "released": {
+            "type": "array",
+            "description": "The releases queued, one per repository, in plan order.",
+            "items": {
+              "$ref": "#/components/schemas/BranchRelease"
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "description": "The repositories with an open pull request that were not queued, and why.",
+            "items": {
+              "$ref": "#/components/schemas/BranchReleaseSkip"
+            }
+          }
+        }
+      },
+      "BranchReleaseSkip": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repo", "branch", "reason", "detail"],
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "The repository's plan alias."
+          },
+          "branch": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": ["no_workflow", "queued"],
+            "description": "`no_workflow`: Team settings › Branch releases names none; `queued`: a release is still queued."
+          },
+          "detail": {
+            "type": "string",
+            "description": "A sentence for a person."
           }
         }
       },

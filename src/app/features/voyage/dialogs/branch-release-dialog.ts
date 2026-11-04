@@ -5,7 +5,7 @@ import { inputsSummary } from '@domain/branch-releases';
 import { Banner } from '@ui/banner/banner';
 import { DialogShell } from '@ui/dialog/dialog';
 import { ToastService } from '@ui/toast/toast';
-import type { BranchReleases } from '../tabs/packages/branch-releases';
+import type { BranchReleases } from '../context/branch-releases';
 import { CommandState } from './dialog-support';
 
 /** What the release dialog is opened with: the tab's releases, and the package's target with its workflow. */

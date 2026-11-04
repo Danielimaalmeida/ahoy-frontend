@@ -18,6 +18,7 @@ import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings
 import addBranchReleaseRepository from '@testing/fixtures/addBranchReleaseRepository.json';
 import updateBranchReleaseRepository from '@testing/fixtures/updateBranchReleaseRepository.json';
 import getStoryBranchReleases from '@testing/fixtures/getStoryBranchReleases.json';
+import requestAllBranchReleases from '@testing/fixtures/requestAllBranchReleases.json';
 import requestBranchRelease from '@testing/fixtures/requestBranchRelease.json';
 import updateDefectSettings from '@testing/fixtures/updateDefectSettings.json';
 import listDefects from '@testing/fixtures/listDefects.json';
@@ -261,6 +262,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['updateBranchReleaseRepository', updateBranchReleaseRepository],
   ['getStoryBranchReleases', getStoryBranchReleases],
   ['requestBranchRelease', requestBranchRelease],
+  ['requestAllBranchReleases', requestAllBranchReleases],
   ['updateDefectSettings', updateDefectSettings],
   ['listDefects', listDefects],
   ['ignoreDefect', ignoreDefect],
@@ -315,7 +317,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      122
+      123
     );
   });
 
@@ -429,6 +431,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'refreshDesign',
       'assessComments',
       'requestBranchRelease',
+      'requestAllBranchReleases',
       'requestRefinement',
       'cancelRefinement',
       'requestAgentDiagnosis',
@@ -631,6 +634,10 @@ describe('the request bodies the client sends', () => {
     expect(
       requestViolations('requestBranchRelease', { workPackageId: 'WP1' })
     ).not.toEqual([]);
+    expect(
+      requestViolations('requestAllBranchReleases', { confirm: true })
+    ).toEqual([]);
+    expect(requestViolations('requestAllBranchReleases', {})).not.toEqual([]);
     expect(
       requestViolations('addBranchReleaseRepository', {
         repository: 'example/api',
