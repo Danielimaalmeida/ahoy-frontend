@@ -8,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { API_BASE } from '@core/api/api-base';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
+import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
@@ -85,6 +86,8 @@ describe('the Team settings frame', () => {
       r.flush(getPhaseSettings);
     for (const r of http.match(`${BASE}/settings/pr-comments`))
       r.flush(getPrCommentSettings);
+    for (const r of http.match(`${BASE}/settings/defects`))
+      r.flush(getDefectSettings);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
       r.flush(
         r.request.params.get('section') === 'jira'
@@ -124,6 +127,7 @@ describe('the Team settings frame', () => {
       'Agents 2 of 4 on',
       'Phases 1 changed',
       'Pull request comments Replies off',
+      'Defects Off',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(text(document.querySelector('h1'))).toBe('Team settings');
@@ -150,6 +154,7 @@ describe('the Team settings frame', () => {
       'agents',
       'phases',
       'pr-comments',
+      'defects',
     ])
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
         1

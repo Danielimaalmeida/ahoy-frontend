@@ -6,11 +6,13 @@ import type {
   JiraSettingsPage,
   PhaseSettingsPage,
   PrCommentSettingsPage,
+  DefectSettingsPage,
   SonarSettings,
   TeamsSettingsPage,
 } from '@core/api/types';
 import { jobsOnLabel } from '@domain/agent-settings';
 import { prCommentsStateLabel } from '@domain/pr-comment-settings';
+import { defectsStateLabel } from '@domain/defect-settings';
 
 /** One section in the settings' side navigation: its state in a word, and whether it is off. */
 export interface SectionState {
@@ -74,9 +76,21 @@ export function prCommentsState(page: PrCommentSettingsPage): SectionState {
   return prCommentsStateLabel(page.prComments, page.repliesPostable);
 }
 
+/** "Watching" or "Off". */
+export function defectsState(page: DefectSettingsPage): SectionState {
+  return defectsStateLabel(page.defects);
+}
+
 /** A section the frame shows a state for. */
 export type SettingsSectionKey =
-  'sonar' | 'jira' | 'teams' | 'figma' | 'agents' | 'phases' | 'pr_comments';
+  | 'sonar'
+  | 'jira'
+  | 'teams'
+  | 'figma'
+  | 'agents'
+  | 'phases'
+  | 'pr_comments'
+  | 'defects';
 
 /**
  * What the Team settings' frame shows around a section: whether the person is an admin and each section's state. The
@@ -103,6 +117,8 @@ export class SettingsSummary {
   readonly phases = signal<SectionState | null>(null);
   /** The pull request comments' state, once read. */
   readonly prComments = signal<SectionState | null>(null);
+  /** The defect watch's state, once read. */
+  readonly defects = signal<SectionState | null>(null);
 
   /** The sections whose page reads them itself. */
   private readonly claimed = new Set<SettingsSectionKey>();
@@ -114,7 +130,7 @@ export class SettingsSummary {
 
   /** Reads the state of every section no page has claimed; a section that cannot be read shows none. */
   async load(): Promise<void> {
-    const [sonar, jira, teams, figma, agents, phases, prComments] =
+    const [sonar, jira, teams, figma, agents, phases, prComments, defects] =
       await Promise.all([
         this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
         this.claimed.has('jira') ? null : this.api.getJiraSettings(),
@@ -125,6 +141,7 @@ export class SettingsSummary {
         this.claimed.has('pr_comments')
           ? null
           : this.api.getPrCommentSettings(),
+        this.claimed.has('defects') ? null : this.api.getDefectSettings(),
       ]);
     if (sonar?.ok && this.sonar() === null) this.sonarRead(sonar.value);
     if (jira?.ok && this.jira() === null) this.jiraRead(jira.value);
@@ -134,6 +151,7 @@ export class SettingsSummary {
     if (phases?.ok && this.phases() === null) this.phasesRead(phases.value);
     if (prComments?.ok && this.prComments() === null)
       this.prCommentsRead(prComments.value);
+    if (defects?.ok && this.defects() === null) this.defectsRead(defects.value);
   }
 
   /** What the SonarQube section read. */
@@ -176,5 +194,11 @@ export class SettingsSummary {
   prCommentsRead(page: PrCommentSettingsPage): void {
     this.admin.set(page.canEdit);
     this.prComments.set(prCommentsState(page));
+  }
+
+  /** What the Defects section read. */
+  defectsRead(page: DefectSettingsPage): void {
+    this.admin.set(page.canEdit);
+    this.defects.set(defectsState(page));
   }
 }

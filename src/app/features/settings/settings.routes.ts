@@ -1,5 +1,6 @@
 import type { Routes } from '@angular/router';
 import { AgentSettingsPage } from './agent-settings-page';
+import { DefectSettingsPage } from './defect-settings-page';
 import { FigmaSettingsPage } from './figma-settings-page';
 import { JiraSettingsPage } from './jira-settings-page';
 import { PhaseSettingsPage } from './phase-settings-page';
@@ -9,8 +10,9 @@ import { SettingsShell } from './settings-shell';
 import { TeamsSettingsPage } from './teams-settings-page';
 
 /**
- * Team settings: SonarQube, Jira, the crew's Teams channel, Figma, the agents' jobs, the phases and pull request
- * comments, kept in the database and changed by admins, one section per page. Reading and changing them is 0 AIU.
+ * Team settings: SonarQube, Jira, the crew's Teams channel, Figma, the agents' jobs, the phases, pull request
+ * comments and the defect watch, kept in the database and changed by admins, one section per page. Reading and
+ * changing them is 0 AIU.
  */
 export const SETTINGS_ROUTES: Routes = [
   {
@@ -52,6 +54,11 @@ export const SETTINGS_ROUTES: Routes = [
         path: 'pr-comments',
         title: 'Pull request comments · Team settings · Ahoy',
         component: PrCommentSettingsPage,
+      },
+      {
+        path: 'defects',
+        title: 'Defects · Team settings · Ahoy',
+        component: DefectSettingsPage,
       },
     ],
   },

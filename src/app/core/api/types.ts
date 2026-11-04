@@ -957,6 +957,28 @@ export type PrCommentSettings = Schemas['PrCommentSettings'];
 /** Body of `updatePrCommentSettings`; turning replies on needs `confirmReplies: true`. */
 export type PrCommentSettingsChange = Schemas['PrCommentSettingsChange'];
 
+/** Answer of `getDefectSettings`: the defect watch's settings and whether the person may change them. */
+export type DefectSettingsPage = Schemas['DefectSettingsPage'];
+
+/** Whether the watch is on, its query, the priorities tried and which repository fixes each Jira component. */
+export type DefectSettings = Schemas['DefectSettings'];
+
+/** Which repository fixes the defects of one Jira component. */
+export type ComponentRepository = Schemas['ComponentRepository'];
+
+/** Body of `updateDefectSettings`. */
+export type DefectSettingsChange = Schemas['DefectSettingsChange'];
+
+/** Answer of `listDefects`: the open defects as the watch last read them, and that pass. */
+export type DefectList = Schemas['DefectList'];
+
+/** One defect the watch saw, with its triage, whether someone ignored it, and its voyage if one was started. */
+export type Defect = Schemas['Defect'];
+
+/** What fixed rules say of a defect: whether Ahoy could try to fix it. */
+export type DefectTriage = Defect['triage'];
+export const DEFECT_TRIAGES = listOf<DefectTriage>()(['can_try', 'out']);
+
 /**
  * Answer of `getPhaseSettings`: each phase as its runs use it now, what the deployment gives it, what an admin set, and
  * the model catalogue.

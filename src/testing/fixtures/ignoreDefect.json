@@ -1,0 +1,19 @@
+{
+  "key": "PROJ-207",
+  "summary": "Export to CSV drops rows with an apostrophe in the name",
+  "priority": "Medium",
+  "jiraStatus": "Open",
+  "components": ["web-portal"],
+  "triage": "can_try",
+  "reasons": ["1 repository", "steps to reproduce"],
+  "repository": "web-portal",
+  "firstSeenAt": "2026-11-04T08:00:00.000Z",
+  "lastSeenAt": "2026-11-04T10:58:00.000Z",
+  "ignored": {
+    "by": "alex@example.com",
+    "byName": "Alex Example",
+    "at": "2026-11-04T11:00:00.000Z",
+    "reason": "Fixed by hand"
+  },
+  "voyage": null
+}
