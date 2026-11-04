@@ -1,6 +1,7 @@
 import type { DialogRef } from '@angular/cdk/dialog';
 import { Injectable, inject } from '@angular/core';
 import type {
+  BranchRelease,
   KnowledgeReview,
   ModelPlan,
   ModelSlot,
@@ -23,6 +24,10 @@ import {
   AssessCommentsDialog,
   type AssessCommentsDialogData,
 } from './assess-comments-dialog';
+import {
+  BranchReleaseDialog,
+  type BranchReleaseDialogData,
+} from './branch-release-dialog';
 import { BudgetDialog } from './budget-dialog';
 import {
   CancelKnowledgeReviewDialog,
@@ -97,6 +102,17 @@ export class VoyageDialogs {
       AssessCommentsDialogData,
       AssessCommentsDialog
     >(AssessCommentsDialog, { data });
+  }
+
+  /** "Deploy WP2's branch to TEST?" Closes with the release, queued. */
+  branchRelease(
+    data: BranchReleaseDialogData
+  ): DialogRef<BranchRelease, BranchReleaseDialog> {
+    return this.dialogs.open<
+      BranchRelease,
+      BranchReleaseDialogData,
+      BranchReleaseDialog
+    >(BranchReleaseDialog, { data, width: '520px' });
   }
 
   /** "Change the budget" */

@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { apiErrorView } from '@core/commands/command-error';
 import type { WorkPackageDecision } from '@core/api/types';
+import { releaseStatusLabel } from '@domain/branch-releases';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
@@ -18,6 +19,7 @@ import {
   type PackageRow,
 } from '../../context/work-packages';
 import { VoyageDialogs } from '../../dialogs/voyage-dialogs';
+import { BranchReleases, type PackageRelease } from './branch-releases';
 
 /** The placeholder rows while the state is read. */
 const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
@@ -31,6 +33,9 @@ const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
  * repository, agent, dependencies, status and why it needs rework or is stuck; the runs its `run.queued` events name
  * ("WP2 — implementation"), with each run's own status beside what Ahoy made of its report; and, while the voyage is halted
  * in implementation and the package is failed, stalled, blocked or unverified, Retry… and Accept….
+ *
+ * While the package's repository has an open pull request and Team settings › Branch releases gives it a workflow,
+ * Deploy to TEST… starts that workflow on the branch, and the card shows the repository's newest release.
  *
  * A run's success is not the package's acceptance: the package's status is the state's, the run's is the run's, and the
  * report's routing is shown as words of its own. The state holds no goal or description for a package; the plan's prose
@@ -50,6 +55,7 @@ const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
     RouterLink,
     SkeletonRows,
   ],
+  providers: [BranchReleases],
   styleUrl: './packages-tab.scss',
   template: `
     <ah-panel>
@@ -123,6 +129,24 @@ const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
                       </button>
                     </span>
                   }
+                  @if (releaseOf(row); as release) {
+                    @if (release.target.workflow) {
+                      <span class="packages__actions">
+                        <button
+                          type="button"
+                          ahButton
+                          size="sm"
+                          [disabled]="releases.pending()"
+                          [attr.aria-label]="
+                            'Deploy ' + row.pkg.id + '’s branch to TEST'
+                          "
+                          (click)="deploy(release)"
+                        >
+                          Deploy to TEST…
+                        </button>
+                      </span>
+                    }
+                  }
                 </div>
                 <dl class="packages__facts">
                   <div>
@@ -159,6 +183,52 @@ const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
                     </div>
                   }
                 </dl>
+                @if (releaseOf(row); as release) {
+                  <div class="packages__release">
+                    <span class="packages__label">TEST release</span>
+                    @if (release.latest; as latest) {
+                      <p class="packages__text">
+                        <span
+                          class="ah-tag packages__status packages__status--{{
+                            releaseTone(latest.status)
+                          }}"
+                          >{{ releaseLabel(latest.status) }}</span
+                        >
+                        · <span class="ah-mono">{{ latest.branch }}</span
+                        >, asked by
+                        {{ latest.requestedByName ?? latest.requestedBy }},
+                        {{ latest.requestedAt | ahDateTime }}
+                        @if (latest.runsUrl; as url) {
+                          ·
+                          <a [href]="url" target="_blank" rel="noopener"
+                            >The workflow's runs on GitHub</a
+                          >
+                        }
+                      </p>
+                      @if (latest.error; as error) {
+                        <p class="packages__text">{{ error }}</p>
+                      }
+                    } @else if (release.target.workflow) {
+                      <p class="ah-hint">
+                        Not released yet. Deploy to TEST runs
+                        <span class="ah-mono">{{
+                          release.target.workflow.workflow
+                        }}</span>
+                        on
+                        <span class="ah-mono">{{ release.target.branch }}</span
+                        >.
+                      </p>
+                    } @else {
+                      <p class="ah-hint">
+                        {{ row.pkg.repo }} has no release workflow. An admin
+                        sets one in
+                        <a routerLink="/settings/branch-releases"
+                          >Team settings › Branch releases</a
+                        >.
+                      </p>
+                    }
+                  </div>
+                }
                 @if (row.reason; as reason) {
                   <div class="packages__reason">
                     <span class="packages__label">{{
@@ -244,6 +314,7 @@ const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
 export class PackagesTab {
   private readonly context = inject(VoyageContext);
   private readonly dialogs = inject(VoyageDialogs);
+  protected readonly releases = inject(BranchReleases);
 
   protected readonly columns = PACKAGE_COLUMNS;
   protected readonly key = this.context.key;
@@ -274,6 +345,30 @@ export class PackagesTab {
       state?.value() === undefined ? (state?.error() ?? null) : null;
     return error === null ? null : apiErrorView(error);
   });
+
+  /** The package's open pull request as a release target, and its repository's newest release. */
+  protected releaseOf(row: PackageRow): PackageRelease | undefined {
+    return this.releases.forPackage(row.pkg.id);
+  }
+
+  protected releaseLabel = releaseStatusLabel;
+
+  /** The tag's colour for a release's status. */
+  protected releaseTone(status: string): 'active' | 'ok' | 'bad' {
+    if (status === 'dispatched') return 'ok';
+    return status === 'failed' ? 'bad' : 'active';
+  }
+
+  /** Opens "Deploy WP2's branch to TEST?" for a package whose repository has a release workflow. */
+  protected deploy(release: PackageRelease): void {
+    const workflow = release.target.workflow;
+    if (workflow === null) return;
+    this.dialogs.branchRelease({
+      releases: this.releases,
+      target: { ...release.target, workflow },
+      dispatchable: this.releases.releases()?.dispatchable === true,
+    });
+  }
 
   protected isActive(status: string): boolean {
     return status === 'queued' || status === 'running';

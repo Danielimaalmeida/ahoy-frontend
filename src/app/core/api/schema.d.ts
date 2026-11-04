@@ -635,6 +635,41 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/branch-releases': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The work packages whose pull request branch can be released to TEST, and the story's releases.
+     * @description `targets` are the work packages with a pull request the gates last saw open, each with its repository's
+     *     release workflow from Team settings › Branch releases (null: none set, so it cannot be released). `releases`
+     *     are the story's releases, newest first: `queued` until the reconciler starts the workflow, `dispatched` once
+     *     GitHub took it (the workflow's own outcome is on GitHub, at `runsUrl`), `failed` with GitHub's reason.
+     *     `dispatchable` says whether this deployment's reconciler starts workflows at all (Docker or Kubernetes
+     *     dispatch); where it does not, releases stay queued. Spends nothing.
+     */
+    readonly get: operations['getStoryBranchReleases'];
+    readonly put?: never;
+    /**
+     * Release a work package's pull request branch to TEST with its repository's workflow. 0 AIU.
+     * @description Queues the repository's `workflow_dispatch` workflow on the package's pull request branch, with the inputs
+     *     Team settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow
+     *     deploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the
+     *     package has no open pull request, its repository has no release workflow, or a release of that repository
+     *     is still queued. Anyone allowed into Ahoy may release. Spends no AIU.
+     */
+    readonly post: operations['requestBranchRelease'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/anchors': {
     readonly parameters: {
       readonly query?: never;
@@ -2378,6 +2413,74 @@ export interface paths {
      *     (`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).
      */
     readonly patch: operations['updatePhaseSettings'];
+    readonly trace?: never;
+  };
+  readonly '/settings/branch-releases': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Which workflow of each child repository releases a pull request branch to TEST, and with which inputs.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A work package whose repository
+     *     has a row offers a release on the story page while its pull request is open; the inputs are sent as written,
+     *     case included (`test` in one repository, `TEST` in another). `dispatchable` says whether this deployment's
+     *     reconciler starts workflows (Docker or Kubernetes dispatch). 0 AIU.
+     */
+    readonly get: operations['getBranchReleaseSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/branch-releases/repositories': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Give a repository its release workflow and inputs. Admins only.
+     * @description `repository` is a plan alias, `owner/name` or `host/owner/name`; each repository is named once (`400`).
+     *     `workflow` is a file of `.github/workflows/` with a `workflow_dispatch` trigger (`branch-release.yaml`).
+     *     `inputs` are at most 25, by name; a boolean is sent as `true` or `false`.
+     */
+    readonly post: operations['addBranchReleaseRepository'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/branch-releases/repositories/{repositoryId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly repositoryId: components['parameters']['BranchReleaseRepositoryId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    readonly post?: never;
+    /** Take a repository's release workflow away, so its work packages offer no release. Admins only. */
+    readonly delete: operations['deleteBranchReleaseRepository'];
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Change a repository's release workflow or its inputs (all of them at once). Admins only.
+     * @description `409 stale_version` when `version` is not the row's.
+     */
+    readonly patch: operations['updateBranchReleaseRepository'];
     readonly trace?: never;
   };
   readonly '/settings/events': {
@@ -4434,6 +4537,97 @@ export interface components {
     readonly IgnoreDefectRequest: {
       readonly reason?: string | null;
     };
+    /** @description The `workflow_dispatch` inputs by name, each sent as `gh workflow run -f name=value`. */
+    readonly BranchReleaseInputs: {
+      readonly [key: string]: string;
+    };
+    readonly BranchReleaseInputsRequest: {
+      readonly [key: string]: string | boolean;
+    };
+    readonly BranchReleaseSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description Whether this deployment's reconciler starts workflows (Docker or Kubernetes dispatch). */
+      readonly dispatchable: boolean;
+      readonly repositories: readonly components['schemas']['BranchReleaseRepository'][];
+    };
+    readonly BranchReleaseRepository: {
+      /** Format: uuid */
+      readonly id: string;
+      readonly repository: string;
+      /** @description A file of `.github/workflows/`. */
+      readonly workflow: string;
+      readonly inputs: components['schemas']['BranchReleaseInputs'];
+      readonly version: number;
+      readonly updatedBy: string;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly BranchReleaseRepositoryRequest: {
+      readonly repository: string;
+      readonly workflow: string;
+      readonly inputs?: components['schemas']['BranchReleaseInputsRequest'];
+    };
+    readonly BranchReleaseRepositoryChange: {
+      readonly version: number;
+      readonly workflow?: string;
+      readonly inputs?: components['schemas']['BranchReleaseInputsRequest'];
+    };
+    readonly BranchReleaseRequest: {
+      readonly workPackageId: string;
+      /** @description Must be true: the workflow deploys the branch to a shared environment. */
+      readonly confirm: boolean;
+    };
+    readonly BranchReleaseTarget: {
+      readonly workPackageId: string;
+      /** @description The package's plan alias. */
+      readonly repo: string;
+      /** @description `host/owner/name`. */
+      readonly slug: string;
+      readonly branch: string;
+      readonly prNumber: number;
+      readonly prUrl: string;
+      /** @description The repository's release workflow; null when Team settings › Branch releases has none. */
+      readonly workflow: null | {
+        /** @description The settings row's repository name. */
+        readonly repository: string;
+        readonly workflow: string;
+        readonly inputs: components['schemas']['BranchReleaseInputs'];
+      };
+    };
+    readonly BranchRelease: {
+      /** Format: uuid */
+      readonly id: string;
+      readonly workPackageId: string;
+      readonly repo: string;
+      readonly slug: string;
+      readonly branch: string;
+      readonly prNumber: number;
+      readonly workflow: string;
+      readonly inputs: components['schemas']['BranchReleaseInputs'];
+      /**
+       * @description `queued` for the reconciler, `dispatched` once GitHub took it, `failed` with GitHub's reason.
+       * @enum {string}
+       */
+      readonly status: 'queued' | 'dispatched' | 'failed';
+      readonly error: string | null;
+      readonly requestedBy: string;
+      readonly requestedByName: string | null;
+      /** Format: date-time */
+      readonly requestedAt: string;
+      /** Format: date-time */
+      readonly dispatchedAt: string | null;
+      /** @description The workflow's runs on the branch, on GitHub, where its outcome is. */
+      readonly runsUrl: string | null;
+    };
+    readonly StoryBranchReleases: {
+      readonly key: string;
+      /** @description Whether this deployment's reconciler starts workflows; where it does not, releases stay queued. */
+      readonly dispatchable: boolean;
+      readonly targets: readonly components['schemas']['BranchReleaseTarget'][];
+      readonly releases: readonly components['schemas']['BranchRelease'][];
+    };
     /** @enum {string} */
     readonly PhaseSettingField:
       | 'model'
@@ -4566,6 +4760,7 @@ export interface components {
     readonly MeetingStoryDraftId: string;
     readonly SonarServerId: string;
     readonly SonarRepositoryId: string;
+    readonly BranchReleaseRepositoryId: string;
     readonly CrewMemberId: string;
     readonly CrewTimeOffId: string;
     /** @description The sprint's first day. */
@@ -5409,6 +5604,62 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly getStoryBranchReleases: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The targets and the releases. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['StoryBranchReleases'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly requestBranchRelease: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['BranchReleaseRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The release, queued. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['BranchRelease'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly amendAnchors: {
@@ -7988,6 +8239,111 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly getBranchReleaseSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The branch release settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['BranchReleaseSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly addBranchReleaseRepository: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['BranchReleaseRepositoryRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The repository's release workflow. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['BranchReleaseRepository'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly deleteBranchReleaseRepository: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly repositoryId: components['parameters']['BranchReleaseRepositoryId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The repository has no release workflow. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly updateBranchReleaseRepository: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly repositoryId: components['parameters']['BranchReleaseRepositoryId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['BranchReleaseRepositoryChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The repository's release workflow, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['BranchReleaseRepository'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly listSettingsEvents: {
     readonly parameters: {
       readonly query?: {
@@ -8002,7 +8358,8 @@ export interface operations {
           | 'agents'
           | 'phases'
           | 'pr_comments'
-          | 'defects';
+          | 'defects'
+          | 'branch_releases';
       };
       readonly header?: never;
       readonly path?: never;

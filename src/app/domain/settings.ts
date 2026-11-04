@@ -10,6 +10,7 @@ import { describeJiraEvent } from './jira-settings';
 import { describePhaseEvent } from './phase-settings';
 import { describePrCommentEvent } from './pr-comment-settings';
 import { describeDefectEvent } from './defect-settings';
+import { describeBranchReleaseEvent } from './branch-releases';
 import { describeTeamsEvent } from './teams-settings';
 
 /** One change of a field, as the API records it: `{ from, to }`. */
@@ -120,6 +121,7 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
         describePhaseEvent(type, payload) ??
         describePrCommentEvent(type, payload) ??
         describeDefectEvent(type, payload) ??
+        describeBranchReleaseEvent(type, payload) ??
         type
       );
   }
