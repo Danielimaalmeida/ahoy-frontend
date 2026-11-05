@@ -19,23 +19,186 @@
 }
 
 .artifacts__files {
-  flex: 1 1 240px;
-  max-width: 300px;
+  flex: 1 1 260px;
+  max-width: 340px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2);
   border-right: 1px solid var(--line-soft);
   box-sizing: border-box;
+  min-width: 0;
+}
+
+// The filter, the count and "Changed only", above the list.
+.artifacts__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1\.5) var(--space-2);
+  padding: var(--space-2\.5) var(--space-2\.5) var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.artifacts__filter {
+  flex: 1 1 100%;
+  height: 30px;
+  border-radius: 9px;
+  font-size: 12.5px;
+}
+
+.artifacts__count {
+  font-size: 11.5px;
+}
+
+.artifacts__only {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+// The list scrolls on its own, so a long set of frames does not push the open file down the page.
+.artifacts__tree {
+  max-height: max(360px, calc(100vh - 260px));
+  overflow-y: auto;
+  padding: var(--space-1\.5) var(--space-1\.5) var(--space-2);
+}
+
+.artifacts__entries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.artifacts__entries--nested {
+  margin: 1px 0 var(--space-1) 13px;
+  padding-left: var(--space-1\.5);
+  border-left: 1px solid var(--line-soft);
+}
+
+// Folder and frame headings: native <details>, so they open with the keyboard and need no state.
+.artifacts__folder + .artifacts__folder,
+.artifacts__entries + .artifacts__folder {
+  margin-top: var(--space-1\.5);
+}
+
+.artifacts__folder-head,
+.artifacts__group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1\.5);
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.artifacts__folder-head {
+  position: sticky;
+  top: calc(-1 * var(--space-1\.5));
+  z-index: 1;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.artifacts__dir {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifacts__group-head {
+  color: var(--ink);
+  font-size: 12.5px;
+}
+
+.artifacts__stem-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artifacts__chevron {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin: 0 3px 0 1px;
+  border-right: 1.6px solid var(--ink-muted);
+  border-bottom: 1.6px solid var(--ink-muted);
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+
+  details[open] > summary > & {
+    transform: rotate(45deg);
+  }
+}
+
+// Two offset squares: "these files belong together".
+.artifacts__stack {
+  flex: none;
+  position: relative;
+  width: 12px;
+  height: 12px;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border: 1.4px solid var(--ink-muted);
+    border-radius: 2px;
+    background: var(--surface);
+  }
+
+  &::before {
+    top: 0;
+    left: 0;
+  }
+
+  &::after {
+    right: 0;
+    bottom: 0;
+  }
+}
+
+.artifacts__badge {
+  flex: none;
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .artifacts__file {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 7px 10px;
-  border-radius: 9px;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: 3px var(--space-2);
+  border-radius: 8px;
   color: var(--ink);
+  font-size: 12.5px;
+  text-decoration: none;
 
   &:hover {
     background: var(--surface-hover);
@@ -45,45 +208,87 @@
 .artifacts__file--open {
   background: var(--accent-soft);
 
-  .artifacts__path {
+  &:hover {
+    background: var(--accent-soft);
+  }
+
+  .artifacts__path,
+  .artifacts__stem {
     color: var(--accent-text);
+  }
+
+  .artifacts__path {
     font-weight: 600;
   }
 }
 
-.artifacts__name {
-  display: flex;
+// The file type at a glance: MD, JSON, PNG.
+.artifacts__ext {
+  flex: none;
+  width: 34px;
+  height: 16px;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  color: inherit;
-  text-decoration: none;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  overflow: hidden;
 }
 
 .artifacts__path {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.artifacts__status {
-  margin-left: auto;
-  flex: none;
+.artifacts__stem {
   color: var(--ink-muted);
-  font-size: 11px;
-  font-weight: 500;
 }
 
 .artifacts__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2\.5);
+  flex: none;
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
-.artifacts__link {
-  font-size: 12px;
+.artifacts__status {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
 
-  &:first-of-type {
-    margin-left: auto;
+  &[data-tone='new'] {
+    background: var(--diff-add-bg);
+    color: var(--diff-add-fg);
   }
+
+  &[data-tone='removed'],
+  &[data-tone='problem'] {
+    background: var(--diff-del-bg);
+    color: var(--diff-del-fg);
+  }
+
+  &[data-tone='changed'] {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+}
+
+.artifacts__none {
+  margin: 0;
+  padding: var(--space-3) var(--space-2);
 }
 
 .artifacts__detail {
@@ -122,6 +327,64 @@
   overflow-wrap: anywhere;
 }
 
+// Images: on a checkerboard, so transparent frames read as transparent; never wider than the pane.
+.artifacts__images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3\.5) var(--space-4);
+}
+
+.artifacts__image {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1\.5);
+  min-width: 0;
+
+  figcaption {
+    color: var(--ink-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    max-height: 70vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    align-self: flex-start;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background-color: var(--surface);
+    background-image:
+      linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--surface-sunken) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--surface-sunken) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--surface-sunken) 75%);
+    background-size: 16px 16px;
+    background-position:
+      0 0,
+      0 8px,
+      8px -8px,
+      -8px 0;
+  }
+}
+
+.artifacts__image--single {
+  padding: var(--space-3\.5) var(--space-4);
+}
+
+.artifacts__image--before figcaption {
+  color: var(--diff-del-fg);
+}
+
+.artifacts__image--after figcaption {
+  color: var(--diff-add-fg);
+}
+
 .artifacts__note {
   margin: 0;
   padding: var(--space-3) var(--space-4);
@@ -145,6 +408,10 @@
     max-width: none;
     border-right: 0;
     border-bottom: 1px solid var(--line-soft);
+  }
+
+  .artifacts__tree {
+    max-height: 50vh;
   }
 
   .artifacts__detail {

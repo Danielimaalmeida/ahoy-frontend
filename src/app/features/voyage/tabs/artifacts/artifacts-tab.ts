@@ -4,8 +4,10 @@ import {
   computed,
   effect,
   inject,
+  signal,
   untracked,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -20,7 +22,8 @@ import { SectionTabs, type SectionTab } from '@ui/section-tabs/section-tabs';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { formatSize, kindLabel, PREVIEW_LIMIT_BYTES } from './artifact-files';
 import { ArtifactsView } from './artifacts-view';
-import { statusLabel } from './file-compare';
+import { statusLabel, type FileState } from './file-compare';
+import { buildTree, splitPath, type TreeFile } from './file-tree';
 
 const VIEW_ONLY: readonly SectionTab[] = [{ id: 'view', label: 'View' }];
 const VIEW_OR_COMPARE: readonly SectionTab[] = [
@@ -28,16 +31,82 @@ const VIEW_OR_COMPARE: readonly SectionTab[] = [
   { id: 'compare', label: 'Compare' },
 ];
 
+/** How a row's status reads at a glance. */
+type Tone = 'same' | 'new' | 'removed' | 'changed' | 'pending' | 'problem';
+
 /** One row of the file list. */
 interface FileRow {
   readonly path: string;
-  readonly meta: string;
+  /** The ext badge: `MD`, `JSON`, `PNG`. */
+  readonly ext: string;
+  /** The name as the row shows it, after a dimmed lead: `↳ ` + `118-4994` for a frame's variant. */
+  readonly dim: string;
+  readonly rest: string;
+  /** "Markdown · " for screen readers, ahead of the size. */
+  readonly typeSr: string;
+  /** View only: the size, when the open revision is the current one; empty otherwise. */
+  readonly size: string;
+  /** Compare only: `same`, `+9 −3`, `new`… */
   readonly status: string;
+  readonly tone: Tone;
+  /** Compare only: whether the file is the same in both revisions. */
+  readonly same: boolean;
   readonly open: boolean;
-  /** The query of the link on the file's name: the same mode, this file. */
+  /** The query of the link on the row: the same mode, this file. */
   readonly link: Record<string, string>;
-  readonly view: Record<string, string>;
-  readonly compare: Record<string, string> | null;
+}
+
+/** A row of the list: one file, or a stem's files under one heading. */
+type Entry =
+  | { readonly kind: 'file'; readonly key: string; readonly row: FileRow }
+  | {
+      readonly kind: 'group';
+      readonly key: string;
+      readonly stem: string;
+      readonly rows: readonly FileRow[];
+      readonly summary: string;
+      readonly open: boolean;
+    };
+
+/** One folder of the list, with what its heading says ("12 files", "3 changed"). */
+interface Folder {
+  readonly dir: string;
+  readonly entries: readonly Entry[];
+  readonly summary: string;
+}
+
+function toneOf(state: FileState | undefined): Tone {
+  switch (state?.kind) {
+    case undefined:
+    case 'loading':
+      return 'pending';
+    case 'same':
+    case 'missing':
+      return 'same';
+    case 'new':
+      return 'new';
+    case 'removed':
+      return 'removed';
+    case 'changed':
+      return 'changed';
+    default:
+      return 'problem';
+  }
+}
+
+/** "1 file", "12 files". */
+function files(count: number): string {
+  return `${count} ${count === 1 ? 'file' : 'files'}`;
+}
+
+/** A heading's summary: the file count in View; in Compare, how many changed ("3 changed", "same"). */
+function summarize(rows: readonly FileRow[], compare: boolean): string {
+  if (!compare) return files(rows.length);
+  const changed = rows.filter((row) => !row.same);
+  if (changed.length === 0) return 'same';
+  return changed.every((row) => row.tone === 'new')
+    ? `${changed.length} new`
+    : `${changed.length} changed`;
 }
 
 /**
@@ -49,6 +118,7 @@ interface FileRow {
 @Component({
   selector: 'ah-artifacts-tab',
   imports: [
+    NgTemplateOutlet,
     ReactiveFormsModule,
     RouterLink,
     ArtifactDiff,
@@ -150,47 +220,66 @@ interface FileRow {
           } @else {
             <div class="artifacts__body">
               <nav class="artifacts__files" aria-label="Files">
-                @for (row of rows(); track row.path) {
-                  <div
-                    class="artifacts__file"
-                    [class.artifacts__file--open]="row.open"
-                  >
-                    <a
-                      class="artifacts__name"
-                      [routerLink]="[]"
-                      [queryParams]="row.link"
-                      [attr.aria-current]="row.open ? 'true' : null"
-                    >
-                      <span class="ah-mono artifacts__path">{{
-                        row.path
-                      }}</span>
-                      @if (row.status !== '') {
-                        <small class="artifacts__status">{{
-                          row.status
-                        }}</small>
+                <div class="artifacts__tools">
+                  <input
+                    type="search"
+                    class="ah-input artifacts__filter"
+                    placeholder="Filter files"
+                    aria-label="Filter files"
+                    [value]="filter()"
+                    (input)="setFilter($event)"
+                  />
+                  <span class="artifacts__count ah-hint" role="status">{{
+                    countLabel()
+                  }}</span>
+                  @if (selection().mode === 'compare') {
+                    <label class="artifacts__only">
+                      <input
+                        type="checkbox"
+                        [checked]="changedOnly()"
+                        (change)="changedOnly.set(!changedOnly())"
+                      />
+                      Changed only
+                    </label>
+                  }
+                </div>
+                <div class="artifacts__tree">
+                  @for (folder of tree(); track folder.dir) {
+                    @if (folder.dir === '') {
+                      <ng-container
+                        [ngTemplateOutlet]="entriesTpl"
+                        [ngTemplateOutletContext]="{ $implicit: folder }"
+                      />
+                    } @else {
+                      <details class="artifacts__folder" [open]="true">
+                        <summary class="artifacts__folder-head">
+                          <span
+                            class="artifacts__chevron"
+                            aria-hidden="true"
+                          ></span>
+                          <span class="ah-mono artifacts__dir"
+                            >{{ folder.dir }}/</span
+                          >
+                          <span class="artifacts__badge">{{
+                            folder.summary
+                          }}</span>
+                        </summary>
+                        <ng-container
+                          [ngTemplateOutlet]="entriesTpl"
+                          [ngTemplateOutletContext]="{ $implicit: folder }"
+                        />
+                      </details>
+                    }
+                  } @empty {
+                    <p class="ah-hint artifacts__none">
+                      @if (filter() !== '') {
+                        No file matches “{{ filter() }}”.
+                      } @else {
+                        No file changed between these revisions.
                       }
-                    </a>
-                    <span class="artifacts__meta">
-                      <span class="ah-hint">{{ row.meta }}</span>
-                      <a
-                        class="artifacts__link"
-                        [routerLink]="[]"
-                        [queryParams]="row.view"
-                        [attr.aria-label]="'View ' + row.path"
-                        >View</a
-                      >
-                      @if (row.compare; as params) {
-                        <a
-                          class="artifacts__link"
-                          [routerLink]="[]"
-                          [queryParams]="params"
-                          [attr.aria-label]="'Compare ' + row.path"
-                          >Compare</a
-                        >
-                      }
-                    </span>
-                  </div>
-                }
+                    </p>
+                  }
+                </div>
               </nav>
               <div class="artifacts__detail">
                 @if (selection().path; as path) {
@@ -236,6 +325,56 @@ interface FileRow {
                         [next]="d.next"
                         [label]="describe()"
                       />
+                    } @else if (d.kind === 'image') {
+                      @if (d.change === 'view') {
+                        <figure
+                          class="artifacts__image artifacts__image--single"
+                        >
+                          <img [src]="d.next" [alt]="path" />
+                        </figure>
+                      } @else {
+                        @if (d.change === 'new') {
+                          <p class="ah-hint artifacts__note">
+                            New image: it was not in revision
+                            {{ selection().base }}.
+                          </p>
+                        } @else if (d.change === 'removed') {
+                          <p class="ah-hint artifacts__note">
+                            Removed image: it is not in revision
+                            {{ selection().target }}.
+                          </p>
+                        }
+                        <div class="artifacts__images">
+                          @if (d.previous !== null) {
+                            <figure
+                              class="artifacts__image artifacts__image--before"
+                            >
+                              <figcaption>
+                                Revision {{ selection().base }}
+                              </figcaption>
+                              <img
+                                [src]="d.previous"
+                                [alt]="path + ', revision ' + selection().base"
+                              />
+                            </figure>
+                          }
+                          @if (d.next !== null) {
+                            <figure
+                              class="artifacts__image artifacts__image--after"
+                            >
+                              <figcaption>
+                                Revision {{ selection().target }}
+                              </figcaption>
+                              <img
+                                [src]="d.next"
+                                [alt]="
+                                  path + ', revision ' + selection().target
+                                "
+                              />
+                            </figure>
+                          }
+                        </div>
+                      }
                     } @else if (d.kind === 'same') {
                       <p class="ah-muted artifacts__note">
                         No changes between revision {{ selection().base }} and
@@ -294,6 +433,73 @@ interface FileRow {
         }
       }
     </ah-panel>
+    <ng-template #entriesTpl let-folder>
+      <ul class="artifacts__entries" role="list">
+        @for (entry of folder.entries; track entry.key) {
+          <li>
+            @if (entry.kind === 'file') {
+              <ng-container
+                [ngTemplateOutlet]="fileTpl"
+                [ngTemplateOutletContext]="{ $implicit: entry.row }"
+              />
+            } @else {
+              <details class="artifacts__group" [open]="entry.open">
+                <summary class="artifacts__group-head">
+                  <span class="artifacts__chevron" aria-hidden="true"></span>
+                  <span class="artifacts__stack" aria-hidden="true"></span>
+                  <span class="ah-mono artifacts__stem-name">{{
+                    entry.stem
+                  }}</span>
+                  <span class="artifacts__badge">{{ entry.summary }}</span>
+                </summary>
+                <ul
+                  class="artifacts__entries artifacts__entries--nested"
+                  role="list"
+                >
+                  @for (row of entry.rows; track row.path) {
+                    <li>
+                      <ng-container
+                        [ngTemplateOutlet]="fileTpl"
+                        [ngTemplateOutletContext]="{ $implicit: row }"
+                      />
+                    </li>
+                  }
+                </ul>
+              </details>
+            }
+          </li>
+        }
+      </ul>
+    </ng-template>
+
+    <ng-template #fileTpl let-row>
+      <a
+        class="artifacts__file"
+        [class.artifacts__file--open]="row.open"
+        [routerLink]="[]"
+        [queryParams]="row.link"
+        [attr.aria-current]="row.open ? 'true' : null"
+        [attr.data-path]="row.path"
+        [title]="row.path"
+      >
+        <span class="artifacts__ext" aria-hidden="true">{{
+          row.ext || '·'
+        }}</span>
+        <span class="ah-mono artifacts__path"
+          ><span class="artifacts__stem">{{ row.dim }}</span
+          >{{ row.rest }}</span
+        >
+        <span class="artifacts__meta"
+          ><span class="ah-sr">{{ row.typeSr }}</span
+          >{{ row.size }}</span
+        >
+        @if (row.status !== '') {
+          <small class="artifacts__status" [attr.data-tone]="row.tone">{{
+            row.status
+          }}</small>
+        }
+      </a>
+    </ng-template>
   `,
 })
 export class ArtifactsTab {
@@ -366,36 +572,119 @@ export class ArtifactsTab {
       : label(target);
   });
 
-  protected readonly rows = computed<readonly FileRow[]>(() => {
+  /** What the filter box holds; the list shows the paths that contain it, whatever the case. */
+  protected readonly filter = signal('');
+  /** Compare only: hide the files that are the same in both revisions. */
+  protected readonly changedOnly = signal(false);
+
+  /** Every file's row, by path. */
+  private readonly rows = computed<ReadonlyMap<string, FileRow>>(() => {
     const selection = this.selection();
     const compare = selection.mode === 'compare';
     const changes = this.view.changes();
     const sizesKnown = selection.target === this.view.current();
     const items = new Map(this.view.items().map((item) => [item.path, item]));
-    return this.view
-      .paths()
-      .filter((path) => !compare || changes.get(path)?.kind !== 'missing')
-      .map((path) => {
-        const item = items.get(path);
-        const kind = this.view.kindOf(path);
-        const type = kindLabel(kind);
-        return {
-          path,
-          meta:
-            item !== undefined && sizesKnown
-              ? `${type} · ${formatSize(item.sizeBytes)}`
-              : type,
-          status: compare ? statusLabel(changes.get(path), kind) : '',
-          open: path === selection.path,
-          link: this.view.queryFor({ path }),
-          view: this.view.queryFor({ path, mode: 'view' }),
-          compare:
-            selection.base === null
-              ? null
-              : this.view.queryFor({ path, mode: 'compare' }),
-        };
+    const rows = new Map<string, FileRow>();
+    for (const path of this.view.paths()) {
+      const change = changes.get(path);
+      if (compare && change?.kind === 'missing') continue;
+      const item = items.get(path);
+      const kind = this.view.kindOf(path);
+      const { name } = splitPath(path);
+      const size =
+        item !== undefined && sizesKnown && !compare
+          ? formatSize(item.sizeBytes)
+          : '';
+      rows.set(path, {
+        path,
+        ext: '',
+        dim: '',
+        rest: name,
+        typeSr: size === '' ? kindLabel(kind) : `${kindLabel(kind)} · `,
+        size,
+        status: compare ? statusLabel(change, kind) : '',
+        tone: compare ? toneOf(change) : 'same',
+        same: compare && change?.kind === 'same',
+        open: path === selection.path,
+        link: this.view.queryFor({ path }),
       });
+    }
+    return rows;
   });
+
+  /** The list: folders, then frames and their variants gathered, filtered by the box and "Changed only". */
+  protected readonly tree = computed<readonly Folder[]>(() => {
+    const compare = this.selection().mode === 'compare';
+    const query = this.filter().trim().toLowerCase();
+    const hideSame = compare && this.changedOnly();
+    const rows = this.rows();
+    const shown = [...rows.values()]
+      .filter((row) => query === '' || row.path.toLowerCase().includes(query))
+      .filter((row) => !hideSame || !row.same)
+      .map((row) => row.path);
+    // The row of a placed file. Inside a group the stem is the heading, so a variant reads by what makes it one:
+    // `118-4993--118-4994.png` is "↳ 118-4994" (the badge says PNG, the title the whole path).
+    const place = (file: TreeFile, stem: string): FileRow[] => {
+      const row = rows.get(file.path);
+      if (row === undefined) return [];
+      const variant = stem !== '' && file.name.startsWith(`${stem}--`);
+      const tail = file.name.slice(stem.length + 2);
+      const dot = tail.lastIndexOf('.');
+      return [
+        {
+          ...row,
+          ext: file.ext,
+          dim: variant ? '↳ ' : '',
+          rest: variant ? (dot > 0 ? tail.slice(0, dot) : tail) : file.name,
+        },
+      ];
+    };
+    return buildTree(shown).map((folder) => {
+      const entries = folder.entries.flatMap((entry): Entry[] => {
+        if (entry.kind === 'file')
+          return place(entry.file, '').map((row) => ({
+            kind: 'file',
+            key: row.path,
+            row,
+          }));
+        const members = entry.files.flatMap((file) => place(file, entry.stem));
+        return [
+          {
+            kind: 'group',
+            key: `${folder.dir}/${entry.stem}`,
+            stem: entry.stem,
+            rows: members,
+            summary: summarize(members, compare),
+            open: query !== '' || members.some((row) => row.open),
+          },
+        ];
+      });
+      const all = entries.flatMap((entry) =>
+        entry.kind === 'file' ? [entry.row] : entry.rows
+      );
+      return { dir: folder.dir, entries, summary: summarize(all, compare) };
+    });
+  });
+
+  /** "24 files", or "3 of 24 files" while the box filters. */
+  protected readonly countLabel = computed(() => {
+    const total = this.rows().size;
+    const shown = this.tree().reduce(
+      (sum, folder) =>
+        sum +
+        folder.entries.reduce(
+          (n, entry) => n + (entry.kind === 'file' ? 1 : entry.rows.length),
+          0
+        ),
+      0
+    );
+    return shown === total ? files(total) : `${shown} of ${files(total)}`;
+  });
+
+  protected setFilter(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) this.filter.set(target.value);
+  }
 
   protected pickMode(mode: string | null): void {
     if (mode === 'view' || mode === 'compare') this.view.go({ mode });

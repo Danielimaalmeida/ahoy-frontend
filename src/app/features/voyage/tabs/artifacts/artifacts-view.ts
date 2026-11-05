@@ -18,6 +18,7 @@ import {
   textBytes,
   type FileKind,
 } from './artifact-files';
+import { ARTIFACT_IMAGES, type ImageRead } from './artifact-images';
 import { ARTIFACT_READER, etagFor } from './artifact-reader';
 import { compareFile, type FileChange, type FileState } from './file-compare';
 import { revisionOptions } from './revision-labels';
@@ -43,6 +44,16 @@ export type Detail =
       readonly change: 'changed' | 'new' | 'removed';
       readonly previous: string;
       readonly next: string;
+    }
+  /**
+   * An image, shown as itself. View: `next` only. Compare: both sides of a changed image, or the one side of a new or
+   * removed one (the other is null).
+   */
+  | {
+      readonly kind: 'image';
+      readonly change: 'view' | 'changed' | 'new' | 'removed';
+      readonly previous: string | null;
+      readonly next: string | null;
     }
   | { readonly kind: 'same' }
   /** View: not in that revision. Compare: in neither. */
@@ -124,6 +135,7 @@ export class ArtifactsView {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly reader = inject(ARTIFACT_READER);
+  private readonly images = inject(ARTIFACT_IMAGES);
   private readonly params = toSignal(this.route.queryParamMap, {
     requireSync: true,
   });
@@ -343,21 +355,16 @@ export class ArtifactsView {
     revision: number
   ): Promise<FileChange> {
     const item = items.find((candidate) => candidate.path === path);
+    const kind = fileKind(path, item?.mediaType ?? null);
     if (
+      kind !== 'image' &&
       item !== undefined &&
       target === revision &&
       isTooLarge(item.sizeBytes)
     ) {
       return Promise.resolve({ kind: 'too_large' });
     }
-    return compareFile(
-      this.reader,
-      key,
-      path,
-      base,
-      target,
-      fileKind(path, item?.mediaType ?? null)
-    );
+    return compareFile(this.reader, key, path, base, target, kind);
   }
 
   private async openFile(job: FileJob | null): Promise<void> {
@@ -373,6 +380,7 @@ export class ArtifactsView {
     this.seed(job.key, job.revision, job.item === null ? [] : [job.item]);
     const path = job.path;
     const kind = fileKind(path, job.item?.mediaType ?? null);
+    if (kind === 'image') return show(await this.imageDetail(job, path));
     if (
       job.item !== null &&
       job.target === job.revision &&
@@ -430,6 +438,69 @@ export class ArtifactsView {
             ? { kind: 'diff', change: 'new', previous: '', next: text }
             : { kind: 'diff', change: 'removed', previous: text, next: '' }
         );
+      }
+    }
+  }
+
+  /**
+   * An image's pane: the picture in View; in Compare, whether it changed (by ETag, without a line diff) and the pictures
+   * of the sides that exist. Images are not held to the text preview's size limit: the browser draws them, not the diff.
+   */
+  private async imageDetail(job: FileJob, path: string): Promise<Detail> {
+    const picture = (read: ImageRead): Detail | string =>
+      read.kind === 'image'
+        ? read.url
+        : read.kind === 'absent'
+          ? { kind: 'absent' }
+          : read;
+    if (job.mode === 'view' || job.base === null) {
+      const next = picture(await this.images.image(job.key, path, job.target));
+      return typeof next === 'string'
+        ? { kind: 'image', change: 'view', previous: null, next }
+        : next;
+    }
+    const change = await compareFile(
+      this.reader,
+      job.key,
+      path,
+      job.base,
+      job.target,
+      'image'
+    );
+    switch (change.kind) {
+      case 'same':
+      case 'error':
+        return change;
+      case 'missing':
+        return { kind: 'absent' };
+      case 'too_large':
+        return { kind: 'too_large', bytes: null };
+      case 'new': {
+        const next = picture(
+          await this.images.image(job.key, path, job.target)
+        );
+        return typeof next === 'string'
+          ? { kind: 'image', change: 'new', previous: null, next }
+          : next;
+      }
+      case 'removed': {
+        const previous = picture(
+          await this.images.image(job.key, path, job.base)
+        );
+        return typeof previous === 'string'
+          ? { kind: 'image', change: 'removed', previous, next: null }
+          : previous;
+      }
+      case 'changed': {
+        const [before, after] = await Promise.all([
+          this.images.image(job.key, path, job.base),
+          this.images.image(job.key, path, job.target),
+        ]);
+        const previous = picture(before);
+        const next = picture(after);
+        if (typeof previous !== 'string') return previous;
+        if (typeof next !== 'string') return next;
+        return { kind: 'image', change: 'changed', previous, next };
       }
     }
   }

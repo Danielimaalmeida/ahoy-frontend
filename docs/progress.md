@@ -1,14 +1,24 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-05 (Release to TEST, with `ahoy-hosted`'s `feat/deploy-all-to-test`; tested on fakes, and seen in
-Chromium with the test fixtures as every API answer, only). One page: replace it,
+Updated 2026-11-05 (the Artifacts list redesign and image previews, frontend only; tested on the mock backend, and seen
+in Chromium with the test fixtures as every API answer, only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/deploy-all-to-test`, 2026-11-04):** **Release to TEST** (`ahoy-hosted` design §4 "Branch
+- **This branch (`feat/artifacts-list-redesign`, 2026-11-05, asked for by the user on 2026-11-03):** the voyage's
+  **Artifacts** list is grouped: top-level files first, then one collapsible heading per folder (`design/frames/`, with
+  its count, or how many changed in Compare); a design frame's PNG, its JSON and its `--` variants are one collapsible
+  entry (`file-tree.ts`), the variants named "↳ 118-4994". Each row has a type badge (MD, JSON, PNG), the name without
+  its folder, and the size (View) or a coloured change badge (Compare); the per-row View and Compare links are gone
+  (the pill sets the mode). A filter box and, in Compare, "Changed only" sit above the list, which scrolls on its own.
+  **Images** (PNG, JPEG, GIF, WebP; SVG stays text) are read as bytes (`getArtifactBlob`, same endpoint) and shown as
+  pictures through cached object URLs (`artifact-images.ts`) instead of their bytes as text; Compare shows a changed
+  image's two revisions side by side and a new or removed one alone. The API types PNGs `text/plain`, so the kind
+  comes from the extension. The tab was screenshotted from its rendered test DOM in Chromium; not run on `ng serve`.
+- **Merged before (`feat/deploy-all-to-test`, #59, 2026-11-04):** **Release to TEST** (`ahoy-hosted` design §4 "Branch
   releases", asked for by the user on 2026-11-04: one click releases everything). The voyage header has a green pill
   with a rocket, "Release to TEST" and how many repositories it releases, while at least one repository of the voyage
   has an open pull request and a release workflow (not on a cancelled voyage). It opens "Deploy N repositories'
@@ -75,7 +85,11 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 ## Proof
 
-- **Last full run** (2026-11-04, `feat/deploy-all-to-test` on `main` after #58, cloud container, Node 22, a local
+- **Last full run** (2026-11-05, `feat/artifacts-list-redesign` on `main` after #59, same setup as below): Vitest 200
+  files, 3,386 tests, all passed (new: `file-tree` 6, `artifact-images` 3, `getArtifactBlob` 2, the image kinds 1, the
+  tab's grouping, filter, "Changed only" and three image cases 6); typecheck, eslint, stylelint, `ng build` and
+  `prettier --check .` passed. Not run: Node 24, the real `@acme-fedev/auth`, the Playwright suite, a real API.
+- **Run before** (2026-11-04, `feat/deploy-all-to-test` on `main` after #58, cloud container, Node 22, a local
   stand-in for `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies
   installed from the lock file with the `@acme-fedev` entries left out): Vitest 198 files, 3,368 tests, all passed (new: the
   header's Release to TEST 5, `releasesQueuedText`, the client and request body of `requestAllBranchReleases` and the
