@@ -95,7 +95,6 @@ import {
   type BranchReleaseSettingsPage,
   type BranchReleaseTarget,
   type StoryBranchReleases,
-  type ComponentRepository,
   type Defect,
   type DefectList,
   type DefectSettings,
@@ -1652,11 +1651,6 @@ export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
   })
 );
 
-const componentRepository = shape<ComponentRepository>({
-  component: nonEmptyText,
-  repository: nonEmptyText,
-});
-
 /** The defect watch's settings page, as `getDefectSettings` and `updateDefectSettings` answer it. */
 export const isDefectSettingsPage = guard<DefectSettingsPage>(
   'DefectSettingsPage',
@@ -1666,7 +1660,6 @@ export const isDefectSettingsPage = guard<DefectSettingsPage>(
       watchOn: flag,
       defectsJql: nullable(nonEmptyText),
       priorities: arrayOf(nonEmptyText),
-      components: arrayOf(componentRepository),
       version: nullable(wholeNumber('a version', 1)),
       updatedBy: nullable(actor),
       updatedByName: nullable(text),
@@ -1683,7 +1676,6 @@ const defect = shape<Defect>({
   components: arrayOf(text),
   triage: oneOf(DEFECT_TRIAGES),
   reasons: arrayOf(text),
-  repository: nullable(nonEmptyText),
   firstSeenAt: timestamp,
   lastSeenAt: timestamp,
   ignored: nullable(

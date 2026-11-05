@@ -8,14 +8,13 @@
       "subject": "defect_settings:1",
       "payload": {
         "changes": {
-          "watchOn": { "from": false, "to": true },
+          "watchOn": {
+            "from": false,
+            "to": true
+          },
           "defectsJql": {
             "from": null,
             "to": "project = PROJ AND issuetype = Defect"
-          },
-          "components": {
-            "from": [],
-            "to": [{ "component": "billing-api", "repository": "billing-api" }]
           }
         }
       },

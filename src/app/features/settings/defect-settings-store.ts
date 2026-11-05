@@ -8,7 +8,7 @@ import type {
 import { SectionStore } from './section-store';
 import type { SettingsSummary } from './settings-summary';
 
-/** The state of the Defects section: the watch, its query, the priorities and the component map, and the history. */
+/** The state of the Defects section: the watch, its query, the priorities, and the history. */
 @Injectable()
 export class DefectSettingsStore extends SectionStore<DefectSettingsPage> {
   protected readonly section = 'defects' as const;

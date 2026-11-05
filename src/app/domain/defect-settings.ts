@@ -1,25 +1,18 @@
 /**
  * Team settings › Defects in words (`ahoy-hosted` design §5 "Defect watch"): the state the side navigation shows, how
- * the priorities and the component map are typed and read back, and what one entry of the section's history says.
+ * the priorities are typed and read back, and what one entry of the section's history says.
  * Pure.
  */
 
 import { isRecord } from './records';
-
-/** Which repository fixes the defects of one Jira component, as the API names it. */
-export interface ComponentPair {
-  readonly component: string;
-  readonly repository: string;
-}
 
 /** What the section keeps that the navigation and the history name. */
 export interface DefectChoice {
   readonly watchOn: boolean;
 }
 
-/** The most priorities and components the settings keep, as the contract says. */
+/** The most priorities the settings keep, as the contract says. */
 export const MAX_PRIORITIES = 20;
-export const MAX_COMPONENTS = 100;
 
 /** The side navigation's word for the section: "Watching" or "Off". */
 export function defectsStateLabel(settings: DefectChoice): {
@@ -54,52 +47,11 @@ export function prioritiesText(priorities: readonly string[]): string {
   return priorities.join(', ');
 }
 
-/**
- * The component map as typed, one `component = repository` a line: blank lines are skipped, each component once (case
- * ignored), or why the map is refused, naming the line.
- */
-export function componentsOf(
-  typed: string
-): { readonly value: readonly ComponentPair[] } | { readonly problem: string } {
-  const pairs: ComponentPair[] = [];
-  const seen = new Set<string>();
-  const lines = typed.split('\n');
-  for (const [index, raw] of lines.entries()) {
-    const line = raw.trim();
-    if (line === '') continue;
-    const at = line.indexOf('=');
-    const component = at < 0 ? '' : line.slice(0, at).trim();
-    const repository = at < 0 ? '' : line.slice(at + 1).trim();
-    if (component === '' || repository === '')
-      return {
-        problem: `Line ${index + 1}: write it as "component = repository".`,
-      };
-    if (component.length > 200 || repository.length > 200)
-      return {
-        problem: `Line ${index + 1}: a name is at most 200 characters.`,
-      };
-    const key = component.toLowerCase();
-    if (seen.has(key))
-      return {
-        problem: `Line ${index + 1}: ${component} is already listed.`,
-      };
-    seen.add(key);
-    pairs.push({ component, repository });
-  }
-  if (pairs.length > MAX_COMPONENTS)
-    return { problem: `List at most ${MAX_COMPONENTS} components.` };
-  return { value: pairs };
-}
-
-/** The component map as the form shows it, one `component = repository` a line. */
-export function componentsText(pairs: readonly ComponentPair[]): string {
-  return pairs.map((p) => `${p.component} = ${p.repository}`).join('\n');
-}
-
 const FIELD_NAMES: Readonly<Record<string, string>> = {
   watchOn: 'Watch',
   defectsJql: 'Query',
   priorities: 'Priorities',
+  // Kept so the history still names a change the component map once made.
   components: 'Components',
 };
 

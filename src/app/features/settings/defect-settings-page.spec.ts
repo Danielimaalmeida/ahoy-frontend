@@ -65,8 +65,6 @@ describe('the Defects section of Team settings', () => {
   const watch = () => field<HTMLSelectElement>(root, 'Watch');
   const jql = () => field<HTMLTextAreaElement>(root, 'Defects query (JQL)');
   const priorities = () => field(root, 'Priorities tried');
-  const components = () =>
-    field<HTMLTextAreaElement>(root, 'Components and repositories');
   const toasts = () =>
     TestBed.inject(ToastService)
       .toasts()
@@ -100,16 +98,16 @@ describe('the Defects section of Team settings', () => {
     expect(watch().value).toBe('off');
     expect(jql().value).toBe('');
     expect(priorities().value).toBe('');
-    expect(components().value).toBe('');
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
     expect(
       [...root.querySelectorAll('[aria-label="Changes to Defects"] li')].map(
         (li) => text(li.querySelector('.history__text span'))
       )
-    ).toEqual(['Watch: on; Query: changed; Components: 1']);
+    ).toEqual(['Watch: on; Query: changed']);
+    expect(text(root)).not.toContain('Components and repositories');
   });
 
-  it('turns the watch on with a query, priorities and components, sending what changed', async () => {
+  it('turns the watch on with a query and priorities, sending what changed', async () => {
     await answer();
     choose(watch(), 'on');
     await settle();
@@ -117,7 +115,6 @@ describe('the Defects section of Team settings', () => {
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
     type(jql(), ' project = PROJ AND issuetype = Defect ');
     type(priorities(), 'Highest, High');
-    type(components(), 'billing-api = billing-api\nweb-portal = web-portal');
     await settle();
     buttonNamed(root, 'Save').click();
     await settle();
@@ -126,10 +123,6 @@ describe('the Defects section of Team settings', () => {
       watchOn: true,
       defectsJql: 'project = PROJ AND issuetype = Defect',
       priorities: ['Highest', 'High'],
-      components: [
-        { component: 'billing-api', repository: 'billing-api' },
-        { component: 'web-portal', repository: 'web-portal' },
-      ],
     });
     expect(
       requestViolations('updateDefectSettings', patch?.request.body)
@@ -144,7 +137,6 @@ describe('the Defects section of Team settings', () => {
   it('does not count a change of spacing alone as unsaved', async () => {
     await answer(updateDefectSettings);
     type(priorities(), 'Highest,High,  Medium');
-    type(components(), 'billing-api=billing-api\n\nweb-portal =  web-portal');
     await settle();
     expect(text(root)).not.toContain('Unsaved changes');
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
@@ -153,13 +145,11 @@ describe('the Defects section of Team settings', () => {
     expect(text(root)).toContain('Unsaved changes');
   });
 
-  it('refuses a component line it cannot read before sending anything', async () => {
+  it('refuses priorities it cannot keep before sending anything', async () => {
     await answer();
-    type(components(), 'billing-api = billing-api\nweb-portal');
+    type(priorities(), 'High, high');
     await settle();
-    expect(text(root)).toContain(
-      'Line 2: write it as "component = repository".'
-    );
+    expect(text(root)).toContain('Name each priority once.');
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
     expect(patches()).toEqual([]);
   });
@@ -222,7 +212,6 @@ describe('the Defects section of Team settings', () => {
       'On',
       'project = PROJ AND issuetype = Defect AND status in (Open, Reopened)',
       'Highest, High, Medium',
-      'billing-api → billing-apiweb-portal → web-portal',
     ]);
   });
 });

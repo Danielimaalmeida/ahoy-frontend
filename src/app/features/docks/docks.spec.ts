@@ -1646,7 +1646,7 @@ describe('Docks', () => {
         'PROJ-190',
       ]);
       expect(text(cell(rowOf(f, 'PROJ-212'), 5))).toBe(
-        'Ahoy can try 1 repository · steps to reproduce · expected result'
+        'Ahoy can try steps to reproduce · expected result'
       );
       expect(text(cell(rowOf(f, 'PROJ-212'), 6))).toContain('implementation');
       expect(text(cell(rowOf(f, 'PROJ-212'), 7))).toBe('Open voyage');
@@ -1654,7 +1654,7 @@ describe('Docks', () => {
         'web-portal + billing-api'
       );
       expect(text(cell(rowOf(f, 'PROJ-201'), 5))).toBe(
-        'Not for Ahoy Touches 2 repositories'
+        'Not for Ahoy No steps to reproduce or expected result'
       );
       expect(text(cell(rowOf(f, 'PROJ-190'), 5))).toContain(
         'Ignored by Sam Example'

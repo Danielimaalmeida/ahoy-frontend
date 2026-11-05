@@ -1,6 +1,4 @@
 import {
-  componentsOf,
-  componentsText,
   defectsStateLabel,
   describeDefectEvent,
   prioritiesOf,
@@ -48,44 +46,6 @@ describe('prioritiesOf', () => {
   });
 });
 
-describe('componentsOf', () => {
-  it('reads one component = repository a line, skipping blank lines', () => {
-    expect(
-      componentsOf('billing-api = billing-api\n\n Web Portal=web-portal ')
-    ).toEqual({
-      value: [
-        { component: 'billing-api', repository: 'billing-api' },
-        { component: 'Web Portal', repository: 'web-portal' },
-      ],
-    });
-    expect(componentsOf('  \n')).toEqual({ value: [] });
-  });
-
-  it('names the line it refuses', () => {
-    expect(componentsOf('a = b\nno repository')).toEqual({
-      problem: 'Line 2: write it as "component = repository".',
-    });
-    expect(componentsOf('a = ')).toEqual({
-      problem: 'Line 1: write it as "component = repository".',
-    });
-    expect(componentsOf('A = b\na = c')).toEqual({
-      problem: 'Line 2: a is already listed.',
-    });
-    expect(componentsOf(`${'x'.repeat(201)} = b`)).toEqual({
-      problem: 'Line 1: a name is at most 200 characters.',
-    });
-  });
-
-  it('refuses more than 100 components, and reads back what componentsText writes', () => {
-    const many = Array.from({ length: 101 }, (_, i) => `c${i} = r`).join('\n');
-    expect(componentsOf(many)).toEqual({
-      problem: 'List at most 100 components.',
-    });
-    const pairs = [{ component: 'billing-api', repository: 'billing' }];
-    expect(componentsOf(componentsText(pairs))).toEqual({ value: pairs });
-  });
-});
-
 describe('describeDefectEvent', () => {
   it('names what a save changed, and is part of the settings history', () => {
     const payload = {
@@ -93,13 +53,26 @@ describe('describeDefectEvent', () => {
         watchOn: { from: false, to: true },
         defectsJql: { from: null, to: 'project = PROJ' },
         priorities: { from: ['High'], to: [] },
-        components: { from: [], to: [{ component: 'a', repository: 'b' }] },
       },
     };
-    const words = 'Watch: on; Query: changed; Priorities: none; Components: 1';
+    const words = 'Watch: on; Query: changed; Priorities: none';
     expect(describeDefectEvent('defect_settings.updated', payload)).toBe(words);
     expect(describeSettingsEvent('defect_settings.updated', payload)).toBe(
       words
+    );
+  });
+
+  it('still reads a save from before the component map was removed', () => {
+    const payload = {
+      changes: {
+        components: {
+          from: [],
+          to: [{ component: 'Billing', repository: 'billing-api' }],
+        },
+      },
+    };
+    expect(describeDefectEvent('defect_settings.updated', payload)).toBe(
+      'Components: 1'
     );
   });
 

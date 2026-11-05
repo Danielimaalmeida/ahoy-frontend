@@ -8,12 +8,7 @@ import type {
   DefectSettingsChange,
   JiraBacklogPreview,
 } from '@core/api/types';
-import {
-  componentsOf,
-  componentsText,
-  prioritiesOf,
-  prioritiesText,
-} from '@domain/defect-settings';
+import { prioritiesOf, prioritiesText } from '@domain/defect-settings';
 import { MAX_BACKLOG_JQL_CHARS } from '@domain/jira-settings';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -27,12 +22,11 @@ import { SECTION_STYLES } from './section-styles';
 import { settingsErrorView } from './settings-errors';
 import { SettingsHistory } from './settings-history';
 
-/** The form's value: the watch as 'on' or 'off', and the query, the priorities and the component map as typed. */
+/** The form's value: the watch as 'on' or 'off', and the query and the priorities as typed. */
 interface FormValue {
   readonly watch: 'on' | 'off';
   readonly jql: string;
   readonly priorities: string;
-  readonly components: string;
 }
 
 /** The saved settings as the form shows them. */
@@ -41,7 +35,6 @@ function formValueOf(settings: DefectSettings): FormValue {
     watch: settings.watchOn ? 'on' : 'off',
     jql: settings.defectsJql ?? '',
     priorities: prioritiesText(settings.priorities),
-    components: componentsText(settings.components),
   };
 }
 
@@ -58,8 +51,9 @@ type PreviewState =
 
 /**
  * Team settings › Defects (`ahoy-hosted` design §5 "Defect watch"): whether the reconciler reads the team's defects
- * query, the priorities it tries and which repository fixes each Jira component. The watch only reads Jira and judges
- * each defect by fixed rules, at 0 AIU: it starts no voyage, so turning it on asks for no confirmation.
+ * query and the priorities it tries. The watch only reads Jira and judges each defect by fixed rules, at 0 AIU: it
+ * starts no voyage, so turning it on asks for no confirmation. No repository is set here: the planner finds them from
+ * the content repository's routing and the code.
  */
 @Component({
   selector: 'ah-defect-settings-page',
@@ -172,7 +166,7 @@ type PreviewState =
           <ah-panel>
             <ah-panel-head
               heading="Defect watch"
-              subtitle="Read with the Jira connection of Team settings › Jira. A defect Ahoy could try says how to reproduce it, maps to one repository and has a priority tried here."
+              subtitle="Read with the Jira connection of Team settings › Jira. A defect Ahoy could try says how to reproduce it and has a priority tried here; the planner finds its repositories."
             >
               @if (dirty()) {
                 <span ahPanelActions class="ah-tag ah-tag--outline"
@@ -256,19 +250,6 @@ type PreviewState =
                       [formControl]="form.controls.priorities"
                     />
                   </ah-field>
-                  <ah-field
-                    label="Components and repositories"
-                    hint="One a line, as component = repository. A defect whose components map to no repository, or to several, stays out."
-                    [errorText]="componentsError() ?? ''"
-                  >
-                    <textarea
-                      ahInput
-                      mono
-                      rows="5"
-                      spellcheck="false"
-                      [formControl]="form.controls.components"
-                    ></textarea>
-                  </ah-field>
                 </div>
               } @else {
                 <dl>
@@ -289,21 +270,6 @@ type PreviewState =
                         ? 'Any'
                         : page.defects.priorities.join(', ')
                     }}
-                  </dd>
-                  <dt>Components</dt>
-                  <dd>
-                    @if (page.defects.components.length === 0) {
-                      <span class="ah-muted">None mapped</span>
-                    } @else {
-                      <ul>
-                        @for (
-                          pair of page.defects.components;
-                          track pair.component
-                        ) {
-                          <li>{{ pair.component }} → {{ pair.repository }}</li>
-                        }
-                      </ul>
-                    }
                   </dd>
                 </dl>
               }
@@ -364,7 +330,6 @@ export class DefectSettingsPage {
     watch: new FormControl<'on' | 'off'>('off', { nonNullable: true }),
     jql: new FormControl('', { nonNullable: true }),
     priorities: new FormControl('', { nonNullable: true }),
-    components: new FormControl('', { nonNullable: true }),
   });
   /** The form's whole value, disabled controls too, as a signal. */
   protected readonly value = toSignal(
@@ -373,25 +338,20 @@ export class DefectSettingsPage {
   );
   /** The saved settings, as the API last answered them. */
   private readonly saved = computed(() => this.store.page()?.defects ?? null);
-  /** What the form would save, or null while a field is refused. */
-  /** The priorities and the component map as read from the form, each parsed once a change. */
+  /** The priorities as read from the form, parsed once a change. */
   private readonly prioritiesRead = computed(() =>
     prioritiesOf(this.value().priorities)
   );
-  private readonly componentsRead = computed(() =>
-    componentsOf(this.value().components)
-  );
+  /** What the form would save, or null while a field is refused. */
   private readonly typed = computed(() => {
     const value = this.value();
     const priorities = this.prioritiesRead();
-    const components = this.componentsRead();
-    if ('problem' in priorities || 'problem' in components) return null;
+    if ('problem' in priorities) return null;
     const jql = value.jql.trim();
     return {
       watchOn: value.watch === 'on',
       defectsJql: jql === '' ? null : jql,
       priorities: priorities.value,
-      components: components.value,
     };
   });
   /** What saving would change, field by field, or null while a field is refused. */
@@ -409,9 +369,6 @@ export class DefectSettingsPage {
       ...(!same(typed.priorities, saved.priorities)
         ? { priorities: [...typed.priorities] }
         : {}),
-      ...(!same(typed.components, saved.components)
-        ? { components: [...typed.components] }
-        : {}),
     };
   });
   /** Whether the settings as read differ from the saved ones: spacing alone is no change. A refused field is one. */
@@ -422,10 +379,7 @@ export class DefectSettingsPage {
     if (changes !== null) return Object.keys(changes).length > 0;
     const was = formValueOf(saved);
     const value = this.value();
-    return (
-      value.priorities.trim() !== was.priorities ||
-      value.components.trim() !== was.components
-    );
+    return value.priorities.trim() !== was.priorities;
   });
   protected readonly jqlError = computed(() =>
     this.value().watch === 'on' && this.value().jql.trim() === ''
@@ -434,10 +388,6 @@ export class DefectSettingsPage {
   );
   protected readonly prioritiesError = computed(() => {
     const read = this.prioritiesRead();
-    return 'problem' in read ? read.problem : null;
-  });
-  protected readonly componentsError = computed(() => {
-    const read = this.componentsRead();
     return 'problem' in read ? read.problem : null;
   });
   protected readonly invalid = computed(
