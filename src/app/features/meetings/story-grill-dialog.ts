@@ -153,17 +153,15 @@ interface Answered {
       [error]="error()"
       (confirm)="next()"
     >
-      @if (draft(); as d) {
-        <span ahDialogLead
-          >From “{{ d.topicTitle }}” · First Mate asked
-          {{ questions().length }}
-          {{ questions().length === 1 ? 'question' : 'questions' }}</span
+      <span ahDialogLead>{{ lead() }}</span>
+      @if (asking()) {
+        <ah-banner ahDialogCost variant="cost" [heading]="costHeading()"
+          >Your answers go once, after the last question. Not charged to any
+          voyage's budget.</ah-banner
         >
+      }
+      @if (draft(); as d) {
         @if (asking()) {
-          <ah-banner ahDialogCost variant="cost" [heading]="costHeading()"
-            >Your answers go once, after the last question. Not charged to any
-            voyage's budget.</ah-banner
-          >
           <div class="progress">
             <strong>{{ progress() }}</strong>
             <span class="ah-hint">{{ spent() }} AIU spent so far</span>
@@ -289,8 +287,6 @@ interface Answered {
             topic.</ah-banner
           >
         }
-      } @else {
-        <span ahDialogLead>This draft was discarded.</span>
       }
     </ah-dialog>
   `,
@@ -308,6 +304,13 @@ export class StoryGrillDialog {
       this.data.drafts.drafts().find((d) => d.id === this.data.draftId) ?? null
   );
   protected readonly questions = computed(() => this.draft()?.questions ?? []);
+  /** "From “topic” · First Mate asked 3 questions", or that the grill was discarded. */
+  protected readonly lead = computed(() => {
+    const draft = this.draft();
+    if (draft === null) return 'This draft was discarded.';
+    const count = this.questions().length;
+    return `From “${draft.topicTitle}” · First Mate asked ${count} ${count === 1 ? 'question' : 'questions'}`;
+  });
   protected readonly asking = computed(() => this.draft()?.status === 'asking');
   /** The answers picked so far, by question id; kept by the store between openings. */
   readonly picks = signal<ReadonlyMap<string, GrillPick>>(
