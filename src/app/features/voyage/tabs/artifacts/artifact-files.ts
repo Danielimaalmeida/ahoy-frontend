@@ -2,7 +2,16 @@
 export const PREVIEW_LIMIT_BYTES = 1_048_576;
 
 /** How the viewer shows a file. */
-export type FileKind = 'markdown' | 'json' | 'text';
+export type FileKind = 'markdown' | 'json' | 'image' | 'text';
+
+/** The raster images the viewer shows as pictures. SVG stays text: it can carry script, and agents write it. */
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'] as const;
+const IMAGE_MEDIA_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+] as const;
 
 /** The file's kind, from its extension and then its media type. Anything else is plain text. */
 export function fileKind(
@@ -12,16 +21,27 @@ export function fileKind(
   const lower = path.toLowerCase();
   if (lower.endsWith('.md') || lower.endsWith('.markdown')) return 'markdown';
   if (lower.endsWith('.json')) return 'json';
+  if (IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'image';
   const media = (mediaType ?? '').toLowerCase();
+  if (IMAGE_MEDIA_TYPES.some((type) => media.startsWith(type))) return 'image';
   if (media.startsWith('text/markdown')) return 'markdown';
   if (media.startsWith('application/json') || media.includes('+json'))
     return 'json';
   return 'text';
 }
 
-/** "Markdown", "JSON" or "Text". */
+/** "Markdown", "JSON", "Image" or "Text". */
 export function kindLabel(kind: FileKind): string {
-  return kind === 'markdown' ? 'Markdown' : kind === 'json' ? 'JSON' : 'Text';
+  switch (kind) {
+    case 'markdown':
+      return 'Markdown';
+    case 'json':
+      return 'JSON';
+    case 'image':
+      return 'Image';
+    case 'text':
+      return 'Text';
+  }
 }
 
 /** The size of `text` in UTF-8 bytes. */

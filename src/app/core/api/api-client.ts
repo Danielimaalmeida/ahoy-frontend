@@ -852,6 +852,39 @@ export class ApiClient {
     }
   }
 
+  /**
+   * The bytes of one artifact, for a file the page shows as itself rather than as text (a design frame's PNG). Read as
+   * text, an image comes back as mojibake; read as a Blob it can be shown with an object URL.
+   */
+  async getArtifactBlob(
+    key: string,
+    query: ArtifactContentQuery
+  ): Promise<ApiResult<Blob>> {
+    const op = 'getArtifactContent';
+    let params = new HttpParams().set('path', query.path);
+    if (query.revision !== undefined)
+      params = params.set('revision', String(query.revision));
+    try {
+      const response = await firstValueFrom(
+        this.http.get(this.url(`/stories/${segment(key)}/artifacts/content`), {
+          observe: 'response',
+          responseType: 'blob',
+          timeout: REQUEST_TIMEOUT_MS,
+          params,
+        })
+      );
+      const body: unknown = response.body;
+      const type = response.headers.get('Content-Type') ?? '';
+      if (body instanceof Blob) return ok(body);
+      // A transport that hands back text (the in-browser mock) still yields the same bytes.
+      if (typeof body === 'string') return ok(new Blob([body], { type }));
+      return ok(new Blob([], { type }));
+    } catch (thrown: unknown) {
+      // An error asked for as a Blob carries its problem details as a Blob: read them, so a 404 is still `not_found`.
+      return fail(toApiError(op, await withTextError(thrown)));
+    }
+  }
+
   /** Events of a story after `after`, oldest first. Pass `lastEventId` as `after` to continue. */
   listStoryEvents(
     key: string,

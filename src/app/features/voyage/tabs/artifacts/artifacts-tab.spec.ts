@@ -142,10 +142,7 @@ function tab(page: Page): HTMLElement {
 function row(page: Page, path: string): HTMLElement {
   const found = [
     ...tab(page).querySelectorAll<HTMLElement>('.artifacts__file'),
-  ].find(
-    (element) =>
-      element.querySelector('.artifacts__path')?.textContent?.trim() === path
-  );
+  ].find((element) => element.dataset['path'] === path);
   if (found === undefined) throw new Error(`no row for ${path}`);
   return found;
 }
@@ -153,8 +150,7 @@ function row(page: Page, path: string): HTMLElement {
 /** Whether the list has a row for one file. */
 function hasRow(page: Page, path: string): boolean {
   return [...tab(page).querySelectorAll<HTMLElement>('.artifacts__file')].some(
-    (element) =>
-      element.querySelector('.artifacts__path')?.textContent?.trim() === path
+    (element) => element.dataset['path'] === path
   );
 }
 
@@ -272,7 +268,7 @@ describe('Artifacts tab on the mock', () => {
       text(
         row(page, 'implementation-plan.md').querySelector('.artifacts__meta')
       )
-    ).toMatch(/^Markdown · /);
+    ).toBe('Markdown');
 
     // The open file is the plan; its diff has one hunk per section, named as in the wireframe.
     expect(
@@ -424,7 +420,7 @@ describe('Artifacts tab on the mock', () => {
     expect(status(page, 'state.json')).toBe('changed');
     expect(
       text(row(page, 'state.json').querySelector('.artifacts__meta'))
-    ).toMatch(/^JSON · /);
+    ).toBe('JSON');
 
     await page.harness.navigateByUrl(
       '/voyages/PROJ-123/artifacts?mode=view&file=state.json'
@@ -517,6 +513,186 @@ describe('Artifacts tab on the mock', () => {
     expect(
       text(tab(page).querySelector('.artifacts__detail-head .ah-mono'))
     ).toBe('implementation-plan.md');
+  });
+
+  it('gathers design frames under their folder, a frame with its JSON and variants as one entry', async () => {
+    const frames = [
+      'design/frames/118-4993.png',
+      'design/frames/118-4993.json',
+      'design/frames/118-4993--118-4994.png',
+      'design/frames/200-1.png',
+    ];
+    const setup = (server: MockAhoyServer): void => {
+      for (const path of frames) putFile(server, 'PROJ-123', 5, path, path);
+    };
+    const page = await open('/voyages/PROJ-123/artifacts?mode=view', {
+      setup,
+    });
+
+    const folder = tab(page).querySelector('.artifacts__folder');
+    expect(text(folder?.querySelector('summary'))).toBe(
+      'design/frames/ 4 files'
+    );
+    const group =
+      folder?.querySelector<HTMLDetailsElement>('.artifacts__group');
+    expect(text(group?.querySelector('summary'))).toBe('118-4993 3 files');
+    expect(group?.open).toBe(false);
+    expect(
+      [...(group?.querySelectorAll<HTMLElement>('.artifacts__file') ?? [])].map(
+        (element) => element.dataset['path']
+      )
+    ).toEqual([
+      'design/frames/118-4993.json',
+      'design/frames/118-4993.png',
+      'design/frames/118-4993--118-4994.png',
+    ]);
+    expect(
+      text(
+        row(page, 'design/frames/118-4993--118-4994.png').querySelector(
+          '.artifacts__path'
+        )
+      )
+    ).toBe('↳ 118-4994');
+    // A frame on its own stays a plain row, named without its folder.
+    expect(
+      text(
+        row(page, 'design/frames/200-1.png').querySelector('.artifacts__path')
+      )
+    ).toBe('200-1.png');
+    // The top-level files come first, outside any folder.
+    expect(
+      row(page, 'jira-snapshot.md').closest('.artifacts__folder')
+    ).toBeNull();
+
+    // Opening a file inside a frame opens its group.
+    await page.harness.navigateByUrl(
+      '/voyages/PROJ-123/artifacts?mode=view&file=design%2Fframes%2F118-4993.json'
+    );
+    await flush(page);
+    expect(
+      tab(page).querySelector<HTMLDetailsElement>('.artifacts__group')?.open
+    ).toBe(true);
+  });
+
+  it('filters the list by path, and says when nothing matches', async () => {
+    const page = await open('/voyages/PROJ-123/artifacts?mode=view');
+    expect(text(tab(page).querySelector('.artifacts__count'))).toBe('6 files');
+
+    const input =
+      tab(page).querySelector<HTMLInputElement>('.artifacts__filter');
+    input!.value = 'PLAN';
+    input!.dispatchEvent(new Event('input'));
+    await flush(page);
+    expect(hasRow(page, 'implementation-plan.md')).toBe(true);
+    expect(hasRow(page, 'plan-sources.md')).toBe(true);
+    expect(hasRow(page, 'state.json')).toBe(false);
+    expect(text(tab(page).querySelector('.artifacts__count'))).toBe(
+      '3 of 6 files'
+    );
+
+    input!.value = 'nothing-like-this';
+    input!.dispatchEvent(new Event('input'));
+    await flush(page);
+    expect(text(tab(page).querySelector('.artifacts__none'))).toBe(
+      'No file matches “nothing-like-this”.'
+    );
+  });
+
+  it('hides the unchanged files in Compare when asked', async () => {
+    const page = await open('/voyages/PROJ-123/artifacts');
+    expect(hasRow(page, 'jira-snapshot.md')).toBe(true);
+
+    const toggle = tab(page).querySelector<HTMLInputElement>(
+      '.artifacts__only input'
+    );
+    toggle!.click();
+    await flush(page);
+    expect(hasRow(page, 'jira-snapshot.md')).toBe(false);
+    expect(hasRow(page, 'questions.json')).toBe(false);
+    expect(hasRow(page, 'implementation-plan.md')).toBe(true);
+    expect(hasRow(page, 'plan-round-1.md')).toBe(true);
+    expect(
+      row(page, 'plan-round-1.md')
+        .querySelector('.artifacts__status')
+        ?.getAttribute('data-tone')
+    ).toBe('new');
+  });
+
+  describe('images', () => {
+    // jsdom has no object URLs: stand in numbered ones for the page's `<img src>`.
+    const original = URL.createObjectURL;
+    let made = 0;
+    beforeEach(() => {
+      made = 0;
+      URL.createObjectURL = () => `blob:test/${++made}`;
+    });
+    afterEach(() => {
+      URL.createObjectURL = original;
+    });
+
+    const FRAME = 'design/frames/118-4993.png';
+
+    it('shows a PNG as a picture, not as its bytes', async () => {
+      const page = await open(
+        `/voyages/PROJ-123/artifacts?mode=view&file=${encodeURIComponent(FRAME)}`,
+        {
+          setup: (server) => putFile(server, 'PROJ-123', 5, FRAME, '\u0089PNG'),
+        }
+      );
+
+      const img = tab(page).querySelector<HTMLImageElement>(
+        '.artifacts__image img'
+      );
+      expect(img?.getAttribute('src')).toBe('blob:test/1');
+      expect(img?.getAttribute('alt')).toBe(FRAME);
+      expect(tab(page).querySelector('.artifacts__pre')).toBeNull();
+      expect(
+        text(tab(page).querySelector('.artifacts__detail-head .ah-tag'))
+      ).toBe('Image');
+      expect(text(row(page, FRAME).querySelector('.artifacts__ext'))).toBe(
+        'PNG'
+      );
+    });
+
+    it('compares a changed PNG side by side, without a line diff', async () => {
+      const setup = (server: MockAhoyServer): void => {
+        putFile(server, 'PROJ-123', 4, FRAME, 'old picture');
+        putFile(server, 'PROJ-123', 5, FRAME, 'new picture');
+      };
+      const page = await open(
+        `/voyages/PROJ-123/artifacts?file=${encodeURIComponent(FRAME)}`,
+        { setup }
+      );
+
+      expect(status(page, FRAME)).toBe('changed');
+      expect(tab(page).querySelector('ah-artifact-diff')).toBeNull();
+      const figures = [
+        ...tab(page).querySelectorAll('.artifacts__images figure'),
+      ];
+      expect(
+        figures.map((figure) => text(figure.querySelector('figcaption')))
+      ).toEqual(['Revision 4', 'Revision 5']);
+      expect(
+        figures.map((figure) =>
+          figure.querySelector('img')?.getAttribute('src')
+        )
+      ).toEqual(['blob:test/1', 'blob:test/2']);
+    });
+
+    it('shows a new PNG on its own, said to be new', async () => {
+      const page = await open(
+        `/voyages/PROJ-123/artifacts?file=${encodeURIComponent(FRAME)}`,
+        { setup: (server) => putFile(server, 'PROJ-123', 5, FRAME, 'picture') }
+      );
+
+      expect(status(page, FRAME)).toBe('new');
+      expect(text(tab(page).querySelector('.artifacts__note'))).toBe(
+        'New image: it was not in revision 4.'
+      );
+      expect(
+        tab(page).querySelectorAll('.artifacts__images figure')
+      ).toHaveLength(1);
+    });
   });
 
   it('has no artifacts on a voyage that has none', async () => {

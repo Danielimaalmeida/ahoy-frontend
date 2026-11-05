@@ -1043,6 +1043,49 @@ describe('ApiClient', () => {
     });
   });
 
+  describe('getArtifactBlob', () => {
+    it('reads an image artifact as bytes, at the revision asked', async () => {
+      const result = api.getArtifactBlob('PROJ-123', {
+        path: 'design/frames/118-4993.png',
+        revision: 3,
+      });
+      const request = http.expectOne(
+        '/api/v1/stories/PROJ-123/artifacts/content?path=design/frames/118-4993.png&revision=3'
+      );
+      expect(request.request.responseType).toBe('blob');
+      expect(request.request.timeout).toBe(REQUEST_TIMEOUT_MS);
+      request.flush(new Blob([new Uint8Array([137, 80, 78, 71])]), {
+        status: 200,
+        statusText: 'OK',
+        headers: new HttpHeaders({ 'Content-Type': 'image/png' }),
+      });
+      const answer = await result;
+      expect(answer.ok).toBe(true);
+      expect(answer.ok && answer.value.size).toBe(4);
+    });
+
+    it('reads the problem details of a 404 sent as a Blob', async () => {
+      const result = api.getArtifactBlob('PROJ-123', { path: 'gone.png' });
+      http
+        .expectOne('/api/v1/stories/PROJ-123/artifacts/content?path=gone.png')
+        .flush(new Blob([JSON.stringify(problemFor('not_found'))]), {
+          status: 404,
+          statusText: 'Not Found',
+          headers: new HttpHeaders({
+            'Content-Type': 'application/problem+json',
+          }),
+        });
+      expect(await result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          kind: 'problem',
+          status: 404,
+          code: 'not_found',
+        }),
+      });
+    });
+  });
+
   describe('getArtifactContent', () => {
     const URL =
       '/api/v1/stories/PROJ-123/artifacts/content?path=implementation-plan.md';

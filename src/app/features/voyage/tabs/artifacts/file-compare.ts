@@ -34,6 +34,15 @@ export type FileState = { readonly kind: 'loading' } | FileChange;
 
 const MINUS = '\u2212';
 
+/** A changed image: no line counts and no texts, the viewer reads both pictures itself. */
+const IMAGE_CHANGED: FileChange = {
+  kind: 'changed',
+  added: 0,
+  removed: 0,
+  previous: '',
+  next: '',
+};
+
 /** The status a row shows: `same`, `+9 −3`, `+2`, `new`, `removed`, `changed` (JSON), "too large". */
 export function statusLabel(
   state: FileState | undefined,
@@ -54,7 +63,7 @@ export function statusLabel(
     case 'error':
       return 'error';
     case 'changed': {
-      if (kind === 'json') return 'changed';
+      if (kind === 'json' || kind === 'image') return 'changed';
       const parts = [
         state.added > 0 ? `+${state.added}` : '',
         state.removed > 0 ? `${MINUS}${state.removed}` : '',
@@ -111,6 +120,8 @@ export async function compareFile(
     if (match.kind === 'error') return match;
     if (match.kind === 'same') return { kind: 'same' };
     if (match.kind === 'absent') return { kind: 'new' };
+    // An image is not diffed line by line: different bytes are a changed picture, shown side by side.
+    if (kind === 'image') return IMAGE_CHANGED;
   }
   const [before, after] = await Promise.all([
     reader.text(key, path, base),
@@ -121,6 +132,8 @@ export async function compareFile(
   if (after.kind === 'absent')
     return before.kind === 'absent' ? { kind: 'missing' } : { kind: 'removed' };
   if (before.kind === 'absent') return { kind: 'new' };
+  if (kind === 'image')
+    return before.text === after.text ? { kind: 'same' } : IMAGE_CHANGED;
   if (isTooLarge(textBytes(before.text)) || isTooLarge(textBytes(after.text)))
     return { kind: 'too_large' };
   const previous = displayText(kind, before.text);

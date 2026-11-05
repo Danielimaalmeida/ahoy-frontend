@@ -17,6 +17,14 @@ describe('fileKind', () => {
     expect(fileKind('notes.txt')).toBe('text');
   });
 
+  it('shows raster images as pictures, and keeps SVG as text', () => {
+    expect(fileKind('design/frames/118-4993.png')).toBe('image');
+    expect(fileKind('shot.JPEG')).toBe('image');
+    expect(fileKind('frame', 'image/png')).toBe('image');
+    expect(fileKind('logo.svg')).toBe('text');
+    expect(fileKind('logo', 'image/svg+xml')).toBe('text');
+  });
+
   it('falls back to the media type', () => {
     expect(fileKind('plan', 'text/markdown')).toBe('markdown');
     expect(fileKind('state', 'application/json')).toBe('json');
@@ -26,9 +34,10 @@ describe('fileKind', () => {
 });
 
 describe('kindLabel', () => {
-  it('names the three kinds as the tag shows them', () => {
+  it('names the four kinds as the tag shows them', () => {
     expect(kindLabel('markdown')).toBe('Markdown');
     expect(kindLabel('json')).toBe('JSON');
+    expect(kindLabel('image')).toBe('Image');
     expect(kindLabel('text')).toBe('Text');
   });
 });
