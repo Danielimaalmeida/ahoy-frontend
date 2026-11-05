@@ -14,13 +14,26 @@ function neutral(status: string): StatusPresentation {
  * lists; on a voyage header add `showApi`, and `detail` for the gate or halt reason that follows the API word.
  *
  * ```html
- * <ah-status-badge [status]="story.status" [phase]="story.phase" showApi detail="plan_accepted" />
+ * <ah-status-badge [status]="story.status" [phase]="story.phase" showApi detail="plan_accepted" pulse />
  * ```
  */
 @Component({
   selector: 'ah-status-badge',
+  styles: `
+    @media (prefers-reduced-motion: no-preference) {
+      .ah-badge--pulse .ah-badge__dot {
+        animation: badge-pulse 1.4s ease-in-out infinite;
+      }
+    }
+
+    @keyframes badge-pulse {
+      50% {
+        opacity: 0.3;
+      }
+    }
+  `,
   template: `
-    <span [class]="'ah-badge ah-badge--' + presentation().modifier"
+    <span [class]="classes()"
       ><i class="ah-badge__dot"></i>{{ presentation().label }}</span
     >
     @if (showApi()) {
@@ -37,6 +50,8 @@ export class StatusBadge {
   readonly showApi = input(false, { transform: booleanAttribute });
   /** Another API word to show after the status word, such as the gate (`plan_accepted`) or the halt reason. */
   readonly detail = input('');
+  /** Make the dot pulse while the voyage is running, for the voyage header: a list of many badges stays still. */
+  readonly pulse = input(false, { transform: booleanAttribute });
 
   protected readonly presentation = computed((): StatusPresentation => {
     const status = this.status();
@@ -48,6 +63,11 @@ export class StatusBadge {
         this.phase() === 'blocked' ? 'blocked' : null
       ) ?? neutral(status)
     );
+  });
+  protected readonly classes = computed(() => {
+    const modifier = this.presentation().modifier;
+    const pulse = this.pulse() && modifier === 'running';
+    return `ah-badge ah-badge--${modifier}${pulse ? ' ah-badge--pulse' : ''}`;
   });
   protected readonly apiText = computed(() => {
     const api = this.presentation().api;

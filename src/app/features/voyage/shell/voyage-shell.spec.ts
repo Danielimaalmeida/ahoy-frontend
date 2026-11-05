@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Title } from '@angular/platform-browser';
 import {
   Router,
   provideRouter,
@@ -24,6 +25,7 @@ import {
 import { CLOCK as UI_CLOCK } from '@ui/pipes/clock';
 import { ToastService } from '@ui/toast/toast';
 import { VOYAGE_ROUTES } from '../voyage.routes';
+import { runningTitle } from './voyage-shell';
 
 @Component({ selector: 'ah-test-voyages', template: `<p>Voyages list</p>` })
 class VoyagesStub {}
@@ -182,6 +184,22 @@ afterEach(() => {
   document.querySelector('.cdk-overlay-container')?.replaceChildren();
 });
 
+describe('runningTitle', () => {
+  it('adds the prefix while running, replaces one already there and takes it away after', () => {
+    expect(runningTitle('Plan · Ahoy', 'PROJ-140')).toBe(
+      '● Running · PROJ-140 · Plan · Ahoy'
+    );
+    expect(runningTitle('● Running · PROJ-140 · Plan · Ahoy', 'PROJ-141')).toBe(
+      '● Running · PROJ-141 · Plan · Ahoy'
+    );
+    expect(runningTitle('● Running · PROJ-140 · Plan · Ahoy', null)).toBe(
+      'Plan · Ahoy'
+    );
+    expect(runningTitle('', 'PROJ-140')).toBe('● Running · PROJ-140');
+    expect(runningTitle('● Running · PROJ-140', null)).toBe('');
+  });
+});
+
 describe('VoyageShell on the mock backend', () => {
   it.each([
     ['/voyages/PROJ-140/runs', 'Models'],
@@ -296,6 +314,55 @@ describe('VoyageShell on the mock backend', () => {
       expect(text(h.querySelector('.header__meta'))).not.toContain(
         'Revision round'
       );
+    });
+
+    it('PROJ-140 is under way on every tab: the Under way strip, the header cues, the live Runs tab and the title', async () => {
+      const page = await open('/voyages/PROJ-140/plan');
+      const strip = page.root.querySelector('.underway');
+      expect(strip?.getAttribute('role')).toBe('status');
+      expect(text(strip?.querySelector('.underway__head'))).toMatch(
+        /^Cartographer is at work on planning · \d/
+      );
+      expect(
+        [...(strip?.querySelectorAll('a') ?? [])].map((a) => text(a))
+      ).toEqual(['Watch live', 'Open run']);
+      const h = header(page);
+      expect(h.querySelector('.header--running')).not.toBeNull();
+      expect(h.querySelector('.ah-badge--pulse')).not.toBeNull();
+      expect(h.querySelector('.ah-step--live')?.textContent).toContain(
+        'planning'
+      );
+      const runsTab = [...page.root.querySelectorAll('ah-section-tabs a')].find(
+        (a) => text(a).startsWith('Runs')
+      );
+      expect(runsTab?.querySelector('.tabs__live')).not.toBeNull();
+      expect(TestBed.inject(Title).getTitle()).toMatch(
+        /^● Running · PROJ-140 · Plan · Ahoy$/
+      );
+    });
+
+    it('PROJ-140 on the Runs tab: no Watch live, which is the tab itself', async () => {
+      const page = await open('/voyages/PROJ-140/runs');
+      const strip = page.root.querySelector('.underway');
+      expect(
+        [...(strip?.querySelectorAll('a') ?? [])].map((a) => text(a))
+      ).toEqual(['Open run']);
+    });
+
+    it('PROJ-109 is queued: the strip says so, with no header cues', async () => {
+      const page = await open('/voyages/PROJ-109/runs');
+      expect(text(page.root.querySelector('.underway__head'))).toMatch(
+        /^Queued for intake · /
+      );
+      expect(header(page).querySelector('.header--running')).toBeNull();
+      expect(TestBed.inject(Title).getTitle()).not.toContain('Running');
+    });
+
+    it('PROJ-118 is anchored: no strip, no live cues', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      expect(page.root.querySelector('.underway')).toBeNull();
+      expect(header(page).querySelector('.ah-step--live')).toBeNull();
+      expect(page.root.querySelector('.tabs__live')).toBeNull();
     });
 
     it('PROJ-109 is queued: no primary action, no run yet', async () => {
