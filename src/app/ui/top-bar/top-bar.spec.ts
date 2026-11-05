@@ -66,7 +66,7 @@ async function render(url = '/') {
 }
 
 describe('ah-top-bar', () => {
-  it('lays out the logo, the destinations, search, Live, the Halloween toggle, Start voyage and the avatar, in that order', async () => {
+  it('lays out the logo, the destinations, search, Live, the Christmas toggle, Start voyage and the avatar, in that order', async () => {
     const { bar } = await render();
     expect(
       Array.from(bar.children).map(
@@ -79,7 +79,7 @@ describe('ah-top-bar', () => {
       'nav.ah-nav',
       'input.ah-search',
       'span',
-      'button.halloween-toggle',
+      'button.christmas-toggle',
       'a.ah-btn',
       'div.account',
     ]);
@@ -338,27 +338,28 @@ describe('ah-top-bar, person and search', () => {
     expect(root.textContent).not.toMatch(/log ?(in|out)|sign ?(in|out)/i);
   });
 
-  it('shows the Halloween decorations by default and the toggle turns them, bunting included, off and on', async () => {
+  it('shows the Christmas decorations by default and the toggle turns them, lights included, off and on', async () => {
     const { fixture, root } = await render();
     const host = root.querySelector('ah-top-bar')!;
-    const toggle = root.querySelector<HTMLButtonElement>('.halloween-toggle')!;
-    expect(toggle.getAttribute('aria-label')).toBe('Halloween decorations');
+    const toggle = root.querySelector<HTMLButtonElement>('.christmas-toggle')!;
+    expect(toggle.getAttribute('aria-label')).toBe('Christmas decorations');
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
-    expect(host.classList).toContain('halloween');
-    expect(root.querySelector('.spooky')!.getAttribute('aria-hidden')).toBe(
+    expect(host.classList).toContain('christmas');
+    expect(root.querySelector('.festive')!.getAttribute('aria-hidden')).toBe(
       'true'
     );
-    expect(root.querySelector('.spooky__bunting')).not.toBeNull();
+    expect(root.querySelector('.festive__lights')).not.toBeNull();
+    expect(root.querySelectorAll('.festive__flake')).toHaveLength(5);
     toggle.click();
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
-    expect(host.classList).not.toContain('halloween');
-    expect(root.querySelector('.spooky')).toBeNull();
-    expect(root.querySelector('.spooky__bunting')).toBeNull();
+    expect(host.classList).not.toContain('christmas');
+    expect(root.querySelector('.festive')).toBeNull();
+    expect(root.querySelector('.festive__lights')).toBeNull();
     toggle.click();
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
-    expect(root.querySelector('.spooky__bunting')).not.toBeNull();
+    expect(root.querySelector('.festive__lights')).not.toBeNull();
   });
 
   it('has a labelled search box that reports what is typed', async () => {
