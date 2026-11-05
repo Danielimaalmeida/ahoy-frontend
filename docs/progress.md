@@ -1,7 +1,7 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-05 (the Artifacts list redesign and image previews, frontend only; tested on the mock backend, and seen
-in Chromium with the test fixtures as every API answer, only). One page: replace it,
+Updated 2026-11-05 (the running indicator on the voyage page, frontend only; tested on the mock backend, and seen in
+Chromium from the rendered test DOM, only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
@@ -13,7 +13,21 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   repositories from the content repository's routing and the code (`ahoy-hosted` D21, its
   `feat/defects-without-repositories`, migration 0038). The section keeps the watch, the query with Preview and the
   priorities; the history no longer names components in new saves (an old save's still reads "Components: N").
-- **Merged before (#62, `feat/artifacts-list-redesign`, 2026-11-05, asked for by the user on 2026-11-03):** the voyage's
+- **Merged before (#63, `feat/running-indicator`, 2026-11-05, asked for by the user on 2026-11-05: the people using Ahoy found
+  no immediate sign on a voyage's page that it is running):** while a voyage is `running` or `ready`, an **Under way**
+  strip (`header/under-way-strip.ts`, words in `context/under-way.ts`) sits under the header on every tab: who is at
+  work and in which phase, a timer that moves every second, the agent's newest step (from the `RunProgressBuffer`), the
+  run, its model and what it has spent, with **Watch live** (the Runs tab; left out there) and **Open run**. It says
+  "Starting … for …" while the run is queued or its worker is starting (the `workerStartup` words, until steps
+  arrive), "At work on …" while the current run is not in the list yet, "Moving on in …" between runs (timed from the
+  last run's end) and "Queued for …" before the first; only the heading is announced, not the timer; it is not shown while Ahoy waits for CI (that banner stays). While
+  `running`, a bar sweeps along the header's top edge, the badge's dot pulses (`ah-status-badge` `pulse`), the current
+  phase is ringed (`ah-phase-stepper` `live`), the Runs tab has a live dot (`SectionTab.live`) and the browser tab's
+  title starts with "● Running · PROJ-140 · " (`runningTitle`). Motion stops under reduced motion. The design was
+  approved by the user on 2026-11-05 (there was no "stop requested" state to show: Stop halts at once). With
+  `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (201 files, 3,402 tests), `ng build`, typecheck, lint and format
+  pass; e2e was not run.
+- **Merged before (`feat/artifacts-list-redesign`, #62, 2026-11-05, asked for by the user on 2026-11-03):** the voyage's
   **Artifacts** list is grouped: top-level files first, then one collapsible heading per folder (`design/frames/`, with
   its count, or how many changed in Compare); a design frame's PNG, its JSON and its `--` variants are one collapsible
   entry (`file-tree.ts`), the variants named "↳ 118-4994". Each row has a type badge (MD, JSON, PNG), the name without
@@ -90,8 +104,8 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 ## Proof
 
-- **Last full run** (2026-11-05, `feat/defects-without-repositories` on `main`, same setup as below): Vitest 200
-  files, 3,384 tests, all passed (the component map's specs removed, its refusal test replaced by one for priorities, and one for an old save's history entry); typecheck, eslint,
+- **Last full run** (2026-11-05, `feat/defects-without-repositories` merged with `main` after #63, same setup as below):
+  Vitest 201 files, 3,400 tests, all passed (the component map's specs removed, its refusal test replaced by one for priorities, and one for an old save's history entry); typecheck, eslint,
   stylelint, `ng build` and `prettier --check .` passed. Not run: Node 24, the real `@acme-fedev/auth`, the Playwright
   suite, a real API.
 - **Run before** (2026-11-05, `feat/artifacts-list-redesign` on `main` after #59, same setup as below): Vitest 200

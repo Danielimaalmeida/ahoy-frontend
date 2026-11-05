@@ -29,7 +29,8 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
  * (in planning and plan review), Refresh design (with a design read, halted in implementation or review or at the
  * delivery gate, or halted in design after a refresh), Release to TEST (while a repository has an open pull request
  * and a release workflow) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
- * round, the pull requests the harness opened, agent config). Shown once the story is read.
+ * round, the pull requests the harness opened, agent config). Shown once the story is read. While the voyage is
+ * `running`, a bar sweeps along the panel's top edge, the badge's dot pulses and the current phase is ringed.
  */
 @Component({
   selector: 'ah-voyage-header',
@@ -44,7 +45,11 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
   styleUrl: './voyage-header.scss',
   template: `
     @if (view(); as v) {
-      <section class="ah-panel" aria-labelledby="voyage-title">
+      <section
+        class="ah-panel"
+        [class.header--running]="v.story.status === 'running'"
+        aria-labelledby="voyage-title"
+      >
         <div class="ah-panel__body header">
           <div class="header__top">
             <div class="header__name">
@@ -54,6 +59,7 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
                   [status]="v.story.status"
                   [phase]="v.story.phase"
                   showApi
+                  pulse
                   [detail]="v.apiDetail"
                 />
               </div>
@@ -136,6 +142,7 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
             [phase]="v.story.phase"
             [status]="v.story.status"
             [stoppedAt]="stoppedAt()"
+            live
           />
           <dl class="header__meta">
             <div>
