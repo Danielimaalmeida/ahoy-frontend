@@ -4,10 +4,6 @@
     "watchOn": true,
     "defectsJql": "project = PROJ AND issuetype = Defect AND status in (Open, Reopened)",
     "priorities": ["Highest", "High", "Medium"],
-    "components": [
-      { "component": "billing-api", "repository": "billing-api" },
-      { "component": "web-portal", "repository": "web-portal" }
-    ],
     "version": 1,
     "updatedBy": "alex@example.com",
     "updatedByName": "Alex Example",

@@ -963,11 +963,8 @@ export type PrCommentSettingsChange = Schemas['PrCommentSettingsChange'];
 /** Answer of `getDefectSettings`: the defect watch's settings and whether the person may change them. */
 export type DefectSettingsPage = Schemas['DefectSettingsPage'];
 
-/** Whether the watch is on, its query, the priorities tried and which repository fixes each Jira component. */
+/** Whether the watch is on, its query and the priorities tried. */
 export type DefectSettings = Schemas['DefectSettings'];
-
-/** Which repository fixes the defects of one Jira component. */
-export type ComponentRepository = Schemas['ComponentRepository'];
 
 /** Body of `updateDefectSettings`. */
 export type DefectSettingsChange = Schemas['DefectSettingsChange'];

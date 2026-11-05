@@ -55,7 +55,7 @@ describe("the defect watch's guards", () => {
       isDefectSettingsPage(
         withField(getDefectSettings, 'defects', {
           ...getDefectSettings.defects,
-          components: [{ component: '', repository: 'web-portal' }],
+          priorities: [''],
         })
       )
     ).toBe(false);
@@ -96,7 +96,7 @@ describe("ApiClient's defect watch", () => {
     const body = {
       watchOn: true,
       defectsJql: 'project = PROJ AND issuetype = Defect',
-      components: [{ component: 'billing-api', repository: 'billing-api' }],
+      priorities: ['Highest', 'High'],
     };
     const change = api.updateDefectSettings(body);
     const patch = http.expectOne({

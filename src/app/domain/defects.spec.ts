@@ -13,11 +13,11 @@ describe('defectTriageView', () => {
 
   it('says Ahoy can try, with what made the defect fit', () => {
     expect(
-      defectTriageView(at('can_try', ['1 repository', 'steps to reproduce']))
+      defectTriageView(at('can_try', ['steps to reproduce', 'expected result']))
     ).toEqual({
       label: 'Ahoy can try',
       tone: 'fit',
-      detail: '1 repository · steps to reproduce',
+      detail: 'steps to reproduce · expected result',
     });
   });
 

@@ -2068,7 +2068,7 @@
         "operationId": "listKnowledgeReviews",
         "tags": ["stories"],
         "summary": "Every knowledge review of one story, newest first, with the proposed business rules and lessons.",
-        "description": "When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs\nthem (Business-rule review, on in Team settings › Agents): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,\nthe approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its\nhalts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content\nrepository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is\n`content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files\nat `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`\nwhen it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request\nthere with the patch, and the rules are approved in that pull request. A story without one answers `200` with no\nitems. `404` when the story does not exist.\n",
+        "description": "When a person accepts a story's delivery and it reaches `done`, the server queues a knowledge review if it runs\nthem (Business-rule review, on in Team settings › Agents): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,\nthe approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its\nhalts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content\nrepository's `knowledge/system/business-context.md` and one to three lessons for `knowledge/process/lessons.md`. Its summary is\n`content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files\nat `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`\nwhen it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request\nthere with the patch, and the rules are approved in that pull request. A story without one answers `200` with no\nitems. `404` when the story does not exist.\n",
         "responses": {
           "200": {
             "description": "The story's knowledge reviews, newest first.",
@@ -2098,7 +2098,7 @@
         "operationId": "requestKnowledgeReview",
         "tags": ["stories"],
         "summary": "Ask an agent for a delivered story's rules and lessons, or a halted story's lessons. May spend AIU.",
-        "description": "For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a\nhalted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for\nthe story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the\ncontent repository, and may change only `knowledge/business-context.md` and `knowledge/lessons.md` in its own\ncopy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It\nchanges nothing about the story.\n\nThe story must be `done` or `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for\nthe outcome. One knowledge review per story is in progress at a time: another request answers\n`409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be\nread.\n",
+        "description": "For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a\nhalted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for\nthe story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the\ncontent repository, and may change only `knowledge/system/business-context.md` and `knowledge/process/lessons.md` in its own\ncopy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It\nchanges nothing about the story.\n\nThe story must be `done` or `halted` (`409 invalid_state` otherwise). `confirmSpend` must be true. The run is capped at\n`budgetNanoAiu` (at most 100 AIU), else the server's knowledge cap (10 AIU by default); it is not charged to the\nstory. It shares the run slots with the stories' runs, so it may wait (`queued`). Poll `listKnowledgeReviews` for\nthe outcome. One knowledge review per story is in progress at a time: another request answers\n`409 invalid_state`. `503 unavailable` when the server runs no knowledge reviews or the control repo cannot be\nread.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -5201,7 +5201,7 @@
       "get": {
         "operationId": "getDefectSettings",
         "tags": ["settings"],
-        "summary": "The defect watch's settings - whether it is on, its query, the priorities tried and the repositories.",
+        "summary": "The defect watch's settings - whether it is on, its query and the priorities tried.",
         "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). The reconciler reads a change on\nits next pass, without a restart. The query can be previewed with `POST /settings/jira/backlog-preview`. 0 AIU.\n",
         "responses": {
           "200": {
@@ -5225,8 +5225,8 @@
       "patch": {
         "operationId": "updateDefectSettings",
         "tags": ["settings"],
-        "summary": "Turn the defect watch on or off, or change its query, priorities or component repositories.",
-        "description": "Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no\nconfirmation; it needs a query (`400`). Each component appears once, case ignored (`400`). `version` is\nrequired once the settings are saved, and absent before (`409 stale_version`). Every change is in\n`settings_events` (`defect_settings.updated`).\n",
+        "summary": "Turn the defect watch on or off, or change its query or priorities.",
+        "description": "Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no\nconfirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). `version` is\nrequired once the settings are saved, and absent before (`409 stale_version`). Every change is in\n`settings_events` (`defect_settings.updated`).\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -7821,11 +7821,11 @@
           },
           "proposal": {
             "type": ["string", "null"],
-            "description": "The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds."
+            "description": "The whole proposed `knowledge/system/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds."
           },
           "lessons": {
             "type": ["string", "null"],
-            "description": "The whole proposed `knowledge/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds."
+            "description": "The whole proposed `knowledge/process/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds."
           },
           "patch": {
             "type": ["string", "null"],
@@ -11990,25 +11990,6 @@
           }
         }
       },
-      "ComponentRepository": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["component", "repository"],
-        "properties": {
-          "component": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "A Jira component, case ignored."
-          },
-          "repository": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "description": "The repository that fixes it."
-          }
-        }
-      },
       "DefectSettings": {
         "type": "object",
         "additionalProperties": false,
@@ -12016,7 +11997,6 @@
           "watchOn",
           "defectsJql",
           "priorities",
-          "components",
           "version",
           "updatedBy",
           "updatedByName",
@@ -12040,13 +12020,6 @@
               "maxLength": 60
             },
             "description": "The Jira priorities a defect may have to be tried; empty: any."
-          },
-          "components": {
-            "type": "array",
-            "maxItems": 100,
-            "items": {
-              "$ref": "#/components/schemas/ComponentRepository"
-            }
           },
           "version": {
             "type": ["integer", "null"],
@@ -12089,13 +12062,6 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 60
-            }
-          },
-          "components": {
-            "type": "array",
-            "maxItems": 100,
-            "items": {
-              "$ref": "#/components/schemas/ComponentRepository"
             }
           }
         }
@@ -12153,7 +12119,6 @@
           "components",
           "triage",
           "reasons",
-          "repository",
           "firstSeenAt",
           "lastSeenAt",
           "ignored",
@@ -12189,10 +12154,6 @@
               "type": "string"
             },
             "description": "For can_try, what made it fit; for out, every rule it failed."
-          },
-          "repository": {
-            "type": ["string", "null"],
-            "description": "The one repository its components map to (can_try)."
           },
           "firstSeenAt": {
             "type": "string",

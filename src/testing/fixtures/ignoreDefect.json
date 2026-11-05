@@ -5,8 +5,7 @@
   "jiraStatus": "Open",
   "components": ["web-portal"],
   "triage": "can_try",
-  "reasons": ["1 repository", "steps to reproduce"],
-  "repository": "web-portal",
+  "reasons": ["steps to reproduce"],
   "firstSeenAt": "2026-11-04T08:00:00.000Z",
   "lastSeenAt": "2026-11-04T10:58:00.000Z",
   "ignored": {

@@ -976,7 +976,7 @@ export interface paths {
      *     them (Business-rule review, on in Team settings › Agents): an agent reads what the story decided (the Jira snapshot, the acceptance criteria,
      *     the approved plan, the answers people gave and their decisions at the human gates) and what got in its way (its
      *     halts, the gates' rejections, rework notes and reviewer findings), and proposes changes to the content
-     *     repository's `knowledge/business-context.md` and one to three lessons for `knowledge/lessons.md`. Its summary is
+     *     repository's `knowledge/system/business-context.md` and one to three lessons for `knowledge/process/lessons.md`. Its summary is
      *     `content`; the whole proposed files are `proposal` and `lessons`, and one unified diff of both against the files
      *     at `controlSha` is `patch` (for `git apply`). Each file is null when the agent left it as it was, and `patch`
      *     when it changed neither. Ahoy changes nothing in the content repository: a person opens the pull request
@@ -990,7 +990,7 @@ export interface paths {
      * @description For a review that failed, was cancelled or should look again with the requester's notes, or for the lessons of a
      *     halted story (no review is queued when a story halts). Queues one worker run of the server's knowledge agent for
      *     the story, pinned to the control repo's HEAD now. The agent reads the evidence Ahoy seeds (untrusted text) and the
-     *     content repository, and may change only `knowledge/business-context.md` and `knowledge/lessons.md` in its own
+     *     content repository, and may change only `knowledge/system/business-context.md` and `knowledge/process/lessons.md` in its own
      *     copy, only the lessons when the story is halted when the run starts; it has no MCP server and no shell. It
      *     changes nothing about the story.
      *
@@ -2417,7 +2417,7 @@ export interface paths {
       readonly cookie?: never;
     };
     /**
-     * The defect watch's settings - whether it is on, its query, the priorities tried and the repositories.
+     * The defect watch's settings - whether it is on, its query and the priorities tried.
      * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). The reconciler reads a change on
      *     its next pass, without a restart. The query can be previewed with `POST /settings/jira/backlog-preview`. 0 AIU.
      */
@@ -2428,9 +2428,9 @@ export interface paths {
     readonly options?: never;
     readonly head?: never;
     /**
-     * Turn the defect watch on or off, or change its query, priorities or component repositories.
+     * Turn the defect watch on or off, or change its query or priorities.
      * @description Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no
-     *     confirmation; it needs a query (`400`). Each component appears once, case ignored (`400`). `version` is
+     *     confirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). `version` is
      *     required once the settings are saved, and absent before (`409 stale_version`). Every change is in
      *     `settings_events` (`defect_settings.updated`).
      */
@@ -3210,9 +3210,9 @@ export interface components {
       readonly endedAt: components['schemas']['Timestamp'] | null;
       /** @description The agent's summary of the rules and lessons it added, changed or left out, as Markdown (untrusted agent text); non-null exactly when `succeeded`. */
       readonly content: string | null;
-      /** @description The whole proposed `knowledge/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
+      /** @description The whole proposed `knowledge/system/business-context.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
       readonly proposal: string | null;
-      /** @description The whole proposed `knowledge/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
+      /** @description The whole proposed `knowledge/process/lessons.md` (untrusted agent text); null when the agent proposed no change, and until the review succeeds. */
       readonly lessons: string | null;
       /** @description Every proposed file as one unified diff against the files at `controlSha`, for `git apply` in the content repository; null exactly when both `proposal` and `lessons` are. */
       readonly patch: string | null;
@@ -4528,19 +4528,12 @@ export interface components {
       readonly canEdit: boolean;
       readonly defects: components['schemas']['DefectSettings'];
     };
-    readonly ComponentRepository: {
-      /** @description A Jira component, case ignored. */
-      readonly component: string;
-      /** @description The repository that fixes it. */
-      readonly repository: string;
-    };
     readonly DefectSettings: {
       /** @description Whether the reconciler reads the defects query (default false). */
       readonly watchOn: boolean;
       readonly defectsJql: string | null;
       /** @description The Jira priorities a defect may have to be tried; empty: any. */
       readonly priorities: readonly string[];
-      readonly components: readonly components['schemas']['ComponentRepository'][];
       /** @description Null until an admin saves anything. */
       readonly version: number | null;
       readonly updatedBy: string | null;
@@ -4553,7 +4546,6 @@ export interface components {
       readonly watchOn?: boolean;
       readonly defectsJql?: string | null;
       readonly priorities?: readonly string[];
-      readonly components?: readonly components['schemas']['ComponentRepository'][];
     };
     readonly DefectList: {
       readonly watchOn: boolean;
@@ -4579,8 +4571,6 @@ export interface components {
       readonly triage: 'can_try' | 'out';
       /** @description For can_try, what made it fit; for out, every rule it failed. */
       readonly reasons: readonly string[];
-      /** @description The one repository its components map to (can_try). */
-      readonly repository: string | null;
       /** Format: date-time */
       readonly firstSeenAt: string;
       /** Format: date-time */

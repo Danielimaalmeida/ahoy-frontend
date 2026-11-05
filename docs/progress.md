@@ -8,6 +8,11 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 ## Where we are
 
+- **This branch (`feat/defects-without-repositories`, 2026-11-05, agreed with the user on 2026-11-05):** Team settings
+  › Defects has no component map any more, and a defect no longer shows or needs a repository: the planner finds the
+  repositories from the content repository's routing and the code (`ahoy-hosted` D21, its
+  `feat/defects-without-repositories`, migration 0038). The section keeps the watch, the query with Preview and the
+  priorities; the history no longer names components in new saves (an old save's still reads "Components: N").
 - **This branch (`feat/artifacts-list-redesign`, 2026-11-05, asked for by the user on 2026-11-03):** the voyage's
   **Artifacts** list is grouped: top-level files first, then one collapsible heading per folder (`design/frames/`, with
   its count, or how many changed in Compare); a design frame's PNG, its JSON and its `--` variants are one collapsible
@@ -73,10 +78,10 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/deploy-all-to-test` (`b299a45`; the
-  commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
-  `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0036 (and 0025 to 0035 before
-  it). Merge and deploy with the `ahoy-hosted` pull request.
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/defects-without-repositories`
+  (`c21cb5f`; the commit in its header changes if that branch moves before merging), formatted with this repository's
+  Prettier; `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0038 (and 0025 to
+  0037 before it). Merge and deploy with the `ahoy-hosted` pull request.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
   checked by unit and component tests on the mock backend only (Crew and Team settings over
   `HttpTestingController`). No Teams, Figma or Jira was called. On 2026-11-01 the first six Team settings sections were
@@ -85,7 +90,11 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 ## Proof
 
-- **Last full run** (2026-11-05, `feat/artifacts-list-redesign` on `main` after #59, same setup as below): Vitest 200
+- **Last full run** (2026-11-05, `feat/defects-without-repositories` on `main`, same setup as below): Vitest 200
+  files, 3,383 tests, all passed (the component map's specs removed, a priorities refusal added); typecheck, eslint,
+  stylelint, `ng build` and `prettier --check .` passed. Not run: Node 24, the real `@acme-fedev/auth`, the Playwright
+  suite, a real API.
+- **Run before** (2026-11-05, `feat/artifacts-list-redesign` on `main` after #59, same setup as below): Vitest 200
   files, 3,386 tests, all passed (new: `file-tree` 6, `artifact-images` 3, `getArtifactBlob` 2, the image kinds 1, the
   tab's grouping, filter, "Changed only" and three image cases 6); typecheck, eslint, stylelint, `ng build` and
   `prettier --check .` passed. Not run: Node 24, the real `@acme-fedev/auth`, the Playwright suite, a real API.
