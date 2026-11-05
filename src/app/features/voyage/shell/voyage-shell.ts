@@ -1,5 +1,20 @@
-import { Component, computed, effect, inject, input } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { Title } from '@angular/platform-browser';
+import { filter } from 'rxjs';
+import {
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterOutlet,
+} from '@angular/router';
 import { apiErrorView } from '@core/commands/command-error';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -17,15 +32,32 @@ import { AnchoredBanner } from '../header/anchored-banner';
 import { CiWaitBanner } from '../header/ci-wait-banner';
 import { KnowledgePanel } from '../header/knowledge-panel';
 import { PrCommentsPanel } from '../header/pr-comments-panel';
+import { UnderWayStrip } from '../header/under-way-strip';
 import { VoyageHeader } from '../header/voyage-header';
 import { BranchReleases } from '../context/branch-releases';
+
+/** What {@link runningTitle} puts before the page's title. */
+const RUNNING_PREFIX = /^● Running · [^·]+?(?: · |$)/;
+
+/**
+ * The browser tab's title for a voyage: `title` with "● Running · PROJ-140 · " before it while `runningKey` names the
+ * voyage, and without it otherwise. A prefix already there is replaced, never doubled.
+ */
+export function runningTitle(title: string, runningKey: string | null): string {
+  const bare = title.replace(RUNNING_PREFIX, '');
+  if (runningKey === null) return bare;
+  return bare === ''
+    ? `● Running · ${runningKey}`
+    : `● Running · ${runningKey} · ${bare}`;
+}
 
 /**
  * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the CI wait banner while Ahoy waits for a
  * pull request's checks, the Anchored banner when halted, the Knowledge panel when done or halted, the Pull request
  * comments panel at the delivery gate or done, the section tabs (one URL each, with the counts) and the outlet the tabs
- * render in. It provides the page's {@link VoyageContext}, which every tab injects. Until the story is read it shows
- * the header's skeleton; a 404 shows "This voyage doesn't exist" and any other failure "Can't reach Ahoy" with Try
+ * render in. While the voyage runs, the Under way strip follows the header, the Runs tab has a live dot and the
+ * browser tab's title starts with "● Running". It provides the page's {@link VoyageContext}, which every tab injects.
+ * Until the story is read it shows the header's skeleton; a 404 shows "This voyage doesn't exist" and any other failure "Can't reach Ahoy" with Try
  * again.
  */
 @Component({
@@ -43,6 +75,7 @@ import { BranchReleases } from '../context/branch-releases';
     RouterOutlet,
     SectionTabs,
     Skeleton,
+    UnderWayStrip,
     VoyageHeader,
   ],
   providers: [VoyageContext, BranchReleases],
@@ -56,6 +89,7 @@ import { BranchReleases } from '../context/branch-releases';
       @switch (context.status()) {
         @case ('ready') {
           <ah-voyage-header />
+          <ah-under-way-strip />
           <ah-ci-wait-banner />
           <ah-anchored-banner />
           <ah-knowledge-panel />
@@ -113,11 +147,13 @@ export class VoyageShell {
     const key = this.key();
     const counts: Partial<Record<VoyageTab, number | null>> =
       this.context.counts();
+    const running = this.context.story()?.status === 'running';
     return VOYAGE_TABS.map((tab) => ({
       id: tab,
       label: VOYAGE_TAB_LABELS[tab],
       link: ['/voyages', key, tab],
       ...(tab in counts ? { count: counts[tab] ?? null } : {}),
+      ...(tab === 'runs' && running ? { live: 'a run is on' } : {}),
     }));
   });
 
@@ -128,6 +164,28 @@ export class VoyageShell {
 
   constructor() {
     effect(() => this.context.open(this.key()));
+    // "● Running · PROJ-140 · Models · Ahoy" in the browser tab while the voyage runs, so it shows from another tab too.
+    // The tab routes set their own titles on navigation, so this runs again after each one and only adds or takes away
+    // its prefix.
+    const title = inject(Title);
+    const router = inject(Router);
+    const navigated = toSignal(
+      router.events.pipe(filter((event) => event instanceof NavigationEnd)),
+      { initialValue: null }
+    );
+    effect(() => {
+      navigated();
+      const story = this.context.story();
+      title.setTitle(
+        runningTitle(
+          title.getTitle(),
+          story?.status === 'running' ? story.key : null
+        )
+      );
+    });
+    inject(DestroyRef).onDestroy(() =>
+      title.setTitle(runningTitle(title.getTitle(), null))
+    );
   }
 
   protected retry(): void {

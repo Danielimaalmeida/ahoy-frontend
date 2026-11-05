@@ -15,6 +15,8 @@ export interface SectionTab {
   readonly count?: number | null;
   /** Active only on exactly this URL, not on the ones below it. */
   readonly exact?: boolean;
+  /** A pulsing live dot after the label (the voyage's Runs tab while a run is on), with this text for screen readers. */
+  readonly live?: string;
 }
 
 /** `tabs` is the segmented bar of a voyage's sections; `pill` is the compact control (All / Not started / In Ahoy). */
@@ -36,6 +38,29 @@ const PREFIX = { exact: false } as const;
 @Component({
   selector: 'ah-section-tabs',
   imports: [NgTemplateOutlet, RouterLink, RouterLinkActive],
+  styles: `
+    .tabs__live {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      margin-left: 2px;
+      border-radius: 50%;
+      background: var(--live);
+      box-shadow: 0 0 0 3px var(--live-halo);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .tabs__live {
+        animation: tabs-live 1.8s ease-in-out infinite;
+      }
+    }
+
+    @keyframes tabs-live {
+      50% {
+        box-shadow: 0 0 0 5px transparent;
+      }
+    }
+  `,
   template: `
     <ng-template #tabList>
       @for (view of views(); track view.tab.id) {
@@ -50,6 +75,10 @@ const PREFIX = { exact: false } as const;
             >{{ view.tab.label }}
             @if (view.tab.count !== undefined && view.tab.count !== null) {
               <span class="ah-tabs__count">{{ view.tab.count }}</span>
+            }
+            @if (view.tab.live; as live) {
+              <span class="tabs__live" aria-hidden="true"></span
+              ><span class="ah-sr">{{ live }}</span>
             }
           </a>
         } @else {

@@ -93,3 +93,36 @@
     align-items: baseline;
   }
 }
+
+// While the voyage is running: a bar sweeps along the panel's top edge (asked for on 2026-11-05, so that a running voyage
+// is plain at a glance). Still under reduced motion. The panel's own `overflow: hidden` clips it to the corners.
+.header--running {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--live), transparent)
+      no-repeat;
+    background-size: 40% 100%;
+    background-position: 50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .header--running::before {
+    animation: header-sweep 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes header-sweep {
+  from {
+    background-position: -70% 0;
+  }
+
+  to {
+    background-position: 170% 0;
+  }
+}

@@ -32,6 +32,25 @@ const STATE_WORDS: Readonly<Record<StepState, string>> = {
  */
 @Component({
   selector: 'ah-phase-stepper',
+  styles: `
+    .ah-step--live .ah-step__n {
+      outline: 2px solid var(--live);
+      outline-offset: 1px;
+      box-shadow: 0 0 0 4px var(--live-halo);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .ah-step--live .ah-step__n {
+        animation: step-live 1.8s ease-in-out infinite;
+      }
+    }
+
+    @keyframes step-live {
+      50% {
+        box-shadow: 0 0 0 6px transparent;
+      }
+    }
+  `,
   template: `
     @if (compact()) {
       <div class="ah-dots" role="img" [attr.aria-label]="progress().label">
@@ -73,13 +92,20 @@ export class PhaseStepper {
   readonly stoppedAt = input<string | null>(null);
   /** The eight bars of the voyages table instead of the full stepper. */
   readonly compact = input(false, { transform: booleanAttribute });
+  /** Ring the current step in the live colour while the voyage is `running` (the voyage header). */
+  readonly live = input(false, { transform: booleanAttribute });
 
   protected readonly progress = computed(() =>
     phaseProgress(this.phase(), this.status(), this.stoppedAt())
   );
 
   protected stepClass(state: StepState): string {
-    return state === 'upcoming' ? 'ah-step' : `ah-step ah-step--${state}`;
+    if (state === 'upcoming') return 'ah-step';
+    const live =
+      state === 'current' && this.live() && this.status() === 'running';
+    return live
+      ? 'ah-step ah-step--current ah-step--live'
+      : `ah-step ah-step--${state}`;
   }
   protected dotClass(state: StepState): string | null {
     return state === 'upcoming' ? null : `is-${state}`;
