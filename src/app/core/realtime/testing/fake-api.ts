@@ -33,6 +33,7 @@ export type FakeApiOps = Pick<
   | 'assessComments'
   | 'getStoryBranchReleases'
   | 'requestBranchRelease'
+  | 'requestAllBranchReleases'
   | 'getJiraSettings'
   | 'listDefects'
   | 'ignoreDefect'
@@ -224,6 +225,14 @@ export class FakeApi implements FakeApiOps {
   requestBranchRelease: FakeApiOps['requestBranchRelease'] = (key, body) => {
     this.calls.push({ op: 'requestBranchRelease', args: [key, body] });
     return this.handlers.requestBranchRelease?.(key, body) ?? unreachable();
+  };
+
+  requestAllBranchReleases: FakeApiOps['requestAllBranchReleases'] = (
+    key,
+    body
+  ) => {
+    this.calls.push({ op: 'requestAllBranchReleases', args: [key, body] });
+    return this.handlers.requestAllBranchReleases?.(key, body) ?? unreachable();
   };
 
   getJiraSettings: FakeApiOps['getJiraSettings'] = () => {

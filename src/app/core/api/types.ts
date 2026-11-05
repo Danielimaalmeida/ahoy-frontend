@@ -1014,6 +1014,22 @@ export type BranchRelease = Schemas['BranchRelease'];
 /** Body of `requestBranchRelease`; `confirm` must be true. */
 export type BranchReleaseRequest = Schemas['BranchReleaseRequest'];
 
+/** Body of `requestAllBranchReleases`; `confirm` must be true. */
+export type BranchReleaseAllRequest = Schemas['BranchReleaseAllRequest'];
+
+/** Answer of `requestAllBranchReleases`: the releases queued, one per repository, and the repositories left out. */
+export type BranchReleaseBatch = Schemas['BranchReleaseBatch'];
+
+/** A repository a release of the whole voyage left out, and why. */
+export type BranchReleaseSkip = Schemas['BranchReleaseSkip'];
+
+/** Why a repository was left out: no release workflow, or a release still queued. */
+export type BranchReleaseSkipReason = BranchReleaseSkip['reason'];
+export const BRANCH_RELEASE_SKIP_REASONS = listOf<BranchReleaseSkipReason>()([
+  'no_workflow',
+  'queued',
+]);
+
 /** Where a release is: queued for the reconciler, started on GitHub, or refused by it. */
 export type BranchReleaseStatus = BranchRelease['status'];
 export const BRANCH_RELEASE_STATUSES = listOf<BranchReleaseStatus>()([

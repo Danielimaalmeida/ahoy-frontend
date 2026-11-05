@@ -1,6 +1,7 @@
 import {
   branchReleasesStateLabel,
   describeBranchReleaseEvent,
+  releasesQueuedText,
   inputsOf,
   inputsSummary,
   inputsText,
@@ -119,5 +120,35 @@ describe('describeBranchReleaseEvent', () => {
     expect(describeBranchReleaseEvent('sonar_server.created', {})).toBe(
       undefined
     );
+  });
+});
+
+describe('releasesQueuedText', () => {
+  it('names what was queued and what was left out, and why', () => {
+    expect(
+      releasesQueuedText({
+        released: [{ repo: 'web' }, { repo: 'api' }, { repo: 'importer' }],
+        skipped: [],
+      })
+    ).toBe(
+      'Releases of web, api and importer queued: the reconciler starts their workflows on GitHub.'
+    );
+    expect(
+      releasesQueuedText({
+        released: [{ repo: 'web' }],
+        skipped: [
+          { repo: 'docs', reason: 'no_workflow' },
+          { repo: 'api', reason: 'queued' },
+        ],
+      })
+    ).toBe(
+      'Release of web queued; left out: docs (no release workflow), api (a release is still queued).'
+    );
+    expect(
+      releasesQueuedText({
+        released: [],
+        skipped: [{ repo: 'api', reason: 'queued' }],
+      })
+    ).toBe('Nothing queued; left out: api (a release is still queued).');
   });
 });

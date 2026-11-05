@@ -18,6 +18,7 @@ import { provideFakes } from '@core/realtime/testing/providers';
 import getStoryBranchReleases from '@testing/fixtures/getStoryBranchReleases.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import requestBranchRelease from '@testing/fixtures/requestBranchRelease.json';
+import { BranchReleases } from '../../context/branch-releases';
 import { VoyageContext } from '../../context/voyage-context';
 import { PackagesTab } from './packages-tab';
 
@@ -169,6 +170,7 @@ describe('PackagesTab', () => {
         ...provideFakes({ api, clock, net }),
         provideRouter([]),
         VoyageContext,
+        BranchReleases,
       ],
     });
   });
@@ -329,6 +331,7 @@ describe('PackagesTab', () => {
         ...provideFakes({ api, clock: new FakeClock(), net: new FakeFetch() }),
         provideRouter([]),
         VoyageContext,
+        BranchReleases,
       ],
     });
     root = await render();

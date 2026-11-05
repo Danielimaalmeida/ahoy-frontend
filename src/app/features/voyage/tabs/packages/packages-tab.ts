@@ -19,7 +19,10 @@ import {
   type PackageRow,
 } from '../../context/work-packages';
 import { VoyageDialogs } from '../../dialogs/voyage-dialogs';
-import { BranchReleases, type PackageRelease } from './branch-releases';
+import {
+  BranchReleases,
+  type PackageRelease,
+} from '../../context/branch-releases';
 
 /** The placeholder rows while the state is read. */
 const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
@@ -35,7 +38,8 @@ const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
  * in implementation and the package is failed, stalled, blocked or unverified, Retry… and Accept….
  *
  * While the package's repository has an open pull request and Team settings › Branch releases gives it a workflow,
- * Deploy to TEST… starts that workflow on the branch, and the card shows the repository's newest release.
+ * Deploy to TEST… starts that workflow on the branch, and the card shows the repository's newest release. The
+ * header's Release to TEST does it for every such repository at once.
  *
  * A run's success is not the package's acceptance: the package's status is the state's, the run's is the run's, and the
  * report's routing is shown as words of its own. The state holds no goal or description for a package; the plan's prose
@@ -55,7 +59,6 @@ const PACKAGE_COLUMNS: readonly SkeletonColumn[] = [
     RouterLink,
     SkeletonRows,
   ],
-  providers: [BranchReleases],
   styleUrl: './packages-tab.scss',
   template: `
     <ah-panel>

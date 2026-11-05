@@ -1,21 +1,31 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-05 (Christmas decorations replace the Halloween ones in the top bar; unit-tested and screenshotted on
-the mock backend only). One page: replace it,
+Updated 2026-11-05 (Release to TEST, with `ahoy-hosted`'s `feat/deploy-all-to-test`; tested on fakes, and seen in
+Chromium with the test fixtures as every API answer, only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/christmas-decorations`, 2026-11-05):** the temporary Halloween decorations of the top bar become
+- **This branch (`feat/deploy-all-to-test`, 2026-11-04):** **Release to TEST** (`ahoy-hosted` design §4 "Branch
+  releases", asked for by the user on 2026-11-04: one click releases everything). The voyage header has a green pill
+  with a rocket, "Release to TEST" and how many repositories it releases, while at least one repository of the voyage
+  has an open pull request and a release workflow (not on a cancelled voyage). It opens "Deploy N repositories'
+  branches to TEST?", listing each repository once (its packages share the branch) with the branch, the pull request,
+  the workflow and its inputs, and naming the repositories left out for want of a workflow; confirming sends
+  `POST /stories/{key}/branch-releases/all` (`confirm: true`), says in a toast what was queued and what was left out
+  and why, and reads the releases again. The per-package Deploy to TEST stays on the Work packages tab; the releases
+  are now read once for the voyage (`context/branch-releases.ts`, provided by the shell). The header, dialog and toast
+  were opened in Chromium (Playwright) on `ng serve` with the test fixtures as every API answer, for screenshots.
+- **Merged before (`feat/christmas-decorations`, #60, 2026-11-05):** the temporary Halloween decorations of the top bar become
   Christmas ones, asked for by the user on 2026-11-04: a tree for the logo, a star on the current destination, fairy
   lights under the bar, snowflakes between Crew and the search box (hidden below 1360px), and a bauble swinging on the
   right. The 🎄 button turns them off (`ahoy.christmas` in `localStorage`); motion stops under reduced motion.
   `HalloweenService` is now `ChristmasService`. With `@acme-fedev/auth` stubbed in a scratch copy, the top-bar and
   service specs pass (37 tests) and the app was screenshotted on the in-browser mock backend; `ng build`, typecheck,
   the full suite and e2e were not run (no private registry here).
-- **Merged before (`feat/cancel-voyage`, #58, 2026-11-04):** a person can cancel a voyage for good
+- **Merged before (`feat/cancel-voyage`, #58, with `ahoy-hosted` #83):** a person can cancel a voyage for good
   (`POST /stories/{key}/cancel`, `ahoy-hosted` design §4 "Cancel", asked for by the user on 2026-11-04 from R3DA-14682, which
   could only stay halted). The header has **Cancel voyage** on every voyage that is not over; its dialog needs a reason,
   says a run under way is cancelled in the background, that Jira and pull requests are left as they are, and that it
@@ -53,7 +63,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/branch-release` (`d954b9c`, PR #82; the
+- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/deploy-all-to-test` (`b299a45`; the
   commit in its header changes if that branch moves before merging), formatted with this repository's Prettier;
   `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0036 (and 0025 to 0035 before
   it). Merge and deploy with the `ahoy-hosted` pull request.
@@ -65,15 +75,14 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 ## Proof
 
-- **Last full run** (2026-11-04, `feat/branch-release` on `main` after #56, cloud container, Node 22, a local stand-in
-  for `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies installed from
-  the lock file with the `@acme-fedev` entries left out): Vitest 197 files, 3,344 tests, all passed (new: the Work
-  packages tab's Deploy to TEST 5, Team settings › Branch releases 6, `domain/branch-releases`, the client and request
-  bodies of the six operations, the navigation with the new section and the contract's operation count, 121); `npm run typecheck` (app, specs,
-  `check-boundaries`), `npm run lint` (eslint, stylelint), `ng build` and `prettier --check .` passed (the
-  `crew-page.ts`, `docks.ts` and `metrics.scss` styles are over the 4 kB warning budget and a meetings dialog warns
-  NG8011, as on `main`). Not run: Node 24, the real `@acme-fedev/auth`, nginx, the Playwright suite, and the pages
-  against a real API or in a browser.
+- **Last full run** (2026-11-04, `feat/deploy-all-to-test` on `main` after #58, cloud container, Node 22, a local
+  stand-in for `@acme-fedev/auth` in `node_modules` because the private registry is not reachable, dependencies
+  installed from the lock file with the `@acme-fedev` entries left out): Vitest 198 files, 3,368 tests, all passed (new: the
+  header's Release to TEST 5, `releasesQueuedText`, the client and request body of `requestAllBranchReleases` and the
+  contract's operation count, 123); `npm run typecheck` (app, specs, `check-boundaries`), `npm run lint` (eslint,
+  stylelint), `ng build` and `prettier --check .` passed (the `crew-page.ts`, `docks.ts` and `metrics.scss` styles are
+  over the 4 kB warning budget and a meetings dialog warns NG8011, as on `main`). Not run: Node 24, the real
+  `@acme-fedev/auth`, nginx, the Playwright suite, and the pages against a real API.
 - **`api:check`:** its mirror half passes; its `schema.d.ts` half fails, also on `main`, because the file is kept
   Prettier-formatted and `openapi-typescript --check` compares the raw output. The formatted output of
   `npm run api:types` is byte-identical to the committed file.
@@ -98,7 +107,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. Merge `ahoy-hosted`'s `feat/branch-release` (PR #82, migration 0036) and this branch together. On a machine with the
+1. Merge `ahoy-hosted`'s `feat/deploy-all-to-test` (no migration; 0036 before it) and this branch together. On a machine with the
    private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`: `npm ci`, then
    `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop `test:scripts`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.

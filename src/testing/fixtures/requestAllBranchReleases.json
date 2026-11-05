@@ -1,0 +1,32 @@
+{
+  "released": [
+    {
+      "id": "9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d",
+      "workPackageId": "WP1",
+      "repo": "web",
+      "slug": "github.example.com/example/web-app",
+      "branch": "feature/PROJ-123-web",
+      "prNumber": 42,
+      "workflow": "branch-release.yaml",
+      "inputs": {
+        "environment": "test",
+        "update-ops-tag": "true"
+      },
+      "status": "queued",
+      "error": null,
+      "requestedBy": "alex@example.com",
+      "requestedByName": "Alex Example",
+      "requestedAt": "2026-11-04T11:00:00.000Z",
+      "dispatchedAt": null,
+      "runsUrl": "https://github.example.com/example/web-app/actions/workflows/branch-release.yaml?query=branch%3Afeature%2FPROJ-123-web"
+    }
+  ],
+  "skipped": [
+    {
+      "repo": "docs",
+      "branch": "feature/PROJ-123-docs",
+      "reason": "no_workflow",
+      "detail": "docs has no release workflow; an admin sets one in Team settings › Branch releases"
+    }
+  ]
+}

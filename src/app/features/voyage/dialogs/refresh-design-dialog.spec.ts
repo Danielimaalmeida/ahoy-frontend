@@ -8,6 +8,7 @@ import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
 import { FakeFetch } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
 import { requestViolations } from '@testing/fixtures/contract';
+import { BranchReleases } from '../context/branch-releases';
 import { VoyageContext } from '../context/voyage-context';
 import { VoyageHeader } from '../header/voyage-header';
 
@@ -78,6 +79,7 @@ describe('Refresh design from the voyage header', () => {
         ...provideFakes({ api, clock: new FakeClock(), net }),
         provideRouter([]),
         VoyageContext,
+        BranchReleases,
       ],
     });
   });

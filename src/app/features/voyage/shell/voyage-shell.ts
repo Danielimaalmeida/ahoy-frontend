@@ -18,6 +18,7 @@ import { CiWaitBanner } from '../header/ci-wait-banner';
 import { KnowledgePanel } from '../header/knowledge-panel';
 import { PrCommentsPanel } from '../header/pr-comments-panel';
 import { VoyageHeader } from '../header/voyage-header';
+import { BranchReleases } from '../context/branch-releases';
 
 /**
  * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the CI wait banner while Ahoy waits for a
@@ -44,7 +45,7 @@ import { VoyageHeader } from '../header/voyage-header';
     Skeleton,
     VoyageHeader,
   ],
-  providers: [VoyageContext],
+  providers: [VoyageContext, BranchReleases],
   styleUrl: './voyage-shell.scss',
   template: `
     <div class="voyage">

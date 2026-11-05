@@ -688,9 +688,38 @@ export interface paths {
      *     Team settings › Branch releases holds now; the reconciler starts it with its own `gh` login. The workflow
      *     deploys the branch to a shared environment, so `confirm` must be true (`400`). `409 invalid_state` when the
      *     package has no open pull request, its repository has no release workflow, or a release of that repository
-     *     is still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy may release. Spends no AIU.
+     *     is still queued, from any story (TEST takes one branch of a repository at a time). Anyone allowed into Ahoy
+     *     may release. Spends no AIU.
      */
     readonly post: operations['requestBranchRelease'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/branch-releases/all': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Release every pull request branch of the story to TEST, one per repository, in one click. 0 AIU.
+     * @description Queues, for each repository of the story with a pull request the gates last saw open, its `workflow_dispatch`
+     *     workflow on that branch with the inputs Team settings › Branch releases holds now, as `requestBranchRelease`
+     *     does for one package (a repository's packages share its branch, so it is released once, for its first
+     *     package). A repository without a release workflow, or with a release still queued from any story, is left out
+     *     and listed in `skipped` with the reason; the others are queued together. `confirm` must be true (`400`).
+     *     `409 invalid_state` when the story is cancelled or none of its pull requests is open. Anyone allowed into
+     *     Ahoy may release. Spends no AIU.
+     */
+    readonly post: operations['requestAllBranchReleases'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -4613,6 +4642,28 @@ export interface components {
       /** @description Must be true: the workflow deploys the branch to a shared environment. */
       readonly confirm: boolean;
     };
+    readonly BranchReleaseAllRequest: {
+      /** @description Must be true: each workflow deploys its branch to a shared environment. */
+      readonly confirm: boolean;
+    };
+    readonly BranchReleaseBatch: {
+      /** @description The releases queued, one per repository, in plan order. */
+      readonly released: readonly components['schemas']['BranchRelease'][];
+      /** @description The repositories with an open pull request that were not queued, and why. */
+      readonly skipped: readonly components['schemas']['BranchReleaseSkip'][];
+    };
+    readonly BranchReleaseSkip: {
+      /** @description The repository's plan alias. */
+      readonly repo: string;
+      readonly branch: string;
+      /**
+       * @description `no_workflow`: Team settings › Branch releases names none; `queued`: a release is still queued.
+       * @enum {string}
+       */
+      readonly reason: 'no_workflow' | 'queued';
+      /** @description A sentence for a person. */
+      readonly detail: string;
+    };
     readonly BranchReleaseTarget: {
       readonly workPackageId: string;
       /** @description The package's plan alias. */
@@ -5718,6 +5769,37 @@ export interface operations {
         };
         content: {
           readonly 'application/json': components['schemas']['BranchRelease'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly requestAllBranchReleases: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['BranchReleaseAllRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The releases queued, and the repositories left out. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['BranchReleaseBatch'];
         };
       };
       readonly 400: components['responses']['Problem'];
