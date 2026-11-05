@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-04 (Release to TEST, with `ahoy-hosted`'s `feat/deploy-all-to-test`; tested on fakes, and seen in
+Updated 2026-11-05 (Release to TEST, with `ahoy-hosted`'s `feat/deploy-all-to-test`; tested on fakes, and seen in
 Chromium with the test fixtures as every API answer, only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
@@ -18,6 +18,13 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   and why, and reads the releases again. The per-package Deploy to TEST stays on the Work packages tab; the releases
   are now read once for the voyage (`context/branch-releases.ts`, provided by the shell). The header, dialog and toast
   were opened in Chromium (Playwright) on `ng serve` with the test fixtures as every API answer, for screenshots.
+- **Merged before (`feat/christmas-decorations`, #60, 2026-11-05):** the temporary Halloween decorations of the top bar become
+  Christmas ones, asked for by the user on 2026-11-04: a tree for the logo, a star on the current destination, fairy
+  lights under the bar, snowflakes between Crew and the search box (hidden below 1360px), and a bauble swinging on the
+  right. The 🎄 button turns them off (`ahoy.christmas` in `localStorage`); motion stops under reduced motion.
+  `HalloweenService` is now `ChristmasService`. With `@acme-fedev/auth` stubbed in a scratch copy, the top-bar and
+  service specs pass (37 tests) and the app was screenshotted on the in-browser mock backend; `ng build`, typecheck,
+  the full suite and e2e were not run (no private registry here).
 - **Merged before (`feat/cancel-voyage`, #58, with `ahoy-hosted` #83):** a person can cancel a voyage for good
   (`POST /stories/{key}/cancel`, `ahoy-hosted` design §4 "Cancel", asked for by the user on 2026-11-04 from R3DA-14682, which
   could only stay halted). The header has **Cancel voyage** on every voyage that is not over; its dialog needs a reason,

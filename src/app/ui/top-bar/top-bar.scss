@@ -121,32 +121,32 @@
   outline-offset: -2px;
 }
 
-// Halloween (temporary): delete from here to the end of the file, the toggle and `.spooky` block in the template, and
-// HalloweenService.
+// Christmas (temporary): delete from here to the end of the file, the toggle and `.festive` block in the template, and
+// ChristmasService.
 :host {
   display: block;
   position: relative;
 }
 
 // stylelint-disable-next-line selector-pseudo-element-no-unknown
-:host(.halloween) ::ng-deep .ah-logo svg {
+:host(.christmas) ::ng-deep .ah-logo svg {
   display: none;
 }
 
 // stylelint-disable-next-line selector-pseudo-element-no-unknown
-:host(.halloween) ::ng-deep .ah-logo::before {
-  content: '🎃' / '';
+:host(.christmas) ::ng-deep .ah-logo::before {
+  content: '🎄' / '';
   font-size: 22px;
   line-height: 1;
 }
 
-:host(.halloween) .ah-nav__item[aria-current='page']::before {
-  content: '🎃' / '';
-  font-size: 12px;
+:host(.christmas) .ah-nav__item[aria-current='page']::before {
+  content: '⭐' / '';
+  font-size: 11px;
   line-height: 1;
 }
 
-.halloween-toggle {
+.christmas-toggle {
   display: inline-grid;
   flex: none;
   place-items: center;
@@ -176,111 +176,192 @@
   }
 }
 
-.spooky {
+.festive {
   position: absolute;
   z-index: 2;
   inset: 0;
   pointer-events: none;
 }
 
-.spooky__bunting {
+// A string of fairy lights hanging under the bar: a sagging wire with red, green, gold and blue bulbs. The `::after`
+// layer is a glow over every other bulb, which fades in and out so the string twinkles.
+.festive__lights {
   position: absolute;
   top: 100%;
   right: 0;
   left: 0;
-  height: 18px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='18'%3E%3Cpath d='M12 0h24L24 16z' fill='%23e8832a'/%3E%3Cpath d='M60 0h24L72 16z' fill='%235b3d99'/%3E%3C/svg%3E")
+  height: 20px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='20'%3E%3Cpath d='M0 1Q15 9 30 1T60 1T90 1T120 1' fill='none' stroke='%23556b5d' stroke-width='1.2'/%3E%3Crect x='13' y='4' width='4' height='3' rx='1' fill='%23556b5d'/%3E%3Cellipse cx='15' cy='11' rx='3.2' ry='4.5' fill='%23d63a3a'/%3E%3Crect x='43' y='4' width='4' height='3' rx='1' fill='%23556b5d'/%3E%3Cellipse cx='45' cy='11' rx='3.2' ry='4.5' fill='%232f9e5b'/%3E%3Crect x='73' y='4' width='4' height='3' rx='1' fill='%23556b5d'/%3E%3Cellipse cx='75' cy='11' rx='3.2' ry='4.5' fill='%23e8b33a'/%3E%3Crect x='103' y='4' width='4' height='3' rx='1' fill='%23556b5d'/%3E%3Cellipse cx='105' cy='11' rx='3.2' ry='4.5' fill='%233a86d6'/%3E%3C/svg%3E")
     repeat-x;
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='20'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff6d5' stop-opacity='.9'/%3E%3Cstop offset='1' stop-color='%23fff6d5' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='15' cy='11' r='7' fill='url(%23g)'/%3E%3Ccircle cx='75' cy='11' r='7' fill='url(%23g)'/%3E%3C/svg%3E")
+      repeat-x;
+    content: '';
+    opacity: 0;
+  }
 }
 
-.spooky__bat {
+.festive__flake {
   position: absolute;
-  width: 26px;
-  height: 9px;
-  fill: var(--ink);
-  opacity: 0.85;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--ink-muted);
+  stroke-linecap: round;
+  stroke-width: 1.6;
+  opacity: 0.7;
 
+  // The flakes drift in the empty gap between the last destination (Crew) and the search box.
   &--1 {
-    top: 2px;
-    left: 22%;
+    top: 6px;
+    left: 650px;
   }
 
-  // Bats 2–4 hang in the gap just left of the search box, which sits about 510px from the right edge.
   &--2 {
-    top: 8px;
-    right: 640px;
+    top: 26px;
+    left: 678px;
+    width: 10px;
+    height: 10px;
   }
 
   &--3 {
-    top: 24px;
-    right: 590px;
-    width: 20px;
+    top: 10px;
+    left: 706px;
   }
 
   &--4 {
-    top: 12px;
-    right: 540px;
-    width: 22px;
+    top: 28px;
+    left: 734px;
+    width: 10px;
+    height: 10px;
+  }
+
+  &--5 {
+    top: 8px;
+    left: 760px;
+    width: 12px;
+    height: 12px;
   }
 }
 
-.spooky__spider {
+.festive__ornament {
   display: flex;
   position: absolute;
   top: 0;
-  right: 10px;
+  right: 14px;
   flex-direction: column;
   align-items: center;
+  transform-origin: top center;
 }
 
-.spooky__thread {
+.festive__thread {
   width: 1px;
-  height: 84px;
+  height: 72px;
   background: var(--ink-muted);
 }
 
-.spooky__body {
-  margin-top: -4px;
-  font-size: 20px;
-  line-height: 1;
+// A red bauble with a gold cap and a highlight.
+.festive__bauble {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    #fff 0 8%,
+    #e65a5a 22%,
+    #b3202a 100%
+  );
+
+  &::before {
+    position: absolute;
+    top: -5px;
+    left: 5px;
+    width: 8px;
+    height: 5px;
+    border-radius: 2px 2px 0 0;
+    background: #d4a63a;
+    content: '';
+  }
 }
 
-@media (max-width: 900px) {
-  .spooky__bat {
+// Below 1360px the search box moves into that gap.
+@media (max-width: 1359px) {
+  .festive__flake {
     display: none;
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .spooky__bat {
-    animation: spooky-flap 0.35s ease-in-out infinite alternate;
+  .festive__flake {
+    animation: festive-drift 6s ease-in-out infinite;
 
     &--2 {
-      animation-delay: -0.1s;
+      animation-duration: 7.5s;
+      animation-delay: -2s;
     }
 
     &--3 {
-      animation-delay: -0.2s;
+      animation-duration: 6.8s;
+      animation-delay: -4s;
     }
 
     &--4 {
-      animation-delay: -0.3s;
+      animation-duration: 8s;
+      animation-delay: -1s;
+    }
+
+    &--5 {
+      animation-duration: 7s;
+      animation-delay: -3s;
     }
   }
 
-  .spooky__thread {
-    animation: spooky-dangle 3s ease-in-out infinite alternate;
+  .festive__lights::after {
+    animation: festive-twinkle 1.6s ease-in-out infinite alternate;
+  }
+
+  .festive__ornament {
+    animation: festive-swing 4s ease-in-out infinite alternate;
   }
 }
 
-@keyframes spooky-flap {
-  to {
-    transform: scaleY(0.4);
+@keyframes festive-drift {
+  0% {
+    transform: translate(0, -4px) rotate(0deg);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.7;
+  }
+
+  80% {
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translate(6px, 18px) rotate(90deg);
+    opacity: 0;
   }
 }
 
-@keyframes spooky-dangle {
+@keyframes festive-twinkle {
   to {
-    height: 64px;
+    opacity: 1;
+  }
+}
+
+@keyframes festive-swing {
+  from {
+    transform: rotate(-5deg);
+  }
+
+  to {
+    transform: rotate(5deg);
   }
 }
