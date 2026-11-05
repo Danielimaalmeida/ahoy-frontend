@@ -56,8 +56,8 @@ export function runningTitle(title: string, runningKey: string | null): string {
  * pull request's checks, the Anchored banner when halted, the Knowledge panel when done or halted, the Pull request
  * comments panel at the delivery gate or done, the section tabs (one URL each, with the counts) and the outlet the tabs
  * render in. While the voyage runs, the Under way strip follows the header, the Runs tab has a live dot and the
- * browser tab's title starts with "● Running". It provides the page's {@link VoyageContext}, which every tab injects. Until the story is read it shows
- * the header's skeleton; a 404 shows "This voyage doesn't exist" and any other failure "Can't reach Ahoy" with Try
+ * browser tab's title starts with "● Running". It provides the page's {@link VoyageContext}, which every tab injects.
+ * Until the story is read it shows the header's skeleton; a 404 shows "This voyage doesn't exist" and any other failure "Can't reach Ahoy" with Try
  * again.
  */
 @Component({

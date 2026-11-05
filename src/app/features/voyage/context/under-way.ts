@@ -10,6 +10,7 @@ import type { Run, Story } from '@core/api/types';
 import type { ProgressEntry } from '@core/stores/run-progress-buffer';
 import { formatDuration } from '@domain/time';
 import { workerStartup } from '@domain/worker-startup';
+import { isRunActive, runModelLabel } from '../tabs/runs/run-rows';
 import { lastRun, runById, runCrew } from './crew';
 
 /** The newest step of a run, as the strip shows it: "10:44:21", "create", "services/admin/roles/RoleAuditWriter.ts". */
@@ -27,7 +28,7 @@ export interface UnderWay {
   readonly kind: 'running' | 'starting' | 'between';
   /** "Developer is at work on implementation". */
   readonly heading: string;
-  /** The live part after the heading: "4 m 12 s", "waiting for a worker, 38 s", "queued". */
+  /** The live part after the heading: "4 m 12 s", "waiting for a worker, 38 s"; empty when there is no time to give. */
   readonly time: string;
   /** One line under the heading; empty when the step line says it all. */
   readonly detail: string;
@@ -37,11 +38,6 @@ export interface UnderWay {
   readonly runLabel: string;
   /** The newest step, while an agent is at work and one has arrived. */
   readonly step: UnderWayStep | null;
-}
-
-/** "claude-sonnet-5 · high", or "agent's own · default". The Runs tab words it the same way. */
-function modelLabel(run: Run): string {
-  return `${run.model ?? "agent's own"} · ${run.reasoningEffort ?? 'default'}`;
 }
 
 /** Text on one line, at most `max` characters, with "…" when it was longer. */
@@ -86,13 +82,12 @@ export function underWay(input: UnderWayInput): UnderWay | null {
   const current =
     story.status === 'running' ? runById(runs, story.currentRunId) : undefined;
 
-  if (
-    current !== undefined &&
-    (current.status === 'queued' || current.status === 'running')
-  ) {
+  if (current !== undefined && isRunActive(current)) {
     const crew = runCrew(current);
-    const runLabel = `${current.id} · ${modelLabel(current)}`;
-    const startup = workerStartup(current, now);
+    const runLabel = `${current.id} · ${runModelLabel(current)}`;
+    const step = newestStep(input.entries);
+    // Steps arriving prove the worker is up, whatever an older runtime observation said.
+    const startup = step === null ? workerStartup(current, now) : null;
     if (current.status === 'queued' || startup !== null) {
       return {
         kind: 'starting',
@@ -113,27 +108,44 @@ export function underWay(input: UnderWayInput): UnderWay | null {
       detail: '',
       runId: current.id,
       runLabel,
-      step: newestStep(input.entries),
+      step,
     };
   }
 
+  // Running on a run the list does not hold yet (it is still being read, or it was read before the run started).
+  if (
+    story.status === 'running' &&
+    story.currentRunId !== null &&
+    current === undefined
+  )
+    return {
+      kind: 'running',
+      heading: `At work on ${phase}`,
+      time: '',
+      detail: '',
+      runId: story.currentRunId,
+      runLabel: story.currentRunId,
+      step: null,
+    };
+
   const last = lastRun(runs);
-  const waited = formatDuration(story.updatedAt, now);
   if (last === null)
     return {
       kind: 'between',
       heading: `Queued for ${phase}`,
-      time: waited,
-      detail: 'Ahoy starts the first run shortly.',
+      time: formatDuration(story.updatedAt, now),
+      detail: 'Ahoy starts the first run on its own.',
       runId: null,
       runLabel: '',
       step: null,
     };
+  // Measured from the last run's end, which later edits of the story (budget, models) do not move.
+  const since = last.endedAt ?? story.updatedAt;
   return {
     kind: 'between',
     heading: `Moving on in ${phase}`,
-    time: story.status === 'ready' ? `queued ${waited}` : waited,
-    detail: `Ahoy is starting the next run. Last run: ${last.id} · ${runCrew(last)} · ${last.status}.`,
+    time: `last run ended ${formatDuration(since, now)} ago`,
+    detail: `No agent is at work right now; Ahoy goes on to the next step on its own. Last run: ${last.id} · ${runCrew(last)} · ${last.status}.`,
     runId: last.id,
     runLabel: '',
     step: null,

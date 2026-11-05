@@ -1,7 +1,17 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { NavigationEnd, Router, RouterLink } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map } from 'rxjs';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import {
+  Router,
+  RouterLink,
+  isActive,
+  type IsActiveMatchOptions,
+} from '@angular/router';
 import { CLOCK as CORE_CLOCK, type Timer } from '@core/realtime/clock';
 import { RunProgressBuffer } from '@core/stores/run-progress-buffer';
 import { formatAiu } from '@domain/aiu';
@@ -10,7 +20,16 @@ import { stepTime } from '@ui/live-steps/live-steps';
 import { ciWait } from '../context/ci-wait';
 import { runById } from '../context/crew';
 import { underWay } from '../context/under-way';
+import { runSpendNanoAiu } from '../tabs/runs/run-rows';
 import { VoyageContext } from '../context/voyage-context';
+
+/** The Runs tab and nothing below it (a run's own page is not the tab). */
+const RUNS_TAB_MATCH: Partial<IsActiveMatchOptions> = {
+  paths: 'exact',
+  queryParams: 'ignored',
+  fragment: 'ignored',
+  matrixParams: 'ignored',
+};
 
 /** How often the strip's timer moves on, in ms. */
 export const UNDER_WAY_TICK_MS = 1_000;
@@ -137,14 +156,19 @@ export const UNDER_WAY_TICK_MS = 1_000;
     @if (view(); as v) {
       <section
         [class]="'underway underway--' + v.kind"
-        role="status"
         aria-label="Voyage under way"
       >
+        <span class="ah-sr" role="status">{{ v.announce }}</span>
         <span class="underway__pulse" aria-hidden="true"></span>
         <div class="underway__main">
           <p class="underway__head">
-            {{ v.heading }} ·
-            <span class="underway__time">{{ v.time }}</span>
+            {{ v.heading }}
+            @if (v.time !== '') {
+              ·
+              <span class="underway__time" aria-hidden="true">{{
+                v.time
+              }}</span>
+            }
           </p>
           <div class="underway__sub">
             @if (v.step; as step) {
@@ -195,13 +219,24 @@ export class UnderWayStrip {
   private readonly now = signal(this.clock.now());
 
   /** The page is on the Runs tab, which already shows the live steps: Watch live is left out. */
-  protected readonly onRunsTab = toSignal(
-    this.router.events.pipe(
-      filter((event) => event instanceof NavigationEnd),
-      map(() => this.isRunsUrl(this.router.url))
-    ),
-    { initialValue: this.isRunsUrl(this.router.url) }
-  );
+  /** Whether the voyage's Runs tab is the page, per key (the shell keeps the strip when only the key changes). */
+  private readonly runsTab = computed(() => {
+    const key = this.context.key();
+    return key === null
+      ? null
+      : isActive(
+          this.router.createUrlTree(['/voyages', key, 'runs']),
+          this.router,
+          RUNS_TAB_MATCH
+        );
+  });
+  protected readonly onRunsTab = computed(() => this.runsTab()?.() ?? false);
+
+  /** The voyage is running or queued: only then does the timer tick. */
+  private readonly active = computed(() => {
+    const status = this.context.story()?.status;
+    return status === 'running' || status === 'ready';
+  });
 
   protected readonly view = computed(() => {
     const story = this.context.story();
@@ -225,12 +260,12 @@ export class UnderWayStrip {
     const run = view.kind === 'running' ? runById(runs, view.runId) : undefined;
     const spend = record?.spend ?? null;
     const spent =
-      run === undefined
-        ? null
-        : formatAiu(Math.max(spend?.nanoAiu ?? 0, run.usage.nanoAiu), 2);
+      run === undefined ? null : formatAiu(runSpendNanoAiu(run, spend), 2);
     return {
       ...view,
       key: story.key,
+      // Read out once per state, never per tick: the timer and the steps stay out of the live region.
+      announce: `${view.heading}.`,
       spent,
       step:
         view.step === null
@@ -245,11 +280,14 @@ export class UnderWayStrip {
       this.now.set(this.clock.now());
       timer = this.clock.schedule(UNDER_WAY_TICK_MS, tick);
     };
-    timer = this.clock.schedule(UNDER_WAY_TICK_MS, tick);
+    effect(() => {
+      timer?.cancel();
+      timer = null;
+      if (this.active()) {
+        this.now.set(this.clock.now());
+        timer = this.clock.schedule(UNDER_WAY_TICK_MS, tick);
+      }
+    });
     inject(DestroyRef).onDestroy(() => timer?.cancel());
-  }
-
-  private isRunsUrl(url: string): boolean {
-    return /^\/voyages\/[^/]+\/runs(?:[?#]|$)/.test(url);
   }
 }

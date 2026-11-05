@@ -319,7 +319,12 @@ describe('VoyageShell on the mock backend', () => {
     it('PROJ-140 is under way on every tab: the Under way strip, the header cues, the live Runs tab and the title', async () => {
       const page = await open('/voyages/PROJ-140/plan');
       const strip = page.root.querySelector('.underway');
-      expect(strip?.getAttribute('role')).toBe('status');
+      expect(text(strip?.querySelector('[role="status"]'))).toBe(
+        'Cartographer is at work on planning.'
+      );
+      expect(
+        strip?.querySelector('.underway__time')?.getAttribute('aria-hidden')
+      ).toBe('true');
       expect(text(strip?.querySelector('.underway__head'))).toMatch(
         /^Cartographer is at work on planning · \d/
       );

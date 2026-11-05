@@ -145,13 +145,68 @@ describe('underWay', () => {
     expect(view).toEqual({
       kind: 'between',
       heading: 'Moving on in implementation',
-      time: 'queued 30 s',
+      time: 'last run ended 30 s ago',
       detail:
-        'Ahoy is starting the next run. Last run: r-05 · Implementer · succeeded.',
+        'No agent is at work right now; Ahoy goes on to the next step on its own. Last run: r-05 · Implementer · succeeded.',
       runId: 'r-05',
       runLabel: '',
       step: null,
     });
+  });
+
+  it('measures the wait from the last run’s end, not from a later edit of the story', () => {
+    const view = underWay({
+      story: story({
+        status: 'ready',
+        currentRunId: null,
+        updatedAt: '2026-11-05T10:44:29Z',
+      }),
+      runs: [run({ status: 'succeeded', endedAt: '2026-11-05T10:41:30Z' })],
+      waitingForCi: false,
+      entries: [],
+      now: NOW,
+    });
+    expect(view?.time).toBe('last run ended 3 m ago');
+  });
+
+  it('says the voyage is at work while its current run is not in the list yet', () => {
+    const view = underWay({
+      story: story(),
+      runs: [],
+      waitingForCi: false,
+      entries: [],
+      now: NOW,
+    });
+    expect(view).toEqual({
+      kind: 'running',
+      heading: 'At work on implementation',
+      time: '',
+      detail: '',
+      runId: 'r-05',
+      runLabel: 'r-05',
+      step: null,
+    });
+  });
+
+  it('trusts arriving steps over an out-of-date worker observation', () => {
+    const view = underWay({
+      story: story(),
+      runs: [
+        run({
+          runtimeStatus: {
+            state: 'starting',
+            reason: null,
+            message: null,
+            observedAt: '2026-11-05T10:40:20Z',
+          },
+        }),
+      ],
+      waitingForCi: false,
+      entries: STEPS,
+      now: NOW,
+    });
+    expect(view?.kind).toBe('running');
+    expect(view?.step?.tool).toBe('message');
   });
 
   it('says the voyage is queued before its first run', () => {

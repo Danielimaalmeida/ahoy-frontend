@@ -95,10 +95,9 @@
 }
 
 // While the voyage is running: a bar sweeps along the panel's top edge (asked for on 2026-11-05, so that a running voyage
-// is plain at a glance). Still under reduced motion.
+// is plain at a glance). Still under reduced motion. The panel's own `overflow: hidden` clips it to the corners.
 .header--running {
   position: relative;
-  overflow: hidden;
 
   &::before {
     content: '';
