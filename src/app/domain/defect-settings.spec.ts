@@ -62,6 +62,20 @@ describe('describeDefectEvent', () => {
     );
   });
 
+  it('still reads a save from before the component map was removed', () => {
+    const payload = {
+      changes: {
+        components: {
+          from: [],
+          to: [{ component: 'Billing', repository: 'billing-api' }],
+        },
+      },
+    };
+    expect(describeDefectEvent('defect_settings.updated', payload)).toBe(
+      'Components: 1'
+    );
+  });
+
   it('says only that it saved when the changes cannot be read, and ignores other sections', () => {
     expect(describeDefectEvent('defect_settings.updated', null)).toBe(
       'Saved the defect settings'

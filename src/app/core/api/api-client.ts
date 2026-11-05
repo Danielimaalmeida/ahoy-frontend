@@ -1681,7 +1681,7 @@ export class ApiClient {
     );
   }
 
-  /** The defect watch's settings: whether it is on, its query, the priorities tried and the component repositories. */
+  /** The defect watch's settings: whether it is on, its query and the priorities tried. */
   getDefectSettings(): Promise<ApiResult<DefectSettingsPage>> {
     return this.get(
       'getDefectSettings',
@@ -1690,7 +1690,7 @@ export class ApiClient {
     );
   }
 
-  /** Turns the defect watch on or off, or changes its query, priorities or component repositories (admins only). */
+  /** Turns the defect watch on or off, or changes its query or priorities (admins only). */
   updateDefectSettings(
     body: DefectSettingsChange
   ): Promise<ApiResult<DefectSettingsPage>> {

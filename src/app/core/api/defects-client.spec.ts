@@ -46,7 +46,7 @@ describe("the defect watch's guards", () => {
     ).toBe(true);
   });
 
-  it('refuse an unknown triage, a blank component and a key that is not a Jira key', () => {
+  it('refuse an unknown triage, a blank priority and a key that is not a Jira key', () => {
     const first = listDefects.defects[0]!;
     expect(isDefect({ ...first, triage: 'maybe' })).toBe(false);
     for (const key of ['proj-1', 'PROJ-0', '1PROJ-2', 'PROJ_12'])

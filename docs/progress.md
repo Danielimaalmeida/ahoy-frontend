@@ -13,7 +13,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   repositories from the content repository's routing and the code (`ahoy-hosted` D21, its
   `feat/defects-without-repositories`, migration 0038). The section keeps the watch, the query with Preview and the
   priorities; the history no longer names components in new saves (an old save's still reads "Components: N").
-- **This branch (`feat/artifacts-list-redesign`, 2026-11-05, asked for by the user on 2026-11-03):** the voyage's
+- **Merged before (#62, `feat/artifacts-list-redesign`, 2026-11-05, asked for by the user on 2026-11-03):** the voyage's
   **Artifacts** list is grouped: top-level files first, then one collapsible heading per folder (`design/frames/`, with
   its count, or how many changed in Compare); a design frame's PNG, its JSON and its `--` variants are one collapsible
   entry (`file-tree.ts`), the variants named "↳ 118-4994". Each row has a type badge (MD, JSON, PNG), the name without
@@ -91,7 +91,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 ## Proof
 
 - **Last full run** (2026-11-05, `feat/defects-without-repositories` on `main`, same setup as below): Vitest 200
-  files, 3,383 tests, all passed (the component map's specs removed, a priorities refusal added); typecheck, eslint,
+  files, 3,384 tests, all passed (the component map's specs removed, its refusal test replaced by one for priorities, and one for an old save's history entry); typecheck, eslint,
   stylelint, `ng build` and `prettier --check .` passed. Not run: Node 24, the real `@acme-fedev/auth`, the Playwright
   suite, a real API.
 - **Run before** (2026-11-05, `feat/artifacts-list-redesign` on `main` after #59, same setup as below): Vitest 200
@@ -130,11 +130,12 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
-1. Merge `ahoy-hosted`'s `feat/deploy-all-to-test` (no migration; 0036 before it) and this branch together. On a machine with the
+1. Merge `ahoy-hosted`'s `feat/defects-without-repositories` (migration 0038) and ahoy-agents'
+   `feat/planner-finds-repositories` together with this branch. On a machine with the
    private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`: `npm ci`, then
    `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop `test:scripts`.
 2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0036): start a
+3. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, migrations up to 0038): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
    Meetings (migrations 0018, 0019 and 0022: an action ticked done, two browsers on one meeting in progress, a
    screenshot pasted into a note and opened large, a meeting cancelled and one marked done, a question answered after
@@ -143,7 +144,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
    repository on it, change its host with the token, and read the history; connect a fake Jira, preview a query, set
    a board and add a fixed field; connect a fake Teams webhook and send a test card, save a fake Figma token and test it,
    turn Business-rule review on and see the confirmation; lower a phase's cap, raise one with the confirmation, and save
-   a catalogue; at the delivery gate, Assess comments with a note; set a defects query and a component map, wait
+   a catalogue; at the delivery gate, Assess comments with a note; set a defects query and priorities, wait
    for a pass, ignore a defect and undo it; add a repository's release workflow and deploy a package's branch with a fake `gh`). The Copilot token page waits on security.
 4. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
    then publishing to Confluence through its API (today the page copies wiki markup).
