@@ -105,8 +105,8 @@ export interface StoryReviewData {
       [error]="error()"
       (confirm)="confirm()"
     >
+      <span ahDialogLead>{{ lead() }}</span>
       @if (draft(); as d) {
-        <span ahDialogLead>{{ lead() }}</span>
         @switch (d.status) {
           @case ('drafting') {
             <ah-banner variant="info" [heading]="draftingHeading()"
@@ -312,8 +312,6 @@ export interface StoryReviewData {
             }
           }
         }
-      } @else {
-        <span ahDialogLead>This draft was discarded.</span>
       }
     </ah-dialog>
   `,
@@ -352,7 +350,7 @@ export class StoryReviewDialog {
   );
   protected readonly lead = computed(() => {
     const draft = this.draft();
-    if (draft === null) return '';
+    if (draft === null) return 'This draft was discarded.';
     const spent =
       draft.run === null ? '' : ` · ${formatCap(draft.spentNanoAiu, 2)} AIU`;
     const by = `Asked for by ${authorLabel(draft.createdBy, this.access.nameOf(draft.createdBy))} on ${meetingDay(draft.createdAt)} at ${meetingTime(draft.createdAt)}`;
