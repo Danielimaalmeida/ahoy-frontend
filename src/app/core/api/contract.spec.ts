@@ -128,8 +128,18 @@ const jiraBacklog = {
         ],
       },
     },
+    {
+      key: 'PROJ-150',
+      issueType: 'Defect',
+      summary: 'Exported invoices drop the VAT number',
+      status: 'New',
+      priority: 'Critical',
+      updatedAt: '2026-10-06T09:00:00.000Z',
+      sprint: null,
+      readiness: { verdict: 'ready', reasons: [] },
+    },
   ],
-  total: 1,
+  total: 2,
 };
 import {
   enumOf,

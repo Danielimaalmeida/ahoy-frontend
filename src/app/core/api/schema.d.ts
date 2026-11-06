@@ -60,12 +60,12 @@ export interface paths {
       readonly cookie?: never;
     };
     /**
-     * All Jira Stories, Tasks and Bugs matching the configured backlog query.
+     * All Jira Stories, Tasks, Bugs and Defects matching the configured backlog query.
      * @description Read-only Jira Server REST search, authenticated with the token stored in the team settings
      *     (`/settings/jira`), not the client's WebEAM token; it is never returned. The query is the settings'
      *     `backlogJql`; there is no default, and while Jira is not connected or the query is empty the endpoint answers
      *     `503 unavailable`. Teams usually use their start-page availability filter, not the Jira Agile board backlog
-     *     (which excludes sprint-assigned issues). The query must select only Story, Task and Bug
+     *     (which excludes sprint-assigned issues). The query must select only Story, Task, Bug and Defect
      *     issues; other issue types cause `503 unavailable`. Epics are not supported. No query parameters
      *     are accepted. The backend follows all Jira search pages and preserves rank order; `total` equals
      *     the number of returned items. Issues already started in Ahoy are not excluded.
@@ -2614,7 +2614,7 @@ export interface components {
     readonly JiraBacklogIssue: {
       readonly key: string;
       /** @enum {string} */
-      readonly issueType: 'Story' | 'Task' | 'Bug';
+      readonly issueType: 'Story' | 'Task' | 'Bug' | 'Defect';
       readonly summary: string;
       readonly status: string;
       readonly priority: string | null;
