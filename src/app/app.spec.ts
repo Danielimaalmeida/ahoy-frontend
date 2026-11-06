@@ -10,7 +10,9 @@ import {
 import { ok } from '@core/api/api-error';
 import { AppConfigStore, DEFAULT_APP_CONFIG } from '@core/config/app-config';
 import { parseAiu } from '@domain/aiu';
-import type { Story } from '@core/api/types';
+import type { Setup, Story } from '@core/api/types';
+import { isSetup } from '@core/api/guards';
+import getSetup from '@testing/fixtures/getSetup.json';
 import { aStory, anEvent } from '@core/realtime/testing/events';
 import { FakeApi } from '@core/realtime/testing/fake-api';
 import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
@@ -69,6 +71,13 @@ const STORIES: readonly Story[] = [
   spentNanoAiu: aiu('3'),
 }));
 
+/** The Setup fixture, as its guard proves it. */
+function proven(value: unknown): Setup {
+  if (!isSetup(value))
+    throw new Error('the Setup fixture does not pass its guard');
+  return value;
+}
+
 const text = (node: Node | null | undefined): string =>
   (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
@@ -94,6 +103,8 @@ interface ShellOptions {
   readonly hang?: boolean;
   /** The `allowedQnumbers` of the configuration; without it the app does not check. */
   readonly allowedQnumbers?: readonly string[];
+  /** What `GET /setup` answers; without it the API cannot be reached for it. */
+  readonly setup?: Setup;
 }
 
 /** Renders the shell over fakes at `url`, with the real routes. */
@@ -116,6 +127,8 @@ async function shell(url = '/', options: ShellOptions = {}): Promise<Shell> {
     Promise.resolve(ok({ items: [], lastEventId: null }))
   );
   api.on('listStoryRuns', () => Promise.resolve(ok([])));
+  const setup = options.setup;
+  if (setup !== undefined) api.on('getSetup', () => Promise.resolve(ok(setup)));
   const storedTheme = options.storedTheme ?? null;
   TestBed.configureTestingModule({
     providers: [
@@ -408,6 +421,50 @@ describe('App shell', () => {
       expect(document.title).toBe('Needs you · Ahoy');
       await go('/voyages?status=halted');
       expect(document.title).toBe('Voyages · Ahoy');
+    });
+  });
+
+  describe('the setup banner', () => {
+    const NOT_READY: Setup = proven(getSetup);
+    const READY: Setup = {
+      ...NOT_READY,
+      steps: NOT_READY.steps.map((s) =>
+        s.required ? { ...s, state: 'done' } : s
+      ),
+      requiredDone: 8,
+    };
+
+    it('tells an admin what is left and the next step on every page, and leads to Setup', async () => {
+      const { root, api } = await shell('/voyages', { setup: NOT_READY });
+      expect(api.callsOf('getSetup')).toHaveLength(1);
+      const banner = root.querySelector('ah-setup-banner');
+      expect(text(banner?.querySelector('.words'))).toBe(
+        'Ahoy is not ready yet: 6 of 8 required steps done. Voyages may fail until the rest are. ' +
+          'Next: Agents, in Team settings.'
+      );
+      expect(banner?.querySelector('a')?.getAttribute('href')).toBe(
+        '/settings/setup'
+      );
+      expect(
+        Array.from(root.children).map((child) => child.tagName.toLowerCase())
+      ).toEqual(['ah-top-bar', 'ah-setup-banner', 'main', 'ah-toast-host']);
+    });
+
+    it('tells a member only that the admins are setting Ahoy up', async () => {
+      const { root } = await shell('/', {
+        setup: { ...NOT_READY, canEdit: false },
+      });
+      expect(text(root.querySelector('ah-setup-banner'))).toContain(
+        'Ahoy is being set up. Some features may not work until the admins finish (6 of 8 required steps).'
+      );
+    });
+
+    it('shows nothing once every required step is done, or when the steps cannot be read', async () => {
+      const ready = await shell('/', { setup: READY });
+      expect(ready.root.querySelector('ah-setup-banner')).toBeNull();
+      TestBed.resetTestingModule();
+      const unread = await shell('/');
+      expect(unread.root.querySelector('ah-setup-banner')).toBeNull();
     });
   });
 

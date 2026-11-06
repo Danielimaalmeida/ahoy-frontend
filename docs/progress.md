@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-06 (`feat/portability-2-people`; offline checks passed with a stubbed `@acme-fedev/auth`). One
+Updated 2026-11-06 (`feat/portability-3-setup`; offline checks passed with a stubbed `@acme-fedev/auth`). One
 page: replace it, do not append; git history is the archive (the 3,692-line page before this one:
 `git show b1f9b88:docs/progress.md`). The review of both repositories, with its proposals (not yet agreed), is
 `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on 2026-10-24
@@ -8,7 +8,17 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
 
 ## Where we are
 
-- **This branch (`feat/portability-2-people`, 2026-11-06, D23 step 2, on top of step 1):** Team settings has a new
+- **This branch (`feat/portability-3-setup`, 2026-11-06, D23 step 3, on top of step 2):** Team settings opens on a
+  new section, **Setup** (`/settings/setup`, "Start here"): how many required steps are done ("6 of 8") with a bar,
+  what is left by who fixes it, and when the API checked; the installation's steps read-only (the chart fixes them);
+  the team's, each with a way to the section that fixes it (Open, Set, Fix in…, Review) and, for an admin, Keep
+  defaults on Phases. A member sees the steps and a link to People. While a required step is not done, every page shows
+  a banner under the top bar (admins: the next step and where it is fixed; members: that the admins are setting Ahoy
+  up) with Open setup. Start voyage stays on: the API does not refuse a story while a step is missing (`ahoy-hosted`
+  design §5 "Setup"). The Phases history reads "Kept the defaults (from Setup)". The contract is `ahoy-hosted`'s
+  `feat/portability-3-setup` (136 operations implemented). With `@acme-fedev/auth` stubbed in `node_modules`, the whole
+  suite (214 files, 3,715 tests), `ng build`, typecheck, lint and format pass; e2e was not run and nothing ran against an API.
+- **Step 2 (`feat/portability-2-people`, 2026-11-06, D23 step 2, on top of step 1):** Team settings has a new
   section, **People** (`/settings/people`): an admin adds a qnumber as member or admin, makes an admin a member or the
   reverse, and removes someone after a second click; their own row shows no controls. The deployment's own people
   (`AHOY_ALLOWED_QNUMBERS`, `AHOY_ADMIN_QNUMBERS`) are listed read-only. The box refuses what is not a qnumber and
