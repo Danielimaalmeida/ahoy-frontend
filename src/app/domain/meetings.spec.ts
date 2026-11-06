@@ -1,6 +1,11 @@
 import {
   acceptImages,
   authorLabel,
+  bySeries,
+  moveTargets,
+  pastByMonth,
+  seriesNeighbours,
+  upcomingByWeek,
   carryOverCandidates,
   dateInputValue,
   decisionsAndActions,
@@ -691,5 +696,118 @@ describe('note images', () => {
       refusal: 'A note takes at most 10 images.',
     });
     expect(acceptImages([], 10)).toEqual({ images: [], refusal: null });
+  });
+});
+
+describe('the left column and moving topics', () => {
+  const at = (
+    id: string,
+    status: MeetingLike['status'],
+    startsAt: string,
+    seriesId: string | null = 's1'
+  ) => ({
+    id,
+    status,
+    startsAt,
+    seriesId,
+    seriesName:
+      seriesId === null
+        ? null
+        : seriesId === 's1'
+          ? 'Finance sync'
+          : 'Ops review',
+  });
+  // Wednesday 7 October 2026, noon local time.
+  const now = new Date(2026, 9, 7, 12, 0);
+  const local = (d: number, h = 10) => new Date(2026, 9, d, h, 0).toISOString();
+
+  it('groups the planned meetings by week from Monday, the ones never held first', () => {
+    const sections = upcomingByWeek(
+      [
+        at('late', 'planned', local(1)),
+        at('a', 'planned', local(9)),
+        at('b', 'planned', local(13)),
+        at('c', 'planned', local(28)),
+        at('done', 'ended', local(6)),
+      ],
+      now
+    );
+    expect(sections.map((s) => [s.label, s.meetings.map((m) => m.id)])).toEqual(
+      [
+        ['Earlier', ['late']],
+        ['This week', ['a']],
+        ['Next week', ['b']],
+        ['Week of 26 Oct', ['c']],
+      ]
+    );
+  });
+
+  it('groups the past meetings by month, latest first', () => {
+    const sections = pastByMonth([
+      at('sep', 'ended', new Date(2026, 8, 29, 10).toISOString()),
+      at('oct', 'cancelled', local(6)),
+      at('open', 'planned', local(13)),
+    ]);
+    expect(sections.map((s) => [s.label, s.meetings.map((m) => m.id)])).toEqual(
+      [
+        ['October 2026', ['oct']],
+        ['September 2026', ['sep']],
+      ]
+    );
+  });
+
+  it('groups meetings by series name, one-offs last, the coming ones before the past ones', () => {
+    const sections = bySeries([
+      at('one', 'planned', local(9), null),
+      at('old', 'ended', local(1)),
+      at('next', 'planned', local(13)),
+      at('ops', 'planned', local(14), 's2'),
+      at('live', 'in_progress', local(7)),
+    ]);
+    expect(sections.map((s) => [s.label, s.meetings.map((m) => m.id)])).toEqual(
+      [
+        ['Finance sync', ['live', 'next', 'old']],
+        ['Ops review', ['ops']],
+        ['One-off meetings', ['one']],
+      ]
+    );
+  });
+
+  it("offers every other open meeting to move a topic to, the series' next one first", () => {
+    const from = at('from', 'in_progress', local(7));
+    const targets = moveTargets(from, [
+      from,
+      at('ended', 'ended', local(1)),
+      at('one', 'planned', local(8), null),
+      at('later', 'planned', local(21)),
+      at('next', 'planned', local(14)),
+      at('live', 'in_progress', local(7, 9), 's2'),
+    ]);
+    expect(targets.map((t) => [t.meeting.id, t.nextOfSeries])).toEqual([
+      ['next', true],
+      ['live', false],
+      ['one', false],
+      ['later', false],
+    ]);
+    expect(
+      moveTargets(at('x', 'planned', local(8), null), [from]).map(
+        (t) => t.nextOfSeries
+      )
+    ).toEqual([false]);
+  });
+
+  it('finds the meetings before and after one in its series, none for a one-off', () => {
+    const list = [
+      at('a', 'ended', local(1)),
+      at('b', 'in_progress', local(7)),
+      at('c', 'planned', local(14)),
+    ];
+    const n = seriesNeighbours(list[1]!, list);
+    expect([n.previous?.id, n.next?.id]).toEqual(['a', 'c']);
+    expect(seriesNeighbours(list[0]!, list).previous).toBeNull();
+    expect(seriesNeighbours(at('o', 'planned', local(9), null), list)).toEqual({
+      previous: null,
+      next: null,
+    });
   });
 });

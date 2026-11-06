@@ -20,6 +20,7 @@ import type { Meeting } from '@core/api/types';
 import { call, settle, testServer } from '@testing/mock-backend/spec-helpers';
 import { ToastService } from '@ui/toast/toast';
 import { meetingLine } from './meetings-shell';
+import { SEARCH_PAUSE_MS, UNDO_MS } from './meetings-store';
 import { MEETINGS_ROUTES } from './meetings.routes';
 
 /** The data layer's `Clock` over the mock's manual clock, so both move together. */
@@ -110,7 +111,10 @@ function buttonNamed(
   return found;
 }
 
-function type(field: HTMLInputElement | null, value: string): void {
+function type(
+  field: HTMLInputElement | HTMLTextAreaElement | null,
+  value: string
+): void {
   if (field === null) throw new Error('no field');
   field.value = value;
   field.dispatchEvent(new Event('input'));
@@ -155,10 +159,18 @@ describe('Meetings on the mock backend', () => {
     expect(text(page.root.querySelector('.identity .ah-badge'))).toBe(
       'In progress'
     );
+    const groups = [...page.root.querySelectorAll('aside h3')].map((h) =>
+      text(h)
+    );
+    expect(groups[0]).toBe('Now');
+    expect(groups.slice(1)).toHaveLength(1);
+    expect(groups[1]).toMatch(/^(This week|Next week|Week of .+|Earlier)$/);
+    expect(page.root.querySelectorAll('aside a.line')).toHaveLength(2);
     expect(
-      [...page.root.querySelectorAll('aside h3')].map((h) => text(h))
-    ).toEqual(['Now', 'Next', 'Past']);
-    expect(page.root.querySelectorAll('aside a.line')).toHaveLength(3);
+      page.root
+        .querySelector('aside .views button[aria-pressed="true"]')
+        ?.textContent?.trim()
+    ).toBe('Upcoming');
     expect(
       text(page.root.querySelector('aside a[aria-current="page"] .title'))
     ).toBe('Finance sync');
@@ -167,7 +179,9 @@ describe('Meetings on the mock backend', () => {
       'Tax ID validation for EU customers',
       'Late fees for enterprise accounts',
     ]);
-    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe('OTHER_COMPANY');
+    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe(
+      'OTHER_COMPANY'
+    );
     expect(tagOf(card(page.root, 'Late fees for enterprise accounts'))).toBe(
       'ACME · priya@'
     );
@@ -241,7 +255,8 @@ describe('Meetings on the mock backend', () => {
   it('adds a note under a topic and clears the line for the next one', async () => {
     const page = await open('/meetings');
     const topic = card(page.root, 'Tax ID validation for EU customers');
-    const line = topic.querySelector<HTMLInputElement>('form input')!;
+    const line =
+      topic.querySelector<HTMLTextAreaElement>('form textarea.line')!;
     type(line, 'Check the VIES service for each new customer.');
     submit(topic.querySelector('form'));
     await flush(page);
@@ -259,7 +274,7 @@ describe('Meetings on the mock backend', () => {
       card(
         page.root,
         'Tax ID validation for EU customers'
-      ).querySelector<HTMLInputElement>('form input')!.value
+      ).querySelector<HTMLTextAreaElement>('form textarea.line')!.value
     ).toBe('');
   });
 
@@ -377,13 +392,19 @@ describe('Meetings on the mock backend', () => {
       );
       buttonNamed(answer, 'Remove').click();
       await flush(page);
+      expect(text(topic().querySelector('ul.answers .removed'))).toContain(
+        'Answer removed.'
+      );
+      expect(page.requests.at(-1)?.method).not.toBe('DELETE');
+      page.clock.advance(UNDO_MS);
+      await flush(page);
       expect(topic().querySelector('ul.answers')).toBeNull();
       expect(text(topic().querySelector('li .status'))).toBe('Open');
     });
 
     it('adds an image pasted into the line with the next note, shows it, opens it large and removes it', async () => {
       const page = await open('/meetings');
-      const line = card(page.root, TOPIC).querySelector('form input');
+      const line = card(page.root, TOPIC).querySelector('form textarea.line');
       paste(line, [screen()]);
       await flush(page);
       expect(text(card(page.root, TOPIC).querySelector('.pending'))).toContain(
@@ -417,8 +438,8 @@ describe('Meetings on the mock backend', () => {
 
     it('adds a chosen image to a note already taken, and says why an SVG is left out', async () => {
       const page = await open('/meetings');
-      const line = card(page.root, TOPIC).querySelector<HTMLInputElement>(
-        'form input'
+      const line = card(page.root, TOPIC).querySelector<HTMLTextAreaElement>(
+        'form textarea.line'
       );
       type(line, 'The VIES error screen');
       submit(card(page.root, TOPIC).querySelector('form'));
@@ -449,8 +470,8 @@ describe('Meetings on the mock backend', () => {
       });
       try {
         const page = await open('/meetings');
-        const line = card(page.root, TOPIC).querySelector<HTMLInputElement>(
-          'form input'
+        const line = card(page.root, TOPIC).querySelector<HTMLTextAreaElement>(
+          'form textarea.line'
         );
         type(line, 'The VIES error screen');
         paste(line, [screen(), screen()]);
@@ -465,6 +486,247 @@ describe('Meetings on the mock backend', () => {
     });
   });
 
+  it('edits a note in place, turning it into an action with an owner, and Esc leaves it as it was', async () => {
+    const page = await open('/meetings');
+    const TOPIC = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, TOPIC), 'Edit').click();
+    await flush(page);
+    const form = card(page.root, TOPIC).querySelector<HTMLFormElement>(
+      'form.edit'
+    )!;
+    const field = form.querySelector<HTMLTextAreaElement>('textarea')!;
+    expect(field.value).toBe('1.5% per month, capped at 10% of the invoice.');
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await flush(page);
+    expect(card(page.root, TOPIC).querySelector('form.edit')).toBeNull();
+
+    card(page.root, TOPIC)
+      .querySelector<HTMLElement>('li .text')!
+      .dispatchEvent(new MouseEvent('dblclick'));
+    await flush(page);
+    const again = card(page.root, TOPIC).querySelector<HTMLFormElement>(
+      'form.edit'
+    )!;
+    type(again.querySelector('textarea'), 'Draft the late-fee wording');
+    const kind = again.querySelector<HTMLSelectElement>('select')!;
+    kind.value = 'action';
+    kind.dispatchEvent(new Event('change'));
+    await flush(page);
+    type(again.querySelector('input.owner'), 'Priya');
+    again
+      .querySelector('textarea')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush(page);
+
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.body).toEqual({
+      text: 'Draft the late-fee wording',
+      kind: 'action',
+      owner: 'Priya',
+      dueOn: null,
+    });
+    const topic = card(page.root, TOPIC);
+    expect(topic.querySelector('form.edit')).toBeNull();
+    expect(notesOf(topic)).toEqual(['Draft the late-fee wording']);
+    expect(text(topic.querySelector('li .kind'))).toBe('Action');
+  });
+
+  it('renames a topic from its menu; Enter saves the new title', async () => {
+    const page = await open('/meetings');
+    buttonNamed(card(page.root, 'Overdue invoice reminders'), '⋯').click();
+    await flush(page);
+    buttonNamed(
+      card(page.root, 'Overdue invoice reminders').querySelector(
+        '[role="menu"]'
+      )!,
+      'Rename'
+    ).click();
+    await flush(page);
+    const form = page.root.querySelector<HTMLFormElement>('form.rename')!;
+    type(form.querySelector('input'), 'Automate invoice reminders');
+    submit(form);
+    await flush(page);
+    expect(titles(page.root)[0]).toBe('Automate invoice reminders');
+    expect(page.root.querySelector('form.rename')).toBeNull();
+  });
+
+  it('removes a note at once with Undo, which brings it back without asking the API', async () => {
+    const page = await open('/meetings');
+    const TOPIC = 'Overdue invoice reminders';
+    buttonNamed(card(page.root, TOPIC), 'Remove').click();
+    await flush(page);
+    expect(notesOf(card(page.root, TOPIC))).toEqual([]);
+    expect(text(card(page.root, TOPIC).querySelector('.removed'))).toContain(
+      'Note removed.'
+    );
+    buttonNamed(card(page.root, TOPIC), 'Undo').click();
+    await flush(page);
+    page.clock.advance(UNDO_MS);
+    await flush(page);
+    expect(notesOf(card(page.root, TOPIC))).toEqual([
+      'About 120 reminders a month are sent by hand.',
+    ]);
+    expect(page.requests.some((r) => r.method === 'DELETE')).toBe(false);
+
+    buttonNamed(card(page.root, TOPIC), 'Remove').click();
+    await flush(page);
+    page.clock.advance(UNDO_MS);
+    await flush(page);
+    expect(page.requests.filter((r) => r.method === 'DELETE')).toHaveLength(1);
+    expect(card(page.root, TOPIC).querySelector('.removed')).toBeNull();
+    expect(notesOf(card(page.root, TOPIC))).toEqual([]);
+  });
+
+  it('moves a topic to a meeting the person picks, at the top of its topics', async () => {
+    const page = await open('/meetings', (server) => {
+      const oneOff = server.meetingDesk.create('alex@example.com', {
+        title: 'Pricing workshop',
+        startsAt: '2026-10-09T14:00:00.000Z',
+      });
+      server.meetingDesk.addTopic('alex@example.com', oneOff.id, {
+        title: 'Discount bands',
+        raisedBy: 'us',
+      });
+    });
+    const workshop = page.server.meetingDesk
+      .list('planned')
+      .find((m) => m.title === 'Pricing workshop')!;
+    buttonNamed(
+      card(page.root, 'Late fees for enterprise accounts'),
+      '⋯'
+    ).click();
+    await flush(page);
+    buttonNamed(
+      card(page.root, 'Late fees for enterprise accounts').querySelector(
+        '[role="menu"]'
+      )!,
+      'Move to…'
+    ).click();
+    await flush(page);
+    const choices = [
+      ...dialog().querySelectorAll<HTMLInputElement>('input[name="move-to"]'),
+    ];
+    expect(choices).toHaveLength(2);
+    expect(text(choices[0]!.closest('label'))).toContain('next in this series');
+    choices.find((c) => c.value === workshop.id)!.click();
+    [
+      ...dialog().querySelectorAll<HTMLInputElement>(
+        'input[name="move-position"]'
+      ),
+    ][1]!.click();
+    await flush(page);
+    buttonNamed(dialog(), 'Move topic').click();
+    await flush(page);
+
+    expect(page.requests.find((r) => r.path.endsWith('/move'))?.body).toEqual({
+      toMeetingId: workshop.id,
+      position: 'first',
+    });
+    expect(
+      page.server.meetingDesk.get(workshop.id).topics.map((t) => t.title)
+    ).toEqual(['Late fees for enterprise accounts', 'Discount bands']);
+    expect(
+      text(
+        card(page.root, 'Late fees for enterprise accounts').querySelector(
+          '.actions'
+        )
+      )
+    ).toContain('Moved to');
+  });
+
+  it("sets a one-off meeting's own Jira project when it is planned, and changes it after it ended", async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const form = dialog().querySelector('form')!;
+    const series = form.querySelector<HTMLSelectElement>('select')!;
+    series.value = 'one-off';
+    series.dispatchEvent(new Event('change'));
+    await flush(page);
+    type(dialog().querySelector('input[formcontrolname="name"]'), 'Workshop');
+    type(dialog().querySelector('input[formcontrolname="jiraKey"]'), 'ops');
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+    const created = page.requests.find(
+      (r) => r.method === 'POST' && r.path.endsWith('/meetings')
+    )!;
+    expect(created.body).toMatchObject({
+      title: 'Workshop',
+      jiraProjectKey: 'OPS',
+      jiraIssueType: 'Story',
+    });
+    expect(text(page.root.querySelector('.identity .jira'))).toContain(
+      'Stories go to OPS · Story'
+    );
+
+    buttonNamed(page.root.querySelector('.header')!, 'Mark done').click();
+    await flush(page);
+    buttonNamed(dialog(), /^Mark done/).click();
+    await flush(page);
+    buttonNamed(page.root.querySelector('.identity .jira')!, 'Change').click();
+    await flush(page);
+    type(dialog().querySelector('input[formcontrolname="projectKey"]'), 'FIN');
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(
+      page.requests.find((r) => r.path.endsWith('/jira-target'))?.body
+    ).toEqual({ jiraProjectKey: 'FIN', jiraIssueType: 'Story' });
+    expect(text(page.root.querySelector('.identity .jira'))).toContain(
+      'Stories go to FIN · Story'
+    );
+  });
+
+  it('lists past meetings by month and the meetings of each series, and goes from one meeting of a series to the next', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside .views')!, 'Series').click();
+    await flush(page);
+    expect(
+      [...page.root.querySelectorAll('aside h3')].map((h) => text(h))
+    ).toEqual(['Now', 'Finance sync']);
+    expect(page.root.querySelectorAll('aside a.line')).toHaveLength(4);
+
+    const nav = page.root.querySelector('.series-nav')!;
+    const links = [...nav.querySelectorAll('a')].map((a) => text(a));
+    expect(links).toHaveLength(2);
+    expect(links[0]).toMatch(/^‹ /);
+    nav.querySelectorAll<HTMLAnchorElement>('a')[1]!.click();
+    await flush(page);
+    expect(text(page.root.querySelector('.identity .ah-badge'))).toBe(
+      'Planned'
+    );
+  });
+
+  it('finds meetings, topics and notes from the search box, and shows the list again on Esc', async () => {
+    const page = await open('/meetings');
+    const box = page.root.querySelector<HTMLInputElement>('#meeting-search')!;
+    type(box, 'invoice');
+    await flush(page);
+    expect(text(page.root.querySelector('aside nav'))).toContain('Searching');
+    page.clock.advance(SEARCH_PAUSE_MS);
+    await flush(page);
+    const results = page.root.querySelector(
+      'nav[aria-label="Search results"]'
+    )!;
+    expect([...results.querySelectorAll('h3')].map((h) => text(h))).toEqual([
+      'Topics',
+      'Notes',
+    ]);
+    expect(text(results.querySelector('a .title'))).toBe(
+      'Overdue invoice reminders'
+    );
+    expect(
+      page.requests.filter((r) => r.path.endsWith('/meeting-search'))
+    ).toHaveLength(1);
+    box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await flush(page);
+    expect(
+      page.root.querySelector('nav[aria-label="Search results"]')
+    ).toBeNull();
+    expect(
+      page.root.querySelector('nav[aria-label="Meetings"]')
+    ).not.toBeNull();
+  });
+
   it('moves a topic down when asked', async () => {
     const page = await open('/meetings');
     buttonNamed(card(page.root, 'Overdue invoice reminders'), '↓').click();
@@ -475,10 +737,20 @@ describe('Meetings on the mock backend', () => {
     ]);
   });
 
-  it('removes a topic only after a second click', async () => {
+  it('removes a topic from its menu, only after a second click', async () => {
     const page = await open('/meetings');
-    buttonNamed(
+    const more = buttonNamed(
       card(page.root, 'Tax ID validation for EU customers'),
+      '⋯'
+    );
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    more.click();
+    await flush(page);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    buttonNamed(
+      card(page.root, 'Tax ID validation for EU customers').querySelector(
+        '[role="menu"]'
+      )!,
       'Remove'
     ).click();
     await flush(page);
@@ -639,8 +911,9 @@ describe('Meetings on the mock backend', () => {
     ).toEqual(['Supplier prices']);
   });
 
-  it('keeps the topics of a meeting whose series has no next meeting and no cadence, rather than fail to move them', async () => {
+  it('carries the topics of a meeting whose series has no next meeting to another meeting the person picks', async () => {
     let id = '';
+    let topicId = '';
     const page = await open('/meetings', (server) => {
       const series = server.meetingDesk.createSeries('alex@example.com', {
         name: 'Pricing review',
@@ -650,26 +923,35 @@ describe('Meetings on the mock backend', () => {
         seriesId: series.id,
         startsAt: '2026-10-20T09:00:00.000Z',
       }).id;
-      server.meetingDesk.addTopic('alex@example.com', id, {
+      topicId = server.meetingDesk.addTopic('alex@example.com', id, {
         title: 'Supplier prices',
         raisedBy: 'us',
-      });
+      }).id;
     });
+    const target = page.server.meetingDesk.list('in_progress')[0]!;
     await page.harness.navigateByUrl(`/meetings/${id}`);
     await flush(page);
     buttonNamed(page.root.querySelector('.header')!, 'Cancel meeting').click();
     await flush(page);
-    expect(text(dialog())).toContain('No next Pricing review is planned');
-    expect(dialog().querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
-    buttonNamed(dialog(), 'Cancel meeting').click();
+    expect(text(dialog())).toContain('to the meeting you choose');
+    const where = dialog().querySelector<HTMLSelectElement>(
+      '.destination select'
+    )!;
+    const options = [...where.options].map((o) => o.text.trim());
+    expect(options.some((o) => o.includes('next in this series'))).toBe(false);
+    expect(where.value).toBe(target.id);
+    buttonNamed(dialog(), /^Cancel meeting · move 1 topic$/).click();
     await flush(page);
 
     expect(text(page.root.querySelector('.identity .ah-tag'))).toBe(
       'Cancelled'
     );
     expect(page.requests.find((r) => r.path.endsWith('/cancel'))?.body).toEqual(
-      { carryOver: [] }
+      { carryOver: [topicId], carryOverTo: target.id }
     );
+    expect(
+      page.server.meetingDesk.get(target.id).topics.map((t) => t.title)
+    ).toContain('Supplier prices');
   });
 
   it('plans a one-off meeting with stakeholders named or by e-mail', async () => {
@@ -703,8 +985,13 @@ describe('Meetings on the mock backend', () => {
 
   it('shows an ended meeting read-only', async () => {
     const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside .views')!, 'Past').click();
+    await flush(page);
+    expect(
+      [...page.root.querySelectorAll('aside h3')].map((h) => text(h))[1]
+    ).toMatch(/^[A-Z][a-z]+ \d{4}$/);
     page.root
-      .querySelector<HTMLAnchorElement>('aside ul:nth-of-type(3) a.line')!
+      .querySelector<HTMLAnchorElement>('aside ul:nth-of-type(2) a.line')!
       .click();
     await flush(page);
     expect(text(page.root.querySelector('.identity .ah-tag'))).toBe('Ended');
@@ -769,7 +1056,7 @@ describe('Meetings on the mock backend', () => {
     kind.value = 'action';
     kind.dispatchEvent(new Event('change'));
     await flush(page);
-    type(topic.querySelector('form input.line'), 'Ask finance for the list');
+    type(topic.querySelector('form textarea.line'), 'Ask finance for the list');
     type(topic.querySelector('form input.owner'), 'Priya');
     type(topic.querySelector('form input.due'), '2026-10-30');
     submit(topic.querySelector('form'));
@@ -794,7 +1081,10 @@ describe('Meetings on the mock backend', () => {
   it('reads a typed /d as a decision and lists it as decided in this meeting', async () => {
     const page = await open('/meetings');
     const topic = card(page.root, 'Tax ID validation for EU customers');
-    type(topic.querySelector('form input'), '/d Validate with VIES only');
+    type(
+      topic.querySelector('form textarea.line'),
+      '/d Validate with VIES only'
+    );
     submit(topic.querySelector('form'));
     await flush(page);
     expect(
@@ -813,7 +1103,7 @@ describe('Meetings on the mock backend', () => {
     const page = await open('/meetings');
     const title = 'Tax ID validation for EU customers';
     type(
-      card(page.root, title).querySelector('form input'),
+      card(page.root, title).querySelector('form textarea.line'),
       '/q Do EU customers need a VAT number?'
     );
     submit(card(page.root, title).querySelector('form'));
@@ -868,7 +1158,7 @@ describe('Meetings on the mock backend', () => {
       const page = await open('/meetings');
       const title = 'Tax ID validation for EU customers';
       for (const q of ['/q Who checks the number?', '/q Which countries?']) {
-        type(card(page.root, title).querySelector('form input'), q);
+        type(card(page.root, title).querySelector('form textarea.line'), q);
         submit(card(page.root, title).querySelector('form'));
         await flush(page);
       }
@@ -1268,6 +1558,8 @@ describe('meetingLine', () => {
     updatedBy: 'alex@example.com',
     updatedByName: null,
     updatedAt: '2026-10-01T10:00:00.000Z',
+    jiraProjectKey: null,
+    jiraIssueType: null,
   } as const;
 
   it('says how many topics a meeting has, and that it is in progress when it runs', () => {

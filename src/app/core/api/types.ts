@@ -659,8 +659,20 @@ export type MeetingNote = Schemas['MeetingNote'];
 /** Answer of `endMeeting`: the ended meeting and, when topics were carried over, the meeting that took them. */
 export type EndMeetingResult = Schemas['EndMeetingResult'];
 
-/** Answer of `moveMeetingTopic`: the moved topic and its copy in the next meeting. */
+/** Answer of `moveMeetingTopic`: the moved topic and its copy in the meeting that took it. */
 export type MoveMeetingTopicResult = Schemas['MoveMeetingTopicResult'];
+
+/** Body of `moveMeetingTopic`: the meeting that takes the topic (else the series' next) and where in its list. */
+export type MoveMeetingTopicRequest = Schemas['MoveMeetingTopicRequest'];
+
+/** Body of `setMeetingJiraTarget`: where a one-off meeting's stories are created in Jira; a null key clears it. */
+export type MeetingJiraTargetRequest = Schemas['MeetingJiraTargetRequest'];
+
+/** An open topic found by `searchMeetings`, with the meeting it is in. */
+export type MeetingTopicInContext = Schemas['MeetingTopicInContext'];
+
+/** Answer of `searchMeetings`: meetings, open topics and notes that match, latest meeting first, at most 20 of each. */
+export type MeetingSearchResult = Schemas['MeetingSearchResult'];
 /** A question, answered, and its new answer (`addMeetingNoteAnswer`). */
 export type MeetingNoteAnswerResult = Schemas['MeetingNoteAnswerResult'];
 
@@ -670,7 +682,7 @@ export type CreateMeetingRequest = Schemas['CreateMeetingRequest'];
 /** Body of `updateMeeting`. */
 export type UpdateMeetingRequest = Schemas['UpdateMeetingRequest'];
 
-/** Body of `endMeeting`: the open topics to carry over to the next meeting. */
+/** Body of `endMeeting`: the open topics to carry over, and the meeting that takes them (else the series' next). */
 export type EndMeetingRequest = Schemas['EndMeetingRequest'];
 
 /** Body of `addMeetingTopic`. */

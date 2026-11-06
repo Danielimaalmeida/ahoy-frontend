@@ -7,11 +7,13 @@ import {
   untracked,
 } from '@angular/core';
 import { DialogService } from '@ui/dialog/dialog';
+import { RouterLink } from '@angular/router';
 import {
   isClosed,
   meetingDay,
   meetingTime,
   meetingToConfluence,
+  seriesNeighbours,
 } from '@domain/meetings';
 import { targetText } from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
@@ -44,13 +46,14 @@ const STATUS_WORDS = {
 
 /**
  * The meeting open on the right of the Meetings page (boards `Meetings` and `MeetingNext`): its status, day and
- * stakeholders, Start, Mark done and Cancel (or End once it runs), the line that adds a topic, the series' open actions
- * and this meeting's decisions, and the topics with their notes. `/meetings` opens the meeting running now, else the
+ * stakeholders, the series' previous and next meetings, where its stories go in Jira (the series' target, or a one-off
+ * meeting's own, which can be set also after it ended), Start, Mark done and Cancel (or End once it runs), the line that
+ * adds a topic, the series' open actions and this meeting's decisions, and the topics with their notes. `/meetings` opens the meeting running now, else the
  * next planned one, else the latest that ended; `/meetings/:id` opens that one.
  */
 @Component({
   selector: 'ah-meeting-view',
-  imports: [ActionsPanel, Banner, Button, TopicCard, TopicComposer],
+  imports: [ActionsPanel, Banner, Button, RouterLink, TopicCard, TopicComposer],
   styles: `
     :host {
       display: flex;
@@ -92,6 +95,11 @@ const STATUS_WORDS = {
       flex-wrap: wrap;
       gap: 4px 8px;
       align-items: center;
+    }
+    .series-nav {
+      display: flex;
+      gap: 8px;
+      font-size: 13px;
     }
     .topics-head {
       display: flex;
@@ -139,23 +147,47 @@ const STATUS_WORDS = {
             @if (m.seriesName !== null) {
               <span class="ah-tag">{{ m.seriesName }}</span>
             }
+            @if (neighbours(); as n) {
+              <nav
+                class="series-nav"
+                [attr.aria-label]="'Other ' + m.seriesName + ' meetings'"
+              >
+                @if (n.previous; as p) {
+                  <a
+                    [routerLink]="['/meetings', p.id]"
+                    [attr.aria-label]="
+                      'Previous ' + m.seriesName + ', ' + day(p.startsAt)
+                    "
+                    >‹ {{ day(p.startsAt) }}</a
+                  >
+                }
+                @if (n.next; as x) {
+                  <a
+                    [routerLink]="['/meetings', x.id]"
+                    [attr.aria-label]="
+                      'Next ' + m.seriesName + ', ' + day(x.startsAt)
+                    "
+                    >{{ day(x.startsAt) }} ›</a
+                  >
+                }
+              </nav>
+            }
           </div>
           <h1>{{ m.title }}</h1>
           @if (m.stakeholders.length > 0) {
             <span class="ah-muted">With {{ m.stakeholders.join(', ') }}</span>
           }
-          @if (series(); as s) {
+          @if (target(); as t) {
             <span class="jira">
               <span class="ah-hint">{{ jiraTarget() }}</span>
               <button
                 ahButton="ghost"
                 size="sm"
                 type="button"
+                [disabled]="busy()"
                 (click)="changeTarget()"
               >
-                {{
-                  s.jiraProjectKey === null ? 'Set the Jira project' : 'Change'
-                }}
+                {{ t.projectKey === null ? 'Set the Jira project' : 'Change' }}
               </button>
             </span>
           }
@@ -263,7 +295,6 @@ const STATUS_WORDS = {
             <ah-topic-card
               [topic]="topic"
               [meetingOpen]="!closed()"
-              [inSeries]="m.seriesId !== null"
               [first]="first"
               [last]="last"
             />
@@ -302,18 +333,26 @@ export class MeetingView {
     return at === null ? '' : `on ${meetingDay(at)} at ${meetingTime(at)}`;
   });
   protected readonly series = this.store.openSeries;
-  /** "Stories go to FIN as Story", or that the series has none. */
+  /** Where the meeting's stories go: its series' Jira target, or a one-off meeting's own. */
+  protected readonly target = this.store.openTarget;
+  /** "Stories go to FIN · Story", or that the series or meeting has none. */
   protected readonly jiraTarget = computed(() => {
-    const s = this.series();
-    if (s === null) return '';
-    const text = targetText({
-      projectKey: s.jiraProjectKey,
-      issueType: s.jiraIssueType,
-    });
-    return text === null
-      ? 'Stories from this series are not created in Jira yet'
-      : `Stories go to ${text}`;
+    const t = this.target();
+    if (t === null) return '';
+    const text = targetText(t);
+    if (text !== null) return `Stories go to ${text}`;
+    return this.meeting()?.seriesId === null
+      ? 'Stories from this meeting are not created in Jira yet'
+      : 'Stories from this series are not created in Jira yet';
   });
+  /** The meetings before and after this one in its series, for the arrows beside the series' name. */
+  protected readonly neighbours = computed(() => {
+    const m = this.meeting();
+    if (m === null || m.seriesId === null) return null;
+    const n = seriesNeighbours(m, this.store.meetings());
+    return n.previous === null && n.next === null ? null : n;
+  });
+  protected readonly day = meetingDay;
   /** The open meeting's id, so the drafts are read once per meeting and not after every change to it. */
   private readonly meetingId = computed(() => this.meeting()?.id ?? null);
   protected readonly openFailure = computed(() => {
@@ -339,13 +378,18 @@ export class MeetingView {
     });
   }
 
-  /** Opens the series' Jira target. */
+  /** Opens the Jira target: the series', or a one-off meeting's own. */
   protected changeTarget(): void {
+    const meeting = this.meeting();
+    if (meeting === null) return;
     const series = this.series();
-    if (series === null) return;
+    if (meeting.seriesId !== null && series === null) return;
     this.dialogs
       .open<unknown, SeriesJiraData>(SeriesJiraDialog, {
-        data: { store: this.store, series },
+        data:
+          series !== null
+            ? { store: this.store, series }
+            : { store: this.store, meeting },
       })
       .closed.subscribe((changed) => {
         if (changed !== undefined) void this.drafts.reload();

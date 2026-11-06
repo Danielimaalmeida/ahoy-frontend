@@ -1,4 +1,14 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -27,6 +37,7 @@ import { draftChip } from '@domain/story-drafts';
 import { Button } from '@ui/button/button';
 import { DialogService } from '@ui/dialog/dialog';
 import { MeetingsStore } from './meetings-store';
+import { MoveTopicDialog, type MoveTopicData } from './move-topic-dialog';
 import { NoteImages } from './note-images';
 import { StoryDraftDialog, type StoryDraftData } from './story-draft-dialog';
 import { StoryDraftsStore } from './story-drafts-store';
@@ -38,8 +49,10 @@ export const NOTE_MAX = 4000;
 
 /**
  * One topic of a meeting (board `Meetings`): its title, who raised it and when, its notes oldest first, and a line to
- * add a note. While it can change, it can also go up or down, move to the series' next meeting, or be removed with its
- * notes (after a second click). A moved topic is read-only and links to where it went. Notes are plain text; a note can
+ * add a note that grows as it is written (Enter adds, Shift+Enter starts a new line). While it can change, it can go up
+ * or down, and its `⋯` menu renames it, moves it to any meeting running or planned (Move to…) or removes it with its
+ * notes (after a second click). A note is edited in place (Edit, or a double click): its text and what it is. A removed
+ * note can be brought back with Undo for a few seconds. A moved topic is read-only and links to where it went. Notes are plain text; a note can
  * be a decision, an action (with an owner and a due day, ticked done also after the meeting ended) or a question,
  * chosen beside the line or typed as `/d`, `/a`, `/q` before the text. A question shows open or answered, with its
  * answers under it: Answer opens a line under it (also after the meeting ended), the first answer marks it answered,
@@ -50,7 +63,13 @@ export const NOTE_MAX = 4000;
  */
 @Component({
   selector: 'ah-topic-card',
-  imports: [Button, NoteImages, ReactiveFormsModule, RouterLink],
+  imports: [
+    Button,
+    NgTemplateOutlet,
+    NoteImages,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
   styles: `
     :host {
       display: block;
@@ -255,7 +274,75 @@ export const NOTE_MAX = 4000;
       align-items: center;
       padding: 0 16px 12px;
     }
+    .edit-note {
+      opacity: 0;
+    }
+    li:hover > .note .edit-note,
+    li:focus-within > .note .edit-note {
+      opacity: 1;
+    }
+    .text.editable {
+      cursor: text;
+    }
+    textarea.line {
+      flex: 1 1 240px;
+      min-height: 32px;
+      max-height: 240px;
+      resize: none;
+      overflow-y: auto;
+      padding-top: 6px;
+      padding-bottom: 6px;
+      background: var(--surface-raised);
+      border-color: var(--line);
+      line-height: 1.4;
+      field-sizing: content;
+    }
+    form.edit {
+      padding: 4px 0 4px;
+      align-items: flex-start;
+    }
+    form.rename {
+      flex: 1 1 240px;
+      padding: 0;
+      flex-wrap: nowrap;
+    }
+    form.rename input {
+      flex: 1;
+    }
+    .removed {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--ink-soft);
+    }
+    .menu-wrap {
+      position: relative;
+    }
+    [role='menu'] {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      z-index: 5;
+      min-width: 180px;
+      display: flex;
+      flex-direction: column;
+      padding: 4px;
+      margin: 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md, 0 6px 20px rgb(0 0 0 / 12%));
+      list-style: none;
+    }
+    [role='menu'] button {
+      justify-content: flex-start;
+      width: 100%;
+    }
   `,
+  host: {
+    '(document:click)': 'closeMenuOutside($event)',
+    '(keydown.escape)': 'menuOpen.set(false)',
+  },
   template: `
     @let t = topic();
     <article
@@ -268,7 +355,44 @@ export const NOTE_MAX = 4000;
     >
       <div class="head">
         <div class="title">
-          <h3 [id]="'topic-' + t.id">{{ t.title }}</h3>
+          @if (renaming()) {
+            <form
+              class="rename"
+              (submit)="$event.preventDefault(); saveTitle()"
+            >
+              <label class="ah-sr" [for]="'title-' + t.id">Topic title</label>
+              <input
+                class="ah-input"
+                type="text"
+                autocomplete="off"
+                maxlength="300"
+                [id]="'title-' + t.id"
+                [formControl]="title"
+                (keydown.escape)="renaming.set(false)"
+              />
+              <button
+                ahButton="primary"
+                size="sm"
+                type="submit"
+                [disabled]="busy()"
+              >
+                Save
+              </button>
+              <button
+                ahButton="ghost"
+                size="sm"
+                type="button"
+                (click)="renaming.set(false)"
+              >
+                Cancel
+              </button>
+            </form>
+            <h3 class="ah-sr" [id]="'topic-' + t.id">{{ t.title }}</h3>
+          } @else {
+            <h3 [id]="'topic-' + t.id" (dblclick)="startRename()">
+              {{ t.title }}
+            </h3>
+          }
           <span
             class="ah-tag"
             [class.ah-tag--accent]="t.raisedBy === 'us'"
@@ -337,26 +461,56 @@ export const NOTE_MAX = 4000;
                   ↓
                 </button>
               }
-              @if (canMoveToNext()) {
+              <span class="menu-wrap">
                 <button
                   ahButton="ghost"
                   size="sm"
                   type="button"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="menuOpen()"
+                  [attr.aria-controls]="'menu-' + t.id"
+                  [attr.aria-label]="'More for ' + t.title"
                   [disabled]="busy()"
-                  (click)="store.moveToNext(t.id)"
+                  (click)="toggleMenu()"
                 >
-                  Move to next meeting
+                  ⋯
                 </button>
-              }
-              <button
-                ahButton="ghost"
-                size="sm"
-                type="button"
-                [disabled]="busy()"
-                (click)="confirming.set(true)"
-              >
-                Remove
-              </button>
+                @if (menuOpen()) {
+                  <span
+                    role="menu"
+                    [id]="'menu-' + t.id"
+                    [attr.aria-label]="'Actions for ' + t.title"
+                  >
+                    <button
+                      ahButton="ghost"
+                      size="sm"
+                      type="button"
+                      role="menuitem"
+                      (click)="menuOpen.set(false); startRename()"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      ahButton="ghost"
+                      size="sm"
+                      type="button"
+                      role="menuitem"
+                      (click)="menuOpen.set(false); moveTo()"
+                    >
+                      Move to…
+                    </button>
+                    <button
+                      ahButton="ghost"
+                      size="sm"
+                      type="button"
+                      role="menuitem"
+                      (click)="menuOpen.set(false); confirming.set(true)"
+                    >
+                      Remove
+                    </button>
+                  </span>
+                }
+              </span>
             }
           }
         </div>
@@ -364,283 +518,369 @@ export const NOTE_MAX = 4000;
       @if (notes().length > 0) {
         <ul [attr.aria-label]="'Notes on ' + t.title">
           @for (note of notes(); track note.id) {
-            <li [class.done]="note.kind === 'action' && note.doneAt !== null">
-              <span class="note">
-                @if (note.kind === 'action') {
-                  <input
-                    type="checkbox"
-                    class="done-box"
-                    [checked]="note.doneAt !== null"
-                    [disabled]="busy() || moved()"
-                    [attr.aria-label]="
-                      (note.doneAt === null
-                        ? 'Mark done: '
-                        : 'Mark not done: ') + note.text
-                    "
-                    (change)="toggleDone(note, $event)"
-                  />
-                }
-                @if (note.kind !== 'note') {
-                  <span class="ah-tag kind" [class]="'kind-' + note.kind">{{
-                    kindLabel[note.kind]
-                  }}</span>
-                }
-                <span class="text">{{ note.text }}</span>
-                @if (note.kind === 'question') {
-                  @if (note.doneAt !== null) {
-                    <span class="ah-tag status answered">Answered</span>
-                  } @else {
-                    <span class="ah-tag status open">Open</span>
+            @if (removing().has(note.id)) {
+              <li class="removed" role="status">
+                <span>Note removed.</span>
+                <button
+                  ahButton="ghost"
+                  size="sm"
+                  type="button"
+                  [attr.aria-label]="'Undo removing: ' + note.text"
+                  (click)="store.undoRemove(note.id)"
+                >
+                  Undo
+                </button>
+              </li>
+            } @else if (editing() === note.id) {
+              <li>
+                <ng-container
+                  *ngTemplateOutlet="editForm; context: { $implicit: note }"
+                />
+              </li>
+            } @else {
+              <li [class.done]="note.kind === 'action' && note.doneAt !== null">
+                <span class="note">
+                  @if (note.kind === 'action') {
+                    <input
+                      type="checkbox"
+                      class="done-box"
+                      [checked]="note.doneAt !== null"
+                      [disabled]="busy() || moved()"
+                      [attr.aria-label]="
+                        (note.doneAt === null
+                          ? 'Mark done: '
+                          : 'Mark not done: ') + note.text
+                      "
+                      (change)="toggleDone(note, $event)"
+                    />
                   }
-                }
-                @if (note.kind === 'action') {
-                  @if (note.owner !== null) {
-                    <span class="ah-hint by">{{ note.owner }}</span>
-                  }
-                  @if (due(note); as d) {
-                    <span class="ah-hint by" [class.overdue]="d.overdue">{{
-                      d.text
+                  @if (note.kind !== 'note') {
+                    <span class="ah-tag kind" [class]="'kind-' + note.kind">{{
+                      kindLabel[note.kind]
                     }}</span>
                   }
-                }
-                <span class="ah-hint by" [attr.title]="note.createdBy"
-                  >{{ author(note.createdBy, note.createdByName) }} ·
-                  {{ time(note.createdAt) }}</span
-                >
-                @if (editable()) {
-                  @if (note.images.length < maxImages) {
-                    <input
-                      #picker
-                      type="file"
-                      multiple
-                      hidden
-                      [accept]="imageTypes"
-                      (change)="addImagesTo(note, $event)"
-                    />
+                  <span
+                    class="text"
+                    [class.editable]="editable()"
+                    (dblclick)="editable() && startEdit(note)"
+                    >{{ note.text }}</span
+                  >
+                  @if (note.kind === 'question') {
+                    @if (note.doneAt !== null) {
+                      <span class="ah-tag status answered">Answered</span>
+                    } @else {
+                      <span class="ah-tag status open">Open</span>
+                    }
+                  }
+                  @if (note.kind === 'action') {
+                    @if (note.owner !== null) {
+                      <span class="ah-hint by">{{ note.owner }}</span>
+                    }
+                    @if (due(note); as d) {
+                      <span class="ah-hint by" [class.overdue]="d.overdue">{{
+                        d.text
+                      }}</span>
+                    }
+                  }
+                  <span class="ah-hint by" [attr.title]="note.createdBy"
+                    >{{ author(note.createdBy, note.createdByName) }} ·
+                    {{ time(note.createdAt) }}</span
+                  >
+                  @if (editable()) {
                     <button
                       ahButton="ghost"
                       size="sm"
                       type="button"
-                      class="add-image"
-                      [attr.aria-label]="
-                        'Add an image to the note: ' + note.text
-                      "
+                      class="edit-note"
+                      [attr.aria-label]="'Edit the note: ' + note.text"
                       [disabled]="busy()"
-                      (click)="picker.click()"
+                      (click)="startEdit(note)"
                     >
-                      Add image
+                      Edit
                     </button>
-                  }
-                  <button
-                    ahButton="ghost"
-                    size="sm"
-                    type="button"
-                    class="remove-note"
-                    [attr.aria-label]="'Remove the note: ' + note.text"
-                    [disabled]="busy()"
-                    (click)="store.deleteNote(t.id, note.id)"
-                  >
-                    Remove
-                  </button>
-                }
-              </span>
-              @if (note.images.length > 0) {
-                <ah-note-images [note]="note" [editable]="editable()" />
-              }
-              @if (note.kind === 'question') {
-                @let answers = answersOf().get(note.id) ?? [];
-                @if (answers.length > 0) {
-                  <ul
-                    class="answers"
-                    [attr.aria-label]="'Answers to ' + note.text"
-                  >
-                    @for (a of answers; track a.id) {
-                      <li>
-                        <span class="note">
-                          <svg
-                            class="reply"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                          >
-                            <path d="M5 4v7a4 4 0 0 0 4 4h10" />
-                            <path d="M15 11l4 4-4 4" />
-                          </svg>
-                          <span class="text">{{ a.text }}</span>
-                          <span class="ah-hint by" [attr.title]="a.createdBy"
-                            >{{ author(a.createdBy, a.createdByName) }} ·
-                            {{ time(a.createdAt) }}</span
-                          >
-                          @if (!moved()) {
-                            @if (a.images.length < maxImages) {
-                              <input
-                                #answerPicker
-                                type="file"
-                                multiple
-                                hidden
-                                [accept]="imageTypes"
-                                (change)="addImagesTo(a, $event)"
-                              />
-                              <button
-                                ahButton="ghost"
-                                size="sm"
-                                type="button"
-                                class="add-image"
-                                [attr.aria-label]="
-                                  'Add an image to the answer: ' + a.text
-                                "
-                                [disabled]="busy()"
-                                (click)="answerPicker.click()"
-                              >
-                                Add image
-                              </button>
-                            }
-                            <button
-                              ahButton="ghost"
-                              size="sm"
-                              type="button"
-                              class="remove-note"
-                              [attr.aria-label]="'Remove the answer: ' + a.text"
-                              [disabled]="busy()"
-                              (click)="store.deleteNote(t.id, a.id)"
-                            >
-                              Remove
-                            </button>
-                          }
-                        </span>
-                        @if (a.images.length > 0) {
-                          <ah-note-images [note]="a" [editable]="!moved()" />
-                        }
-                      </li>
-                    }
-                  </ul>
-                }
-                @if (!moved()) {
-                  @if (answering() === note.id) {
-                    <form
-                      class="answer"
-                      (submit)="$event.preventDefault(); addAnswer(note)"
-                    >
-                      <label class="ah-sr" [for]="'answer-' + note.id"
-                        >Answer to: {{ note.text }}</label
-                      >
+                    @if (note.images.length < maxImages) {
                       <input
-                        class="ah-input line"
-                        type="text"
-                        autocomplete="off"
-                        placeholder="Write the answer"
-                        [id]="'answer-' + note.id"
-                        [maxlength]="noteMax"
-                        [formControl]="answerText"
-                        (paste)="pasteAnswer($event)"
-                        (keydown.escape)="cancelAnswer()"
-                      />
-                      <button
-                        ahButton="primary"
-                        size="sm"
-                        type="submit"
-                        [disabled]="busy()"
-                      >
-                        Add answer
-                      </button>
-                      <input
-                        #answerComposerPicker
+                        #picker
                         type="file"
                         multiple
                         hidden
                         [accept]="imageTypes"
-                        (change)="chooseForAnswer($event)"
+                        (change)="addImagesTo(note, $event)"
                       />
                       <button
                         ahButton="ghost"
                         size="sm"
                         type="button"
+                        class="add-image"
                         [attr.aria-label]="
-                          'Add an image to the answer to: ' + note.text
+                          'Add an image to the note: ' + note.text
                         "
-                        [disabled]="
-                          busy() || answerPending().length >= maxImages
-                        "
-                        (click)="answerComposerPicker.click()"
+                        [disabled]="busy()"
+                        (click)="picker.click()"
                       >
                         Add image
                       </button>
-                      <button
-                        ahButton="default"
-                        size="sm"
-                        type="button"
-                        (click)="cancelAnswer()"
-                      >
-                        Cancel
-                      </button>
-                      @if (answerPending().length > 0) {
-                        <ul
-                          class="pending"
-                          [attr.aria-label]="
-                            'Images for the answer to: ' + note.text
-                          "
-                        >
-                          @for (file of answerPending(); track $index) {
-                            <li class="ah-tag">
-                              {{ file.name || 'Pasted image' }}
-                              <button
-                                ahButton="ghost"
-                                size="sm"
-                                type="button"
-                                [attr.aria-label]="
-                                  'Leave out ' +
-                                  (file.name || 'the pasted image')
-                                "
-                                (click)="leaveOutOfAnswer($index)"
+                    }
+                    <button
+                      ahButton="ghost"
+                      size="sm"
+                      type="button"
+                      class="remove-note"
+                      [attr.aria-label]="'Remove the note: ' + note.text"
+                      [disabled]="busy()"
+                      (click)="removeNote(note)"
+                    >
+                      Remove
+                    </button>
+                  }
+                </span>
+                @if (note.images.length > 0) {
+                  <ah-note-images [note]="note" [editable]="editable()" />
+                }
+                @if (note.kind === 'question') {
+                  @let answers = answersOf().get(note.id) ?? [];
+                  @if (answers.length > 0) {
+                    <ul
+                      class="answers"
+                      [attr.aria-label]="'Answers to ' + note.text"
+                    >
+                      @for (a of answers; track a.id) {
+                        @if (editing() === a.id) {
+                          <li>
+                            <ng-container
+                              *ngTemplateOutlet="
+                                editForm;
+                                context: { $implicit: a }
+                              "
+                            />
+                          </li>
+                        } @else if (removing().has(a.id)) {
+                          <li class="removed" role="status">
+                            <span>Answer removed.</span>
+                            <button
+                              ahButton="ghost"
+                              size="sm"
+                              type="button"
+                              [attr.aria-label]="'Undo removing: ' + a.text"
+                              (click)="store.undoRemove(a.id)"
+                            >
+                              Undo
+                            </button>
+                          </li>
+                        } @else {
+                          <li>
+                            <span class="note">
+                              <svg
+                                class="reply"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
                               >
-                                ×
-                              </button>
-                            </li>
-                          }
-                        </ul>
+                                <path d="M5 4v7a4 4 0 0 0 4 4h10" />
+                                <path d="M15 11l4 4-4 4" />
+                              </svg>
+                              <span
+                                class="text"
+                                [class.editable]="!moved()"
+                                (dblclick)="!moved() && startEdit(a)"
+                                >{{ a.text }}</span
+                              >
+                              <span
+                                class="ah-hint by"
+                                [attr.title]="a.createdBy"
+                                >{{ author(a.createdBy, a.createdByName) }} ·
+                                {{ time(a.createdAt) }}</span
+                              >
+                              @if (!moved()) {
+                                <button
+                                  ahButton="ghost"
+                                  size="sm"
+                                  type="button"
+                                  class="edit-note"
+                                  [attr.aria-label]="
+                                    'Edit the answer: ' + a.text
+                                  "
+                                  [disabled]="busy()"
+                                  (click)="startEdit(a)"
+                                >
+                                  Edit
+                                </button>
+                                @if (a.images.length < maxImages) {
+                                  <input
+                                    #answerPicker
+                                    type="file"
+                                    multiple
+                                    hidden
+                                    [accept]="imageTypes"
+                                    (change)="addImagesTo(a, $event)"
+                                  />
+                                  <button
+                                    ahButton="ghost"
+                                    size="sm"
+                                    type="button"
+                                    class="add-image"
+                                    [attr.aria-label]="
+                                      'Add an image to the answer: ' + a.text
+                                    "
+                                    [disabled]="busy()"
+                                    (click)="answerPicker.click()"
+                                  >
+                                    Add image
+                                  </button>
+                                }
+                                <button
+                                  ahButton="ghost"
+                                  size="sm"
+                                  type="button"
+                                  class="remove-note"
+                                  [attr.aria-label]="
+                                    'Remove the answer: ' + a.text
+                                  "
+                                  [disabled]="busy()"
+                                  (click)="removeNote(a)"
+                                >
+                                  Remove
+                                </button>
+                              }
+                            </span>
+                            @if (a.images.length > 0) {
+                              <ah-note-images
+                                [note]="a"
+                                [editable]="!moved()"
+                              />
+                            }
+                          </li>
+                        }
                       }
-                      <p class="ah-hint image-hint" role="status">
-                        {{
-                          answerHint() ??
-                            'Enter adds it. The first answer marks the question answered; you can reopen it.'
-                        }}
-                      </p>
-                    </form>
-                  } @else {
-                    <span class="question-actions">
-                      <button
-                        ahButton="ghost"
-                        size="sm"
-                        type="button"
-                        [attr.aria-label]="'Answer: ' + note.text"
-                        [disabled]="busy()"
-                        (click)="startAnswer(note)"
+                    </ul>
+                  }
+                  @if (!moved()) {
+                    @if (answering() === note.id) {
+                      <form
+                        class="answer"
+                        (submit)="$event.preventDefault(); addAnswer(note)"
                       >
-                        Answer
-                      </button>
-                      @if (note.doneAt !== null) {
+                        <label class="ah-sr" [for]="'answer-' + note.id"
+                          >Answer to: {{ note.text }}</label
+                        >
+                        <input
+                          class="ah-input line"
+                          type="text"
+                          autocomplete="off"
+                          placeholder="Write the answer"
+                          [id]="'answer-' + note.id"
+                          [maxlength]="noteMax"
+                          [formControl]="answerText"
+                          (paste)="pasteAnswer($event)"
+                          (keydown.escape)="cancelAnswer()"
+                        />
+                        <button
+                          ahButton="primary"
+                          size="sm"
+                          type="submit"
+                          [disabled]="busy()"
+                        >
+                          Add answer
+                        </button>
+                        <input
+                          #answerComposerPicker
+                          type="file"
+                          multiple
+                          hidden
+                          [accept]="imageTypes"
+                          (change)="chooseForAnswer($event)"
+                        />
                         <button
                           ahButton="ghost"
                           size="sm"
                           type="button"
-                          [attr.aria-label]="'Reopen: ' + note.text"
-                          [disabled]="busy()"
-                          (click)="store.setDone(note.id, false)"
+                          [attr.aria-label]="
+                            'Add an image to the answer to: ' + note.text
+                          "
+                          [disabled]="
+                            busy() || answerPending().length >= maxImages
+                          "
+                          (click)="answerComposerPicker.click()"
                         >
-                          Reopen
+                          Add image
                         </button>
-                      }
-                    </span>
+                        <button
+                          ahButton="default"
+                          size="sm"
+                          type="button"
+                          (click)="cancelAnswer()"
+                        >
+                          Cancel
+                        </button>
+                        @if (answerPending().length > 0) {
+                          <ul
+                            class="pending"
+                            [attr.aria-label]="
+                              'Images for the answer to: ' + note.text
+                            "
+                          >
+                            @for (file of answerPending(); track $index) {
+                              <li class="ah-tag">
+                                {{ file.name || 'Pasted image' }}
+                                <button
+                                  ahButton="ghost"
+                                  size="sm"
+                                  type="button"
+                                  [attr.aria-label]="
+                                    'Leave out ' +
+                                    (file.name || 'the pasted image')
+                                  "
+                                  (click)="leaveOutOfAnswer($index)"
+                                >
+                                  ×
+                                </button>
+                              </li>
+                            }
+                          </ul>
+                        }
+                        <p class="ah-hint image-hint" role="status">
+                          {{
+                            answerHint() ??
+                              'Enter adds it. The first answer marks the question answered; you can reopen it.'
+                          }}
+                        </p>
+                      </form>
+                    } @else {
+                      <span class="question-actions">
+                        <button
+                          ahButton="ghost"
+                          size="sm"
+                          type="button"
+                          [attr.aria-label]="'Answer: ' + note.text"
+                          [disabled]="busy()"
+                          (click)="startAnswer(note)"
+                        >
+                          Answer
+                        </button>
+                        @if (note.doneAt !== null) {
+                          <button
+                            ahButton="ghost"
+                            size="sm"
+                            type="button"
+                            [attr.aria-label]="'Reopen: ' + note.text"
+                            [disabled]="busy()"
+                            (click)="store.setDone(note.id, false)"
+                          >
+                            Reopen
+                          </button>
+                        }
+                      </span>
+                    }
                   }
                 }
-              }
-            </li>
+              </li>
+            }
           }
         </ul>
       }
@@ -717,16 +957,17 @@ export const NOTE_MAX = 4000;
           <label class="ah-sr" [for]="'note-' + t.id"
             >Add a note to {{ t.title }}</label
           >
-          <input
+          <textarea
             class="ah-input line"
-            type="text"
+            rows="1"
             autocomplete="off"
             [placeholder]="placeholder()"
             [id]="'note-' + t.id"
             [maxlength]="noteMax"
             [formControl]="note"
             (paste)="paste($event)"
-          />
+            (keydown.enter)="enterAdds($event)"
+          ></textarea>
           @if (kindNow() === 'action') {
             <label class="ah-sr" [for]="'owner-' + t.id">Who does it</label>
             <input
@@ -796,6 +1037,63 @@ export const NOTE_MAX = 4000;
         </form>
       }
     </article>
+
+    <ng-template #editForm let-n>
+      <form class="edit" (submit)="$event.preventDefault(); saveEdit(n)">
+        @if (n.answerTo === null && !hasAnswers(n)) {
+          <label class="ah-sr" [for]="'edit-kind-' + n.id"
+            >What the note is</label
+          >
+          <select
+            class="ah-input"
+            [id]="'edit-kind-' + n.id"
+            [formControl]="editKind"
+          >
+            @for (k of kinds; track k) {
+              <option [value]="k">{{ kindLabel[k] }}</option>
+            }
+          </select>
+        }
+        <label class="ah-sr" [for]="'edit-' + n.id">Note text</label>
+        <textarea
+          class="ah-input line"
+          rows="1"
+          [id]="'edit-' + n.id"
+          [maxlength]="noteMax"
+          [formControl]="editText"
+          (keydown.enter)="enterSaves($event, n)"
+          (keydown.escape)="cancelEdit()"
+        ></textarea>
+        @if (editKindNow() === 'action' && n.answerTo === null) {
+          <label class="ah-sr" [for]="'edit-owner-' + n.id">Who does it</label>
+          <input
+            class="ah-input owner"
+            type="text"
+            autocomplete="off"
+            placeholder="Owner"
+            maxlength="200"
+            [id]="'edit-owner-' + n.id"
+            [formControl]="editOwner"
+          />
+          <label class="ah-sr" [for]="'edit-due-' + n.id">Due on</label>
+          <input
+            class="ah-input due"
+            type="date"
+            [id]="'edit-due-' + n.id"
+            [formControl]="editDue"
+          />
+        }
+        <button ahButton="primary" size="sm" type="submit" [disabled]="busy()">
+          Save
+        </button>
+        <button ahButton="ghost" size="sm" type="button" (click)="cancelEdit()">
+          Cancel
+        </button>
+        <p class="ah-hint image-hint">
+          Enter saves, Shift+Enter starts a new line, Esc cancels.
+        </p>
+      </form>
+    </ng-template>
   `,
 })
 export class TopicCard {
@@ -807,8 +1105,6 @@ export class TopicCard {
   readonly topic = input.required<MeetingTopic>();
   /** Whether the meeting takes changes (it has not ended). */
   readonly meetingOpen = input(true);
-  /** Whether the meeting belongs to a series, so the topic can go to its next meeting. */
-  readonly inSeries = input(false);
   /** Whether the topic is the first of the meeting (it cannot go up). */
   readonly first = input(false);
   /** Whether the topic is the last of the meeting (it cannot go down). */
@@ -855,7 +1151,26 @@ export class TopicCard {
   protected readonly editable = computed(
     () => this.meetingOpen() && !this.moved()
   );
-  protected readonly canMoveToNext = computed(() => this.inSeries());
+  /** The notes removed but still within Undo. */
+  protected readonly removing = this.store.removing;
+  /** Whether the `⋯` menu is open. */
+  readonly menuOpen = signal(false);
+  /** Whether the title is being renamed in place. */
+  readonly renaming = signal(false);
+  protected readonly title = new FormControl('', { nonNullable: true });
+  /** The note being edited in place, if any. */
+  readonly editing = signal<string | null>(null);
+  protected readonly editText = new FormControl('', { nonNullable: true });
+  protected readonly editKind = new FormControl<NoteKind>('note', {
+    nonNullable: true,
+  });
+  protected readonly editOwner = new FormControl('', { nonNullable: true });
+  protected readonly editDue = new FormControl('', { nonNullable: true });
+  protected readonly editKindNow = toSignal(this.editKind.valueChanges, {
+    initialValue: this.editKind.value,
+  });
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly raisedBy = computed(() => raisedByLabel(this.topic()));
   protected readonly when = computed(() => topicWhen(this.topic()));
   /** The topic's notes without the answers, and each question's answers, which show under it. */
@@ -920,6 +1235,148 @@ export class TopicCard {
       data: { drafts: this.drafts, draftId: draft.id },
       width: '720px',
     });
+  }
+
+  /** Opens or closes the `⋯` menu; an open menu puts the focus on its first item. */
+  toggleMenu(): void {
+    const open = !this.menuOpen();
+    this.menuOpen.set(open);
+    if (open)
+      afterNextRender(
+        () =>
+          this.host.nativeElement
+            .querySelector<HTMLButtonElement>('[role="menuitem"]')
+            ?.focus(),
+        { injector: this.injector }
+      );
+  }
+
+  /** Closes the menu on a click anywhere outside it. */
+  protected closeMenuOutside(event: Event): void {
+    if (!this.menuOpen()) return;
+    const target = event.target;
+    const wrap = this.host.nativeElement.querySelector('.menu-wrap');
+    if (target instanceof Node && wrap?.contains(target)) return;
+    this.menuOpen.set(false);
+  }
+
+  /** Opens "Move … to…", to pick the meeting that takes the topic. */
+  moveTo(): void {
+    this.dialogs.open<unknown, MoveTopicData>(MoveTopicDialog, {
+      data: { store: this.store, topic: this.topic() },
+      width: '560px',
+    });
+  }
+
+  /** Puts the title in a field to rename it; Enter saves, Esc cancels. */
+  startRename(): void {
+    if (!this.editable()) return;
+    this.title.setValue(this.topic().title);
+    this.renaming.set(true);
+    afterNextRender(
+      () => {
+        const field = this.host.nativeElement.querySelector<HTMLInputElement>(
+          `#title-${this.topic().id}`
+        );
+        field?.focus();
+        field?.select();
+      },
+      { injector: this.injector }
+    );
+  }
+
+  /** Saves the new title; a blank or unchanged one just closes the field. */
+  async saveTitle(): Promise<void> {
+    const title = this.title.value.trim();
+    if (title === '' || title === this.topic().title) {
+      this.renaming.set(false);
+      return;
+    }
+    if (await this.store.renameTopic(this.topic().id, title))
+      this.renaming.set(false);
+  }
+
+  /** Whether a question has answers, so it stays a question. */
+  protected hasAnswers(note: MeetingNote): boolean {
+    return (this.answersOf().get(note.id) ?? []).length > 0;
+  }
+
+  /** Opens a note for editing in place, closing any other. */
+  startEdit(note: MeetingNote): void {
+    this.editing.set(note.id);
+    this.editText.setValue(note.text);
+    this.editKind.setValue(note.kind);
+    this.editOwner.setValue(note.owner ?? '');
+    this.editDue.setValue(note.dueOn ?? '');
+    afterNextRender(
+      () => {
+        const field =
+          this.host.nativeElement.querySelector<HTMLTextAreaElement>(
+            `#edit-${note.id}`
+          );
+        field?.focus();
+        field?.setSelectionRange(field.value.length, field.value.length);
+      },
+      { injector: this.injector }
+    );
+  }
+
+  /** Closes the note being edited, dropping the change. */
+  cancelEdit(): void {
+    this.editing.set(null);
+  }
+
+  /** Saves the edited note: its text and, unless it is an answer, what it is; a blank text keeps it as it was. */
+  async saveEdit(note: MeetingNote): Promise<void> {
+    const text = this.editText.value.trim();
+    if (text === '' || this.busy()) return;
+    const kind = this.editKind.value;
+    const extras =
+      note.answerTo !== null
+        ? undefined
+        : {
+            kind,
+            owner: kind === 'action' ? this.editOwner.value : '',
+            dueOn: kind === 'action' ? this.editDue.value : '',
+          };
+    const unchanged =
+      text === note.text &&
+      (extras === undefined ||
+        (extras.kind === note.kind &&
+          extras.owner.trim() === (note.owner ?? '') &&
+          extras.dueOn === (note.dueOn ?? '')));
+    if (unchanged) {
+      this.cancelEdit();
+      return;
+    }
+    const saved = await this.store.editNote(
+      this.topic().id,
+      note.id,
+      text,
+      extras
+    );
+    if (saved) this.cancelEdit();
+  }
+
+  /** Enter saves the edited note; Shift+Enter starts a new line. */
+  protected enterSaves(event: Event, note: MeetingNote): void {
+    if (event instanceof KeyboardEvent && (event.shiftKey || event.isComposing))
+      return;
+    event.preventDefault();
+    void this.saveEdit(note);
+  }
+
+  /** Enter adds the note being written; Shift+Enter starts a new line. */
+  protected enterAdds(event: Event): void {
+    if (event instanceof KeyboardEvent && (event.shiftKey || event.isComposing))
+      return;
+    event.preventDefault();
+    void this.addNote();
+  }
+
+  /** Hides a note now and removes it for good unless Undo is clicked within a few seconds. */
+  protected removeNote(note: MeetingNote): void {
+    this.store.removeNoteLater(this.topic().id, note.id);
   }
 
   /** Moves the topic one place up. */

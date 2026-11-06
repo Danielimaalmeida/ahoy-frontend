@@ -623,3 +623,163 @@ export function acceptImages<
   }
   return { images, refusal };
 }
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
+/** A labelled run of meetings in the left column, in the order it lists them. */
+export interface MeetingSection<T> {
+  readonly label: string;
+  readonly meetings: readonly T[];
+}
+
+/** Midnight at the start of the Monday of `at`'s week, in the browser's time zone. */
+function weekStart(at: Date): Date {
+  const start = new Date(at.getFullYear(), at.getMonth(), at.getDate());
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+}
+
+/**
+ * The planned meetings soonest first, by week from `now` (weeks start on Monday): "Earlier" for one whose day has
+ * passed but was never held, then "This week", "Next week" and "Week of 16 Nov".
+ */
+export function upcomingByWeek<T extends MeetingLike>(
+  meetings: readonly T[],
+  now: Date
+): MeetingSection<T>[] {
+  const thisWeek = weekStart(now).getTime();
+  const sections: { label: string; meetings: T[] }[] = [];
+  for (const meeting of groupMeetings(meetings).next) {
+    const at = new Date(meeting.startsAt);
+    const week = weekStart(at);
+    const weeks = Math.round((week.getTime() - thisWeek) / (7 * 86_400_000));
+    const label =
+      Number.isNaN(at.getTime()) || weeks < 0
+        ? 'Earlier'
+        : weeks === 0
+          ? 'This week'
+          : weeks === 1
+            ? 'Next week'
+            : `Week of ${week.getDate()} ${MONTHS[week.getMonth()] ?? ''}`;
+    const last = sections.at(-1);
+    if (last?.label === label) last.meetings.push(meeting);
+    else sections.push({ label, meetings: [meeting] });
+  }
+  return sections;
+}
+
+/** The ended and cancelled meetings latest first, by month ("October 2026"). */
+export function pastByMonth<T extends MeetingLike>(
+  meetings: readonly T[]
+): MeetingSection<T>[] {
+  const sections: { label: string; meetings: T[] }[] = [];
+  for (const meeting of groupMeetings(meetings).past) {
+    const at = new Date(meeting.startsAt);
+    const label = Number.isNaN(at.getTime())
+      ? 'Unknown date'
+      : `${MONTH_NAMES[at.getMonth()] ?? ''} ${at.getFullYear()}`;
+    const last = sections.at(-1);
+    if (last?.label === label) last.meetings.push(meeting);
+    else sections.push({ label, meetings: [meeting] });
+  }
+  return sections;
+}
+
+/** What the series view reads of a meeting: its series, by id and name. */
+export interface NamedSeriesMeetingLike extends SeriesMeetingLike {
+  readonly seriesName: string | null;
+}
+
+/**
+ * The meetings by series, series by name, then the one-off meetings: within each, the running and planned ones soonest
+ * first, then the ended and cancelled ones latest first.
+ */
+export function bySeries<T extends NamedSeriesMeetingLike>(
+  meetings: readonly T[]
+): MeetingSection<T>[] {
+  const groups = new Map<string, { label: string; meetings: T[] }>();
+  for (const meeting of meetings) {
+    const key = meeting.seriesId ?? '';
+    const label =
+      meeting.seriesId === null
+        ? 'One-off meetings'
+        : (meeting.seriesName ?? 'Series');
+    const group = groups.get(key) ?? { label, meetings: [] };
+    group.meetings.push(meeting);
+    groups.set(key, group);
+  }
+  const order = (group: { meetings: T[] }) => {
+    const g = groupMeetings(group.meetings);
+    return [...g.now, ...g.next, ...g.past];
+  };
+  const oneOff = groups.get('');
+  const named = [...groups.entries()]
+    .filter(([key]) => key !== '')
+    .map(([, group]) => group)
+    .sort((a, b) => a.label.localeCompare(b.label));
+  return [...named, ...(oneOff === undefined ? [] : [oneOff])].map((group) => ({
+    label: group.label,
+    meetings: order(group),
+  }));
+}
+
+/** A meeting a topic can move to, and whether it is the series' next one (the one a plain move takes). */
+export interface MoveTarget<T> {
+  readonly meeting: T;
+  readonly nextOfSeries: boolean;
+}
+
+/**
+ * The meetings a topic of `from` can move to: every other meeting running or planned, of any series or none. The
+ * series' next planned meeting (the one Move to next takes) comes first, then the running ones, then the planned ones
+ * soonest first.
+ */
+export function moveTargets<T extends SeriesMeetingLike>(
+  from: SeriesMeetingLike,
+  meetings: readonly T[]
+): MoveTarget<T>[] {
+  const groups = groupMeetings(meetings.filter((m) => m.id !== from.id));
+  const after = Date.parse(from.startsAt);
+  const next =
+    from.seriesId === null
+      ? undefined
+      : groups.next.find(
+          (m) => m.seriesId === from.seriesId && Date.parse(m.startsAt) > after
+        );
+  return [
+    ...(next === undefined ? [] : [{ meeting: next, nextOfSeries: true }]),
+    ...[...groups.now, ...groups.next]
+      .filter((m) => m !== next)
+      .map((meeting) => ({ meeting, nextOfSeries: false })),
+  ];
+}
+
+/** The meetings just before and after `meeting` in its series, by start; null at either end or for a one-off. */
+export function seriesNeighbours<T extends SeriesMeetingLike>(
+  meeting: SeriesMeetingLike,
+  meetings: readonly T[]
+): { readonly previous: T | null; readonly next: T | null } {
+  if (meeting.seriesId === null) return { previous: null, next: null };
+  const inSeries = meetings
+    .filter((m) => m.seriesId === meeting.seriesId)
+    .sort(
+      (a, b) =>
+        startOf(a) - startOf(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+    );
+  const at = inSeries.findIndex((m) => m.id === meeting.id);
+  if (at < 0) return { previous: null, next: null };
+  return { previous: inSeries[at - 1] ?? null, next: inSeries[at + 1] ?? null };
+}

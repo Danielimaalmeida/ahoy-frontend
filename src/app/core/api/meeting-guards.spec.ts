@@ -17,6 +17,8 @@ import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
 import listMeetingNotes from '@testing/fixtures/listMeetingNotes.json';
 import listMeetings from '@testing/fixtures/listMeetings.json';
 import moveMeetingTopic from '@testing/fixtures/moveMeetingTopic.json';
+import searchMeetings from '@testing/fixtures/searchMeetings.json';
+import setMeetingJiraTarget from '@testing/fixtures/setMeetingJiraTarget.json';
 import setMeetingNoteDone from '@testing/fixtures/setMeetingNoteDone.json';
 import { withField } from '@testing/fixtures/mutate';
 import {
@@ -32,6 +34,7 @@ import {
   isMeetingStoryDraftList,
   isMeetingTopic,
   isMoveMeetingTopicResult,
+  isMeetingSearchResult,
   isNoContent,
 } from './guards';
 
@@ -234,6 +237,37 @@ describe('meeting guards', () => {
       isMeeting(withField(getMeeting, 'endedAt', '2026-10-06T10:00:00.000Z'))
     ).toBe(false);
     expect(isMeeting(withField(getMeeting, 'status', 'paused'))).toBe(false);
+  });
+
+  it("accept a one-off meeting's own Jira target, and refuse half a target or one on a series' meeting", () => {
+    expect(isMeeting(setMeetingJiraTarget)).toBe(true);
+    const half = withField(setMeetingJiraTarget, 'jiraIssueType', null);
+    expect(isMeeting(half)).toBe(false);
+    expect(isMeeting.explain(half)).toContain('set together');
+    expect(
+      isMeeting(withField(setMeetingJiraTarget, 'jiraProjectKey', 'proj'))
+    ).toBe(false);
+    expect(
+      isMeeting({
+        ...getMeeting,
+        jiraProjectKey: 'PROJ',
+        jiraIssueType: 'Story',
+      })
+    ).toBe(false);
+  });
+
+  it('accept a search answer, and refuse a topic found in a meeting of an unknown status', () => {
+    expect(isMeetingSearchResult(searchMeetings)).toBe(true);
+    const [topic] = searchMeetings.topics;
+    expect(
+      isMeetingSearchResult({
+        ...searchMeetings,
+        topics: [{ ...topic, meetingStatus: 'paused' }],
+      })
+    ).toBe(false);
+    expect(isMeetingSearchResult({ ...searchMeetings, notes: undefined })).toBe(
+      false
+    );
   });
 
   it('accept a meeting marked done without a start, and refuse a cancelled one that started or has no end', () => {

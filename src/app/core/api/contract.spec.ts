@@ -60,6 +60,8 @@ import listMeetingNotes from '@testing/fixtures/listMeetingNotes.json';
 import listMeetingSeries from '@testing/fixtures/listMeetingSeries.json';
 import listMeetings from '@testing/fixtures/listMeetings.json';
 import moveMeetingTopic from '@testing/fixtures/moveMeetingTopic.json';
+import searchMeetings from '@testing/fixtures/searchMeetings.json';
+import setMeetingJiraTarget from '@testing/fixtures/setMeetingJiraTarget.json';
 import setMeetingNoteDone from '@testing/fixtures/setMeetingNoteDone.json';
 import setMeetingTopicOrder from '@testing/fixtures/setMeetingTopicOrder.json';
 import startMeeting from '@testing/fixtures/startMeeting.json';
@@ -231,6 +233,8 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['setMeetingTopicOrder', setMeetingTopicOrder],
   ['updateMeetingTopic', updateMeetingTopic],
   ['moveMeetingTopic', moveMeetingTopic],
+  ['setMeetingJiraTarget', setMeetingJiraTarget],
+  ['searchMeetings', searchMeetings],
   ['addMeetingNote', addMeetingNote],
   ['updateMeetingNote', updateMeetingNote],
   ['setMeetingNoteDone', setMeetingNoteDone],
@@ -339,7 +343,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      129
+      131
     );
   });
 
@@ -423,6 +427,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'setMeetingTopicOrder',
       'updateMeetingTopic',
       'moveMeetingTopic',
+      'setMeetingJiraTarget',
       'updateMeetingNote',
       'setMeetingNoteDone',
     ])
