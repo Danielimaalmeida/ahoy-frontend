@@ -101,6 +101,7 @@ import refreshIntake from '@testing/fixtures/refreshIntake.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
+import restartStory from '@testing/fixtures/restartStory.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import decideWorkPackage from '@testing/fixtures/decideWorkPackage.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -180,6 +181,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['getStory', getStory],
   ['stopStory', stopStory],
   ['cancelStory', cancelStory],
+  ['restartStory', restartStory],
   ['resumeStory', resumeStory],
   ['setStoryBudget', setStoryBudget],
   ['refreshIntake', refreshIntake],
@@ -329,7 +331,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      124
+      125
     );
   });
 
@@ -433,6 +435,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
     for (const id of [
       'stopStory',
       'cancelStory',
+      'restartStory',
       'resumeStory',
       'setStoryBudget',
       'setStoryModels',

@@ -458,7 +458,7 @@
       "post": {
         "operationId": "cancelStory",
         "tags": ["stories"],
-        "summary": "Cancel the story for good. It cannot be undone, and spends nothing.",
+        "summary": "Cancel the story. It spends nothing; the story can only be started again from intake (`restartStory`).",
         "description": "From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it\nagain, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run\nis cancelled as Stop cancels it, asynchronously, and so is the story's agent diagnosis or knowledge review in\nprogress (their ids in the event's `stoppedAgentRuns`); a cancelled story's branches are not released. The reason is required and goes into the decision log; the\nevent `story.cancelled` carries it as `detail`, with the phase, `previousStatus`, `previousHaltReason` and\n`runId`. Nothing is written to Jira or GitHub: an open pull request stays open.\n",
         "requestBody": {
           "required": true,
@@ -473,6 +473,56 @@
         "responses": {
           "202": {
             "description": "The story is cancelled; cancellation of an active run completes asynchronously.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Story"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/restart": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "restartStory",
+        "tags": ["stories"],
+        "summary": "Start a cancelled story again from intake, as a fresh attempt. May spend AIU.",
+        "description": "Only a `cancelled` story, once the run its cancel stopped has ended (409 `invalid_state` before). The story goes\nback to `intake` and `ready`, pinned to the control repo's HEAD (or `controlRef`), with the intake template's\nstate as a start has it: an empty artifact set and none of the earlier attempt's questions, gate verdicts or\ndecisions, reviews, pull request comment rulings or decision log. Its models are kept. The person who starts it\nagain owns it. What the earlier attempt spent stays spent: `budgetNanoAiu`, when given, is the new total cap and\nmust be more than `spentNanoAiu` (400 otherwise, as without it when the old cap is spent). The reason goes into\nthe new decision log (`restart`) and the event `story.restarted` as `detail`, with `from` (the phase it was\ncancelled in), `previousOwner`, `previousRevision`, `revision`, `controlSha`, `budgetNanoAiu` and\n`spentNanoAiu`. The events, runs and artifact revisions of the earlier attempt stay. Nothing is written to Jira\nor GitHub: a pull request the earlier attempt opened stays open.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestartStoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The story is ready to run intake again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6333,6 +6383,31 @@
           }
         }
       },
+      "RestartStoryRequest": {
+        "type": "object",
+        "required": ["expectedVersion", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The new hard AIU cap for every run of the story together, the earlier attempt's included; more than what it has spent. Defaults to the current cap."
+          },
+          "controlRef": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$",
+            "description": "Control-repo commit to pin. Defaults to the configured control repo's HEAD."
+          }
+        }
+      },
       "WorkPackageId": {
         "type": "string",
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
@@ -8258,6 +8333,7 @@
           "story.halted",
           "story.resumed",
           "story.cancelled",
+          "story.restarted",
           "story.intake_refreshed",
           "design.refreshed",
           "story.budget_changed",

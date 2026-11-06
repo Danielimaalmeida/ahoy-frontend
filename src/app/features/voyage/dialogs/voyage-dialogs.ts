@@ -48,6 +48,7 @@ import {
 } from './package-decision-dialog';
 import { RefreshDesignDialog } from './refresh-design-dialog';
 import { RefreshIntakeDialog } from './refresh-intake-dialog';
+import { RestartVoyageDialog } from './restart-voyage-dialog';
 import { ResumeDialog } from './resume-dialog';
 import { StopDialog } from './stop-dialog';
 import { UnblockDialog } from './unblock-dialog';
@@ -71,6 +72,14 @@ export class VoyageDialogs {
   cancel(context: VoyageContext): DialogRef<Story, CancelVoyageDialog> {
     return this.dialogs.open<Story, VoyageDialogData, CancelVoyageDialog>(
       CancelVoyageDialog,
+      { data: { context } }
+    );
+  }
+
+  /** "Start PROJ-140 again?" */
+  restart(context: VoyageContext): DialogRef<Story, RestartVoyageDialog> {
+    return this.dialogs.open<Story, VoyageDialogData, RestartVoyageDialog>(
+      RestartVoyageDialog,
       { data: { context } }
     );
   }

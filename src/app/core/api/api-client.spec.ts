@@ -42,6 +42,7 @@ import refreshIntake from '@testing/fixtures/refreshIntake.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
+import restartStory from '@testing/fixtures/restartStory.json';
 import resumeStory from '@testing/fixtures/resumeStory.json';
 import decideWorkPackage from '@testing/fixtures/decideWorkPackage.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
@@ -195,6 +196,26 @@ const CASES: readonly Case[] = [
     status: 202,
     value: stopStory,
     problem: 'stale_version',
+  },
+  {
+    op: 'restartStory',
+    call: (api) =>
+      api.restartStory('PROJ-126', {
+        expectedVersion: 5,
+        reason: 'Scope agreed.',
+        budgetNanoAiu: 20_000_000_000,
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-126/restart',
+    body: {
+      expectedVersion: 5,
+      reason: 'Scope agreed.',
+      budgetNanoAiu: 20_000_000_000,
+    },
+    reply: restartStory,
+    status: 202,
+    value: restartStory,
+    problem: 'invalid_state',
   },
   {
     op: 'resumeStory',
@@ -700,6 +721,7 @@ describe('ApiClient', () => {
         'getStoryDiagnosis',
         'getStoryPlanFit',
         'stopStory',
+        'restartStory',
         'resumeStory',
         'decideWorkPackage',
         'setStoryBudget',

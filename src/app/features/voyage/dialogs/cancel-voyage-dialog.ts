@@ -17,7 +17,7 @@ import {
 /**
  * "Cancel PROJ-140?": ends the voyage for good with a required reason (`cancelStory`), so it no longer stands halted
  * waiting for someone. It says that a run under way is cancelled in the background, that nothing is written to Jira or
- * GitHub, and that it cannot be undone. On a conflict the dialog stays open with the banner and the reason as typed.
+ * GitHub, and that it can only start again from intake, as a fresh attempt. On a conflict the dialog stays open with the banner and the reason as typed.
  */
 @Component({
   selector: 'ah-cancel-voyage-dialog',
@@ -35,13 +35,14 @@ import {
       (confirm)="submit()"
     >
       <span ahDialogLead
-        >The voyage ends for good in <b>{{ phase() }}</b
+        >The voyage ends in <b>{{ phase() }}</b
         >: no crew member works on it again and it no longer waits for anyone.
         @if (runId(); as id) {
           Run <span class="ah-mono">{{ id }}</span> is cancelled in the
           background; what it has used stays spent.
         }
-        Jira and any pull request are left as they are. This can't be undone.
+        Jira and any pull request are left as they are. It can only set sail
+        again from intake, as a fresh attempt.
       </span>
       <ah-field
         label="Reason"

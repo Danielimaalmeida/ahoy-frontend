@@ -429,6 +429,16 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
     expectedVersion: version('CXL-1'),
     reason: 'Again',
   });
+  post('/stories/CXL-1/restart', { expectedVersion: version('CXL-1') });
+  post('/stories/CXL-1/restart', {
+    expectedVersion: version('CXL-1'),
+    reason: 'Scope agreed',
+    budgetNanoAiu: 6 * AIU,
+  });
+  post('/stories/CXL-1/restart', {
+    expectedVersion: version('CXL-1'),
+    reason: 'Again',
+  });
 }
 
 describe('the mock against openapi/ahoy-v1.yaml', () => {
@@ -447,6 +457,7 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'getStory',
       'stopStory',
       'cancelStory',
+      'restartStory',
       'resumeStory',
       'setStoryBudget',
       'getStoryModels',

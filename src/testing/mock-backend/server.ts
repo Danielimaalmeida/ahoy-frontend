@@ -42,6 +42,7 @@ import type {
   StartStoryRequest,
   StopStoryRequest,
   CancelStoryRequest,
+  RestartStoryRequest,
   StoryPage,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
@@ -625,6 +626,8 @@ export class MockAhoyServer {
         return this.stopStory(call);
       case 'cancelStory':
         return this.cancelStory(call);
+      case 'restartStory':
+        return this.restartStory(call);
       case 'resumeStory':
         return this.resumeStory(call);
       case 'refreshIntake':
@@ -1152,6 +1155,79 @@ export class MockAhoyServer {
       ...(previousHaltReason !== null ? { previousHaltReason } : {}),
       runId,
     });
+    return jsonResponse(202, voyage.storyDto());
+  }
+
+  /**
+   * Starts a cancelled story again from intake, as `restartStory` of `ahoy-hosted` does: a fresh attempt with no
+   * questions, gates, decision log, plan or artifacts from before, the spend kept, and the person restarting as owner.
+   */
+  private restartStory(call: Call): MockResponse {
+    const body = call.body as RestartStoryRequest; // validated
+    const voyage = this.lock(call, body.expectedVersion);
+    const story = voyage.story;
+    if (story.status !== 'cancelled')
+      throw new MockProblem(
+        'invalid_state',
+        `Story ${story.key} is ${story.status}, not cancelled; only a cancelled story starts again`
+      );
+    if (story.currentRunId !== null)
+      throw new MockProblem(
+        'invalid_state',
+        `Story ${story.key} still has run ${story.currentRunId} ending; start it again once it has`
+      );
+    const budget = body.budgetNanoAiu ?? story.budgetNanoAiu;
+    if (budget <= story.spentNanoAiu)
+      throw new MockProblem(
+        'validation_failed',
+        `Story ${story.key} has already spent ${story.spentNanoAiu} nano-AIU: give a budget above it to start it again`,
+        {
+          errors: [
+            {
+              path: '/budgetNanoAiu',
+              message: 'must be more than what the story has already spent',
+            },
+          ],
+        }
+      );
+    const reason = body.reason.trim();
+    const from = story.phase;
+    const previousOwner = story.owner;
+    voyage.questions.length = 0;
+    voyage.gates.length = 0;
+    voyage.decisionLog.length = 0;
+    voyage.humanGates = {};
+    voyage.revisionRounds = {};
+    voyage.revisionReason = null;
+    voyage.plan = { criteria: [], packages: [], repos: [] };
+    voyage.asked = false;
+    if (voyage.current !== null)
+      voyage.revisions.push({
+        number: voyage.current.number + 1,
+        createdAt: this.world.nowIso(),
+        files: [],
+      });
+    voyage.decisionLog.push({
+      timestamp: this.world.nowIso().replace(/\.\d{3}Z$/, 'Z'),
+      actor: 'human',
+      type: 'restart',
+      summary: `started again from intake by ${call.actor}: ${reason}`,
+    });
+    story.phase = 'intake';
+    story.status = 'ready';
+    story.haltReason = null;
+    story.owner = call.actor;
+    story.budgetNanoAiu = budget;
+    this.world.touch(voyage);
+    this.world.append(voyage, 'story.restarted', call.actor, {
+      detail: reason,
+      from,
+      previousOwner,
+      controlSha: story.controlSha,
+      budgetNanoAiu: budget,
+      spentNanoAiu: story.spentNanoAiu,
+    });
+    this.simulator.poke(voyage);
     return jsonResponse(202, voyage.storyDto());
   }
 

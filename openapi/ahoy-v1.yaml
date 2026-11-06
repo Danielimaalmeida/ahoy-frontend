@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 8449452c15228dda0050cef446cf609f37a4a783
+# Commit: ec2a793d0fa48d64a19efaf54b3fa15894c298f6
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -294,7 +294,7 @@ paths:
     post:
       operationId: cancelStory
       tags: [stories]
-      summary: Cancel the story for good. It cannot be undone, and spends nothing.
+      summary: Cancel the story. It spends nothing; the story can only be started again from intake (`restartStory`).
       description: |
         From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it
         again, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run
@@ -310,6 +310,40 @@ paths:
       responses:
         '202':
           description: The story is cancelled; cancellation of an active run completes asynchronously.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/restart:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: restartStory
+      tags: [stories]
+      summary: Start a cancelled story again from intake, as a fresh attempt. May spend AIU.
+      description: |
+        Only a `cancelled` story, once the run its cancel stopped has ended (409 `invalid_state` before). The story goes
+        back to `intake` and `ready`, pinned to the control repo's HEAD (or `controlRef`), with the intake template's
+        state as a start has it: an empty artifact set and none of the earlier attempt's questions, gate verdicts or
+        decisions, reviews, pull request comment rulings or decision log. Its models are kept. The person who starts it
+        again owns it. What the earlier attempt spent stays spent: `budgetNanoAiu`, when given, is the new total cap and
+        must be more than `spentNanoAiu` (400 otherwise, as without it when the old cap is spent). The reason goes into
+        the new decision log (`restart`) and the event `story.restarted` as `detail`, with `from` (the phase it was
+        cancelled in), `previousOwner`, `previousRevision`, `revision`, `controlSha`, `budgetNanoAiu` and
+        `spentNanoAiu`. The events, runs and artifact revisions of the earlier attempt stay. Nothing is written to Jira
+        or GitHub: a pull request the earlier attempt opened stays open.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestartStoryRequest' }
+      responses:
+        '202':
+          description: The story is ready to run intake again.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Story' }
@@ -3645,6 +3679,23 @@ components:
       properties:
         expectedVersion: { $ref: '#/components/schemas/Version' }
         reason: { type: string, minLength: 1, maxLength: 2000 }
+    RestartStoryRequest:
+      type: object
+      required: [expectedVersion, reason]
+      additionalProperties: false
+      properties:
+        expectedVersion: { $ref: '#/components/schemas/Version' }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+        budgetNanoAiu:
+          type: integer
+          minimum: 1
+          description: >-
+            The new hard AIU cap for every run of the story together, the earlier attempt's included; more than what it
+            has spent. Defaults to the current cap.
+        controlRef:
+          type: string
+          pattern: '^[0-9a-f]{40}$'
+          description: Control-repo commit to pin. Defaults to the configured control repo's HEAD.
     WorkPackageId:
       type: string
       pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
@@ -4813,6 +4864,7 @@ components:
         - story.halted
         - story.resumed
         - story.cancelled
+        - story.restarted
         - story.intake_refreshed
         - design.refreshed
         - story.budget_changed

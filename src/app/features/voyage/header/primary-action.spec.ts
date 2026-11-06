@@ -39,6 +39,13 @@ describe('primaryAction', () => {
     });
   });
 
+  it('offers Start again… for a cancelled voyage', () => {
+    expect(primaryAction('cancelled', null)).toEqual({
+      kind: 'restart',
+      label: 'Start again…',
+    });
+  });
+
   it('offers none while the voyage sails, waits in the queue or is done', () => {
     expect(primaryAction('running', null)).toBeNull();
     expect(primaryAction('ready', null)).toBeNull();
@@ -77,10 +84,6 @@ describe('headerActions', () => {
         budget: false,
         cancel: false,
       });
-  });
-
-  it('has no primary action for a cancelled voyage', () => {
-    expect(primaryAction('cancelled', null)).toBeNull();
   });
 });
 

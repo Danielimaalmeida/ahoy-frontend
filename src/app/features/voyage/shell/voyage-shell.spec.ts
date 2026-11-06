@@ -95,10 +95,18 @@ async function open(url: string, options: OpenOptions = {}): Promise<Page> {
 function storyOf(
   server: MockAhoyServer,
   key: string
-): { version: number; spentNanoAiu: number; phase: string } {
+): {
+  version: number;
+  spentNanoAiu: number;
+  phase: string;
+  status: string;
+  budgetNanoAiu: number;
+} {
   return call(server, 'GET', `/stories/${key}`).body as {
     version: number;
     spentNanoAiu: number;
+    status: string;
+    budgetNanoAiu: number;
     phase: string;
   };
 }
@@ -834,8 +842,10 @@ describe('VoyageShell on the mock backend', () => {
       expect(text(d.querySelector('.ah-dialog__title'))).toBe(
         'Cancel PROJ-126?'
       );
-      expect(text(d)).toContain('The voyage ends for good in planning');
-      expect(text(d)).toContain("This can't be undone.");
+      expect(text(d)).toContain('The voyage ends in planning');
+      expect(text(d)).toContain(
+        'It can only set sail again from intake, as a fresh attempt.'
+      );
       click(buttonNamed(d, 'Cancel voyage'));
       await flush(page);
       expect(text(dialog().querySelector('.ah-field__error'))).toBe(
@@ -859,7 +869,7 @@ describe('VoyageShell on the mock backend', () => {
       expect(text(h.querySelector('ah-status-badge'))).toBe(
         'Cancelled cancelled'
       );
-      expect(buttonsIn(h)).toEqual(['Models']);
+      expect(buttonsIn(h)).toEqual(['Start again…', 'Models']);
       expect(page.root.querySelector('ah-anchored-banner section')).toBeNull();
       expect(
         TestBed.inject(ToastService)
@@ -874,6 +884,61 @@ describe('VoyageShell on the mock backend', () => {
         'cancellation',
         'cancelled at phase planning by dev@example.com: Already implemented.',
       ]);
+    });
+
+    it('starts a cancelled voyage again from intake with a reason and a cap above what is spent', async () => {
+      const page = await open('/voyages/PROJ-126/models');
+      click(buttonNamed(header(page), 'Cancel voyage'));
+      await flush(page);
+      type(dialog().querySelector('textarea'), 'Wrong scope.');
+      click(buttonNamed(dialog(), 'Cancel voyage'));
+      await flush(page);
+      const cancelled = storyOf(page.server, 'PROJ-126');
+
+      click(buttonNamed(header(page), 'Start again…'));
+      await flush(page);
+      const d = dialog();
+      expect(text(d.querySelector('.ah-dialog__title'))).toBe(
+        'Start PROJ-126 again?'
+      );
+      expect(text(d)).toContain('as a fresh attempt');
+      const cap = d.querySelector('input');
+      expect(cap?.value).not.toBe('');
+      click(buttonNamed(d, 'Start again'));
+      await flush(page);
+      expect(text(dialog().querySelector('.ah-field__error'))).toBe(
+        'A reason is required.'
+      );
+      type(cap, '0.0001');
+      type(dialog().querySelector('textarea'), '  Scope agreed.  ');
+      click(buttonNamed(dialog(), 'Start again'));
+      await flush(page);
+      expect(commands(page)).toHaveLength(1);
+      type(cap, '40');
+      click(buttonNamed(dialog(), 'Start again'));
+      await flush(page);
+
+      const sent = commands(page);
+      expect(sent).toHaveLength(2);
+      expect(sent[1]?.path).toBe('/stories/PROJ-126/restart');
+      expect(sent[1]?.body).toEqual({
+        expectedVersion: cancelled.version,
+        reason: 'Scope agreed.',
+        budgetNanoAiu: 40_000_000_000,
+      });
+      expect(hasDialog()).toBe(false);
+      const story = storyOf(page.server, 'PROJ-126');
+      expect([story.status, story.phase, story.budgetNanoAiu]).toEqual([
+        'ready',
+        'intake',
+        40_000_000_000,
+      ]);
+      expect(buttonsIn(header(page))).not.toContain('Start again…');
+      expect(
+        page.server.state.voyages
+          .get('PROJ-126')
+          ?.decisionLog.map((d) => d.type)
+      ).toEqual(['restart']);
     });
 
     it('cancels a running voyage and says its run is cancelled in the background', async () => {

@@ -366,6 +366,9 @@ export type StopStoryRequest = Schemas['StopStoryRequest'];
 /** Body of `cancelStory`. */
 export type CancelStoryRequest = Schemas['CancelStoryRequest'];
 
+/** Body of `restartStory`. */
+export type RestartStoryRequest = Schemas['RestartStoryRequest'];
+
 /** Body of `resumeStory`. */
 export type ResumeStoryRequest = Schemas['ResumeStoryRequest'];
 
