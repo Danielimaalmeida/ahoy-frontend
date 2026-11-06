@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 17e394530f50ae72ebb2c18ac1a058103f1797d9
+# Commit: 908065fc40d65f8bcc917519c8bfb8611752dcea (plus uncommitted changes in the source file)
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2474,7 +2474,7 @@ paths:
       operationId: getMe
       tags: [settings]
       summary: Who the signed-in person is, and whether they may change the team's settings.
-      description: An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).
+      description: An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` or one with the `admin` role in Team settings › People (under `AHOY_AUTH=dev` without the list, everyone).
       responses:
         '200':
           description: The signed-in person.

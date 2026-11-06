@@ -255,8 +255,8 @@ type PreviewState =
     } @else if (store.page(); as page) {
       @if (!page.canEdit) {
         <ah-banner variant="info" heading="Only admins change these">
-          You can read the team settings. Ask an admin to add you to
-          AHOY_ADMIN_QNUMBERS.
+          You can read the team settings. Ask an admin to make you one in
+          People.
         </ah-banner>
       } @else if (!page.secretsConfigured) {
         <ah-banner variant="notice" heading="Tokens can't be saved yet">

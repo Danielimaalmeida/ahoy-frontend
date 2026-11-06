@@ -2025,7 +2025,7 @@ export interface paths {
     };
     /**
      * Who the signed-in person is, and whether they may change the team's settings.
-     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).
+     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` or one with the `admin` role in Team settings › People (under `AHOY_AUTH=dev` without the list, everyone).
      */
     readonly get: operations['getMe'];
     readonly put?: never;
