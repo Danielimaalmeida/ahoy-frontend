@@ -84,6 +84,14 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
                     [routerLink]="['/voyages', v.story.key, primary.tab]"
                     >{{ primary.label }}</a
                   >
+                } @else if (primary.kind === 'restart') {
+                  <button
+                    type="button"
+                    ahButton="primary"
+                    (click)="openRestart()"
+                  >
+                    {{ primary.label }}
+                  </button>
                 } @else {
                   <button
                     type="button"
@@ -277,6 +285,10 @@ export class VoyageHeader {
 
   protected openCancel(): void {
     this.dialogs.cancel(this.context);
+  }
+
+  protected openRestart(): void {
+    this.dialogs.restart(this.context);
   }
 
   protected openResume(): void {

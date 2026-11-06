@@ -2,14 +2,16 @@ import type { Run, Story, StoryStatus } from '@core/api/types';
 import { isOver } from '@domain/status';
 import type { VoyageTab } from '../context/default-tab';
 
-/** The header's primary action: a link to a tab, or the Resume dialog. */
+/** The header's primary action: a link to a tab, the Resume dialog, or the Start again dialog. */
 export type PrimaryAction =
   | { readonly kind: 'tab'; readonly label: string; readonly tab: VoyageTab }
-  | { readonly kind: 'resume'; readonly label: string };
+  | { readonly kind: 'resume'; readonly label: string }
+  | { readonly kind: 'restart'; readonly label: string };
 
 /**
  * The one primary action of the voyage header, by status (plan, lane 4A, deliverable 4): Answer questions, Decide on the
- * plan (or Decide, for a gate other than the plan's), Resume…, or none while it sails, waits in the queue or is done.
+ * plan (or Decide, for a gate other than the plan's), Resume…, Start again… once cancelled, or none while it sails,
+ * waits in the queue or is done.
  */
 export function primaryAction(
   status: StoryStatus,
@@ -26,10 +28,11 @@ export function primaryAction(
       };
     case 'halted':
       return { kind: 'resume', label: 'Resume…' };
+    case 'cancelled':
+      return { kind: 'restart', label: 'Start again…' };
     case 'running':
     case 'ready':
     case 'terminal':
-    case 'cancelled':
       return null;
   }
 }

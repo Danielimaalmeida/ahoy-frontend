@@ -267,6 +267,21 @@ export class VoyageContext {
     );
   }
 
+  /**
+   * Sets sail again after a cancel: `restartStory` with the reason and the new total cap, from intake as a fresh
+   * attempt. The `202` story goes to the store; the rest is read again, since nothing of the earlier attempt stays.
+   */
+  async restart(
+    reason: string,
+    budgetNanoAiu: number
+  ): Promise<CommandOutcome<Story>> {
+    const outcome = await this.storyCommand((key, expectedVersion) =>
+      this.api.restartStory(key, { expectedVersion, reason, budgetNanoAiu })
+    );
+    if (outcome.kind === 'ok') await this.refresh();
+    return outcome;
+  }
+
   /** Weighs anchor: `resumeStory`, with the reason only when there is one. */
   resume(reason: string): Promise<CommandOutcome<Story>> {
     return this.storyCommand((key, expectedVersion) =>

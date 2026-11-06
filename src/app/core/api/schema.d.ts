@@ -214,7 +214,7 @@ export interface paths {
     readonly get?: never;
     readonly put?: never;
     /**
-     * Cancel the story for good. It cannot be undone, and spends nothing.
+     * Cancel the story. It spends nothing; the story can only be started again from intake (`restartStory`).
      * @description From any status but `terminal` or `cancelled`. The story becomes `cancelled`: the reconciler never steps it
      *     again, and it no longer waits for a person as a halted story does. Its phase stays where it was. An active run
      *     is cancelled as Stop cancels it, asynchronously, and so is the story's agent diagnosis or knowledge review in
@@ -223,6 +223,37 @@ export interface paths {
      *     `runId`. Nothing is written to Jira or GitHub: an open pull request stays open.
      */
     readonly post: operations['cancelStory'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/restart': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Start a cancelled story again from intake, as a fresh attempt. May spend AIU.
+     * @description Only a `cancelled` story, once the run its cancel stopped has ended (409 `invalid_state` before). The story goes
+     *     back to `intake` and `ready`, pinned to the control repo's HEAD (or `controlRef`), with the intake template's
+     *     state as a start has it: an empty artifact set and none of the earlier attempt's questions, gate verdicts or
+     *     decisions, reviews, pull request comment rulings or decision log. Its models are kept. The person who starts it
+     *     again owns it. What the earlier attempt spent stays spent: `budgetNanoAiu`, when given, is the new total cap and
+     *     must be more than `spentNanoAiu` (400 otherwise, as without it when the old cap is spent). The reason goes into
+     *     the new decision log (`restart`) and the event `story.restarted` as `detail`, with `from` (the phase it was
+     *     cancelled in), `previousOwner`, `previousRevision`, `revision`, `controlSha`, `budgetNanoAiu` and
+     *     `spentNanoAiu`. The events, runs and artifact revisions of the earlier attempt stay. Nothing is written to Jira
+     *     or GitHub: a pull request the earlier attempt opened stays open.
+     */
+    readonly post: operations['restartStory'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -2772,6 +2803,14 @@ export interface components {
       readonly expectedVersion: components['schemas']['Version'];
       readonly reason: string;
     };
+    readonly RestartStoryRequest: {
+      readonly expectedVersion: components['schemas']['Version'];
+      readonly reason: string;
+      /** @description The new hard AIU cap for every run of the story together, the earlier attempt's included; more than what it has spent. Defaults to the current cap. */
+      readonly budgetNanoAiu?: number;
+      /** @description Control-repo commit to pin. Defaults to the configured control repo's HEAD. */
+      readonly controlRef?: string;
+    };
     /** @description A work package id from the plan, e.g. `WP1`. */
     readonly WorkPackageId: string;
     /** @description A plan alias of a child repository, as in `child_repos[].repo`. */
@@ -3366,6 +3405,7 @@ export interface components {
      * @example story.halted
      * @example story.resumed
      * @example story.cancelled
+     * @example story.restarted
      * @example story.intake_refreshed
      * @example design.refreshed
      * @example story.budget_changed
@@ -5169,6 +5209,37 @@ export interface operations {
     };
     readonly responses: {
       /** @description The story is cancelled; cancellation of an active run completes asynchronously. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Story'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly restartStory: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['RestartStoryRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The story is ready to run intake again. */
       readonly 202: {
         headers: {
           readonly [name: string]: unknown;

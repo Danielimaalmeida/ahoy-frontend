@@ -262,8 +262,8 @@ export class Voyage {
   readonly gates: GateRecord[] = [];
   readonly revisions: ArtifactRevision[] = [];
   chosen: Partial<Record<ModelSlot, ModelChoice>> = {};
-  readonly humanGates: Record<string, HumanGateEntry> = {};
-  readonly revisionRounds: Record<string, number> = {};
+  humanGates: Record<string, HumanGateEntry> = {};
+  revisionRounds: Record<string, number> = {};
   readonly decisionLog: DecisionLogEntry[] = [];
   /** The reason of the last send-back, for the planner's next revision. */
   revisionReason: string | null = null;

@@ -1,13 +1,24 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-06 (defects started by Ahoy: Try to fix and automatic starts; tested offline with fakes only). One page: replace it,
+Updated 2026-11-06 (Start again for a cancelled voyage; tested offline with fakes only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/defect-auto-start`, 2026-11-06, asked for by the user on 2026-11-06):** Ahoy starts defects.
+- **This branch (`feat/restart-voyage`, 2026-11-06, asked for by the user on 2026-11-06: a cancelled voyage could not
+  be started again later):** a cancelled voyage's header has **Start again…** as its primary action
+  (`dialogs/restart-voyage-dialog.ts`): a total cap (the current one when it leaves room, more than what is already
+  spent) and a required reason, sent as `restartStory`; the voyage sets sail from intake as a fresh attempt, owned by
+  the person, and the page reads everything again. The dialog says nothing of the cancelled attempt is carried over,
+  its history stays and its spend stays spent; Cancel voyage now says a voyage can only start again that way. The
+  mock backend answers `restartStory` as `ahoy-hosted`'s `feat/restart-cancelled-story` does, which deploys with this
+  branch. Without `@acme-fedev/auth` (not reachable from the cloud session) the suite ran without `src/app`'s own
+  spec, `core/auth` and `features/meetings`: 193 files, 3,314 tests pass; typecheck (outside those), lint and format
+  pass; `ng build` and e2e were not run. `api:check` reports the generated types as not up to date on main too
+  (formatting).
+- **Merged before (#66, `feat/defect-auto-start`, 2026-11-06, asked for by the user on 2026-11-06):** Ahoy starts defects.
   Backlog › Defects has **Try to fix** on each defect with no voyage that nobody ignored and whose key may be a
   voyage's (`try-to-fix-dialog.ts`): it
   asks for the voyage's AIU cap, starting at Team settings › Defects' cap per defect, calls `startDefect` and opens the

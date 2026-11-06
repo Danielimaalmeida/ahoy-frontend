@@ -209,6 +209,7 @@ import type {
   StartStoryRequest,
   StopStoryRequest,
   CancelStoryRequest,
+  RestartStoryRequest,
   Story,
   StoryPage,
   StoryPlanFit,
@@ -408,7 +409,8 @@ export class ApiClient {
 
   /**
    * Cancels a story for good, from any status but `terminal`: it is never stepped again and waits for nobody. An active
-   * run is cancelled as Stop cancels it. It spends nothing and cannot be undone. The answer (202) is the story.
+   * run is cancelled as Stop cancels it. It spends nothing; the story can only be started again from intake
+   * (`restartStory`). The answer (202) is the story.
    */
   cancelStory(
     key: string,
@@ -417,6 +419,22 @@ export class ApiClient {
     return this.post(
       'cancelStory',
       `/stories/${segment(key)}/cancel`,
+      body,
+      isStory
+    );
+  }
+
+  /**
+   * Starts a cancelled story again from intake, as a fresh attempt: nothing of the earlier attempt's questions, gates,
+   * reviews or artifacts is carried over, and what it spent stays spent. May spend AIU. The answer (202) is the story.
+   */
+  restartStory(
+    key: string,
+    body: RestartStoryRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'restartStory',
+      `/stories/${segment(key)}/restart`,
       body,
       isStory
     );
