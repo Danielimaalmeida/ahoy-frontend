@@ -20,7 +20,7 @@ const BACKLOG: JiraBacklog = {
     },
     {
       key: 'PROJ-140',
-      issueType: 'Bug',
+      issueType: 'Defect',
       summary: 'Fix the audit trail',
       status: 'In Test',
       priority: null,
@@ -68,7 +68,7 @@ describe('JiraBacklogAdapter', () => {
       {
         key: 'PROJ-140',
         summary: 'Fix the audit trail',
-        type: 'Bug',
+        type: 'Defect',
         jiraStatus: 'In Test',
         priority: 'Not set',
         assignee: null,

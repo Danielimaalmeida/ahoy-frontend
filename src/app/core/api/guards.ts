@@ -279,7 +279,7 @@ const backlogReadiness = shape<BacklogReadiness>({
 
 const jiraBacklogIssue = shape<JiraBacklogIssue>({
   key: patterned('a Jira issue key', /^[A-Z][A-Z0-9_]*-[1-9][0-9]*$/, 40),
-  issueType: oneOf(['Story', 'Task', 'Bug']),
+  issueType: oneOf(['Story', 'Task', 'Bug', 'Defect']),
   summary: nonEmptyText,
   status: nonEmptyText,
   priority: nullable(nonEmptyText),
