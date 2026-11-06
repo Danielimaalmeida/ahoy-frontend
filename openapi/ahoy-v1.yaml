@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 9ec795de12633b1d0dbe49d9e3b19726df3359e8
+# Commit: e49f84a039ce66e6f94b15f41e212b8457165710
 openapi: 3.1.0
 info:
   title: Ahoy control plane API

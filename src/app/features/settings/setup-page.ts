@@ -167,8 +167,8 @@ function actionLabel(step: SetupStep): string {
       <h2>Setup</h2>
       <span class="ah-muted"
         >What this Ahoy needs before the team can start voyages. Each tick comes
-        from the settings and from the checks Ahoy already runs; this page saves
-        nothing.</span
+        from the settings and from the checks Ahoy already runs; the only thing
+        saved here is keeping the phases' defaults.</span
       >
     </div>
 
@@ -253,7 +253,6 @@ function actionLabel(step: SetupStep): string {
                 @for (step of installation(); track step.key) {
                   <li class="step" [attr.data-step]="step.key">
                     <span
-                      class="mark"
                       [class]="'mark mark--' + step.state"
                       role="img"
                       [attr.aria-label]="marks[step.state].label"
@@ -284,7 +283,6 @@ function actionLabel(step: SetupStep): string {
                 @for (step of team(); track step.key) {
                   <li class="step" [attr.data-step]="step.key">
                     <span
-                      class="mark"
                       [class]="'mark mark--' + step.state"
                       role="img"
                       [attr.aria-label]="marks[step.state].label"

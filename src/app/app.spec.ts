@@ -450,6 +450,16 @@ describe('App shell', () => {
       ).toEqual(['ah-top-bar', 'ah-setup-banner', 'main', 'ah-toast-host']);
     });
 
+    it('checks again on each page while not ready, so a step fixed elsewhere clears the banner', async () => {
+      const { root, api, go } = await shell('/voyages', { setup: NOT_READY });
+      api.on('getSetup', () => Promise.resolve(ok(READY)));
+      await go('/meetings');
+      expect(api.callsOf('getSetup')).toHaveLength(2);
+      expect(root.querySelector('ah-setup-banner')).toBeNull();
+      await go('/voyages');
+      expect(api.callsOf('getSetup')).toHaveLength(2);
+    });
+
     it('tells a member only that the admins are setting Ahoy up', async () => {
       const { root } = await shell('/', {
         setup: { ...NOT_READY, canEdit: false },

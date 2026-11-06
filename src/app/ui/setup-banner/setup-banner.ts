@@ -66,7 +66,7 @@ import { Button } from '@ui/button/button';
     }
   `,
   template: `
-    <div class="strip" role="status">
+    <section class="strip" aria-label="Setup">
       <span class="mark" aria-hidden="true">!</span>
       <p class="words">
         <b>{{ heading() }}</b> {{ text() }}
@@ -74,7 +74,7 @@ import { Button } from '@ui/button/button';
       <div
         class="bar"
         role="progressbar"
-        aria-label="Required setup steps done"
+        aria-label="Setup progress"
         [attr.aria-valuenow]="percent()"
         aria-valuemin="0"
         aria-valuemax="100"
@@ -84,7 +84,7 @@ import { Button } from '@ui/button/button';
       <a ahButton="primary" size="sm" routerLink="/settings/setup"
         >Open setup</a
       >
-    </div>
+    </section>
   `,
 })
 export class SetupBanner {

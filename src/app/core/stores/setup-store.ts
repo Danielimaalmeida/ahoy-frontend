@@ -3,56 +3,55 @@ import { ApiClient } from '@core/api/api-client';
 import type { ApiError } from '@core/api/api-error';
 import type { Setup } from '@core/api/types';
 import { setupReady } from '@domain/setup';
+import { StoreResource } from './resource';
 
 /**
  * What the installation and the team still need (`GET /setup`, `ahoy-hosted` design D23), for the banner every page
- * shows and for Team settings › Setup. Read when the app starts and each time the Setup page opens or checks again;
- * a read that fails keeps the last answer, and with none the banner stays hidden. 0 AIU.
+ * shows and for Team settings › Setup. Read when the app starts, on each page while Ahoy is not ready, and when the
+ * Setup page opens or checks again; a read asked for during another runs once more after it, and a read that fails
+ * keeps the last answer (with none, the banner stays hidden). 0 AIU.
  */
 @Injectable({ providedIn: 'root' })
 export class SetupStore {
   private readonly api = inject(ApiClient);
-  private readonly current = signal<Setup | null>(null);
-  private readonly problem = signal<ApiError | null>(null);
-  private readonly reading = signal(false);
-  /** Counts the reads and saves, so a read that started before a later one is dropped. */
-  private generation = 0;
+  private readonly resource = new StoreResource<Setup>(() =>
+    this.api.getSetup()
+  );
+  private readonly keepingSignal = signal(false);
 
   /** The last answer, or null before the first one. */
-  readonly setup = this.current.asReadonly();
+  readonly setup = computed(() => this.resource.value() ?? null);
   /** Why the last read failed, or null. */
-  readonly error = this.problem.asReadonly();
-  /** Whether a read is under way. */
-  readonly loading = this.reading.asReadonly();
+  readonly error = this.resource.error;
+  /** Whether a read or Keep defaults is under way. */
+  readonly loading = computed(
+    () => this.resource.busy() || this.keepingSignal()
+  );
   /** Whether a required step is still not done; false until the API has answered. */
   readonly notReady = computed(() => {
-    const setup = this.current();
+    const setup = this.setup();
     return setup !== null && !setupReady(setup);
   });
 
   /** Reads the steps again. */
-  async load(): Promise<void> {
-    const generation = ++this.generation;
-    this.reading.set(true);
-    const result = await this.api.getSetup();
-    if (generation !== this.generation) return;
-    this.reading.set(false);
-    if (result.ok) {
-      this.current.set(result.value);
-      this.problem.set(null);
-    } else this.problem.set(result.error);
+  load(): Promise<void> {
+    return this.resource.refresh();
   }
 
-  /** Says the phases run on the defaults (admins only); the answer is the steps with Phases done. */
+  /**
+   * Says the phases run on the defaults (admins only). The answer is shown at once; a read that began before the save
+   * is then read again, so it cannot put Phases back as missing.
+   */
   async keepPhaseDefaults(): Promise<ApiError | null> {
-    const generation = ++this.generation;
-    const result = await this.api.keepPhaseDefaults();
-    if (generation === this.generation) this.reading.set(false);
-    if (!result.ok) return result.error;
-    if (generation === this.generation) {
-      this.current.set(result.value);
-      this.problem.set(null);
+    this.keepingSignal.set(true);
+    try {
+      const result = await this.api.keepPhaseDefaults();
+      if (!result.ok) return result.error;
+      this.resource.accept(result.value);
+      if (this.resource.busy()) void this.resource.refresh();
+      return null;
+    } finally {
+      this.keepingSignal.set(false);
     }
-    return null;
   }
 }
