@@ -44,6 +44,18 @@ describe('the names of a meeting’s two sides, as the meeting pages read them',
     http.expectNone(`${BASE}/settings/meetings`);
   });
 
+  it('keeps names saved in Team settings over a read that started before the save', async () => {
+    const reading = store.load();
+    store.set({
+      ...updateMeetingSettings.meetings,
+      usLabel: 'Fabrikam',
+      version: 2,
+    });
+    read().flush(updateMeetingSettings);
+    await reading;
+    expect(store.labels()).toEqual({ us: 'Fabrikam', them: 'Contoso' });
+  });
+
   it('keeps the defaults when the read fails, and tries again on the next page', async () => {
     const failed = store.load();
     read().flush(problem('internal_error'), {

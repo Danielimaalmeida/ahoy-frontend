@@ -13,8 +13,8 @@ import { TeamsSettingsPage } from './teams-settings-page';
 
 /**
  * Team settings: SonarQube, Jira, the crew's Teams channel, Figma, the agents' jobs, the phases, pull request
- * comments, the defect watch, branch releases and the names of a meeting's two sides, kept in the database and changed by admins, one section per page.
- * Reading and changing them is 0 AIU.
+ * comments, the defect watch, branch releases and the names of a meeting's two sides, kept in the database and
+ * changed by admins, one section per page. Reading and changing them is 0 AIU.
  */
 export const SETTINGS_ROUTES: Routes = [
   {

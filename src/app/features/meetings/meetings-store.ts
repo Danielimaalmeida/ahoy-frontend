@@ -131,7 +131,7 @@ export class MeetingsStore {
     const [meetings, series] = await Promise.all([
       this.api.listMeetings(),
       this.api.listMeetingSeries(),
-      // The names of the two sides, read once; the defaults show until then.
+      // The names of the two sides, read once (the list waits for them, so the tags never change under the reader).
       this.labelsStore.load(),
     ]);
     this.loading.set(false);

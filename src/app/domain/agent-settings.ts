@@ -99,7 +99,7 @@ export function knowledgeRepoProblem(typed: string): string | null {
     !REPOSITORY.test(repo) ||
     repo.split('/').some((part) => part === '.' || part === '..')
   )
-    return 'Give it as owner/name, such as acme/business-rules.';
+    return 'Give it as owner/name, such as my-org/business-rules.';
   return null;
 }
 

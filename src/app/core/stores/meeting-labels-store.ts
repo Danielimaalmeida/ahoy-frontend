@@ -18,21 +18,26 @@ export class MeetingLabelsStore {
   private readonly api = inject(ApiClient);
   private readonly current = signal<MeetingLabels>(DEFAULT_MEETING_LABELS);
   private loading: Promise<void> | null = null;
+  /** Counts the names set from Team settings, so a read that started before one is dropped. */
+  private generation = 0;
 
   /** The names now: the defaults until the settings are read. */
   readonly labels = this.current.asReadonly();
 
-  /** Reads the settings the first time it is called; later calls wait for that read, or try again after a failed one. */
+  /** Reads the settings the first time it is called; later calls wait for that read, or read again after a failure. */
   load(): Promise<void> {
+    const generation = this.generation;
     this.loading ??= this.api.getMeetingSettings().then((result) => {
-      if (result.ok) this.current.set(meetingLabelsOf(result.value.meetings));
-      else this.loading = null;
+      if (!result.ok) this.loading = null;
+      else if (generation === this.generation)
+        this.current.set(meetingLabelsOf(result.value.meetings));
     });
     return this.loading;
   }
 
   /** What Team settings › Meetings saved or read. */
   set(settings: MeetingSettings): void {
+    this.generation++;
     this.current.set(meetingLabelsOf(settings));
   }
 }

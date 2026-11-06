@@ -19,8 +19,9 @@ const SOMEONE_ELSE = '';
 
 /**
  * The one line that adds a topic to the open meeting (boards `Meetings` and `MeetingNext`): the title, who raised it
- * (our side or the stakeholders', as Team settings › Meetings names them, and which stakeholder) and Add. Before the meeting the topic is one to raise; during it,
- * one that came up. Enter adds it; the choice of side stays for the next topic.
+ * (our side or the stakeholders', as Team settings › Meetings names them, and which stakeholder) and Add. Before the
+ * meeting the topic is one to raise; during it, one that came up. Enter adds it; the choice of side stays for the
+ * next topic.
  */
 @Component({
   selector: 'ah-topic-composer',

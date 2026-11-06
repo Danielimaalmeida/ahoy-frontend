@@ -115,7 +115,7 @@ function capValidator(
       (confirm)="submit()"
     >
       <span ahDialogLead
-        >From “{{ topic.title }}” · {{ meeting }} · {{ raisedBy }}</span
+        >From “{{ topic.title }}” · {{ meeting }} · {{ raisedBy() }}</span
       >
       <ah-banner ahDialogCost variant="cost" [heading]="costHeading()"
         >Not charged to any voyage's budget. It shares the run slots with the
@@ -204,9 +204,9 @@ export class StoryDraftDialog {
 
   protected readonly topic = this.data.topic;
   protected readonly meeting = this.data.meeting;
-  protected readonly raisedBy = raisedByLabel(
-    this.data.topic,
-    inject(MeetingLabelsStore).labels()
+  private readonly labels = inject(MeetingLabelsStore).labels;
+  protected readonly raisedBy = computed(() =>
+    raisedByLabel(this.data.topic, this.labels())
   );
   protected readonly capMessages = {
     amount: 'Type an amount in AIU, such as 2 or 0.5.',

@@ -8,8 +8,8 @@ import { isRecord } from './records';
 /** The most characters of one side's name, as the API takes it. */
 export const MEETING_LABEL_MAX = 40;
 
-// A line break or an ASCII control character (`\p{Cc}` without its C1 range), as the API refuses them.
-const CONTROL = /(?![\u0080-\u009f])\p{Cc}/u;
+// A control character or a line or paragraph separator: a tag is one line, as the API checks it.
+const LINE_BREAK = /[\p{Cc}\u2028\u2029]/u;
 
 /** A side's name as typed: trimmed, 1 to 40 characters on one line; or why it is refused. */
 export function meetingLabelOf(
@@ -19,7 +19,7 @@ export function meetingLabelOf(
   if (value === '') return { problem: 'Give the side a name.' };
   if ([...value].length > MEETING_LABEL_MAX)
     return { problem: `At most ${MEETING_LABEL_MAX} characters.` };
-  if (CONTROL.test(value)) return { problem: 'Keep the name on one line.' };
+  if (LINE_BREAK.test(value)) return { problem: 'Keep the name on one line.' };
   return { value };
 }
 

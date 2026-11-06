@@ -18,7 +18,7 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
   operations implemented). The `build:compress` and `analyze` scripts now read `dist/ahoy-frontend`, the folder the
   build writes. `environment.test.ts` and the dev proxy still name our TEST host and SSO: another team's image takes
   its realm and client from `/config.json` (F17), and our TEST build keeps its fallback until its deployment mounts
-  that file. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (210 files, 3,693 tests), `ng build`,
+  that file. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (210 files, 3,694 tests), `ng build`,
   typecheck and lint pass; `npm run format` passes on every changed file (`docs/architecture.md` was already
   unformatted on main); e2e was not run and nothing ran against an API.
 - **Merged before (`feature/R3DA-14787-auto-defects`, 2026-11-06):** merges `origin/main` at `1330060b` without
@@ -212,10 +212,12 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
 
 ## Next, in order
 
+- **After `feat/portability-1-meeting-labels` deploys with its API** (2026-11-06, D23): an admin saves our team's own
+  two names in Team settings › Meetings, or TEST's meeting pages and Confluence copies say "Us" and "Stakeholders".
 - **Before the next TEST deploy of the front end** (2026-10-30): mount a `/config.json` with FIO's `auth` (realm and
   client from `environment.test.ts`, and the three redirect URIs exactly as FIO's client registered them: today's
   build sends `<origin>/`, and `<origin>//ui/oauth/silent-refresh.html` for silent refresh), `jiraBaseUrl` (`https://atc.acmegroup.net/jira`) and `allowedQnumbers`, then
-  sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
+  sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's (audit #16).
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
 1. Merge `ahoy-hosted`'s `feat/defects-without-repositories` (migration 0038) and ahoy-agents'
