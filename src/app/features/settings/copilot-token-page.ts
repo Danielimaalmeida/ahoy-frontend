@@ -59,8 +59,8 @@ import { settingsErrorView } from './settings-errors';
     <div class="head">
       <h2>My Copilot token</h2>
       <span class="ah-muted"
-        >Your own token, for the runs you start. Only you see or change it,
-        admins included; Ahoy keeps it encrypted and never shows it again.</span
+        >Your own token, for the runs you start. Only you see or change it;
+        admins cannot. Ahoy keeps it encrypted and never shows it again.</span
       >
     </div>
 
@@ -204,8 +204,8 @@ import { settingsErrorView } from './settings-errors';
                 <div class="remove">
                   <p>
                     Remove your token {{ hint(page.token.hint) }}? Your runs
-                    then use the cluster's Secret, and fail to sign in to
-                    Copilot if there is none.
+                    then use the cluster's Secret, and cannot start if there is
+                    none.
                   </p>
                 </div>
               }
@@ -228,7 +228,7 @@ import { settingsErrorView } from './settings-errors';
                       [disabled]="busy()"
                       (click)="remove()"
                     >
-                      Remove the token
+                      {{ removing() ? 'Removing…' : 'Remove the token' }}
                     </button>
                   } @else {
                     <button
@@ -298,7 +298,10 @@ export class CopilotTokenPage {
   );
   protected readonly saving = signal(false);
   protected readonly testing = signal(false);
-  protected readonly busy = computed(() => this.saving() || this.testing());
+  protected readonly removing = signal(false);
+  protected readonly busy = computed(
+    () => this.saving() || this.testing() || this.removing()
+  );
   protected readonly confirmingRemove = signal(false);
   private readonly changeError = signal<ApiError | null>(null);
   protected readonly changeFailure = computed(() => {
@@ -317,6 +320,8 @@ export class CopilotTokenPage {
   /** Which token the person's runs use: this one, or the cluster's Secret. */
   protected readonly subtitle = computed(() => {
     const page = this.store.page();
+    if (page?.token && !page.tokenReadable)
+      return "Saved, but it cannot be opened: your runs use the cluster's Secret until you save it again.";
     if (page === null || page.token !== null)
       return 'Your runs in the cluster use this one.';
     return `Not saved: your runs use the cluster's ahoy-copilot-${page.qnumber} Secret, if there is one.`;
@@ -371,10 +376,10 @@ export class CopilotTokenPage {
   /** Removes the token, after the second press. */
   protected async remove(): Promise<void> {
     if (this.busy()) return;
-    this.saving.set(true);
+    this.removing.set(true);
     this.changeError.set(null);
     const result = await this.store.remove();
-    this.saving.set(false);
+    this.removing.set(false);
     this.confirmingRemove.set(false);
     if (!result.ok) this.changeError.set(result.error);
     else this.toasts.show('Your Copilot token is removed.');
