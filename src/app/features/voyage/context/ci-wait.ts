@@ -50,6 +50,7 @@ const NEUTRAL: ReadonlySet<string> = new Set([
   'story.routed',
   'story.budget_changed',
   'story.models_changed',
+  'story.planning_mode_changed',
 ]);
 
 /** A gate verdict from a `gate.evaluated` of a reconciler step (not a run's own gate, which carries its `runId`). */

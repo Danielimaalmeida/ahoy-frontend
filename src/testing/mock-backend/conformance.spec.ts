@@ -319,6 +319,54 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   get('/metrics/export?table=halts&format=json');
   get('/metrics/export?table=stories');
 
+  // A story planned by panel: the planners ask, the judge rates, the mode is changed and read back, and every refusal.
+  post('/stories', {
+    key: 'PANEL-1',
+    title: 'Panel voyage',
+    budgetNanoAiu: 40 * AIU,
+    planningMode: 'panel',
+  });
+  advance(12_000);
+  get('/stories/PANEL-1/plan-panels');
+  for (const id of ['Q1', 'Q2'])
+    post(`/stories/PANEL-1/questions/${id}/answer`, {
+      answer: 'POC test answer, not a product decision',
+      expectedVersion: version('PANEL-1'),
+    });
+  advance(12_000);
+  const panels = get('/stories/PANEL-1/plan-panels').body as {
+    items: { runId: string }[];
+  };
+  for (const panel of panels.items) get(`/runs/${panel.runId}/plan-panel`);
+  get('/runs/r-nope/plan-panel');
+  get('/runs/PROJ-123-planning-1/plan-panel');
+  get('/stories/NOPE-1/plan-panels');
+  get('/metrics/plan-panel');
+  get('/metrics/plan-panel?from=2026-09-01T00:00:00Z&to=2026-11-01T00:00:00Z');
+  get('/metrics/plan-panel?from=2026-10-02T00:00:00Z&to=2026-10-01T00:00:00Z');
+  get('/metrics/plan-panel?from=2024-01-01T00:00:00Z&to=2026-10-01T00:00:00Z');
+  post('/stories/PANEL-1/planning-mode', {
+    expectedVersion: version('PANEL-1'),
+    planningMode: 'standard',
+    reason: 'One planner is enough',
+  });
+  post('/stories/PANEL-1/planning-mode', {
+    expectedVersion: 1,
+    planningMode: 'panel',
+  });
+  post('/stories/PANEL-1/planning-mode', {
+    expectedVersion: version('PANEL-1'),
+    planningMode: 'duo',
+  });
+  post('/stories/NOPE-1/planning-mode', {
+    expectedVersion: 1,
+    planningMode: 'panel',
+  });
+  post('/stories/PROJ-097/planning-mode', {
+    expectedVersion: version('PROJ-097'),
+    planningMode: 'panel',
+  });
+
   // Meetings: the seeded Finance sync, a topic and notes through every command, and the carry-over at the end.
   const patch = (path: string, body: unknown) =>
     call(server, 'PATCH', path, body);
@@ -462,7 +510,11 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'setStoryBudget',
       'getStoryModels',
       'setStoryModels',
+      'setStoryPlanningMode',
       'listStoryRuns',
+      'listStoryPlanPanels',
+      'getRunPlanPanel',
+      'getPlanPanelMetrics',
       'getRun',
       'listQuestions',
       'answerQuestion',

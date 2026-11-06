@@ -11,6 +11,7 @@
  */
 import {
   arrayOf,
+  boundedNumber,
   boundedText,
   flag,
   guard,
@@ -54,6 +55,8 @@ import {
   MODEL_SLOTS,
   MODEL_SOURCES,
   PLAN_FIT_VERDICTS,
+  PLANNING_MODES,
+  PANELIST_STATUSES,
   READINESS_VERDICTS,
   REASONING_EFFORTS,
   REFINEMENT_STATUSES,
@@ -119,6 +122,12 @@ import {
   type BacklogReadiness,
   type FitReason,
   type PlanFit,
+  type PlanPanel,
+  type PlanPanelConfig,
+  type PlanPanelList,
+  type PlanPanelMember,
+  type PlanPanelMetrics,
+  type PlanPanelModelRatings,
   type StoryPlanFit,
   type AhoyEvent,
   type Diagnosis,
@@ -252,6 +261,7 @@ const story = shape<Story>({
   spentNanoAiu: nanoAiu,
   controlSha: sha1,
   currentRunId: nullable(runId),
+  planningMode: optional(oneOf(PLANNING_MODES)),
   version: positive,
   createdAt: timestamp,
   updatedAt: timestamp,
@@ -454,6 +464,19 @@ const slotDefault = shape<SlotDefault>({
   effortSource: oneOf(['configuration', 'phase_table', 'model_default']),
 });
 
+const planPanelConfig = shape<PlanPanelConfig>({
+  panelists: arrayOf(
+    shape<PlanPanelConfig['panelists'][number]>({
+      model: modelId,
+      reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+    })
+  ),
+  judge: shape<PlanPanelConfig['judge']>({
+    models: arrayOf(modelId),
+    reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+  }),
+});
+
 const diagnosisFinding = shape<DiagnosisFinding>({
   kind: oneOf(DIAGNOSIS_KINDS),
   title: text,
@@ -645,6 +668,7 @@ export const isModelCatalog = guard<ModelCatalog>(
     reasoningEfforts: arrayOf(oneOf(REASONING_EFFORTS)),
     controlSha: nullable(sha1),
     defaults: arrayOf(slotDefault),
+    planPanel: optional(planPanelConfig),
   })
 );
 
@@ -652,6 +676,57 @@ export const isModelCatalog = guard<ModelCatalog>(
 export const isModelPlan = guard<ModelPlan>(
   'ModelPlan',
   shape<ModelPlan>({ storyKey, version: positive, slots: arrayOf(slotModel) })
+);
+
+const planPanelMember = shape<PlanPanelMember>({
+  label: patterned('a draft label from A to E', /^[A-E]$/, 1),
+  model: modelId,
+  reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+  status: oneOf(PANELIST_STATUSES),
+  error: nullable(text),
+  usage,
+  gate: nullable(
+    shape<NonNullable<PlanPanelMember['gate']>>({
+      result: oneOf(GATE_RESULTS),
+      message: text,
+    })
+  ),
+  questions: arrayOf(
+    shape<PlanPanelMember['questions'][number]>({
+      text,
+      recommendation: text,
+    })
+  ),
+  score: nullable(wholeNumber('a score from 1 to 10', 1, 10)),
+  rationale: nullable(text),
+  adopted: nullable(text),
+  leftOut: nullable(text),
+  plan: optional(nullable(text)),
+});
+
+const planPanel = shape<PlanPanel>({
+  runId,
+  storyKey,
+  createdAt: timestamp,
+  judge: nullable(
+    shape<NonNullable<PlanPanel['judge']>>({
+      model: modelId,
+      reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+      usage,
+    })
+  ),
+  summary: nullable(text),
+  ratingsProblem: nullable(text),
+  members: arrayOf(planPanelMember),
+});
+
+/** One panel run with the plan each planner drafted, as `getRunPlanPanel` answers it. */
+export const isPlanPanel = guard<PlanPanel>('PlanPanel', planPanel);
+
+/** A story's panel runs, newest first; the entries have no `plan`. */
+export const isPlanPanelList = guard<PlanPanelList>(
+  'PlanPanelList',
+  shape<PlanPanelList>({ items: arrayOf(planPanel) })
 );
 
 /** The state document of a story; its `state` is read with `readStoryState`. */
@@ -890,6 +965,38 @@ export const isMetricsReport = guard<MetricsReport>(
         title: text,
         evidence: text,
         action: text,
+      })
+    ),
+  })
+);
+
+const planPanelModelRatings = shape<PlanPanelModelRatings>({
+  model: modelId,
+  judgeModel: nullable(modelId),
+  plans: count,
+  rated: count,
+  averageScore: nullable(boundedNumber('an average score from 1 to 10', 1, 10)),
+  minScore: nullable(wholeNumber('a score from 1 to 10', 1, 10)),
+  maxScore: nullable(wholeNumber('a score from 1 to 10', 1, 10)),
+  best: count,
+  gatePassed: count,
+  gateChecked: count,
+  unfinished: count,
+  averageNanoAiu: nullable(nanoAiu),
+});
+
+/** How the judges rated each model's plans over a period, and how many panels each judge model ran. */
+export const isPlanPanelMetrics = guard<PlanPanelMetrics>(
+  'PlanPanelMetrics',
+  shape<PlanPanelMetrics>({
+    from: timestamp,
+    to: timestamp,
+    panels: count,
+    models: arrayOf(planPanelModelRatings),
+    judges: arrayOf(
+      shape<Item<PlanPanelMetrics['judges']>>({
+        model: modelId,
+        panels: positive,
       })
     ),
   })

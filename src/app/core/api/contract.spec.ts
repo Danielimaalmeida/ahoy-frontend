@@ -106,6 +106,10 @@ import resumeStory from '@testing/fixtures/resumeStory.json';
 import decideWorkPackage from '@testing/fixtures/decideWorkPackage.json';
 import setStoryBudget from '@testing/fixtures/setStoryBudget.json';
 import setStoryModels from '@testing/fixtures/setStoryModels.json';
+import setStoryPlanningMode from '@testing/fixtures/setStoryPlanningMode.json';
+import getPlanPanelMetrics from '@testing/fixtures/getPlanPanelMetrics.json';
+import getRunPlanPanel from '@testing/fixtures/getRunPlanPanel.json';
+import listStoryPlanPanels from '@testing/fixtures/listStoryPlanPanels.json';
 import startStory from '@testing/fixtures/startStory.json';
 import stopStory from '@testing/fixtures/stopStory.json';
 import cancelStory from '@testing/fixtures/cancelStory.json';
@@ -190,7 +194,11 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['assessComments', assessComments],
   ['getStoryModels', getStoryModels],
   ['setStoryModels', setStoryModels],
+  ['setStoryPlanningMode', setStoryPlanningMode],
   ['listStoryRuns', listStoryRuns],
+  ['listStoryPlanPanels', listStoryPlanPanels],
+  ['getRunPlanPanel', getRunPlanPanel],
+  ['getPlanPanelMetrics', getPlanPanelMetrics],
   ['getRun', getRun],
   ['listQuestions', listQuestions],
   ['answerQuestion', answerQuestion],
@@ -331,7 +339,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      125
+      129
     );
   });
 
@@ -439,6 +447,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'resumeStory',
       'setStoryBudget',
       'setStoryModels',
+      'setStoryPlanningMode',
       'answerQuestion',
       'decideHumanGate',
       'decideWorkPackage',
@@ -613,6 +622,47 @@ describe('the request bodies the client sends', () => {
       },
     };
     expect(requestViolations('startStory', body)).toEqual([]);
+  });
+
+  it('are valid for startStory with a planning mode, and refuse one the contract does not list', () => {
+    const body = { key: 'PROJ-145', budgetNanoAiu: 25_000_000_000 };
+    expect(
+      requestViolations('startStory', { ...body, planningMode: 'panel' })
+    ).toEqual([]);
+    expect(
+      requestViolations('startStory', { ...body, planningMode: 'standard' })
+    ).toEqual([]);
+    expect(
+      requestViolations('startStory', { ...body, planningMode: 'duo' })
+    ).not.toEqual([]);
+  });
+
+  it('are valid for setStoryPlanningMode with and without a reason, and refuse a request without a mode', () => {
+    expect(
+      requestViolations('setStoryPlanningMode', {
+        expectedVersion: 9,
+        planningMode: 'panel',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('setStoryPlanningMode', {
+        expectedVersion: 9,
+        planningMode: 'standard',
+        reason: 'The panel cost too much for this story',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('setStoryPlanningMode', { expectedVersion: 9 }).join(
+        '\n'
+      )
+    ).toContain('planningMode');
+    expect(
+      requestViolations('setStoryPlanningMode', {
+        expectedVersion: 9,
+        planningMode: 'panel',
+        reason: '',
+      })
+    ).not.toEqual([]);
   });
 
   it('are valid for refreshDesign as the client sends it, and refuse a request without links', () => {

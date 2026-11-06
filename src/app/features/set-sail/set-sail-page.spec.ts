@@ -24,6 +24,8 @@ import {
   provideMockBackend,
 } from '@core/mock/mock-backend';
 import { testServer } from '@testing/mock-backend/spec-helpers';
+import listModels from '@testing/fixtures/listModels.json';
+import { withoutField } from '@testing/fixtures/mutate';
 import { ToastService } from '@ui/toast/toast';
 import type { Observable } from 'rxjs';
 import { from, switchMap, throwError } from 'rxjs';
@@ -390,6 +392,119 @@ describe('the Set sail page', () => {
         25_000_000_000
       );
       expect(TestBed.inject(Router).url).toBe('/voyages/PROJ-145');
+    });
+  });
+  describe('planning', () => {
+    /** The radio of the choice whose title starts with `title`, inside the group named "Planning". */
+    const choice = (
+      root: HTMLElement,
+      title: string
+    ): HTMLInputElement | undefined => {
+      const group = root.querySelector(
+        '[role="radiogroup"][aria-label="Planning"]'
+      );
+      const label = Array.from(group?.querySelectorAll('label') ?? []).find(
+        (l) => l.textContent?.trim().startsWith(title)
+      );
+      return label?.querySelector('input') ?? undefined;
+    };
+
+    it('offers one planner, preselected, and a panel that costs more, under a group named Planning', async () => {
+      const page = await openPage();
+      const standard = choice(page.root, 'Standard');
+      const panel = choice(page.root, 'Panel');
+      expect(standard?.checked).toBe(true);
+      expect(panel?.checked).toBe(false);
+      const group = page.root.querySelector('[role="radiogroup"]');
+      expect(group?.textContent).toContain('Standard · one planner');
+      expect(group?.textContent).toContain(
+        'Panel · three planners and a judge'
+      );
+      expect(group?.textContent).toContain('costs more AIU than one planner');
+      expect(page.fact('Planning')).toBe('One planner');
+    });
+
+    it("shows the panel's models from the catalogue, in its labels where it has them and in ids where it has not", async () => {
+      const page = await openPage();
+      expect(page.fact('Panel planners')).toBe(
+        'Claude Haiku 4.5, GPT-5.6 Terra, gemini-3.8-flash'
+      );
+      expect(page.fact('Panel judge')).toBe(
+        'claude-opus-5.5, or Claude Sonnet 5 if your Copilot account may not use it'
+      );
+    });
+
+    it('shows no panel models, and does not say how many planners, for a server older than the plan panel', async () => {
+      const older = withoutField(listModels, 'planPanel');
+      const page = await openPage('/voyages/new', () =>
+        from(Promise.resolve(new HttpResponse({ status: 200, body: older })))
+      );
+      expect(page.fact('Panel planners')).toBeUndefined();
+      expect(
+        choice(page.root, 'Panel · several planners and a judge')
+      ).toBeDefined();
+    });
+
+    it('sends no planningMode for a standard story, so the request is what an older server expects', async () => {
+      const page = await openPage();
+      page.type(page.labelled('Jira key'), 'PROJ-145');
+      page.type(page.labelled('Total budget'), '25');
+
+      page.submit().click();
+      await page.settle();
+
+      expect(page.wire.posts[0]?.body).toStrictEqual({
+        key: 'PROJ-145',
+        budgetNanoAiu: 25_000_000_000,
+      });
+    });
+
+    it('sends planningMode "panel" beside the rest when the panel is chosen, and the voyage starts as a panel story', async () => {
+      const page = await openPage();
+      page.type(page.labelled('Jira key'), 'PROJ-145');
+      page.type(page.labelled('Total budget'), '25');
+      choice(page.root, 'Panel')!.click();
+      page.harness.detectChanges();
+      expect(page.fact('Planning')).toBe('A panel, three planners and a judge');
+
+      page.submit().click();
+      await page.settle();
+
+      expect(page.wire.posts[0]?.body).toStrictEqual({
+        key: 'PROJ-145',
+        budgetNanoAiu: 25_000_000_000,
+        planningMode: 'panel',
+      });
+      expect(TestBed.inject(StoriesStore).find('PROJ-145')?.planningMode).toBe(
+        'panel'
+      );
+    });
+
+    it('leaves the panel for one planner again when the user changes their mind before sailing', async () => {
+      const page = await openPage();
+      page.type(page.labelled('Jira key'), 'PROJ-145');
+      page.type(page.labelled('Total budget'), '25');
+      choice(page.root, 'Panel')!.click();
+      choice(page.root, 'Standard')!.click();
+      page.harness.detectChanges();
+      expect(page.fact('Planning')).toBe('One planner');
+
+      page.submit().click();
+      await page.settle();
+
+      expect(page.wire.posts[0]?.body).not.toHaveProperty('planningMode');
+    });
+
+    it('keeps the choice when the API refuses the request', async () => {
+      const page = await openPage('/voyages/new', () =>
+        problemAnswer(503, 'unavailable')
+      );
+      page.type(page.labelled('Jira key'), 'PROJ-145');
+      page.type(page.labelled('Total budget'), '25');
+      choice(page.root, 'Panel')!.click();
+      page.submit().click();
+      await page.settle();
+      expect(choice(page.root, 'Panel')?.checked).toBe(true);
     });
   });
   describe('what is checked before anything is sent', () => {

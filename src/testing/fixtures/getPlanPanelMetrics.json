@@ -1,0 +1,95 @@
+{
+  "from": "2026-09-11T09:00:00.000Z",
+  "to": "2026-10-11T09:00:00.000Z",
+  "panels": 4,
+  "models": [
+    {
+      "model": "gpt-5.6-terra",
+      "judgeModel": "claude-opus-5.5",
+      "plans": 3,
+      "rated": 3,
+      "averageScore": 8.33,
+      "minScore": 7,
+      "maxScore": 9,
+      "best": 2,
+      "gatePassed": 3,
+      "gateChecked": 3,
+      "unfinished": 0,
+      "averageNanoAiu": 420000000
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "judgeModel": "claude-sonnet-5",
+      "plans": 1,
+      "rated": 1,
+      "averageScore": 8,
+      "minScore": 8,
+      "maxScore": 8,
+      "best": 1,
+      "gatePassed": 1,
+      "gateChecked": 1,
+      "unfinished": 0,
+      "averageNanoAiu": 400000000
+    },
+    {
+      "model": "claude-haiku-4.5",
+      "judgeModel": "claude-opus-5.5",
+      "plans": 3,
+      "rated": 2,
+      "averageScore": 6,
+      "minScore": 5,
+      "maxScore": 7,
+      "best": 1,
+      "gatePassed": 1,
+      "gateChecked": 2,
+      "unfinished": 1,
+      "averageNanoAiu": 240000000
+    },
+    {
+      "model": "claude-haiku-4.5",
+      "judgeModel": "claude-sonnet-5",
+      "plans": 1,
+      "rated": 1,
+      "averageScore": 6,
+      "minScore": 6,
+      "maxScore": 6,
+      "best": 0,
+      "gatePassed": 1,
+      "gateChecked": 1,
+      "unfinished": 0,
+      "averageNanoAiu": 230000000
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "judgeModel": "claude-sonnet-5",
+      "plans": 1,
+      "rated": 1,
+      "averageScore": 5,
+      "minScore": 5,
+      "maxScore": 5,
+      "best": 0,
+      "gatePassed": 1,
+      "gateChecked": 1,
+      "unfinished": 0,
+      "averageNanoAiu": 90000000
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "judgeModel": "claude-opus-5.5",
+      "plans": 3,
+      "rated": 1,
+      "averageScore": 4,
+      "minScore": 4,
+      "maxScore": 4,
+      "best": 0,
+      "gatePassed": 0,
+      "gateChecked": 1,
+      "unfinished": 2,
+      "averageNanoAiu": 95000000
+    }
+  ],
+  "judges": [
+    { "model": "claude-opus-5.5", "panels": 3 },
+    { "model": "claude-sonnet-5", "panels": 1 }
+  ]
+}

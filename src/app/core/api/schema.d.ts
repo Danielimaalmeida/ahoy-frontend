@@ -140,6 +140,31 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/metrics/plan-panel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * How the judges rated each model's plans, over a period.
+     * @description Read-only and 0 AIU: aggregated from the panel runs kept in `[from, to)` (the 30 days before now by default, at
+     *     most 366 days). Per model and judge model (a judge's scores are its own, so a model the judge Opus rated and the
+     *     judge Sonnet rated has a row for each): the drafts it wrote, how many the judge rated, their average, lowest and highest
+     *     score, how often its draft had the highest score of its panel (ties count for each), how many drafts the
+     *     harness's plan gate passed of those it checked, how many planners did not finish, and the average AIU of its
+     *     session in nano-AIU. The judges' own models are counted apart. Rows are ordered by average score.
+     */
+    readonly get: operations['getPlanPanelMetrics'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories': {
     readonly parameters: {
       readonly query?: never;
@@ -376,6 +401,64 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/planning-mode': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Choose how the story is planned: by one planner, or by a panel of planners and a judge.
+     * @description `standard` plans the story with one planner, as before. `panel` has three cheaper planners (the models
+     *     `GET /models` lists under `planPanel.panelists`) each plan it on their own and in parallel, then a judge (the
+     *     first of `planPanel.judge.models` the owner's Copilot account may use) reads their drafts, writes the final
+     *     plan from the best of each and rates every draft from 1 to 10 (`GET /stories/{key}/plan-panels`). A panel run
+     *     costs more than a planner's: its cap and its deadline are the planning phase's times two, and the story's own
+     *     budget is still the hard stop. The model chosen for the `planning` slot is not used in panel mode.
+     *
+     *     Takes effect when the reconciler next queues a planning run (the first one, a re-plan after the plan is sent
+     *     back, or the run after the planners' questions are answered): an active run keeps what it started with. Status
+     *     and phase do not change. Also chosen when the story starts (`startStory`).
+     */
+    readonly post: operations['setStoryPlanningMode'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/plan-panels': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The panel runs of a story's planning, newest first, with the judge's rating of every draft.
+     * @description One entry per planning run that ran as a panel, whatever its gate said. Each lists the judge (the model that
+     *     wrote the final plan), the planners with their models, how their sessions ended, the harness's own plan gate
+     *     verdict on their drafts, the judge's score from 1 to 10 and its reasons, and what it took from each draft.
+     *     The drafts' plans are not included: read one with `GET /runs/{runId}/plan-panel`. The judge saw the drafts
+     *     under the labels `A`, `B`, `C`, in an order nobody can predict, and was not told which model wrote which.
+     *     Free text is untrusted: agents wrote it. Read-only and 0 AIU.
+     */
+    readonly get: operations['listStoryPlanPanels'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/runs': {
     readonly parameters: {
       readonly query?: never;
@@ -404,6 +487,29 @@ export interface paths {
       readonly cookie?: never;
     };
     readonly get: operations['getRun'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/runs/{runId}/plan-panel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * One panel run, with the plan each planner drafted.
+     * @description The same as an entry of `GET /stories/{key}/plan-panels`, with each planner's `plan` (its
+     *     `implementation-plan.md`, null when it wrote none; at most 200 000 characters). Agent text, untrusted.
+     */
+    readonly get: operations['getRunPlanPanel'];
     readonly put?: never;
     readonly post?: never;
     readonly delete?: never;
@@ -2777,6 +2883,8 @@ export interface components {
       /** @description Control-repo commit (agents, skills, phase rules) pinned for the story's life. */
       readonly controlSha: string;
       readonly currentRunId: components['schemas']['RunId'] | null;
+      /** @description How the story is planned. Always sent by this server; a server older than the plan panel sends none, which is `standard`. */
+      readonly planningMode?: components['schemas']['PlanningMode'];
       readonly version: components['schemas']['Version'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedAt: components['schemas']['Timestamp'];
@@ -2794,6 +2902,8 @@ export interface components {
       readonly controlRef?: string;
       /** @description The model and reasoning effort for each phase; a slot left out runs on the server's configured defaults. Can be changed later with `setStoryModels`. */
       readonly models?: components['schemas']['ModelPlanRequest'];
+      /** @description How the story is planned: `standard` (the default) with one planner, or `panel` with a panel of planners and a judge (`setStoryPlanningMode` describes it). Can be changed later with `setStoryPlanningMode`. */
+      readonly planningMode?: components['schemas']['PlanningMode'];
     };
     readonly StopStoryRequest: {
       readonly expectedVersion: components['schemas']['Version'];
@@ -3061,6 +3171,125 @@ export interface components {
       /** @description The control commit whose `phases.tsv` filled the defaults; null when it could not be read. */
       readonly controlSha: string | null;
       readonly defaults: readonly components['schemas']['SlotDefault'][];
+      /** @description The models a story planned by panel runs on (`setStoryPlanningMode`). Absent on a server older than the plan panel. */
+      readonly planPanel?: components['schemas']['PlanPanelConfig'];
+    };
+    /**
+     * @description `standard`: one planner writes the plan. `panel`: planners write drafts on their own, and a judge writes the final plan from them and rates them.
+     * @enum {string}
+     */
+    readonly PlanningMode: 'standard' | 'panel';
+    readonly SetStoryPlanningModeRequest: {
+      readonly expectedVersion: components['schemas']['Version'];
+      readonly planningMode: components['schemas']['PlanningMode'];
+      readonly reason?: string;
+    };
+    /** @description The models of a panel: its planners, and the judge's models, best first. */
+    readonly PlanPanelConfig: {
+      readonly panelists: readonly {
+        readonly model: components['schemas']['ModelId'];
+        readonly reasoningEffort:
+          components['schemas']['ReasoningEffort'] | null;
+      }[];
+      /** @description The judge runs on the first of `models` the owner's Copilot account may use, so it is the strongest model the account has; a run whose account may use none fails before it spends anything. */
+      readonly judge: {
+        readonly models: readonly components['schemas']['ModelId'][];
+        readonly reasoningEffort:
+          components['schemas']['ReasoningEffort'] | null;
+      };
+    };
+    /** @description One planner of a panel and what became of its draft. Free text is untrusted: agents wrote it. */
+    readonly PlanPanelMember: {
+      /** @description The name the judge saw the draft under; it was not told the model. */
+      readonly label: string;
+      readonly model: components['schemas']['ModelId'];
+      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
+      /**
+       * @description How the planner's session ended. Only `completed` leaves a draft for the judge; the others (a model the account may not use, its share of the budget or time spent, a draft that broke the output rules) were left out, and the panel went on without them.
+       * @enum {string}
+       */
+      readonly status:
+        | 'completed'
+        | 'failed'
+        | 'budget_exceeded'
+        | 'timed_out'
+        | 'output_violation';
+      readonly error: string | null;
+      readonly usage: components['schemas']['Usage'];
+      /** @description What the harness's plan gate said about the draft's state, its own check; null when it made none. */
+      readonly gate: {
+        /** @enum {string} */
+        readonly result:
+          'pass' | 'fail' | 'error' | 'branch' | 'halt' | 'reject';
+        readonly message: string;
+      } | null;
+      /** @description The questions the planner asked; the judge decided whether a person must answer them. */
+      readonly questions: readonly {
+        readonly text: string;
+        readonly recommendation: string;
+      }[];
+      /** @description The judge's rating of the draft as a plan for the story; null when it was not rated. */
+      readonly score: number | null;
+      readonly rationale: string | null;
+      /** @description What the judge took from the draft. */
+      readonly adopted: string | null;
+      /** @description What the judge left out, and why. */
+      readonly leftOut: string | null;
+      /** @description The draft's implementation plan; only in `getRunPlanPanel`, null when the planner wrote none. */
+      readonly plan?: string | null;
+    };
+    readonly PlanPanel: {
+      readonly runId: components['schemas']['RunId'];
+      readonly storyKey: components['schemas']['StoryKey'];
+      readonly createdAt: components['schemas']['Timestamp'];
+      /** @description The model that wrote the final plan and rated the drafts; null when no planner finished. */
+      readonly judge: {
+        readonly model: components['schemas']['ModelId'];
+        readonly reasoningEffort:
+          components['schemas']['ReasoningEffort'] | null;
+        readonly usage: components['schemas']['Usage'];
+      } | null;
+      /** @description How the judge says it built the final plan. */
+      readonly summary: string | null;
+      /** @description Why the judge's ratings could not be used, when they could not; then no draft has a score. */
+      readonly ratingsProblem: string | null;
+      readonly members: readonly components['schemas']['PlanPanelMember'][];
+    };
+    readonly PlanPanelList: {
+      readonly items: readonly components['schemas']['PlanPanel'][];
+    };
+    /** @description One model's drafts as one judge model rated them. */
+    readonly PlanPanelModelRatings: {
+      readonly model: components['schemas']['ModelId'];
+      /** @description The model that judged these drafts; null for the panels where no planner finished, so no judge ran. Scores from different judges are not comparable, so each has its own row. */
+      readonly judgeModel: components['schemas']['ModelId'] | null;
+      /** @description The drafts the model wrote: every planner seat it took. */
+      readonly plans: number;
+      /** @description The drafts the judge rated. */
+      readonly rated: number;
+      readonly averageScore: number | null;
+      readonly minScore: number | null;
+      readonly maxScore: number | null;
+      /** @description The rated drafts that had the highest score of their panel, ties included. */
+      readonly best: number;
+      /** @description The drafts the plan gate passed. */
+      readonly gatePassed: number;
+      /** @description The drafts the plan gate checked. */
+      readonly gateChecked: number;
+      /** @description The planners that did not finish. */
+      readonly unfinished: number;
+      readonly averageNanoAiu: components['schemas']['NanoAiu'] | null;
+    };
+    readonly PlanPanelMetrics: {
+      readonly from: components['schemas']['Timestamp'];
+      readonly to: components['schemas']['Timestamp'];
+      /** @description The panel runs kept in the period. */
+      readonly panels: number;
+      readonly models: readonly components['schemas']['PlanPanelModelRatings'][];
+      readonly judges: readonly {
+        readonly model: components['schemas']['ModelId'];
+        readonly panels: number;
+      }[];
     };
     /** @enum {string} */
     readonly RunStatus:
@@ -5078,6 +5307,34 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
     };
   };
+  readonly getPlanPanelMetrics: {
+    readonly parameters: {
+      readonly query?: {
+        /** @description Start of the period (inclusive). Defaults to 30 days before `to`. */
+        readonly from?: components['parameters']['MetricsFrom'];
+        /** @description End of the period (exclusive). Defaults to now. */
+        readonly to?: components['parameters']['MetricsTo'];
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The ratings of the period. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PlanPanelMetrics'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
   readonly listStories: {
     readonly parameters: {
       readonly query?: {
@@ -5406,6 +5663,63 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly setStoryPlanningMode: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['SetStoryPlanningModeRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The story, at its new version. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Story'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly listStoryPlanPanels: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The panel runs; empty for a story planned by one planner. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PlanPanelList'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
   readonly listStoryRuns: {
     readonly parameters: {
       readonly query?: never;
@@ -5452,6 +5766,32 @@ export interface operations {
         };
         content: {
           readonly 'application/json': components['schemas']['Run'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly getRunPlanPanel: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The panel run. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PlanPanel'];
         };
       };
       readonly 400: components['responses']['Problem'];

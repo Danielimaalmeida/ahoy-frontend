@@ -49,6 +49,7 @@ const TITLES: Readonly<Record<string, string>> = {
   'design.refreshed': 'Design refreshed',
   'story.budget_changed': 'Budget changed',
   'story.models_changed': 'Models changed',
+  'story.planning_mode_changed': 'Planning mode changed',
   'story.phase_changed': 'Phase changed',
   'story.awaiting_input': 'Waiting for answers',
   'story.awaiting_decision': 'Waiting at the human gate',

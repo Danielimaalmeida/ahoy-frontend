@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -8,13 +9,20 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import type { ModelSlot, SlotModel } from '@core/api/types';
+import { ApiClient } from '@core/api/api-client';
+import type { ModelCatalog, ModelSlot, SlotModel } from '@core/api/types';
 import {
   apiErrorView,
   commandErrorView,
   type CommandErrorView,
 } from '@core/commands/command-error';
 import { CREW } from '@domain/models';
+import { catalogModelLabel, judgeModelsLine } from '@domain/plan-panel';
+import {
+  PLANNING_MODE_LABELS,
+  plannersLabel,
+  planningModeOf,
+} from '@domain/planning-mode';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { Panel, PanelBody, PanelFoot, PanelHead } from '@ui/panel/panel';
@@ -99,6 +107,30 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
     }
     .models__banner {
       margin: var(--space-3) var(--space-4) 0;
+    }
+    .models__planning {
+      display: block;
+      margin-top: var(--space-3\\.5);
+    }
+    .models__mode {
+      margin: 0;
+    }
+    .models__panel {
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      gap: 6px 14px;
+      margin: 0;
+    }
+    .models__panel dt {
+      color: var(--ink-muted);
+    }
+    .models__panel dd {
+      margin: 0;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+    .models__note {
+      margin: 0;
     }
   `,
   template: `
@@ -228,6 +260,53 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
         >
       </ah-panel-foot>
     </ah-panel>
+
+    <ah-panel class="models__planning">
+      <ah-panel-head
+        heading="Planning"
+        subtitle="How the plan is written. A change applies from the next planning run."
+      >
+        <button
+          ahButton
+          size="sm"
+          ahPanelActions
+          type="button"
+          [disabled]="planning() === null"
+          (click)="changePlanning()"
+        >
+          Change planning
+        </button>
+      </ah-panel-head>
+      <ah-panel-body>
+        @if (planning(); as p) {
+          <p class="models__mode">
+            <span
+              class="ah-badge"
+              [class.ah-badge--input]="p.mode === 'panel'"
+              >{{ p.label }}</span
+            >
+            {{ p.summary }}
+          </p>
+          @if (p.models; as m) {
+            <dl class="models__panel">
+              <dt>Planners</dt>
+              <dd>{{ m.planners }}</dd>
+              <dt>Judge</dt>
+              <dd>{{ m.judge }}</dd>
+            </dl>
+          }
+          @if (p.mode === 'panel') {
+            <p class="ah-hint models__note">
+              A panel does not use the planning model above. It costs more AIU
+              than one planner: its cap and its deadline are twice the planning
+              phase's.
+            </p>
+          }
+        } @else {
+          <ah-skeleton-rows [rows]="1" [columns]="planningColumns" />
+        }
+      </ah-panel-body>
+    </ah-panel>
   `,
 })
 export class ModelsTab {
@@ -237,11 +316,48 @@ export class ModelsTab {
   private readonly dialogs = inject(VoyageDialogs);
   private readonly toasts = inject(ToastService);
   private readonly command = inject(ModelsCommand);
+  private readonly api = inject(ApiClient);
 
   protected readonly skeletonColumns = SKELETON_COLUMNS;
+  protected readonly planningColumns: readonly SkeletonColumn[] = [
+    { track: 'minmax(0, 1fr)' },
+  ];
   protected readonly busy = this.context.commands.pending;
   /** Why the last Reset did not go through; null before and after a success. */
   protected readonly actionError = signal<CommandErrorView | null>(null);
+  /** The server's catalogue, for the models a panel uses; null until it is read, and when it could not be. */
+  private readonly catalog = signal<ModelCatalog | null>(null);
+
+  /** How many planners the server's panel has; null when the catalogue is not read or lists no panel. */
+  private readonly planners = computed(
+    () => this.catalog()?.planPanel?.panelists.length ?? null
+  );
+
+  /** How the voyage is planned and, from the catalogue, the models a panel uses; null until the voyage is read. */
+  protected readonly planning = computed(() => {
+    const story = this.context.story();
+    if (story === null) return null;
+    const mode = planningModeOf(story);
+    const catalog = this.catalog();
+    const panel = catalog?.planPanel;
+    const name = (id: string): string =>
+      catalog === null ? id : catalogModelLabel(catalog.models, id);
+    return {
+      mode,
+      label: PLANNING_MODE_LABELS[mode],
+      summary:
+        mode === 'panel'
+          ? `${plannersLabel(this.planners())} each write a plan, then a judge writes the final plan from the best of each and rates every draft.`
+          : 'One planner writes the plan.',
+      models:
+        panel === undefined
+          ? null
+          : {
+              planners: panel.panelists.map((p) => name(p.model)).join(', '),
+              judge: judgeModelsLine(panel.judge.models.map(name)),
+            },
+    };
+  });
 
   /** Why the model plan could not be read, while there is none to show. */
   protected readonly loadError = computed((): CommandErrorView | null => {
@@ -287,6 +403,13 @@ export class ModelsTab {
   });
 
   constructor() {
+    const destroyed = inject(DestroyRef);
+    let alive = true;
+    destroyed.onDestroy(() => (alive = false));
+    // The panel's models are a nicety: a catalogue that cannot be read leaves the section without them.
+    void this.api.listModels().then((result) => {
+      if (alive && result.ok) this.catalog.set(result.value);
+    });
     effect(() => {
       const slot = this.changeParam();
       if (slot === null) {
@@ -317,6 +440,12 @@ export class ModelsTab {
   protected change(slot: ModelSlot | null): void {
     this.actionError.set(null);
     this.dialogs.models(this.context, slot);
+  }
+
+  /** Opens "Planning": one planner or a panel, from the next planning run. */
+  protected changePlanning(): void {
+    this.actionError.set(null);
+    this.dialogs.planningMode(this.context, this.planners());
   }
 
   /** Reads the model plan again after it could not be read. */

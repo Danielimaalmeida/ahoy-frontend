@@ -167,9 +167,7 @@ describe('Meetings on the mock backend', () => {
       'Tax ID validation for EU customers',
       'Late fees for enterprise accounts',
     ]);
-    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe(
-      'OTHER_COMPANY'
-    );
+    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe('OTHER_COMPANY');
     expect(tagOf(card(page.root, 'Late fees for enterprise accounts'))).toBe(
       'ACME · priya@'
     );

@@ -6,6 +6,7 @@
  *
  * Every field is `readonly`. AIU amounts are integer nano-AIU (1 AIU = 1_000_000_000).
  */
+import type { PlanningMode } from './planning-mode';
 
 /** Lifecycle status of a voyage (`Story` in the API). */
 export type StoryStatus =
@@ -149,6 +150,8 @@ export interface Story {
   readonly spentNanoAiu: number;
   readonly controlSha: string;
   readonly currentRunId: string | null;
+  /** How the story is planned. Absent from a server older than the plan panel, which plans by one planner. */
+  readonly planningMode?: PlanningMode;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;

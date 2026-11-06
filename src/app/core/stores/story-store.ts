@@ -53,6 +53,7 @@ export const STALE_AFTER: Readonly<
   'story.cancelled': ['story', 'state', 'runs'],
   'story.budget_changed': ['story'],
   'story.models_changed': ['story', 'models'],
+  'story.planning_mode_changed': ['story'],
   'story.phase_changed': ['story', 'state'],
   'story.awaiting_input': ['story', 'questions'],
   'story.awaiting_decision': ['story', 'state', 'gates'],

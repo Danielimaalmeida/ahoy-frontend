@@ -75,6 +75,9 @@ import {
   isNoContent,
   isModelPlan,
   isModelCatalog,
+  isPlanPanel,
+  isPlanPanelList,
+  isPlanPanelMetrics,
   isProblem,
   isQuestionList,
   isDiagnosis,
@@ -192,6 +195,9 @@ import type {
   MetricsTable,
   ModelPlan,
   ModelCatalog,
+  PlanPanel,
+  PlanPanelMetrics,
+  PlanPanelMetricsQuery,
   MoveMeetingTopicResult,
   Question,
   CancelRefinementRequest,
@@ -206,6 +212,7 @@ import type {
   Run,
   SetStoryBudgetRequest,
   SetStoryModelsRequest,
+  SetStoryPlanningModeRequest,
   StartStoryRequest,
   StopStoryRequest,
   CancelStoryRequest,
@@ -341,6 +348,18 @@ export class ApiClient {
       'getMetrics',
       '/metrics',
       isMetricsReport,
+      metricsParams(query)
+    );
+  }
+
+  /** How the judges rated each model's plans, and how many panels each judge ran, for one period. Spends nothing. */
+  getPlanPanelMetrics(
+    query: PlanPanelMetricsQuery = {}
+  ): Promise<ApiResult<PlanPanelMetrics>> {
+    return this.get(
+      'getPlanPanelMetrics',
+      '/metrics/plan-panel',
+      isPlanPanelMetrics,
       metricsParams(query)
     );
   }
@@ -759,6 +778,46 @@ export class ApiClient {
       isRunList
     );
     return mapResult(result, (list) => list.items);
+  }
+
+  /**
+   * Chooses how the story is planned: by one planner (`standard`) or by a panel of planners and a judge (`panel`). It
+   * applies from the next planning run; the story's status and phase do not change. The answer (202) is the story.
+   */
+  setStoryPlanningMode(
+    key: string,
+    body: SetStoryPlanningModeRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'setStoryPlanningMode',
+      `/stories/${segment(key)}/planning-mode`,
+      body,
+      isStory
+    );
+  }
+
+  /**
+   * The panel runs of a story's planning, newest first, with the judge's rating of every draft but not the drafts' plans
+   * (read one with `getRunPlanPanel`). Empty for a story planned by one planner.
+   */
+  async listStoryPlanPanels(
+    key: string
+  ): Promise<ApiResult<readonly PlanPanel[]>> {
+    const result = await this.get(
+      'listStoryPlanPanels',
+      `/stories/${segment(key)}/plan-panels`,
+      isPlanPanelList
+    );
+    return mapResult(result, (list) => list.items);
+  }
+
+  /** One panel run, with the plan each planner drafted (agent text, untrusted). `404` for a run planned by one planner. */
+  getRunPlanPanel(runId: string): Promise<ApiResult<PlanPanel>> {
+    return this.get(
+      'getRunPlanPanel',
+      `/runs/${segment(runId)}/plan-panel`,
+      isPlanPanel
+    );
   }
 
   /** One run. */

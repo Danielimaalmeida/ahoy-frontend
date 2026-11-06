@@ -1,5 +1,6 @@
 import {
   arrayOf,
+  boundedNumber,
   boundedText,
   describe as describeValue,
   guard,
@@ -84,6 +85,13 @@ describe('primitive checks', () => {
     expect([1, 5].map((n) => check(n, 'x'))).toEqual([null, null]);
     for (const bad of [0, 6, 2.5, NaN, Infinity, '3', null])
       expect(check(bad, 'x')).not.toBeNull();
+  });
+
+  it('boundedNumber takes a finite number inside its bounds, fractions included, and nothing else', () => {
+    const check = boundedNumber('a score from 1 to 10', 1, 10);
+    expect([1, 7.25, 10].map((n) => check(n, 'x'))).toEqual([null, null, null]);
+    for (const bad of [0.9, 10.1, NaN, Infinity, '7', null, undefined])
+      expect(check(bad, 'x')).toContain('x must be a score from 1 to 10');
   });
 
   it('timestamp takes RFC 3339 date-times that Date can read', () => {

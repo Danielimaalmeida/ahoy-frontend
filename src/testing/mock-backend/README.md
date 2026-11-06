@@ -32,6 +32,12 @@ The same `MockAhoyServer` runs in three places, never as two mocks:
   costs more than the story has left halts it on `budget_exhausted`.
 - **`GET /events/stream`**: `: connected`, the events after `Last-Event-ID` (or `after`), then new ones as they happen, and
   `: keepalive` after 15 s of silence.
+- **A plan panel** (`plan-panel.ts`): a story started with `planningMode: "panel"`, or switched with `setStoryPlanningMode`,
+  has its next planning runs run as a panel (twice the planning cap, more AIU): each leaves a simulated panel with the
+  models `GET /models` lists under `planPanel`: the planners' questions in the first run, then drafts, plan gate verdicts,
+  scores (turned round for each re-plan) and a judge's summary. `GET /stories/{key}/plan-panels` lists them newest first
+  without the plans, `GET /runs/{runId}/plan-panel` has the plans, and `GET /metrics/plan-panel` is worked out from the panels
+  of the world. Every story answers `planningMode` (seeds: `standard`); one planned by one planner has no panels.
 - **Eight seeded voyages** (`seeds.ts`): PROJ-123, 131, 140, 118, 126, 109, 097 and 102, as the wireframes show them. Every
   time is relative to the start (in specs, `SEED_AT`, Tuesday 6 October 2026 10:10 UTC).
 

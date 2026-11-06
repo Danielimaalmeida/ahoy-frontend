@@ -109,6 +109,21 @@ export function wholeNumber(
       : refuse(at, expected, value);
 }
 
+/** A finite number, whole or not, from `min` to `max`: an average, not an amount of AIU. */
+export function boundedNumber(
+  expected: string,
+  min: number,
+  max: number
+): Check {
+  return (value, at) =>
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= min &&
+    value <= max
+      ? null
+      : refuse(at, expected, value);
+}
+
 const TIMESTAMP =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 

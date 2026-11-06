@@ -21,9 +21,17 @@ import { StoriesStore } from '@core/stores/stories-store';
 import { CurrentUser } from '@core/auth/current-user';
 import { MODEL_SLOTS } from '@domain/models';
 import { PHASES } from '@domain/phases';
+import { catalogModelLabel, judgeModelsLine } from '@domain/plan-panel';
+import {
+  DEFAULT_PLANNING_MODE,
+  plannersLabel,
+  planningModeChoices,
+  type PlanningMode,
+} from '@domain/planning-mode';
 import type { ModelSlot } from '@domain/types';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
+import { ChoiceCardGroup } from '@ui/choice-card/choice-card';
 import { Field, FieldControl } from '@ui/field/field';
 import { Icon } from '@ui/icon/icon';
 import type {
@@ -68,14 +76,16 @@ function singleText(value: unknown): string | null {
 }
 
 /**
- * Set sail (`/voyages/new?key=&title=`): a typed Reactive Form for the key, title, budget and per-slot models, sent as
- * `startStory`. The budget is read as integer nano-AIU (never a float) and only the slots the user filled in are sent.
+ * Set sail (`/voyages/new?key=&title=`): a typed Reactive Form for the key, title, budget, how the story is planned and
+ * per-slot models, sent as `startStory`. The budget is read as integer nano-AIU (never a float) and only the slots the
+ * user filled in are sent; `planningMode` is sent only for a panel.
  */
 @Component({
   selector: 'ah-set-sail',
   imports: [
     Banner,
     Button,
+    ChoiceCardGroup,
     Field,
     FieldControl,
     Icon,
@@ -273,6 +283,35 @@ function singleText(value: unknown): string | null {
 
           <ah-panel>
             <ah-panel-head
+              heading="Planning"
+              subtitle="How the plan is written. You can change it later on the voyage's Models tab."
+            />
+            <ah-panel-body>
+              <ah-choice-card-group
+                label="Planning"
+                [options]="planningChoices()"
+                formControlName="planningMode"
+              />
+              @if (panelModels(); as panel) {
+                <dl class="set-sail__facts">
+                  <dt>Panel planners</dt>
+                  <dd>{{ panel.planners }}</dd>
+                  <dt>Panel judge</dt>
+                  <dd>{{ panel.judge }}</dd>
+                </dl>
+              }
+              <span class="ah-hint"
+                >A panel costs more AIU than one planner: its planners and its
+                judge all run in the planning phase. Its cap and its deadline
+                are twice the planning phase's, and the voyage's budget is still
+                the hard stop. The planning model chosen below is not used by a
+                panel.</span
+              >
+            </ah-panel-body>
+          </ah-panel>
+
+          <ah-panel>
+            <ah-panel-head
               heading="Agents and models"
               subtitle="Optional. Leave a field blank and the server decides."
             />
@@ -324,6 +363,8 @@ function singleText(value: unknown): string | null {
                 <dd>{{ user.id() }} (you)</dd>
                 <dt>Budget cap</dt>
                 <dd>{{ cap() === null ? '—' : cap() + ' AIU' }}</dd>
+                <dt>Planning</dt>
+                <dd>{{ planningSummary() }}</dd>
                 <dt>First crew</dt>
                 <dd>Navigator reads the Jira issue</dd>
               </dl>
@@ -426,6 +467,9 @@ export class SetSailPage {
       nonNullable: true,
       validators: [budgetValidator],
     }),
+    planningMode: new FormControl<PlanningMode>(DEFAULT_PLANNING_MODE, {
+      nonNullable: true,
+    }),
     models: new FormGroup({
       planning: modelGroup(),
       implementation: modelGroup(),
@@ -467,6 +511,30 @@ export class SetSailPage {
       : this.cap() === null
         ? 'Start voyage'
         : `Start voyage · up to ${this.cap()} AIU`
+  );
+
+  /** The choices of "Planning", with the panel's planners counted from the server's catalogue when it is read. */
+  protected readonly planningChoices = computed(() =>
+    planningModeChoices(this.catalog()?.planPanel?.panelists.length ?? null)
+  );
+
+  /** The panel's planners and judge in the catalogue's words; null while the catalogue is not read or lists no panel. */
+  protected readonly panelModels = computed(() => {
+    const catalog = this.catalog();
+    const panel = catalog?.planPanel;
+    if (catalog === null || panel === undefined) return null;
+    const name = (id: string): string => catalogModelLabel(catalog.models, id);
+    return {
+      planners: panel.panelists.map((p) => name(p.model)).join(', '),
+      judge: judgeModelsLine(panel.judge.models.map(name)),
+    };
+  });
+
+  /** "Before you sail": how the voyage will be planned. */
+  protected readonly planningSummary = computed(() =>
+    this.values().planningMode === 'panel'
+      ? `A panel, ${plannersLabel(this.catalog()?.planPanel?.panelists.length ?? null).toLowerCase()} and a judge`
+      : 'One planner'
   );
 
   /** The page was opened from Backlog, which passes the key. */

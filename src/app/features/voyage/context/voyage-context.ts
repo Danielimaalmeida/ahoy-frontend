@@ -12,6 +12,7 @@ import type { ApiResult } from '@core/api/api-error';
 import type {
   AhoyEvent,
   ModelPlan,
+  PlanningMode,
   Run,
   Story,
   WorkPackageDecision,
@@ -380,6 +381,23 @@ export class VoyageContext {
     );
     if (outcome.kind === 'ok') void this.refresh();
     return outcome;
+  }
+
+  /**
+   * Chooses how the voyage is planned (`setStoryPlanningMode`): by one planner or by a panel and a judge. It applies from
+   * the next planning run; the status and phase do not change. The `202` story goes to the store.
+   */
+  setPlanningMode(
+    planningMode: PlanningMode,
+    reason: string
+  ): Promise<CommandOutcome<Story>> {
+    return this.storyCommand((key, expectedVersion) =>
+      this.api.setStoryPlanningMode(key, {
+        expectedVersion,
+        planningMode,
+        ...(reason !== '' ? { reason } : {}),
+      })
+    );
   }
 
   /** Sets the total cap: `setStoryBudget` with the new cap in nano-AIU and the reason. */

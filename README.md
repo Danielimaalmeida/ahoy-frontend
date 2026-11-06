@@ -5,7 +5,7 @@ The web front end of Ahoy, in Angular 22. It talks to the `/api/v1` of
 system copied into [docs/design/](docs/design/SOURCES.md).
 
 - Working rules for agents: [CLAUDE.md](CLAUDE.md).
-- Architecture and decisions (F1–F16): [docs/architecture.md](docs/architecture.md).
+- Architecture and decisions (F1–F18): [docs/architecture.md](docs/architecture.md).
 - Handoff and proof of what ran: [docs/progress.md](docs/progress.md).
 - Engineering review of the harness (2026-10-20):
   [ahoy-hosted/docs/harness-review-2026-10-20.md](https://github.com/Danielimaalmeida/ahoy-hosted/blob/main/docs/harness-review-2026-10-20.md).

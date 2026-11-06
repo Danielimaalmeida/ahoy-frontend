@@ -22,6 +22,7 @@ import {
   type ProgressStep,
 } from './content';
 import { sha256Hex } from './sha256';
+import { PANEL_RUN_COST_NANO_AIU, simulatedPanel } from './plan-panel';
 import {
   artifactFile,
   NO_SLOT_MODEL,
@@ -222,6 +223,11 @@ export class Simulator {
     const plan =
       slot === null ? NO_SLOT_MODEL : resolveSlot(slot, voyage.chosen[slot]);
     const now = this.world.nowIso();
+    // A run keeps the planning mode the story had when it was queued; a panel run has twice the planning run's cap.
+    const panelRun = phase === 'planning' && story.planningMode === 'panel';
+    const runBudget = panelRun
+      ? Math.min(budget * 2, story.budgetNanoAiu - story.spentNanoAiu)
+      : budget;
     const run: Writable<Run> = {
       id: runIdFor(story.key, phase, attempt),
       storyKey: story.key,
@@ -232,7 +238,7 @@ export class Simulator {
       status: 'queued',
       runtime: 'fake',
       controlSha: story.controlSha,
-      budgetNanoAiu: budget,
+      budgetNanoAiu: runBudget,
       usage: { requests: 0, nanoAiu: 0, inputTokens: 0, outputTokens: 0 },
       replayOf: null,
       exitReason: null,
@@ -242,6 +248,7 @@ export class Simulator {
       startedAt: null,
       endedAt: null,
     };
+    if (panelRun) voyage.panelRuns.add(run.id);
     this.world.addRun(voyage, run);
     story.status = 'running';
     story.currentRunId = run.id;
@@ -254,11 +261,13 @@ export class Simulator {
       reasoningEffort: run.reasoningEffort,
       modelSource: plan.modelSource,
       effortSource: plan.effortSource,
-      budgetNanoAiu: budget,
+      budgetNanoAiu: runBudget,
       runtime: run.runtime,
       attempt,
     });
-    const shape = RUN_SHAPE[phase] ?? { cost: 500_000_000, ticks: 2 };
+    const shape = panelRun
+      ? { cost: PANEL_RUN_COST_NANO_AIU, ticks: 4 }
+      : (RUN_SHAPE[phase] ?? { cost: 500_000_000, ticks: 2 });
     this.progress.set(run.id, {
       line: 1,
       steps: 0,
@@ -447,6 +456,18 @@ export class Simulator {
 
   private finishPlanning(voyage: Voyage, run: Writable<Run>): void {
     const story = voyage.story;
+    // A panel run leaves what its panel did, whether the planners asked questions or planned.
+    if (voyage.panelRuns.has(run.id))
+      voyage.panels.push(
+        simulatedPanel(
+          run.id,
+          story.key,
+          this.world.clock.now(),
+          run.status !== 'awaiting_input',
+          voyage.panels.filter((p) => p.members.some((m) => m.score !== null))
+            .length
+        )
+      );
     for (const q of voyage.questions) if (q.answer !== null) q.consumed = true;
     if (run.status === 'awaiting_input') {
       voyage.asked = true;

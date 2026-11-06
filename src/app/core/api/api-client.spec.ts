@@ -26,6 +26,10 @@ import getStoryPlanFit from '@testing/fixtures/getStoryPlanFit.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
+import getPlanPanelMetrics from '@testing/fixtures/getPlanPanelMetrics.json';
+import getRunPlanPanel from '@testing/fixtures/getRunPlanPanel.json';
+import listStoryPlanPanels from '@testing/fixtures/listStoryPlanPanels.json';
+import setStoryPlanningMode from '@testing/fixtures/setStoryPlanningMode.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
 import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listKnowledgeReviews from '@testing/fixtures/listKnowledgeReviews.json';
@@ -308,6 +312,60 @@ const CASES: readonly Case[] = [
     status: 200,
     value: listStoryRuns.items,
     problem: 'not_found',
+  },
+  {
+    op: 'setStoryPlanningMode',
+    call: (api) =>
+      api.setStoryPlanningMode('PROJ-123', {
+        expectedVersion: 9,
+        planningMode: 'panel',
+        reason: 'A hard story: let three planners try it',
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-123/planning-mode',
+    body: {
+      expectedVersion: 9,
+      planningMode: 'panel',
+      reason: 'A hard story: let three planners try it',
+    },
+    reply: setStoryPlanningMode,
+    status: 202,
+    value: setStoryPlanningMode,
+    problem: 'stale_version',
+  },
+  {
+    op: 'listStoryPlanPanels',
+    call: (api) => api.listStoryPlanPanels('PROJ-123'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-123/plan-panels',
+    reply: listStoryPlanPanels,
+    status: 200,
+    value: listStoryPlanPanels.items,
+    problem: 'not_found',
+  },
+  {
+    op: 'getRunPlanPanel',
+    call: (api) => api.getRunPlanPanel('r-04'),
+    method: 'GET',
+    url: '/api/v1/runs/r-04/plan-panel',
+    reply: getRunPlanPanel,
+    status: 200,
+    value: getRunPlanPanel,
+    problem: 'not_found',
+  },
+  {
+    op: 'getPlanPanelMetrics',
+    call: (api) =>
+      api.getPlanPanelMetrics({
+        from: '2026-09-11T09:00:00.000Z',
+        to: '2026-10-11T09:00:00.000Z',
+      }),
+    method: 'GET',
+    url: '/api/v1/metrics/plan-panel?from=2026-09-11T09:00:00.000Z&to=2026-10-11T09:00:00.000Z',
+    reply: getPlanPanelMetrics,
+    status: 200,
+    value: getPlanPanelMetrics,
+    problem: 'validation_failed',
   },
   {
     op: 'getRun',
@@ -707,6 +765,108 @@ describe('ApiClient', () => {
     });
   });
 
+  describe('the plan panel calls', () => {
+    it('asks the period of the ratings only when one is given, 30 days by default on the server', async () => {
+      const result = api.getPlanPanelMetrics();
+      const request = http.expectOne('/api/v1/metrics/plan-panel');
+      expect(request.request.params.keys()).toEqual([]);
+      reply(request, getPlanPanelMetrics, 200);
+      expect(await result).toEqual({ ok: true, value: getPlanPanelMetrics });
+    });
+
+    it('does not pass the metrics filters of the other reports on: the contract has none for the ratings', async () => {
+      const result = api.getPlanPanelMetrics({
+        from: '2026-09-11T09:00:00.000Z',
+      });
+      const request = http.expectOne(
+        '/api/v1/metrics/plan-panel?from=2026-09-11T09:00:00.000Z'
+      );
+      expect(request.request.params.keys()).toEqual(['from']);
+      reply(request, getPlanPanelMetrics, 200);
+      expect((await result).ok).toBe(true);
+    });
+
+    it('encodes the run id it reads a panel of, and gives the plan of each draft', async () => {
+      const result = api.getRunPlanPanel('r 04/x');
+      const request = http.expectOne('/api/v1/runs/r%2004%2Fx/plan-panel');
+      reply(request, getRunPlanPanel, 200);
+      const outcome = await result;
+      expect(outcome.ok && outcome.value.members[0]?.plan).toContain(
+        '# Draft A for PROJ-123'
+      );
+    });
+
+    it('lists the panels newest first as the API sent them, with an empty list for a story planned by one planner', async () => {
+      const result = api.listStoryPlanPanels('PROJ-123');
+      reply(
+        http.expectOne('/api/v1/stories/PROJ-123/plan-panels'),
+        { items: [] },
+        200
+      );
+      expect(await result).toEqual({ ok: true, value: [] });
+    });
+
+    it('names the planner when a draft of the panel has a score the contract does not allow', async () => {
+      const result = api.getRunPlanPanel('r-04');
+      reply(
+        http.expectOne('/api/v1/runs/r-04/plan-panel'),
+        {
+          ...getRunPlanPanel,
+          members: [{ ...getRunPlanPanel.members[0], score: 11 }],
+        },
+        200
+      );
+      expect(await result).toEqual({
+        ok: false,
+        error: {
+          kind: 'invalid_response',
+          what: 'getRunPlanPanel: PlanPanel.members[0].score must be a score from 1 to 10 (got 11)',
+        },
+      });
+    });
+
+    it('sends the planning mode change as the contract wants it, and takes the story it answers', async () => {
+      const result = api.setStoryPlanningMode('PROJ-123', {
+        expectedVersion: 9,
+        planningMode: 'standard',
+      });
+      const request = http.expectOne({
+        method: 'POST',
+        url: '/api/v1/stories/PROJ-123/planning-mode',
+      });
+      expect(request.request.body).toEqual({
+        expectedVersion: 9,
+        planningMode: 'standard',
+      });
+      reply(
+        request,
+        { ...setStoryPlanningMode, planningMode: 'standard' },
+        202
+      );
+      const outcome = await result;
+      expect(outcome.ok && outcome.value.planningMode).toBe('standard');
+    });
+
+    it('answers a stale version as a conflict, as the other story commands do', async () => {
+      const result = api.setStoryPlanningMode('PROJ-123', {
+        expectedVersion: 3,
+        planningMode: 'panel',
+      });
+      const stale = problemFor('stale_version');
+      http
+        .expectOne('/api/v1/stories/PROJ-123/planning-mode')
+        .flush(stale, { status: stale.status, statusText: 'Conflict' });
+      expect(await result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          kind: 'problem',
+          status: 409,
+          code: 'stale_version',
+        }),
+      });
+    });
+  });
+
   it('covers the implemented operations, including the Jira backlog and model catalogue', () => {
     expect(
       [...CASES.map((c) => c.op), 'getArtifactContent', 'exportMetrics'].sort()
@@ -727,7 +887,11 @@ describe('ApiClient', () => {
         'setStoryBudget',
         'getStoryModels',
         'setStoryModels',
+        'setStoryPlanningMode',
         'listStoryRuns',
+        'listStoryPlanPanels',
+        'getRunPlanPanel',
+        'getPlanPanelMetrics',
         'getRun',
         'listQuestions',
         'answerQuestion',

@@ -1,6 +1,7 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: ec2a793d0fa48d64a19efaf54b3fa15894c298f6
+# Commit: 63f1e9e0a74b457135a197fd847b9ca7f7ce579f
+# Also merged: ec2a793d0fa48d64a19efaf54b3fa15894c298f6 (automatic defects and voyage restart).
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -196,6 +197,30 @@ paths:
               schema:
                 type: array
                 items: { type: object }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /metrics/plan-panel:
+    get:
+      operationId: getPlanPanelMetrics
+      tags: [metrics]
+      summary: How the judges rated each model's plans, over a period.
+      description: |
+        Read-only and 0 AIU: aggregated from the panel runs kept in `[from, to)` (the 30 days before now by default, at
+        most 366 days). Per model and judge model (a judge's scores are its own, so a model the judge Opus rated and the
+        judge Sonnet rated has a row for each): the drafts it wrote, how many the judge rated, their average, lowest and highest
+        score, how often its draft had the highest score of its panel (ties count for each), how many drafts the
+        harness's plan gate passed of those it checked, how many planners did not finish, and the average AIU of its
+        session in nano-AIU. The judges' own models are counted apart. Rows are ordered by average score.
+      parameters:
+        - $ref: '#/components/parameters/MetricsFrom'
+        - $ref: '#/components/parameters/MetricsTo'
+      responses:
+        '200':
+          description: The ratings of the period.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlanPanelMetrics' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
@@ -493,6 +518,64 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/planning-mode:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    post:
+      operationId: setStoryPlanningMode
+      tags: [stories]
+      summary: 'Choose how the story is planned: by one planner, or by a panel of planners and a judge.'
+      description: |
+        `standard` plans the story with one planner, as before. `panel` has three cheaper planners (the models
+        `GET /models` lists under `planPanel.panelists`) each plan it on their own and in parallel, then a judge (the
+        first of `planPanel.judge.models` the owner's Copilot account may use) reads their drafts, writes the final
+        plan from the best of each and rates every draft from 1 to 10 (`GET /stories/{key}/plan-panels`). A panel run
+        costs more than a planner's: its cap and its deadline are the planning phase's times two, and the story's own
+        budget is still the hard stop. The model chosen for the `planning` slot is not used in panel mode.
+
+        Takes effect when the reconciler next queues a planning run (the first one, a re-plan after the plan is sent
+        back, or the run after the planners' questions are answered): an active run keeps what it started with. Status
+        and phase do not change. Also chosen when the story starts (`startStory`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetStoryPlanningModeRequest' }
+      responses:
+        '202':
+          description: The story, at its new version.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /stories/{key}/plan-panels:
+    parameters:
+      - $ref: '#/components/parameters/StoryKey'
+    get:
+      operationId: listStoryPlanPanels
+      tags: [stories]
+      summary: The panel runs of a story's planning, newest first, with the judge's rating of every draft.
+      description: |
+        One entry per planning run that ran as a panel, whatever its gate said. Each lists the judge (the model that
+        wrote the final plan), the planners with their models, how their sessions ended, the harness's own plan gate
+        verdict on their drafts, the judge's score from 1 to 10 and its reasons, and what it took from each draft.
+        The drafts' plans are not included: read one with `GET /runs/{runId}/plan-panel`. The judge saw the drafts
+        under the labels `A`, `B`, `C`, in an order nobody can predict, and was not told which model wrote which.
+        Free text is untrusted: agents wrote it. Read-only and 0 AIU.
+      responses:
+        '200':
+          description: The panel runs; empty for a story planned by one planner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlanPanelList' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
   /stories/{key}/runs:
     parameters:
       - $ref: '#/components/parameters/StoryKey'
@@ -531,6 +614,29 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Run' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /runs/{runId}/plan-panel:
+    parameters:
+      - name: runId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/RunId' }
+    get:
+      operationId: getRunPlanPanel
+      tags: [runs]
+      summary: One panel run, with the plan each planner drafted.
+      description: |
+        The same as an entry of `GET /stories/{key}/plan-panels`, with each planner's `plan` (its
+        `implementation-plan.md`, null when it wrote none; at most 200 000 characters). Agent text, untrusted.
+      responses:
+        '200':
+          description: The panel run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlanPanel' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
@@ -3633,6 +3739,11 @@ components:
           description: Control-repo commit (agents, skills, phase rules) pinned for the story's life.
         currentRunId:
           { oneOf: [{ $ref: '#/components/schemas/RunId' }, { type: 'null' }] }
+        planningMode:
+          $ref: '#/components/schemas/PlanningMode'
+          description: >-
+            How the story is planned. Always sent by this server; a server older than the plan panel sends none, which
+            is `standard`.
         version: { $ref: '#/components/schemas/Version' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
@@ -3665,6 +3776,11 @@ components:
           description: >-
             The model and reasoning effort for each phase; a slot left out runs on the server's configured defaults.
             Can be changed later with `setStoryModels`.
+        planningMode:
+          $ref: '#/components/schemas/PlanningMode'
+          description: >-
+            How the story is planned: `standard` (the default) with one planner, or `panel` with a panel of planners and
+            a judge (`setStoryPlanningMode` describes it). Can be changed later with `setStoryPlanningMode`.
     StopStoryRequest:
       type: object
       required: [expectedVersion, reason]
@@ -4173,6 +4289,286 @@ components:
         defaults:
           type: array
           items: { $ref: '#/components/schemas/SlotDefault' }
+        planPanel:
+          $ref: '#/components/schemas/PlanPanelConfig'
+          description: >-
+            The models a story planned by panel runs on (`setStoryPlanningMode`). Absent on a server older than the plan
+            panel.
+    PlanningMode:
+      type: string
+      enum: [standard, panel]
+      description: >-
+        `standard`: one planner writes the plan. `panel`: planners write drafts on their own, and a judge writes the
+        final plan from them and rates them.
+    SetStoryPlanningModeRequest:
+      type: object
+      required: [expectedVersion, planningMode]
+      additionalProperties: false
+      properties:
+        expectedVersion: { $ref: '#/components/schemas/Version' }
+        planningMode: { $ref: '#/components/schemas/PlanningMode' }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+    PlanPanelConfig:
+      type: object
+      required: [panelists, judge]
+      additionalProperties: false
+      description: "The models of a panel: its planners, and the judge's models, best first."
+      properties:
+        panelists:
+          type: array
+          minItems: 2
+          maxItems: 5
+          items:
+            type: object
+            required: [model, reasoningEffort]
+            additionalProperties: false
+            properties:
+              model: { $ref: '#/components/schemas/ModelId' }
+              reasoningEffort:
+                oneOf:
+                  - $ref: '#/components/schemas/ReasoningEffort'
+                  - type: 'null'
+        judge:
+          type: object
+          required: [models, reasoningEffort]
+          additionalProperties: false
+          description: >-
+            The judge runs on the first of `models` the owner's Copilot account may use, so it is the strongest model the
+            account has; a run whose account may use none fails before it spends anything.
+          properties:
+            models:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items: { $ref: '#/components/schemas/ModelId' }
+            reasoningEffort:
+              oneOf:
+                - $ref: '#/components/schemas/ReasoningEffort'
+                - type: 'null'
+    PlanPanelMember:
+      type: object
+      required:
+        [
+          label,
+          model,
+          reasoningEffort,
+          status,
+          error,
+          usage,
+          gate,
+          questions,
+          score,
+          rationale,
+          adopted,
+          leftOut,
+        ]
+      additionalProperties: false
+      description: 'One planner of a panel and what became of its draft. Free text is untrusted: agents wrote it.'
+      properties:
+        label:
+          type: string
+          pattern: '^[A-E]$'
+          description: The name the judge saw the draft under; it was not told the model.
+        model: { $ref: '#/components/schemas/ModelId' }
+        reasoningEffort:
+          oneOf:
+            - $ref: '#/components/schemas/ReasoningEffort'
+            - type: 'null'
+        status:
+          type: string
+          enum:
+            [completed, failed, budget_exceeded, timed_out, output_violation]
+          description: >-
+            How the planner's session ended. Only `completed` leaves a draft for the judge; the others (a model the
+            account may not use, its share of the budget or time spent, a draft that broke the output rules) were left
+            out, and the panel went on without them.
+        error: { type: [string, 'null'], maxLength: 2000 }
+        usage: { $ref: '#/components/schemas/Usage' }
+        gate:
+          description: What the harness's plan gate said about the draft's state, its own check; null when it made none.
+          oneOf:
+            - type: object
+              required: [result, message]
+              additionalProperties: false
+              properties:
+                result:
+                  {
+                    type: string,
+                    enum: [pass, fail, error, branch, halt, reject],
+                  }
+                message: { type: string, maxLength: 2000 }
+            - type: 'null'
+        questions:
+          type: array
+          maxItems: 20
+          description: The questions the planner asked; the judge decided whether a person must answer them.
+          items:
+            type: object
+            required: [text, recommendation]
+            additionalProperties: false
+            properties:
+              text: { type: string, maxLength: 2000 }
+              recommendation: { type: string, maxLength: 2000 }
+        score:
+          description: The judge's rating of the draft as a plan for the story; null when it was not rated.
+          oneOf:
+            - { type: integer, minimum: 1, maximum: 10 }
+            - type: 'null'
+        rationale: { type: [string, 'null'], maxLength: 4000 }
+        adopted:
+          {
+            type: [string, 'null'],
+            maxLength: 2000,
+            description: What the judge took from the draft.,
+          }
+        leftOut:
+          {
+            type: [string, 'null'],
+            maxLength: 2000,
+            description: 'What the judge left out, and why.',
+          }
+        plan:
+          type: [string, 'null']
+          maxLength: 200000
+          description: The draft's implementation plan; only in `getRunPlanPanel`, null when the planner wrote none.
+    PlanPanel:
+      type: object
+      required:
+        [runId, storyKey, createdAt, judge, summary, ratingsProblem, members]
+      additionalProperties: false
+      properties:
+        runId: { $ref: '#/components/schemas/RunId' }
+        storyKey: { $ref: '#/components/schemas/StoryKey' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        judge:
+          description: The model that wrote the final plan and rated the drafts; null when no planner finished.
+          oneOf:
+            - type: object
+              required: [model, reasoningEffort, usage]
+              additionalProperties: false
+              properties:
+                model: { $ref: '#/components/schemas/ModelId' }
+                reasoningEffort:
+                  oneOf:
+                    - $ref: '#/components/schemas/ReasoningEffort'
+                    - type: 'null'
+                usage: { $ref: '#/components/schemas/Usage' }
+            - type: 'null'
+        summary:
+          {
+            type: [string, 'null'],
+            maxLength: 6000,
+            description: How the judge says it built the final plan.,
+          }
+        ratingsProblem:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Why the judge's ratings could not be used, when they could not; then no draft has a score.
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/PlanPanelMember' }
+    PlanPanelList:
+      type: object
+      required: [items]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PlanPanel' }
+    PlanPanelModelRatings:
+      type: object
+      required:
+        [
+          model,
+          judgeModel,
+          plans,
+          rated,
+          averageScore,
+          minScore,
+          maxScore,
+          best,
+          gatePassed,
+          gateChecked,
+          unfinished,
+          averageNanoAiu,
+        ]
+      additionalProperties: false
+      description: One model's drafts as one judge model rated them.
+      properties:
+        model: { $ref: '#/components/schemas/ModelId' }
+        judgeModel:
+          description: >-
+            The model that judged these drafts; null for the panels where no planner finished, so no judge ran. Scores
+            from different judges are not comparable, so each has its own row.
+          oneOf:
+            - $ref: '#/components/schemas/ModelId'
+            - type: 'null'
+        plans:
+          {
+            type: integer,
+            minimum: 0,
+            description: 'The drafts the model wrote: every planner seat it took.',
+          }
+        rated:
+          {
+            type: integer,
+            minimum: 0,
+            description: The drafts the judge rated.,
+          }
+        averageScore: { type: [number, 'null'], minimum: 1, maximum: 10 }
+        minScore: { type: [integer, 'null'], minimum: 1, maximum: 10 }
+        maxScore: { type: [integer, 'null'], minimum: 1, maximum: 10 }
+        best:
+          type: integer
+          minimum: 0
+          description: The rated drafts that had the highest score of their panel, ties included.
+        gatePassed:
+          {
+            type: integer,
+            minimum: 0,
+            description: The drafts the plan gate passed.,
+          }
+        gateChecked:
+          {
+            type: integer,
+            minimum: 0,
+            description: The drafts the plan gate checked.,
+          }
+        unfinished:
+          {
+            type: integer,
+            minimum: 0,
+            description: The planners that did not finish.,
+          }
+        averageNanoAiu:
+          {
+            oneOf: [{ $ref: '#/components/schemas/NanoAiu' }, { type: 'null' }],
+          }
+    PlanPanelMetrics:
+      type: object
+      required: [from, to, panels, models, judges]
+      additionalProperties: false
+      properties:
+        from: { $ref: '#/components/schemas/Timestamp' }
+        to: { $ref: '#/components/schemas/Timestamp' }
+        panels:
+          {
+            type: integer,
+            minimum: 0,
+            description: The panel runs kept in the period.,
+          }
+        models:
+          type: array
+          items: { $ref: '#/components/schemas/PlanPanelModelRatings' }
+        judges:
+          type: array
+          items:
+            type: object
+            required: [model, panels]
+            additionalProperties: false
+            properties:
+              model: { $ref: '#/components/schemas/ModelId' }
+              panels: { type: integer, minimum: 1 }
     RunStatus:
       type: string
       enum:

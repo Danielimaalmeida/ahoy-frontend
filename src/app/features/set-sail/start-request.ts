@@ -1,6 +1,7 @@
 import type { StartStoryRequest } from '@core/api/types';
 import { formatAiu, parseAiu } from '@domain/aiu';
 import { MODEL_SLOTS } from '@domain/models';
+import type { PlanningMode } from '@domain/planning-mode';
 import type { ModelChoice, ModelSlot } from '@domain/types';
 import type { EffortChoice } from '@ui/model-choice/model-choice';
 
@@ -76,6 +77,8 @@ export interface SetSailValues {
   readonly title: string;
   readonly budget: string;
   readonly models: Readonly<Record<ModelSlot, ModelValues>>;
+  /** How the story is planned: one planner (the default) or a panel. */
+  readonly planningMode: PlanningMode;
 }
 
 const MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
@@ -117,7 +120,8 @@ function chosenModels(
 /**
  * The `startStory` body for what the form holds, or `null` when the key, the title, the budget or a model id would be refused. The
  * budget goes through {@link budgetNanoAiu} (never a float); only slots the user filled in go in `models`, and a blank
- * title is left out.
+ * title is left out. `planningMode` goes only for a panel: a standard story is started as before, so a request to a server
+ * older than the plan panel is unchanged.
  */
 export function buildStartRequest(
   values: SetSailValues
@@ -141,6 +145,7 @@ export function buildStartRequest(
     ...(title !== '' ? { title } : {}),
     budgetNanoAiu: budget,
     ...(models !== null ? { models } : {}),
+    ...(values.planningMode === 'panel' ? { planningMode: 'panel' } : {}),
   };
 }
 

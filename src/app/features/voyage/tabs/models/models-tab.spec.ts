@@ -17,6 +17,7 @@ import type { MockRequest } from '@testing/mock-backend/http';
 import type { MockAhoyServer } from '@testing/mock-backend/server';
 import { settle, testServer } from '@testing/mock-backend/spec-helpers';
 import { CLOCK as UI_CLOCK } from '@ui/pipes/clock';
+import { ToastService } from '@ui/toast/toast';
 import { VOYAGE_ROUTES } from '../../voyage.routes';
 
 /** The data layer's `Clock` over the mock's manual clock, so both move together. */
@@ -314,6 +315,211 @@ describe('ModelsTab on the mock backend', () => {
       type(modelInput('Planning'), 'claude-sonnet-5');
       await flush(page);
       const save = buttonNamed(dialog(), 'Save models');
+      save.click();
+      save.click();
+      await flush(page);
+      expect(commands(page)).toHaveLength(1);
+    });
+  });
+
+  describe('Planning', () => {
+    /** The radio of the choice whose title starts with `title`, in the open dialog. */
+    function planningChoice(title: string): HTMLInputElement {
+      const label = [...dialog().querySelectorAll('label')].find((l) =>
+        text(l).startsWith(title)
+      );
+      const input = label?.querySelector('input');
+      if (!input) throw new Error(`no choice ${title}`);
+      return input;
+    }
+
+    /** The pairs of the section's list: "Planners" gives the planners. */
+    function planningFact(page: Page, name: string): string | undefined {
+      const section = page.root.querySelector(
+        'ah-models-tab .models__planning'
+      );
+      const term = [...(section?.querySelectorAll('dt') ?? [])].find(
+        (dt) => text(dt) === name
+      );
+      return term === undefined ? undefined : text(term.nextElementSibling);
+    }
+
+    /** Opens PROJ-118 as a panel story: the mock's state is changed before the page reads it. */
+    function asPanel(_request: MockRequest, server: MockAhoyServer): void {
+      const voyage = server.state.voyages.get('PROJ-118');
+      if (voyage) voyage.story.planningMode = 'panel';
+    }
+
+    it('says one planner writes the plan for a standard voyage, and which models a panel would use', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      const section = page.root.querySelector(
+        'ah-models-tab .models__planning'
+      );
+      expect(text(section?.querySelector('ah-panel-head'))).toContain(
+        'Planning'
+      );
+      expect(text(section?.querySelector('.models__mode'))).toBe(
+        'Standard One planner writes the plan.'
+      );
+      expect(planningFact(page, 'Planners')).toBe(
+        'Claude Haiku 4.5, GPT-5.6 Terra, gemini-3.8-flash'
+      );
+      expect(planningFact(page, 'Judge')).toBe(
+        'claude-opus-5.5, or Claude Sonnet 5 if your Copilot account may not use it'
+      );
+      expect(section?.textContent).not.toContain(
+        'does not use the planning model'
+      );
+    });
+
+    it('says the planners and the judge write the plan for a panel voyage, and that its planning model is not used', async () => {
+      const page = await open('/voyages/PROJ-118/models', asPanel);
+      const section = page.root.querySelector(
+        'ah-models-tab .models__planning'
+      );
+      expect(text(section?.querySelector('.models__mode'))).toBe(
+        'Panel Three planners each write a plan, then a judge writes the final plan from the best of each and rates every draft.'
+      );
+      expect(text(section)).toContain('does not use the planning model above');
+      expect(text(section)).toContain('costs more AIU');
+    });
+
+    it('still says the mode when the catalogue cannot be read, without the models of the panel', async () => {
+      const page = await open('/voyages/PROJ-118/models', (request, server) => {
+        if (request.method === 'GET' && request.path === '/models')
+          server.switches.failNext = 503;
+      });
+      expect(text(page.root.querySelector('.models__mode'))).toContain(
+        'Standard'
+      );
+      expect(planningFact(page, 'Planners')).toBeUndefined();
+    });
+
+    it('opens the dialog on the voyage’s own choice, and cannot save until it changes: no request', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      buttonNamed(page.root, 'Change planning').click();
+      await flush(page);
+      expect(hasDialog()).toBe(true);
+      expect(
+        text(dialog().querySelector('h2, h3, [role="heading"]'))
+      ).toContain('Planning');
+      expect(planningChoice('Standard').checked).toBe(true);
+      expect(planningChoice('Panel').checked).toBe(false);
+      expect(dialog().textContent).toContain('three planners and a judge');
+      expect(dialog().textContent).toContain(
+        'applies from the next planning run'
+      );
+      expect(buttonNamed(dialog(), 'Save planning').disabled).toBe(true);
+      buttonNamed(dialog(), 'Save planning').click();
+      await flush(page);
+      expect(commands(page)).toHaveLength(0);
+      expect(hasDialog()).toBe(true);
+    });
+
+    it('sends the new mode with the version the user saw and no reason when there is none, and shows it at once', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      buttonNamed(page.root, 'Change planning').click();
+      await flush(page);
+      planningChoice('Panel').click();
+      await flush(page);
+      buttonNamed(dialog(), 'Save planning').click();
+      await flush(page);
+
+      const [sent] = commands(page);
+      expect(commands(page)).toHaveLength(1);
+      expect(sent?.path).toBe('/stories/PROJ-118/planning-mode');
+      expect(sent?.body).toMatchObject({ planningMode: 'panel' });
+      expect(Object.keys(sent?.body as object).sort()).toEqual([
+        'expectedVersion',
+        'planningMode',
+      ]);
+      expect(hasDialog()).toBe(false);
+      expect(text(page.root.querySelector('.models__mode'))).toContain('Panel');
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .map((t) => t.text)
+      ).toContain(
+        'Planning is now by a panel. Applies from the next planning run.'
+      );
+    });
+
+    it('sends the trimmed reason when there is one, and can go back to one planner', async () => {
+      const page = await open('/voyages/PROJ-118/models', asPanel);
+      buttonNamed(page.root, 'Change planning').click();
+      await flush(page);
+      expect(planningChoice('Panel').checked).toBe(true);
+      planningChoice('Standard').click();
+      type(dialog().querySelector('textarea'), '  The panel cost too much  ');
+      await flush(page);
+      buttonNamed(dialog(), 'Save planning').click();
+      await flush(page);
+
+      expect(commands(page)[0]?.body).toMatchObject({
+        planningMode: 'standard',
+        reason: 'The panel cost too much',
+      });
+      expect(text(page.root.querySelector('.models__mode'))).toContain(
+        'Standard'
+      );
+    });
+
+    it('refuses a reason longer than the API takes without sending anything', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      buttonNamed(page.root, 'Change planning').click();
+      await flush(page);
+      planningChoice('Panel').click();
+      type(dialog().querySelector('textarea'), 'x'.repeat(2001));
+      await flush(page);
+      expect(buttonNamed(dialog(), 'Save planning').disabled).toBe(true);
+      expect(commands(page)).toHaveLength(0);
+    });
+
+    it('keeps the choice and the reason when the voyage changed meanwhile, and sends again with the new version', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      buttonNamed(page.root, 'Change planning').click();
+      await flush(page);
+      planningChoice('Panel').click();
+      type(dialog().querySelector('textarea'), 'A hard story');
+      await flush(page);
+      page.server.switches.conflictNext = 'stale_version';
+      buttonNamed(dialog(), 'Save planning').click();
+      await flush(page);
+
+      expect(hasDialog()).toBe(true);
+      expect(text(dialog().querySelector('.ah-banner'))).toContain(
+        'This voyage changed since you opened it'
+      );
+      expect(planningChoice('Panel').checked).toBe(true);
+      expect(dialog().querySelector('textarea')?.value).toBe('A hard story');
+
+      buttonNamed(dialog(), 'Save planning').click();
+      await flush(page);
+      expect(commands(page)).toHaveLength(2);
+      expect(hasDialog()).toBe(false);
+    });
+
+    it('says why when the API refuses, on a voyage that has ended, and keeps the dialog open', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      buttonNamed(page.root, 'Change planning').click();
+      await flush(page);
+      planningChoice('Panel').click();
+      await flush(page);
+      buttonNamed(dialog(), 'Save planning').click();
+      await flush(page);
+      expect(hasDialog()).toBe(true);
+      expect(text(dialog().querySelector('.ah-banner'))).toContain(
+        'Story PROJ-097 is terminal'
+      );
+    });
+
+    it('does not send twice on a double click', async () => {
+      const page = await open('/voyages/PROJ-118/models');
+      buttonNamed(page.root, 'Change planning').click();
+      await flush(page);
+      planningChoice('Panel').click();
+      await flush(page);
+      const save = buttonNamed(dialog(), 'Save planning');
       save.click();
       save.click();
       await flush(page);

@@ -11,7 +11,7 @@ import { CLOCK, type Clock } from '@core/realtime/clock';
 import type { ManualClock } from '@testing/mock-backend/clock';
 import type { MockRequest, MockResponse } from '@testing/mock-backend/http';
 import type { MockAhoyServer } from '@testing/mock-backend/server';
-import { settle, testServer } from '@testing/mock-backend/spec-helpers';
+import { call, settle, testServer } from '@testing/mock-backend/spec-helpers';
 import { CLOCK as UI_CLOCK } from '@ui/pipes/clock';
 import { METRICS_ROUTES } from './metrics.routes';
 import { metricsFailure } from './metrics-shell';
@@ -54,10 +54,11 @@ async function flush(page: { harness: RouterTestingHarness }): Promise<void> {
 /** The Metrics routes on the mock, opened at `url`. */
 async function open(
   url: string,
-  prepare: (server: MockAhoyServer) => void = () => undefined
+  prepare: (server: MockAhoyServer, clock: ManualClock) => void = () =>
+    undefined
 ): Promise<Page> {
   const { server, clock } = testServer();
-  prepare(server);
+  prepare(server, clock);
   const requests = record(server);
   TestBed.configureTestingModule({
     providers: [
@@ -337,6 +338,201 @@ describe('Metrics', () => {
     await flush(page);
     expect(page.root.querySelector('ah-banner')).toBeNull();
     expect(tiles(page.root).length).toBe(4);
+  });
+});
+
+describe('Metrics: Plan panel ratings', () => {
+  const AIU = 1_000_000_000;
+
+  /** Starts a story planned by panel and lets its planners ask, be answered and plan: two panels, one of them rated. */
+  function runPanelStory(server: MockAhoyServer, clock: ManualClock): void {
+    call(server, 'POST', '/stories', {
+      key: 'PANEL-1',
+      budgetNanoAiu: 40 * AIU,
+      planningMode: 'panel',
+    });
+    const state = (): Record<string, unknown> =>
+      call(server, 'GET', '/stories/PANEL-1').body as Record<string, unknown>;
+    for (let i = 0; i < 120 && state()['status'] !== 'awaiting_input'; i++)
+      clock.advance(1_000);
+    const questions = call(server, 'GET', '/stories/PANEL-1/questions')
+      .body as { items: { id: string }[] };
+    for (const q of questions.items)
+      call(server, 'POST', `/stories/PANEL-1/questions/${q.id}/answer`, {
+        answer: 'POC test answer, not a product decision',
+        expectedVersion: state()['version'],
+      });
+    for (let i = 0; i < 120 && state()['status'] !== 'awaiting_decision'; i++)
+      clock.advance(1_000);
+    // The period ends before now: a panel written this very instant is not in it yet.
+    clock.advance(1_000);
+  }
+
+  function ratingsQueries(page: Page): URLSearchParams[] {
+    return page.requests
+      .filter((r) => r.path === '/metrics/plan-panel')
+      .map((r) => r.query);
+  }
+
+  it('says that no panel ran in a period with none, and how to get one', async () => {
+    const page = await open('/metrics/cost');
+    const section = panel(page.root, 'Plan panel ratings');
+    expect(section.querySelector('table')).toBeNull();
+    expect(text(section)).toContain('No panel ran in this period');
+    expect(text(section)).toContain('Choose Panel on Set sail');
+  });
+
+  it('reads the ratings of the same period as the report, without the report’s filters', async () => {
+    const page = await open('/metrics/cost');
+    const [ratings] = ratingsQueries(page);
+    const [current] = metricsQueries(page);
+    expect(ratings!.get('from')).toBe(current!.get('from'));
+    expect(ratings!.get('to')).toBe(current!.get('to'));
+    expect([...ratings!.keys()].sort()).toEqual(['from', 'to']);
+
+    const owner = page.root.querySelector<HTMLInputElement>(
+      'input[aria-label="Owner"]'
+    )!;
+    owner.value = 'alex@example.com';
+    owner.dispatchEvent(new Event('input'));
+    button(page.root, 'Apply').click();
+    await flush(page);
+    expect([...ratingsQueries(page).at(-1)!.keys()].sort()).toEqual([
+      'from',
+      'to',
+    ]);
+    expect(metricsQueries(page).at(-2)!.get('owner')).toBe('alex@example.com');
+  });
+
+  it('reads another period when one is chosen', async () => {
+    const page = await open('/metrics/cost');
+    button(page.root, 'Last 7 days').click();
+    await flush(page);
+    expect(ratingsQueries(page).at(-1)!.get('from')).toBe(
+      '2026-09-29T10:10:00.000Z'
+    );
+  });
+
+  it('lists each model with its drafts, scores, best drafts, plan gate, unfinished planners and cost, best average first', async () => {
+    const page = await open('/metrics/cost', runPanelStory);
+    const table = rows(page.root, 'Plan panel ratings');
+    expect(table).toEqual([
+      [
+        'claude-haiku-4.5',
+        'claude-opus-5.5',
+        '2',
+        '1',
+        '8.0',
+        '8',
+        '1',
+        '1/1',
+        '0',
+        '0.25',
+      ],
+      [
+        'gemini-3.8-flash',
+        'claude-opus-5.5',
+        '2',
+        '1',
+        '7.0',
+        '7',
+        '0',
+        '1/1',
+        '0',
+        '0.35',
+      ],
+      [
+        'gpt-5.6-terra',
+        'claude-opus-5.5',
+        '2',
+        '1',
+        '6.0',
+        '6',
+        '0',
+        '1/1',
+        '0',
+        '0.30',
+      ],
+    ]);
+    const headers = Array.from(
+      panel(page.root, 'Plan panel ratings').querySelectorAll('thead th')
+    ).map(text);
+    expect(headers).toEqual([
+      'Model',
+      'Judge',
+      'Drafts',
+      'Rated',
+      'Average score',
+      'Range',
+      'Best',
+      'Plan gate passed',
+      'Not finished',
+      'Average AIU',
+    ]);
+  });
+
+  it('counts the judges’ panels apart, and says how many panels the period had', async () => {
+    const page = await open('/metrics/cost', runPanelStory);
+    const note = text(
+      panel(page.root, 'Plan panel ratings').querySelector('.note')
+    );
+    expect(note).toContain('2 panels in the period.');
+    expect(note).toContain('Judges: claude-opus-5.5 ran 2 panels.');
+  });
+
+  it('draws the average as text and as a bar a screen reader skips, so colour alone says nothing', async () => {
+    const page = await open('/metrics/cost', runPanelStory);
+    const first = panel(page.root, 'Plan panel ratings').querySelector(
+      'tbody tr'
+    )!;
+    expect(
+      first.querySelector('.hbar__track')?.getAttribute('aria-hidden')
+    ).toBe('true');
+    expect(first.querySelector<HTMLElement>('.hbar__fill')!.style.width).toBe(
+      '80%'
+    );
+    expect(text(first.querySelector('.mono'))).toBe('8.0');
+  });
+
+  it('says the ratings could not be read, keeps the rest of the page, and reads again on Try again', async () => {
+    const page = await open('/metrics/cost', (server) => {
+      const handle = server.handle.bind(server);
+      let failed = false;
+      server.handle = (request) => {
+        if (!failed && request.path === '/metrics/plan-panel') {
+          failed = true;
+          server.switches.failNext = 503;
+        }
+        return handle(request);
+      };
+    });
+    const section = panel(page.root, 'Plan panel ratings');
+    expect(text(section.querySelector('.ah-banner'))).toContain(
+      "Can't reach Ahoy"
+    );
+    expect(tiles(page.root).length).toBe(4);
+
+    button(section, 'Try again').click();
+    await flush(page);
+    expect(text(panel(page.root, 'Plan panel ratings'))).toContain(
+      'No panel ran in this period'
+    );
+    expect(ratingsQueries(page)).toHaveLength(2);
+  });
+
+  it('does not let a failure of the ratings hide the report, nor the report’s failure show as theirs', async () => {
+    const page = await open('/metrics/cost', (server) => {
+      const handle = server.handle.bind(server);
+      server.handle = (request) => {
+        if (request.path === '/metrics/plan-panel')
+          server.switches.failNext = 400;
+        return handle(request);
+      };
+    });
+    expect(tiles(page.root).length).toBe(4);
+    expect(text(panel(page.root, 'Plan panel ratings'))).toContain(
+      'The ratings could not be read'
+    );
   });
 });
 

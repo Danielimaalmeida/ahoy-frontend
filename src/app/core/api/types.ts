@@ -33,6 +33,8 @@ export type CatalogModel = Schemas['CatalogModel'];
 export type SlotDefault = Schemas['SlotDefault'];
 /** The server's model catalogue and defaults for a new story. */
 export type ModelCatalog = Schemas['ModelCatalog'];
+/** The models a story planned by panel runs on: its planners, and the judge's models, best first (`ModelCatalog.planPanel`). */
+export type PlanPanelConfig = Schemas['PlanPanelConfig'];
 
 /** One Jira issue from the configured read-only backlog search. */
 export type JiraBacklogIssue = Schemas['JiraBacklogIssue'];
@@ -76,6 +78,20 @@ export const STORY_STATUSES = listOf<StoryStatus>()([
   'halted',
   'terminal',
   'cancelled',
+]);
+
+/** How a story is planned (`PlanningMode`): by one planner, or by a panel of planners and a judge. */
+export type PlanningMode = Schemas['PlanningMode'];
+export const PLANNING_MODES = listOf<PlanningMode>()(['standard', 'panel']);
+
+/** How a panel planner's session ended (`PlanPanelMember.status`). Only `completed` leaves a draft for the judge. */
+export type PanelistStatus = Schemas['PlanPanelMember']['status'];
+export const PANELIST_STATUSES = listOf<PanelistStatus>()([
+  'completed',
+  'failed',
+  'budget_exceeded',
+  'timed_out',
+  'output_violation',
 ]);
 
 /** The states a run can be in (`RunStatus`). */
@@ -482,6 +498,22 @@ export type SetStoryBudgetRequest = Schemas['SetStoryBudgetRequest'];
 /** Body of `setStoryModels`. */
 export type SetStoryModelsRequest = Schemas['SetStoryModelsRequest'];
 
+/** Body of `setStoryPlanningMode`. It applies from the next planning run. */
+export type SetStoryPlanningModeRequest =
+  Schemas['SetStoryPlanningModeRequest'];
+
+/**
+ * One planner of a panel and what became of its draft. Free text (`rationale`, `adopted`, `leftOut`, `error`, the
+ * questions, the gate's `message`, and `plan`) was written by agents: untrusted. `plan` is only in `getRunPlanPanel`.
+ */
+export type PlanPanelMember = Schemas['PlanPanelMember'];
+
+/** One planning run that ran as a panel: the judge, the planners, the judge's ratings and its summary. */
+export type PlanPanel = Schemas['PlanPanel'];
+
+/** Answer of `listStoryPlanPanels`: a story's panel runs, newest first, without the drafts' plans. */
+export type PlanPanelList = Schemas['PlanPanelList'];
+
 /** Body of `answerQuestion`. */
 export type AnswerRequest = Schemas['AnswerRequest'];
 
@@ -540,6 +572,17 @@ export type MetricsError = Schemas['MetricsError'];
 /** Query of `getMetrics` and `exportMetrics`: the period `[from, to)` (30 days before now by default) and filters. */
 export type MetricsQuery = NonNullable<
   operations['getMetrics']['parameters']['query']
+>;
+
+/** How the judges rated one model's plans over a period (`getPlanPanelMetrics`). */
+export type PlanPanelModelRatings = Schemas['PlanPanelModelRatings'];
+
+/** Answer of `getPlanPanelMetrics`: the ratings per model and the judges' panel counts, for one period. */
+export type PlanPanelMetrics = Schemas['PlanPanelMetrics'];
+
+/** Query of `getPlanPanelMetrics`: the period `[from, to)` (30 days before now by default). */
+export type PlanPanelMetricsQuery = NonNullable<
+  operations['getPlanPanelMetrics']['parameters']['query']
 >;
 
 /** The tables `exportMetrics` serves (`table`). */

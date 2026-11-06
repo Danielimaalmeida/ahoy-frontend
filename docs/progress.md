@@ -1,13 +1,17 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-06 (Start again for a cancelled voyage; tested offline with fakes only). One page: replace it,
+Updated 2026-11-06 (main merged into the automatic-defects branch; full offline checks passed). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/restart-voyage`, 2026-11-06, asked for by the user on 2026-11-06: a cancelled voyage could not
+- **This branch (`feature/R3DA-14787-auto-defects`, 2026-11-06):** merges `origin/main` at `1330060b` without
+  rewriting history. The combined contract preserves automatic defect handling, voyage restart and the new plan
+  panel endpoints (136 operations, 129 implemented). API provenance records both source contracts; generated types
+  and the JSON mirror match the combined contract. No API or TEST environment was used for validation.
+- **Included (`feat/restart-voyage`, 2026-11-06, asked for by the user on 2026-11-06: a cancelled voyage could not
   be started again later):** a cancelled voyage's header has **Start again…** as its primary action
   (`dialogs/restart-voyage-dialog.ts`): a total cap (the current one when it leaves room, more than what is already
   spent) and a required reason, sent as `restartStory`; the voyage sets sail from intake as a fresh attempt, owned by
@@ -32,7 +36,23 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   navigation says "Fixing" while it starts defects. The contract is `ahoy-hosted`'s `feat/defect-auto-start`
   (migration 0039), which deploys with this branch. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite
   (201 files, 3,420 tests), `ng build`, typecheck, lint and format pass; e2e was not run.
-- **Merged before (`feat/defects-without-repositories`, 2026-11-05, agreed with the user on 2026-11-05):** Team settings
+- **Plan panel (`feature/plan-panel-mode`, with `ahoy-hosted` D22, migration 0039):** a voyage is planned by one
+  planner, as before, unless it is planned by a **panel**: three cheaper planners each write a plan in parallel, then a
+  judge writes the final plan from the best of each and rates every draft 1 to 10. Tested on fakes and the mock backend
+  only; never run against an API or in a browser.
+  - **Set sail** has a "Planning" choice (standard preselected, or panel, which costs more AIU and shows the panel's
+    models from `GET /models` `planPanel`); `planningMode` is in the start request only for a panel.
+  - **Voyage › Models** shows the mode and has **Change planning** (`POST /stories/{key}/planning-mode`, from the next
+    planning run). **Voyage › Plan** has a "Plan panel" section (judge, drafts with score, gate verdict and reasons, each
+    draft's plan on demand, earlier panel runs). **Metrics › Cost** has "Plan panel ratings" per model and judge.
+  - `Story.planningMode` and `ModelCatalog.planPanel` are optional in the guards (an older API sends neither).
+- **Included (`feature/R3DA-14787-defects-ux`, PR #24, 2026-11-06):** a Jira backlog containing a Defect no longer
+  fails as `invalid_response`. The contract sync had removed Defect from the backlog guard and types, and deleted its
+  client regression tests. `JiraBacklogIssue` and `JiraBacklog` now explicitly retain Defect compatibility at the API
+  boundary, with a shared, compile-time-checked list of supported types; the vendored contract and generated files stay
+  untouched. The restored client tests cover Story, Task, Bug and Defect in a mixed backlog, reject Epic, and still
+  validate a Defect's readiness. The existing adapter test confirms Defects are preserved in the displayed backlog.
+- **Included on this branch (`feat/defects-without-repositories`, 2026-11-05, agreed with the user on 2026-11-05):** Team settings
   › Defects has no component map any more, and a defect no longer shows or needs a repository: the planner finds the
   repositories from the content repository's routing and the code (`ahoy-hosted` D21, its
   `feat/defects-without-repositories`, migration 0038). The section keeps the watch, the query with Preview and the
@@ -116,10 +136,10 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   Refresh design and the pull request links; tabs Plan, Questions, Work packages, Runs, Gates, Artifacts, Log and
   Models), the run detail with live steps, Metrics, the halt diagnosis, knowledge-review lessons, WebEAM sign-in with
   the qnumber allow-list, Meetings slices 1 to 3 and the Crew page.
-- **Contract:** `openapi/ahoy-v1.yaml` is vendored from `ahoy-hosted`'s `feat/defects-without-repositories`
-  (`c21cb5f`; the commit in its header changes if that branch moves before merging), formatted with this repository's
-  Prettier; `schema.d.ts` and the test mirror are regenerated from it. Needs on the API: migration 0038 (and 0025 to
-  0037 before it). Merge and deploy with the `ahoy-hosted` pull request.
+- **Contract:** `openapi/ahoy-v1.yaml` combines `ahoy-hosted`'s plan-panel contract at `63f1e9e` and its automatic
+  defect/voyage-restart contract at `ec2a793d`, retaining `Defect` in `JiraBacklogIssue.issueType`. `schema.d.ts`
+  and the test mirror are generated from the combined contract. Merge the corresponding backend features and their
+  migrations before deploying this frontend; this merge does not change the backend.
 - **Never run against an API.** No record of the app against a local `ahoy-hosted --simulate` or TEST: every screen was
   checked by unit and component tests on the mock backend only (Crew and Team settings over
   `HttpTestingController`). No Teams, Figma or Jira was called. On 2026-11-01 the first six Team settings sections were
@@ -128,10 +148,27 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 ## Proof
 
-- **Last full run** (2026-11-05, `feat/defects-without-repositories` merged with `main` after #63, same setup as below):
+- **Current merge** (2026-11-06, local checkout, Node 24.22.2): `npm run build`, typecheck (app, specs and boundaries),
+  lint (ESLint and Stylelint), `npm test -- --watch=false` (207 files, 3,680 tests) and format all passed. The build
+  reports component-style budget warnings, no errors. API artifacts were regenerated from the combined contract;
+  the mirror check passes. The focused Angular regression run also passed (4 files, 558 tests, Node 26). Installed
+  dependencies were used without an auth stub. Not run: Playwright, a browser, a local hosted API, a live API or TEST.
+  No AIU was spent.
+- **Run before** (2026-11-05, `feat/defects-without-repositories` merged with `main` after #63, same setup as below):
   Vitest 201 files, 3,400 tests, all passed (the component map's specs removed, its refusal test replaced by one for priorities, and one for an old save's history entry); typecheck, eslint,
   stylelint, `ng build` and `prettier --check .` passed. Not run: Node 24, the real `@acme-fedev/auth`, the Playwright
   suite, a real API.
+- **After merging main into the plan panel branch** (2026-11-06, Node 24.22.1, contract `ahoy-hosted` `63f1e9e`):
+  typecheck with the boundary check, eslint, stylelint, Prettier, `ng build` and all Vitest tests passed (206 files,
+  3,653 tests); the contract mirror check passes. Not run: Playwright, a browser, a local API or TEST.
+- **Run before** (2026-11-06, `feature/R3DA-14787-defects-ux`, local checkout, Node 24.22.2 through `npx node@24`,
+  installed dependencies without an auth stub): `npm run build`, typecheck (app, specs and boundaries), lint (eslint
+  and stylelint), `npm test -- --watch=false` (201 files, 3,407 tests) and format all passed. Build has component-style
+  budget warnings, no errors. The focused client, backlog adapter, defect client and contract specs also passed
+  (4 files, 473 tests) through the Angular tool on Node 26. The initial targeted run caught the existing adapter's
+  Defect type error before the fix. The Node 24 wrapper initially passed its npx configuration into nested npx calls,
+  preventing lint; clearing those inherited options let lint, tests and format finish. Not run: Playwright, a local
+  hosted API, a live API or TEST. No auth stub, real Jira call or AIU spend was used.
 - **Run before** (2026-11-05, `feat/artifacts-list-redesign` on `main` after #59, same setup as below): Vitest 200
   files, 3,386 tests, all passed (new: `file-tree` 6, `artifact-images` 3, `getArtifactBlob` 2, the image kinds 1, the
   tab's grouping, filter, "Changed only" and three image cases 6); typecheck, eslint, stylelint, `ng build` and

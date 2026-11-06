@@ -11,6 +11,10 @@ import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
 import getStory from '@testing/fixtures/getStory.json';
 import getStoryModels from '@testing/fixtures/getStoryModels.json';
+import getPlanPanelMetrics from '@testing/fixtures/getPlanPanelMetrics.json';
+import getRunPlanPanel from '@testing/fixtures/getRunPlanPanel.json';
+import listStoryPlanPanels from '@testing/fixtures/listStoryPlanPanels.json';
+import setStoryPlanningMode from '@testing/fixtures/setStoryPlanningMode.json';
 import getStoryState from '@testing/fixtures/getStoryState.json';
 import listAgentDiagnoses from '@testing/fixtures/listAgentDiagnoses.json';
 import listKnowledgeReviews from '@testing/fixtures/listKnowledgeReviews.json';
@@ -53,6 +57,9 @@ import {
   isMetricsReport,
   isModelPlan,
   isModelCatalog,
+  isPlanPanel,
+  isPlanPanelList,
+  isPlanPanelMetrics,
   isProblem,
   isQuestion,
   isQuestionList,
@@ -131,6 +138,10 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['listStories', isStoryPage, listStories],
     ['getStoryModels', isModelPlan, getStoryModels],
     ['setStoryModels', isModelPlan, setStoryModels],
+    ['setStoryPlanningMode', isStory, setStoryPlanningMode],
+    ['listStoryPlanPanels', isPlanPanelList, listStoryPlanPanels],
+    ['getRunPlanPanel', isPlanPanel, getRunPlanPanel],
+    ['getPlanPanelMetrics', isPlanPanelMetrics, getPlanPanelMetrics],
     ['listStoryRuns', isRunList, listStoryRuns],
     ['getRun', isRun, getRun],
     ['listQuestions', isQuestionList, listQuestions],
@@ -195,8 +206,63 @@ describe('isModelCatalog', () => {
     expect(isModelCatalog(withField(listModels, field, value))).toBe(false);
   });
 
-  it.each(Object.keys(listModels))('requires %s', (field) => {
-    expect(isModelCatalog(withoutField(listModels, field))).toBe(false);
+  it.each(Object.keys(listModels).filter((field) => field !== 'planPanel'))(
+    'requires %s',
+    (field) => {
+      expect(isModelCatalog(withoutField(listModels, field))).toBe(false);
+    }
+  );
+
+  it('accepts what a server older than the plan panel sends: no planPanel', () => {
+    expect(isModelCatalog(withoutField(listModels, 'planPanel'))).toBe(true);
+  });
+
+  it('accepts the panel the catalogue lists, and the judge with no effort', () => {
+    expect(isModelCatalog(listModels)).toBe(true);
+    expect(
+      isModelCatalog({
+        ...listModels,
+        planPanel: {
+          ...listModels.planPanel,
+          judge: { models: ['claude-opus-5.5'], reasoningEffort: null },
+        },
+      })
+    ).toBe(true);
+  });
+
+  it.each([
+    ['null', null],
+    [
+      'a panelist with a bad model id',
+      {
+        panelists: [{ model: 'bad id', reasoningEffort: null }],
+        judge: listModels.planPanel.judge,
+      },
+    ],
+    [
+      'a panelist with an unknown effort',
+      {
+        panelists: [{ model: 'm', reasoningEffort: 'extreme' }],
+        judge: listModels.planPanel.judge,
+      },
+    ],
+    [
+      'a panelist without an effort key',
+      { panelists: [{ model: 'm' }], judge: listModels.planPanel.judge },
+    ],
+    ['no judge', { panelists: listModels.planPanel.panelists }],
+    [
+      'judge models that are not ids',
+      {
+        panelists: listModels.planPanel.panelists,
+        judge: { models: [7], reasoningEffort: null },
+      },
+    ],
+    ['no panelists', { judge: listModels.planPanel.judge }],
+  ])('refuses a planPanel of %s', (_name, planPanel) => {
+    expect(
+      isModelCatalog.explain(withField(listModels, 'planPanel', planPanel))
+    ).toContain('ModelCatalog.planPanel');
   });
 
   it('accepts unavailable control defaults and unknown model effort support', () => {
@@ -287,6 +353,23 @@ describe('isStory', () => {
   it('tolerates fields it does not know, so a newer API does not break the app', () => {
     expect(isStory({ ...getStory, haltDetail: 'x', labels: ['a'] })).toBe(true);
   });
+
+  it('accepts a story with no planningMode, which a server older than the plan panel sends, and both modes', () => {
+    expect('planningMode' in getStory).toBe(false);
+    expect(isStory(getStory)).toBe(true);
+    expect(isStory(setStoryPlanningMode)).toBe(true);
+    for (const mode of ['standard', 'panel'])
+      expect(isStory(withField(getStory, 'planningMode', mode))).toBe(true);
+  });
+
+  it.each(['duo', 'Panel', '', null, 2])(
+    'refuses planningMode = %o and names it',
+    (mode) => {
+      const broken = withField(getStory, 'planningMode', mode);
+      expect(isStory(broken)).toBe(false);
+      expect(isStory.explain(broken)).toContain('Story.planningMode must be');
+    }
+  );
 
   it('refuses what is not an object', () => {
     for (const value of [null, undefined, [], 'PROJ-123', 7])
@@ -822,5 +905,265 @@ describe('isMetricsReport', () => {
         ])
       )
     ).toBe(false);
+  });
+});
+
+describe('isPlanPanel', () => {
+  const [first, second, third] = getRunPlanPanel.members;
+  const member = first!;
+
+  it.each(Object.keys(getRunPlanPanel).filter((field) => field !== 'members'))(
+    'requires %s and names it',
+    (field) => {
+      const broken = withoutField(getRunPlanPanel, field);
+      expect(isPlanPanel(broken)).toBe(false);
+      expect(isPlanPanel.explain(broken)).toContain(
+        `PlanPanel.${field} must be`
+      );
+    }
+  );
+
+  it('accepts a panel whose judge never ran, and one the judge could not rate', () => {
+    expect(
+      isPlanPanel({ ...getRunPlanPanel, judge: null, summary: null })
+    ).toBe(true);
+    expect(
+      isPlanPanel({
+        ...getRunPlanPanel,
+        ratingsProblem: 'The ratings were not valid JSON.',
+        members: [
+          { ...member, score: null, rationale: null },
+          { ...second!, score: null },
+        ],
+      })
+    ).toBe(true);
+  });
+
+  it('accepts a planner that did not finish, with its error and a question and no draft', () => {
+    expect(third?.status).toBe('timed_out');
+    expect(isPlanPanel({ ...getRunPlanPanel, members: [third] })).toBe(true);
+  });
+
+  it('accepts every end a planner can have', () => {
+    for (const status of [
+      'completed',
+      'failed',
+      'budget_exceeded',
+      'timed_out',
+      'output_violation',
+    ])
+      expect(
+        isPlanPanel({ ...getRunPlanPanel, members: [{ ...member, status }] })
+      ).toBe(true);
+  });
+
+  it.each([
+    ['label', 'F'],
+    ['label', 'a'],
+    ['label', 'AB'],
+    ['model', 'bad id'],
+    ['reasoningEffort', 'extreme'],
+    ['status', 'cancelled'],
+    ['error', 7],
+    ['usage', { requests: 1, nanoAiu: 1.5, inputTokens: 0, outputTokens: 0 }],
+    ['gate', { result: 'maybe', message: 'x' }],
+    ['gate', { result: 'pass' }],
+    ['questions', [{ text: 'Why?' }]],
+    ['questions', 'none'],
+    ['score', 0],
+    ['score', 11],
+    ['score', 7.5],
+    ['score', '8'],
+    ['rationale', 7],
+    ['adopted', 7],
+    ['leftOut', 7],
+    ['plan', 7],
+  ])('refuses a planner with %s = %o', (field, value) => {
+    const broken = {
+      ...getRunPlanPanel,
+      members: [withField(member, field, value)],
+    };
+    expect(isPlanPanel(broken)).toBe(false);
+    expect(isPlanPanel.explain(broken)).toContain(`members[0].${field}`);
+  });
+
+  it.each(Object.keys(member).filter((field) => field !== 'plan'))(
+    'requires the planner field %s',
+    (field) => {
+      const broken = {
+        ...getRunPlanPanel,
+        members: [withoutField(member, field)],
+      };
+      expect(isPlanPanel.explain(broken)).toContain(
+        `members[0].${field} must be`
+      );
+    }
+  );
+
+  it('accepts a planner with no plan key (the list leaves it out) and with a null one', () => {
+    expect(
+      isPlanPanel({
+        ...getRunPlanPanel,
+        members: [withoutField(member, 'plan'), { ...member, plan: null }],
+      })
+    ).toBe(true);
+  });
+
+  it('refuses a judge without a model or with a usage that is not a count', () => {
+    const judge = getRunPlanPanel.judge;
+    expect(
+      isPlanPanel(
+        withField(getRunPlanPanel, 'judge', withoutField(judge, 'model'))
+      )
+    ).toBe(false);
+    expect(
+      isPlanPanel(
+        withField(getRunPlanPanel, 'judge', {
+          ...judge,
+          usage: { ...judge.usage, nanoAiu: -1 },
+        })
+      )
+    ).toBe(false);
+  });
+
+  it('tolerates fields it does not know', () => {
+    expect(
+      isPlanPanel({
+        ...getRunPlanPanel,
+        voters: 3,
+        members: [{ ...member, confidence: 0.9 }],
+      })
+    ).toBe(true);
+  });
+});
+
+describe('isPlanPanelList', () => {
+  it('accepts the panels newest first, none of them with a plan', () => {
+    expect(
+      listStoryPlanPanels.items.some((p) => p.members.some((m) => 'plan' in m))
+    ).toBe(false);
+    expect(isPlanPanelList(listStoryPlanPanels)).toBe(true);
+  });
+
+  it('accepts an empty list, a story planned by one planner', () => {
+    expect(isPlanPanelList({ items: [] })).toBe(true);
+  });
+
+  it('refuses a list with an item that is not a panel, and names it', () => {
+    expect(
+      isPlanPanelList.explain({
+        items: [{ ...listStoryPlanPanels.items[0], runId: 'bad id' }],
+      })
+    ).toContain('PlanPanelList.items[0].runId');
+    expect(isPlanPanelList({})).toBe(false);
+  });
+});
+
+describe('isPlanPanelMetrics', () => {
+  const row = getPlanPanelMetrics.models[0]!;
+
+  it.each(Object.keys(getPlanPanelMetrics))('requires %s', (field) => {
+    expect(isPlanPanelMetrics(withoutField(getPlanPanelMetrics, field))).toBe(
+      false
+    );
+  });
+
+  it('accepts a period in which no panel ran', () => {
+    expect(
+      isPlanPanelMetrics({
+        ...getPlanPanelMetrics,
+        panels: 0,
+        models: [],
+        judges: [],
+      })
+    ).toBe(true);
+  });
+
+  it('accepts a model whose drafts were never rated or checked, with no scores and no cost', () => {
+    expect(
+      isPlanPanelMetrics({
+        ...getPlanPanelMetrics,
+        models: [
+          {
+            ...row,
+            rated: 0,
+            averageScore: null,
+            minScore: null,
+            maxScore: null,
+            best: 0,
+            gateChecked: 0,
+            gatePassed: 0,
+            averageNanoAiu: null,
+          },
+        ],
+      })
+    ).toBe(true);
+  });
+
+  it.each([
+    ['model', 'bad id'],
+    ['judgeModel', 'bad id'],
+    ['judgeModel', undefined],
+    ['plans', -1],
+    ['plans', 1.5],
+    ['rated', '3'],
+    ['averageScore', 0.5],
+    ['averageScore', 10.5],
+    ['averageScore', NaN],
+    ['averageScore', '7'],
+    ['minScore', 0],
+    ['maxScore', 11],
+    ['maxScore', 7.5],
+    ['best', -1],
+    ['gatePassed', 1.5],
+    ['gateChecked', null],
+    ['unfinished', -2],
+    ['averageNanoAiu', 12.5],
+    ['averageNanoAiu', -1],
+  ])('refuses a model row with %s = %o', (field, value) => {
+    const broken = withField(getPlanPanelMetrics, 'models', [
+      withField(row, field, value),
+    ]);
+    expect(isPlanPanelMetrics(broken)).toBe(false);
+    expect(isPlanPanelMetrics.explain(broken)).toContain(`models[0].${field}`);
+  });
+
+  it('accepts an average score with decimals', () => {
+    expect(row.averageScore).toBe(8.33);
+    expect(isPlanPanelMetrics(getPlanPanelMetrics)).toBe(true);
+  });
+
+  it('has a row for a model with each judge that rated it, and for a panel no judge ran for', () => {
+    const judged = getPlanPanelMetrics.models.filter(
+      (m) => m.model === row.model
+    );
+    expect(judged.map((m) => m.judgeModel)).toEqual([
+      'claude-opus-5.5',
+      'claude-sonnet-5',
+    ]);
+    expect(
+      isPlanPanelMetrics({
+        ...getPlanPanelMetrics,
+        models: [{ ...row, judgeModel: null, rated: 0, averageScore: null }],
+      })
+    ).toBe(true);
+  });
+
+  it.each([
+    [{ model: 'claude-opus-5.5', panels: 0 }],
+    [{ model: 'bad id', panels: 1 }],
+    [{ panels: 1 }],
+  ])('refuses the judge row %o', (judge) => {
+    expect(
+      isPlanPanelMetrics(withField(getPlanPanelMetrics, 'judges', [judge]))
+    ).toBe(false);
+  });
+
+  it('refuses a period that is not made of timestamps', () => {
+    expect(
+      isPlanPanelMetrics.explain(
+        withField(getPlanPanelMetrics, 'from', 'last week')
+      )
+    ).toContain('PlanPanelMetrics.from');
   });
 });

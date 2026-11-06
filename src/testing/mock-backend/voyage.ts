@@ -10,6 +10,7 @@ import type {
   ModelChoice,
   ModelPlan,
   ModelSlot,
+  PlanPanel,
   Question,
   ReasoningEffort,
   Run,
@@ -274,8 +275,14 @@ export class Voyage {
   asked = false;
   /** Whether the story predates the relational state model (every change answers `409 legacy_story`). */
   legacy = false;
+  /** The planning runs that ran as a panel: the story was planned by panel when they were queued. */
+  readonly panelRuns = new Set<string>();
+  /** What the panel runs left, oldest first, with the drafts' plans. */
+  readonly panels: PlanPanel[] = [];
 
   constructor(story: Writable<Story>) {
+    // The real server always sends the planning mode; one older than the plan panel sends none, which is `standard`.
+    story.planningMode ??= 'standard';
     this.story = story;
   }
 

@@ -9,6 +9,7 @@ export const KNOWN_EVENT_TYPES = [
   'story.cancelled',
   'story.budget_changed',
   'story.models_changed',
+  'story.planning_mode_changed',
   'story.phase_changed',
   'story.awaiting_input',
   'story.awaiting_decision',

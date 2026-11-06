@@ -15,17 +15,19 @@ import {
 import { EmptyState } from '@ui/empty-state/empty-state';
 import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
 import { Api, Key, Table } from '@ui/table/table';
+import { MetricsPlanPanels } from './metrics-plan-panels';
 import { MetricsStore } from './metrics-store';
 
 /** A voyage is near its cap from this share of its budget spent. */
 const NEAR_CAP_PERCENT = 90;
 
-/** Cost: AIU by phase, by agent and model, how runs ended and the voyages that spent most. */
+/** Cost: AIU by phase, by agent and model, how runs ended, the voyages that spent most and how the judges rated plans. */
 @Component({
   selector: 'ah-metrics-cost',
   imports: [
     RouterLink,
     EmptyState,
+    MetricsPlanPanels,
     Panel,
     PanelBody,
     PanelHead,
@@ -276,6 +278,8 @@ const NEAR_CAP_PERCENT = 90;
             </div>
           }
         </ah-panel>
+
+        <ah-metrics-plan-panels />
       </div>
     }
   `,

@@ -19,6 +19,7 @@ import { criteriaOf } from './plan-criteria';
 import { PlanDecision } from './plan-decision';
 import { PlanDocument } from './plan-document';
 import { PlanFitPanel } from './plan-fit';
+import { PlanPanelSection } from './plan-panel-section';
 
 /**
  * The Plan tab (plan, lane 4B; wireframe `PlanReview`): the plan the Cartographer wrote, with the blocks that changed
@@ -38,6 +39,7 @@ import { PlanFitPanel } from './plan-fit';
     PanelBody,
     PanelHead,
     PlanFitPanel,
+    PlanPanelSection,
     RelativePipe,
     RouterLink,
     Skeleton,
@@ -125,6 +127,7 @@ import { PlanFitPanel } from './plan-fit';
             }
           </ah-panel-body>
         </ah-panel>
+        <ah-plan-panel-section />
       </article>
 
       <aside class="plan__side" aria-label="Decision and criteria">

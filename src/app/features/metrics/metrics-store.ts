@@ -7,6 +7,7 @@ import type {
   MetricsQuery,
   MetricsReport,
   MetricsTable,
+  PlanPanelMetrics,
 } from '@core/api/types';
 import {
   periodRange,
@@ -58,6 +59,10 @@ export class MetricsStore {
   readonly exported = signal<ExportState>({ kind: 'idle' });
   /** The models seen in the unfiltered report, for the Model filter. */
   readonly models = signal<readonly string[]>([]);
+  /** How the judges rated each model's plans in the period, once read; null before, and while it is read again. */
+  readonly planPanels = signal<PlanPanelMetrics | null>(null);
+  /** Why the plan panel ratings could not be read; the rest of the page does not depend on them. */
+  readonly planPanelsError = signal<ApiError | null>(null);
 
   /** Whether any filter is set. */
   readonly filtered = computed(() => {
@@ -65,15 +70,18 @@ export class MetricsStore {
     return f.owner !== '' || f.repo !== '' || f.model !== '';
   });
 
-  /** Reads the report of the period and of the one before it. */
+  /** Reads the report of the period and of the one before it, and the plan panel ratings of the period. */
   async load(now = this.clock.now()): Promise<void> {
     const generation = ++this.generation;
     const span = periodRange(this.period(), now);
     this.loading.set(true);
-    const [current, before] = await Promise.all([
+    const reports = Promise.all([
       this.api.getMetrics(this.query(span)),
       this.api.getMetrics(this.query(previousRange(span))),
     ]);
+    // After the reports are asked for: the ratings are a side section, and a failure of the page's own reads comes first.
+    void this.loadPlanPanels(span, generation);
+    const [current, before] = await reports;
     if (generation !== this.generation) return;
     this.loading.set(false);
     if (!current.ok) {
@@ -99,6 +107,33 @@ export class MetricsStore {
   setPeriod(period: MetricsPeriod): Promise<void> {
     this.period.set(period);
     return this.load();
+  }
+
+  /** Reads the plan panel ratings of the current period again, after they could not be read. */
+  reloadPlanPanels(now = this.clock.now()): Promise<void> {
+    return this.loadPlanPanels(
+      periodRange(this.period(), now),
+      this.generation
+    );
+  }
+
+  /**
+   * Reads the judges' ratings of the period (`getPlanPanelMetrics`). They have no owner, repository or model filter, so
+   * the filters do not apply to them. An answer to a read that was replaced meanwhile is dropped.
+   */
+  private async loadPlanPanels(
+    span: { readonly from: string; readonly to: string },
+    generation: number
+  ): Promise<void> {
+    this.planPanels.set(null);
+    this.planPanelsError.set(null);
+    const result = await this.api.getPlanPanelMetrics({
+      from: span.from,
+      to: span.to,
+    });
+    if (generation !== this.generation) return;
+    if (result.ok) this.planPanels.set(result.value);
+    else this.planPanelsError.set(result.error);
   }
 
   /** Changes the filters and reads the report again. */

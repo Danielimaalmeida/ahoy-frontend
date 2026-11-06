@@ -5,7 +5,7 @@ on:
     inputs:
       update-ops-tag:
         type: boolean
-        description: 'Update r3da_cdm_ops TEST image tag'
+        description: 'Update r3da_appx_ops TEST image tag'
         required: false
         default: false
 

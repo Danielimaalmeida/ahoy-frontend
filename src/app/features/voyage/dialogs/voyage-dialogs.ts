@@ -16,6 +16,10 @@ import {
   type ChangeModelsData,
 } from '../tabs/models/change-models-dialog';
 import {
+  ChangePlanningModeDialog,
+  type ChangePlanningModeData,
+} from '../tabs/models/change-planning-mode-dialog';
+import {
   AgentDiagnosisDialog,
   CancelAgentDiagnosisDialog,
   type AgentDiagnosisDialogData,
@@ -166,6 +170,21 @@ export class VoyageDialogs {
       ChangeModelsDialog,
       { data: { context, slot }, width: '960px' }
     );
+  }
+
+  /** "Planning": one planner or a panel, from the next planning run. Closes with the story. */
+  planningMode(
+    context: VoyageContext,
+    planners: number | null
+  ): DialogRef<Story, ChangePlanningModeDialog> {
+    return this.dialogs.open<
+      Story,
+      ChangePlanningModeData,
+      ChangePlanningModeDialog
+    >(ChangePlanningModeDialog, {
+      data: { context, planners },
+      width: '640px',
+    });
   }
 
   /** "Retry WP2?" or "Accept WP2 as it stands?" Closes with the story. */

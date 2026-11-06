@@ -207,5 +207,51 @@ describe('VoyageContext', () => {
     expect(await context.stop('x')).toEqual({ kind: 'skipped' });
     expect(await context.resume('')).toEqual({ kind: 'skipped' });
     expect(await context.setBudget(1, 'x')).toEqual({ kind: 'skipped' });
+    expect(await context.setPlanningMode('panel', '')).toEqual({
+      kind: 'skipped',
+    });
+  });
+
+  it('changes how the voyage is planned, sends no reason key when the reason is empty, and puts the story in the store', async () => {
+    const { context, server } = setUp();
+    const bodies: unknown[] = [];
+    const handle = server.handle.bind(server);
+    server.handle = (request) => {
+      if (request.method === 'POST') bodies.push(request.body);
+      return handle(request);
+    };
+    context.open('PROJ-140');
+    await settle();
+    const before = context.version();
+    expect(context.story()?.planningMode).toBe('standard');
+
+    const outcome = await context.setPlanningMode('panel', '');
+
+    expect(outcome.kind).toBe('ok');
+    expect(bodies).toEqual([
+      { expectedVersion: before, planningMode: 'panel' },
+    ]);
+    expect(context.story()?.planningMode).toBe('panel');
+    expect(context.version()).toBe((before ?? 0) + 1);
+    expect(TestBed.inject(StoriesStore).find('PROJ-140')?.planningMode).toBe(
+      'panel'
+    );
+  });
+
+  it('sends the reason of a planning mode change when there is one, and reads a stale version as a conflict', async () => {
+    const { context, server } = setUp();
+    const bodies: unknown[] = [];
+    const handle = server.handle.bind(server);
+    server.handle = (request) => {
+      if (request.method === 'POST') bodies.push(request.body);
+      return handle(request);
+    };
+    context.open('PROJ-140');
+    await settle();
+    server.switches.conflictNext = 'stale_version';
+    const stale = await context.setPlanningMode('panel', 'A hard story');
+    expect(stale.kind).toBe('stale');
+    expect(bodies[0]).toMatchObject({ reason: 'A hard story' });
+    expect(context.story()?.planningMode).toBe('standard');
   });
 });

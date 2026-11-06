@@ -32,6 +32,8 @@ import type {
   MeetingTopicOrderRequest,
   ModelChoice,
   ModelSlot,
+  PlanPanel,
+  PlanPanelMetrics,
   ProblemCode,
   RefinementRequest,
   RefreshDesignRequest,
@@ -39,6 +41,7 @@ import type {
   ResumeStoryRequest,
   SetStoryBudgetRequest,
   SetStoryModelsRequest,
+  SetStoryPlanningModeRequest,
   StartStoryRequest,
   StopStoryRequest,
   CancelStoryRequest,
@@ -56,6 +59,11 @@ import { realClock, type MockClock } from './clock';
 import { agentDiagnosisMarkdown } from './content';
 import { diagnosisOf } from './diagnosis';
 import { planFitOf } from './plan-fit';
+import {
+  PANEL_METRICS_MAX_DAYS,
+  planPanelMetrics,
+  withoutPlans,
+} from './plan-panel';
 import { KEEPALIVE_MS, StreamHub } from './event-stream';
 import {
   isRecord,
@@ -740,6 +748,14 @@ export class MockAhoyServer {
         );
       case 'setStoryModels':
         return this.setStoryModels(call);
+      case 'setStoryPlanningMode':
+        return this.setStoryPlanningMode(call);
+      case 'listStoryPlanPanels':
+        return jsonResponse(200, {
+          items: this.voyage(call).panels.map(withoutPlans).reverse(),
+        });
+      case 'getRunPlanPanel':
+        return jsonResponse(200, this.runPlanPanel(call));
       case 'listStoryRuns':
         return jsonResponse(200, { items: this.voyage(call).runDtos() });
       case 'getRun': {
@@ -989,6 +1005,10 @@ export class MockAhoyServer {
         return jsonResponse(200, this.metrics(call), {
           'Cache-Control': 'no-store',
         });
+      case 'getPlanPanelMetrics':
+        return jsonResponse(200, this.planPanelRatings(call), {
+          'Cache-Control': 'no-store',
+        });
       case 'exportMetrics':
         return this.exportMetrics(call);
       default:
@@ -1090,12 +1110,17 @@ export class MockAhoyServer {
       updatedAt: now,
     });
     voyage.chosen = chosen;
+    if (body.planningMode !== undefined)
+      voyage.story.planningMode = body.planningMode;
     this.world.voyages.set(body.key, voyage);
     this.world.append(voyage, 'story.started', call.actor, {
       phase: 'intake',
       controlSha: voyage.story.controlSha,
       budgetNanoAiu: body.budgetNanoAiu,
       ...(body.models !== undefined ? { models: body.models } : {}),
+      ...(body.planningMode !== undefined
+        ? { planningMode: body.planningMode }
+        : {}),
     });
     this.simulator.poke(voyage);
     return jsonResponse(201, voyage.storyDto(), {
@@ -1492,6 +1517,40 @@ export class MockAhoyServer {
     return jsonResponse(202, voyage.modelPlan());
   }
 
+  /** `standard` or `panel`, from the next planning run on: an active run keeps what it started with. */
+  private setStoryPlanningMode(call: Call): MockResponse {
+    const body = call.body as SetStoryPlanningModeRequest; // validated
+    const voyage = this.lock(call, body.expectedVersion);
+    const story = voyage.story;
+    if (story.status === 'terminal')
+      throw new MockProblem('invalid_state', `Story ${story.key} is terminal`);
+    const from = story.planningMode ?? 'standard';
+    story.planningMode = body.planningMode;
+    this.world.touch(voyage);
+    this.world.append(voyage, 'story.planning_mode_changed', call.actor, {
+      from,
+      to: body.planningMode,
+      runId: story.currentRunId,
+      ...(body.reason !== undefined ? { detail: body.reason } : {}),
+    });
+    return jsonResponse(202, voyage.storyDto());
+  }
+
+  /** One panel run with the plan each planner drafted, or `404` for a run that does not exist or ran one planner. */
+  private runPlanPanel(call: Call): PlanPanel {
+    const runId = call.path['runId'] ?? '';
+    const voyage = this.world.voyageOfRun(runId);
+    if (voyage === null)
+      throw new MockProblem('not_found', `Run ${runId} does not exist`);
+    const panel = voyage.panels.find((p) => p.runId === runId);
+    if (panel === undefined)
+      throw new MockProblem(
+        'not_found',
+        `Run ${runId} was not planned by a panel`
+      );
+    return panel;
+  }
+
   private answerQuestion(call: Call): MockResponse {
     const body = call.body as AnswerRequest; // validated
     const voyage = this.lock(call, body.expectedVersion);
@@ -1700,6 +1759,12 @@ export class MockAhoyServer {
 
   /** The metrics of the period: the design's fictional figures (the fixture), over the period the query names. */
   private metrics(call: Call): typeof getMetrics {
+    const { from, to } = this.period(call);
+    return { ...getMetrics, from, to };
+  }
+
+  /** The period `[from, to)` a metrics query names: the 30 days before now by default. */
+  private period(call: Call): { readonly from: string; readonly to: string } {
     const to =
       typeof call.query['to'] === 'string'
         ? call.query['to']
@@ -1717,7 +1782,22 @@ export class MockAhoyServer {
       );
     if (from >= to)
       throw new MockProblem('validation_failed', 'from must be before to');
-    return { ...getMetrics, from, to };
+    return { from, to };
+  }
+
+  /** The judges' ratings of the panels the mock's stories ran in the period, worked out from those panels. */
+  private planPanelRatings(call: Call): PlanPanelMetrics {
+    const { from, to } = this.period(call);
+    if (Date.parse(to) - Date.parse(from) > PANEL_METRICS_MAX_DAYS * DAY_MS)
+      throw new MockProblem(
+        'validation_failed',
+        `The period may span at most ${PANEL_METRICS_MAX_DAYS} days`
+      );
+    return planPanelMetrics(
+      [...this.world.voyages.values()].flatMap((voyage) => voyage.panels),
+      from,
+      to
+    );
   }
 
   /** One metrics table as a file to save: runs and gate records of this world, halts and errors of the fixture. */

@@ -99,6 +99,11 @@ export class World {
     return this.runIndex.get(runId)?.run ?? null;
   }
 
+  /** The story a run belongs to. */
+  voyageOfRun(runId: string): Voyage | null {
+    return this.runIndex.get(runId)?.voyage ?? null;
+  }
+
   /** The id the newest event has, or 0. */
   get lastEventId(): number {
     return this.nextEventId - 1;

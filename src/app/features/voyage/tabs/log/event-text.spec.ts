@@ -267,6 +267,7 @@ describe('eventText: the types whose payload is not confirmed', () => {
     ['story.resumed', 'Resumed'],
     ['story.budget_changed', 'Budget changed'],
     ['story.models_changed', 'Models changed'],
+    ['story.planning_mode_changed', 'Planning mode changed'],
     ['story.awaiting_input', 'Waiting for answers'],
     ['question.asked', 'Questions asked'],
     ['question.answered', 'Question answered'],

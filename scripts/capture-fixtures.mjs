@@ -136,6 +136,18 @@ const runId = runs?.items?.[0]?.id;
 if (typeof runId === 'string')
   await capture('getRun', `/runs/${encodeURIComponent(runId)}`);
 else skipped.push('getRun: the story has no run yet');
+const panels = await capture(
+  'listStoryPlanPanels',
+  `/stories/${seg}/plan-panels`
+);
+const panelRunId = panels?.items?.[0]?.runId;
+if (typeof panelRunId === 'string')
+  await capture(
+    'getRunPlanPanel',
+    `/runs/${encodeURIComponent(panelRunId)}/plan-panel`
+  );
+else skipped.push('getRunPlanPanel: the story was not planned by a panel');
+await capture('getPlanPanelMetrics', '/metrics/plan-panel');
 await capture('listQuestions', `/stories/${seg}/questions`);
 await capture('listGateRecords', `/stories/${seg}/gates`);
 await capture('getStoryState', `/stories/${seg}/state`);

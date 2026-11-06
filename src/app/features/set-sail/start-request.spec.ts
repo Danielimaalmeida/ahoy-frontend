@@ -26,6 +26,7 @@ function values(
     key: 'PROJ-145',
     title: '',
     budget: '25',
+    planningMode: 'standard',
     models: {
       planning: BLANK,
       implementation: BLANK,
@@ -138,6 +139,42 @@ describe('the request the form sends', () => {
     const request = buildStartRequest(values({ title: '   ' }));
     expect(request).not.toBeNull();
     expect(Object.keys(request ?? {})).toEqual(['key', 'budgetNanoAiu']);
+  });
+
+  it('has no `planningMode` key for a standard story, so a request to a server older than the plan panel is unchanged', () => {
+    const request = buildStartRequest(values({ planningMode: 'standard' }));
+    expect(request).toStrictEqual({
+      key: 'PROJ-145',
+      budgetNanoAiu: 25_000_000_000,
+    });
+    expect(request).not.toHaveProperty('planningMode');
+  });
+
+  it('carries `planningMode: "panel"` when the user chose the panel, beside the models they filled in', () => {
+    expect(buildStartRequest(values({ planningMode: 'panel' }))).toStrictEqual({
+      key: 'PROJ-145',
+      budgetNanoAiu: 25_000_000_000,
+      planningMode: 'panel',
+    });
+    expect(
+      buildStartRequest(
+        values({
+          planningMode: 'panel',
+          models: { review: { model: 'gpt-5.6-terra', effort: '' } },
+        })
+      )
+    ).toStrictEqual({
+      key: 'PROJ-145',
+      budgetNanoAiu: 25_000_000_000,
+      models: { review: { model: 'gpt-5.6-terra' } },
+      planningMode: 'panel',
+    });
+  });
+
+  it('still refuses a form with a bad key, whatever the planning mode', () => {
+    expect(
+      buildStartRequest(values({ key: 'nope', planningMode: 'panel' }))
+    ).toBeNull();
   });
 
   it('trims the title and the key, and writes the key in capitals', () => {
