@@ -158,7 +158,10 @@ function topics(n: number): string {
           </select>
         </label>
         <span class="ah-hint">
-          @if (cancelling) {
+          @if (!seriesNext()) {
+            Tick the topics to move and pick where they go; unticked topics stay
+            here.
+          } @else if (cancelling) {
             Every open topic is ticked to begin with: none was discussed.
           } @else {
             Topics with no notes are ticked to begin with: they were most likely
@@ -188,7 +191,7 @@ export class EndMeetingDialog {
    * Whether the series has a next meeting for the ticked topics (planned, or planned from its cadence); when the series
    * is not read yet, the API decides.
    */
-  private readonly seriesNext = computed(() => {
+  protected readonly seriesNext = computed(() => {
     const meeting = this.store.meeting();
     if (meeting === null || meeting.seriesId === null) return false;
     const series = this.store.openSeries();
@@ -234,12 +237,17 @@ export class EndMeetingDialog {
   );
   /** The words for the way the person chose to close the meeting, fixed while the dialog is open. */
   protected readonly words = WORDS[this.data.how];
-  /** The ids of the ticked topics. */
+  /**
+   * The ids of the ticked topics. Without a next meeting of the series none is ticked to begin with, so a plain confirm
+   * never sends topics to a meeting of another series that the person did not pick.
+   */
   readonly chosen = signal<ReadonlySet<string>>(
     new Set(
-      this.cancelling
-        ? this.candidates().map((t) => t.id)
-        : suggestedCarryOver(this.store.meeting()?.topics ?? [])
+      !this.seriesNext()
+        ? []
+        : this.cancelling
+          ? this.candidates().map((t) => t.id)
+          : suggestedCarryOver(this.store.meeting()?.topics ?? [])
     )
   );
   private readonly failed = signal(false);

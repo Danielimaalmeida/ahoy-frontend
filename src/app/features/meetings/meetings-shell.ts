@@ -231,7 +231,7 @@ export const SERIES_PAGE = 3;
               <p class="status-line ah-hint" role="status">
                 The search failed. Try again in a moment.
               </p>
-            } @else if (results(); as r) {
+            } @else if (!store.searching() && results(); as r) {
               @if (r.meetings.length + r.topics.length + r.notes.length === 0) {
                 <p class="status-line ah-hint" role="status">
                   Nothing matches “{{ r.q }}”.
@@ -311,7 +311,7 @@ export const SERIES_PAGE = 3;
                 </button>
               }
             </div>
-            @for (section of sections(); track section.label) {
+            @for (section of sections(); track section.key) {
               <h3 class="group">{{ section.label }}</h3>
               <ul>
                 @for (line of section.lines; track line.id) {
@@ -326,7 +326,7 @@ export const SERIES_PAGE = 3;
                   size="sm"
                   type="button"
                   class="more"
-                  (click)="showAll(section.label)"
+                  (click)="showAll(section.key)"
                 >
                   Show all {{ section.hidden + section.lines.length }}
                 </button>
@@ -430,6 +430,7 @@ export class MeetingsShell {
     switch (this.view()) {
       case 'upcoming':
         return upcomingByWeek(meetings, this.clock.now()).map((s) => ({
+          key: s.key,
           label: s.label,
           lines: s.meetings.map(meetingLine),
           hidden: 0,
@@ -440,15 +441,23 @@ export class MeetingsShell {
           if (budget <= 0) return [];
           const shown = s.meetings.slice(0, budget);
           budget -= shown.length;
-          return [{ label: s.label, lines: shown.map(meetingLine), hidden: 0 }];
+          return [
+            {
+              key: s.key,
+              label: s.label,
+              lines: shown.map(meetingLine),
+              hidden: 0,
+            },
+          ];
         });
       }
       case 'series': {
         const open = this.expanded();
         return bySeries(meetings).map((s) => {
-          const all = open.has(s.label) || s.meetings.length <= SERIES_PAGE;
+          const all = open.has(s.key) || s.meetings.length <= SERIES_PAGE;
           const shown = all ? s.meetings : s.meetings.slice(0, SERIES_PAGE);
           return {
+            key: s.key,
             label: s.label,
             lines: shown.map(meetingLine),
             hidden: s.meetings.length - shown.length,
@@ -480,8 +489,8 @@ export class MeetingsShell {
   }
 
   /** Shows every meeting of one series in the series view. */
-  protected showAll(label: string): void {
-    this.expanded.set(new Set([...this.expanded(), label]));
+  protected showAll(key: string): void {
+    this.expanded.set(new Set([...this.expanded(), key]));
   }
 
   /** Searches as the person types; a blank box, or Esc, shows the list again. */

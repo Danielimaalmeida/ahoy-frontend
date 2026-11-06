@@ -105,7 +105,7 @@ function choiceSub(m: MeetingSummary, nextOfSeries: boolean): string {
       confirmLabel="Move topic"
       busyLabel="Moving…"
       [busy]="busy()"
-      [confirmDisabled]="chosen() === null"
+      [confirmDisabled]="target() === null"
       [error]="error()"
       (confirm)="submit()"
     >
@@ -224,6 +224,11 @@ export class MoveTopicDialog {
   });
   /** The chosen meeting (or {@link PLAN_NEXT}); the series' next one to begin with. */
   readonly chosen = signal<string | null>(this.choices()[0]?.value ?? null);
+  /** The chosen meeting while the list shows it: a meeting the filter hides is never the one moved to. */
+  protected readonly target = computed(() => {
+    const chosen = this.chosen();
+    return this.shown().some((c) => c.value === chosen) ? chosen : null;
+  });
   /** Whether the topic goes at the end of the meeting's topics or at the top. */
   readonly position = signal<'first' | 'last'>('last');
   private readonly failed = signal(false);
@@ -238,7 +243,7 @@ export class MoveTopicDialog {
 
   /** Moves the topic; on a refusal the dialog stays open with the reason. */
   async submit(): Promise<void> {
-    const chosen = this.chosen();
+    const chosen = this.target();
     if (chosen === null || this.busy()) return;
     const moved = await this.store.moveTopic(this.topic.id, {
       toMeetingId: chosen === PLAN_NEXT ? null : chosen,

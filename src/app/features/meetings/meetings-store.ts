@@ -104,6 +104,8 @@ export class MeetingsStore {
   /** The notes removed but still within Undo, by note id, with the topic they are under. */
   readonly removing = signal<ReadonlyMap<string, string>>(new Map());
   private readonly removalTimers = new Map<string, Timer>();
+  /** The removals whose DELETE is under way, by note id: Undo can no longer stop them, and a flush waits for them. */
+  private readonly removalsInFlight = new Map<string, Promise<void>>();
 
   /** What the last search found, for the text it was asked with; null when no search is shown. */
   readonly searchResult = signal<{
@@ -493,6 +495,7 @@ export class MeetingsStore {
 
   /** Removes a topic and its notes. */
   async deleteTopic(topicId: string): Promise<void> {
+    await this.flushRemovals(topicId);
     if (!(await this.runEmpty(() => this.api.deleteMeetingTopic(topicId))))
       return;
     this.patchMeeting((m) => ({
@@ -524,6 +527,8 @@ export class MeetingsStore {
     topicId: string,
     to: MoveRequest = { toMeetingId: null, position: 'last' }
   ): Promise<MoveMeetingTopicResult | null> {
+    // A note removed a moment ago goes now, so it is not copied with the topic.
+    await this.flushRemovals(topicId);
     const moved = await this.run(() =>
       this.api.moveMeetingTopic(topicId, {
         ...(to.toMeetingId !== null ? { toMeetingId: to.toMeetingId } : {}),
@@ -708,8 +713,9 @@ export class MeetingsStore {
     );
   }
 
-  /** Brings back a note removed less than {@link UNDO_MS} ago. */
+  /** Brings back a note removed less than {@link UNDO_MS} ago, unless its removal is already under way. */
   undoRemove(noteId: string): void {
+    if (this.removalsInFlight.has(noteId)) return;
     this.removalTimers.get(noteId)?.cancel();
     this.removalTimers.delete(noteId);
     const next = new Map(this.removing());
@@ -717,21 +723,37 @@ export class MeetingsStore {
     this.removing.set(next);
   }
 
-  /** Removes every note waiting for its Undo to run out, now. */
-  async flushRemovals(): Promise<void> {
-    for (const noteId of [...this.removing().keys()])
-      await this.finishRemoval(noteId);
+  /** Removes every note waiting for its Undo to run out (only those under `topicId`, when given), now and together. */
+  async flushRemovals(topicId?: string): Promise<void> {
+    await Promise.all(
+      [...this.removing()]
+        .filter(([, under]) => topicId === undefined || under === topicId)
+        .map(([noteId]) => this.finishRemoval(noteId))
+    );
   }
 
-  private async finishRemoval(noteId: string): Promise<void> {
+  /**
+   * Sends one pending removal, once: a flush during the request waits for it. It runs in the background, so it leaves
+   * `busy` and the error of whatever the person is doing alone, and shows only its own failure (the note comes back).
+   */
+  private finishRemoval(noteId: string): Promise<void> {
+    const inFlight = this.removalsInFlight.get(noteId);
+    if (inFlight !== undefined) return inFlight;
     const topicId = this.removing().get(noteId);
-    if (topicId === undefined) return;
+    if (topicId === undefined) return Promise.resolve();
     this.removalTimers.get(noteId)?.cancel();
     this.removalTimers.delete(noteId);
-    await this.deleteNote(topicId, noteId);
-    const next = new Map(this.removing());
-    next.delete(noteId);
-    this.removing.set(next);
+    const removal = (async () => {
+      const result = await this.api.deleteMeetingNote(noteId);
+      if (result.ok) await this.dropNote(topicId, noteId);
+      else this.commandError.set(result.error);
+      this.removalsInFlight.delete(noteId);
+      const next = new Map(this.removing());
+      next.delete(noteId);
+      this.removing.set(next);
+    })();
+    this.removalsInFlight.set(noteId, removal);
+    return removal;
   }
 
   /**
@@ -750,6 +772,7 @@ export class MeetingsStore {
       return;
     }
     this.searching.set(true);
+    this.searchError.set(null);
     this.searchTimer = this.clock.schedule(SEARCH_PAUSE_MS, () => {
       this.searchTimer = null;
       void this.runSearch(text.slice(0, 100), generation);
@@ -775,6 +798,11 @@ export class MeetingsStore {
   async deleteNote(topicId: string, noteId: string): Promise<void> {
     if (!(await this.runEmpty(() => this.api.deleteMeetingNote(noteId))))
       return;
+    await this.dropNote(topicId, noteId);
+  }
+
+  /** Takes a removed note, and a question's answers with it, out of the page. */
+  private async dropNote(topicId: string, noteId: string): Promise<void> {
     const notes =
       this.meeting()?.topics.find((t) => t.id === topicId)?.notes ?? [];
     const questionId = notes.find((n) => n.id === noteId)?.answerTo ?? null;

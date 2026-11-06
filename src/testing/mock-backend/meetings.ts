@@ -256,6 +256,11 @@ export class MeetingDesk {
     body: MeetingJiraTargetRequest
   ): Meeting {
     const meeting = this.meeting(id);
+    if (meeting.seriesId !== null)
+      throw refused(
+        'body/jiraProjectKey',
+        "A series' meetings create their stories in the series' Jira project"
+      );
     const jira = this.jiraTargetOf(meeting.seriesId, body);
     meeting.jiraProjectKey = jira.projectKey;
     meeting.jiraIssueType = jira.issueType;
@@ -268,7 +273,7 @@ export class MeetingDesk {
     body: { jiraProjectKey?: string | null; jiraIssueType?: JiraIssueType }
   ): { projectKey: string | null; issueType: JiraIssueType | null } {
     if (!body.jiraProjectKey) {
-      if (body.jiraIssueType !== undefined && body.jiraProjectKey === undefined)
+      if (body.jiraIssueType !== undefined)
         throw refused(
           'body/jiraIssueType',
           'jiraIssueType goes with a jiraProjectKey'
@@ -409,12 +414,13 @@ export class MeetingDesk {
         'body/carryOver',
         `carryOver names topics that are not open topics of this meeting: ${bad.join(', ')}`
       );
+    const to =
+      carryOverTo === undefined
+        ? null
+        : this.chosenMeeting(meeting, carryOverTo, 'body/carryOverTo');
     let next: MeetingRecord | null = null;
     if (carryOver.length > 0) {
-      next =
-        carryOverTo === undefined
-          ? this.nextMeetingOf(meeting, actor)
-          : this.chosenMeeting(meeting, carryOverTo, 'body/carryOverTo');
+      next = to ?? this.nextMeetingOf(meeting, actor);
       for (const topic of this.topicsOf(id))
         if (carryOver.includes(topic.id)) this.carry(topic, next, actor);
     }
@@ -1224,7 +1230,7 @@ export class MeetingDesk {
       ...topic,
       id: this.id(),
       meetingId: next.id,
-      origin: 'planned',
+      origin: next.status === 'in_progress' ? 'in_meeting' : 'planned',
       status: 'open',
       position: this.topicsOf(next.id).length,
       carriedFromTopicId: topic.id,

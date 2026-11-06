@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 09d5039990d52b3a6aee1536ca24d14fde20513d
+# Commit: 3126a2e0c500d82a07ff8122e161e38ddc267a0a
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -1934,7 +1934,7 @@ paths:
         - name: q
           in: query
           required: true
-          schema: { type: string, minLength: 1, maxLength: 200 }
+          schema: { type: string, minLength: 2, maxLength: 100 }
       responses:
         '200':
           description: What matched.

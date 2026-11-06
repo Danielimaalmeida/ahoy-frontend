@@ -164,7 +164,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 ## Proof
 
 - **This branch** (2026-11-06, cloud container): `npm run build`, typecheck (app, specs and boundaries), lint (ESLint
-  and Stylelint), `npm test -- --watch=false` (207 files, 3,699 tests) and format (only `docs/architecture.md` warns,
+  and Stylelint), `npm test -- --watch=false` (207 files, 3,702 tests, after the code review fixes) and format (only `docs/architecture.md` warns,
   as on `main`) passed, with `@acme-fedev/auth` replaced by a local stub in `node_modules` and native bindings installed
   by hand (the private registry is not reachable here). The contract was synced from `ahoy-hosted`'s branch; the
   mirror check passes and `schema.d.ts` is kept Prettier-formatted (see `api:check` below). Not run: the real auth

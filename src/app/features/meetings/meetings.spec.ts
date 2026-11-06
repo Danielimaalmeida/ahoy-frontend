@@ -634,6 +634,65 @@ describe('Meetings on the mock backend', () => {
     ).toContain('Moved to');
   });
 
+  it('removes a note still within Undo before its topic moves, so the note is not copied', async () => {
+    const page = await open('/meetings');
+    const TOPIC = 'Overdue invoice reminders';
+    buttonNamed(card(page.root, TOPIC), 'Remove').click();
+    await flush(page);
+    buttonNamed(card(page.root, TOPIC), '⋯').click();
+    await flush(page);
+    buttonNamed(
+      card(page.root, TOPIC).querySelector('[role="menu"]')!,
+      'Move to…'
+    ).click();
+    await flush(page);
+    buttonNamed(dialog(), 'Move topic').click();
+    await flush(page);
+
+    const kinds = page.requests
+      .filter((r) => r.method === 'DELETE' || r.path.endsWith('/move'))
+      .map((r) => r.method);
+    expect(kinds).toEqual(['DELETE', 'POST']);
+    const moved = page.requests.find((r) => r.path.endsWith('/move'))!;
+    const copy = page.server.meetingDesk
+      .list('planned')
+      .flatMap((m) => page.server.meetingDesk.get(m.id).topics)
+      .find((t) => t.title === TOPIC && t.carriedFrom !== null);
+    expect(moved).toBeDefined();
+    expect(copy?.notes).toEqual([]);
+    page.clock.advance(UNDO_MS);
+    await flush(page);
+    expect(page.requests.filter((r) => r.method === 'DELETE')).toHaveLength(1);
+  });
+
+  it('keeps Move topic off while the filter hides the chosen meeting', async () => {
+    const page = await open('/meetings', (server) => {
+      for (const day of [12, 13, 14, 15, 16])
+        server.meetingDesk.create('alex@example.com', {
+          title: `Workshop ${day}`,
+          startsAt: `2026-10-${day}T14:00:00.000Z`,
+        });
+    });
+    const TOPIC = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, TOPIC), '⋯').click();
+    await flush(page);
+    buttonNamed(
+      card(page.root, TOPIC).querySelector('[role="menu"]')!,
+      'Move to…'
+    ).click();
+    await flush(page);
+    expect(buttonNamed(dialog(), 'Move topic').disabled).toBe(false);
+    type(dialog().querySelector('#move-filter'), 'workshop 14');
+    await flush(page);
+    expect(
+      dialog().querySelectorAll('input[name="move-to"]:checked')
+    ).toHaveLength(0);
+    expect(buttonNamed(dialog(), 'Move topic').disabled).toBe(true);
+    dialog().querySelector<HTMLInputElement>('input[name="move-to"]')!.click();
+    await flush(page);
+    expect(buttonNamed(dialog(), 'Move topic').disabled).toBe(false);
+  });
+
   it("sets a one-off meeting's own Jira project when it is planned, and changes it after it ended", async () => {
     const page = await open('/meetings');
     buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
@@ -940,6 +999,13 @@ describe('Meetings on the mock backend', () => {
     const options = [...where.options].map((o) => o.text.trim());
     expect(options.some((o) => o.includes('next in this series'))).toBe(false);
     expect(where.value).toBe(target.id);
+    expect(
+      dialog().querySelector<HTMLInputElement>('input[type="checkbox"]')!
+        .checked
+    ).toBe(false);
+    buttonNamed(dialog(), /^Cancel meeting$/);
+    dialog().querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await flush(page);
     buttonNamed(dialog(), /^Cancel meeting · move 1 topic$/).click();
     await flush(page);
 

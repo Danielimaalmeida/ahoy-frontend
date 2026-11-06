@@ -48,8 +48,8 @@ const STATUS_WORDS = {
  * The meeting open on the right of the Meetings page (boards `Meetings` and `MeetingNext`): its status, day and
  * stakeholders, the series' previous and next meetings, where its stories go in Jira (the series' target, or a one-off
  * meeting's own, which can be set also after it ended), Start, Mark done and Cancel (or End once it runs), the line that
- * adds a topic, the series' open actions and this meeting's decisions, and the topics with their notes. `/meetings` opens the meeting running now, else the
- * next planned one, else the latest that ended; `/meetings/:id` opens that one.
+ * adds a topic, the series' open actions and this meeting's decisions, and the topics with their notes. `/meetings`
+ * opens the meeting running now, else the next planned one, else the latest that ended; `/meetings/:id` opens that one.
  */
 @Component({
   selector: 'ah-meeting-view',

@@ -641,6 +641,8 @@ const MONTH_NAMES = [
 
 /** A labelled run of meetings in the left column, in the order it lists them. */
 export interface MeetingSection<T> {
+  /** Tells sections apart where labels can repeat (two series of one name). */
+  readonly key: string;
   readonly label: string;
   readonly meetings: readonly T[];
 }
@@ -661,7 +663,7 @@ export function upcomingByWeek<T extends MeetingLike>(
   now: Date
 ): MeetingSection<T>[] {
   const thisWeek = weekStart(now).getTime();
-  const sections: { label: string; meetings: T[] }[] = [];
+  const sections: { key: string; label: string; meetings: T[] }[] = [];
   for (const meeting of groupMeetings(meetings).next) {
     const at = new Date(meeting.startsAt);
     const week = weekStart(at);
@@ -676,7 +678,7 @@ export function upcomingByWeek<T extends MeetingLike>(
             : `Week of ${week.getDate()} ${MONTHS[week.getMonth()] ?? ''}`;
     const last = sections.at(-1);
     if (last?.label === label) last.meetings.push(meeting);
-    else sections.push({ label, meetings: [meeting] });
+    else sections.push({ key: label, label, meetings: [meeting] });
   }
   return sections;
 }
@@ -685,7 +687,7 @@ export function upcomingByWeek<T extends MeetingLike>(
 export function pastByMonth<T extends MeetingLike>(
   meetings: readonly T[]
 ): MeetingSection<T>[] {
-  const sections: { label: string; meetings: T[] }[] = [];
+  const sections: { key: string; label: string; meetings: T[] }[] = [];
   for (const meeting of groupMeetings(meetings).past) {
     const at = new Date(meeting.startsAt);
     const label = Number.isNaN(at.getTime())
@@ -693,7 +695,7 @@ export function pastByMonth<T extends MeetingLike>(
       : `${MONTH_NAMES[at.getMonth()] ?? ''} ${at.getFullYear()}`;
     const last = sections.at(-1);
     if (last?.label === label) last.meetings.push(meeting);
-    else sections.push({ label, meetings: [meeting] });
+    else sections.push({ key: label, label, meetings: [meeting] });
   }
   return sections;
 }
@@ -710,14 +712,21 @@ export interface NamedSeriesMeetingLike extends SeriesMeetingLike {
 export function bySeries<T extends NamedSeriesMeetingLike>(
   meetings: readonly T[]
 ): MeetingSection<T>[] {
-  const groups = new Map<string, { label: string; meetings: T[] }>();
+  const groups = new Map<
+    string,
+    { key: string; label: string; meetings: T[] }
+  >();
   for (const meeting of meetings) {
     const key = meeting.seriesId ?? '';
     const label =
       meeting.seriesId === null
         ? 'One-off meetings'
         : (meeting.seriesName ?? 'Series');
-    const group = groups.get(key) ?? { label, meetings: [] };
+    const group = groups.get(key) ?? {
+      key: meeting.seriesId ?? 'one-off',
+      label,
+      meetings: [],
+    };
     group.meetings.push(meeting);
     groups.set(key, group);
   }
@@ -731,6 +740,7 @@ export function bySeries<T extends NamedSeriesMeetingLike>(
     .map(([, group]) => group)
     .sort((a, b) => a.label.localeCompare(b.label));
   return [...named, ...(oneOff === undefined ? [] : [oneOff])].map((group) => ({
+    key: group.key,
     label: group.label,
     meetings: order(group),
   }));

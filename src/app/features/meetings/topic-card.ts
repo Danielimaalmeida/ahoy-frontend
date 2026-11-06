@@ -52,14 +52,14 @@ export const NOTE_MAX = 4000;
  * add a note that grows as it is written (Enter adds, Shift+Enter starts a new line). While it can change, it can go up
  * or down, and its `⋯` menu renames it, moves it to any meeting running or planned (Move to…) or removes it with its
  * notes (after a second click). A note is edited in place (Edit, or a double click): its text and what it is. A removed
- * note can be brought back with Undo for a few seconds. A moved topic is read-only and links to where it went. Notes are plain text; a note can
- * be a decision, an action (with an owner and a due day, ticked done also after the meeting ended) or a question,
- * chosen beside the line or typed as `/d`, `/a`, `/q` before the text. A question shows open or answered, with its
- * answers under it: Answer opens a line under it (also after the meeting ended), the first answer marks it answered,
- * and Reopen marks it open again keeping the answers. Images (PNG, JPEG, WebP, GIF) are pasted into the
- * line, dropped on the topic or chosen with Add image, and go with the next note; Add image beside a note adds to it. A topic
- * that was not moved can be turned into a user story (also after the meeting ended); its draft's state shows on a line
- * of its own, with the way to check it, and the Jira issue once created.
+ * note can be brought back with Undo for a few seconds. A moved topic is read-only and links to where it went. Notes
+ * are plain text; a note can be a decision, an action (with an owner and a due day, ticked done also after the meeting
+ * ended) or a question, chosen beside the line or typed as `/d`, `/a`, `/q` before the text. A question shows open or
+ * answered, with its answers under it: Answer opens a line under it (also after the meeting ended), the first answer
+ * marks it answered, and Reopen marks it open again keeping the answers. Images (PNG, JPEG, WebP, GIF) are pasted into
+ * the line, dropped on the topic or chosen with Add image, and go with the next note; Add image beside a note adds to
+ * it. A topic that was not moved can be turned into a user story (also after the meeting ended); its draft's state
+ * shows on a line of its own, with the way to check it, and the Jira issue once created.
  */
 @Component({
   selector: 'ah-topic-card',

@@ -773,6 +773,19 @@ describe('the left column and moving topics', () => {
     );
   });
 
+  it('keeps two series of the same name apart, by their ids', () => {
+    const sections = bySeries([
+      { ...at('a', 'planned', local(9)), seriesName: 'Weekly sync' },
+      { ...at('b', 'planned', local(10), 's2'), seriesName: 'Weekly sync' },
+      at('c', 'planned', local(11), null),
+    ]);
+    expect(sections.map((s) => [s.key, s.label])).toEqual([
+      ['s1', 'Weekly sync'],
+      ['s2', 'Weekly sync'],
+      ['one-off', 'One-off meetings'],
+    ]);
+  });
+
   it("offers every other open meeting to move a topic to, the series' next one first", () => {
     const from = at('from', 'in_progress', local(7));
     const targets = moveTargets(from, [
