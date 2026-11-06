@@ -1660,6 +1660,10 @@ export const isDefectSettingsPage = guard<DefectSettingsPage>(
       watchOn: flag,
       defectsJql: nullable(nonEmptyText),
       priorities: arrayOf(nonEmptyText),
+      autoStart: flag,
+      budgetNanoAiu: nullable(positive),
+      maxStartsPerDay: wholeNumber('a count of starts', 1),
+      maxActive: wholeNumber('a count of voyages', 1),
       version: nullable(wholeNumber('a version', 1)),
       updatedBy: nullable(actor),
       updatedByName: nullable(text),
@@ -1692,6 +1696,14 @@ const defect = shape<Defect>({
       phase: nullable(text),
     })
   ),
+  started: nullable(
+    shape<NonNullable<Defect['started']>>({
+      by: actor,
+      byName: nullable(text),
+      at: timestamp,
+    })
+  ),
+  startError: nullable(text),
 });
 
 /** One defect, as `ignoreDefect` and `unignoreDefect` answer it. */

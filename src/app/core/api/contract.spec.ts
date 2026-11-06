@@ -24,6 +24,7 @@ import updateDefectSettings from '@testing/fixtures/updateDefectSettings.json';
 import listDefects from '@testing/fixtures/listDefects.json';
 import ignoreDefect from '@testing/fixtures/ignoreDefect.json';
 import unignoreDefect from '@testing/fixtures/unignoreDefect.json';
+import startDefect from '@testing/fixtures/startDefect.json';
 import addCrewMember from '@testing/fixtures/addCrewMember.json';
 import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
 import addSonarRepository from '@testing/fixtures/addSonarRepository.json';
@@ -277,6 +278,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['listDefects', listDefects],
   ['ignoreDefect', ignoreDefect],
   ['unignoreDefect', unignoreDefect],
+  ['startDefect', startDefect],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -327,7 +329,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      123
+      124
     );
   });
 

@@ -1,14 +1,27 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-05 (the running indicator on the voyage page, frontend only; tested on the mock backend, and seen in
-Chromium from the rendered test DOM, only). One page: replace it,
+Updated 2026-11-06 (defects started by Ahoy: Try to fix and automatic starts; tested offline with fakes only). One page: replace it,
 do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
 The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
 kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/defects-without-repositories`, 2026-11-05, agreed with the user on 2026-11-05):** Team settings
+- **This branch (`feat/defect-auto-start`, 2026-11-06, asked for by the user on 2026-11-06):** Ahoy starts defects.
+  Backlog › Defects has **Try to fix** on each defect with no voyage that nobody ignored and whose key may be a
+  voyage's (`try-to-fix-dialog.ts`): it
+  asks for the voyage's AIU cap, starting at Team settings › Defects' cap per defect, calls `startDefect` and opens the
+  voyage; a refusal (a voyage started first, a defect the watch no longer lists) says so, and closing reads the list
+  again. Each row says who started its voyage ("Started by Ahoy" for the watch's own starts) or why the watch could
+  not, and a banner says when the watch starts nothing by itself. Team settings › Defects adds **Automatic starts**
+  (on/off), **AIU cap per defect** (at most 200 AIU, required while on), **Starts per day** and **Open voyages at
+  once**; turning the starts on, or raising the cap or the starts per day while on, shows the most it may spend a day
+  and asks for a yes, sent as `confirmSpend` (as the API's `spendsMore` decides). The log and every "by" read
+  `ahoy-defect-watch` as Ahoy. The side
+  navigation says "Fixing" while it starts defects. The contract is `ahoy-hosted`'s `feat/defect-auto-start`
+  (migration 0039), which deploys with this branch. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite
+  (201 files, 3,420 tests), `ng build`, typecheck, lint and format pass; e2e was not run.
+- **Merged before (`feat/defects-without-repositories`, 2026-11-05, agreed with the user on 2026-11-05):** Team settings
   › Defects has no component map any more, and a defect no longer shows or needs a repository: the planner finds the
   repositories from the content repository's routing and the code (`ahoy-hosted` D21, its
   `feat/defects-without-repositories`, migration 0038). The section keeps the watch, the query with Preview and the

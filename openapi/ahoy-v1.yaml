@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 7e13528dd90b746451189953af20de90acff5b5e
+# Commit: 8449452c15228dda0050cef446cf609f37a4a783
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2913,10 +2913,11 @@ paths:
       description: |
         Anyone allowed into Ahoy. While Team settings › Defects turns the watch on, the reconciler reads the defects
         query every 15 minutes with the team settings' Jira and fixed rules judge each defect: `can_try` (with what
-        made it fit and the one repository that would fix it) or `out` (with every rule it failed). `lastPass` says
-        when Jira was last read and how many defects matched, or why Jira could not be read. A defect the query no
-        longer matches leaves the list. `voyage` is the story of the same key, if one was started. Nothing here
-        starts a story. 0 AIU.
+        made it fit) or `out` (with every rule it failed). `lastPass` says when Jira was last read and how many
+        defects matched, or why Jira could not be read. A defect the query no longer matches leaves the list.
+        `voyage` is the story of the same key, if one was started; `started` says who started it (a person with
+        `startDefect`, or `ahoy-defect-watch` when the settings' automatic starts are on), and `startError` why the
+        watch could not. Reading the list is 0 AIU.
       responses:
         '200':
           description: The open defects, the latest seen first.
@@ -2951,6 +2952,36 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /defects/{key}/start:
+    parameters:
+      - $ref: '#/components/parameters/JiraIssueKey'
+    post:
+      operationId: startDefect
+      tags: [jira]
+      summary: Try to fix a defect - start its story now.
+      description: |
+        Anyone allowed into Ahoy. Starts the story of the defect's key as `startStory` does, owned by the person, with
+        the defect's summary as its title and `budgetNanoAiu` as its AIU cap, else Team settings › Defects' cap per
+        defect (`400` when neither is set). Any defect the watch lists may be started whatever its triage, but not an
+        ignored one (`409 invalid_state`) nor one whose key a story cannot have. `404` for a defect the watch does not
+        list, `409 story_exists` when the story exists. The plan and the delivery still wait for a person. Writes
+        nothing to Jira.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartDefectRequest' }
+      responses:
+        '201':
+          description: The story, started.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Story' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /defects/{key}/unignore:
     parameters:
       - $ref: '#/components/parameters/JiraIssueKey'
@@ -2973,7 +3004,7 @@ paths:
     get:
       operationId: getDefectSettings
       tags: [settings]
-      summary: The defect watch's settings - whether it is on, its query and the priorities tried.
+      summary: The defect watch's settings - whether it is on, its query, the priorities tried and its automatic starts.
       description: |
         Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). The reconciler reads a change on
         its next pass, without a restart. The query can be previewed with `POST /settings/jira/backlog-preview`. 0 AIU.
@@ -2988,12 +3019,14 @@ paths:
     patch:
       operationId: updateDefectSettings
       tags: [settings]
-      summary: Turn the defect watch on or off, or change its query or priorities.
+      summary: Turn the defect watch on or off, or change its query, priorities or automatic starts.
       description: |
         Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no
-        confirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). `version` is
-        required once the settings are saved, and absent before (`409 stale_version`). Every change is in
-        `settings_events` (`defect_settings.updated`).
+        confirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). Automatic starts
+        spend AIU without a person starting each story: turning them on needs an AIU cap per defect, and turning them
+        on (or the watch, with them on) or raising the cap per defect or the starts per day while they are on needs
+        `confirmSpend: true` (`400`), which the settings event records. `version` is required once the settings are saved, and absent before
+        (`409 stale_version`). Every change is in `settings_events` (`defect_settings.updated`).
       requestBody:
         required: true
         content:
@@ -7065,6 +7098,10 @@ components:
           watchOn,
           defectsJql,
           priorities,
+          autoStart,
+          budgetNanoAiu,
+          maxStartsPerDay,
+          maxActive,
           version,
           updatedBy,
           updatedByName,
@@ -7082,6 +7119,28 @@ components:
           maxItems: 20
           items: { type: string, minLength: 1, maxLength: 60 }
           description: 'The Jira priorities a defect may have to be tried; empty: any.'
+        autoStart:
+          type: boolean
+          description: >-
+            Whether the watch starts a story for each defect Ahoy can try by itself, after each pass, the oldest seen
+            first, under the caps below (default false). Both human gates stay.
+        budgetNanoAiu:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 200000000000
+          description: 'The AIU cap of each story the watch starts, and of a Try to fix that gives none.'
+        maxStartsPerDay:
+          {
+            type: integer,
+            minimum: 1,
+            maximum: 20,
+            description: 'The most stories the watch starts in 24 hours.',
+          }
+        maxActive:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: 'The most stories the watch started that may be open at once (not done, not cancelled).'
         version:
           {
             type: [integer, 'null'],
@@ -7103,6 +7162,16 @@ components:
           type: array
           maxItems: 20
           items: { type: string, minLength: 1, maxLength: 60 }
+        autoStart: { type: boolean }
+        budgetNanoAiu:
+          { type: [integer, 'null'], minimum: 1, maximum: 200000000000 }
+        maxStartsPerDay: { type: integer, minimum: 1, maximum: 20 }
+        maxActive: { type: integer, minimum: 1, maximum: 20 }
+        confirmSpend:
+          type: boolean
+          description: >-
+            Must be true when the change turns automatic starts on, or raises the cap per defect or the starts per day
+            while they are on: each lets Ahoy spend more AIU by itself.
     DefectList:
       type: object
       additionalProperties: false
@@ -7142,6 +7211,8 @@ components:
           lastSeenAt,
           ignored,
           voyage,
+          started,
+          startError,
         ]
       properties:
         key: { $ref: '#/components/schemas/JiraIssueKey' }
@@ -7179,6 +7250,25 @@ components:
               properties:
                 status: { type: string }
                 phase: { type: [string, 'null'] }
+        started:
+          description: "Who started the defect's story and when: a person, or ahoy-defect-watch."
+          oneOf:
+            - { type: 'null' }
+            - type: object
+              additionalProperties: false
+              required: [by, byName, at]
+              properties:
+                by: { type: string }
+                byName: { type: [string, 'null'] }
+                at: { type: string, format: date-time }
+        startError:
+          type: [string, 'null']
+          description: "Why the watch could not start the defect's story; it tries that defect again a day later."
+    StartDefectRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        budgetNanoAiu: { type: integer, minimum: 1, maximum: 200000000000 }
     IgnoreDefectRequest:
       type: object
       additionalProperties: false

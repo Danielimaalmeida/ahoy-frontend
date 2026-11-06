@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiClient } from '@core/api/api-client';
 import { isInvalidState, isNotFound, type ApiError } from '@core/api/api-error';
 import {
@@ -9,7 +9,12 @@ import {
   type StoryStatus,
 } from '@core/api/types';
 import { techLine } from '@core/commands/command-error';
-import { defectTriageView, defectsLabel } from '@domain/defects';
+import {
+  canTryToFix,
+  defectStartLine,
+  defectTriageView,
+  defectsLabel,
+} from '@domain/defects';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
@@ -18,6 +23,7 @@ import { Skeleton } from '@ui/skeleton/skeleton';
 import { StatusBadge } from '@ui/status-badge/status-badge';
 import { Api, Key, Nowrap, Table } from '@ui/table/table';
 import { ToastService } from '@ui/toast/toast';
+import { TryToFixDialogs } from './try-to-fix-dialog';
 
 /** What the list holds: being read, read, or why it could not be. */
 type ListState =
@@ -27,8 +33,9 @@ type ListState =
 
 /**
  * Backlog › Defects (`ahoy-hosted` design §5 "Defect watch"): the open defects the watch read from Jira on its last
- * pass, each with its triage by fixed rules (0 AIU) and its voyage if it has one. A person may ignore a defect, which
- * writes nothing to Jira, and undo it. Nothing here starts a voyage.
+ * pass, each with its triage by fixed rules (0 AIU), its voyage if it has one and who started it (a person, or the
+ * watch itself when Team settings › Defects turns automatic starts on). A person may Try to fix a defect, which starts
+ * its voyage, or ignore it, which writes nothing to Jira, and undo that.
  */
 @Component({
   selector: 'ah-backlog-defects',
@@ -73,6 +80,13 @@ type ListState =
     .defects__actions > * + * {
       margin-left: 6px;
     }
+    .defects__failed {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--danger-text);
+      white-space: normal;
+    }
   `,
   template: `
     @switch (state().kind) {
@@ -114,15 +128,28 @@ type ListState =
                 The list keeps what it last read.
               }
             </ah-banner>
-          } @else if (list.lastPass?.error; as error) {
-            <ah-banner
-              variant="notice"
-              heading="Could not read Jira on the last check"
-              [tech]="error"
-            >
-              The list keeps what it last read; the watch tries again in 15
-              minutes.
-            </ah-banner>
+          } @else {
+            @if (list.lastPass?.error; as error) {
+              <ah-banner
+                variant="notice"
+                heading="Could not read Jira on the last check"
+                [tech]="error"
+              >
+                The list keeps what it last read; the watch tries again in 15
+                minutes.
+              </ah-banner>
+            }
+            @if (autoStart() === false) {
+              <ah-banner
+                variant="info"
+                heading="Ahoy starts no defect by itself"
+                announce="off"
+              >
+                Use Try to fix to start one, or ask an admin to turn on
+                automatic starts in
+                <a routerLink="/settings/defects">Team settings › Defects</a>.
+              </ah-banner>
+            }
           }
           @if (actionError(); as failure) {
             <ah-banner
@@ -238,6 +265,14 @@ type ListState =
                             >Not started</span
                           >
                         }
+                        @if (startLine(defect); as line) {
+                          <span
+                            class="defects__sub"
+                            [class.ah-muted]="!line.failed"
+                            [class.defects__failed]="line.failed"
+                            >{{ line.text }}</span
+                          >
+                        }
                       </td>
                       <td ahNowrap class="defects__actions">
                         @if (defect.voyage) {
@@ -259,6 +294,18 @@ type ListState =
                             {{ busy() === defect.key ? 'Undoing…' : 'Undo' }}
                           </button>
                         } @else {
+                          @if (tryable(defect)) {
+                            <button
+                              ahButton="soft"
+                              size="sm"
+                              type="button"
+                              [disabled]="busy() !== null"
+                              [attr.aria-label]="'Try to fix ' + defect.key"
+                              (click)="tryToFix(defect)"
+                            >
+                              Try to fix
+                            </button>
+                          }
                           <button
                             ahButton="ghost"
                             size="sm"
@@ -285,6 +332,17 @@ type ListState =
 export class BacklogDefects {
   private readonly api = inject(ApiClient);
   private readonly toasts = inject(ToastService);
+  private readonly tryDialogs = inject(TryToFixDialogs);
+  private readonly router = inject(Router);
+  /** Team settings › Defects as read with the list: the cap Try to fix starts at, and whether the watch starts any. */
+  private readonly settings = signal<{
+    readonly autoStart: boolean;
+    readonly budgetNanoAiu: number | null;
+  } | null>(null);
+  /** Whether the watch starts defects by itself; null while the settings are unknown. */
+  protected readonly autoStart = computed(
+    () => this.settings()?.autoStart ?? null
+  );
 
   protected readonly state = signal<ListState>({ kind: 'loading' });
   protected readonly list = computed(() => {
@@ -307,14 +365,31 @@ export class BacklogDefects {
     void this.load();
   }
 
-  /** Reads the list again. */
+  /** Reads the list again, and the settings beside it: each shows as soon as it is read. */
   async load(): Promise<void> {
     if (this.state().kind !== 'ready') this.state.set({ kind: 'loading' });
+    await Promise.all([this.loadList(), this.loadSettings()]);
+  }
+
+  private async loadList(): Promise<void> {
     const result = await this.api.listDefects();
     this.state.set(
       result.ok
         ? { kind: 'ready', list: result.value }
         : { kind: 'failed', error: result.error }
+    );
+  }
+
+  /** Without the settings the tab still works: Try to fix asks for a cap, and no banner says what the watch starts. */
+  private async loadSettings(): Promise<void> {
+    const settings = await this.api.getDefectSettings();
+    this.settings.set(
+      settings.ok
+        ? {
+            autoStart: settings.value.defects.autoStart,
+            budgetNanoAiu: settings.value.defects.budgetNanoAiu,
+          }
+        : null
     );
   }
 
@@ -333,6 +408,31 @@ export class BacklogDefects {
   /** The voyage's status as the badge knows it, or null for a word this version does not. */
   protected storyStatus(status: string): StoryStatus | null {
     return STORY_STATUSES.find((s) => s === status) ?? null;
+  }
+
+  protected startLine(defect: Defect) {
+    return defectStartLine(defect);
+  }
+
+  protected tryable(defect: Defect): boolean {
+    return canTryToFix(defect);
+  }
+
+  /**
+   * Try to fix: asks for the voyage's AIU cap, starts it, and opens it. Closed without a voyage, the list is read
+   * again: the dialog may have been refused because someone, or the watch, got there first.
+   */
+  protected tryToFix(defect: Defect): void {
+    if (this.busy() !== null) return;
+    const ref = this.tryDialogs.open({
+      key: defect.key,
+      summary: defect.summary,
+      defaultCapNanoAiu: this.settings()?.budgetNanoAiu ?? null,
+    });
+    ref.closed.subscribe((story) => {
+      if (story === undefined) void this.load();
+      else void this.router.navigate(['/voyages', story.key]);
+    });
   }
 
   /** Marks the defect as one Ahoy never tries. */
