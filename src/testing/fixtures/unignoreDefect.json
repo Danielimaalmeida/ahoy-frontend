@@ -9,5 +9,7 @@
   "firstSeenAt": "2026-11-04T08:00:00.000Z",
   "lastSeenAt": "2026-11-04T10:58:00.000Z",
   "ignored": null,
-  "voyage": null
+  "voyage": null,
+  "started": null,
+  "startError": null
 }

@@ -38,6 +38,8 @@ export type FakeApiOps = Pick<
   | 'listDefects'
   | 'ignoreDefect'
   | 'unignoreDefect'
+  | 'startDefect'
+  | 'getDefectSettings'
 >;
 
 /** A call the fake saw. */
@@ -253,5 +255,15 @@ export class FakeApi implements FakeApiOps {
   unignoreDefect: FakeApiOps['unignoreDefect'] = (key) => {
     this.calls.push({ op: 'unignoreDefect', args: [key] });
     return this.handlers.unignoreDefect?.(key) ?? unreachable();
+  };
+
+  startDefect: FakeApiOps['startDefect'] = (key, budgetNanoAiu) => {
+    this.calls.push({ op: 'startDefect', args: [key, budgetNanoAiu] });
+    return this.handlers.startDefect?.(key, budgetNanoAiu) ?? unreachable();
+  };
+
+  getDefectSettings: FakeApiOps['getDefectSettings'] = () => {
+    this.calls.push({ op: 'getDefectSettings', args: [] });
+    return this.handlers.getDefectSettings?.() ?? unreachable();
   };
 }

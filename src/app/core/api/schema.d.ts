@@ -2350,10 +2350,11 @@ export interface paths {
      * The team's open defects as the defect watch last read them, each with its triage.
      * @description Anyone allowed into Ahoy. While Team settings › Defects turns the watch on, the reconciler reads the defects
      *     query every 15 minutes with the team settings' Jira and fixed rules judge each defect: `can_try` (with what
-     *     made it fit and the one repository that would fix it) or `out` (with every rule it failed). `lastPass` says
-     *     when Jira was last read and how many defects matched, or why Jira could not be read. A defect the query no
-     *     longer matches leaves the list. `voyage` is the story of the same key, if one was started. Nothing here
-     *     starts a story. 0 AIU.
+     *     made it fit) or `out` (with every rule it failed). `lastPass` says when Jira was last read and how many
+     *     defects matched, or why Jira could not be read. A defect the query no longer matches leaves the list.
+     *     `voyage` is the story of the same key, if one was started; `started` says who started it (a person with
+     *     `startDefect`, or `ahoy-defect-watch` when the settings' automatic starts are on), and `startError` why the
+     *     watch could not. Reading the list is 0 AIU.
      */
     readonly get: operations['listDefects'];
     readonly put?: never;
@@ -2381,6 +2382,33 @@ export interface paths {
      *     defect the watch has not seen, `409 invalid_state` when it is already ignored. Writes nothing to Jira.
      */
     readonly post: operations['ignoreDefect'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/defects/{key}/start': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Try to fix a defect - start its story now.
+     * @description Anyone allowed into Ahoy. Starts the story of the defect's key as `startStory` does, owned by the person, with
+     *     the defect's summary as its title and `budgetNanoAiu` as its AIU cap, else Team settings › Defects' cap per
+     *     defect (`400` when neither is set). Any defect the watch lists may be started whatever its triage, but not an
+     *     ignored one (`409 invalid_state`) nor one whose key a story cannot have. `404` for a defect the watch does not
+     *     list, `409 story_exists` when the story exists. The plan and the delivery still wait for a person. Writes
+     *     nothing to Jira.
+     */
+    readonly post: operations['startDefect'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -2417,7 +2445,7 @@ export interface paths {
       readonly cookie?: never;
     };
     /**
-     * The defect watch's settings - whether it is on, its query and the priorities tried.
+     * The defect watch's settings - whether it is on, its query, the priorities tried and its automatic starts.
      * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). The reconciler reads a change on
      *     its next pass, without a restart. The query can be previewed with `POST /settings/jira/backlog-preview`. 0 AIU.
      */
@@ -2428,11 +2456,12 @@ export interface paths {
     readonly options?: never;
     readonly head?: never;
     /**
-     * Turn the defect watch on or off, or change its query or priorities.
+     * Turn the defect watch on or off, or change its query, priorities or automatic starts.
      * @description Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no
-     *     confirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). `version` is
-     *     required once the settings are saved, and absent before (`409 stale_version`). Every change is in
-     *     `settings_events` (`defect_settings.updated`).
+     *     confirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). Automatic starts
+     *     spend AIU without a person starting each story: turning them on needs `confirmSpend: true` and an AIU cap
+     *     per defect (`400`). `version` is required once the settings are saved, and absent before
+     *     (`409 stale_version`). Every change is in `settings_events` (`defect_settings.updated`).
      */
     readonly patch: operations['updateDefectSettings'];
     readonly trace?: never;
@@ -4534,6 +4563,14 @@ export interface components {
       readonly defectsJql: string | null;
       /** @description The Jira priorities a defect may have to be tried; empty: any. */
       readonly priorities: readonly string[];
+      /** @description Whether the watch starts a story for each defect Ahoy can try by itself, after each pass, the oldest seen first, under the caps below (default false). Both human gates stay. */
+      readonly autoStart: boolean;
+      /** @description The AIU cap of each story the watch starts, and of a Try to fix that gives none. */
+      readonly budgetNanoAiu: number | null;
+      /** @description The most stories the watch starts in 24 hours. */
+      readonly maxStartsPerDay: number;
+      /** @description The most stories the watch started that may be open at once (not done, not cancelled). */
+      readonly maxActive: number;
       /** @description Null until an admin saves anything. */
       readonly version: number | null;
       readonly updatedBy: string | null;
@@ -4546,6 +4583,12 @@ export interface components {
       readonly watchOn?: boolean;
       readonly defectsJql?: string | null;
       readonly priorities?: readonly string[];
+      readonly autoStart?: boolean;
+      readonly budgetNanoAiu?: number | null;
+      readonly maxStartsPerDay?: number;
+      readonly maxActive?: number;
+      /** @description Must be true when the change turns automatic starts on, which spends AIU by itself. */
+      readonly confirmSpend?: boolean;
     };
     readonly DefectList: {
       readonly watchOn: boolean;
@@ -4586,6 +4629,18 @@ export interface components {
         readonly status: string;
         readonly phase: string | null;
       };
+      /** @description Who started the defect's story and when: a person, or ahoy-defect-watch. */
+      readonly started: null | {
+        readonly by: string;
+        readonly byName: string | null;
+        /** Format: date-time */
+        readonly at: string;
+      };
+      /** @description Why the watch could not start the defect's story; it does not try that defect again by itself. */
+      readonly startError: string | null;
+    };
+    readonly StartDefectRequest: {
+      readonly budgetNanoAiu?: number;
     };
     readonly IgnoreDefectRequest: {
       readonly reason?: string | null;
@@ -8241,6 +8296,37 @@ export interface operations {
         };
         content: {
           readonly 'application/json': components['schemas']['Defect'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly startDefect: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['StartDefectRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The story, started. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Story'];
         };
       };
       readonly 400: components['responses']['Problem'];

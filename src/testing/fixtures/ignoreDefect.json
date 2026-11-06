@@ -14,5 +14,7 @@
     "at": "2026-11-04T11:00:00.000Z",
     "reason": "Fixed by hand"
   },
-  "voyage": null
+  "voyage": null,
+  "started": null,
+  "startError": null
 }

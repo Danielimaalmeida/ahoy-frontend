@@ -1,5 +1,7 @@
 import {
+  dailySpendText,
   defectsStateLabel,
+  startCapOf,
   describeDefectEvent,
   prioritiesOf,
   prioritiesText,
@@ -16,6 +18,40 @@ describe('defectsStateLabel', () => {
       label: 'Off',
       off: true,
     });
+  });
+});
+
+describe('automatic starts in words', () => {
+  it('says Fixing when the watch starts defects by itself', () => {
+    expect(defectsStateLabel({ watchOn: true, autoStart: true }).label).toBe(
+      'Fixing'
+    );
+  });
+
+  it('reads a cap on starts from 1 to 20', () => {
+    expect(startCapOf(' 3 ')).toEqual({ value: 3 });
+    expect(startCapOf('0')).toEqual({
+      problem: 'Type a whole number from 1 to 20.',
+    });
+    expect(startCapOf('2.5')).toEqual({
+      problem: 'Type a whole number from 1 to 20.',
+    });
+  });
+
+  it('says the most a day may spend', () => {
+    expect(dailySpendText(12_500_000_000, 2)).toBe('25 AIU');
+    expect(dailySpendText(null, 2)).toBeNull();
+  });
+
+  it('names the automatic starts in the history', () => {
+    expect(
+      describeDefectEvent('defect_settings.updated', {
+        changes: {
+          autoStart: { from: false, to: true },
+          budgetNanoAiu: { from: null, to: 20_000_000_000 },
+        },
+      })
+    ).toBe('Automatic starts: on; AIU cap per defect: 20.00 AIU');
   });
 });
 

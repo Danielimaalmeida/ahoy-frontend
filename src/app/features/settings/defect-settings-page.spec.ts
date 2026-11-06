@@ -212,6 +212,63 @@ describe('the Defects section of Team settings', () => {
       'On',
       'project = PROJ AND issuetype = Defect AND status in (Open, Reopened)',
       'Highest, High, Medium',
+      'Off',
+      '20 AIU',
     ]);
+  });
+
+  it('turns automatic starts on only with an AIU cap and a yes to the spend, sending confirmSpend', async () => {
+    await answer({
+      ...updateDefectSettings,
+      defects: { ...updateDefectSettings.defects, budgetNanoAiu: null },
+    });
+    choose(field<HTMLSelectElement>(root, 'Automatic starts'), 'on');
+    await settle();
+    expect(text(root)).toContain(
+      'Automatic starts need an AIU cap per defect.'
+    );
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    type(field(root, 'AIU cap per defect'), '15');
+    type(field(root, 'Starts per day'), '3');
+    await settle();
+    expect(text(root)).toContain('Ahoy may spend up to 45 AIU a day by itself');
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    const yes = root.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    yes.click();
+    await settle();
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 1,
+      autoStart: true,
+      budgetNanoAiu: 15_000_000_000,
+      maxStartsPerDay: 3,
+      confirmSpend: true,
+    });
+    expect(
+      requestViolations('updateDefectSettings', patch?.request.body)
+    ).toEqual([]);
+    const on = {
+      ...updateDefectSettings,
+      defects: {
+        ...updateDefectSettings.defects,
+        autoStart: true,
+        budgetNanoAiu: 15_000_000_000,
+        maxStartsPerDay: 3,
+        version: 2,
+      },
+    };
+    await respond(patch!, on);
+    await answer(on);
+    expect(toasts()).toContain('Automatic starts on. Defect settings saved.');
+  });
+
+  it('refuses caps on starts it cannot keep', async () => {
+    await answer(updateDefectSettings);
+    type(field(root, 'Open voyages at once'), '21');
+    await settle();
+    expect(text(root)).toContain('Type a whole number from 1 to 20.');
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
   });
 });

@@ -1,10 +1,11 @@
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { fail, ok, type ApiResult } from '@core/api/api-error';
 import type {
   Defect,
   DefectList,
+  DefectSettingsPage,
   JiraSettingsPage,
   Refinement,
   Story,
@@ -16,7 +17,9 @@ import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
 import { FakeFetch } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
 import { StoriesStore } from '@core/stores/stories-store';
+import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import listDefects from '@testing/fixtures/listDefects.json';
+import startDefect from '@testing/fixtures/startDefect.json';
 import { CLOCK as UI_CLOCK } from '@ui/pipes/clock';
 import {
   BACKLOG_PORT,
@@ -1624,6 +1627,15 @@ describe('Docks', () => {
     const find = (key: string): Defect =>
       LIST.defects.find((d) => d.key === key)!;
 
+    /** The row's first button whose label starts with Ignore or Undo. */
+    const ignoreButton = (
+      f: ComponentFixture<Docks>,
+      key: string
+    ): HTMLButtonElement =>
+      [...cell(rowOf(f, key), 7).querySelectorAll('button')].find((b) =>
+        /^(Ignore|Undo) /.test(b.getAttribute('aria-label') ?? '')
+      )!;
+
     async function openDefects(
       list: DefectList = LIST
     ): Promise<ComponentFixture<Docks>> {
@@ -1660,7 +1672,8 @@ describe('Docks', () => {
         'Ignored by Sam Example'
       );
       expect(text(cell(rowOf(f, 'PROJ-190'), 7))).toBe('Undo');
-      expect(text(root(f))).not.toContain('Try to fix');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Try to fix Ignore');
+      expect(text(cell(rowOf(f, 'PROJ-212'), 6))).toContain('Started by Ahoy');
     });
 
     it('ignores a defect and undoes it, with no reason, writing the answer into its row', async () => {
@@ -1675,7 +1688,7 @@ describe('Docks', () => {
         },
       };
       api.on('ignoreDefect', () => Promise.resolve(ok(ignored)));
-      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      ignoreButton(f, 'PROJ-207').click();
       await refresh(f);
       expect(api.calls.filter((c) => c.op === 'ignoreDefect')).toEqual([
         { op: 'ignoreDefect', args: ['PROJ-207', null] },
@@ -1684,9 +1697,9 @@ describe('Docks', () => {
         'Ignored by Alex Example'
       );
       api.on('unignoreDefect', () => Promise.resolve(ok(find('PROJ-207'))));
-      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      ignoreButton(f, 'PROJ-207').click();
       await refresh(f);
-      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Ignore');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Try to fix Ignore');
     });
 
     it('says when ignoring fails, and keeps the row as it was', async () => {
@@ -1694,10 +1707,62 @@ describe('Docks', () => {
       api.on('ignoreDefect', () =>
         Promise.resolve(fail({ kind: 'network' as const }))
       );
-      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      ignoreButton(f, 'PROJ-207').click();
       await refresh(f);
       expect(text(root(f))).toContain('Could not ignore PROJ-207');
-      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Ignore');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Try to fix Ignore');
+    });
+
+    it("tries to fix a defect with the settings' cap, and opens its voyage", async () => {
+      api.on('getDefectSettings', () =>
+        Promise.resolve(
+          ok({
+            ...(getDefectSettings as DefectSettingsPage),
+            defects: {
+              ...(getDefectSettings as DefectSettingsPage).defects,
+              watchOn: true,
+              budgetNanoAiu: 20_000_000_000,
+            },
+          })
+        )
+      );
+      const f = await openDefects();
+      expect(text(root(f))).toContain('Ahoy starts no defect by itself');
+      api.on('startDefect', () => Promise.resolve(ok(startDefect as Story)));
+      const navigate = vi
+        .spyOn(TestBed.inject(Router), 'navigate')
+        .mockResolvedValue(true);
+      [...cell(rowOf(f, 'PROJ-207'), 7).querySelectorAll('button')]
+        .find((b) => b.textContent?.trim() === 'Try to fix')!
+        .click();
+      await refresh(f);
+      const dialog = document.querySelector('ah-try-to-fix-dialog')!;
+      expect(dialog.textContent).toContain('Try to fix PROJ-207?');
+      expect((dialog.querySelector('input') as HTMLInputElement).value).toBe(
+        '20'
+      );
+      [...dialog.querySelectorAll('button')]
+        .find((b) => b.textContent?.includes('up to 20 AIU'))!
+        .click();
+      await refresh(f);
+      expect(api.calls.filter((c) => c.op === 'startDefect')).toEqual([
+        { op: 'startDefect', args: ['PROJ-207', 20_000_000_000] },
+      ]);
+      expect(navigate).toHaveBeenCalledWith(['/voyages', 'PROJ-207']);
+    });
+
+    it('says why the watch could not start a defect', async () => {
+      const f = await openDefects({
+        ...LIST,
+        defects: LIST.defects.map((d) =>
+          d.key === 'PROJ-207'
+            ? { ...d, startError: 'Control repo commit is not usable' }
+            : d
+        ),
+      });
+      expect(text(cell(rowOf(f, 'PROJ-207'), 6))).toContain(
+        'Ahoy could not start it: Control repo commit is not usable'
+      );
     });
 
     it('says when the watch is off or the last check could not read Jira', async () => {
@@ -1763,7 +1828,7 @@ describe('Docks', () => {
           })
         )
       );
-      cell(rowOf(f, 'PROJ-207'), 7).querySelector('button')!.click();
+      ignoreButton(f, 'PROJ-207').click();
       await refresh(f);
       expect(text(root(f))).toContain('the list was read again');
       expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Undo');

@@ -8,7 +8,15 @@ import type {
   DefectSettingsChange,
   JiraBacklogPreview,
 } from '@core/api/types';
-import { prioritiesOf, prioritiesText } from '@domain/defect-settings';
+import { checkAiuLimit } from '@domain/aiu';
+import {
+  dailySpendText,
+  MAX_DEFECT_BUDGET_NANO_AIU,
+  prioritiesOf,
+  prioritiesText,
+  startCapOf,
+} from '@domain/defect-settings';
+import { formatCap } from '@ui/budget-meter/budget-meter';
 import { MAX_BACKLOG_JQL_CHARS } from '@domain/jira-settings';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -22,11 +30,18 @@ import { SECTION_STYLES } from './section-styles';
 import { settingsErrorView } from './settings-errors';
 import { SettingsHistory } from './settings-history';
 
-/** The form's value: the watch as 'on' or 'off', and the query and the priorities as typed. */
+/** The form's value: the watch and its automatic starts as 'on' or 'off', the rest as typed. */
 interface FormValue {
   readonly watch: 'on' | 'off';
   readonly jql: string;
   readonly priorities: string;
+  readonly auto: 'on' | 'off';
+  /** The AIU cap per defect, in AIU. */
+  readonly cap: string;
+  readonly perDay: string;
+  readonly active: string;
+  /** The admin's yes to the spend, asked when the change turns automatic starts on. */
+  readonly confirm: boolean;
 }
 
 /** The saved settings as the form shows them. */
@@ -35,6 +50,14 @@ function formValueOf(settings: DefectSettings): FormValue {
     watch: settings.watchOn ? 'on' : 'off',
     jql: settings.defectsJql ?? '',
     priorities: prioritiesText(settings.priorities),
+    auto: settings.autoStart ? 'on' : 'off',
+    cap:
+      settings.budgetNanoAiu === null
+        ? ''
+        : formatCap(settings.budgetNanoAiu, 9),
+    perDay: String(settings.maxStartsPerDay),
+    active: String(settings.maxActive),
+    confirm: false,
   };
 }
 
@@ -51,9 +74,11 @@ type PreviewState =
 
 /**
  * Team settings › Defects (`ahoy-hosted` design §5 "Defect watch"): whether the reconciler reads the team's defects
- * query and the priorities it tries. The watch only reads Jira and judges each defect by fixed rules, at 0 AIU: it
- * starts no voyage, so turning it on asks for no confirmation. No repository is set here: the planner finds them from
- * the content repository's routing and the code.
+ * query and the priorities it tries, and whether it starts the defects Ahoy can try by itself. The watch only reads
+ * Jira and judges each defect by fixed rules, at 0 AIU, so turning it on asks for no confirmation. Automatic starts
+ * spend AIU without a person starting each voyage: turning them on needs an AIU cap per defect and the admin's yes
+ * (`confirmSpend`). No repository is set here: the planner finds them from the content repository's routing and the
+ * code.
  */
 @Component({
   selector: 'ah-defect-settings-page',
@@ -119,15 +144,23 @@ type PreviewState =
         margin: 0;
         padding-left: 18px;
       }
+      .confirm {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        margin-top: 8px;
+        font-weight: 600;
+      }
     `,
   ],
   template: `
     <div class="head">
       <h2>Defects</h2>
       <span class="ah-muted"
-        >Which Jira defects Ahoy watches, and which it could try to fix. The
-        watch reads Jira every 15 minutes and lists them in the Backlog; it
-        starts no voyage and spends no AIU.</span
+        >Which Jira defects Ahoy watches, which it could try to fix, and whether
+        it starts them by itself. The watch reads Jira every 15 minutes and
+        lists them in the Backlog, spending no AIU; automatic starts spend AIU
+        under the caps set here.</span
       >
     </div>
 
@@ -166,7 +199,7 @@ type PreviewState =
           <ah-panel>
             <ah-panel-head
               heading="Defect watch"
-              subtitle="Read with the Jira connection of Team settings › Jira. A defect Ahoy could try says how to reproduce it and has a priority tried here; the planner finds its repositories."
+              subtitle="Read with the Jira connection of Team settings › Jira. A defect Ahoy could try says how to reproduce it and what should happen, and has a priority tried here; the planner finds its repositories."
             >
               @if (dirty()) {
                 <span ahPanelActions class="ah-tag ah-tag--outline"
@@ -250,6 +283,74 @@ type PreviewState =
                       [formControl]="form.controls.priorities"
                     />
                   </ah-field>
+                  <ah-field
+                    label="Automatic starts"
+                    hint="On: after each check, Ahoy starts a voyage for each defect it can try, the oldest first, under the caps below. The plan and the delivery still wait for a person."
+                  >
+                    <select ahInput [formControl]="form.controls.auto">
+                      <option value="off">Off</option>
+                      <option value="on">On</option>
+                    </select>
+                  </ah-field>
+                  <ah-field
+                    label="AIU cap per defect"
+                    unit="AIU"
+                    [optional]="value().auto === 'off'"
+                    hint="The budget of each voyage Ahoy starts, and where Try to fix starts. At most 200 AIU."
+                    [errorText]="capError() ?? ''"
+                  >
+                    <input
+                      ahInput
+                      inputmode="decimal"
+                      autocomplete="off"
+                      [formControl]="form.controls.cap"
+                    />
+                  </ah-field>
+                  <ah-field
+                    label="Starts per day"
+                    hint="The most voyages Ahoy starts by itself in any 24 hours."
+                    [errorText]="perDayError() ?? ''"
+                  >
+                    <input
+                      ahInput
+                      inputmode="numeric"
+                      autocomplete="off"
+                      [formControl]="form.controls.perDay"
+                    />
+                  </ah-field>
+                  <ah-field
+                    label="Open voyages at once"
+                    hint="The most voyages Ahoy started by itself that may be open together; done and cancelled ones don't count."
+                    [errorText]="activeError() ?? ''"
+                  >
+                    <input
+                      ahInput
+                      inputmode="numeric"
+                      autocomplete="off"
+                      [formControl]="form.controls.active"
+                    />
+                  </ah-field>
+                  @if (turningOn()) {
+                    <ah-banner
+                      variant="cost"
+                      [heading]="
+                        'Ahoy may spend up to ' +
+                        (dailySpend() ?? '…') +
+                        ' a day by itself'
+                      "
+                    >
+                      Each voyage it starts is capped at the AIU cap per defect,
+                      and it starts at most the starts per day.
+                      <label class="confirm">
+                        <input
+                          type="checkbox"
+                          [formControl]="form.controls.confirm"
+                        />
+                        Let Ahoy start voyages and spend AIU without a person
+                        starting each one.
+                      </label>
+                    </ah-banner>
+                  }
                 </div>
               } @else {
                 <dl>
@@ -270,6 +371,23 @@ type PreviewState =
                         ? 'Any'
                         : page.defects.priorities.join(', ')
                     }}
+                  </dd>
+                  <dt>Automatic starts</dt>
+                  <dd>
+                    @if (page.defects.autoStart) {
+                      On: at most {{ page.defects.maxStartsPerDay }} a day and
+                      {{ page.defects.maxActive }} open at once
+                    } @else {
+                      Off
+                    }
+                  </dd>
+                  <dt>AIU cap per defect</dt>
+                  <dd>
+                    @if (page.defects.budgetNanoAiu !== null) {
+                      {{ aiu(page.defects.budgetNanoAiu) }} AIU
+                    } @else {
+                      <span class="ah-muted">Not set</span>
+                    }
                   </dd>
                 </dl>
               }
@@ -330,6 +448,11 @@ export class DefectSettingsPage {
     watch: new FormControl<'on' | 'off'>('off', { nonNullable: true }),
     jql: new FormControl('', { nonNullable: true }),
     priorities: new FormControl('', { nonNullable: true }),
+    auto: new FormControl<'on' | 'off'>('off', { nonNullable: true }),
+    cap: new FormControl('', { nonNullable: true }),
+    perDay: new FormControl('2', { nonNullable: true }),
+    active: new FormControl('3', { nonNullable: true }),
+    confirm: new FormControl(false, { nonNullable: true }),
   });
   /** The form's whole value, disabled controls too, as a signal. */
   protected readonly value = toSignal(
@@ -342,16 +465,35 @@ export class DefectSettingsPage {
   private readonly prioritiesRead = computed(() =>
     prioritiesOf(this.value().priorities)
   );
+  /** The AIU cap as read from the form: nano-AIU or null (none), or why it is refused. */
+  private readonly capRead = computed(() =>
+    checkAiuLimit(this.value().cap, MAX_DEFECT_BUDGET_NANO_AIU)
+  );
+  private readonly perDayRead = computed(() => startCapOf(this.value().perDay));
+  private readonly activeRead = computed(() => startCapOf(this.value().active));
   /** What the form would save, or null while a field is refused. */
   private readonly typed = computed(() => {
     const value = this.value();
     const priorities = this.prioritiesRead();
-    if ('problem' in priorities) return null;
+    const cap = this.capRead();
+    const perDay = this.perDayRead();
+    const active = this.activeRead();
+    if (
+      'problem' in priorities ||
+      'error' in cap ||
+      'problem' in perDay ||
+      'problem' in active
+    )
+      return null;
     const jql = value.jql.trim();
     return {
       watchOn: value.watch === 'on',
       defectsJql: jql === '' ? null : jql,
       priorities: priorities.value,
+      autoStart: value.auto === 'on',
+      budgetNanoAiu: cap.cap,
+      maxStartsPerDay: perDay.value,
+      maxActive: active.value,
     };
   });
   /** What saving would change, field by field, or null while a field is refused. */
@@ -369,8 +511,54 @@ export class DefectSettingsPage {
       ...(!same(typed.priorities, saved.priorities)
         ? { priorities: [...typed.priorities] }
         : {}),
+      ...(typed.autoStart !== saved.autoStart
+        ? { autoStart: typed.autoStart }
+        : {}),
+      ...(typed.budgetNanoAiu !== saved.budgetNanoAiu
+        ? { budgetNanoAiu: typed.budgetNanoAiu }
+        : {}),
+      ...(typed.maxStartsPerDay !== saved.maxStartsPerDay
+        ? { maxStartsPerDay: typed.maxStartsPerDay }
+        : {}),
+      ...(typed.maxActive !== saved.maxActive
+        ? { maxActive: typed.maxActive }
+        : {}),
     };
   });
+  /** Whether saving would turn automatic starts on, which asks for the admin's yes to the spend. */
+  protected readonly turningOn = computed(
+    () => this.value().auto === 'on' && this.saved()?.autoStart === false
+  );
+  /** The most AIU automatic starts may spend in a day, as typed. */
+  protected readonly dailySpend = computed(() => {
+    const typed = this.typed();
+    return typed === null
+      ? null
+      : dailySpendText(typed.budgetNanoAiu, typed.maxStartsPerDay);
+  });
+  protected readonly capError = computed(() => {
+    const read = this.capRead();
+    if ('error' in read)
+      return read.error === 'maximum'
+        ? 'The cap may be at most 200 AIU.'
+        : read.error === 'positive'
+          ? 'The cap must be above 0 AIU.'
+          : 'Type an amount in AIU, such as 20 or 12.5.';
+    return this.value().auto === 'on' && read.cap === null
+      ? 'Automatic starts need an AIU cap per defect.'
+      : null;
+  });
+  protected readonly perDayError = computed(() => {
+    const read = this.perDayRead();
+    return 'problem' in read ? read.problem : null;
+  });
+  protected readonly activeError = computed(() => {
+    const read = this.activeRead();
+    return 'problem' in read ? read.problem : null;
+  });
+  protected readonly confirmMissing = computed(
+    () => this.turningOn() && !this.value().confirm
+  );
   /** Whether the settings as read differ from the saved ones: spacing alone is no change. A refused field is one. */
   protected readonly dirty = computed(() => {
     const saved = this.saved();
@@ -379,7 +567,12 @@ export class DefectSettingsPage {
     if (changes !== null) return Object.keys(changes).length > 0;
     const was = formValueOf(saved);
     const value = this.value();
-    return value.priorities.trim() !== was.priorities;
+    return (
+      value.priorities.trim() !== was.priorities ||
+      value.cap.trim() !== was.cap ||
+      value.perDay.trim() !== was.perDay ||
+      value.active.trim() !== was.active
+    );
   });
   protected readonly jqlError = computed(() =>
     this.value().watch === 'on' && this.value().jql.trim() === ''
@@ -391,7 +584,11 @@ export class DefectSettingsPage {
     return 'problem' in read ? read.problem : null;
   });
   protected readonly invalid = computed(
-    () => this.typed() === null || this.jqlError() !== null
+    () =>
+      this.typed() === null ||
+      this.jqlError() !== null ||
+      this.capError() !== null ||
+      this.confirmMissing()
   );
   protected readonly saving = signal(false);
   private readonly saveError = signal<ApiError | null>(null);
@@ -433,6 +630,11 @@ export class DefectSettingsPage {
       if (this.saving()) this.form.disable({ emitEvent: false });
       else this.form.enable({ emitEvent: false });
     });
+  }
+
+  /** An AIU amount as the page shows it: "20" or "12.5". */
+  protected aiu(nanoAiu: number): string {
+    return formatCap(nanoAiu, 9);
   }
 
   /** "12 issues match". */
@@ -481,6 +683,7 @@ export class DefectSettingsPage {
     const body: DefectSettingsChange = {
       ...(saved.version !== null ? { version: saved.version } : {}),
       ...changes,
+      ...(changes.autoStart === true ? { confirmSpend: true } : {}),
     };
     this.saving.set(true);
     this.saveError.set(null);
@@ -495,9 +698,11 @@ export class DefectSettingsPage {
     }
     this.show(result.value.defects);
     this.toasts.show(
-      typed.watchOn && !saved.watchOn
-        ? 'Watch on. Defect settings saved.'
-        : 'Defect settings saved.'
+      typed.autoStart && !saved.autoStart
+        ? 'Automatic starts on. Defect settings saved.'
+        : typed.watchOn && !saved.watchOn
+          ? 'Watch on. Defect settings saved.'
+          : 'Defect settings saved.'
     );
   }
 }

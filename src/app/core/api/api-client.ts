@@ -1722,6 +1722,19 @@ export class ApiClient {
     );
   }
 
+  /**
+   * Try to fix: starts the defect's voyage now, owned by the person, with `budgetNanoAiu` as its AIU cap, else Team
+   * settings › Defects' cap per defect. The plan and the delivery still wait for a person.
+   */
+  startDefect(key: string, budgetNanoAiu?: number): Promise<ApiResult<Story>> {
+    return this.post(
+      'startDefect',
+      `/defects/${segment(key)}/start`,
+      budgetNanoAiu === undefined ? {} : { budgetNanoAiu },
+      isStory
+    );
+  }
+
   /** Undoes a defect's Ignore. */
   unignoreDefect(key: string): Promise<ApiResult<Defect>> {
     return this.send(

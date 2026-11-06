@@ -20,7 +20,13 @@
       "voyage": {
         "status": "running",
         "phase": "implementation"
-      }
+      },
+      "started": {
+        "by": "ahoy-defect-watch",
+        "byName": null,
+        "at": "2026-11-04T10:46:00.000Z"
+      },
+      "startError": null
     },
     {
       "key": "PROJ-207",
@@ -33,7 +39,9 @@
       "firstSeenAt": "2026-11-04T08:00:00.000Z",
       "lastSeenAt": "2026-11-04T10:58:00.000Z",
       "ignored": null,
-      "voyage": null
+      "voyage": null,
+      "started": null,
+      "startError": null
     },
     {
       "key": "PROJ-201",
@@ -46,7 +54,9 @@
       "firstSeenAt": "2026-11-03T09:00:00.000Z",
       "lastSeenAt": "2026-11-04T10:58:00.000Z",
       "ignored": null,
-      "voyage": null
+      "voyage": null,
+      "started": null,
+      "startError": null
     },
     {
       "key": "PROJ-190",
@@ -64,7 +74,9 @@
         "at": "2026-11-02T14:00:00.000Z",
         "reason": "The copy is being rewritten"
       },
-      "voyage": null
+      "voyage": null,
+      "started": null,
+      "startError": null
     }
   ]
 }

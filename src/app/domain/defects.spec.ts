@@ -1,4 +1,9 @@
-import { defectTriageView, defectsLabel } from './defects';
+import {
+  canTryToFix,
+  defectStartLine,
+  defectTriageView,
+  defectsLabel,
+} from './defects';
 
 describe('defectTriageView', () => {
   const at = (
@@ -54,5 +59,49 @@ describe('defectsLabel', () => {
   it('counts defects', () => {
     expect(defectsLabel(1)).toBe('1 defect');
     expect(defectsLabel(0)).toBe('0 defects');
+  });
+});
+
+describe('defectStartLine', () => {
+  const base = { started: null, startError: null, voyage: null, ignored: null };
+
+  it('says the watch or a person started the voyage', () => {
+    expect(
+      defectStartLine({
+        ...base,
+        started: { by: 'ahoy-defect-watch', byName: null },
+      })
+    ).toEqual({ text: 'Started by Ahoy', failed: false });
+    expect(
+      defectStartLine({
+        ...base,
+        started: { by: 'sam@example.com', byName: 'Sam Example' },
+      })?.text
+    ).toBe('Started by Sam Example');
+  });
+
+  it('says why the watch could not start it, until a voyage exists', () => {
+    expect(defectStartLine({ ...base, startError: 'no such ref' })).toEqual({
+      text: 'Ahoy could not start it: no such ref',
+      failed: true,
+    });
+    expect(
+      defectStartLine({ ...base, startError: 'x', voyage: { status: 'ready' } })
+    ).toBeNull();
+    expect(defectStartLine(base)).toBeNull();
+  });
+});
+
+describe('canTryToFix', () => {
+  it('lets a person try a defect with no voyage that nobody ignored', () => {
+    const base = {
+      started: null,
+      startError: null,
+      voyage: null,
+      ignored: null,
+    };
+    expect(canTryToFix(base)).toBe(true);
+    expect(canTryToFix({ ...base, voyage: { status: 'ready' } })).toBe(false);
+    expect(canTryToFix({ ...base, ignored: { by: 'sam' } })).toBe(false);
   });
 });
