@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: e49f84a039ce66e6f94b15f41e212b8457165710
+# Commit: 1e3a328093271e905efdbf9dc1c28340bbef9813 (plus uncommitted changes in the source file)
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2483,6 +2483,78 @@ paths:
               schema: { $ref: '#/components/schemas/Me' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /me/copilot-token:
+    get:
+      operationId: getMyCopilotToken
+      tags: [settings]
+      summary: The signed-in person's own Copilot token, never in clear.
+      description: |
+        Each person's own (design D23, §5 "My Copilot token"): nobody else reads or changes it, admins included. The
+        token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) for the person's qnumber; only its last four characters come
+        back. A run the person starts reads it; without one, the run reads the cluster's `ahoy-copilot-<qnumber>`
+        Secret. `409 invalid_state` for a sign-in that is not a qnumber.
+      responses:
+        '200':
+          description: The person's token, if saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCopilotToken' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: putMyCopilotToken
+      tags: [settings]
+      summary: Save your Copilot token, the first or a new one.
+      description: |
+        Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else
+        `GH_HOST`) by Test and to your runs' pods. A new
+        token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CopilotTokenRequest' }
+      responses:
+        '200':
+          description: Your token, as saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCopilotToken' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteMyCopilotToken
+      tags: [settings]
+      summary: Remove your Copilot token; your runs read the cluster's Secret again, if there is one.
+      responses:
+        '200':
+          description: Your page, with no token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCopilotToken' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /me/copilot-token/test:
+    post:
+      operationId: testMyCopilotToken
+      tags: [settings]
+      summary: Ask GitHub who your token is, and keep the answer as the last test.
+      description: "`GET /user` on the Copilot host with your token. No Copilot request is made, so it spends nothing (0 AIU). GitHub's own text is never returned."
+      responses:
+        '200':
+          description: What GitHub answered.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CopilotTokenTest' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /settings/sonar:
     get:
       operationId: getSonarSettings
@@ -7476,6 +7548,59 @@ components:
         updatedBy: { type: [string, 'null'] }
         updatedByName: { type: [string, 'null'] }
         updatedAt: { type: [string, 'null'], format: date-time }
+    MyCopilotToken:
+      type: object
+      additionalProperties: false
+      required: [qnumber, secretsConfigured, token, tokenReadable]
+      properties:
+        qnumber:
+          {
+            type: string,
+            description: "The person's qnumber, lower case: the token is theirs alone.",
+          }
+        secretsConfigured:
+          {
+            type: boolean,
+            description: 'Whether the server has `AHOY_SECRETS_KEY`, without which no token can be saved.',
+          }
+        token:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [hint, savedAt, lastTest]
+              properties:
+                hint:
+                  {
+                    type: string,
+                    description: "The token's last four characters; empty for a short token.",
+                  }
+                savedAt: { type: string, format: date-time }
+                lastTest:
+                  oneOf:
+                    - type: 'null'
+                    - { $ref: '#/components/schemas/CopilotTokenTest' }
+        tokenReadable:
+          {
+            type: boolean,
+            description: "Whether the stored token opens with this server's key; false means it must be typed again.",
+          }
+    CopilotTokenTest:
+      type: object
+      additionalProperties: false
+      required: [result, detail, at]
+      properties:
+        result: { type: string, enum: [works, refused, unreachable] }
+        detail:
+          type: [string, 'null']
+          description: 'Who GitHub says the token is, the HTTP status it refused with, or why it could not be reached.'
+        at: { type: string, format: date-time }
+    CopilotTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token: { type: string, minLength: 1, maxLength: 255, writeOnly: true }
     FigmaTest:
       type: object
       additionalProperties: false
@@ -7747,13 +7872,12 @@ components:
               figma,
               defects,
               branch_releases,
+              copilot,
             ]
         group:
-          {
-            type: string,
-            enum: [installation, team],
-            description: 'Who fixes it: the chart, or an admin.',
-          }
+          type: string
+          enum: [installation, team, you]
+          description: 'Who fixes it: the chart, an admin, or the person reading the page (their own Copilot token).'
         title: { type: string }
         required: { type: boolean }
         state: { type: string, enum: [done, missing, attention, optional] }

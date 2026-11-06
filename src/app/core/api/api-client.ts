@@ -43,6 +43,8 @@ import {
   isMeetingSettingsPage,
   isPeoplePage,
   isSetup,
+  isMyCopilotToken,
+  isCopilotTokenTest,
   isBranchRelease,
   isBranchReleaseBatch,
   isBranchReleaseRepository,
@@ -130,6 +132,9 @@ import type {
   MeetingSettingsPage,
   PeoplePage,
   Setup,
+  MyCopilotToken,
+  CopilotTokenTest,
+  CopilotTokenRequest,
   PersonChange,
   BranchRelease,
   BranchReleaseRepository,
@@ -1801,6 +1806,47 @@ export class ApiClient {
       '/setup/phases/keep-defaults',
       null,
       isSetup
+    );
+  }
+
+  /** The person's own Copilot token, only as its last four characters; 409 for a sign-in without a qnumber. */
+  getMyCopilotToken(): Promise<ApiResult<MyCopilotToken>> {
+    return this.get('getMyCopilotToken', '/me/copilot-token', isMyCopilotToken);
+  }
+
+  /** Saves the person's Copilot token, the first or a new one; a new one clears the last test. */
+  putMyCopilotToken(
+    body: CopilotTokenRequest
+  ): Promise<ApiResult<MyCopilotToken>> {
+    return this.send(
+      'putMyCopilotToken',
+      isMyCopilotToken,
+      this.http.put<unknown>(this.url('/me/copilot-token'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Removes the person's Copilot token; their runs read the cluster's Secret again, if there is one. */
+  deleteMyCopilotToken(): Promise<ApiResult<MyCopilotToken>> {
+    return this.send(
+      'deleteMyCopilotToken',
+      isMyCopilotToken,
+      this.http.delete<unknown>(this.url('/me/copilot-token'), {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Asks GitHub who the person's token is (0 AIU), kept as the last test. */
+  testMyCopilotToken(): Promise<ApiResult<CopilotTokenTest>> {
+    return this.post(
+      'testMyCopilotToken',
+      '/me/copilot-token/test',
+      null,
+      isCopilotTokenTest
     );
   }
 

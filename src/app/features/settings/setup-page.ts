@@ -28,17 +28,18 @@ const MARKS: Readonly<
   optional: { mark: '○', label: 'Not set' },
 };
 
-/** What an admin's button on a team step says, by its state. */
+/** What the button on a team step (an admin's) or on the reader's own step says, by its state. */
 function actionLabel(step: SetupStep): string {
   if (step.state === 'done') return 'Open';
   if (step.state === 'optional') return 'Set';
   if (step.key === 'phases') return 'Review';
+  if (step.group === 'you') return 'Fix';
   return `Fix in ${step.title}`;
 }
 
 /**
  * Team settings › Setup (`ahoy-hosted` design D23, §5 "Setup"): what the installation and the team still need before
- * stories can run, in the order an admin sets them. The installation's steps are read-only here (the chart fixes them);
+ * stories can run, in the order an admin sets them, then the reader's own Copilot token. The installation's steps are read-only here (the chart fixes them);
  * each of the team's leads to the section that fixes it, and an admin may keep the phases' defaults from here. It saves
  * nothing else and spends nothing: every tick comes from the settings and from the checks the API already runs. 0 AIU.
  */
@@ -338,6 +339,45 @@ function actionLabel(step: SetupStep): string {
               </ul>
             </ah-panel-body>
           </ah-panel>
+
+          @if (you().length > 0) {
+            <ah-panel>
+              <ah-panel-head
+                heading="You"
+                subtitle="Your own, never required: only you set them."
+              />
+              <ah-panel-body>
+                <ul class="steps">
+                  @for (step of you(); track step.key) {
+                    <li class="step" [attr.data-step]="step.key">
+                      <span
+                        [class]="'mark mark--' + step.state"
+                        role="img"
+                        [attr.aria-label]="marks[step.state].label"
+                        >{{ marks[step.state].mark }}</span
+                      >
+                      <div class="what">
+                        <span class="title">{{ step.title }}</span>
+                        <span class="detail ah-muted">{{ step.detail }}</span>
+                      </div>
+                      @if (step.section !== null) {
+                        <div class="actions">
+                          <a
+                            [ahButton]="
+                              step.state === 'done' ? 'ghost' : 'default'
+                            "
+                            size="sm"
+                            [routerLink]="'/settings/' + step.section"
+                            >{{ action(step) }}</a
+                          >
+                        </div>
+                      }
+                    </li>
+                  }
+                </ul>
+              </ah-panel-body>
+            </ah-panel>
+          }
         </div>
         <aside class="side">
           <ah-panel>
@@ -377,6 +417,9 @@ export class SetupPage {
   );
   protected readonly team = computed(
     () => this.store.setup()?.steps.filter((s) => s.group === 'team') ?? []
+  );
+  protected readonly you = computed(
+    () => this.store.setup()?.steps.filter((s) => s.group === 'you') ?? []
   );
   protected readonly progress = computed(() => {
     const setup = this.store.setup();

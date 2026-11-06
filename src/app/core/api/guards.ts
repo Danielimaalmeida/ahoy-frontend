@@ -99,6 +99,10 @@ import {
   SETUP_STEP_GROUPS,
   SETUP_STEP_KEYS,
   SETUP_STEP_STATES,
+  COPILOT_TEST_RESULTS,
+  type CopilotTokenSaved,
+  type CopilotTokenTest,
+  type MyCopilotToken,
   type DeploymentPerson,
   BRANCH_RELEASE_STATUSES,
   type BranchRelease,
@@ -1821,6 +1825,35 @@ export const isSetup = guard<Setup>(
     requiredTotal: count,
     checkedAt: timestamp,
   })
+);
+
+const copilotTokenTest = shape<CopilotTokenTest>({
+  result: oneOf(COPILOT_TEST_RESULTS),
+  detail: nullable(text),
+  at: timestamp,
+});
+
+/** The person's own Copilot token, as `getMyCopilotToken`, `putMyCopilotToken` and `deleteMyCopilotToken` answer it. */
+export const isMyCopilotToken = guard<MyCopilotToken>(
+  'MyCopilotToken',
+  shape<MyCopilotToken>({
+    qnumber: nonEmptyText,
+    secretsConfigured: flag,
+    token: nullable(
+      shape<CopilotTokenSaved>({
+        hint: boundedText('at most four characters', 0, 4),
+        savedAt: timestamp,
+        lastTest: nullable(copilotTokenTest),
+      })
+    ),
+    tokenReadable: flag,
+  })
+);
+
+/** What a test of the person's Copilot token found, as `testMyCopilotToken` answers it. */
+export const isCopilotTokenTest = guard<CopilotTokenTest>(
+  'CopilotTokenTest',
+  copilotTokenTest
 );
 
 /** The meetings settings page, as `getMeetingSettings` and `updateMeetingSettings` answer it. */

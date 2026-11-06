@@ -6,8 +6,8 @@
 /** Where a step stands, as the API says it. */
 export type SetupStepState = 'done' | 'missing' | 'attention' | 'optional';
 
-/** Who fixes a step: the chart (installation) or an admin in Team settings (team). */
-export type SetupStepGroup = 'installation' | 'team';
+/** Who fixes a step: the chart (installation), an admin in Team settings (team), or the reader (you: their own token). */
+export type SetupStepGroup = 'installation' | 'team' | 'you';
 
 /** The fields of a step this module reads. */
 export interface SetupStepLike {
