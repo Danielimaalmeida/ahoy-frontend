@@ -1,0 +1,11 @@
+{
+  "canEdit": true,
+  "you": "q100001",
+  "everyoneAllowed": false,
+  "everyoneAdmin": false,
+  "deployment": [
+    { "qnumber": "q100001", "name": "Alex Example", "role": "admin" },
+    { "qnumber": "q100002", "name": null, "role": "member" }
+  ],
+  "members": []
+}

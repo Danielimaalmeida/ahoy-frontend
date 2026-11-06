@@ -179,6 +179,11 @@ export class SettingsShell {
       label: 'Meetings',
       state: () => this.summary.meetings(),
     },
+    {
+      path: 'people',
+      label: 'People',
+      state: () => this.summary.people(),
+    },
   ];
 
   constructor() {

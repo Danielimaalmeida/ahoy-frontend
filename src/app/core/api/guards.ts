@@ -48,6 +48,7 @@ import {
   TEAMS_CARD_RESULTS,
   MEETING_NOTE_IMAGE_TYPES,
   MEETING_NOTE_KINDS,
+  MEMBER_ROLES,
   MEETING_STATUSES,
   GRILL_CHOICES,
   MEETING_STORY_DRAFT_STATUSES,
@@ -91,6 +92,9 @@ import {
   type PrCommentSettingsPage,
   type MeetingSettings,
   type MeetingSettingsPage,
+  type Member,
+  type PeoplePage,
+  type DeploymentPerson,
   BRANCH_RELEASE_STATUSES,
   type BranchRelease,
   type BranchReleaseBatch,
@@ -1757,6 +1761,38 @@ export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
     }),
     repliesPostable: flag,
     maxCommentsPerRound: wholeNumber('a count of comments', 1),
+  })
+);
+
+const memberRole = oneOf(MEMBER_ROLES);
+
+/** The People settings page, as `getPeopleSettings`, `putPerson` and `removePerson` answer it. */
+export const isPeoplePage = guard<PeoplePage>(
+  'PeoplePage',
+  shape<PeoplePage>({
+    canEdit: flag,
+    you: actor,
+    everyoneAllowed: flag,
+    everyoneAdmin: flag,
+    deployment: arrayOf(
+      shape<DeploymentPerson>({
+        qnumber: actor,
+        name: nullable(text),
+        role: memberRole,
+      })
+    ),
+    members: arrayOf(
+      shape<Member>({
+        qnumber: actor,
+        name: nullable(text),
+        role: memberRole,
+        addedBy: actor,
+        addedByName: nullable(text),
+        addedAt: timestamp,
+        updatedBy: actor,
+        updatedAt: timestamp,
+      })
+    ),
   })
 );
 

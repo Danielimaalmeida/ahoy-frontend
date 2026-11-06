@@ -9,6 +9,8 @@ import deleteFigmaToken from '@testing/fixtures/deleteFigmaToken.json';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
+import getPeopleSettings from '@testing/fixtures/getPeopleSettings.json';
+import listPeopleSettingsEvents from '@testing/fixtures/listPeopleSettingsEvents.json';
 import listMeetingSettingsEvents from '@testing/fixtures/listMeetingSettingsEvents.json';
 import updateMeetingSettings from '@testing/fixtures/updateMeetingSettings.json';
 import getTeamsSettings from '@testing/fixtures/getTeamsSettings.json';
@@ -32,6 +34,7 @@ import { ApiClient } from './api-client';
 import {
   isAgentSettingsPage,
   isMeetingSettingsPage,
+  isPeoplePage,
   isPrCommentSettingsPage,
   isFigmaSettings,
   isFigmaSettingsPage,
@@ -73,6 +76,14 @@ describe("the Teams, Figma and Agents settings' guards", () => {
     expect(isPrCommentSettingsPage(updatePrCommentSettings)).toBe(true);
     expect(isMeetingSettingsPage(getMeetingSettings)).toBe(true);
     expect(isMeetingSettingsPage(updateMeetingSettings)).toBe(true);
+    expect(isPeoplePage(getPeopleSettings)).toBe(true);
+    expect(
+      isPeoplePage(
+        withField(getPeopleSettings, 'members', [
+          { ...getPeopleSettings.members[0], role: 'owner' },
+        ])
+      )
+    ).toBe(false);
     expect(
       isMeetingSettingsPage(
         withField(getMeetingSettings, 'meetings', {
@@ -95,6 +106,7 @@ describe("the Teams, Figma and Agents settings' guards", () => {
       listAgentSettingsEvents,
       listPrCommentSettingsEvents,
       listMeetingSettingsEvents,
+      listPeopleSettingsEvents,
     ])
       expect(isSettingsEventPage(page)).toBe(true);
   });

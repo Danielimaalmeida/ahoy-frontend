@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 842410e2142700cf80a51732b72c933b221502ba
+# Commit: 17e394530f50ae72ebb2c18ac1a058103f1797d9
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -3083,6 +3083,73 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /settings/people:
+    get:
+      operationId: getPeopleSettings
+      tags: [settings]
+      summary: Who may use Ahoy and who is an admin.
+      description: |
+        Anyone allowed into Ahoy reads it; only an admin changes it (`canEdit`). `deployment` lists the deployment's
+        own people (`AHOY_ALLOWED_QNUMBERS` and `AHOY_ADMIN_QNUMBERS`), which change only in the chart; `members` the
+        ones the team added. The API reads the members at most every 30 seconds, so a change reaches every replica
+        within that time. 0 AIU.
+      responses:
+        '200':
+          description: The people.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PeoplePage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /settings/people/{qnumber}:
+    parameters:
+      - name: qnumber
+        in: path
+        required: true
+        description: A qnumber, `q` then 1 to 62 letters or digits (case-insensitive).
+        schema: { type: string, minLength: 2, maxLength: 63 }
+    put:
+      operationId: putPerson
+      tags: [settings]
+      summary: Let someone use Ahoy, or change their role.
+      description: |
+        Admins only. Adds the qnumber with the role, or changes the role of a member already there. `400` for a value
+        that is not a qnumber; `409 invalid_state` for the person's own qnumber, for one of the deployment's own
+        people, and for a change that would leave Ahoy with no admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonChange' }
+      responses:
+        '200':
+          description: The people, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PeoplePage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: removePerson
+      tags: [settings]
+      summary: Stop someone using Ahoy.
+      description: |
+        Admins only. Removes a member; within 30 seconds every replica refuses them (`403`). `404` for a qnumber that
+        is not a member; `409 invalid_state` for the person's own qnumber, one of the deployment's own people, or the
+        last admin.
+      responses:
+        '200':
+          description: The people, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PeoplePage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /defects:
     get:
       operationId: listDefects
@@ -3379,6 +3446,7 @@ paths:
                   defects,
                   branch_releases,
                   meetings,
+                  people,
                 ],
             }
       responses:
@@ -7602,6 +7670,81 @@ components:
         updatedBy: { type: [string, 'null'] }
         updatedByName: { type: [string, 'null'] }
         updatedAt: { type: [string, 'null'], format: date-time }
+    MemberRole:
+      type: string
+      enum: [member, admin]
+      description: "`member` uses Ahoy; `admin` also changes the team's settings."
+    PeoplePage:
+      type: object
+      additionalProperties: false
+      required:
+        [canEdit, you, everyoneAllowed, everyoneAdmin, deployment, members]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        you:
+          {
+            type: string,
+            description: "The person's own qnumber, lower case: their row cannot be changed.",
+          }
+        everyoneAllowed:
+          type: boolean
+          description: 'True only under `AHOY_AUTH=dev` without `AHOY_ALLOWED_QNUMBERS`: everyone is let in.'
+        everyoneAdmin:
+          type: boolean
+          description: 'True only under `AHOY_AUTH=dev` without `AHOY_ADMIN_QNUMBERS`: everyone is an admin.'
+        deployment:
+          type: array
+          description: The deployment's own people, admins first; they change only in the chart.
+          items: { $ref: '#/components/schemas/DeploymentPerson' }
+        members:
+          type: array
+          description: The people the team added, by qnumber.
+          items: { $ref: '#/components/schemas/Member' }
+    DeploymentPerson:
+      type: object
+      additionalProperties: false
+      required: [qnumber, name, role]
+      properties:
+        qnumber: { type: string }
+        name: { type: [string, 'null'] }
+        role: { $ref: '#/components/schemas/MemberRole' }
+    Member:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          qnumber,
+          name,
+          role,
+          addedBy,
+          addedByName,
+          addedAt,
+          updatedBy,
+          updatedAt,
+        ]
+      properties:
+        qnumber: { type: string }
+        name:
+          {
+            type: [string, 'null'],
+            description: 'The name WebEAM gave, once the person has signed in.',
+          }
+        role: { $ref: '#/components/schemas/MemberRole' }
+        addedBy: { type: string }
+        addedByName: { type: [string, 'null'] }
+        addedAt: { type: string, format: date-time }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+    PersonChange:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role: { $ref: '#/components/schemas/MemberRole' }
     MeetingSettingsChange:
       type: object
       additionalProperties: false
