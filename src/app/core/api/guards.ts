@@ -94,6 +94,11 @@ import {
   type MeetingSettingsPage,
   type Member,
   type PeoplePage,
+  type Setup,
+  type SetupStep,
+  SETUP_STEP_GROUPS,
+  SETUP_STEP_KEYS,
+  SETUP_STEP_STATES,
   type DeploymentPerson,
   BRANCH_RELEASE_STATUSES,
   type BranchRelease,
@@ -1793,6 +1798,28 @@ export const isPeoplePage = guard<PeoplePage>(
         updatedAt: timestamp,
       })
     ),
+  })
+);
+
+/** The Setup page, as `getSetup` and `keepPhaseDefaults` answer it. */
+export const isSetup = guard<Setup>(
+  'Setup',
+  shape<Setup>({
+    canEdit: flag,
+    steps: arrayOf(
+      shape<SetupStep>({
+        key: oneOf(SETUP_STEP_KEYS),
+        group: oneOf(SETUP_STEP_GROUPS),
+        title: text,
+        required: flag,
+        state: oneOf(SETUP_STEP_STATES),
+        detail: text,
+        section: nullable(text),
+      })
+    ),
+    requiredDone: count,
+    requiredTotal: count,
+    checkedAt: timestamp,
   })
 );
 

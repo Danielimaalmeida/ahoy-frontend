@@ -1,0 +1,143 @@
+{
+  "canEdit": true,
+  "steps": [
+    {
+      "key": "database",
+      "group": "installation",
+      "title": "Database",
+      "required": true,
+      "state": "done",
+      "detail": "Reachable, with all 42 migrations applied.",
+      "section": null
+    },
+    {
+      "key": "content",
+      "group": "installation",
+      "title": "Content repository",
+      "required": true,
+      "state": "done",
+      "detail": "At 3fa023c, with 12 agent profiles.",
+      "section": null
+    },
+    {
+      "key": "secrets",
+      "group": "installation",
+      "title": "Secrets key",
+      "required": true,
+      "state": "done",
+      "detail": "AHOY_SECRETS_KEY is set, so tokens can be saved.",
+      "section": null
+    },
+    {
+      "key": "runs",
+      "group": "installation",
+      "title": "Runs",
+      "required": true,
+      "state": "done",
+      "detail": "Agents run with Kubernetes Jobs; live runs are allowed.",
+      "section": null
+    },
+    {
+      "key": "mcp",
+      "group": "installation",
+      "title": "MCP servers",
+      "required": false,
+      "state": "attention",
+      "detail": "The phases ask for Confluence, Jira: check that the MCP Secret has each. Ahoy cannot read it.",
+      "section": null
+    },
+    {
+      "key": "jira",
+      "group": "team",
+      "title": "Jira",
+      "required": true,
+      "state": "done",
+      "detail": "Connected to https://jira.example.com.",
+      "section": "jira"
+    },
+    {
+      "key": "people",
+      "group": "team",
+      "title": "People and admins",
+      "required": true,
+      "state": "done",
+      "detail": "6 people may use Ahoy, 2 admins.",
+      "section": "people"
+    },
+    {
+      "key": "agents",
+      "group": "team",
+      "title": "Agents",
+      "required": true,
+      "state": "attention",
+      "detail": "1 job names a profile the content repository no longer has: those runs are paused.",
+      "section": "agents"
+    },
+    {
+      "key": "phases",
+      "group": "team",
+      "title": "Phases",
+      "required": true,
+      "state": "missing",
+      "detail": "Nobody has reviewed the phases yet: save them, or keep the defaults.",
+      "section": "phases"
+    },
+    {
+      "key": "meetings",
+      "group": "team",
+      "title": "Meeting labels",
+      "required": false,
+      "state": "optional",
+      "detail": "Topics show “Us” and “Stakeholders”: name the two sides as your team says them.",
+      "section": "meetings"
+    },
+    {
+      "key": "teams",
+      "group": "team",
+      "title": "Teams channel",
+      "required": false,
+      "state": "optional",
+      "detail": "Crew cards at sprint start and on each change.",
+      "section": "teams"
+    },
+    {
+      "key": "sonar",
+      "group": "team",
+      "title": "SonarQube",
+      "required": false,
+      "state": "done",
+      "detail": "1 server, 2 repositories.",
+      "section": "sonar"
+    },
+    {
+      "key": "figma",
+      "group": "team",
+      "title": "Figma",
+      "required": false,
+      "state": "optional",
+      "detail": "Designs for frontend stories, read by the design phase.",
+      "section": "figma"
+    },
+    {
+      "key": "defects",
+      "group": "team",
+      "title": "Defect watch",
+      "required": false,
+      "state": "optional",
+      "detail": "Lists the team's defects and tries them.",
+      "section": "defects"
+    },
+    {
+      "key": "branch_releases",
+      "group": "team",
+      "title": "Branch releases",
+      "required": false,
+      "state": "optional",
+      "detail": "Deploys a work package's branch to TEST from the voyage.",
+      "section": "branch-releases"
+    }
+  ],
+  "requiredDone": 6,
+  "requiredTotal": 8,
+  "checkedAt": "2026-11-06T18:52:00.000Z"
+}

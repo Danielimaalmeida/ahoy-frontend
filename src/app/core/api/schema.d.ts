@@ -2503,6 +2503,52 @@ export interface paths {
     readonly patch: operations['updateMeetingSettings'];
     readonly trace?: never;
   };
+  readonly '/setup': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * What the installation and the team still need before stories can run.
+     * @description Anyone allowed into Ahoy. The installation's steps (fixed in the chart, read-only here), then the team's (fixed
+     *     in Team settings, the required ones first). Each says `done`, `missing`, `attention` or `optional`, one line,
+     *     and the settings section that fixes it. Until every required step is done the UI says Ahoy is not ready.
+     *     It saves nothing and spends nothing: every state comes from a settings row or a check the API already makes.
+     *     The MCP servers are not required: the API cannot read the MCP Secret, so the step lists what the phases ask
+     *     for. 0 AIU.
+     */
+    readonly get: operations['getSetup'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/setup/phases/keep-defaults': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Say the phases run on the defaults, so their Setup step is done.
+     * @description Admins only. Records `phase_settings.defaults_kept` in the phases' history, once; nothing changes once the
+     *     phases are saved or kept. The phases keep running on the deployment's defaults.
+     */
+    readonly post: operations['keepPhaseDefaults'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/settings/people': {
     readonly parameters: {
       readonly query?: never;
@@ -4919,6 +4965,47 @@ export interface components {
       readonly updatedByName: string | null;
       /** Format: date-time */
       readonly updatedAt: string | null;
+    };
+    readonly Setup: {
+      /** @description Whether the person is an admin, who may fix the team's steps. */
+      readonly canEdit: boolean;
+      /** @description The installation's steps, then the team's, in the order an admin sets them. */
+      readonly steps: readonly components['schemas']['SetupStep'][];
+      readonly requiredDone: number;
+      readonly requiredTotal: number;
+      /** Format: date-time */
+      readonly checkedAt: string;
+    };
+    readonly SetupStep: {
+      /** @enum {string} */
+      readonly key:
+        | 'database'
+        | 'content'
+        | 'secrets'
+        | 'runs'
+        | 'mcp'
+        | 'jira'
+        | 'people'
+        | 'agents'
+        | 'phases'
+        | 'meetings'
+        | 'teams'
+        | 'sonar'
+        | 'figma'
+        | 'defects'
+        | 'branch_releases';
+      /**
+       * @description Who fixes it: the chart, or an admin.
+       * @enum {string}
+       */
+      readonly group: 'installation' | 'team';
+      readonly title: string;
+      readonly required: boolean;
+      /** @enum {string} */
+      readonly state: 'done' | 'missing' | 'attention' | 'optional';
+      readonly detail: string;
+      /** @description The Team settings section that fixes it (its path, such as `branch-releases`); null for the chart. */
+      readonly section: string | null;
     };
     /**
      * @description `member` uses Ahoy; `admin` also changes the team's settings.
@@ -8855,6 +8942,50 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getSetup: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The steps. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Setup'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly keepPhaseDefaults: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The steps, with Phases done. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Setup'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly getPeopleSettings: {

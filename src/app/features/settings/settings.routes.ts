@@ -10,19 +10,26 @@ import { PhaseSettingsPage } from './phase-settings-page';
 import { PrCommentSettingsPage } from './pr-comment-settings-page';
 import { SettingsPage } from './settings-page';
 import { SettingsShell } from './settings-shell';
+import { SetupPage } from './setup-page';
 import { TeamsSettingsPage } from './teams-settings-page';
 
 /**
- * Team settings: SonarQube, Jira, the crew's Teams channel, Figma, the agents' jobs, the phases, pull request
- * comments, the defect watch, branch releases, the names of a meeting's two sides and who may use Ahoy, kept in the
- * database and changed by admins, one section per page. Reading and changing them is 0 AIU.
+ * Team settings: Setup first (what is still needed before stories run), then SonarQube, Jira, the crew's Teams
+ * channel, Figma, the agents' jobs, the phases, pull request comments, the defect watch, branch releases, the names of a
+ * meeting's two sides and who may use Ahoy, kept in the database and changed by admins, one section per page. Reading
+ * and changing them is 0 AIU.
  */
 export const SETTINGS_ROUTES: Routes = [
   {
     path: '',
     component: SettingsShell,
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'sonar' },
+      { path: '', pathMatch: 'full', redirectTo: 'setup' },
+      {
+        path: 'setup',
+        title: 'Setup · Team settings · Ahoy',
+        component: SetupPage,
+      },
       {
         path: 'sonar',
         title: 'SonarQube · Team settings · Ahoy',

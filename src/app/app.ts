@@ -20,9 +20,12 @@ import { initialsOf } from '@core/auth/current-user';
 import { CLOCK as CORE_CLOCK, type Timer } from '@core/realtime/clock';
 import { EventBus } from '@core/realtime/event-bus';
 import type { StreamStatus } from '@core/realtime/event-stream-client';
+import { SetupStore } from '@core/stores/setup-store';
 import { StoriesStore } from '@core/stores/stories-store';
+import { setupBannerText, setupPercent } from '@domain/setup';
 import { AccessDenied } from '@ui/access-denied/access-denied';
 import { CLOCK as UI_CLOCK, type Clock } from '@ui/pipes/clock';
+import { SetupBanner } from '@ui/setup-banner/setup-banner';
 import { ThemeService } from '@ui/theme/theme.service';
 import { ToastHost } from '@ui/toast/toast';
 import { TopBar, type LiveState, type TopBarUser } from '@ui/top-bar/top-bar';
@@ -83,15 +86,16 @@ function isVoyagesList(tree: UrlTree): boolean {
 
 /**
  * The shell: the top bar on every screen (the count of voyages that need a person, the Live indicator, who is signed
- * in, and the search that leads to `/voyages?q=`), the page in one `main`, and the toasts. It keeps the voyage list
- * alive for the whole session, which holds the event stream open, so the count and the pages follow the stream.
+ * in, and the search that leads to `/voyages?q=`), the setup banner while Ahoy is not ready, the page in one `main`, and
+ * the toasts. It keeps the voyage list alive for the whole session, which holds the event stream open, so the count and
+ * the pages follow the stream.
  *
  * A user who may not use Ahoy ({@link AccessControl}) sees only "Access denied": no top bar, no page, and no call to the
  * API from the shell.
  */
 @Component({
   selector: 'ah-root',
-  imports: [AccessDenied, RouterOutlet, ToastHost, TopBar],
+  imports: [AccessDenied, RouterOutlet, SetupBanner, ToastHost, TopBar],
   providers: [{ provide: UI_CLOCK, useFactory: tickingClock }],
   styles: `
     :host {
@@ -130,6 +134,13 @@ function isVoyagesList(tree: UrlTree): boolean {
         (queryChange)="search($event)"
         (logout)="auth.logout()"
       />
+      @if (setupBanner(); as banner) {
+        <ah-setup-banner
+          [heading]="banner.heading"
+          [text]="banner.text"
+          [percent]="banner.percent"
+        />
+      }
       <main class="page"><router-outlet /></main>
       <ah-toast-host />
     }
@@ -137,6 +148,7 @@ function isVoyagesList(tree: UrlTree): boolean {
 })
 export class App {
   private readonly stories = inject(StoriesStore);
+  private readonly setup = inject(SetupStore);
   private readonly bus = inject(EventBus);
   private readonly router = inject(Router);
   private readonly clock = inject(CORE_CLOCK);
@@ -146,6 +158,15 @@ export class App {
 
   /** The text in the search box: that of the `?q=` of the page, if it has one. */
   protected readonly query = signal('');
+  /** The setup banner's words while a required step is not done; null once Ahoy is ready or before the API answers. */
+  protected readonly setupBanner = computed(() => {
+    const setup = this.setup.setup();
+    if (setup === null || !this.setup.notReady()) return null;
+    return {
+      ...setupBannerText(setup, setup.canEdit),
+      percent: setupPercent(setup),
+    };
+  });
   protected readonly needsYou = computed(() => this.stories.needsYou().length);
   protected readonly live = computed(() => liveStateOf(this.bus.status()));
   protected readonly user = computed((): TopBarUser | null => {
@@ -175,7 +196,10 @@ export class App {
     effect(() => {
       if (using || this.access.denied()) return;
       using = true;
-      untracked(() => this.stories.use(destroyRef));
+      untracked(() => {
+        this.stories.use(destroyRef);
+        void this.setup.load();
+      });
     });
     destroyRef.onDestroy(() => this.pendingSearch?.cancel());
     this.router.events

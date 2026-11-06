@@ -16,6 +16,7 @@ import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
 import getPeopleSettings from '@testing/fixtures/getPeopleSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
+import getSetup from '@testing/fixtures/getSetup.json';
 import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
 import getTeamsSettings from '@testing/fixtures/getTeamsSettings.json';
 import listJiraSettingsEvents from '@testing/fixtures/listJiraSettingsEvents.json';
@@ -77,6 +78,7 @@ describe('the Team settings frame', () => {
     jira: object = getJiraSettings,
     sonar: object = getSonarSettings
   ): void {
+    for (const r of http.match(`${BASE}/setup`)) r.flush(getSetup);
     for (const r of http.match(`${BASE}/settings/jira`)) r.flush(jira);
     for (const r of http.match(`${BASE}/settings/sonar`)) r.flush(sonar);
     for (const r of http.match(`${BASE}/settings/teams`))
@@ -120,7 +122,7 @@ describe('the Team settings frame', () => {
 
   afterEach(() => http.verify());
 
-  it('opens on SonarQube, names each section with its state and marks the one on show', async () => {
+  it('opens on Setup, names each section with its state and marks the one on show', async () => {
     await harness.navigateByUrl('/settings');
     answerAll();
     await settle();
@@ -129,6 +131,7 @@ describe('the Team settings frame', () => {
     const nav = document.querySelector('[aria-label="Settings sections"]');
     const links = [...(nav?.querySelectorAll('a') ?? [])];
     expect(links.map((a) => text(a))).toEqual([
+      'Setup 6 of 8',
       'SonarQube 2 servers',
       'Jira On',
       'Teams On',
@@ -142,16 +145,17 @@ describe('the Team settings frame', () => {
       'People 3 people',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
+    expect(links[0]?.querySelector('.nav__state--todo')).not.toBeNull();
     expect(text(document.querySelector('h1'))).toBe('Team settings');
-    expect(text(document.querySelector('h2'))).toBe('SonarQube');
+    expect(text(document.querySelector('h2'))).toBe('Setup');
     expect(text(root)).toContain('You can change these · admin');
 
-    links[1]?.click();
+    links[2]?.click();
     await settle();
     answerAll();
     await settle();
     expect(text(document.querySelector('h2'))).toBe('Jira');
-    expect(links[1]?.getAttribute('aria-current')).toBe('page');
+    expect(links[2]?.getAttribute('aria-current')).toBe('page');
     expect(links[0]?.getAttribute('aria-current')).toBeNull();
   });
 
@@ -174,6 +178,7 @@ describe('the Team settings frame', () => {
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
         1
       );
+    expect(http.match(`${BASE}/setup`), 'setup').toHaveLength(1);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
       r.flush({ items: [] });
   });

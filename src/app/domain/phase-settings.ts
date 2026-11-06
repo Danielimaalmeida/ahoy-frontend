@@ -140,6 +140,8 @@ export function describePhaseEvent(
   type: string,
   payload: unknown
 ): string | undefined {
+  if (type === 'phase_settings.defaults_kept')
+    return 'Kept the defaults (from Setup)';
   if (type !== 'phase_settings.updated') return undefined;
   const p = isRecord(payload) ? payload : {};
   const changes = p['changes'];
