@@ -9,9 +9,9 @@ export function meetingLabelsOf(settings: MeetingSettings): MeetingLabels {
 }
 
 /**
- * The names the meeting pages show for the two sides of a meeting (Team settings › Meetings). Read once, the first time
- * a page asks; until then, and when it cannot be read, the defaults show. Team settings › Meetings tells it of a save,
- * so the pages follow without a reload. 0 AIU.
+ * The names the meeting pages show for the two sides of a meeting (Team settings › Meetings). Read once, the first
+ * time a page asks (again after a failed read); until then, and when it cannot be read, the defaults show. Team
+ * settings › Meetings tells it of a save, so the pages follow without a reload. 0 AIU.
  */
 @Injectable({ providedIn: 'root' })
 export class MeetingLabelsStore {
@@ -22,10 +22,11 @@ export class MeetingLabelsStore {
   /** The names now: the defaults until the settings are read. */
   readonly labels = this.current.asReadonly();
 
-  /** Reads the settings the first time it is called; later calls wait for that read. */
+  /** Reads the settings the first time it is called; later calls wait for that read, or try again after a failed one. */
   load(): Promise<void> {
     this.loading ??= this.api.getMeetingSettings().then((result) => {
       if (result.ok) this.current.set(meetingLabelsOf(result.value.meetings));
+      else this.loading = null;
     });
     return this.loading;
   }

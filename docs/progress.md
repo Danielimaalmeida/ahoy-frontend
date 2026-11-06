@@ -18,7 +18,7 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
   operations implemented). The `build:compress` and `analyze` scripts now read `dist/ahoy-frontend`, the folder the
   build writes. `environment.test.ts` and the dev proxy still name our TEST host and SSO: another team's image takes
   its realm and client from `/config.json` (F17), and our TEST build keeps its fallback until its deployment mounts
-  that file. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (209 files, 3,691 tests), `ng build`,
+  that file. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (210 files, 3,693 tests), `ng build`,
   typecheck and lint pass; `npm run format` passes on every changed file (`docs/architecture.md` was already
   unformatted on main); e2e was not run and nothing ran against an API.
 - **Merged before (`feature/R3DA-14787-auto-defects`, 2026-11-06):** merges `origin/main` at `1330060b` without
