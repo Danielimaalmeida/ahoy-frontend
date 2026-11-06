@@ -27,8 +27,8 @@ export interface AppConfig {
   /** The team's Jira base URL, for the Backlog's issue links; without it the Backlog shows no Jira link. */
   readonly jiraBaseUrl?: string;
   /**
-   * The qnumbers allowed to use the app, lower-cased. Anyone else sees "Access denied". Without it the app does not
-   * check and the API's `AHOY_ALLOWED_QNUMBERS` decides (it answers `403 forbidden`, which shows the same screen).
+   * Read but no longer used (`ahoy-hosted` D23): the API decides who may use Ahoy, from the deployment's qnumbers and
+   * Team settings › People, and answers `403 forbidden` to anyone else. Kept so an older `/config.json` still loads.
    */
   readonly allowedQnumbers?: readonly string[];
 }

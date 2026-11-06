@@ -16,15 +16,3 @@ export function qnumberOf(candidates: readonly unknown[]): string | null {
   }
   return null;
 }
-
-/**
- * Whether a user may use the app. Without a list (`undefined`) the app does not check, and the API's own list decides;
- * with one, only a user whose qnumber is on it may, so a user whose qnumber cannot be read is refused.
- */
-export function isAllowedUser(
-  qnumber: string | null,
-  allowed: readonly string[] | undefined
-): boolean {
-  if (allowed === undefined) return true;
-  return qnumber !== null && allowed.includes(qnumber);
-}
