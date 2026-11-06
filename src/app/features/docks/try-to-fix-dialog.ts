@@ -4,9 +4,21 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ApiClient } from '@core/api/api-client';
-import { fieldMessage, type ApiResult } from '@core/api/api-error';
+import {
+  fieldMessage,
+  isInvalidState,
+  isNotFound,
+  isStoryExists,
+  type ApiError,
+  type ApiResult,
+} from '@core/api/api-error';
 import type { Story } from '@core/api/types';
-import { apiErrorView } from '@core/commands/command-error';
+import {
+  apiErrorView,
+  techLine,
+  type CommandErrorView,
+} from '@core/commands/command-error';
+import { StoriesStore } from '@core/stores/stories-store';
 import { checkAiuLimit } from '@domain/aiu';
 import { MAX_DEFECT_BUDGET_NANO_AIU } from '@domain/defect-settings';
 import { Banner } from '@ui/banner/banner';
@@ -22,6 +34,47 @@ export interface TryToFixDialogData {
   readonly summary: string;
   /** Team settings › Defects' AIU cap per defect, the field's starting value; null when none is set or it is unknown. */
   readonly defaultCapNanoAiu: number | null;
+}
+
+/** The API's own words for a refusal, when it sent them; otherwise `fallback`. */
+function detailOr(error: ApiError, fallback: string): string {
+  return error.kind === 'problem' && error.detail?.trim()
+    ? error.detail.trim()
+    : fallback;
+}
+
+/**
+ * What the dialog says when the voyage did not start. A refusal about the defect (it has a voyage already, the watch
+ * no longer lists it, it is ignored or its key cannot be a voyage's) gets its own words; the list behind is read again
+ * when the dialog closes. Anything else reads as any command's error.
+ */
+export function startDefectErrorView(
+  error: ApiError,
+  key: string
+): CommandErrorView {
+  const tech = techLine(error);
+  if (isStoryExists(error))
+    return {
+      variant: 'notice',
+      heading: `${key} already has a voyage`,
+      text: 'Someone, or the watch, started it first. Close this to see it in the list.',
+      tech,
+    };
+  if (isNotFound(error))
+    return {
+      variant: 'notice',
+      heading: `The watch no longer lists ${key}`,
+      text: 'It may be resolved in Jira, or no longer match the defects query.',
+      tech,
+    };
+  if (isInvalidState(error))
+    return {
+      variant: 'error',
+      heading: `Ahoy can't start ${key}`,
+      text: detailOr(error, 'Close this to see the defect as it is now.'),
+      tech,
+    };
+  return apiErrorView(error);
 }
 
 /** The cap must be an amount above zero and at most 200 AIU; this dialog has no server default to fall back on. */
@@ -89,6 +142,7 @@ export class TryToFixDialog {
   private readonly ref = inject<DialogRef<Story>>(DialogRef);
   private readonly api = inject(ApiClient);
   private readonly toasts = inject(ToastService);
+  private readonly stories = inject(StoriesStore);
   private readonly last = signal<ApiResult<Story> | null>(null);
 
   protected readonly key = this.data.key;
@@ -123,7 +177,9 @@ export class TryToFixDialog {
   protected readonly busy = signal(false);
   protected readonly error = computed(() => {
     const last = this.last();
-    return last === null || last.ok ? null : apiErrorView(last.error);
+    return last === null || last.ok
+      ? null
+      : startDefectErrorView(last.error, this.key);
   });
   protected readonly capServerError = computed(() => {
     const last = this.last();
@@ -142,6 +198,7 @@ export class TryToFixDialog {
     this.busy.set(false);
     this.last.set(result);
     if (!result.ok) return;
+    this.stories.upsert(result.value);
     this.toasts.show(`Voyage ${this.key} started.`);
     this.ref.close(result.value);
   }

@@ -4,7 +4,8 @@
  * Pure.
  */
 
-import { formatAiu, NANO_AIU_PER_AIU } from './aiu';
+import { NANO_AIU_PER_AIU } from './aiu';
+import { aiuLabel } from './phase-settings';
 import { isRecord } from './records';
 
 /** What the section keeps that the navigation and the history name. */
@@ -39,9 +40,31 @@ export function dailySpendText(
   budgetNanoAiu: number | null,
   maxStartsPerDay: number
 ): string | null {
-  if (budgetNanoAiu === null) return null;
-  const text = formatAiu(budgetNanoAiu * maxStartsPerDay, 9);
-  return `${text.includes('.') ? text.replace(/\.?0+$/, '') : text} AIU`;
+  return budgetNanoAiu === null
+    ? null
+    : aiuLabel(budgetNanoAiu * maxStartsPerDay);
+}
+
+/** What the spend confirmation weighs of the settings. */
+export interface DefectSpend {
+  readonly watchOn: boolean;
+  readonly autoStart: boolean;
+  readonly budgetNanoAiu: number | null;
+  readonly maxStartsPerDay: number;
+}
+
+/**
+ * Whether going from `was` to `now` lets the watch spend more by itself, which needs the admin's yes (`confirmSpend`):
+ * turning automatic starts on, or raising the cap per defect or the starts per day while they are on. Mirrors
+ * `ahoy-hosted`'s `spendsMore`.
+ */
+export function spendsMore(was: DefectSpend, now: DefectSpend): boolean {
+  if (!now.watchOn || !now.autoStart) return false;
+  if (!was.watchOn || !was.autoStart) return true;
+  return (
+    (now.budgetNanoAiu ?? 0) > (was.budgetNanoAiu ?? 0) ||
+    now.maxStartsPerDay > was.maxStartsPerDay
+  );
 }
 
 /** The most priorities the settings keep, as the contract says. */
@@ -98,7 +121,7 @@ function toWords(field: string, value: unknown): string {
   if (field === 'watchOn' || field === 'autoStart')
     return value === true ? 'on' : 'off';
   if (field === 'budgetNanoAiu')
-    return typeof value === 'number' ? `${formatAiu(value, 2)} AIU` : 'none';
+    return typeof value === 'number' ? aiuLabel(value) : 'none';
   if (field === 'maxStartsPerDay' || field === 'maxActive')
     return typeof value === 'number' ? String(value) : '?';
   if (field === 'defectsJql')

@@ -351,6 +351,12 @@ describe('eventText: unknown types', () => {
   it('marks an unknown type by a person as human', () => {
     expect(eventText(event('x.y', {}, 'priya@example.com')).kind).toBe('human');
   });
+
+  it('marks what the defect watch did by itself as Ahoy, not a person', () => {
+    expect(eventText(event('x.y', {}, 'ahoy-defect-watch')).kind).toBe(
+      'system'
+    );
+  });
 });
 
 describe('genericDetails', () => {

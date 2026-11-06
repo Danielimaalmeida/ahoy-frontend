@@ -128,25 +128,28 @@ type ListState =
                 The list keeps what it last read.
               }
             </ah-banner>
-          } @else if (autoStart() === false) {
-            <ah-banner
-              variant="info"
-              heading="Ahoy starts no defect by itself"
-              announce="off"
-            >
-              Use Try to fix to start one, or ask an admin to turn on automatic
-              starts in
-              <a routerLink="/settings/defects">Team settings › Defects</a>.
-            </ah-banner>
-          } @else if (list.lastPass?.error; as error) {
-            <ah-banner
-              variant="notice"
-              heading="Could not read Jira on the last check"
-              [tech]="error"
-            >
-              The list keeps what it last read; the watch tries again in 15
-              minutes.
-            </ah-banner>
+          } @else {
+            @if (list.lastPass?.error; as error) {
+              <ah-banner
+                variant="notice"
+                heading="Could not read Jira on the last check"
+                [tech]="error"
+              >
+                The list keeps what it last read; the watch tries again in 15
+                minutes.
+              </ah-banner>
+            }
+            @if (autoStart() === false) {
+              <ah-banner
+                variant="info"
+                heading="Ahoy starts no defect by itself"
+                announce="off"
+              >
+                Use Try to fix to start one, or ask an admin to turn on
+                automatic starts in
+                <a routerLink="/settings/defects">Team settings › Defects</a>.
+              </ah-banner>
+            }
           }
           @if (actionError(); as failure) {
             <ah-banner
@@ -362,14 +365,24 @@ export class BacklogDefects {
     void this.load();
   }
 
-  /** Reads the list again. */
+  /** Reads the list again, and the settings beside it: each shows as soon as it is read. */
   async load(): Promise<void> {
     if (this.state().kind !== 'ready') this.state.set({ kind: 'loading' });
-    const [result, settings] = await Promise.all([
-      this.api.listDefects(),
-      this.api.getDefectSettings(),
-    ]);
-    // Without the settings the tab still works: Try to fix asks for a cap, and no banner says what the watch starts.
+    await Promise.all([this.loadList(), this.loadSettings()]);
+  }
+
+  private async loadList(): Promise<void> {
+    const result = await this.api.listDefects();
+    this.state.set(
+      result.ok
+        ? { kind: 'ready', list: result.value }
+        : { kind: 'failed', error: result.error }
+    );
+  }
+
+  /** Without the settings the tab still works: Try to fix asks for a cap, and no banner says what the watch starts. */
+  private async loadSettings(): Promise<void> {
+    const settings = await this.api.getDefectSettings();
     this.settings.set(
       settings.ok
         ? {
@@ -377,11 +390,6 @@ export class BacklogDefects {
             budgetNanoAiu: settings.value.defects.budgetNanoAiu,
           }
         : null
-    );
-    this.state.set(
-      result.ok
-        ? { kind: 'ready', list: result.value }
-        : { kind: 'failed', error: result.error }
     );
   }
 
@@ -410,7 +418,10 @@ export class BacklogDefects {
     return canTryToFix(defect);
   }
 
-  /** Try to fix: asks for the voyage's AIU cap, starts it, and opens it. */
+  /**
+   * Try to fix: asks for the voyage's AIU cap, starts it, and opens it. Closed without a voyage, the list is read
+   * again: the dialog may have been refused because someone, or the watch, got there first.
+   */
   protected tryToFix(defect: Defect): void {
     if (this.busy() !== null) return;
     const ref = this.tryDialogs.open({
@@ -419,8 +430,8 @@ export class BacklogDefects {
       defaultCapNanoAiu: this.settings()?.budgetNanoAiu ?? null,
     });
     ref.closed.subscribe((story) => {
-      if (story === undefined) return;
-      void this.router.navigate(['/voyages', story.key]);
+      if (story === undefined) void this.load();
+      else void this.router.navigate(['/voyages', story.key]);
     });
   }
 

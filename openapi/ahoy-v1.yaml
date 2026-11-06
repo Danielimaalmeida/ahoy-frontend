@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 7d218c0b5c96b57205a3ad9831661873a1f453c8
+# Commit: 8449452c15228dda0050cef446cf609f37a4a783
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -3023,8 +3023,9 @@ paths:
       description: |
         Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no
         confirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). Automatic starts
-        spend AIU without a person starting each story: turning them on needs `confirmSpend: true` and an AIU cap
-        per defect (`400`). `version` is required once the settings are saved, and absent before
+        spend AIU without a person starting each story: turning them on needs an AIU cap per defect, and turning them
+        on (or the watch, with them on) or raising the cap per defect or the starts per day while they are on needs
+        `confirmSpend: true` (`400`), which the settings event records. `version` is required once the settings are saved, and absent before
         (`409 stale_version`). Every change is in `settings_events` (`defect_settings.updated`).
       requestBody:
         required: true
@@ -7168,7 +7169,9 @@ components:
         maxActive: { type: integer, minimum: 1, maximum: 20 }
         confirmSpend:
           type: boolean
-          description: 'Must be true when the change turns automatic starts on, which spends AIU by itself.'
+          description: >-
+            Must be true when the change turns automatic starts on, or raises the cap per defect or the starts per day
+            while they are on: each lets Ahoy spend more AIU by itself.
     DefectList:
       type: object
       additionalProperties: false
@@ -7260,7 +7263,7 @@ components:
                 at: { type: string, format: date-time }
         startError:
           type: [string, 'null']
-          description: "Why the watch could not start the defect's story; it does not try that defect again by itself."
+          description: "Why the watch could not start the defect's story; it tries that defect again a day later."
     StartDefectRequest:
       type: object
       additionalProperties: false

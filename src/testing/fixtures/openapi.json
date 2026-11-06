@@ -5276,7 +5276,7 @@
         "operationId": "updateDefectSettings",
         "tags": ["settings"],
         "summary": "Turn the defect watch on or off, or change its query, priorities or automatic starts.",
-        "description": "Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no\nconfirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). Automatic starts\nspend AIU without a person starting each story: turning them on needs `confirmSpend: true` and an AIU cap\nper defect (`400`). `version` is required once the settings are saved, and absent before\n(`409 stale_version`). Every change is in `settings_events` (`defect_settings.updated`).\n",
+        "description": "Admins only. The watch reads Jira and writes nothing, and spends no AIU, so turning it on needs no\nconfirmation; it needs a query (`400`). Each priority appears once, case ignored (`400`). Automatic starts\nspend AIU without a person starting each story: turning them on needs an AIU cap per defect, and turning them\non (or the watch, with them on) or raising the cap per defect or the starts per day while they are on needs\n`confirmSpend: true` (`400`), which the settings event records. `version` is required once the settings are saved, and absent before\n(`409 stale_version`). Every change is in `settings_events` (`defect_settings.updated`).\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -12160,7 +12160,7 @@
           },
           "confirmSpend": {
             "type": "boolean",
-            "description": "Must be true when the change turns automatic starts on, which spends AIU by itself."
+            "description": "Must be true when the change turns automatic starts on, or raises the cap per defect or the starts per day while they are on: each lets Ahoy spend more AIU by itself."
           }
         }
       },
@@ -12337,7 +12337,7 @@
           },
           "startError": {
             "type": ["string", "null"],
-            "description": "Why the watch could not start the defect's story; it does not try that defect again by itself."
+            "description": "Why the watch could not start the defect's story; it tries that defect again a day later."
           }
         }
       },

@@ -8,15 +8,19 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 ## Where we are
 
 - **This branch (`feat/defect-auto-start`, 2026-11-06, asked for by the user on 2026-11-06):** Ahoy starts defects.
-  Backlog › Defects has **Try to fix** on each defect with no voyage that nobody ignored (`try-to-fix-dialog.ts`): it
+  Backlog › Defects has **Try to fix** on each defect with no voyage that nobody ignored and whose key may be a
+  voyage's (`try-to-fix-dialog.ts`): it
   asks for the voyage's AIU cap, starting at Team settings › Defects' cap per defect, calls `startDefect` and opens the
-  voyage. Each row says who started its voyage ("Started by Ahoy" for the watch's own starts) or why the watch could
+  voyage; a refusal (a voyage started first, a defect the watch no longer lists) says so, and closing reads the list
+  again. Each row says who started its voyage ("Started by Ahoy" for the watch's own starts) or why the watch could
   not, and a banner says when the watch starts nothing by itself. Team settings › Defects adds **Automatic starts**
   (on/off), **AIU cap per defect** (at most 200 AIU, required while on), **Starts per day** and **Open voyages at
-  once**; turning the starts on shows the most it may spend a day and asks for a yes, sent as `confirmSpend`. The side
+  once**; turning the starts on, or raising the cap or the starts per day while on, shows the most it may spend a day
+  and asks for a yes, sent as `confirmSpend` (as the API's `spendsMore` decides). The log and every "by" read
+  `ahoy-defect-watch` as Ahoy. The side
   navigation says "Fixing" while it starts defects. The contract is `ahoy-hosted`'s `feat/defect-auto-start`
   (migration 0039), which deploys with this branch. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite
-  (201 files, 3,412 tests), `ng build`, typecheck, lint and format pass; e2e was not run.
+  (201 files, 3,420 tests), `ng build`, typecheck, lint and format pass; e2e was not run.
 - **Merged before (`feat/defects-without-repositories`, 2026-11-05, agreed with the user on 2026-11-05):** Team settings
   › Defects has no component map any more, and a defect no longer shows or needs a repository: the planner finds the
   repositories from the content repository's routing and the code (`ahoy-hosted` D21, its

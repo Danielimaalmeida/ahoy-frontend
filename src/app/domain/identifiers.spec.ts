@@ -31,6 +31,11 @@ describe('STORY_KEY_PATTERN and isStoryKey', () => {
       expect(isStoryKey(key)).toBe(false);
     });
   }
+
+  it('rejects a key over 40 characters, as the contract does', () => {
+    expect(isStoryKey(`PROJ-${'1'.repeat(35)}`)).toBe(true);
+    expect(isStoryKey(`PROJ-${'1'.repeat(36)}`)).toBe(false);
+  });
 });
 
 describe('shortSha', () => {
@@ -47,8 +52,9 @@ describe('shortSha', () => {
 });
 
 describe('actorLabel', () => {
-  it('shows the system reconciler as "Ahoy"', () => {
+  it('shows the system reconciler and the defect watch as "Ahoy"', () => {
     expect(actorLabel('ahoy-reconciler')).toBe('Ahoy');
+    expect(actorLabel('ahoy-defect-watch')).toBe('Ahoy');
   });
 
   it('shows a person by their e-mail', () => {

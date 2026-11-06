@@ -63,7 +63,13 @@ describe('defectsLabel', () => {
 });
 
 describe('defectStartLine', () => {
-  const base = { started: null, startError: null, voyage: null, ignored: null };
+  const base = {
+    key: 'PROJ-212',
+    started: null,
+    startError: null,
+    voyage: null,
+    ignored: null,
+  };
 
   it('says the watch or a person started the voyage', () => {
     expect(
@@ -90,11 +96,18 @@ describe('defectStartLine', () => {
     ).toBeNull();
     expect(defectStartLine(base)).toBeNull();
   });
+
+  it('says nothing of a refused start once someone ignored the defect', () => {
+    expect(
+      defectStartLine({ ...base, startError: 'x', ignored: { by: 'sam' } })
+    ).toBeNull();
+  });
 });
 
 describe('canTryToFix', () => {
   it('lets a person try a defect with no voyage that nobody ignored', () => {
     const base = {
+      key: 'PROJ-212',
       started: null,
       startError: null,
       voyage: null,
@@ -103,5 +116,17 @@ describe('canTryToFix', () => {
     expect(canTryToFix(base)).toBe(true);
     expect(canTryToFix({ ...base, voyage: { status: 'ready' } })).toBe(false);
     expect(canTryToFix({ ...base, ignored: { by: 'sam' } })).toBe(false);
+  });
+
+  it("does not offer a defect whose key cannot be a voyage's", () => {
+    const base = {
+      started: null,
+      startError: null,
+      voyage: null,
+      ignored: null,
+    };
+    expect(canTryToFix({ ...base, key: 'A_B-12' })).toBe(false);
+    expect(canTryToFix({ ...base, key: 'X-1' })).toBe(false);
+    expect(canTryToFix({ ...base, key: `PROJ-${'1'.repeat(40)}` })).toBe(false);
   });
 });

@@ -11,6 +11,7 @@ import type {
 import { checkAiuLimit } from '@domain/aiu';
 import {
   dailySpendText,
+  spendsMore,
   MAX_DEFECT_BUDGET_NANO_AIU,
   prioritiesOf,
   prioritiesText,
@@ -330,7 +331,7 @@ type PreviewState =
                       [formControl]="form.controls.active"
                     />
                   </ah-field>
-                  @if (turningOn()) {
+                  @if (confirmNeeded()) {
                     <ah-banner
                       variant="cost"
                       [heading]="
@@ -339,6 +340,9 @@ type PreviewState =
                         ' a day by itself'
                       "
                     >
+                      @if (alreadyOn()) {
+                        This raises what Ahoy may spend by itself.
+                      }
                       Each voyage it starts is capped at the AIU cap per defect,
                       and it starts at most the starts per day.
                       <label class="confirm">
@@ -525,10 +529,28 @@ export class DefectSettingsPage {
         : {}),
     };
   });
-  /** Whether saving would turn automatic starts on, which asks for the admin's yes to the spend. */
-  protected readonly turningOn = computed(
-    () => this.value().auto === 'on' && this.saved()?.autoStart === false
-  );
+  /**
+   * Whether saving would let the watch spend more by itself (automatic starts turned on, or the cap per defect or the
+   * starts per day raised while they are on), which asks for the admin's yes to the spend. While a field is refused
+   * it asks when the form turns them on, so the question does not come and go as the admin types.
+   */
+  protected readonly confirmNeeded = computed(() => {
+    const saved = this.saved();
+    if (saved === null) return false;
+    const typed = this.typed();
+    if (typed !== null) return spendsMore(saved, typed);
+    const value = this.value();
+    return (
+      value.watch === 'on' &&
+      value.auto === 'on' &&
+      !(saved.watchOn && saved.autoStart)
+    );
+  });
+  /** Whether automatic starts are on in the saved settings, so the confirmation is about raising what they spend. */
+  protected readonly alreadyOn = computed(() => {
+    const saved = this.saved();
+    return saved !== null && saved.watchOn && saved.autoStart;
+  });
   /** The most AIU automatic starts may spend in a day, as typed. */
   protected readonly dailySpend = computed(() => {
     const typed = this.typed();
@@ -557,7 +579,7 @@ export class DefectSettingsPage {
     return 'problem' in read ? read.problem : null;
   });
   protected readonly confirmMissing = computed(
-    () => this.turningOn() && !this.value().confirm
+    () => this.confirmNeeded() && !this.value().confirm
   );
   /** Whether the settings as read differ from the saved ones: spacing alone is no change. A refused field is one. */
   protected readonly dirty = computed(() => {
@@ -683,7 +705,7 @@ export class DefectSettingsPage {
     const body: DefectSettingsChange = {
       ...(saved.version !== null ? { version: saved.version } : {}),
       ...changes,
-      ...(changes.autoStart === true ? { confirmSpend: true } : {}),
+      ...(this.confirmNeeded() ? { confirmSpend: true } : {}),
     };
     this.saving.set(true);
     this.saveError.set(null);

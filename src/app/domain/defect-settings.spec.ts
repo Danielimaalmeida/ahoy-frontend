@@ -5,6 +5,7 @@ import {
   describeDefectEvent,
   prioritiesOf,
   prioritiesText,
+  spendsMore,
 } from './defect-settings';
 import { describeSettingsEvent } from './settings';
 
@@ -51,7 +52,35 @@ describe('automatic starts in words', () => {
           budgetNanoAiu: { from: null, to: 20_000_000_000 },
         },
       })
-    ).toBe('Automatic starts: on; AIU cap per defect: 20.00 AIU');
+    ).toBe('Automatic starts: on; AIU cap per defect: 20 AIU');
+    expect(
+      describeDefectEvent('defect_settings.updated', {
+        changes: { budgetNanoAiu: { from: null, to: 12_345_000_000 } },
+      })
+    ).toBe('AIU cap per defect: 12.345 AIU');
+  });
+
+  it('asks for a yes when the watch may spend more by itself, as the API does', () => {
+    const on = {
+      watchOn: true,
+      autoStart: true,
+      budgetNanoAiu: 20_000_000_000,
+      maxStartsPerDay: 2,
+    };
+    const off = { ...on, autoStart: false };
+    expect(spendsMore(off, on)).toBe(true);
+    expect(spendsMore({ ...on, watchOn: false }, on)).toBe(true);
+    expect(spendsMore(on, { ...on, budgetNanoAiu: 30_000_000_000 })).toBe(true);
+    expect(spendsMore(on, { ...on, maxStartsPerDay: 3 })).toBe(true);
+    expect(
+      spendsMore(on, {
+        ...on,
+        budgetNanoAiu: 10_000_000_000,
+        maxStartsPerDay: 1,
+      })
+    ).toBe(false);
+    expect(spendsMore(on, off)).toBe(false);
+    expect(spendsMore(off, { ...on, watchOn: false })).toBe(false);
   });
 });
 

@@ -7,6 +7,7 @@
  */
 import type { AhoyEvent } from '@core/api/types';
 import { formatAiu } from '@domain/aiu';
+import { AHOY_ACTORS } from '@domain/identifiers';
 import { crewLabel } from '@domain/models';
 import type { LogEntryKind } from '@ui/ships-log/ships-log';
 
@@ -261,7 +262,7 @@ function kindOf(event: AhoyEvent): LogEntryKind {
     str(event.payload, 'result') === 'pass'
   )
     return 'pass';
-  return event.actor === SYSTEM_ACTOR ? 'system' : 'human';
+  return AHOY_ACTORS.includes(event.actor) ? 'system' : 'human';
 }
 
 /** The title and detail of one event, with the round and the crew the surrounding events give it. */

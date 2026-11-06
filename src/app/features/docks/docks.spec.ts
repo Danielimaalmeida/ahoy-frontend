@@ -1749,6 +1749,52 @@ describe('Docks', () => {
         { op: 'startDefect', args: ['PROJ-207', 20_000_000_000] },
       ]);
       expect(navigate).toHaveBeenCalledWith(['/voyages', 'PROJ-207']);
+      expect(TestBed.inject(StoriesStore).find('PROJ-207')).toBeDefined();
+    });
+
+    it('says when someone started the defect first, and reads the list again when the dialog closes', async () => {
+      const f = await openDefects();
+      api.on('startDefect', () =>
+        Promise.resolve(
+          fail({
+            kind: 'problem' as const,
+            status: 409,
+            code: 'story_exists',
+            title: 'Story exists',
+          })
+        )
+      );
+      [...cell(rowOf(f, 'PROJ-207'), 7).querySelectorAll('button')]
+        .find((b) => b.textContent?.trim() === 'Try to fix')!
+        .click();
+      await refresh(f);
+      const dialog = document.querySelector('ah-try-to-fix-dialog')!;
+      (dialog.querySelector('input') as HTMLInputElement).value = '5';
+      dialog.querySelector('input')!.dispatchEvent(new Event('input'));
+      await refresh(f);
+      [...dialog.querySelectorAll('button')]
+        .find((b) => b.textContent?.includes('up to 5 AIU'))!
+        .click();
+      await refresh(f);
+      expect(dialog.textContent).toContain('PROJ-207 already has a voyage');
+      const reads = api.calls.filter((c) => c.op === 'listDefects').length;
+      [...dialog.querySelectorAll('button')]
+        .find((b) => b.textContent?.trim() === 'Cancel')!
+        .click();
+      await refresh(f);
+      expect(api.calls.filter((c) => c.op === 'listDefects')).toHaveLength(
+        reads + 1
+      );
+    });
+
+    it("offers no Try to fix for a defect whose key cannot be a voyage's", async () => {
+      const f = await openDefects({
+        ...LIST,
+        defects: LIST.defects.map((d) =>
+          d.key === 'PROJ-207' ? { ...d, key: 'PROJ_X-207' } : d
+        ),
+      });
+      expect(text(cell(rowOf(f, 'PROJ_X-207'), 7))).toBe('Ignore');
     });
 
     it('says why the watch could not start a defect', async () => {
@@ -1776,6 +1822,9 @@ describe('Docks', () => {
     });
 
     it('says the last check could not read Jira, keeping what it read before', async () => {
+      api.on('getDefectSettings', () =>
+        Promise.resolve(ok(getDefectSettings as DefectSettingsPage))
+      );
       const f = await openDefects({
         ...LIST,
         lastPass: {
@@ -1785,6 +1834,8 @@ describe('Docks', () => {
         },
       });
       expect(text(root(f))).toContain('Could not read Jira on the last check');
+      // The two say different things, so neither hides the other.
+      expect(text(root(f))).toContain('Ahoy starts no defect by itself');
       expect(rows(f)).toHaveLength(4);
     });
 

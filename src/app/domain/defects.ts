@@ -3,6 +3,8 @@
  * each defect's triage, and of the watch's last pass. Pure.
  */
 
+import { isStoryKey } from './identifiers';
+
 /** What the tab reads of one defect. */
 export interface DefectFacts {
   readonly triage: 'can_try' | 'out';
@@ -38,6 +40,7 @@ export function defectTriageView(defect: DefectFacts): {
 
 /** Who started a defect's voyage, or why the watch could not, as the tab reads them. */
 export interface DefectStartFacts {
+  readonly key: string;
   readonly started: {
     readonly by: string;
     readonly byName: string | null;
@@ -63,7 +66,11 @@ export function defectStartLine(defect: DefectStartFacts): {
           : `Started by ${defect.started.byName ?? defect.started.by}`,
       failed: false,
     };
-  if (defect.startError !== null && defect.voyage === null)
+  if (
+    defect.startError !== null &&
+    defect.voyage === null &&
+    defect.ignored === null
+  )
     return {
       text: `Ahoy could not start it: ${defect.startError}`,
       failed: true,
@@ -71,9 +78,11 @@ export function defectStartLine(defect: DefectStartFacts): {
   return null;
 }
 
-/** Whether a person may Try to fix the defect: it has no voyage yet and nobody ignored it. */
+/** Whether a person may Try to fix the defect: it has no voyage yet, nobody ignored it, and its key may be a voyage's. */
 export function canTryToFix(defect: DefectStartFacts): boolean {
-  return defect.voyage === null && defect.ignored === null;
+  return (
+    defect.voyage === null && defect.ignored === null && isStoryKey(defect.key)
+  );
 }
 
 /** "4 defects" or "1 defect". */

@@ -264,6 +264,55 @@ describe('the Defects section of Team settings', () => {
     expect(toasts()).toContain('Automatic starts on. Defect settings saved.');
   });
 
+  it('asks again for a yes when raising what automatic starts may spend, not when lowering it', async () => {
+    const on = {
+      ...updateDefectSettings,
+      defects: {
+        ...updateDefectSettings.defects,
+        autoStart: true,
+        budgetNanoAiu: 15_000_000_000,
+        maxStartsPerDay: 3,
+      },
+    };
+    await answer(on);
+    type(field(root, 'Open voyages at once'), '2');
+    type(field(root, 'AIU cap per defect'), '10');
+    await settle();
+    expect(text(root)).not.toContain('a day by itself');
+    expect(buttonNamed(root, 'Save').disabled).toBe(false);
+    type(field(root, 'AIU cap per defect'), '25');
+    await settle();
+    expect(text(root)).toContain('Ahoy may spend up to 75 AIU a day by itself');
+    expect(text(root)).toContain('This raises what Ahoy may spend by itself.');
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    root.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await settle();
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 1,
+      budgetNanoAiu: 25_000_000_000,
+      maxActive: 2,
+      confirmSpend: true,
+    });
+    expect(
+      requestViolations('updateDefectSettings', patch?.request.body)
+    ).toEqual([]);
+    const raised = {
+      ...on,
+      defects: {
+        ...on.defects,
+        budgetNanoAiu: 25_000_000_000,
+        maxActive: 2,
+        version: 2,
+      },
+    };
+    await respond(patch!, raised);
+    await answer(raised);
+    expect(toasts()).toContain('Defect settings saved.');
+  });
+
   it('refuses caps on starts it cannot keep', async () => {
     await answer(updateDefectSettings);
     type(field(root, 'Open voyages at once'), '21');
