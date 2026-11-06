@@ -19,6 +19,7 @@ import type {
   RaisedBy,
 } from '@core/api/types';
 import { CLOCK, type Timer } from '@core/realtime/clock';
+import { MeetingLabelsStore } from '@core/stores/meeting-labels-store';
 import {
   dateInputValue,
   defaultMeeting,
@@ -63,6 +64,9 @@ export interface NewSeries {
 export class MeetingsStore {
   private readonly api = inject(ApiClient);
   private readonly clock = inject(CLOCK);
+  private readonly labelsStore = inject(MeetingLabelsStore);
+  /** The names shown for the two sides of a meeting (Team settings › Meetings); the defaults until read. */
+  readonly labels = this.labelsStore.labels;
   /** Counts loads of the open meeting, so an answer to an older one is dropped. */
   private generation = 0;
   private timer: Timer | null = null;
@@ -121,12 +125,14 @@ export class MeetingsStore {
   /** Whether the list has been read once (successfully), so the page knows which meeting to open by default. */
   readonly loaded = signal(false);
 
-  /** Reads the meetings and the series for the left column. */
+  /** Reads the meetings and the series for the left column, and the names of the two sides of a meeting. */
   async load(): Promise<void> {
     this.loading.set(true);
     const [meetings, series] = await Promise.all([
       this.api.listMeetings(),
       this.api.listMeetingSeries(),
+      // The names of the two sides, read once; the defaults show until then.
+      this.labelsStore.load(),
     ]);
     this.loading.set(false);
     if (!meetings.ok) {

@@ -2476,6 +2476,33 @@ export interface paths {
     readonly patch: operations['updatePrCommentSettings'];
     readonly trace?: never;
   };
+  readonly '/settings/meetings': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The names the meeting pages show for the two sides of a meeting.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). Topics keep `us` and `them`
+     *     (`raisedBy`); these are only the names shown for them. Without a save they are "Us" and "Stakeholders". 0 AIU.
+     */
+    readonly get: operations['getMeetingSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Rename one side of a meeting, or both.
+     * @description Admins only. Each name is trimmed and must be 1 to 40 characters on one line (`400`). A change renames the tag
+     *     of every topic, before and after it, and changes no topic. `version` is required once the settings are saved,
+     *     and absent before (`409 stale_version`).
+     */
+    readonly patch: operations['updateMeetingSettings'];
+    readonly trace?: never;
+  };
   readonly '/defects': {
     readonly parameters: {
       readonly query?: never;
@@ -4821,6 +4848,28 @@ export interface components {
       readonly commentsPerRound?: number;
       /** @description Must be true when the change turns replies on, which posts on colleagues' pull requests. */
       readonly confirmReplies?: boolean;
+    };
+    readonly MeetingSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      readonly meetings: components['schemas']['MeetingSettings'];
+    };
+    readonly MeetingSettings: {
+      /** @description The name shown for our side (`raisedBy: us`); "Us" until an admin saves one. */
+      readonly usLabel: string;
+      /** @description The name shown for the stakeholders' side (`raisedBy: them`); "Stakeholders" until saved. */
+      readonly themLabel: string;
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly MeetingSettingsChange: {
+      readonly version?: number;
+      readonly usLabel?: string;
+      readonly themLabel?: string;
     };
     readonly DefectSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
@@ -8664,6 +8713,56 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly getMeetingSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The meeting settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updateMeetingSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MeetingSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly listDefects: {
     readonly parameters: {
       readonly query?: never;
@@ -8994,7 +9093,8 @@ export interface operations {
           | 'phases'
           | 'pr_comments'
           | 'defects'
-          | 'branch_releases';
+          | 'branch_releases'
+          | 'meetings';
       };
       readonly header?: never;
       readonly path?: never;

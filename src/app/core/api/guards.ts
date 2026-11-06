@@ -89,6 +89,8 @@ import {
   type AgentSettingsPage,
   type PrCommentSettings,
   type PrCommentSettingsPage,
+  type MeetingSettings,
+  type MeetingSettingsPage,
   BRANCH_RELEASE_STATUSES,
   type BranchRelease,
   type BranchReleaseBatch,
@@ -1755,6 +1757,22 @@ export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
     }),
     repliesPostable: flag,
     maxCommentsPerRound: wholeNumber('a count of comments', 1),
+  })
+);
+
+/** The meetings settings page, as `getMeetingSettings` and `updateMeetingSettings` answer it. */
+export const isMeetingSettingsPage = guard<MeetingSettingsPage>(
+  'MeetingSettingsPage',
+  shape<MeetingSettingsPage>({
+    canEdit: flag,
+    meetings: shape<MeetingSettings>({
+      usLabel: nonEmptyText,
+      themLabel: nonEmptyText,
+      version: nullable(wholeNumber('a version', 1)),
+      updatedBy: nullable(actor),
+      updatedByName: nullable(text),
+      updatedAt: nullable(timestamp),
+    }),
   })
 );
 

@@ -12,6 +12,7 @@ import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
+import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
 import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
@@ -91,6 +92,8 @@ describe('the Team settings frame', () => {
       r.flush(getDefectSettings);
     for (const r of http.match(`${BASE}/settings/branch-releases`))
       r.flush(getBranchReleaseSettings);
+    for (const r of http.match(`${BASE}/settings/meetings`))
+      r.flush(getMeetingSettings);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
       r.flush(
         r.request.params.get('section') === 'jira'
@@ -132,6 +135,7 @@ describe('the Team settings frame', () => {
       'Pull request comments Replies off',
       'Defects Off',
       'Branch releases 1 repository',
+      'Meetings Defaults',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(text(document.querySelector('h1'))).toBe('Team settings');
@@ -160,6 +164,7 @@ describe('the Team settings frame', () => {
       'pr-comments',
       'defects',
       'branch-releases',
+      'meetings',
     ])
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
         1

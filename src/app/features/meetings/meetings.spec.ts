@@ -167,13 +167,30 @@ describe('Meetings on the mock backend', () => {
       'Tax ID validation for EU customers',
       'Late fees for enterprise accounts',
     ]);
-    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe('OTHER_COMPANY');
+    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe('Us');
     expect(tagOf(card(page.root, 'Late fees for enterprise accounts'))).toBe(
-      'ACME · priya@'
+      'Stakeholders · priya@'
     );
     expect(
       notesOf(card(page.root, 'Late fees for enterprise accounts'))
     ).toEqual(['1.5% per month, capped at 10% of the invoice.']);
+  });
+
+  it('tags topics and the composer with the names Team settings › Meetings gives the two sides', async () => {
+    const page = await open('/meetings', (server) =>
+      server.setMeetingLabels('Northwind', 'Contoso')
+    );
+    expect(tagOf(card(page.root, 'Overdue invoice reminders'))).toBe(
+      'Northwind'
+    );
+    expect(tagOf(card(page.root, 'Late fees for enterprise accounts'))).toBe(
+      'Contoso · priya@'
+    );
+    const composer = page.root.querySelector<HTMLElement>('ah-topic-composer')!;
+    expect(buttonNamed(composer, 'Contoso')).toBeTruthy();
+    expect(
+      page.requests.filter((r) => r.path.endsWith('/settings/meetings'))
+    ).toHaveLength(1);
   });
 
   it('adds a topic a stakeholder raised during the meeting, at the end, tagged with who raised it', async () => {
@@ -183,7 +200,7 @@ describe('Meetings on the mock backend', () => {
       composer.querySelector('#topic-title'),
       'Refund approvals take too long'
     );
-    buttonNamed(composer, 'ACME').click();
+    buttonNamed(composer, 'Stakeholders').click();
     await flush(page);
     const who = composer.querySelector<HTMLSelectElement>('#topic-who')!;
     expect([...who.options].map((o) => o.text)).toEqual([
@@ -198,7 +215,7 @@ describe('Meetings on the mock backend', () => {
 
     expect(titles(page.root).at(-1)).toBe('Refund approvals take too long');
     const added = card(page.root, 'Refund approvals take too long');
-    expect(tagOf(added)).toBe('ACME · jordan@');
+    expect(tagOf(added)).toBe('Stakeholders · jordan@');
     expect(text(added.querySelector('.head .ah-hint'))).toMatch(
       /^raised at \d{2}:\d{2}$/
     );
@@ -218,7 +235,7 @@ describe('Meetings on the mock backend', () => {
   it('keeps the stakeholder picked for the next topic when a topic is moved up in the same meeting', async () => {
     const page = await open('/meetings');
     const composer = page.root.querySelector<HTMLElement>('ah-topic-composer')!;
-    buttonNamed(composer, 'ACME').click();
+    buttonNamed(composer, 'Stakeholders').click();
     await flush(page);
     const who = composer.querySelector<HTMLSelectElement>('#topic-who')!;
     who.value = 'jordan@example.com';

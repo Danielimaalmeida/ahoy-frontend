@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "id": 71,
+      "type": "meeting_settings.updated",
+      "actor": "bea@example.com",
+      "actorName": "Bea Example",
+      "subject": "meeting_settings:1",
+      "payload": {
+        "changes": {
+          "usLabel": { "from": "Us", "to": "Northwind" },
+          "themLabel": { "from": "Stakeholders", "to": "Contoso" }
+        }
+      },
+      "createdAt": "2026-11-03T14:10:00.000Z"
+    }
+  ]
+}

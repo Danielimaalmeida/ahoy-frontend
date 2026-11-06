@@ -1,16 +1,29 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-06 (main merged into the automatic-defects branch; full offline checks passed). One page: replace it,
-do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
-The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
-kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
+Updated 2026-11-06 (`feat/portability-1-meeting-labels`; offline checks passed with a stubbed `@acme-fedev/auth`). One
+page: replace it, do not append; git history is the archive (the 3,692-line page before this one:
+`git show b1f9b88:docs/progress.md`). The review of both repositories, with its proposals (not yet agreed), is
+`ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on 2026-10-24
+(`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feature/R3DA-14787-auto-defects`, 2026-11-06):** merges `origin/main` at `1330060b` without
+- **This branch (`feat/portability-1-meeting-labels`, 2026-11-06, asked for by the user on 2026-11-06: another team of
+  the company installs its own Ahoy, `ahoy-hosted` D23):** the names of a meeting's two sides are a team setting.
+  Team settings has a new section, **Meetings** (`/settings/meetings`): "Our side" and "Stakeholders' side", 1 to 40
+  characters on one line, with their history; the navigation says "Defaults" until an admin saves them. The meeting
+  pages (topic tags, composer, end-of-meeting summary, story draft, Confluence page) read them through
+  `MeetingLabelsStore` instead of the fixed names, and show "Us" and "Stakeholders" until then. The contract is
+  `ahoy-hosted`'s `feat/portability-1-meeting-labels` (migration 0041), which deploys with this branch (131
+  operations implemented). The `build:compress` and `analyze` scripts now read `dist/ahoy-frontend`, the folder the
+  build writes. `environment.test.ts` and the dev proxy still name our TEST host and SSO: another team's image takes
+  its realm and client from `/config.json` (F17), and our TEST build keeps its fallback until its deployment mounts
+  that file. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (209 files, 3,691 tests), `ng build`,
+  typecheck and lint pass; `npm run format` passes on every changed file (`docs/architecture.md` was already
+  unformatted on main); e2e was not run and nothing ran against an API.
+- **Merged before (`feature/R3DA-14787-auto-defects`, 2026-11-06):** merges `origin/main` at `1330060b` without
   rewriting history. The combined contract preserves automatic defect handling, voyage restart and the new plan
-  panel endpoints (136 operations, 129 implemented). API provenance records both source contracts; generated types
-  and the JSON mirror match the combined contract. No API or TEST environment was used for validation.
+  panel endpoints. No API or TEST environment was used for validation.
 - **Included (`feat/restart-voyage`, 2026-11-06, asked for by the user on 2026-11-06: a cancelled voyage could not
   be started again later):** a cancelled voyage's header has **Start again…** as its primary action
   (`dialogs/restart-voyage-dialog.ts`): a total cap (the current one when it leaves room, more than what is already
