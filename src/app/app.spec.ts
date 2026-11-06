@@ -453,7 +453,8 @@ describe('App shell', () => {
     it('checks again on each page while not ready, so a step fixed elsewhere clears the banner', async () => {
       const { root, api, go } = await shell('/voyages', { setup: NOT_READY });
       api.on('getSetup', () => Promise.resolve(ok(READY)));
-      await go('/meetings');
+      // Another voyages filter: a page whose own reads the fake answers, so nothing is left unhandled.
+      await go('/voyages?status=halted');
       expect(api.callsOf('getSetup')).toHaveLength(2);
       expect(root.querySelector('ah-setup-banner')).toBeNull();
       await go('/voyages');
