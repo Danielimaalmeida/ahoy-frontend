@@ -286,8 +286,9 @@ export const NOTE_MAX = 4000;
     .text.editable {
       cursor: text;
     }
-    /* A touch screen has no hover: the note's buttons show, or they could not be found. */
-    @media (hover: none) {
+    /* A touch screen has no hover: the note's buttons show, or they could not be found. A laptop with a touch screen
+       reports the mouse's hover, so a coarse pointer anywhere shows them too. */
+    @media (hover: none), (any-pointer: coarse) {
       .remove-note,
       .add-image,
       .edit-note {

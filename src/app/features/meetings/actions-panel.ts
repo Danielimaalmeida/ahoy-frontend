@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import type { MeetingNoteInContext } from '@core/api/types';
@@ -110,18 +118,19 @@ import { NOTE_MAX } from './topic-card';
                     [attr.aria-label]="'Mark done: ' + a.note.text"
                     (change)="done(a, $event)"
                   />
+                  @let d = due(a);
                   <span class="body">
                     <span class="text">{{ a.note.text }}</span>
                     @if (
                       a.note.owner !== null ||
-                      due(a) !== null ||
+                      d !== null ||
                       a.meetingId !== meetingId()
                     ) {
                       <span class="meta">
                         @if (a.note.owner !== null) {
                           <span class="ah-hint">{{ a.note.owner }}</span>
                         }
-                        @if (due(a); as d) {
+                        @if (d !== null) {
                           <span class="ah-hint" [class.overdue]="d.overdue">{{
                             d.text
                           }}</span>
@@ -167,6 +176,7 @@ import { NOTE_MAX } from './topic-card';
                           ahButton="ghost"
                           size="sm"
                           type="button"
+                          [id]="'answer-' + q.note.id"
                           [attr.aria-label]="'Answer: ' + q.note.text"
                           [disabled]="store.busy()"
                           (click)="startAnswer(q)"
@@ -189,7 +199,7 @@ import { NOTE_MAX } from './topic-card';
                         [id]="'open-answer-' + q.note.id"
                         [maxlength]="noteMax"
                         [formControl]="text"
-                        (keydown.escape)="answering.set(null)"
+                        (keydown.escape)="cancelAnswer(q)"
                       />
                       <button
                         ahButton="primary"
@@ -203,7 +213,7 @@ import { NOTE_MAX } from './topic-card';
                         ahButton="default"
                         size="sm"
                         type="button"
-                        (click)="answering.set(null)"
+                        (click)="cancelAnswer(q)"
                       >
                         Cancel
                       </button>
@@ -235,6 +245,8 @@ import { NOTE_MAX } from './topic-card';
 })
 export class ActionsPanel {
   protected readonly store = inject(MeetingsStore);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   protected readonly actions = this.store.openActions;
   protected readonly questions = this.store.openQuestions;
@@ -265,6 +277,22 @@ export class ActionsPanel {
   startAnswer(question: MeetingNoteInContext): void {
     this.text.setValue('');
     this.answering.set(question.note.id);
+    this.focusOnceShown(`#open-answer-${question.note.id}`);
+  }
+
+  /** Closes the answer line and gives the focus back to the question's Answer button. */
+  cancelAnswer(question: MeetingNoteInContext): void {
+    this.answering.set(null);
+    this.focusOnceShown(`#answer-${question.note.id}`);
+  }
+
+  /** Focuses the element the selector names once the view shows it: the line and its button replace each other. */
+  private focusOnceShown(selector: string): void {
+    afterNextRender(
+      () =>
+        this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
+      { injector: this.injector }
+    );
   }
 
   /** Answers an open question; it leaves the list once the API agrees, and the line stays open when it does not. */

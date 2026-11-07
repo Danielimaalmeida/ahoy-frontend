@@ -174,7 +174,8 @@ export const SERIES_PAGE = 3;
     .status-line {
       padding: 8px 16px;
     }
-    /* On a narrow screen the list goes above the meeting instead of squeezing it. */
+    /* On a narrow screen the list goes above the meeting instead of squeezing it, and scrolls on its own so the
+       meeting opened from it starts within the first screen. */
     @media (max-width: 760px) {
       :host {
         flex-direction: column;
@@ -182,6 +183,8 @@ export const SERIES_PAGE = 3;
       }
       aside {
         width: auto;
+        max-height: 45vh;
+        overflow-y: auto;
       }
     }
     main {
