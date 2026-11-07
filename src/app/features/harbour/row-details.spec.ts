@@ -147,6 +147,25 @@ describe('RowDetails (All hands)', () => {
     ]).toEqual(['PROJ-102']);
   });
 
+  it('says when the events of a voyage were read, or could not be, and not before', async () => {
+    const { api, details } = rig();
+    const aground = aStory('PROJ-102', {
+      status: 'terminal',
+      phase: 'blocked',
+    });
+    expect(details.eventsRead('PROJ-102')).toBe(false);
+    details.sync([aground, asking]);
+    expect(details.eventsRead('PROJ-102')).toBe(false);
+    await settle();
+    expect(details.eventsRead('PROJ-102')).toBe(true);
+    expect(details.eventsRead('PROJ-131')).toBe(false);
+    api.on('listStoryEvents', () => Promise.resolve(fail({ kind: 'network' })));
+    const other = aStory('PROJ-103', { status: 'terminal', phase: 'blocked' });
+    details.sync([other]);
+    await settle();
+    expect(details.eventsRead('PROJ-103')).toBe(true);
+  });
+
   it('does not open a voyage that needs nothing beyond its story', async () => {
     const { api, bus, details } = rig();
     details.sync([docked, aStory('PROJ-109', { status: 'ready' })]);
