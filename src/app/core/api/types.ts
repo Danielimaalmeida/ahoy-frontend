@@ -1006,6 +1006,15 @@ export type PrCommentSettings = Schemas['PrCommentSettings'];
 /** Body of `updatePrCommentSettings`; turning replies on needs `confirmReplies: true`. */
 export type PrCommentSettingsChange = Schemas['PrCommentSettingsChange'];
 
+/** Answer of `getMeetingSettings`: the names of the two sides of a meeting, and whether the person may change them. */
+export type MeetingSettingsPage = Schemas['MeetingSettingsPage'];
+
+/** The names shown for our side and the stakeholders' side of a meeting. */
+export type MeetingSettings = Schemas['MeetingSettings'];
+
+/** Body of `updateMeetingSettings`: either name or both. */
+export type MeetingSettingsChange = Schemas['MeetingSettingsChange'];
+
 /** Answer of `getDefectSettings`: the defect watch's settings and whether the person may change them. */
 export type DefectSettingsPage = Schemas['DefectSettingsPage'];
 

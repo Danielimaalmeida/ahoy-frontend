@@ -174,6 +174,11 @@ export class SettingsShell {
       label: 'Branch releases',
       state: () => this.summary.branchReleases(),
     },
+    {
+      path: 'meetings',
+      label: 'Meetings',
+      state: () => this.summary.meetings(),
+    },
   ];
 
   constructor() {

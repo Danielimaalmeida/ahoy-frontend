@@ -13,6 +13,8 @@ import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import updatePhaseSettings from '@testing/fixtures/updatePhaseSettings.json';
 import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
 import updatePrCommentSettings from '@testing/fixtures/updatePrCommentSettings.json';
+import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
+import updateMeetingSettings from '@testing/fixtures/updateMeetingSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
 import addBranchReleaseRepository from '@testing/fixtures/addBranchReleaseRepository.json';
@@ -277,6 +279,8 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['updatePhaseSettings', updatePhaseSettings],
   ['getPrCommentSettings', getPrCommentSettings],
   ['updatePrCommentSettings', updatePrCommentSettings],
+  ['getMeetingSettings', getMeetingSettings],
+  ['updateMeetingSettings', updateMeetingSettings],
   ['getDefectSettings', getDefectSettings],
   ['getBranchReleaseSettings', getBranchReleaseSettings],
   ['addBranchReleaseRepository', addBranchReleaseRepository],
@@ -339,7 +343,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      129
+      131
     );
   });
 

@@ -1,7 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 63f1e9e0a74b457135a197fd847b9ca7f7ce579f
-# Also merged: ec2a793d0fa48d64a19efaf54b3fa15894c298f6 (automatic defects and voyage restart).
+# Commit: 842410e2142700cf80a51732b72c933b221502ba
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -3045,6 +3044,45 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /settings/meetings:
+    get:
+      operationId: getMeetingSettings
+      tags: [settings]
+      summary: The names the meeting pages show for the two sides of a meeting.
+      description: |
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). Topics keep `us` and `them`
+        (`raisedBy`); these are only the names shown for them. Without a save they are "Us" and "Stakeholders". 0 AIU.
+      responses:
+        '200':
+          description: The meeting settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingSettingsPage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateMeetingSettings
+      tags: [settings]
+      summary: Rename one side of a meeting, or both.
+      description: |
+        Admins only. Each name is trimmed and must be 1 to 40 characters on one line (`400`). A change renames the tag
+        of every topic, before and after it, and changes no topic. `version` is required once the settings are saved,
+        and absent before (`409 stale_version`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingSettingsChange' }
+      responses:
+        '200':
+          description: The settings, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingSettingsPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /defects:
     get:
       operationId: listDefects
@@ -3340,6 +3378,7 @@ paths:
                   pr_comments,
                   defects,
                   branch_releases,
+                  meetings,
                 ],
             }
       responses:
@@ -7527,6 +7566,50 @@ components:
         confirmReplies:
           type: boolean
           description: "Must be true when the change turns replies on, which posts on colleagues' pull requests."
+    MeetingSettingsPage:
+      type: object
+      additionalProperties: false
+      required: [canEdit, meetings]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        meetings: { $ref: '#/components/schemas/MeetingSettings' }
+    MeetingSettings:
+      type: object
+      additionalProperties: false
+      required:
+        [usLabel, themLabel, version, updatedBy, updatedByName, updatedAt]
+      properties:
+        usLabel:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: 'The name shown for our side (`raisedBy: us`); "Us" until an admin saves one.'
+        themLabel:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: 'The name shown for the stakeholders'' side (`raisedBy: them`); "Stakeholders" until saved.'
+        version:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            description: 'Null until an admin saves anything.',
+          }
+        updatedBy: { type: [string, 'null'] }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: [string, 'null'], format: date-time }
+    MeetingSettingsChange:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        version: { type: integer, minimum: 1 }
+        usLabel: { type: string, minLength: 1, maxLength: 200 }
+        themLabel: { type: string, minLength: 1, maxLength: 200 }
     DefectSettingsPage:
       type: object
       additionalProperties: false

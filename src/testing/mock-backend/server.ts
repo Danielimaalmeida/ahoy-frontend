@@ -247,6 +247,9 @@ export class MockAhoyServer {
   private agentDiagnoses: RefinementDesk;
   private knowledgeReviews: KnowledgeDesk;
   private meetings: MeetingDesk;
+  /** Team settings › Meetings: the names of the two sides, as saved. */
+  private meetingLabels = { usLabel: 'Us', themLabel: 'Stakeholders' };
+  private meetingLabelsVersion: number | null = null;
 
   constructor(options: MockServerOptions) {
     if (!isRecord(options.contract) || !isRecord(options.contract['paths']))
@@ -811,6 +814,19 @@ export class MockAhoyServer {
         return this.listStoryEvents(call);
       case 'streamEvents':
         return this.streamEvents(call);
+      case 'getMeetingSettings':
+        return jsonResponse(200, this.meetingSettingsPage(), {
+          'Cache-Control': 'no-store',
+        });
+      case 'updateMeetingSettings': {
+        const body = call.body as { usLabel?: string; themLabel?: string }; // validated
+        this.meetingLabels = {
+          usLabel: body.usLabel?.trim() ?? this.meetingLabels.usLabel,
+          themLabel: body.themLabel?.trim() ?? this.meetingLabels.themLabel,
+        };
+        this.meetingLabelsVersion = (this.meetingLabelsVersion ?? 0) + 1;
+        return jsonResponse(200, this.meetingSettingsPage());
+      }
       case 'listMeetings': {
         const status = call.query['status'] as MeetingStatus | undefined; // validated
         return jsonResponse(200, { items: this.meetings.list(status) });
@@ -1017,6 +1033,27 @@ export class MockAhoyServer {
           `The mock backend does not simulate ${operationId}`
         );
     }
+  }
+
+  /** Names the two sides of a meeting, as an admin would in Team settings › Meetings. */
+  setMeetingLabels(usLabel: string, themLabel: string): void {
+    this.meetingLabels = { usLabel, themLabel };
+    this.meetingLabelsVersion = (this.meetingLabelsVersion ?? 0) + 1;
+  }
+
+  /** Team settings › Meetings, as `getMeetingSettings` answers it: everyone may change it in the mock. */
+  private meetingSettingsPage() {
+    const saved = this.meetingLabelsVersion !== null;
+    return {
+      canEdit: true,
+      meetings: {
+        ...this.meetingLabels,
+        version: this.meetingLabelsVersion,
+        updatedBy: saved ? 'alex@example.com' : null,
+        updatedByName: saved ? 'Alex Doe' : null,
+        updatedAt: saved ? new Date(this.clock.now()).toISOString() : null,
+      },
+    };
   }
 
   /** The story the path names, or `404 not_found`. */

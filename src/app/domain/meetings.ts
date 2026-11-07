@@ -105,10 +105,21 @@ export function authorLabel(actor: string, name: string | null): string {
 }
 
 /**
- * The names the page shows for the two sides of a meeting. The API keeps `us` and `them`; the page never shows those
- * words: our side is OTHER_COMPANY, the stakeholders' side is ACME.
+ * The names the pages show for the two sides of a meeting, from Team settings › Meetings. The API keeps `us` and `them`;
+ * the pages never show those words.
  */
-export const RAISED_BY_LABELS = { us: 'OTHER_COMPANY', them: 'ACME' } as const;
+export interface MeetingLabels {
+  /** Our side. */
+  readonly us: string;
+  /** The stakeholders' side. */
+  readonly them: string;
+}
+
+/** The names before an admin saves any, as the API gives them then. */
+export const DEFAULT_MEETING_LABELS: MeetingLabels = {
+  us: 'Us',
+  them: 'Stakeholders',
+};
 
 /**
  * A stakeholder, short enough for a tag: an e-mail as "maria@", a name with an e-mail ("Rui Costa <rui@acme.com>") as
@@ -122,12 +133,12 @@ export function stakeholderLabel(stakeholder: string): string {
     : shortEmail(stakeholder.trim());
 }
 
-/** Who raised a topic, for its tag: "OTHER_COMPANY", "ACME", "ACME · maria@" or "ACME · Ana Silva". */
-export function raisedByLabel(topic: TopicLike): string {
-  if (topic.raisedBy === 'us') return RAISED_BY_LABELS.us;
+/** Who raised a topic, for its tag: "Us", "Stakeholders", "Stakeholders · maria@" or "Stakeholders · Ana Silva". */
+export function raisedByLabel(topic: TopicLike, labels: MeetingLabels): string {
+  if (topic.raisedBy === 'us') return labels.us;
   return topic.raisedByStakeholder === null
-    ? RAISED_BY_LABELS.them
-    : `${RAISED_BY_LABELS.them} · ${stakeholderLabel(topic.raisedByStakeholder)}`;
+    ? labels.them
+    : `${labels.them} · ${stakeholderLabel(topic.raisedByStakeholder)}`;
 }
 
 /** A day as the page writes it: "Tue 13 Oct", in the browser's time zone; "—" for a date it cannot read. */
@@ -423,7 +434,8 @@ function wiki(text: string): string {
  */
 export function meetingToConfluence(
   meeting: MeetingDoc,
-  openQuestions: readonly OpenQuestionDoc[] = []
+  openQuestions: readonly OpenQuestionDoc[] = [],
+  labels: MeetingLabels = DEFAULT_MEETING_LABELS
 ): string {
   const end = meeting.endsAt === null ? '' : `–${meetingTime(meeting.endsAt)}`;
   const lines = [
@@ -467,7 +479,7 @@ export function meetingToConfluence(
     lines.push(
       '',
       `h3. ${index + 1}. ${wiki(topic.title)}`,
-      `_${wiki(raisedByLabel(topic))} · ${topicWhen(topic)}${moved}_`
+      `_${wiki(raisedByLabel(topic, labels))} · ${topicWhen(topic)}${moved}_`
     );
     const { notes, answers } = threadNotes(topic.notes);
     for (const note of notes) {

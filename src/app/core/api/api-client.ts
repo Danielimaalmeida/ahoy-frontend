@@ -40,6 +40,7 @@ import {
   isJiraTest,
   isAgentSettingsPage,
   isPrCommentSettingsPage,
+  isMeetingSettingsPage,
   isBranchRelease,
   isBranchReleaseBatch,
   isBranchReleaseRepository,
@@ -123,6 +124,8 @@ import type {
   AgentSettingsPage,
   PrCommentSettingsChange,
   PrCommentSettingsPage,
+  MeetingSettingsChange,
+  MeetingSettingsPage,
   BranchRelease,
   BranchReleaseRepository,
   BranchReleaseRepositoryChange,
@@ -1752,6 +1755,29 @@ export class ApiClient {
       'updatePrCommentSettings',
       isPrCommentSettingsPage,
       this.http.patch<unknown>(this.url('/settings/pr-comments'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** The names the meeting pages show for the two sides of a meeting. */
+  getMeetingSettings(): Promise<ApiResult<MeetingSettingsPage>> {
+    return this.get(
+      'getMeetingSettings',
+      '/settings/meetings',
+      isMeetingSettingsPage
+    );
+  }
+
+  /** Renames one side of a meeting, or both (admins only). */
+  updateMeetingSettings(
+    body: MeetingSettingsChange
+  ): Promise<ApiResult<MeetingSettingsPage>> {
+    return this.send(
+      'updateMeetingSettings',
+      isMeetingSettingsPage,
+      this.http.patch<unknown>(this.url('/settings/meetings'), body, {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })

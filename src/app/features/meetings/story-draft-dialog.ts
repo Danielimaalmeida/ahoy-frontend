@@ -9,6 +9,7 @@ import type {
   MeetingStoryMode,
   MeetingTopic,
 } from '@core/api/types';
+import { MeetingLabelsStore } from '@core/stores/meeting-labels-store';
 import { checkAiuLimit } from '@domain/aiu';
 import { raisedByLabel } from '@domain/meetings';
 import { chosenNoteIds, STORY_DRAFT_MAX_NANO_AIU } from '@domain/story-drafts';
@@ -114,7 +115,7 @@ function capValidator(
       (confirm)="submit()"
     >
       <span ahDialogLead
-        >From “{{ topic.title }}” · {{ meeting }} · {{ raisedBy }}</span
+        >From “{{ topic.title }}” · {{ meeting }} · {{ raisedBy() }}</span
       >
       <ah-banner ahDialogCost variant="cost" [heading]="costHeading()"
         >Not charged to any voyage's budget. It shares the run slots with the
@@ -203,7 +204,10 @@ export class StoryDraftDialog {
 
   protected readonly topic = this.data.topic;
   protected readonly meeting = this.data.meeting;
-  protected readonly raisedBy = raisedByLabel(this.data.topic);
+  private readonly labels = inject(MeetingLabelsStore).labels;
+  protected readonly raisedBy = computed(() =>
+    raisedByLabel(this.data.topic, this.labels())
+  );
   protected readonly capMessages = {
     amount: 'Type an amount in AIU, such as 2 or 0.5.',
     positive: 'The limit must be above 0 AIU.',
