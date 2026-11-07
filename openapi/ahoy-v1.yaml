@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 1e3a328093271e905efdbf9dc1c28340bbef9813 (plus uncommitted changes in the source file)
+# Commit: f2063575db9d807360ad61aa55a2bd6c0fb75da4
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2508,7 +2508,7 @@ paths:
       summary: Save your Copilot token, the first or a new one.
       description: |
         Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else
-        `GH_HOST`) by Test and to your runs' pods. A new
+        github.com) by Test and to your runs' pods. A new
         token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
       requestBody:
         required: true
@@ -8395,6 +8395,7 @@ components:
           canEdit,
           maxBudgetNanoAiu,
           phases,
+          agentMcpServers,
           catalog,
           version,
           updatedBy,
@@ -8424,6 +8425,7 @@ components:
                 pinned,
                 fields,
                 budgetCapNanoAiu,
+                mcpServers,
               ]
             properties:
               phase: { type: string }
@@ -8444,6 +8446,38 @@ components:
                   minimum: 0,
                   description: 'The most an admin may cap one run at.',
                 }
+              mcpServers:
+                type: object
+                additionalProperties: false
+                required: [from, names]
+                description: >-
+                  The MCP servers the phase's runs get, read only here (each must be in the deployment's MCP Secret):
+                  `deployment` (`AHOY_PHASE_CONFIG` names them), `built_in` (the code names them, as design's
+                  `density-mcp`), `profile` (none named: the agent profile's own, see `agentMcpServers`; `names` is
+                  empty), or `none` (the job gets none).
+                properties:
+                  from:
+                    {
+                      type: string,
+                      enum: [deployment, built_in, profile, none],
+                    }
+                  names:
+                    type: array
+                    items: { type: string, minLength: 1 }
+        agentMcpServers:
+          type: array
+          description: >-
+            Each agent profile at the content repository's HEAD that uses an MCP server, with its servers: what a phase
+            whose servers come from the `profile` runs on.
+          items:
+            type: object
+            additionalProperties: false
+            required: [agent, servers]
+            properties:
+              agent: { type: string }
+              servers:
+                type: array
+                items: { type: string, minLength: 1 }
         catalog:
           type: object
           additionalProperties: false

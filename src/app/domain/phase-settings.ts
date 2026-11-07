@@ -48,6 +48,37 @@ export function isStoryPhase(phase: string): boolean {
   return STORY_PHASES.includes(phase);
 }
 
+/** Where a phase's MCP servers come from, as the API says it. */
+export type McpSourceLike = 'deployment' | 'built_in' | 'profile' | 'none';
+
+/**
+ * The MCP servers a phase's runs get, in words: those the deployment's phase configuration names (the chart, so read
+ * only here), the built-in ones, the agent profile's own, or none.
+ */
+export function mcpServersLabel(mcp: {
+  readonly from: McpSourceLike;
+  readonly names: readonly string[];
+}): string {
+  switch (mcp.from) {
+    case 'deployment':
+      return `MCP servers: ${mcp.names.join(', ')} (set by the deployment)`;
+    case 'built_in':
+      return `MCP servers: ${mcp.names.join(', ')} (built in)`;
+    case 'profile':
+      return "MCP servers: the agent profile's own";
+    case 'none':
+      return 'MCP servers: none';
+  }
+}
+
+/** "planner: Jira, Confluence": an agent profile's MCP servers. */
+export function agentMcpLabel(agent: {
+  readonly agent: string;
+  readonly servers: readonly string[];
+}): string {
+  return `${agent.agent}: ${agent.servers.join(', ')}`;
+}
+
 /** The shortest and longest timeout the API takes, in minutes: one minute and one day. */
 export const MIN_TIMEOUT_MINUTES = 1;
 export const MAX_TIMEOUT_MINUTES = 24 * 60;

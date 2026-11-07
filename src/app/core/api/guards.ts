@@ -43,6 +43,7 @@ import {
   JIRA_ISSUE_TYPES,
   AGENT_JOBS,
   CATALOG_SOURCES,
+  MCP_SOURCES,
   PHASE_SETTING_FIELDS,
   FIGMA_TEST_RESULTS,
   TEAMS_CARD_RESULTS,
@@ -2065,6 +2066,16 @@ export const isPhaseSettingsPage = guard<PhaseSettingsPage>(
         pinned: arrayOf(oneOf(PHASE_SETTING_FIELDS)),
         fields: arrayOf(oneOf(PHASE_SETTING_FIELDS)),
         budgetCapNanoAiu: nanoAiu,
+        mcpServers: shape<PhaseSettingsRow['mcpServers']>({
+          from: oneOf(MCP_SOURCES),
+          names: arrayOf(nonEmptyText),
+        }),
+      })
+    ),
+    agentMcpServers: arrayOf(
+      shape<PhaseSettingsPage['agentMcpServers'][number]>({
+        agent: nonEmptyText,
+        servers: arrayOf(nonEmptyText),
       })
     ),
     catalog: shape<PhaseSettingsPage['catalog']>({

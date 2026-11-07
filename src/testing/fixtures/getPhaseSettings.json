@@ -27,7 +27,11 @@
       },
       "pinned": [],
       "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
-      "budgetCapNanoAiu": 100000000000
+      "budgetCapNanoAiu": 100000000000,
+      "mcpServers": {
+        "from": "deployment",
+        "names": ["Jira", "Confluence"]
+      }
     },
     {
       "phase": "design",
@@ -54,7 +58,11 @@
       },
       "pinned": [],
       "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
-      "budgetCapNanoAiu": 100000000000
+      "budgetCapNanoAiu": 100000000000,
+      "mcpServers": {
+        "from": "built_in",
+        "names": ["density-mcp"]
+      }
     },
     {
       "phase": "implementation",
@@ -87,7 +95,11 @@
         "timeoutSeconds",
         "ciWaitMinutes"
       ],
-      "budgetCapNanoAiu": 100000000000
+      "budgetCapNanoAiu": 100000000000,
+      "mcpServers": {
+        "from": "profile",
+        "names": []
+      }
     },
     {
       "phase": "pr_review",
@@ -114,7 +126,21 @@
       },
       "pinned": [],
       "fields": ["model", "reasoningEffort", "budgetNanoAiu", "timeoutSeconds"],
-      "budgetCapNanoAiu": 100000000000
+      "budgetCapNanoAiu": 100000000000,
+      "mcpServers": {
+        "from": "profile",
+        "names": []
+      }
+    }
+  ],
+  "agentMcpServers": [
+    {
+      "agent": "ui-implementer",
+      "servers": ["density-mcp"]
+    },
+    {
+      "agent": "reviewer",
+      "servers": ["Jira"]
     }
   ],
   "catalog": {
