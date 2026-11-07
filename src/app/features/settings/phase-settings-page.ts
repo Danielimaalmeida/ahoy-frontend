@@ -222,9 +222,15 @@ function catalogOf(
   styles: [
     SECTION_STYLES,
     `
+      /* Relative, so a screen-reader label in a scrolled column stays inside the scroller, not past the page edge. */
       .phases,
       .models {
+        position: relative;
         overflow-x: auto;
+      }
+      /* The phases table needs about 860px: the history goes below it rather than cutting its last column off. */
+      .main {
+        flex-basis: 860px;
       }
       .phase {
         font-weight: 600;

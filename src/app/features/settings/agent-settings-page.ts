@@ -95,6 +95,8 @@ function choiceOf(value: FormValue, saved: AgentSettings): AgentJobChoice {
         font-weight: 400;
       }
       select {
+        width: auto;
+        min-width: 160px;
         max-width: 240px;
       }
       .repo {

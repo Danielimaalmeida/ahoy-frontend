@@ -1338,6 +1338,27 @@ describe('Meetings on the mock backend', () => {
     }
   });
 
+  it('puts the focus in the answer line when Answer is pressed, and back on Answer when the line is cancelled', async () => {
+    const page = await open('/meetings');
+    const title = 'Tax ID validation for EU customers';
+    type(
+      card(page.root, title).querySelector('form textarea.line'),
+      '/q Who checks the number?'
+    );
+    submit(card(page.root, title).querySelector('form'));
+    await flush(page);
+    const panel = page.root.querySelector<HTMLElement>('ah-actions-panel')!;
+    const question = () =>
+      panel.querySelector<HTMLElement>('ul[aria-label="Open questions"] li')!;
+    buttonNamed(question(), 'Answer').click();
+    await flush(page);
+    expect(document.activeElement).toBe(question().querySelector('form input'));
+    buttonNamed(question(), 'Cancel').click();
+    await flush(page);
+    expect(question().querySelector('form')).toBeNull();
+    expect(document.activeElement).toBe(buttonNamed(question(), 'Answer'));
+  });
+
   it('shows the notes others take while the meeting runs, and stops reading once it ends', async () => {
     const page = await open('/meetings');
     const running = (

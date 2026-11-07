@@ -88,6 +88,7 @@ const STATUS_WORDS = {
     }
     .actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
     }
     .jira {

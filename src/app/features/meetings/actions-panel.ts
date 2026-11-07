@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import type { MeetingNoteInContext } from '@core/api/types';
@@ -50,10 +58,22 @@ import { NOTE_MAX } from './topic-card';
       align-items: baseline;
       flex-wrap: wrap;
     }
-    .text {
-      flex: 1 1 160px;
+    /* The note's text takes the column's width; who, when and where go on a line of their own below it. */
+    .body {
+      flex: 1 1 0;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .text {
       overflow-wrap: anywhere;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 8px;
     }
     .overdue {
       color: var(--danger-text);
@@ -98,20 +118,33 @@ import { NOTE_MAX } from './topic-card';
                     [attr.aria-label]="'Mark done: ' + a.note.text"
                     (change)="done(a, $event)"
                   />
-                  <span class="text">{{ a.note.text }}</span>
-                  @if (a.note.owner !== null) {
-                    <span class="ah-hint">{{ a.note.owner }}</span>
-                  }
-                  @if (due(a); as d) {
-                    <span class="ah-hint" [class.overdue]="d.overdue">{{
-                      d.text
-                    }}</span>
-                  }
-                  @if (a.meetingId !== meetingId()) {
-                    <a class="ah-hint" [routerLink]="['/meetings', a.meetingId]"
-                      >{{ a.topicTitle }}, {{ day(a.meetingStartsAt) }}</a
-                    >
-                  }
+                  @let d = due(a);
+                  <span class="body">
+                    <span class="text">{{ a.note.text }}</span>
+                    @if (
+                      a.note.owner !== null ||
+                      d !== null ||
+                      a.meetingId !== meetingId()
+                    ) {
+                      <span class="meta">
+                        @if (a.note.owner !== null) {
+                          <span class="ah-hint">{{ a.note.owner }}</span>
+                        }
+                        @if (d !== null) {
+                          <span class="ah-hint" [class.overdue]="d.overdue">{{
+                            d.text
+                          }}</span>
+                        }
+                        @if (a.meetingId !== meetingId()) {
+                          <a
+                            class="ah-hint"
+                            [routerLink]="['/meetings', a.meetingId]"
+                            >{{ a.topicTitle }}, {{ day(a.meetingStartsAt) }}</a
+                          >
+                        }
+                      </span>
+                    }
+                  </span>
                 </li>
               }
             </ul>
@@ -126,14 +159,33 @@ import { NOTE_MAX } from './topic-card';
             <ul aria-label="Open questions">
               @for (q of questions(); track q.note.id) {
                 <li>
-                  <span class="text">{{ q.note.text }}</span>
-                  @if (q.meetingId !== meetingId()) {
-                    <a class="ah-hint" [routerLink]="['/meetings', q.meetingId]"
-                      >{{ q.topicTitle }}, {{ day(q.meetingStartsAt) }}</a
-                    >
-                  } @else {
-                    <span class="ah-hint">{{ q.topicTitle }}</span>
-                  }
+                  <span class="body">
+                    <span class="text">{{ q.note.text }}</span>
+                    <span class="meta">
+                      @if (q.meetingId !== meetingId()) {
+                        <a
+                          class="ah-hint"
+                          [routerLink]="['/meetings', q.meetingId]"
+                          >{{ q.topicTitle }}, {{ day(q.meetingStartsAt) }}</a
+                        >
+                      } @else {
+                        <span class="ah-hint">{{ q.topicTitle }}</span>
+                      }
+                      @if (answering() !== q.note.id) {
+                        <button
+                          ahButton="ghost"
+                          size="sm"
+                          type="button"
+                          [id]="'answer-' + q.note.id"
+                          [attr.aria-label]="'Answer: ' + q.note.text"
+                          [disabled]="store.busy()"
+                          (click)="startAnswer(q)"
+                        >
+                          Answer
+                        </button>
+                      }
+                    </span>
+                  </span>
                   @if (answering() === q.note.id) {
                     <form (submit)="$event.preventDefault(); answer(q)">
                       <label class="ah-sr" [for]="'open-answer-' + q.note.id"
@@ -147,7 +199,7 @@ import { NOTE_MAX } from './topic-card';
                         [id]="'open-answer-' + q.note.id"
                         [maxlength]="noteMax"
                         [formControl]="text"
-                        (keydown.escape)="answering.set(null)"
+                        (keydown.escape)="cancelAnswer(q)"
                       />
                       <button
                         ahButton="primary"
@@ -161,22 +213,11 @@ import { NOTE_MAX } from './topic-card';
                         ahButton="default"
                         size="sm"
                         type="button"
-                        (click)="answering.set(null)"
+                        (click)="cancelAnswer(q)"
                       >
                         Cancel
                       </button>
                     </form>
-                  } @else {
-                    <button
-                      ahButton="ghost"
-                      size="sm"
-                      type="button"
-                      [attr.aria-label]="'Answer: ' + q.note.text"
-                      [disabled]="store.busy()"
-                      (click)="startAnswer(q)"
-                    >
-                      Answer
-                    </button>
                   }
                 </li>
               }
@@ -204,6 +245,8 @@ import { NOTE_MAX } from './topic-card';
 })
 export class ActionsPanel {
   protected readonly store = inject(MeetingsStore);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   protected readonly actions = this.store.openActions;
   protected readonly questions = this.store.openQuestions;
@@ -234,6 +277,22 @@ export class ActionsPanel {
   startAnswer(question: MeetingNoteInContext): void {
     this.text.setValue('');
     this.answering.set(question.note.id);
+    this.focusOnceShown(`#open-answer-${question.note.id}`);
+  }
+
+  /** Closes the answer line and gives the focus back to the question's Answer button. */
+  cancelAnswer(question: MeetingNoteInContext): void {
+    this.answering.set(null);
+    this.focusOnceShown(`#answer-${question.note.id}`);
+  }
+
+  /** Focuses the element the selector names once the view shows it: the line and its button replace each other. */
+  private focusOnceShown(selector: string): void {
+    afterNextRender(
+      () =>
+        this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
+      { injector: this.injector }
+    );
   }
 
   /** Answers an open question; it leaves the list once the API agrees, and the line stays open when it does not. */

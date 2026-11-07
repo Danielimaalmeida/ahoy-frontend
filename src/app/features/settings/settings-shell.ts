@@ -96,8 +96,10 @@ interface Section {
       color: var(--accent-text);
       box-shadow: var(--shadow-selected);
     }
+    /* The state stays on one line; a long section name wraps instead ("Pull request comments"). */
     .nav__state {
       margin-left: auto;
+      white-space: nowrap;
       font-size: 11.5px;
       font-weight: 500;
       color: var(--ink-muted);

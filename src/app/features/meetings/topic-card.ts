@@ -141,13 +141,15 @@ export const NOTE_MAX = 4000;
     li {
       padding: 2px 0;
     }
+    /* The author, owner, due day and buttons go to the next line when they would squeeze the text. */
     .note {
       display: flex;
-      gap: 8px;
+      flex-wrap: wrap;
+      gap: 2px 8px;
       align-items: baseline;
     }
     .text {
-      flex: 1;
+      flex: 1 1 180px;
       min-width: 0;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -283,6 +285,15 @@ export const NOTE_MAX = 4000;
     }
     .text.editable {
       cursor: text;
+    }
+    /* A touch screen has no hover: the note's buttons show, or they could not be found. A laptop with a touch screen
+       reports the mouse's hover, so a coarse pointer anywhere shows them too. */
+    @media (hover: none), (any-pointer: coarse) {
+      .remove-note,
+      .add-image,
+      .edit-note {
+        opacity: 1;
+      }
     }
     textarea.line {
       flex: 1 1 240px;

@@ -74,6 +74,11 @@ export function diffBlocks(
     .ah-diff {
       padding: var(--space-2) 0;
     }
+    /* A long line wraps beside its number, not under it. */
+    .ah-diff > div:not(.ah-diff__hunk) {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+    }
     .ah-artifact-diff__empty {
       margin: 0;
       padding: var(--space-3) var(--space-4);
