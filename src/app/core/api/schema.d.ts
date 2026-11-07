@@ -2054,7 +2054,7 @@ export interface paths {
     /**
      * Save your Copilot token, the first or a new one.
      * @description Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else
-     *     `GH_HOST`) by Test and to your runs' pods. A new
+     *     github.com) by Test and to your runs' pods. A new
      *     token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
      */
     readonly put: operations['putMyCopilotToken'];
@@ -5368,6 +5368,17 @@ export interface components {
         readonly fields: readonly components['schemas']['PhaseSettingField'][];
         /** @description The most an admin may cap one run at. */
         readonly budgetCapNanoAiu: number;
+        /** @description The MCP servers the phase's runs get, read only here (each must be in the deployment's MCP Secret): `deployment` (`AHOY_PHASE_CONFIG` names them), `built_in` (the code names them, as design's `density-mcp`), `profile` (none named: the agent profile's own, see `agentMcpServers`; `names` is empty), or `none` (the job gets none). */
+        readonly mcpServers: {
+          /** @enum {string} */
+          readonly from: 'deployment' | 'built_in' | 'profile' | 'none';
+          readonly names: readonly string[];
+        };
+      }[];
+      /** @description Each agent profile at the content repository's HEAD that uses an MCP server, with its servers: what a phase whose servers come from the `profile` runs on. */
+      readonly agentMcpServers: readonly {
+        readonly agent: string;
+        readonly servers: readonly string[];
       }[];
       readonly catalog: {
         /** @enum {string} */

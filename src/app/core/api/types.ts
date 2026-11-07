@@ -1180,6 +1180,19 @@ export const PHASE_SETTING_FIELDS = listOf<PhaseSettingField>()([
   'ciWaitMinutes',
 ]);
 
+/** A phase's MCP servers and where they come from: the deployment, the code, the agent profile, or none (D23). */
+export type PhaseMcpServers = PhaseSettingsRow['mcpServers'];
+export type McpSource = PhaseMcpServers['from'];
+export const MCP_SOURCES = listOf<McpSource>()([
+  'deployment',
+  'built_in',
+  'profile',
+  'none',
+]);
+
+/** An agent profile at HEAD that uses MCP servers, with its servers. */
+export type AgentMcpServers = PhaseSettingsPage['agentMcpServers'][number];
+
 /** Where the model catalogue comes from. */
 export type CatalogSource = ModelCatalog['source'];
 export const CATALOG_SOURCES = listOf<CatalogSource>()([

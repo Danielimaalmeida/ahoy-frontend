@@ -122,13 +122,16 @@ describe('the Phases section of Team settings', () => {
 
     const rows = [...root.querySelectorAll('[aria-label="Phases"] tbody tr')];
     expect(rows.map((r) => text(r.querySelector('th')))).toEqual([
-      'PlanningStory phase',
-      'DesignStory phase',
-      'ImplementationStory phase',
-      'ReviewStory phase',
+      'PlanningStory phaseMCP servers: Jira, Confluence (set by the deployment)',
+      'DesignStory phaseMCP servers: density-mcp (built in)',
+      "ImplementationStory phaseMCP servers: the agent profile's own",
+      "ReviewStory phaseMCP servers: the agent profile's own",
     ]);
     expect(text(root)).toContain(
       "Caps up to 100 AIU per run, or a phase's deployment cap where that is higher."
+    );
+    expect(text(root)).toContain(
+      "The agent profiles' own MCP servers, at the content repository's HEAD: ui-implementer: density-mcp · reviewer: Jira."
     );
     expect(options('Design model')[0]).toBe('Default');
     expect(

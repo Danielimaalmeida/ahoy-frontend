@@ -8,7 +8,15 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
 
 ## Where we are
 
-- **This branch (`feat/portability-4-copilot-token`, 2026-11-06, D23 step 4, on top of step 3):** Team settings has a
+- **This branch (`feat/portability-5-mcp-defaults`, 2026-11-06, D23 step 5, on top of step 4):** Team settings ›
+  Phases shows, under each phase's name, the MCP servers its runs get and where they come from, read-only since only
+  the deployment sets them: "Jira, Confluence (set by the deployment)", "density-mcp (built in)", "the agent profile's
+  own" (the built-in phases name no other server) or "none"; under the table, each agent profile's own servers at the
+  content repository's HEAD. Setup's MCP step comes from the API, which now lists what the phases and agent profiles
+  ask for and points at the reconciler's preflight. The contract is `ahoy-hosted`'s `feat/portability-5-mcp-defaults`
+  (140 operations implemented). With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (218 files, 3,736 tests),
+  `ng build`, typecheck, lint and format pass; e2e was not run and nothing ran against an API.
+- **Step 4 (`feat/portability-4-copilot-token`, 2026-11-06, D23 step 4, on top of step 3):** Team settings has a
   "You" group with **My Copilot token** (`/settings/copilot-token`): each person pastes their own Copilot PAT, which
   the API seals and never shows again (only `••••` and its last four characters); Test asks GitHub who it is (0 AIU)
   and keeps the answer as the last test (a refusal shows a banner with what to do); Replace and Remove (after a second
@@ -16,8 +24,7 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
   stored token, a banner says so; a sign-in without a qnumber is told the page is not for it. Setup lists it in a
   "You" panel, never required, with a link for admins and members alike, and the side navigation says "Saved" or
   "Check" from Setup. The settings history names "Saved/Replaced/Removed their Copilot token". The contract is
-  `ahoy-hosted`'s `feat/portability-4-copilot-token` (140 operations implemented). With `@acme-fedev/auth` stubbed in
-  `node_modules`, the whole suite (218 files, 3,735 tests), `ng build`, typecheck, lint and format pass; e2e was not run and nothing ran against an API.
+  `ahoy-hosted`'s `feat/portability-4-copilot-token` (140 operations implemented).
 - **Step 3 (`feat/portability-3-setup`, 2026-11-06, D23 step 3, on top of step 2):** Team settings opens on a
   new section, **Setup** (`/settings/setup`, "Start here"): how many required steps are done ("6 of 8") with a bar,
   what is left by who fixes it, and when the API checked; the installation's steps read-only (the chart fixes them);

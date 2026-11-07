@@ -11,8 +11,10 @@ import { firstValueFrom, map, merge } from 'rxjs';
 import { isStale, type ApiError } from '@core/api/api-error';
 import {
   REASONING_EFFORTS,
+  type AgentMcpServers,
   type CatalogModel,
   type PhaseChange,
+  type PhaseMcpServers,
   type PhaseSettingsChange,
   type PhaseSettingsPage as PhasesPage,
   type PhaseSettingsRow,
@@ -23,8 +25,10 @@ import {
   aiuLabel,
   aiuNumber,
   capsRaised,
+  agentMcpLabel,
   isStoryPhase,
   MAX_CI_WAIT_MINUTES,
+  mcpServersLabel,
   MAX_TIMEOUT_MINUTES,
   MIN_TIMEOUT_MINUTES,
   minutesLabel,
@@ -232,6 +236,10 @@ function catalogOf(
         display: block;
         font-weight: 400;
       }
+      .mcp {
+        white-space: normal;
+        max-width: 220px;
+      }
       select {
         min-width: 100px;
         max-width: 120px;
@@ -344,6 +352,9 @@ function catalogOf(
                         {{ name(row.phase)
                         }}<span class="ah-cell-sub kind">{{
                           kind(row.phase)
+                        }}</span
+                        ><span class="ah-cell-sub kind mcp">{{
+                          mcp(row.mcpServers)
                         }}</span>
                       </th>
                       <td>
@@ -532,6 +543,12 @@ function catalogOf(
                 >Default and an empty field take the deployment's value, shown
                 in grey. A story's own budget still bounds every run.</span
               >
+              @if (page.agentMcpServers.length) {
+                <span class="ah-hint agent-mcp"
+                  >The agent profiles' own MCP servers, at the content
+                  repository's HEAD: {{ agentMcp(page.agentMcpServers) }}.</span
+                >
+              }
               @for (raise of raised(); track raise.phase) {
                 <ah-banner
                   variant="notice"
@@ -895,6 +912,16 @@ export class PhaseSettingsPage {
 
   protected kind(phase: string): string {
     return isStoryPhase(phase) ? 'Story phase' : 'Agent job, outside a story';
+  }
+
+  /** The phase's MCP servers and where they come from; only the deployment sets them. */
+  protected mcp(servers: PhaseMcpServers): string {
+    return mcpServersLabel(servers);
+  }
+
+  /** Each agent profile's own MCP servers, for the phases that run on them. */
+  protected agentMcp(agents: readonly AgentMcpServers[]): string {
+    return agents.map(agentMcpLabel).join(' · ');
   }
 
   protected aiu(nanoAiu: number | null): string {

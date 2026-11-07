@@ -4332,7 +4332,7 @@
         "operationId": "putMyCopilotToken",
         "tags": ["settings"],
         "summary": "Save your Copilot token, the first or a new one.",
-        "description": "Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else\n`GH_HOST`) by Test and to your runs' pods. A new\ntoken clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.\n",
+        "description": "Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else\ngithub.com) by Test and to your runs' pods. A new\ntoken clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -14213,6 +14213,7 @@
           "canEdit",
           "maxBudgetNanoAiu",
           "phases",
+          "agentMcpServers",
           "catalog",
           "version",
           "updatedBy",
@@ -14240,7 +14241,8 @@
                 "saved",
                 "pinned",
                 "fields",
-                "budgetCapNanoAiu"
+                "budgetCapNanoAiu",
+                "mcpServers"
               ],
               "properties": {
                 "phase": {
@@ -14273,6 +14275,46 @@
                   "type": "integer",
                   "minimum": 0,
                   "description": "The most an admin may cap one run at."
+                },
+                "mcpServers": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["from", "names"],
+                  "description": "The MCP servers the phase's runs get, read only here (each must be in the deployment's MCP Secret): `deployment` (`AHOY_PHASE_CONFIG` names them), `built_in` (the code names them, as design's `density-mcp`), `profile` (none named: the agent profile's own, see `agentMcpServers`; `names` is empty), or `none` (the job gets none).",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "enum": ["deployment", "built_in", "profile", "none"]
+                    },
+                    "names": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "agentMcpServers": {
+            "type": "array",
+            "description": "Each agent profile at the content repository's HEAD that uses an MCP server, with its servers: what a phase whose servers come from the `profile` runs on.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["agent", "servers"],
+              "properties": {
+                "agent": {
+                  "type": "string"
+                },
+                "servers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 }
               }
             }
