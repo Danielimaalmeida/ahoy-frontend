@@ -1022,6 +1022,39 @@ export const MEMBER_ROLES = listOf<MemberRole>()(['member', 'admin']);
 /** Body of `putPerson`. */
 export type PersonChange = Schemas['PersonChange'];
 
+/** Answer of `getSetup` and `keepPhaseDefaults`: what the installation and the team still need before stories run. */
+export type Setup = Schemas['Setup'];
+
+/** One step of the Setup page: who fixes it, whether voyages need it, where it stands and the section that fixes it. */
+export type SetupStep = Schemas['SetupStep'];
+export const SETUP_STEP_STATES = listOf<SetupStep['state']>()([
+  'done',
+  'missing',
+  'attention',
+  'optional',
+]);
+export const SETUP_STEP_GROUPS = listOf<SetupStep['group']>()([
+  'installation',
+  'team',
+]);
+export const SETUP_STEP_KEYS = listOf<SetupStep['key']>()([
+  'database',
+  'content',
+  'secrets',
+  'runs',
+  'mcp',
+  'jira',
+  'people',
+  'agents',
+  'phases',
+  'meetings',
+  'teams',
+  'sonar',
+  'figma',
+  'defects',
+  'branch_releases',
+]);
+
 /** Answer of `getMeetingSettings`: the names of the two sides of a meeting, and whether the person may change them. */
 export type MeetingSettingsPage = Schemas['MeetingSettingsPage'];
 

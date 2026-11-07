@@ -42,6 +42,7 @@ import {
   isPrCommentSettingsPage,
   isMeetingSettingsPage,
   isPeoplePage,
+  isSetup,
   isBranchRelease,
   isBranchReleaseBatch,
   isBranchReleaseRepository,
@@ -128,6 +129,7 @@ import type {
   MeetingSettingsChange,
   MeetingSettingsPage,
   PeoplePage,
+  Setup,
   PersonChange,
   BranchRelease,
   BranchReleaseRepository,
@@ -1784,6 +1786,21 @@ export class ApiClient {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })
+    );
+  }
+
+  /** What the installation and the team still need before stories run; it saves nothing. */
+  getSetup(): Promise<ApiResult<Setup>> {
+    return this.get('getSetup', '/setup', isSetup);
+  }
+
+  /** Says the phases run on the defaults, so their Setup step is done (admins only). */
+  keepPhaseDefaults(): Promise<ApiResult<Setup>> {
+    return this.post(
+      'keepPhaseDefaults',
+      '/setup/phases/keep-defaults',
+      null,
+      isSetup
     );
   }
 

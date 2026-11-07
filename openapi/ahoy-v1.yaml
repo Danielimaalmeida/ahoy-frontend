@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 908065fc40d65f8bcc917519c8bfb8611752dcea (plus uncommitted changes in the source file)
+# Commit: e49f84a039ce66e6f94b15f41e212b8457165710
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -3083,6 +3083,42 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /setup:
+    get:
+      operationId: getSetup
+      tags: [settings]
+      summary: What the installation and the team still need before stories can run.
+      description: |
+        Anyone allowed into Ahoy. The installation's steps (fixed in the chart, read-only here), then the team's (fixed
+        in Team settings, the required ones first). Each says `done`, `missing`, `attention` or `optional`, one line,
+        and the settings section that fixes it. Until every required step is done the UI says Ahoy is not ready.
+        It saves nothing and spends nothing: every state comes from a settings row or a check the API already makes.
+        The MCP servers are not required: the API cannot read the MCP Secret, so the step lists what the phases ask
+        for. 0 AIU.
+      responses:
+        '200':
+          description: The steps.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Setup' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /setup/phases/keep-defaults:
+    post:
+      operationId: keepPhaseDefaults
+      tags: [settings]
+      summary: Say the phases run on the defaults, so their Setup step is done.
+      description: |
+        Admins only. Records `phase_settings.defaults_kept` in the phases' history, once; nothing changes once the
+        phases are saved or kept. The phases keep running on the deployment's defaults.
+      responses:
+        '200':
+          description: The steps, with Phases done.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Setup' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
   /settings/people:
     get:
       operationId: getPeopleSettings
@@ -7670,6 +7706,61 @@ components:
         updatedBy: { type: [string, 'null'] }
         updatedByName: { type: [string, 'null'] }
         updatedAt: { type: [string, 'null'], format: date-time }
+    Setup:
+      type: object
+      additionalProperties: false
+      required: [canEdit, steps, requiredDone, requiredTotal, checkedAt]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: "Whether the person is an admin, who may fix the team's steps.",
+          }
+        steps:
+          type: array
+          description: The installation's steps, then the team's, in the order an admin sets them.
+          items: { $ref: '#/components/schemas/SetupStep' }
+        requiredDone: { type: integer, minimum: 0 }
+        requiredTotal: { type: integer, minimum: 0 }
+        checkedAt: { type: string, format: date-time }
+    SetupStep:
+      type: object
+      additionalProperties: false
+      required: [key, group, title, required, state, detail, section]
+      properties:
+        key:
+          type: string
+          enum:
+            [
+              database,
+              content,
+              secrets,
+              runs,
+              mcp,
+              jira,
+              people,
+              agents,
+              phases,
+              meetings,
+              teams,
+              sonar,
+              figma,
+              defects,
+              branch_releases,
+            ]
+        group:
+          {
+            type: string,
+            enum: [installation, team],
+            description: 'Who fixes it: the chart, or an admin.',
+          }
+        title: { type: string }
+        required: { type: boolean }
+        state: { type: string, enum: [done, missing, attention, optional] }
+        detail: { type: string }
+        section:
+          type: [string, 'null']
+          description: The Team settings section that fixes it (its path, such as `branch-releases`); null for the chart.
     MemberRole:
       type: string
       enum: [member, admin]

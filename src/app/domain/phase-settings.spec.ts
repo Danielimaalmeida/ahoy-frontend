@@ -115,6 +115,9 @@ describe('an entry of the phases’ history', () => {
     expect(describePhaseEvent('phase_settings.updated', 'odd')).toBe(
       'Saved the phases'
     );
+    expect(describePhaseEvent('phase_settings.defaults_kept', {})).toBe(
+      'Kept the defaults (from Setup)'
+    );
     expect(describePhaseEvent('agent_settings.updated', {})).toBeUndefined();
   });
 
