@@ -57,6 +57,16 @@ export class World {
     return written;
   }
 
+  /** The id of the newest event written more than `ageMs` ago, or 0 when there is none, as `eventIdBefore` answers. */
+  eventIdBefore(ageMs: number): number {
+    const cutoff = this.clock.now() - ageMs;
+    let newest = 0;
+    for (const event of this.events)
+      if (Date.parse(event.createdAt) < cutoff)
+        newest = Math.max(newest, Number(event.id));
+    return newest;
+  }
+
   /** The events with an id greater than `after`, of one story or all, oldest first, at most `limit`. */
   eventsAfter(
     after: number,

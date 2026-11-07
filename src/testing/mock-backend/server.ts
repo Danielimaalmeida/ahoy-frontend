@@ -1942,10 +1942,14 @@ export class MockAhoyServer {
   }
 
   private streamEvents(call: Call): MockResponse {
-    const fromHeader = call.headers['last-event-id'];
-    const after = Number(fromHeader ?? call.query['after'] ?? 0);
+    const resumeFrom = call.headers['last-event-id'] ?? call.query['after'];
     const storyParam = call.query['story'];
     const story = typeof storyParam === 'string' ? storyParam : null;
+    // As on the real server: without a cursor, one story's stream replays it all, every story's the last two minutes.
+    const after =
+      resumeFrom === undefined && story === null
+        ? this.world.eventIdBefore(STREAM_RECENT_MS)
+        : Number(resumeFrom ?? 0);
     const stream = this.world.hub.connect(
       story,
       after,
@@ -1963,6 +1967,9 @@ export class MockAhoyServer {
     };
   }
 }
+
+/** How far back a new stream of every story starts, as `STREAM_RECENT_MS` in `ahoy-hosted`. */
+const STREAM_RECENT_MS = 2 * 60_000;
 
 /** The schema of an undeclared `500`: the contract's `Problem`. */
 const PROBLEM_SCHEMA = { $ref: '#/components/schemas/Problem' };

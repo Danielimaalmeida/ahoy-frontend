@@ -30,8 +30,9 @@ The same `MockAhoyServer` runs in three places, never as two mocks:
   pr_review (one Lookout run) → delivery_gate → done. `send_back` archives the plan as
   `implementation-plan.round<N>.md` and plans again with the reason; `reject` → blocked; stop cancels the run; a run that
   costs more than the story has left halts it on `budget_exhausted`.
-- **`GET /events/stream`**: `: connected`, the events after `Last-Event-ID` (or `after`), then new ones as they happen, and
-  `: keepalive` after 15 s of silence.
+- **`GET /events/stream`**: `: connected`, the events after `Last-Event-ID` (or `after`), without either all of one
+  `story`'s events or the last two minutes' of every story, then new ones as they happen, and `: keepalive` after 15 s
+  of silence.
 - **A plan panel** (`plan-panel.ts`): a story started with `planningMode: "panel"`, or switched with `setStoryPlanningMode`,
   has its next planning runs run as a panel (twice the planning cap, more AIU): each leaves a simulated panel with the
   models `GET /models` lists under `planPanel`: the planners' questions in the first run, then drafts, plan gate verdicts,

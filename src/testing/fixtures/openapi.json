@@ -2452,7 +2452,7 @@
         "operationId": "streamEvents",
         "tags": ["events"],
         "summary": "Live events as Server-Sent Events.",
-        "description": "Each message is `id: <Event.id>`, `event: <Event.type>` and one `data:` line holding the\n`Event` JSON. IDs are stable and increase monotonically. To resume, reconnect with the\n`Last-Event-ID` header (or `after`); the server replays every later event before streaming\nnew ones. Comment lines (`: keepalive`) are sent periodically. Clients that cannot use SSE\nmay poll `listStoryEvents` instead.\n",
+        "description": "Each message is `id: <Event.id>`, `event: <Event.type>` and one `data:` line holding the\n`Event` JSON. IDs are stable and increase monotonically. To resume, reconnect with the\n`Last-Event-ID` header (or `after`); the server replays every later event before streaming\nnew ones. Without either, the stream of one `story` replays all its events first, and the\nstream of every story replays only the events of the last two minutes. Comment lines\n(`: keepalive`) are sent periodically. Clients that cannot use SSE may poll\n`listStoryEvents` instead.\n",
         "parameters": [
           {
             "name": "story",
