@@ -30,6 +30,8 @@ import type {
   MeetingStoryAnswersRequest,
   MeetingStoryDraftRequest,
   MeetingTopicOrderRequest,
+  MeetingJiraTargetRequest,
+  MoveMeetingTopicRequest,
   ModelChoice,
   ModelSlot,
   PlanPanel,
@@ -202,6 +204,8 @@ interface Route {
   readonly operationId: string;
   readonly params: readonly Param[];
   readonly body: unknown;
+  /** The JSON body may be left out (`requestBody.required: false`), as the API allows. */
+  readonly optionalBody: boolean;
   /** The media types of a body that is bytes (an image upload), or undefined when the body is JSON or none. */
   readonly bytesBody: readonly string[] | undefined;
   /** The operation's `responses`, by status (`"200"`, `"409"`, `default`). */
@@ -582,9 +586,10 @@ export class MockAhoyServer {
     if (route.body !== undefined) {
       if (request.bodyIsInvalidJson)
         throw new MockProblem('bad_request', 'Request body is not valid JSON');
-      if (request.body === undefined)
-        errors.push({ path: 'body', message: 'is required' });
-      else {
+      if (request.body === undefined) {
+        if (!route.optionalBody)
+          errors.push({ path: 'body', message: 'is required' });
+      } else {
         const bodyErrors = this.checker.check(route.body, request.body, 'body');
         errors.push(...bodyErrors);
         const unstorable =
@@ -861,7 +866,8 @@ export class MockAhoyServer {
           this.meetings.end(
             call.actor,
             call.path['meetingId'] ?? '',
-            (call.body as EndMeetingRequest).carryOver // validated
+            (call.body as EndMeetingRequest).carryOver, // validated
+            (call.body as EndMeetingRequest).carryOverTo
           )
         );
       case 'cancelMeeting':
@@ -870,8 +876,23 @@ export class MockAhoyServer {
           this.meetings.cancel(
             call.actor,
             call.path['meetingId'] ?? '',
-            (call.body as EndMeetingRequest).carryOver // validated
+            (call.body as EndMeetingRequest).carryOver, // validated
+            (call.body as EndMeetingRequest).carryOverTo
           )
+        );
+      case 'setMeetingJiraTarget':
+        return jsonResponse(
+          200,
+          this.meetings.setJiraTarget(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            call.body as MeetingJiraTargetRequest // validated
+          )
+        );
+      case 'searchMeetings':
+        return jsonResponse(
+          200,
+          this.meetings.search(String(call.query['q'] ?? '')) // validated
         );
       case 'addMeetingTopic':
         return jsonResponse(
@@ -906,7 +927,11 @@ export class MockAhoyServer {
       case 'moveMeetingTopic':
         return jsonResponse(
           200,
-          this.meetings.move(call.actor, call.path['topicId'] ?? '')
+          this.meetings.move(
+            call.actor,
+            call.path['topicId'] ?? '',
+            (call.body ?? {}) as MoveMeetingTopicRequest // validated
+          )
         );
       case 'addMeetingNote':
         return jsonResponse(
@@ -2043,6 +2068,8 @@ function buildRoutes(
         operationId: op['operationId'],
         params: [...shared, ...readParams(op['parameters'])],
         body: json === null ? undefined : json['schema'],
+        optionalBody:
+          !isRecord(requestBody) || requestBody['required'] !== true,
         bytesBody: imageTypes.length > 0 ? imageTypes : undefined,
         responses: isRecord(op['responses']) ? op['responses'] : {},
         anonymous: Array.isArray(op['security']) && op['security'].length === 0,

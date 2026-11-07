@@ -5,6 +5,8 @@ import {
   carryOverCandidates,
   hasNextMeeting,
   meetingDay,
+  meetingTime,
+  moveTargets,
   raisedByLabel,
   suggestedCarryOver,
 } from '@domain/meetings';
@@ -54,10 +56,11 @@ function topics(n: number): string {
 
 /**
  * "End Finance sync?" (or "Mark Finance sync done?" for a meeting never started, or "Cancel Finance sync?" for one
- * that did not take place): the open topics with a tick each; the ticked ones move, with their notes, to the series'
- * next meeting (planned from its cadence when none is). Topics with no notes are ticked to begin with, as most likely
- * not reached, and every open topic of a cancelled meeting; the person decides. A meeting outside a series, or in one
- * with no next meeting and no cadence, keeps its topics. The meeting is read-only once closed.
+ * that did not take place): the open topics with a tick each; the ticked ones move, with their notes, to the meeting
+ * chosen below the list: the series' next meeting to begin with (planned from its cadence when none is), or any other
+ * meeting running or planned, which is how a one-off meeting hands its topics on. Topics with no notes are ticked to
+ * begin with, as most likely not reached, and every open topic of a cancelled meeting; the person decides. With no
+ * meeting to take them, the topics stay. The meeting is read-only once closed.
  */
 @Component({
   selector: 'ah-end-meeting-dialog',
@@ -83,6 +86,11 @@ function topics(n: number): string {
       margin-top: 3px;
       accent-color: var(--accent);
     }
+    .destination {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
     .topic {
       display: flex;
       flex-direction: column;
@@ -106,19 +114,19 @@ function topics(n: number): string {
           It didn't take place.
         }
         @if (canMove()) {
-          The topics you tick move, with their notes, to the next {{ title() }}.
+          The topics you tick move, with their notes, to the meeting you choose.
           The rest stay here. After this the meeting is read-only.
         } @else if (inSeries()) {
           No next {{ title() }} is planned, so its topics stay here; plan the
           next one first to move them. After this the meeting is read-only.
         } @else {
-          This meeting isn't part of a series, so its topics stay here. After
-          this the meeting is read-only.
+          No other meeting is planned, so its topics stay here; plan one first
+          to move them. After this the meeting is read-only.
         }
       </span>
       @if (canMove() && candidates().length > 0) {
         <fieldset class="list">
-          <legend class="ah-sr">Topics to move to the next meeting</legend>
+          <legend class="ah-sr">Topics to move to another meeting</legend>
           @for (topic of candidates(); track topic.id) {
             <label>
               <input
@@ -135,8 +143,25 @@ function topics(n: number): string {
             </label>
           }
         </fieldset>
+        <label class="destination">
+          <span>Move them to</span>
+          <select
+            class="ah-input"
+            [value]="destination()"
+            (change)="destination.set(selected($event))"
+          >
+            @for (d of destinations(); track d.value) {
+              <option [value]="d.value" [selected]="d.value === destination()">
+                {{ d.label }}
+              </option>
+            }
+          </select>
+        </label>
         <span class="ah-hint">
-          @if (cancelling) {
+          @if (!seriesNext()) {
+            Tick the topics to move and pick where they go; unticked topics stay
+            here.
+          } @else if (cancelling) {
             Every open topic is ticked to begin with: none was discussed.
           } @else {
             Topics with no notes are ticked to begin with: they were most likely
@@ -163,9 +188,10 @@ export class EndMeetingDialog {
     () => (this.store.meeting()?.seriesId ?? null) !== null
   );
   /**
-   * Whether ticked topics have a next meeting to go to; when the series is not read yet, the API decides.
+   * Whether the series has a next meeting for the ticked topics (planned, or planned from its cadence); when the series
+   * is not read yet, the API decides.
    */
-  protected readonly canMove = computed(() => {
+  protected readonly seriesNext = computed(() => {
     const meeting = this.store.meeting();
     if (meeting === null || meeting.seriesId === null) return false;
     const series = this.store.openSeries();
@@ -174,17 +200,54 @@ export class EndMeetingDialog {
       hasNextMeeting(meeting, this.store.meetings(), series.cadenceDays)
     );
   });
+  /**
+   * Where the ticked topics can go: the series' next meeting first (value `''`, as the API finds or plans it), then
+   * every other meeting running or planned.
+   */
+  protected readonly destinations = computed(() => {
+    const meeting = this.store.meeting();
+    if (meeting === null) return [];
+    const targets = moveTargets(meeting, this.store.meetings());
+    const next = targets.find((t) => t.nextOfSeries);
+    const label = (m: { title: string; startsAt: string }) =>
+      `${m.title} · ${meetingDay(m.startsAt)} ${meetingTime(m.startsAt)}`;
+    return [
+      ...(this.seriesNext()
+        ? [
+            {
+              value: '',
+              label:
+                next === undefined
+                  ? `The next ${meeting.title} (planned from its rhythm)`
+                  : `${label(next.meeting)} (next in this series)`,
+            },
+          ]
+        : []),
+      ...targets
+        .filter((t) => !t.nextOfSeries)
+        .map((t) => ({ value: t.meeting.id, label: label(t.meeting) })),
+    ];
+  });
+  /** Whether ticked topics have a meeting to go to. */
+  protected readonly canMove = computed(() => this.destinations().length > 0);
+  /** The chosen destination: `''` for the series' next meeting, else a meeting's id. */
+  readonly destination = signal(this.destinations()[0]?.value ?? '');
   protected readonly candidates = computed(() =>
     carryOverCandidates(this.store.meeting()?.topics ?? [])
   );
   /** The words for the way the person chose to close the meeting, fixed while the dialog is open. */
   protected readonly words = WORDS[this.data.how];
-  /** The ids of the ticked topics. */
+  /**
+   * The ids of the ticked topics. Without a next meeting of the series none is ticked to begin with, so a plain confirm
+   * never sends topics to a meeting of another series that the person did not pick.
+   */
   readonly chosen = signal<ReadonlySet<string>>(
     new Set(
-      this.cancelling
-        ? this.candidates().map((t) => t.id)
-        : suggestedCarryOver(this.store.meeting()?.topics ?? [])
+      !this.seriesNext()
+        ? []
+        : this.cancelling
+          ? this.candidates().map((t) => t.id)
+          : suggestedCarryOver(this.store.meeting()?.topics ?? [])
     )
   );
   private readonly failed = signal(false);
@@ -214,13 +277,18 @@ export class EndMeetingDialog {
     this.chosen.set(next);
   }
 
+  protected selected(event: Event): string {
+    return event.target instanceof HTMLSelectElement ? event.target.value : '';
+  }
+
   /** Ends or cancels the meeting with the ticked topics; on a refusal the dialog stays open with the reason. */
   async submit(): Promise<void> {
     const carryOver = this.canMove() ? [...this.chosen()] : [];
+    const to = this.destination() === '' ? null : this.destination();
     const toast = this.words.toast;
     const ended = this.cancelling
-      ? await this.store.cancel(carryOver)
-      : await this.store.end(carryOver);
+      ? await this.store.cancel(carryOver, to)
+      : await this.store.end(carryOver, to);
     if (ended === null) {
       this.failed.set(true);
       return;

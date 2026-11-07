@@ -1310,8 +1310,10 @@ export interface paths {
     /**
      * Plan a meeting, alone or as the next one of a series.
      * @description With `seriesId`, `title` and `stakeholders` default to the series'. Without it, the meeting is a one-off and
-     *     `title` is required (`400 validation_failed`). `404 not_found` when the series does not exist. Stakeholders are
-     *     kept trimmed, lower-cased and once each.
+     *     `title` is required (`400 validation_failed`) and `jiraProjectKey` may name where the stories drafted from its
+     *     topics are created (`jiraIssueType` defaults to `Story`); a series' meetings use the series' target (`400
+     *     validation_failed` for a `jiraProjectKey` with `seriesId`). `404 not_found` when the series does not exist.
+     *     Stakeholders are kept trimmed, lower-cased and once each.
      */
     readonly post: operations['createMeeting'];
     readonly delete?: never;
@@ -1341,6 +1343,30 @@ export interface paths {
      * @description `409 invalid_state` once the meeting has ended: an ended meeting is read-only.
      */
     readonly patch: operations['updateMeeting'];
+    readonly trace?: never;
+  };
+  readonly '/meetings/{meetingId}/jira-target': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Set or clear the Jira project a one-off meeting's stories are created in.
+     * @description `jiraIssueType` defaults to `Story`; a null `jiraProjectKey` clears the target. Allowed in any status, since a
+     *     meeting's topics become stories after it ended. `400 validation_failed` for a series' meeting, whose stories go
+     *     to the series' target (`PATCH /meeting-series/{seriesId}`). 0 AIU.
+     */
+    readonly put: operations['setMeetingJiraTarget'];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
     readonly trace?: never;
   };
   readonly '/meetings/{meetingId}/start': {
@@ -1380,13 +1406,15 @@ export interface paths {
     /**
      * End (mark done) a meeting, planned or in progress, and carry the chosen open topics to the next one.
      * @description A planned meeting can be marked done without being started (its `startedAt` stays null). Each topic in
-     *     `carryOver` is copied, with its notes (their authors and times kept), to the end of the series' next planned
-     *     meeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next meeting is
-     *     planned one cadence on (or at the first step in the future), with the same title, length and stakeholders. All
-     *     or nothing: `409 invalid_state` when the meeting has already ended or was cancelled, or when a topic is to be
-     *     carried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);
-     *     `400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.
-     *     The meeting is read-only once ended.
+     *     `carryOver` is copied, with its notes (their authors and times kept), to the end of the meeting `carryOverTo`
+     *     names (planned or in progress, of any series or none), else of the series' next planned meeting, and marked
+     *     `moved` here. When none is planned and the series has `cadenceDays`, the next meeting is planned one cadence on
+     *     (or at the first step in the future), with the same title, length and stakeholders. All or nothing: `409
+     *     invalid_state` when the meeting has already ended or was cancelled, when `carryOverTo` names a closed meeting,
+     *     or when a topic is to be carried but there is no next meeting (a one-off meeting without `carryOverTo`, or a
+     *     series without a cadence and none planned); `404 not_found` when `carryOverTo` names no meeting; `400
+     *     validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting, or
+     *     `carryOverTo` names this meeting. The meeting is read-only once ended.
      */
     readonly post: operations['endMeeting'];
     readonly delete?: never;
@@ -1407,11 +1435,11 @@ export interface paths {
     readonly get?: never;
     readonly put?: never;
     /**
-     * Cancel a planned meeting and carry the chosen open topics over to the series' next meeting.
+     * Cancel a planned meeting and carry the chosen open topics over to another meeting.
      * @description The meeting did not take place: it becomes `cancelled`, read-only, with `endedAt` the time it was cancelled.
-     *     `carryOver` works as for `endMeeting`; the topics left out stay here. `409 invalid_state` when the meeting is
-     *     not planned (one that started is ended instead), or when a topic is to be carried but there is no next
-     *     meeting; `400 validation_failed` for a `carryOver` that `endMeeting` would refuse.
+     *     `carryOver` and `carryOverTo` work as for `endMeeting`; the topics left out stay here. `409 invalid_state` when
+     *     the meeting is not planned (one that started is ended instead), or when a topic is to be carried but there is
+     *     no meeting to take it; `400 validation_failed` and `404 not_found` as `endMeeting` would answer.
      */
     readonly post: operations['cancelMeeting'];
     readonly delete?: never;
@@ -1506,9 +1534,12 @@ export interface paths {
     readonly get?: never;
     readonly put?: never;
     /**
-     * Move one topic, with its notes, to the series' next meeting without ending this one.
-     * @description The next meeting is found or planned as for `endMeeting`. `409 invalid_state` when the topic was already moved,
-     *     its meeting has ended, or there is no next meeting to take it.
+     * Move one topic, with its notes, to another meeting without ending this one.
+     * @description To the meeting `toMeetingId` names (planned or in progress, of any series or none), else to the series' next
+     *     meeting, found or planned as for `endMeeting`; at the end of its topics, or at their start with `position:
+     *     first`. The body is optional. `409 invalid_state` when the topic was already moved, its meeting has ended, the
+     *     meeting named is closed, or there is no next meeting to take it; `404 not_found` when `toMeetingId` names no
+     *     meeting; `400 validation_failed` when it names the topic's own meeting.
      */
     readonly post: operations['moveMeetingTopic'];
     readonly delete?: never;
@@ -1535,6 +1566,28 @@ export interface paths {
      *     has ended.
      */
     readonly post: operations['addMeetingNote'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/meeting-search': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Find meetings by title, open topics by title and notes by text.
+     * @description Case-insensitive substring match of `q` (trimmed, 2 to 100 characters, else `400 validation_failed`), with
+     *     `%`, `_` and `\` matching only themselves. Latest meeting first, at most 20 of each. A topic carried over to
+     *     another meeting, and its notes, are found as their copy there. 0 AIU.
+     */
+    readonly get: operations['searchMeetings'];
+    readonly put?: never;
+    readonly post?: never;
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -4342,6 +4395,9 @@ export interface components {
       /** @description Every topic of the meeting, moved ones included. */
       readonly topicCount: number;
       readonly openTopicCount: number;
+      /** @description A one-off meeting's own Jira target; null for none and always for a series' meeting. */
+      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
+      readonly jiraIssueType: components['schemas']['JiraIssueType'] | null;
       readonly createdBy: components['schemas']['Actor'];
       readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
@@ -4458,6 +4514,9 @@ export interface components {
       /** @description Every topic of the meeting, moved ones included. */
       readonly topicCount: number;
       readonly openTopicCount: number;
+      /** @description A one-off meeting's own Jira target; null for none and always for a series' meeting. */
+      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
+      readonly jiraIssueType: components['schemas']['JiraIssueType'] | null;
       readonly createdBy: components['schemas']['Actor'];
       readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
@@ -4474,6 +4533,13 @@ export interface components {
       readonly startsAt: components['schemas']['Timestamp'];
       readonly endsAt?: components['schemas']['Timestamp'];
       readonly stakeholders?: readonly components['schemas']['Stakeholder'][];
+      readonly jiraProjectKey?: components['schemas']['JiraProjectKey'];
+      readonly jiraIssueType?: components['schemas']['JiraIssueType'];
+    };
+    readonly MeetingJiraTargetRequest: {
+      /** @description null clears the target. */
+      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
+      readonly jiraIssueType?: components['schemas']['JiraIssueType'];
     };
     readonly UpdateMeetingRequest: {
       readonly title?: string;
@@ -4488,6 +4554,11 @@ export interface components {
     readonly EndMeetingRequest: {
       /** @description The open topics to carry over to the next meeting; empty to carry none. */
       readonly carryOver: readonly string[];
+      /**
+       * Format: uuid
+       * @description The planned or running meeting that takes them; else the series' next meeting.
+       */
+      readonly carryOverTo?: string;
     };
     readonly EndMeetingResult: {
       readonly meeting: components['schemas']['Meeting'];
@@ -4507,6 +4578,18 @@ export interface components {
     };
     readonly MeetingTopicOrderRequest: {
       readonly topicIds: readonly string[];
+    };
+    readonly MoveMeetingTopicRequest: {
+      /**
+       * Format: uuid
+       * @description The planned or running meeting that takes the topic; else the series' next meeting.
+       */
+      readonly toMeetingId?: string;
+      /**
+       * @description At the start or (by default) the end of that meeting's topics.
+       * @enum {string}
+       */
+      readonly position?: 'first' | 'last';
     };
     readonly MoveMeetingTopicResult: {
       readonly topic: components['schemas']['MeetingTopic'];
@@ -4547,6 +4630,27 @@ export interface components {
     };
     readonly MeetingNoteList: {
       readonly items: readonly components['schemas']['MeetingNoteInContext'][];
+    };
+    /** @description An open topic with the meeting it is in. */
+    readonly MeetingTopicInContext: {
+      /** Format: uuid */
+      readonly id: string;
+      /** @description The topic's title (untrusted). */
+      readonly title: string;
+      readonly raisedBy: components['schemas']['RaisedBy'];
+      readonly raisedByStakeholder: string | null;
+      /** Format: uuid */
+      readonly meetingId: string;
+      readonly meetingTitle: string;
+      readonly meetingStartsAt: components['schemas']['Timestamp'];
+      readonly meetingStatus: components['schemas']['MeetingStatus'];
+      /** Format: uuid */
+      readonly seriesId: string | null;
+    };
+    readonly MeetingSearchResult: {
+      readonly meetings: readonly components['schemas']['MeetingSummary'][];
+      readonly topics: readonly components['schemas']['MeetingTopicInContext'][];
+      readonly notes: readonly components['schemas']['MeetingNoteInContext'][];
     };
     /**
      * @description `sprint_person`: takes the refinement notes, the pre-refinement and the release (the devs). `lunch_host`: picks
@@ -7258,6 +7362,36 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly setMeetingJiraTarget: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MeetingJiraTargetRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The meeting, with its target. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Meeting'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
   readonly startMeeting: {
     readonly parameters: {
       readonly query?: never;
@@ -7474,9 +7608,13 @@ export interface operations {
       };
       readonly cookie?: never;
     };
-    readonly requestBody?: never;
+    readonly requestBody?: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MoveMeetingTopicRequest'];
+      };
+    };
     readonly responses: {
-      /** @description The moved topic here and its copy in the next meeting. */
+      /** @description The moved topic here and its copy in the meeting that took it. */
       readonly 200: {
         headers: {
           readonly [name: string]: unknown;
@@ -7521,6 +7659,31 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly searchMeetings: {
+    readonly parameters: {
+      readonly query: {
+        readonly q: string;
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description What matched. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingSearchResult'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
     };
   };
   readonly listMeetingNotes: {

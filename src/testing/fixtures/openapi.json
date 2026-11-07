@@ -2694,7 +2694,7 @@
         "operationId": "createMeeting",
         "tags": ["meetings"],
         "summary": "Plan a meeting, alone or as the next one of a series.",
-        "description": "With `seriesId`, `title` and `stakeholders` default to the series'. Without it, the meeting is a one-off and\n`title` is required (`400 validation_failed`). `404 not_found` when the series does not exist. Stakeholders are\nkept trimmed, lower-cased and once each.\n",
+        "description": "With `seriesId`, `title` and `stakeholders` default to the series'. Without it, the meeting is a one-off and\n`title` is required (`400 validation_failed`) and `jiraProjectKey` may name where the stories drafted from its\ntopics are created (`jiraIssueType` defaults to `Story`); a series' meetings use the series' target (`400\nvalidation_failed` for a `jiraProjectKey` with `seriesId`). `404 not_found` when the series does not exist.\nStakeholders are kept trimmed, lower-cased and once each.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2810,6 +2810,53 @@
         }
       }
     },
+    "/meetings/{meetingId}/jira-target": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "put": {
+        "operationId": "setMeetingJiraTarget",
+        "tags": ["meetings"],
+        "summary": "Set or clear the Jira project a one-off meeting's stories are created in.",
+        "description": "`jiraIssueType` defaults to `Story`; a null `jiraProjectKey` clears the target. Allowed in any status, since a\nmeeting's topics become stories after it ended. `400 validation_failed` for a series' meeting, whose stories go\nto the series' target (`PATCH /meeting-series/{seriesId}`). 0 AIU.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingJiraTargetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The meeting, with its target.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meetings/{meetingId}/start": {
       "parameters": [
         {
@@ -2860,7 +2907,7 @@
         "operationId": "endMeeting",
         "tags": ["meetings"],
         "summary": "End (mark done) a meeting, planned or in progress, and carry the chosen open topics to the next one.",
-        "description": "A planned meeting can be marked done without being started (its `startedAt` stays null). Each topic in\n`carryOver` is copied, with its notes (their authors and times kept), to the end of the series' next planned\nmeeting and marked `moved` here. When none is planned and the series has `cadenceDays`, the next meeting is\nplanned one cadence on (or at the first step in the future), with the same title, length and stakeholders. All\nor nothing: `409 invalid_state` when the meeting has already ended or was cancelled, or when a topic is to be\ncarried but there is no next meeting (a one-off meeting, or a series without a cadence and none planned);\n`400 validation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting.\nThe meeting is read-only once ended.\n",
+        "description": "A planned meeting can be marked done without being started (its `startedAt` stays null). Each topic in\n`carryOver` is copied, with its notes (their authors and times kept), to the end of the meeting `carryOverTo`\nnames (planned or in progress, of any series or none), else of the series' next planned meeting, and marked\n`moved` here. When none is planned and the series has `cadenceDays`, the next meeting is planned one cadence on\n(or at the first step in the future), with the same title, length and stakeholders. All or nothing: `409\ninvalid_state` when the meeting has already ended or was cancelled, when `carryOverTo` names a closed meeting,\nor when a topic is to be carried but there is no next meeting (a one-off meeting without `carryOverTo`, or a\nseries without a cadence and none planned); `404 not_found` when `carryOverTo` names no meeting; `400\nvalidation_failed` when `carryOver` names a topic twice or one that is not an open topic of this meeting, or\n`carryOverTo` names this meeting. The meeting is read-only once ended.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2909,8 +2956,8 @@
       "post": {
         "operationId": "cancelMeeting",
         "tags": ["meetings"],
-        "summary": "Cancel a planned meeting and carry the chosen open topics over to the series' next meeting.",
-        "description": "The meeting did not take place: it becomes `cancelled`, read-only, with `endedAt` the time it was cancelled.\n`carryOver` works as for `endMeeting`; the topics left out stay here. `409 invalid_state` when the meeting is\nnot planned (one that started is ended instead), or when a topic is to be carried but there is no next\nmeeting; `400 validation_failed` for a `carryOver` that `endMeeting` would refuse.\n",
+        "summary": "Cancel a planned meeting and carry the chosen open topics over to another meeting.",
+        "description": "The meeting did not take place: it becomes `cancelled`, read-only, with `endedAt` the time it was cancelled.\n`carryOver` and `carryOverTo` work as for `endMeeting`; the topics left out stay here. `409 invalid_state` when\nthe meeting is not planned (one that started is ended instead), or when a topic is to be carried but there is\nno meeting to take it; `400 validation_failed` and `404 not_found` as `endMeeting` would answer.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -3135,11 +3182,21 @@
       "post": {
         "operationId": "moveMeetingTopic",
         "tags": ["meetings"],
-        "summary": "Move one topic, with its notes, to the series' next meeting without ending this one.",
-        "description": "The next meeting is found or planned as for `endMeeting`. `409 invalid_state` when the topic was already moved,\nits meeting has ended, or there is no next meeting to take it.\n",
+        "summary": "Move one topic, with its notes, to another meeting without ending this one.",
+        "description": "To the meeting `toMeetingId` names (planned or in progress, of any series or none), else to the series' next\nmeeting, found or planned as for `endMeeting`; at the end of its topics, or at their start with `position:\nfirst`. The body is optional. `409 invalid_state` when the topic was already moved, its meeting has ended, the\nmeeting named is closed, or there is no next meeting to take it; `404 not_found` when `toMeetingId` names no\nmeeting; `400 validation_failed` when it names the topic's own meeting.\n",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveMeetingTopicRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "The moved topic here and its copy in the next meeting.",
+            "description": "The moved topic here and its copy in the meeting that took it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3211,6 +3268,47 @@
             "$ref": "#/components/responses/Problem"
           },
           "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/meeting-search": {
+      "get": {
+        "operationId": "searchMeetings",
+        "tags": ["meetings"],
+        "summary": "Find meetings by title, open topics by title and notes by text.",
+        "description": "Case-insensitive substring match of `q` (trimmed, 2 to 100 characters, else `400 validation_failed`), with\n`%`, `_` and `\\` matching only themselves. Latest meeting first, at most 20 of each. A topic carried over to\nanother meeting, and its notes, are found as their copy there. 0 AIU.\n",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What matched.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingSearchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
             "$ref": "#/components/responses/Problem"
           }
         }
@@ -10897,6 +10995,8 @@
           "endedAt",
           "topicCount",
           "openTopicCount",
+          "jiraProjectKey",
+          "jiraIssueType",
           "createdBy",
           "createdByName",
           "createdAt",
@@ -10951,6 +11051,27 @@
           "openTopicCount": {
             "type": "integer",
             "minimum": 0
+          },
+          "jiraProjectKey": {
+            "description": "A one-off meeting's own Jira target; null for none and always for a series' meeting.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraProjectKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "jiraIssueType": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraIssueType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
@@ -11249,6 +11370,8 @@
           "endedAt",
           "topicCount",
           "openTopicCount",
+          "jiraProjectKey",
+          "jiraIssueType",
           "createdBy",
           "createdByName",
           "createdAt",
@@ -11305,6 +11428,27 @@
             "type": "integer",
             "minimum": 0
           },
+          "jiraProjectKey": {
+            "description": "A one-off meeting's own Jira target; null for none and always for a series' meeting.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraProjectKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "jiraIssueType": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraIssueType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "createdBy": {
             "$ref": "#/components/schemas/Actor"
           },
@@ -11359,6 +11503,33 @@
             "items": {
               "$ref": "#/components/schemas/Stakeholder"
             }
+          },
+          "jiraProjectKey": {
+            "$ref": "#/components/schemas/JiraProjectKey"
+          },
+          "jiraIssueType": {
+            "$ref": "#/components/schemas/JiraIssueType"
+          }
+        }
+      },
+      "MeetingJiraTargetRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["jiraProjectKey"],
+        "properties": {
+          "jiraProjectKey": {
+            "description": "null clears the target.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/JiraProjectKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "jiraIssueType": {
+            "$ref": "#/components/schemas/JiraIssueType"
           }
         }
       },
@@ -11403,6 +11574,11 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "carryOverTo": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The planned or running meeting that takes them; else the series' next meeting."
           }
         }
       },
@@ -11484,6 +11660,22 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "MoveMeetingTopicRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "toMeetingId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The planned or running meeting that takes the topic; else the series' next meeting."
+          },
+          "position": {
+            "type": "string",
+            "enum": ["first", "last"],
+            "description": "At the start or (by default) the end of that meeting's topics."
           }
         }
       },
@@ -11604,6 +11796,80 @@
         "required": ["items"],
         "properties": {
           "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingNoteInContext"
+            }
+          }
+        }
+      },
+      "MeetingTopicInContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "An open topic with the meeting it is in.",
+        "required": [
+          "id",
+          "title",
+          "raisedBy",
+          "raisedByStakeholder",
+          "meetingId",
+          "meetingTitle",
+          "meetingStartsAt",
+          "meetingStatus",
+          "seriesId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "The topic's title (untrusted)."
+          },
+          "raisedBy": {
+            "$ref": "#/components/schemas/RaisedBy"
+          },
+          "raisedByStakeholder": {
+            "type": ["string", "null"]
+          },
+          "meetingId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meetingTitle": {
+            "type": "string"
+          },
+          "meetingStartsAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "meetingStatus": {
+            "$ref": "#/components/schemas/MeetingStatus"
+          },
+          "seriesId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          }
+        }
+      },
+      "MeetingSearchResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["meetings", "topics", "notes"],
+        "properties": {
+          "meetings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingSummary"
+            }
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeetingTopicInContext"
+            }
+          },
+          "notes": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MeetingNoteInContext"

@@ -77,6 +77,7 @@ import {
   isMetricsReport,
   isMeetingNoteAnswerResult,
   isMoveMeetingTopicResult,
+  isMeetingSearchResult,
   isNoContent,
   isModelPlan,
   isModelCatalog,
@@ -212,6 +213,9 @@ import type {
   PlanPanelMetrics,
   PlanPanelMetricsQuery,
   MoveMeetingTopicResult,
+  MoveMeetingTopicRequest,
+  MeetingJiraTargetRequest,
+  MeetingSearchResult,
   Question,
   CancelRefinementRequest,
   Diagnosis,
@@ -1036,7 +1040,7 @@ export class ApiClient {
 
   /**
    * Cancels a planned meeting (it did not take place) and carries the chosen open topics, with their notes, to the
-   * series' next meeting.
+   * meeting `carryOverTo` names, else the series' next meeting.
    */
   cancelMeeting(
     id: string,
@@ -1052,7 +1056,7 @@ export class ApiClient {
 
   /**
    * Ends (marks done) a meeting, planned or in progress, and carries the chosen open topics, with their notes, to the
-   * series' next meeting.
+   * meeting `carryOverTo` names, else the series' next meeting.
    */
   endMeeting(
     id: string,
@@ -1119,15 +1123,45 @@ export class ApiClient {
     );
   }
 
-  /** Moves one topic, with its notes, to the series' next meeting without ending this one. */
+  /**
+   * Moves one topic, with its notes, without ending its meeting: to the meeting `toMeetingId` names, else the series'
+   * next, at the end of its topics or with `position: 'first'` at their start.
+   */
   moveMeetingTopic(
-    topicId: string
+    topicId: string,
+    body: MoveMeetingTopicRequest = {}
   ): Promise<ApiResult<MoveMeetingTopicResult>> {
     return this.post(
       'moveMeetingTopic',
       `/meeting-topics/${segment(topicId)}/move`,
-      null,
+      body,
       isMoveMeetingTopicResult
+    );
+  }
+
+  /** Sets, or with a null key clears, where a one-off meeting's stories are created in Jira; also once it ended. */
+  setMeetingJiraTarget(
+    meetingId: string,
+    body: MeetingJiraTargetRequest
+  ): Promise<ApiResult<Meeting>> {
+    return this.send(
+      'setMeetingJiraTarget',
+      isMeeting,
+      this.http.put<unknown>(
+        this.url(`/meetings/${segment(meetingId)}/jira-target`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Meetings by title, open topics by title and notes by text that contain `q` (2 to 100 characters). Spends nothing. */
+  searchMeetings(q: string): Promise<ApiResult<MeetingSearchResult>> {
+    return this.get(
+      'searchMeetings',
+      '/meeting-search',
+      isMeetingSearchResult,
+      new HttpParams().set('q', q)
     );
   }
 

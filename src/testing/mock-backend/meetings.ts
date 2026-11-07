@@ -22,6 +22,8 @@ import type {
   MeetingNoteAnswerResult,
   MeetingNoteInContext,
   MeetingNoteRequest,
+  MeetingJiraTargetRequest,
+  MeetingSearchResult,
   MeetingSeries,
   MeetingStatus,
   MeetingStoryDraft,
@@ -29,7 +31,9 @@ import type {
   MeetingStoryDraftRequest,
   MeetingSummary,
   MeetingTopic,
+  MoveMeetingTopicRequest,
   MoveMeetingTopicResult,
+  JiraIssueType,
   StoryTemplate,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
@@ -231,6 +235,7 @@ export class MeetingDesk {
         'title is required for a meeting outside a series'
       );
     this.checkTimes(body.startsAt, body.endsAt ?? null);
+    const jira = this.jiraTargetOf(series?.id ?? null, body);
     const meeting = this.insertMeeting(
       actor,
       series?.id ?? null,
@@ -239,7 +244,97 @@ export class MeetingDesk {
       body.endsAt ?? null,
       normalizeStakeholders(body.stakeholders ?? series?.stakeholders ?? [])
     );
+    meeting.jiraProjectKey = jira.projectKey;
+    meeting.jiraIssueType = jira.issueType;
     return this.meetingDto(meeting);
+  }
+
+  /** Sets, or with a null key clears, a one-off meeting's Jira target, in any status; a series' meeting has none. */
+  setJiraTarget(
+    actor: string,
+    id: string,
+    body: MeetingJiraTargetRequest
+  ): Meeting {
+    const meeting = this.meeting(id);
+    if (meeting.seriesId !== null)
+      throw refused(
+        'body/jiraProjectKey',
+        "A series' meetings create their stories in the series' Jira project"
+      );
+    const jira = this.jiraTargetOf(meeting.seriesId, body);
+    meeting.jiraProjectKey = jira.projectKey;
+    meeting.jiraIssueType = jira.issueType;
+    this.touch(meeting, actor);
+    return this.meetingDto(meeting);
+  }
+
+  private jiraTargetOf(
+    seriesId: string | null,
+    body: { jiraProjectKey?: string | null; jiraIssueType?: JiraIssueType }
+  ): { projectKey: string | null; issueType: JiraIssueType | null } {
+    if (!body.jiraProjectKey) {
+      if (body.jiraIssueType !== undefined)
+        throw refused(
+          'body/jiraIssueType',
+          'jiraIssueType goes with a jiraProjectKey'
+        );
+      return { projectKey: null, issueType: null };
+    }
+    if (seriesId !== null)
+      throw refused(
+        'body/jiraProjectKey',
+        "A series' meetings create their stories in the series' Jira project"
+      );
+    return {
+      projectKey: body.jiraProjectKey,
+      issueType: body.jiraIssueType ?? 'Story',
+    };
+  }
+
+  /**
+   * Meetings by title, open topics by title and notes by text that contain `q`, ignoring case, latest meeting first,
+   * at most 20 of each, as the API answers `searchMeetings`.
+   */
+  search(q: string): MeetingSearchResult {
+    const text = q.trim().toLowerCase();
+    if (text.length < 2 || text.length > 100)
+      throw refused('query.q', 'q is 2 to 100 characters');
+    const meetings = this.list();
+    const topics: MeetingSearchResult['topics'][number][] = [];
+    const notes: MeetingNoteInContext[] = [];
+    for (const meeting of meetings)
+      for (const topic of this.topicsOf(meeting.id)) {
+        if (topic.status !== 'open') continue;
+        if (topic.title.toLowerCase().includes(text))
+          topics.push({
+            id: topic.id,
+            title: topic.title,
+            raisedBy: topic.raisedBy,
+            raisedByStakeholder: topic.raisedByStakeholder,
+            meetingId: meeting.id,
+            meetingTitle: meeting.title,
+            meetingStartsAt: meeting.startsAt,
+            meetingStatus: meeting.status,
+            seriesId: meeting.seriesId,
+          });
+        for (const note of this.topicDto(topic).notes)
+          if (note.text.toLowerCase().includes(text))
+            notes.push({
+              note,
+              topicTitle: topic.title,
+              meetingId: meeting.id,
+              meetingTitle: meeting.title,
+              meetingStartsAt: meeting.startsAt,
+              seriesId: meeting.seriesId,
+            });
+      }
+    return {
+      meetings: meetings
+        .filter((m) => m.title.toLowerCase().includes(text))
+        .slice(0, 20),
+      topics: topics.slice(0, 20),
+      notes: notes.slice(0, 20),
+    };
   }
 
   update(actor: string, id: string, body: UpdateMeetingRequest): Meeting {
@@ -268,39 +363,42 @@ export class MeetingDesk {
     return this.meetingDto(meeting);
   }
 
-  /** Ends (marks done) a meeting, planned or in progress, carrying `carryOver` to the next one. */
+  /** Ends (marks done) a meeting, planned or in progress, carrying `carryOver` to `carryOverTo` or the next one. */
   end(
     actor: string,
     id: string,
-    carryOver: readonly string[]
+    carryOver: readonly string[],
+    carryOverTo?: string
   ): EndMeetingResult {
     const meeting = this.meeting(id);
     if (isClosed(meeting.status))
       throw invalid(
         `Only a planned meeting or one in progress can end; this one is ${meeting.status}`
       );
-    return this.close(actor, meeting, 'ended', carryOver);
+    return this.close(actor, meeting, 'ended', carryOver, carryOverTo);
   }
 
-  /** Cancels a planned meeting, carrying `carryOver` to the next one. */
+  /** Cancels a planned meeting, carrying `carryOver` to `carryOverTo` or the next one. */
   cancel(
     actor: string,
     id: string,
-    carryOver: readonly string[]
+    carryOver: readonly string[],
+    carryOverTo?: string
   ): EndMeetingResult {
     const meeting = this.meeting(id);
     if (meeting.status !== 'planned')
       throw invalid(
         `Only a planned meeting can be cancelled; this one is ${meeting.status}`
       );
-    return this.close(actor, meeting, 'cancelled', carryOver);
+    return this.close(actor, meeting, 'cancelled', carryOver, carryOverTo);
   }
 
   private close(
     actor: string,
     meeting: MeetingRecord,
     status: 'ended' | 'cancelled',
-    carryOver: readonly string[]
+    carryOver: readonly string[],
+    carryOverTo: string | undefined
   ): EndMeetingResult {
     const id = meeting.id;
     if (new Set(carryOver).size !== carryOver.length)
@@ -316,9 +414,13 @@ export class MeetingDesk {
         'body/carryOver',
         `carryOver names topics that are not open topics of this meeting: ${bad.join(', ')}`
       );
+    const to =
+      carryOverTo === undefined
+        ? null
+        : this.chosenMeeting(meeting, carryOverTo, 'body/carryOverTo');
     let next: MeetingRecord | null = null;
     if (carryOver.length > 0) {
-      next = this.nextMeetingOf(meeting, actor);
+      next = to ?? this.nextMeetingOf(meeting, actor);
       for (const topic of this.topicsOf(id))
         if (carryOver.includes(topic.id)) this.carry(topic, next, actor);
     }
@@ -443,11 +545,43 @@ export class MeetingDesk {
     return this.meetingDto(meeting);
   }
 
-  move(actor: string, id: string): MoveMeetingTopicResult {
+  move(
+    actor: string,
+    id: string,
+    body: MoveMeetingTopicRequest = {}
+  ): MoveMeetingTopicResult {
     const topic = this.changeableTopic(id);
-    const next = this.nextMeetingOf(this.meeting(topic.meetingId), actor);
+    const from = this.meeting(topic.meetingId);
+    const next =
+      body.toMeetingId === undefined
+        ? this.nextMeetingOf(from, actor)
+        : this.chosenMeeting(from, body.toMeetingId, 'body/toMeetingId');
     const copy = this.carry(topic, next, actor);
+    if (body.position === 'first') {
+      const others = this.topicsOf(next.id).filter((t) => t.id !== copy.id);
+      copy.position = 0;
+      others.forEach((t, i) => (t.position = i + 1));
+    }
     return { topic: this.topicDto(topic), movedTo: this.topicDto(copy) };
+  }
+
+  /** The planned or running meeting `toMeetingId` names, which is not `from`, as the API checks it. */
+  private chosenMeeting(
+    from: MeetingRecord,
+    toMeetingId: string,
+    path: string
+  ): MeetingRecord {
+    if (toMeetingId === from.id)
+      throw refused(
+        path,
+        'A topic is moved to another meeting, not to the one it is in'
+      );
+    const to = this.meeting(toMeetingId);
+    if (isClosed(to.status))
+      throw invalid(
+        `Meeting ${to.title} is ${to.status}; topics go to a planned or running meeting`
+      );
+    return to;
   }
 
   addNote(
@@ -904,15 +1038,16 @@ export class MeetingDesk {
     const meeting = this.meeting(draft.meetingId);
     const series =
       meeting.seriesId === null ? undefined : this.series.get(meeting.seriesId);
-    if (series === undefined)
+    const target = this.targetOf(meeting.id);
+    if (target.projectKey === null)
       throw invalid(
-        "A one-off meeting has no Jira project; only a series' meetings create stories"
+        series === undefined
+          ? `Meeting ${meeting.title} has no Jira project; set it first`
+          : `Series ${series.name} has no Jira project; set it first`
       );
-    if (series.jiraProjectKey === null)
-      throw invalid(`Series ${series.name} has no Jira project; set it first`);
     if (this.jiraRefuses !== null)
       throw new MockProblem('unavailable', this.jiraRefuses);
-    const key = `${series.jiraProjectKey}-${this.nextIssue++}`;
+    const key = `${target.projectKey}-${this.nextIssue++}`;
     draft.status = 'created';
     draft.jiraKey = key;
     draft.jiraUrl = `https://jira.example.com/browse/${key}`;
@@ -928,13 +1063,19 @@ export class MeetingDesk {
     return draft;
   }
 
-  /** Where Create in Jira puts a meeting's stories: its series' project, if it has one. */
+  /** Where Create in Jira puts a meeting's stories: its series' project, or a one-off meeting's own, if it has one. */
   private targetOf(meetingId: string): MeetingStoryDraft['target'] {
-    const seriesId = this.meeting(meetingId).seriesId;
-    const series = seriesId === null ? undefined : this.series.get(seriesId);
+    const meeting = this.meeting(meetingId);
+    const series =
+      meeting.seriesId === null ? undefined : this.series.get(meeting.seriesId);
+    if (series === undefined)
+      return {
+        projectKey: meeting.jiraProjectKey,
+        issueType: meeting.jiraIssueType,
+      };
     return {
-      projectKey: series?.jiraProjectKey ?? null,
-      issueType: series === undefined ? null : series.jiraIssueType,
+      projectKey: series.jiraProjectKey,
+      issueType: series.jiraIssueType,
     };
   }
 
@@ -968,6 +1109,8 @@ export class MeetingDesk {
       status: 'planned',
       startedAt: null,
       endedAt: null,
+      jiraProjectKey: null,
+      jiraIssueType: null,
       createdBy: actor,
       createdByName: this.nameOf(actor),
       createdAt: at,
@@ -1034,7 +1177,9 @@ export class MeetingDesk {
   /** The series' first planned meeting after this one; else a new one a cadence on; else `409 invalid_state`. */
   private nextMeetingOf(meeting: MeetingRecord, actor: string): MeetingRecord {
     if (meeting.seriesId === null)
-      throw invalid('A one-off meeting has no next meeting to move topics to');
+      throw invalid(
+        'A one-off meeting has no next meeting; choose the meeting to move topics to'
+      );
     const next = [...this.meetings.values()]
       .filter(
         (m) =>
@@ -1085,7 +1230,7 @@ export class MeetingDesk {
       ...topic,
       id: this.id(),
       meetingId: next.id,
-      origin: 'planned',
+      origin: next.status === 'in_progress' ? 'in_meeting' : 'planned',
       status: 'open',
       position: this.topicsOf(next.id).length,
       carriedFromTopicId: topic.id,

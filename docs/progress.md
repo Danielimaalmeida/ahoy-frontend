@@ -1,14 +1,29 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-06 (`feat/portability-4-copilot-token`; offline checks passed with a stubbed `@acme-fedev/auth`). One
-page: replace it, do not append; git history is the archive (the 3,692-line page before this one:
-`git show b1f9b88:docs/progress.md`). The review of both repositories, with its proposals (not yet agreed), is
-`ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on 2026-10-24
-(`ahoy-hosted` `design.md` §1 and §5).
+Updated 2026-11-07 (`feat/meeting-notes-ux`: the meeting notes page reworked, main merged in; offline checks passed with
+a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the archive (the 3,692-line page
+before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories, with its proposals (not yet
+agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on
+2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/portability-5-mcp-defaults`, 2026-11-06, D23 step 5, on top of step 4):** Team settings ›
+- **This branch (`feat/meeting-notes-ux`, 2026-11-06, asked for by the user on 2026-11-06 after a UX study of the
+  meeting notes page):** deploys with `ahoy-hosted`'s `feat/meeting-notes-ux` (PR #91, migration 0044).
+  - **A list that grows:** the left column pins the running meeting, then switches between Upcoming (grouped by week),
+    Past (by month, 12 at a time) and Series (each series' next and last meetings, 3 at a time), and searches meetings,
+    topics and notes (`GET /meeting-search`, debounced). The list still comes whole from `listMeetings`; the UI only
+    collapses it.
+  - **Seamless notes:** a note or answer is edited in place (text, kind, owner, due date); a topic is renamed in place;
+    removing a note or answer leaves an Undo for 5 seconds; the composer grows with the text (Enter adds, Shift+Enter
+    breaks the line); a topic's actions sit in a `⋯` menu.
+  - **Move to any meeting:** Move to… lists every running or planned meeting (the series' next first, or the next one
+    planned from its cadence), with a filter and "at the end" or "at the top"; ending a meeting carries open topics to the
+    meeting the person picks. The moved topic stays read-only and links to where it went (unchanged).
+  - **Jira from one-off meetings:** a one-off meeting keeps its own Jira project and issue type (set in New meeting,
+    prefilled from the last one-off's, or changed on the meeting); Create in Jira works there as in a series.
+  - A series meeting links to the previous and next meeting of its series.
+- **Merged before (`feat/portability-5-mcp-defaults`, #73, 2026-11-06, D23 step 5, on top of step 4):** Team settings ›
   Phases shows, under each phase's name, the MCP servers its runs get and where they come from, read-only since only
   the deployment sets them: "Jira, Confluence (set by the deployment)", "density-mcp (built in)", "the agent profile's
   own" (the built-in phases name no other server) or "none"; under the table, each agent profile's own servers at the
@@ -196,7 +211,13 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
 
 ## Proof
 
-- **Current merge** (2026-11-06, local checkout, Node 24.22.2): `npm run build`, typecheck (app, specs and boundaries),
+- **This branch** (2026-11-06, cloud container): `npm run build`, typecheck (app, specs and boundaries), lint (ESLint
+  and Stylelint), `npm test -- --watch=false` (218 files, 3,758 tests, after merging main on 2026-11-07) and format (only `docs/architecture.md` warns,
+  as on `main`) passed, with `@acme-fedev/auth` replaced by a local stub in `node_modules` and native bindings installed
+  by hand (the private registry is not reachable here). The contract was synced from `ahoy-hosted`'s branch; the
+  mirror check passes and `schema.d.ts` is kept Prettier-formatted (see `api:check` below). Not run: the real auth
+  library, Playwright, a browser, a local hosted API, a live API or TEST. No AIU was spent.
+- **Previous merge** (2026-11-06, local checkout, Node 24.22.2): `npm run build`, typecheck (app, specs and boundaries),
   lint (ESLint and Stylelint), `npm test -- --watch=false` (207 files, 3,680 tests) and format all passed. The build
   reports component-style budget warnings, no errors. API artifacts were regenerated from the combined contract;
   the mirror check passes. The focused Angular regression run also passed (4 files, 558 tests, Node 26). Installed
@@ -274,7 +295,9 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
    turn Business-rule review on and see the confirmation; lower a phase's cap, raise one with the confirmation, and save
    a catalogue; at the delivery gate, Assess comments with a note; set a defects query and priorities, wait
    for a pass, ignore a defect and undo it; add a repository's release workflow and deploy a package's branch with a fake `gh`). The Copilot token page waits on security.
-4. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
+4. Merge `ahoy-hosted` PR #91 (migration 0044) with or before this branch; then open Meetings against a local API: move a
+   topic to a one-off, set a one-off's Jira target and draft a story, search, undo a removal.
+   Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
    then publishing to Confluence through its API (today the page copies wiki markup).
 5. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
    fixers' answers beside the delivery gate, the anchor amendment beside a `child_ready` rejection).

@@ -13,9 +13,11 @@ import type {
   Meeting,
   MeetingNote,
   MeetingNoteInContext,
+  MeetingSearchResult,
   MeetingSeries,
   MeetingSummary,
   MeetingTopic,
+  MoveMeetingTopicResult,
   RaisedBy,
 } from '@core/api/types';
 import { CLOCK, type Timer } from '@core/realtime/clock';
@@ -44,6 +46,29 @@ export interface NewMeeting {
   readonly startsAt: string;
   /** The stakeholders of a one-off meeting; a series' meeting takes the series'. */
   readonly stakeholders?: readonly string[];
+  /** Where a one-off meeting's stories are created in Jira; a series' meeting uses the series'. */
+  readonly jira?: {
+    readonly projectKey: string;
+    readonly issueType: JiraIssueType;
+  };
+}
+
+/** Where a moved topic goes: a meeting (else the series' next one), at the end of its topics or at their start. */
+export interface MoveRequest {
+  readonly toMeetingId: string | null;
+  readonly position: 'first' | 'last';
+}
+
+/** How long the search waits after the last key before it asks the API. */
+export const SEARCH_PAUSE_MS = 250;
+
+/** How long a removed note waits, hidden, before it is removed for good, so Undo can bring it back. */
+export const UNDO_MS = 5000;
+
+/** Where the open meeting's stories are created in Jira: the series' target, or a one-off meeting's own. */
+export interface JiraTargetView {
+  readonly projectKey: string | null;
+  readonly issueType: JiraIssueType | null;
 }
 
 /** What the page asks for when it starts a series: its name, stakeholders and how many days apart its meetings are. */
@@ -74,9 +99,29 @@ export class MeetingsStore {
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.stopLive();
+      this.searchTimer?.cancel();
+      void this.flushRemovals();
       for (const url of this.imageUrls().values()) URL.revokeObjectURL(url);
     });
   }
+
+  /** The notes removed but still within Undo, by note id, with the topic they are under. */
+  readonly removing = signal<ReadonlyMap<string, string>>(new Map());
+  private readonly removalTimers = new Map<string, Timer>();
+  /** The removals whose DELETE is under way, by note id: Undo can no longer stop them, and a flush waits for them. */
+  private readonly removalsInFlight = new Map<string, Promise<void>>();
+
+  /** What the last search found, for the text it was asked with; null when no search is shown. */
+  readonly searchResult = signal<{
+    readonly q: string;
+    readonly result: MeetingSearchResult;
+  } | null>(null);
+  /** Why the last search failed. */
+  readonly searchError = signal<ApiError | null>(null);
+  /** Whether a search is waiting or in flight. */
+  readonly searching = signal(false);
+  private searchTimer: Timer | null = null;
+  private searchGeneration = 0;
 
   /** The object URL of each note image read so far, by image id. An image never changes, so one read is enough. */
   readonly imageUrls = signal<ReadonlyMap<string, string>>(new Map());
@@ -122,6 +167,21 @@ export class MeetingsStore {
       : (this.series().find((s) => s.id === seriesId) ?? null);
   });
 
+  /** Where the open meeting's stories are created in Jira: its series' target, or a one-off meeting's own. */
+  readonly openTarget = computed<JiraTargetView | null>(() => {
+    const meeting = this.meeting();
+    if (meeting === null) return null;
+    if (meeting.seriesId === null)
+      return {
+        projectKey: meeting.jiraProjectKey,
+        issueType: meeting.jiraIssueType,
+      };
+    const series = this.openSeries();
+    return series === null
+      ? null
+      : { projectKey: series.jiraProjectKey, issueType: series.jiraIssueType };
+  });
+
   /** Whether the list has been read once (successfully), so the page knows which meeting to open by default. */
   readonly loaded = signal(false);
 
@@ -164,6 +224,8 @@ export class MeetingsStore {
   async open(id: string): Promise<void> {
     const generation = ++this.generation;
     this.stopLive();
+    await this.flushRemovals();
+    if (generation !== this.generation) return;
     const result = await this.api.getMeeting(id);
     if (generation !== this.generation) return;
     if (!result.ok) {
@@ -260,6 +322,12 @@ export class MeetingsStore {
         request.stakeholders.length > 0
           ? { stakeholders: [...request.stakeholders] }
           : {}),
+        ...(request.jira !== undefined && request.seriesId === null
+          ? {
+              jiraProjectKey: request.jira.projectKey,
+              jiraIssueType: request.jira.issueType,
+            }
+          : {}),
       })
     );
     if (created === null) return null;
@@ -308,6 +376,40 @@ export class MeetingsStore {
     return result;
   }
 
+  /**
+   * Sets where a one-off meeting's drafted stories are created in Jira (a null project turns creating off), also after
+   * it ended, and keeps the changed meeting. The dialog shows the outcome itself, so the page's command error is left
+   * alone.
+   */
+  async setMeetingTarget(
+    meetingId: string,
+    projectKey: string | null,
+    issueType: JiraIssueType
+  ): Promise<ApiResult<Meeting>> {
+    this.busy.set(true);
+    const result = await this.api.setMeetingJiraTarget(meetingId, {
+      jiraProjectKey: projectKey,
+      ...(projectKey !== null ? { jiraIssueType: issueType } : {}),
+    });
+    this.busy.set(false);
+    if (result.ok) {
+      const changed = result.value;
+      if (this.meeting()?.id === meetingId) this.meeting.set(changed);
+      this.meetings.set(
+        this.meetings().map((m) =>
+          m.id === meetingId
+            ? {
+                ...m,
+                jiraProjectKey: changed.jiraProjectKey,
+                jiraIssueType: changed.jiraIssueType,
+              }
+            : m
+        )
+      );
+    }
+    return result;
+  }
+
   /** Starts the open meeting: topics added from now on were raised in it. */
   async start(): Promise<void> {
     const id = this.meeting()?.id;
@@ -320,26 +422,37 @@ export class MeetingsStore {
   }
 
   /**
-   * Ends (marks done) the open meeting, planned or in progress, carrying `carryOver` to the next one. Answers the ended
-   * meeting and the meeting that took the topics (null when none went), or null when the API refused (the reason is in
-   * `commandError`).
+   * Ends (marks done) the open meeting, planned or in progress, carrying `carryOver` to the meeting `to` names, else to
+   * the series' next one. Answers the ended meeting and the meeting that took the topics (null when none went), or null
+   * when the API refused (the reason is in `commandError`).
    */
-  end(carryOver: readonly string[]): Promise<EndMeetingResult | null> {
-    return this.close('end', carryOver);
+  end(
+    carryOver: readonly string[],
+    to: string | null = null
+  ): Promise<EndMeetingResult | null> {
+    return this.close('end', carryOver, to);
   }
 
-  /** Cancels the open meeting, which is planned, carrying `carryOver` to the next one; answers as `end` does. */
-  cancel(carryOver: readonly string[]): Promise<EndMeetingResult | null> {
-    return this.close('cancel', carryOver);
+  /** Cancels the open meeting, which is planned, carrying `carryOver` as `end` does; answers as `end` does. */
+  cancel(
+    carryOver: readonly string[],
+    to: string | null = null
+  ): Promise<EndMeetingResult | null> {
+    return this.close('cancel', carryOver, to);
   }
 
   private async close(
     how: 'end' | 'cancel',
-    carryOver: readonly string[]
+    carryOver: readonly string[],
+    to: string | null
   ): Promise<EndMeetingResult | null> {
     const id = this.meeting()?.id;
     if (id === undefined) return null;
-    const body = { carryOver: [...carryOver] };
+    await this.flushRemovals();
+    const body = {
+      carryOver: [...carryOver],
+      ...(to !== null && carryOver.length > 0 ? { carryOverTo: to } : {}),
+    };
     const ended = await this.run(() =>
       how === 'end'
         ? this.api.endMeeting(id, body)
@@ -388,6 +501,7 @@ export class MeetingsStore {
 
   /** Removes a topic and its notes. */
   async deleteTopic(topicId: string): Promise<void> {
+    await this.flushRemovals(topicId);
     if (!(await this.runEmpty(() => this.api.deleteMeetingTopic(topicId))))
       return;
     this.patchMeeting((m) => ({
@@ -411,13 +525,27 @@ export class MeetingsStore {
     if (ordered !== null) this.meeting.set(ordered);
   }
 
-  /** Moves a topic, with its notes, to the series' next meeting now. */
-  async moveToNext(topicId: string): Promise<void> {
-    const moved = await this.run(() => this.api.moveMeetingTopic(topicId));
-    if (moved === null) return;
+  /**
+   * Moves a topic, with its notes, now: to the meeting `to.toMeetingId` names (else the series' next one), at the end
+   * of its topics or at their start. Answers the moved topic and its copy, or null when refused.
+   */
+  async moveTopic(
+    topicId: string,
+    to: MoveRequest = { toMeetingId: null, position: 'last' }
+  ): Promise<MoveMeetingTopicResult | null> {
+    // A note removed a moment ago goes now, so it is not copied with the topic.
+    await this.flushRemovals(topicId);
+    const moved = await this.run(() =>
+      this.api.moveMeetingTopic(topicId, {
+        ...(to.toMeetingId !== null ? { toMeetingId: to.toMeetingId } : {}),
+        ...(to.position === 'first' ? { position: 'first' as const } : {}),
+      })
+    );
+    if (moved === null) return null;
     this.replaceTopic(moved.topic);
     await this.refreshList();
     await this.loadActions();
+    return moved;
   }
 
   /**
@@ -538,14 +666,32 @@ export class MeetingsStore {
     return true;
   }
 
-  /** Rewrites a note. */
+  /**
+   * Rewrites a note and, with `extras`, changes what it is: a plain note, a decision, an action (whose owner and due day
+   * are set, or cleared when empty) or a question. Allowed while the meeting takes changes, and for an answer also
+   * after it ended.
+   */
   async editNote(
     topicId: string,
     noteId: string,
-    text: string
+    text: string,
+    extras?: NoteExtras
   ): Promise<boolean> {
+    const owner = extras?.owner?.trim() ?? '';
     const note = await this.run(() =>
-      this.api.updateMeetingNote(noteId, { text: text.trim() })
+      this.api.updateMeetingNote(noteId, {
+        text: text.trim(),
+        ...(extras !== undefined ? { kind: extras.kind } : {}),
+        ...(extras?.kind === 'action'
+          ? {
+              owner: owner !== '' ? owner : null,
+              dueOn:
+                extras.dueOn !== undefined && extras.dueOn !== ''
+                  ? extras.dueOn
+                  : null,
+            }
+          : {}),
+      })
     );
     if (note === null) return false;
     this.patchTopic(topicId, (t) => ({
@@ -554,7 +700,101 @@ export class MeetingsStore {
     }));
     for (const list of [this.openActions, this.openQuestions])
       list.set(list().map((a) => (a.note.id === noteId ? { ...a, note } : a)));
+    if (extras !== undefined) await this.loadActions();
     return true;
+  }
+
+  /**
+   * Hides a note at once and removes it for good after {@link UNDO_MS}, unless {@link undoRemove} brings it back first.
+   * A meeting that is left or closed meanwhile removes it straight away.
+   */
+  removeNoteLater(topicId: string, noteId: string): void {
+    if (this.removing().has(noteId)) return;
+    const next = new Map(this.removing());
+    next.set(noteId, topicId);
+    this.removing.set(next);
+    this.removalTimers.set(
+      noteId,
+      this.clock.schedule(UNDO_MS, () => void this.finishRemoval(noteId))
+    );
+  }
+
+  /** Brings back a note removed less than {@link UNDO_MS} ago, unless its removal is already under way. */
+  undoRemove(noteId: string): void {
+    if (this.removalsInFlight.has(noteId)) return;
+    this.removalTimers.get(noteId)?.cancel();
+    this.removalTimers.delete(noteId);
+    const next = new Map(this.removing());
+    next.delete(noteId);
+    this.removing.set(next);
+  }
+
+  /** Removes every note waiting for its Undo to run out (only those under `topicId`, when given), now and together. */
+  async flushRemovals(topicId?: string): Promise<void> {
+    await Promise.all(
+      [...this.removing()]
+        .filter(([, under]) => topicId === undefined || under === topicId)
+        .map(([noteId]) => this.finishRemoval(noteId))
+    );
+  }
+
+  /**
+   * Sends one pending removal, once: a flush during the request waits for it. It runs in the background, so it leaves
+   * `busy` and the error of whatever the person is doing alone, and shows only its own failure (the note comes back).
+   */
+  private finishRemoval(noteId: string): Promise<void> {
+    const inFlight = this.removalsInFlight.get(noteId);
+    if (inFlight !== undefined) return inFlight;
+    const topicId = this.removing().get(noteId);
+    if (topicId === undefined) return Promise.resolve();
+    this.removalTimers.get(noteId)?.cancel();
+    this.removalTimers.delete(noteId);
+    const removal = (async () => {
+      const result = await this.api.deleteMeetingNote(noteId);
+      if (result.ok) await this.dropNote(topicId, noteId);
+      else this.commandError.set(result.error);
+      this.removalsInFlight.delete(noteId);
+      const next = new Map(this.removing());
+      next.delete(noteId);
+      this.removing.set(next);
+    })();
+    this.removalsInFlight.set(noteId, removal);
+    return removal;
+  }
+
+  /**
+   * Finds meetings, open topics and notes containing `q` after a short pause, so typing asks once; a blank `q`, or one
+   * shorter than 2 characters, clears the results. An answer to an older text is dropped.
+   */
+  search(q: string): void {
+    const text = q.trim();
+    const generation = ++this.searchGeneration;
+    this.searchTimer?.cancel();
+    this.searchTimer = null;
+    if (text.length < 2) {
+      this.searching.set(false);
+      this.searchError.set(null);
+      this.searchResult.set(null);
+      return;
+    }
+    this.searching.set(true);
+    this.searchError.set(null);
+    this.searchTimer = this.clock.schedule(SEARCH_PAUSE_MS, () => {
+      this.searchTimer = null;
+      void this.runSearch(text.slice(0, 100), generation);
+    });
+  }
+
+  private async runSearch(q: string, generation: number): Promise<void> {
+    const result = await this.api.searchMeetings(q);
+    if (generation !== this.searchGeneration) return;
+    this.searching.set(false);
+    if (!result.ok) {
+      this.searchError.set(result.error);
+      return;
+    }
+    this.searchError.set(null);
+    this.searchResult.set({ q, result: result.value });
   }
 
   /**
@@ -564,6 +804,11 @@ export class MeetingsStore {
   async deleteNote(topicId: string, noteId: string): Promise<void> {
     if (!(await this.runEmpty(() => this.api.deleteMeetingNote(noteId))))
       return;
+    await this.dropNote(topicId, noteId);
+  }
+
+  /** Takes a removed note, and a question's answers with it, out of the page. */
+  private async dropNote(topicId: string, noteId: string): Promise<void> {
     const notes =
       this.meeting()?.topics.find((t) => t.id === topicId)?.notes ?? [];
     const questionId = notes.find((n) => n.id === noteId)?.answerTo ?? null;

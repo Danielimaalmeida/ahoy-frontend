@@ -177,12 +177,14 @@ import {
   type MeetingNoteImage,
   type MeetingNoteInContext,
   type MeetingNoteList,
+  type MeetingSearchResult,
   type MeetingSeries,
   type MeetingSeriesList,
   type MeetingStoryDraft,
   type MeetingStoryDraftList,
   type MeetingSummary,
   type MeetingTopic,
+  type MeetingTopicInContext,
   type MeetingTopicLink,
   type EndMeetingResult,
   type MeetingNoteAnswerResult,
@@ -1113,21 +1115,19 @@ const meetingNote: Check = (value, at) => {
 /** A note, as `addMeetingNote`, `updateMeetingNote` and `setMeetingNoteDone` answer it. */
 export const isMeetingNote = guard<MeetingNote>('MeetingNote', meetingNote);
 
+const meetingNoteInContext = shape<MeetingNoteInContext>({
+  note: meetingNote,
+  topicTitle: text,
+  meetingId: uuid,
+  meetingTitle: text,
+  meetingStartsAt: timestamp,
+  seriesId: nullable(uuid),
+});
+
 /** Every note of one kind across meetings, each with the topic and meeting it was taken in. */
 export const isMeetingNoteList = guard<MeetingNoteList>(
   'MeetingNoteList',
-  shape<MeetingNoteList>({
-    items: arrayOf(
-      shape<MeetingNoteInContext>({
-        note: meetingNote,
-        topicTitle: text,
-        meetingId: uuid,
-        meetingTitle: text,
-        meetingStartsAt: timestamp,
-        seriesId: nullable(uuid),
-      })
-    ),
-  })
+  shape<MeetingNoteList>({ items: arrayOf(meetingNoteInContext) })
 );
 
 const topicLink = shape<MeetingTopicLink>({
@@ -1184,6 +1184,8 @@ const meetingSummaryFields = {
   endedAt: nullable(timestamp),
   topicCount: count,
   openTopicCount: count,
+  jiraProjectKey: nullable(jiraProjectKey),
+  jiraIssueType: nullable(oneOf(JIRA_ISSUE_TYPES)),
   createdBy: actor,
   createdByName: nullable(text),
   createdAt: timestamp,
@@ -1212,15 +1214,29 @@ const meetingTimes: Check = (value, at) => {
   return null;
 };
 
+/** A one-off meeting's Jira target has a project and an issue type or neither, and a series' meeting has none. */
+const meetingJiraTarget: Check = (value, at) => {
+  if (!isRecord(value)) return null;
+  const key = value['jiraProjectKey'];
+  if ((key === null) !== (value['jiraIssueType'] === null))
+    return `${at}.jiraProjectKey and ${at}.jiraIssueType must be set together`;
+  if (key !== null && value['seriesId'] !== null)
+    return `${at} is a series' meeting with a Jira target of its own`;
+  return null;
+};
+
 const meetingSummary: Check = (value, at) =>
   shape<MeetingSummary>(meetingSummaryFields)(value, at) ??
-  meetingTimes(value, at);
+  meetingTimes(value, at) ??
+  meetingJiraTarget(value, at);
 
 const meeting: Check = (value, at) =>
   shape<Meeting>({ ...meetingSummaryFields, topics: arrayOf(meetingTopic) })(
     value,
     at
-  ) ?? meetingTimes(value, at);
+  ) ??
+  meetingTimes(value, at) ??
+  meetingJiraTarget(value, at);
 
 /** Every meeting, latest start first. */
 export const isMeetingList = guard<MeetingList>(
@@ -1243,10 +1259,32 @@ export const isMeetingNoteAnswerResult = guard<MeetingNoteAnswerResult>(
   shape<MeetingNoteAnswerResult>({ question: meetingNote, answer: meetingNote })
 );
 
-/** A moved topic and its copy in the next meeting. */
+/** A moved topic and its copy in the meeting that took it. */
 export const isMoveMeetingTopicResult = guard<MoveMeetingTopicResult>(
   'MoveMeetingTopicResult',
   shape<MoveMeetingTopicResult>({ topic: meetingTopic, movedTo: meetingTopic })
+);
+
+/** What a search found: meetings, open topics with their meeting, and notes with their topic and meeting. */
+export const isMeetingSearchResult = guard<MeetingSearchResult>(
+  'MeetingSearchResult',
+  shape<MeetingSearchResult>({
+    meetings: arrayOf(meetingSummary),
+    topics: arrayOf(
+      shape<MeetingTopicInContext>({
+        id: uuid,
+        title: text,
+        raisedBy: oneOf(RAISED_BY),
+        raisedByStakeholder: nullable(text),
+        meetingId: uuid,
+        meetingTitle: text,
+        meetingStartsAt: timestamp,
+        meetingStatus: oneOf(MEETING_STATUSES),
+        seriesId: nullable(uuid),
+      })
+    ),
+    notes: arrayOf(meetingNoteInContext),
+  })
 );
 
 const storyText = boundedText('text of 1 to 1000 characters', 1, 1000);

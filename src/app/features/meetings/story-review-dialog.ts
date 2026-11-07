@@ -288,7 +288,7 @@ export interface StoryReviewData {
                   >
                     Grill me on it
                   </button>
-                  @if (series() !== null) {
+                  @if (series() !== null || oneOff() !== null) {
                     <button
                       ahButton="ghost"
                       size="sm"
@@ -330,6 +330,11 @@ export class StoryReviewDialog {
     () => this.data.drafts.drafts().find((d) => d.id === this.draftId()) ?? null
   );
   protected readonly series = this.data.store.openSeries;
+  /** The open meeting when it is a one-off, whose stories go to a Jira target of its own. */
+  protected readonly oneOff = computed(() => {
+    const meeting = this.data.store.meeting();
+    return meeting !== null && meeting.seriesId === null ? meeting : null;
+  });
   protected readonly busy = this.data.drafts.busy;
   protected readonly target = computed(() => {
     const draft = this.draft();
@@ -385,13 +390,11 @@ export class StoryReviewDialog {
   });
   protected readonly noTargetHeading = computed(() =>
     this.series() === null
-      ? 'A one-off meeting has no Jira project'
+      ? 'This meeting has no Jira project yet'
       : 'This series has no Jira project yet'
   );
-  protected readonly noTargetText = computed(() =>
-    this.series() === null
-      ? "Only a series' meetings create stories in Jira."
-      : 'Set where its stories go, then create this one.'
+  protected readonly noTargetText = computed(
+    () => 'Set where its stories go, then create this one.'
   );
   private readonly failure = signal<{
     error: ApiError;
@@ -466,14 +469,19 @@ export class StoryReviewDialog {
     });
   }
 
-  /** Opens the series' Jira target; the draft is read again so its target updates. */
+  /** Opens the Jira target, the series' or a one-off meeting's own; the draft is read again so its target updates. */
   changeTarget(): void {
     const series = this.series();
-    if (series === null) return;
+    const meeting = this.oneOff();
+    const data: SeriesJiraData | null =
+      series !== null
+        ? { store: this.data.store, series }
+        : meeting !== null
+          ? { store: this.data.store, meeting }
+          : null;
+    if (data === null) return;
     this.dialogs
-      .open<unknown, SeriesJiraData>(SeriesJiraDialog, {
-        data: { store: this.data.store, series },
-      })
+      .open<unknown, SeriesJiraData>(SeriesJiraDialog, { data })
       .closed.subscribe((changed) => {
         if (changed !== undefined) void this.data.drafts.reload();
       });

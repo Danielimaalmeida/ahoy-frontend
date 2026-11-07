@@ -6,12 +6,18 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { JIRA_ISSUE_TYPES, type JiraIssueType } from '@core/api/types';
 import { CLOCK } from '@core/realtime/clock';
 import {
   dateInputValue,
   parseStakeholders,
   startsAtFrom,
 } from '@domain/meetings';
+import {
+  isProjectKey,
+  normaliseProjectKey,
+  PROJECT_KEY_MAX,
+} from '@domain/story-drafts';
 import { DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { maxTrimmed, requiredText } from '@ui/field/text-validators';
@@ -34,7 +40,8 @@ const NAME_MAX = 200;
 /**
  * "New meeting": in an existing series (its title and stakeholders come with it), in a new series (name, stakeholders,
  * and how many days apart its meetings are, so Ahoy can plan the next one when topics move on), or a one-off with its
- * own title. Then the day and the start time. Answers the new meeting's id.
+ * own title and, optionally, the Jira project its stories go to (the last one-off meeting's, to begin with). Then the
+ * day and the start time. Answers the new meeting's id.
  */
 @Component({
   selector: 'ah-new-meeting-dialog',
@@ -109,6 +116,30 @@ const NAME_MAX = 200;
             <input ahInput formControlName="stakeholders" autocomplete="off" />
           </ah-field>
         }
+        @if (kind() === 'one-off') {
+          <div class="row">
+            <ah-field
+              label="Jira project"
+              optional
+              hint="Where its stories go, such as FIN. You can set it later."
+              [errorMessages]="keyMessages"
+            >
+              <input
+                ahInput
+                formControlName="jiraKey"
+                autocomplete="off"
+                [maxlength]="keyMax"
+              />
+            </ah-field>
+            <ah-field label="Issue type">
+              <select ahInput formControlName="jiraType">
+                @for (type of issueTypes; track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </ah-field>
+          </div>
+        }
         <div class="row">
           <ah-field label="Day" required>
             <input ahInput type="date" formControlName="date" />
@@ -134,6 +165,16 @@ export class NewMeetingDialog {
   };
   protected readonly series = this.store.series;
   protected readonly busy = this.store.busy;
+  protected readonly issueTypes = JIRA_ISSUE_TYPES;
+  protected readonly keyMax = PROJECT_KEY_MAX;
+  protected readonly keyMessages: Readonly<Record<string, string>> = {
+    projectKey:
+      'A project key: a capital letter, then capitals, digits or _ (such as FIN).',
+  };
+  /** The Jira target of the latest one-off meeting that has one, to begin with. */
+  private readonly lastTarget = [...this.store.meetings()]
+    .filter((m) => m.seriesId === null && m.jiraProjectKey !== null)
+    .sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
 
   protected readonly form = new FormGroup({
     series: new FormControl(this.store.series()[0]?.id ?? NEW_SERIES, {
@@ -153,6 +194,19 @@ export class NewMeetingDialog {
       nonNullable: true,
       validators: [Validators.required],
     }),
+    jiraKey: new FormControl(this.lastTarget?.jiraProjectKey ?? '', {
+      nonNullable: true,
+      validators: [
+        (control) => {
+          const key = normaliseProjectKey(String(control.value));
+          return key === '' || isProjectKey(key) ? null : { projectKey: true };
+        },
+      ],
+    }),
+    jiraType: new FormControl<JiraIssueType>(
+      this.lastTarget?.jiraIssueType ?? 'Story',
+      { nonNullable: true }
+    ),
   });
 
   private readonly choice = signal(this.form.controls.series.value);
@@ -201,6 +255,11 @@ export class NewMeetingDialog {
       this.form.controls.name.markAsTouched();
       if (this.form.controls.name.invalid) return;
     }
+    const jiraKey = normaliseProjectKey(value.jiraKey);
+    if (kind === 'one-off') {
+      this.form.controls.jiraKey.markAsTouched();
+      if (this.form.controls.jiraKey.invalid) return;
+    }
     const startsAt = startsAtFrom(value.date, value.time);
     if (startsAt === null) {
       this.failed.set('when');
@@ -235,6 +294,9 @@ export class NewMeetingDialog {
       title: kind === 'one-off' ? value.name : '',
       startsAt,
       ...(kind === 'one-off' ? { stakeholders } : {}),
+      ...(kind === 'one-off' && jiraKey !== ''
+        ? { jira: { projectKey: jiraKey, issueType: value.jiraType } }
+        : {}),
     });
     if (id === null) {
       this.failed.set('api');

@@ -170,6 +170,92 @@ describe('the mock meetings', () => {
     ).toBe('in_progress');
   });
 
+  it('moves a topic to a meeting it names, at the top when asked, and refuses its own meeting or a closed one', () => {
+    const { server, list, running } = seeded();
+    const ended = list.items.find((m) => m.status === 'ended')!;
+    const oneOff = call(server, 'POST', '/meetings', {
+      title: 'Pricing workshop',
+      startsAt: '2026-10-09T14:00:00.000Z',
+    }).body as Meeting;
+    call(server, 'POST', `/meetings/${oneOff.id}/topics`, {
+      title: 'Discount bands',
+      raisedBy: 'us',
+    });
+    const topic = (
+      call(server, 'GET', `/meetings/${running.id}`).body as Meeting
+    ).topics[0]!;
+    const refused = (toMeetingId: string) =>
+      call(server, 'POST', `/meeting-topics/${topic.id}/move`, { toMeetingId })
+        .status;
+    expect(refused(running.id)).toBe(400);
+    expect(refused(ended.id)).toBe(409);
+    expect(refused('00000000-0000-4000-8000-00000000ffff')).toBe(404);
+    const moved = call(server, 'POST', `/meeting-topics/${topic.id}/move`, {
+      toMeetingId: oneOff.id,
+      position: 'first',
+    });
+    expect(moved.status).toBe(200);
+    expect(
+      (
+        call(server, 'GET', `/meetings/${oneOff.id}`).body as Meeting
+      ).topics.map((t) => [t.title, t.position])
+    ).toEqual([
+      [topic.title, 0],
+      ['Discount bands', 1],
+    ]);
+  });
+
+  it("ends a one-off meeting carrying its topics to the meeting it names, and keeps a one-off meeting's Jira target", () => {
+    const { server, running } = seeded();
+    const oneOff = call(server, 'POST', '/meetings', {
+      title: 'Workshop',
+      startsAt: '2026-10-09T14:00:00.000Z',
+      jiraProjectKey: 'OPS',
+    }).body as Meeting;
+    expect([oneOff.jiraProjectKey, oneOff.jiraIssueType]).toEqual([
+      'OPS',
+      'Story',
+    ]);
+    const topic = call(server, 'POST', `/meetings/${oneOff.id}/topics`, {
+      title: 'Open points',
+      raisedBy: 'us',
+    }).body as MeetingTopic;
+    const ended = call(server, 'POST', `/meetings/${oneOff.id}/end`, {
+      carryOver: [topic.id],
+      carryOverTo: running.id,
+    }).body as EndMeetingResult;
+    expect(ended.nextMeeting?.id).toBe(running.id);
+    expect(ended.nextMeeting?.topics.at(-1)?.title).toBe('Open points');
+    const changed = call(server, 'PUT', `/meetings/${oneOff.id}/jira-target`, {
+      jiraProjectKey: 'FIN',
+      jiraIssueType: 'Task',
+    });
+    expect(changed.status).toBe(200);
+    expect((changed.body as Meeting).jiraIssueType).toBe('Task');
+    expect(
+      call(server, 'PUT', `/meetings/${running.id}/jira-target`, {
+        jiraProjectKey: 'FIN',
+      }).status
+    ).toBe(400);
+  });
+
+  it('finds meetings, open topics and notes by text, ignoring case, and refuses a single character', () => {
+    const { server } = seeded();
+    const found = call(server, 'GET', '/meeting-search?q=INVOICE').body as {
+      meetings: unknown[];
+      topics: { title: string }[];
+      notes: { note: { text: string } }[];
+    };
+    expect(found.meetings).toEqual([]);
+    expect(found.topics.map((t) => t.title)).toEqual([
+      'Overdue invoice reminders',
+    ]);
+    expect(found.notes.map((n) => n.note.text)).toEqual([
+      '1.5% per month, capped at 10% of the invoice.',
+    ]);
+    expect(call(server, 'GET', '/meeting-search?q=x').status).toBe(400);
+  });
+
   it('deletes a note and a topic with 204 and no body', () => {
     const { server, running } = seeded();
     const topic = call(server, 'POST', `/meetings/${running.id}/topics`, {

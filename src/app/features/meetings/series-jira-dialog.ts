@@ -6,6 +6,7 @@ import type { ApiError } from '@core/api/api-error';
 import {
   JIRA_ISSUE_TYPES,
   type JiraIssueType,
+  type Meeting,
   type MeetingSeries,
 } from '@core/api/types';
 import {
@@ -19,11 +20,13 @@ import { ToastService } from '@ui/toast/toast';
 import type { MeetingsStore } from './meetings-store';
 import { storyErrorView } from './story-errors';
 
-/** What the Jira target dialog is opened with: the page's store and the series to change. */
-export interface SeriesJiraData {
-  readonly store: MeetingsStore;
-  readonly series: MeetingSeries;
-}
+/**
+ * What the Jira target dialog is opened with: the page's store and what to change, a series or a one-off meeting (whose
+ * stories go to a target of its own).
+ */
+export type SeriesJiraData =
+  | { readonly store: MeetingsStore; readonly series: MeetingSeries }
+  | { readonly store: MeetingsStore; readonly meeting: Meeting };
 
 /** Refuses a typed key Jira would not have; an empty one is fine (it turns creating off). */
 function projectKeyValidator(
@@ -35,7 +38,8 @@ function projectKeyValidator(
 
 /**
  * "Where do Finance sync's stories go?": the Jira project and issue type every story drafted from the series' meetings
- * is created as. Set once per series; an empty project turns creating off. Closes with the changed series.
+ * is created as, or, for a one-off meeting, from that meeting's topics. Set once per series or meeting, also after a
+ * one-off meeting ended; an empty project turns creating off. Closes with the changed series or meeting.
  */
 @Component({
   selector: 'ah-series-jira-dialog',
@@ -58,8 +62,8 @@ function projectKeyValidator(
       (confirm)="submit()"
     >
       <span ahDialogLead
-        >Stories drafted from this series' meetings are created in this Jira
-        project, as this type of issue. Leave the project empty to stop creating
+        >Stories drafted from this {{ what }} are created in this Jira project,
+        as this type of issue. Leave the project empty to stop creating
         them.</span
       >
       <form
@@ -93,10 +97,25 @@ function projectKeyValidator(
 })
 export class SeriesJiraDialog {
   private readonly data = inject<SeriesJiraData>(DIALOG_DATA);
-  private readonly ref = inject<DialogRef<MeetingSeries>>(DialogRef);
+  private readonly ref = inject<DialogRef<MeetingSeries | Meeting>>(DialogRef);
   private readonly toasts = inject(ToastService);
 
-  protected readonly name = this.data.series.name;
+  private readonly current =
+    'series' in this.data
+      ? {
+          name: this.data.series.name,
+          projectKey: this.data.series.jiraProjectKey,
+          issueType: this.data.series.jiraIssueType,
+        }
+      : {
+          name: this.data.meeting.title,
+          projectKey: this.data.meeting.jiraProjectKey,
+          issueType: this.data.meeting.jiraIssueType ?? ('Story' as const),
+        };
+  protected readonly name = this.current.name;
+  /** What the stories are drafted from, for the lead. */
+  protected readonly what =
+    'series' in this.data ? "series' meetings" : 'meeting';
   protected readonly types = JIRA_ISSUE_TYPES;
   protected readonly max = PROJECT_KEY_MAX;
   protected readonly messages: Readonly<Record<string, string>> = {
@@ -104,11 +123,11 @@ export class SeriesJiraDialog {
       'A project key: a capital letter, then capitals, digits or _ (such as FIN).',
   };
   protected readonly form = new FormGroup({
-    projectKey: new FormControl(this.data.series.jiraProjectKey ?? '', {
+    projectKey: new FormControl(this.current.projectKey ?? '', {
       nonNullable: true,
       validators: [projectKeyValidator],
     }),
-    issueType: new FormControl<JiraIssueType>(this.data.series.jiraIssueType, {
+    issueType: new FormControl<JiraIssueType>(this.current.issueType, {
       nonNullable: true,
     }),
   });
@@ -125,11 +144,20 @@ export class SeriesJiraDialog {
     if (this.form.invalid || this.busy()) return;
     const key = normaliseProjectKey(this.form.controls.projectKey.value);
     this.busy.set(true);
-    const result = await this.data.store.setSeriesTarget(
-      this.data.series.id,
-      key === '' ? null : key,
-      this.form.controls.issueType.value
-    );
+    const project = key === '' ? null : key;
+    const type = this.form.controls.issueType.value;
+    const result =
+      'series' in this.data
+        ? await this.data.store.setSeriesTarget(
+            this.data.series.id,
+            project,
+            type
+          )
+        : await this.data.store.setMeetingTarget(
+            this.data.meeting.id,
+            project,
+            type
+          );
     this.busy.set(false);
     if (!result.ok) {
       this.failure.set(result.error);
@@ -138,7 +166,7 @@ export class SeriesJiraDialog {
     this.toasts.show(
       key === ''
         ? `${this.name}'s stories are no longer created in Jira.`
-        : `${this.name}'s stories go to ${key} as ${result.value.jiraIssueType}.`
+        : `${this.name}'s stories go to ${key} as ${type}.`
     );
     this.ref.close(result.value);
   }
