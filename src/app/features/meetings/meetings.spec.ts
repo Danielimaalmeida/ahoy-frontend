@@ -205,6 +205,39 @@ describe('Meetings on the mock backend', () => {
     ).toHaveLength(1);
   });
 
+  it('reads a meeting and its drafts once when it opens, and not again when the address names the meeting on screen', async () => {
+    const page = await open('/meetings');
+    const reads = (path: RegExp) =>
+      page.requests.filter((r) => r.method === 'GET' && path.test(r.path))
+        .length;
+    const running = page.server.meetingDesk.list('in_progress')[0]!;
+    const meeting = new RegExp(`/meetings/${running.id}$`);
+    expect(reads(meeting)).toBe(1);
+    expect(reads(/\/story-drafts$/)).toBe(1);
+    expect(reads(/\/meeting-notes$/)).toBe(2);
+
+    // `/meetings` and `/meetings/:id` are two routes: the page is drawn anew for the same meeting.
+    await page.harness.navigateByUrl(`/meetings/${running.id}`);
+    await flush(page);
+    expect(reads(meeting)).toBe(1);
+    expect(reads(/\/story-drafts$/)).toBe(1);
+    expect(reads(/\/meeting-notes$/)).toBe(2);
+
+    const other = page.server.meetingDesk
+      .list()
+      .find((m) => m.id !== running.id)!;
+    await page.harness.navigateByUrl(`/meetings/${other.id}`);
+    await flush(page);
+    expect(reads(new RegExp(`/meetings/${other.id}$`))).toBe(1);
+    expect(
+      page.requests.filter(
+        (r) =>
+          r.method === 'GET' && r.path === `/meetings/${other.id}/story-drafts`
+      )
+    ).toHaveLength(1);
+    expect(reads(/\/story-drafts$/)).toBe(2);
+  });
+
   it('adds a topic a stakeholder raised during the meeting, at the end, tagged with who raised it', async () => {
     const page = await open('/meetings');
     const composer = page.root.querySelector<HTMLElement>('ah-topic-composer')!;

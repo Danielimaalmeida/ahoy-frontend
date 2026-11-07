@@ -94,6 +94,8 @@ export class MeetingsStore {
   readonly labels = this.labelsStore.labels;
   /** Counts loads of the open meeting, so an answer to an older one is dropped. */
   private generation = 0;
+  /** The meeting the last `open` asked for, so asking for it again while it is open reads nothing. */
+  private openedId: string | null = null;
   private timer: Timer | null = null;
 
   constructor() {
@@ -209,6 +211,7 @@ export class MeetingsStore {
   async show(id: string | undefined): Promise<void> {
     const target = id ?? defaultMeeting(this.meetings())?.id;
     if (target === undefined) {
+      this.openedId = null;
       this.generation++;
       this.stopLive();
       this.openError.set(null);
@@ -220,8 +223,18 @@ export class MeetingsStore {
     await this.open(target);
   }
 
-  /** Opens one meeting on the right, with the open actions of its series. */
+  /**
+   * Opens one meeting on the right, with the open actions of its series. The meeting already open is not read again:
+   * the page is drawn anew when the address changes from `/meetings` to `/meetings/:id`, and asks for it once more.
+   */
   async open(id: string): Promise<void> {
+    if (
+      this.openedId === id &&
+      this.meeting()?.id === id &&
+      this.openError() === null
+    )
+      return;
+    this.openedId = id;
     const generation = ++this.generation;
     this.stopLive();
     await this.flushRemovals();

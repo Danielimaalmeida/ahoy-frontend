@@ -45,11 +45,22 @@ import { SettingsHistory } from './settings-history';
   styles: [
     SECTION_STYLES,
     `
+      /* The controls line up at the top: the Qnumber's hint below its input must not push Role and Add down. */
       .add {
         display: flex;
         flex-wrap: wrap;
-        align-items: flex-end;
+        align-items: flex-start;
         gap: 12px;
+      }
+      /* An empty label above Add, as tall as a field's, so the button sits level with the inputs. */
+      .add__submit {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      /* As tall as the inputs beside it (36px), not the smaller control-md of a button. */
+      .add__submit > button {
+        height: 36px;
       }
       .add > ah-field:first-child {
         flex: 1 1 220px;
@@ -135,13 +146,16 @@ import { SettingsHistory } from './settings-history';
                       <option value="admin">Admin</option>
                     </select>
                   </ah-field>
-                  <button
-                    ahButton="primary"
-                    type="submit"
-                    [disabled]="busy() || !typed() || qnumberError() !== null"
-                  >
-                    Add
-                  </button>
+                  <div class="add__submit">
+                    <span class="ah-label" aria-hidden="true">&nbsp;</span>
+                    <button
+                      ahButton="primary"
+                      type="submit"
+                      [disabled]="busy() || !typed() || qnumberError() !== null"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </form>
               }
               @if (failureOfChange(); as problem) {

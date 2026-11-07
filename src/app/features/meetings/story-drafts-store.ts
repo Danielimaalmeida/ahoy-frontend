@@ -47,8 +47,22 @@ export class StoryDraftsStore {
     inject(DestroyRef).onDestroy(() => this.stopPolling());
   }
 
-  /** Reads the drafts of `meetingId` (none for no meeting), and keeps reading while one is being written. */
+  /**
+   * Reads the drafts of `meetingId` (none for no meeting), and keeps reading while one is being written. The meeting
+   * already shown (or being read) is not read again: the page asks each time it is drawn, and it is drawn anew when
+   * the address changes from `/meetings` to `/meetings/:id`.
+   */
   async load(meetingId: string | null): Promise<void> {
+    if (meetingId === this.meetingId && this.loadError() === null) return;
+    return this.read(meetingId);
+  }
+
+  /** Reads the open meeting's drafts again, for example after its series' Jira target changed. */
+  reload(): Promise<void> {
+    return this.read(this.meetingId);
+  }
+
+  private async read(meetingId: string | null): Promise<void> {
     this.stopPolling();
     const generation = ++this.generation;
     this.meetingId = meetingId;
@@ -57,12 +71,7 @@ export class StoryDraftsStore {
       this.loadError.set(null);
       return;
     }
-    await this.read(generation, meetingId);
-  }
-
-  /** Reads the open meeting's drafts again, for example after its series' Jira target changed. */
-  reload(): Promise<void> {
-    return this.load(this.meetingId);
+    await this.fetch(generation, meetingId);
   }
 
   /**
@@ -151,7 +160,7 @@ export class StoryDraftsStore {
     return result;
   }
 
-  private async read(generation: number, meetingId: string): Promise<void> {
+  private async fetch(generation: number, meetingId: string): Promise<void> {
     const result = await this.api.listMeetingStoryDrafts(meetingId);
     if (generation !== this.generation) return;
     if (!result.ok) {
@@ -171,7 +180,8 @@ export class StoryDraftsStore {
     const generation = this.generation;
     this.timer = this.clock.schedule(DRAFT_POLL_MS, () => {
       this.timer = null;
-      if (generation === this.generation) void this.read(generation, meetingId);
+      if (generation === this.generation)
+        void this.fetch(generation, meetingId);
     });
   }
 
