@@ -194,9 +194,11 @@ function describeFailure(error: ApiError): Failure {
     .voyage a {
       white-space: nowrap;
     }
+    /* A halt's detail can hold a long path or hash: it breaks anywhere rather than pushing the actions off the panel. */
     .need {
       white-space: normal;
       min-width: 240px;
+      overflow-wrap: anywhere;
     }
     .retry {
       margin-top: 8px;
@@ -318,7 +320,7 @@ function describeFailure(error: ApiError): Failure {
                         >
                       }
                     </td>
-                    <td>{{ row.story.owner }}</td>
+                    <td ahNowrap>{{ row.story.owner }}</td>
                     <td ahNowrap>
                       {{ row.story.updatedAt | ahRelative: 'waiting' }}
                     </td>
@@ -406,7 +408,7 @@ function describeFailure(error: ApiError): Failure {
                         · <span class="ah-mono">{{ runtime }}</span>
                       }
                     </td>
-                    <td>{{ row.story.owner }}</td>
+                    <td ahNowrap>{{ row.story.owner }}</td>
                     <td ahNowrap>{{ row.story.updatedAt | ahRelative }}</td>
                     <td ahNowrap>
                       <ah-budget-meter

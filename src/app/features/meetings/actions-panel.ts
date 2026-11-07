@@ -50,10 +50,22 @@ import { NOTE_MAX } from './topic-card';
       align-items: baseline;
       flex-wrap: wrap;
     }
-    .text {
-      flex: 1 1 160px;
+    /* The note's text takes the column's width; who, when and where go on a line of their own below it. */
+    .body {
+      flex: 1 1 0;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .text {
       overflow-wrap: anywhere;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 8px;
     }
     .overdue {
       color: var(--danger-text);
@@ -98,20 +110,32 @@ import { NOTE_MAX } from './topic-card';
                     [attr.aria-label]="'Mark done: ' + a.note.text"
                     (change)="done(a, $event)"
                   />
-                  <span class="text">{{ a.note.text }}</span>
-                  @if (a.note.owner !== null) {
-                    <span class="ah-hint">{{ a.note.owner }}</span>
-                  }
-                  @if (due(a); as d) {
-                    <span class="ah-hint" [class.overdue]="d.overdue">{{
-                      d.text
-                    }}</span>
-                  }
-                  @if (a.meetingId !== meetingId()) {
-                    <a class="ah-hint" [routerLink]="['/meetings', a.meetingId]"
-                      >{{ a.topicTitle }}, {{ day(a.meetingStartsAt) }}</a
-                    >
-                  }
+                  <span class="body">
+                    <span class="text">{{ a.note.text }}</span>
+                    @if (
+                      a.note.owner !== null ||
+                      due(a) !== null ||
+                      a.meetingId !== meetingId()
+                    ) {
+                      <span class="meta">
+                        @if (a.note.owner !== null) {
+                          <span class="ah-hint">{{ a.note.owner }}</span>
+                        }
+                        @if (due(a); as d) {
+                          <span class="ah-hint" [class.overdue]="d.overdue">{{
+                            d.text
+                          }}</span>
+                        }
+                        @if (a.meetingId !== meetingId()) {
+                          <a
+                            class="ah-hint"
+                            [routerLink]="['/meetings', a.meetingId]"
+                            >{{ a.topicTitle }}, {{ day(a.meetingStartsAt) }}</a
+                          >
+                        }
+                      </span>
+                    }
+                  </span>
                 </li>
               }
             </ul>
@@ -126,14 +150,32 @@ import { NOTE_MAX } from './topic-card';
             <ul aria-label="Open questions">
               @for (q of questions(); track q.note.id) {
                 <li>
-                  <span class="text">{{ q.note.text }}</span>
-                  @if (q.meetingId !== meetingId()) {
-                    <a class="ah-hint" [routerLink]="['/meetings', q.meetingId]"
-                      >{{ q.topicTitle }}, {{ day(q.meetingStartsAt) }}</a
-                    >
-                  } @else {
-                    <span class="ah-hint">{{ q.topicTitle }}</span>
-                  }
+                  <span class="body">
+                    <span class="text">{{ q.note.text }}</span>
+                    <span class="meta">
+                      @if (q.meetingId !== meetingId()) {
+                        <a
+                          class="ah-hint"
+                          [routerLink]="['/meetings', q.meetingId]"
+                          >{{ q.topicTitle }}, {{ day(q.meetingStartsAt) }}</a
+                        >
+                      } @else {
+                        <span class="ah-hint">{{ q.topicTitle }}</span>
+                      }
+                      @if (answering() !== q.note.id) {
+                        <button
+                          ahButton="ghost"
+                          size="sm"
+                          type="button"
+                          [attr.aria-label]="'Answer: ' + q.note.text"
+                          [disabled]="store.busy()"
+                          (click)="startAnswer(q)"
+                        >
+                          Answer
+                        </button>
+                      }
+                    </span>
+                  </span>
                   @if (answering() === q.note.id) {
                     <form (submit)="$event.preventDefault(); answer(q)">
                       <label class="ah-sr" [for]="'open-answer-' + q.note.id"
@@ -166,17 +208,6 @@ import { NOTE_MAX } from './topic-card';
                         Cancel
                       </button>
                     </form>
-                  } @else {
-                    <button
-                      ahButton="ghost"
-                      size="sm"
-                      type="button"
-                      [attr.aria-label]="'Answer: ' + q.note.text"
-                      [disabled]="store.busy()"
-                      (click)="startAnswer(q)"
-                    >
-                      Answer
-                    </button>
                   }
                 </li>
               }

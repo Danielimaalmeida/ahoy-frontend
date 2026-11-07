@@ -70,10 +70,39 @@ ah-banner {
   gap: 6px;
 }
 
+// A button in such a banner ("Try again") keeps its own width; the column would stretch it across the banner.
+.ah-banner__body > .ah-btn {
+  align-self: flex-start;
+}
+
 // A cancelled voyage is over, not waiting: the design system has no badge for it, and the neutral `queued` one reads as
 // "about to run". So it is outlined, with no fill, in the muted ink, which no badge of the bundle uses.
 .ah-badge--cancelled {
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--line-strong);
   color: var(--ink-muted);
+}
+
+// Row headers. The bundle styles every `.ah-table th` as a column header (small capitals, muted, on the raised
+// surface), and the DataTable preview has none in its body. A `<th scope="row">` there reads as a cell of its row, in
+// the label weight, so a name or a job is not shouted in grey capitals as if it headed a column.
+.ah-table tbody th {
+  // The token is named `space-3.5`, not a number without its leading zero.
+  // stylelint-disable-next-line @stylistic/number-leading-zero
+  padding: 7px var(--space-3\.5);
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+}
+
+.ah-table tbody tr:last-child th {
+  border-bottom: 0;
+}
+
+.ah-table tbody tr:hover th {
+  background: var(--row-hover);
 }

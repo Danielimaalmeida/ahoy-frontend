@@ -174,6 +174,16 @@ export const SERIES_PAGE = 3;
     .status-line {
       padding: 8px 16px;
     }
+    /* On a narrow screen the list goes above the meeting instead of squeezing it. */
+    @media (max-width: 760px) {
+      :host {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      aside {
+        width: auto;
+      }
+    }
     main {
       flex: 1;
       min-width: 0;

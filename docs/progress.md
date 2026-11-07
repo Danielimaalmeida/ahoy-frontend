@@ -1,13 +1,22 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-07 (`feat/meeting-notes-ux`: the meeting notes page reworked, main merged in; offline checks passed with
-a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the archive (the 3,692-line page
+Updated 2026-11-07 (`fix/design-audit`: layout faults found by running every page against a local API and fixed;
+offline checks passed with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the archive (the 3,692-line page
 before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories, with its proposals (not yet
 agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on
 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
+- **This branch (`fix/design-audit`, 2026-11-07, asked for by the user after the People form's misaligned Add):** every
+  page was opened at 1440 and 390 px against a local `ahoy-hosted` (stub dispatcher, fictional data) and checked for
+  misaligned or unequal controls, cut-off text and sideways scroll. Fixed: table row headers (`<th scope="row">`) no
+  longer look like grey capitals column headers (one rule in `_ahoy-angular.scss`); a "Try again" no longer stretches
+  across an error banner with a technical line; Meetings stacks its list above the meeting on a phone, and its notes,
+  open actions and questions keep their text readable; Metrics controls share one height; the diff wraps long lines
+  beside their numbers; Needs you keeps its actions on screen; Phases and Agents settings no longer cut a column or a
+  profile name. Not changed, reported: the delivery gate's decision panel uses the plan review's words. The People
+  form's alignment is in PR #74.
 - **This branch (`feat/meeting-notes-ux`, 2026-11-06, asked for by the user on 2026-11-06 after a UX study of the
   meeting notes page):** deploys with `ahoy-hosted`'s `feat/meeting-notes-ux` (PR #91, migration 0044).
   - **A list that grows:** the left column pins the running meeting, then switches between Upcoming (grouped by week),
@@ -211,7 +220,12 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
 
 ## Proof
 
-- **This branch** (2026-11-06, cloud container): `npm run build`, typecheck (app, specs and boundaries), lint (ESLint
+- **This branch** (2026-11-07, cloud container, Node 22.23.4): `npm run build`, typecheck (app, specs and
+  boundaries), lint (ESLint and Stylelint), `ng test --watch=false` (218 files, 3,758 tests) and `npm run format` all
+  passed, with `@acme-fedev/auth` stubbed in `node_modules` as below. The layout was checked in Chromium
+  (Playwright, not the e2e suite) against a local `ahoy-hosted` (`AHOY_DISPATCH=stub`, `AHOY_AUTH=dev`), 0 AIU. Not
+  run: Node 24, the real auth library, the Playwright e2e suite, a live API or TEST.
+- **`feat/meeting-notes-ux`** (2026-11-06, cloud container): `npm run build`, typecheck (app, specs and boundaries), lint (ESLint
   and Stylelint), `npm test -- --watch=false` (218 files, 3,758 tests, after merging main on 2026-11-07) and format (only `docs/architecture.md` warns,
   as on `main`) passed, with `@acme-fedev/auth` replaced by a local stub in `node_modules` and native bindings installed
   by hand (the private registry is not reachable here). The contract was synced from `ahoy-hosted`'s branch; the

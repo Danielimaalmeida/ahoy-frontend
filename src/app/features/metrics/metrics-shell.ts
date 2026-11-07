@@ -105,7 +105,6 @@ export function metricsFailure(error: ApiError): {
           </select>
           <button
             ahButton
-            size="sm"
             type="button"
             [disabled]="saving()"
             (click)="exportAs('csv')"
@@ -114,7 +113,6 @@ export function metricsFailure(error: ApiError): {
           </button>
           <button
             ahButton
-            size="sm"
             type="button"
             [disabled]="saving()"
             (click)="exportAs('json')"
@@ -161,7 +159,7 @@ export function metricsFailure(error: ApiError): {
               <option [value]="m">{{ m }}</option>
             }
           </select>
-          <button ahButton size="sm" type="submit">Apply</button>
+          <button ahButton type="submit">Apply</button>
         </form>
       </div>
 

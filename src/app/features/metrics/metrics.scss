@@ -70,6 +70,8 @@
 .metrics__text {
   width: auto;
   max-width: 100%;
+  // As tall as the buttons beside them (an input is 36px, a button 34px).
+  height: var(--control-md);
 }
 
 .metrics__text {
