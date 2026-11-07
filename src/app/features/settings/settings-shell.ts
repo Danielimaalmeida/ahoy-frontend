@@ -162,6 +162,19 @@ interface Section {
             }
           </a>
         }
+        <span class="nav__group">You</span>
+        <a
+          class="nav__item"
+          routerLink="copilot-token"
+          routerLinkActive="nav__item--current"
+          ariaCurrentWhenActive="page"
+          >My Copilot token
+          @if (copilotState(); as state) {
+            <span class="nav__state" [class.nav__state--todo]="state.todo">{{
+              state.label
+            }}</span>
+          }
+        </a>
       </nav>
       <div class="section">
         <router-outlet />
@@ -178,6 +191,14 @@ export class SettingsShell {
     return setup === null
       ? null
       : { label: setupProgressLabel(setup), ready: setupReady(setup) };
+  });
+  /** "Saved" beside My Copilot token, from Setup's last step; nothing for a sign-in without a qnumber. */
+  protected readonly copilotState = computed(() => {
+    const step = this.setup.setup()?.steps.find((s) => s.key === 'copilot');
+    if (step === undefined) return null;
+    if (step.state === 'done') return { label: 'Saved', todo: false };
+    if (step.state === 'attention') return { label: 'Check', todo: true };
+    return null;
   });
   protected readonly sections: readonly Section[] = [
     { path: 'sonar', label: 'SonarQube', state: () => this.summary.sonar() },

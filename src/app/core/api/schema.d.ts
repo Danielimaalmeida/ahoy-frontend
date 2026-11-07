@@ -2036,6 +2036,56 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/me/copilot-token': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The signed-in person's own Copilot token, never in clear.
+     * @description Each person's own (design D23, §5 "My Copilot token"): nobody else reads or changes it, admins included. The
+     *     token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) for the person's qnumber; only its last four characters come
+     *     back. A run the person starts reads it; without one, the run reads the cluster's `ahoy-copilot-<qnumber>`
+     *     Secret. `409 invalid_state` for a sign-in that is not a qnumber.
+     */
+    readonly get: operations['getMyCopilotToken'];
+    /**
+     * Save your Copilot token, the first or a new one.
+     * @description Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else
+     *     `GH_HOST`) by Test and to your runs' pods. A new
+     *     token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+     */
+    readonly put: operations['putMyCopilotToken'];
+    readonly post?: never;
+    /** Remove your Copilot token; your runs read the cluster's Secret again, if there is one. */
+    readonly delete: operations['deleteMyCopilotToken'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/me/copilot-token/test': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask GitHub who your token is, and keep the answer as the last test.
+     * @description `GET /user` on the Copilot host with your token. No Copilot request is made, so it spends nothing (0 AIU). GitHub's own text is never returned.
+     */
+    readonly post: operations['testMyCopilotToken'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/settings/sonar': {
     readonly parameters: {
       readonly query?: never;
@@ -4850,6 +4900,32 @@ export interface components {
       /** Format: date-time */
       readonly updatedAt: string | null;
     };
+    readonly MyCopilotToken: {
+      /** @description The person's qnumber, lower case: the token is theirs alone. */
+      readonly qnumber: string;
+      /** @description Whether the server has `AHOY_SECRETS_KEY`, without which no token can be saved. */
+      readonly secretsConfigured: boolean;
+      readonly token: null | {
+        /** @description The token's last four characters; empty for a short token. */
+        readonly hint: string;
+        /** Format: date-time */
+        readonly savedAt: string;
+        readonly lastTest: null | components['schemas']['CopilotTokenTest'];
+      };
+      /** @description Whether the stored token opens with this server's key; false means it must be typed again. */
+      readonly tokenReadable: boolean;
+    };
+    readonly CopilotTokenTest: {
+      /** @enum {string} */
+      readonly result: 'works' | 'refused' | 'unreachable';
+      /** @description Who GitHub says the token is, the HTTP status it refused with, or why it could not be reached. */
+      readonly detail: string | null;
+      /** Format: date-time */
+      readonly at: string;
+    };
+    readonly CopilotTokenRequest: {
+      readonly token: string;
+    };
     readonly FigmaTest: {
       /** @enum {string} */
       readonly result: 'ok' | 'refused' | 'unreachable';
@@ -4993,12 +5069,13 @@ export interface components {
         | 'sonar'
         | 'figma'
         | 'defects'
-        | 'branch_releases';
+        | 'branch_releases'
+        | 'copilot';
       /**
-       * @description Who fixes it: the chart, or an admin.
+       * @description Who fixes it: the chart, an admin, or the person reading the page (their own Copilot token).
        * @enum {string}
        */
-      readonly group: 'installation' | 'team';
+      readonly group: 'installation' | 'team' | 'you';
       readonly title: string;
       readonly required: boolean;
       /** @enum {string} */
@@ -8166,6 +8243,105 @@ export interface operations {
       };
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly getMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The person's token, if saved. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MyCopilotToken'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly putMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CopilotTokenRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description Your token, as saved. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MyCopilotToken'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly deleteMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description Your page, with no token. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MyCopilotToken'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly testMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description What GitHub answered. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['CopilotTokenTest'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
     };
   };
   readonly getSonarSettings: {

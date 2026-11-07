@@ -135,6 +135,15 @@
       "state": "optional",
       "detail": "Deploys a work package's branch to TEST from the voyage.",
       "section": "branch-releases"
+    },
+    {
+      "key": "copilot",
+      "group": "you",
+      "title": "My Copilot token",
+      "required": false,
+      "state": "optional",
+      "detail": "Not saved: your runs use the cluster's ahoy-copilot-q1abcde Secret, if there is one.",
+      "section": "copilot-token"
     }
   ],
   "requiredDone": 6,

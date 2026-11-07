@@ -4,6 +4,7 @@
  */
 
 import { isRecord } from './records';
+import { describeCopilotTokenEvent } from './copilot-token';
 import { describeAgentEvent } from './agent-settings';
 import { describeFigmaEvent } from './figma-settings';
 import { describeJiraEvent } from './jira-settings';
@@ -126,6 +127,7 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
         describeBranchReleaseEvent(type, payload) ??
         describeMeetingEvent(type, payload) ??
         describePeopleEvent(type, payload) ??
+        describeCopilotTokenEvent(type) ??
         type
       );
   }

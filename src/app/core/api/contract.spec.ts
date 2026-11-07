@@ -19,6 +19,10 @@ import putPerson from '@testing/fixtures/putPerson.json';
 import removePerson from '@testing/fixtures/removePerson.json';
 import getSetup from '@testing/fixtures/getSetup.json';
 import keepPhaseDefaults from '@testing/fixtures/keepPhaseDefaults.json';
+import getMyCopilotToken from '@testing/fixtures/getMyCopilotToken.json';
+import putMyCopilotToken from '@testing/fixtures/putMyCopilotToken.json';
+import deleteMyCopilotToken from '@testing/fixtures/deleteMyCopilotToken.json';
+import testMyCopilotToken from '@testing/fixtures/testMyCopilotToken.json';
 import updateMeetingSettings from '@testing/fixtures/updateMeetingSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
@@ -291,6 +295,10 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['removePerson', removePerson],
   ['getSetup', getSetup],
   ['keepPhaseDefaults', keepPhaseDefaults],
+  ['getMyCopilotToken', getMyCopilotToken],
+  ['putMyCopilotToken', putMyCopilotToken],
+  ['deleteMyCopilotToken', deleteMyCopilotToken],
+  ['testMyCopilotToken', testMyCopilotToken],
   ['getDefectSettings', getDefectSettings],
   ['getBranchReleaseSettings', getBranchReleaseSettings],
   ['addBranchReleaseRepository', addBranchReleaseRepository],
@@ -353,7 +361,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      136
+      140
     );
   });
 

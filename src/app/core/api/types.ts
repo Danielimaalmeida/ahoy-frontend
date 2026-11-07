@@ -1036,6 +1036,7 @@ export const SETUP_STEP_STATES = listOf<SetupStep['state']>()([
 export const SETUP_STEP_GROUPS = listOf<SetupStep['group']>()([
   'installation',
   'team',
+  'you',
 ]);
 export const SETUP_STEP_KEYS = listOf<SetupStep['key']>()([
   'database',
@@ -1053,7 +1054,25 @@ export const SETUP_STEP_KEYS = listOf<SetupStep['key']>()([
   'figma',
   'defects',
   'branch_releases',
+  'copilot',
 ]);
+
+/** Answer of `getMyCopilotToken`: the person's own Copilot token, only as its last four characters. */
+export type MyCopilotToken = Schemas['MyCopilotToken'];
+
+/** The saved Copilot token, as the API shows it. */
+export type CopilotTokenSaved = NonNullable<MyCopilotToken['token']>;
+
+/** What "Test" found: who GitHub says the token is, or why not. */
+export type CopilotTokenTest = Schemas['CopilotTokenTest'];
+export const COPILOT_TEST_RESULTS = listOf<CopilotTokenTest['result']>()([
+  'works',
+  'refused',
+  'unreachable',
+]);
+
+/** Body of `putMyCopilotToken`. */
+export type CopilotTokenRequest = Schemas['CopilotTokenRequest'];
 
 /** Answer of `getMeetingSettings`: the names of the two sides of a meeting, and whether the person may change them. */
 export type MeetingSettingsPage = Schemas['MeetingSettingsPage'];

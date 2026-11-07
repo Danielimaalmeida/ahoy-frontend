@@ -143,6 +143,7 @@ describe('the Team settings frame', () => {
       'Branch releases 1 repository',
       'Meetings Defaults',
       'People 3 people',
+      'My Copilot token',
     ]);
     expect(links[0]?.getAttribute('aria-current')).toBe('page');
     expect(links[0]?.querySelector('.nav__state--todo')).not.toBeNull();

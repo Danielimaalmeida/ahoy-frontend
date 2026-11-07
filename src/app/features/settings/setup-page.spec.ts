@@ -71,7 +71,7 @@ describe('the Setup section of Team settings', () => {
       /^6 of 8\s*required steps done$/
     );
     expect(summary).toContain(
-      '2 to fix here · 1 to check · 5 optional not set'
+      '2 to fix here · 1 to check · 6 optional not set'
     );
     expect(summary).toContain('Next: Agents.');
     expect(
@@ -143,6 +143,9 @@ describe('the Setup section of Team settings', () => {
     expect(bannerHeadings(root)).toEqual(['Admins finish the setup']);
     expect(links('agents')).toEqual([['Open', '/settings/agents']]);
     expect(step('phases')?.querySelector('button')).toBeNull();
+    // Their own token is theirs to set, admin or not.
+    expect(links('copilot')).toEqual([['Set', '/settings/copilot-token']]);
+    expect(text(step('copilot'))).not.toContain('Required');
     expect(
       [...root.querySelectorAll('ah-banner a')].map((a) =>
         a.getAttribute('href')
