@@ -1,6 +1,7 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-07 (`perf/setup-once`: Setup is read once, when the app starts; offline checks passed). One page: replace it, do not append; git history is the
+Updated 2026-11-07 (`perf/setup-once`: Setup is read once, when the app starts; offline checks passed on Node 22
+with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
 outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
@@ -10,11 +11,11 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 - **This branch (`perf/setup-once`, 2026-11-07, asked for by the user: "Só carrega quando a app arranca e mais
   nada"):** `GET /setup` is read once, when the app starts. No page reads it again on its own: not each navigation
   while Ahoy is not ready, not opening Team settings or its Setup section, not a change to My Copilot token. Only the
-  Setup section's Check again and Try again read it, so the banner and the section show the start's answer until a
-  reload or a press. Its 22 queries had been competing with each page's own reads for the API's 5 database
-  connections. Unit and component tests only (`ng test`, 218 files, 3763 tests); `npm run build`, `typecheck`, `lint`
-  and `format` pass on Node 22.23.4 (not 24). Not run in a browser. Pairs with `ahoy-hosted`'s
-  `perf/fewer-db-round-trips` but needs nothing from it.
+  Setup section's Check again and Try again read it (and Keep defaults, when a read was under way). A change to My
+  Copilot token updates its step locally from the token's answer, so the Team settings label does not contradict the
+  page. Accepted by the user: a fix made in another section, or a failed start read, shows only after a reload or
+  Check again. Its 22 queries had been competing with each page's own reads for the API's 5 database connections.
+  Pairs with `ahoy-hosted`'s `perf/fewer-db-round-trips` but needs nothing from it.
 - **`fix/design-audit` (merged, PR #75, 2026-11-07, asked for by the user after the People form's misaligned Add):** every
   page was opened at 1440 and 390 px against a local `ahoy-hosted` (stub dispatcher, fictional data) and checked for
   misaligned or unequal controls, cut-off text and sideways scroll. Fixed: table row headers (`<th scope="row">`) no
@@ -235,13 +236,14 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Proof
 
-- **This branch** (2026-11-07, cloud container, Node 22.23.4): `npm run build`, typecheck (app, specs and
-  boundaries), lint (ESLint and Stylelint), `ng test --watch=false` (218 files, 3,759 tests) and `npm run format` all
-  passed, with `@acme-fedev/auth` stubbed in `node_modules` as below. The layout was checked in Chromium
-  (Playwright scripts, not the e2e suite) against a local `ahoy-hosted` API and reconciler started by hand with
-  `AHOY_DISPATCH=stub` and `AHOY_AUTH=dev` (no agent runs, 0 AIU), not through `npm run dev -- --simulate`. Not run:
-  Node 24, the real auth library, the Playwright e2e suite, a live API or TEST, so the work is not done until the full
-  check passes on Node 24 with the private registry (step 1 below).
+- **This branch** (`perf/setup-once`, 2026-11-07, cloud container, Node 22.23.4): `npm run build`, typecheck (app,
+  specs and boundaries), lint (ESLint and Stylelint), `ng test --watch=false` (218 files, 3,765 tests) and `npm run format` all passed, with
+  `@acme-fedev/auth` stubbed in `node_modules` as below. Unit and component tests only; nothing was opened in a
+  browser. Not run: Node 24, the real auth library, the Playwright e2e suite, a local or live API, or TEST, so the work
+  is not done until the full check passes on Node 24 with the private registry (step 1 below).
+- **`fix/design-audit`** (2026-11-07, cloud container, Node 22.23.4): the same checks (3,759 tests) with the same
+  stub; the layout was checked in Chromium (Playwright scripts, not the e2e suite) against a local `ahoy-hosted` API
+  and reconciler started by hand with `AHOY_DISPATCH=stub` and `AHOY_AUTH=dev` (no agent runs, 0 AIU).
 - **`feat/meeting-notes-ux`** (2026-11-06, cloud container): `npm run build`, typecheck (app, specs and boundaries), lint (ESLint
   and Stylelint), `npm test -- --watch=false` (218 files, 3,758 tests, after merging main on 2026-11-07) and format (only `docs/architecture.md` warns,
   as on `main`) passed, with `@acme-fedev/auth` replaced by a local stub in `node_modules` and native bindings installed

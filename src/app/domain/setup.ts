@@ -88,3 +88,58 @@ export function setupBannerText(
     text: `Voyages may fail until the rest are.${where}`,
   };
 }
+
+/** The fields of the reader's own Copilot token page this module reads. */
+export interface CopilotTokenLike {
+  readonly qnumber: string;
+  readonly tokenReadable: boolean;
+  readonly token: null | {
+    readonly hint: string;
+    readonly lastTest: null | {
+      readonly result: 'works' | 'refused' | 'unreachable';
+      readonly detail: string | null;
+    };
+  };
+}
+
+/**
+ * The reader's own step after a change to their token, in the words Setup would answer (parity with `ahoy-hosted`'s
+ * `copilotStep` in `service/setup.ts`), so the step shows the change without reading Setup again.
+ */
+export function copilotSetupStep(page: CopilotTokenLike): {
+  state: SetupStepState;
+  detail: string;
+} {
+  const token = page.token;
+  if (token === null)
+    return {
+      state: 'optional',
+      detail: `Not saved: your runs use the cluster's ahoy-copilot-${page.qnumber} Secret, if there is one.`,
+    };
+  if (!page.tokenReadable)
+    return {
+      state: 'attention',
+      detail: 'Saved, but it cannot be read here: enter it again.',
+    };
+  const saved = `Saved, ending in ${token.hint || '…'}`;
+  const test = token.lastTest;
+  if (test?.result === 'refused')
+    return {
+      state: 'attention',
+      detail: 'GitHub refused it at the last test.',
+    };
+  if (test?.result === 'unreachable')
+    return {
+      state: 'done',
+      detail: `${saved}; GitHub could not be asked at the last test, so test it again.`,
+    };
+  if (test?.result === 'works')
+    return {
+      state: 'done',
+      detail: `${saved}; it works as ${test.detail ?? '?'}.`,
+    };
+  return {
+    state: 'done',
+    detail: `${saved}; test it to see that GitHub takes it.`,
+  };
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  copilotSetupStep,
   nextSetupStep,
   setupBannerText,
   setupPercent,
@@ -66,5 +67,42 @@ describe('the Setup page in words', () => {
       heading: 'Ahoy is being set up.',
       text: 'Some features may not work until the admins finish (2 of 4 required steps).',
     });
+  });
+});
+
+describe('the Copilot token step after a change', () => {
+  const saved = {
+    qnumber: 'q1abcde',
+    tokenReadable: true,
+    token: { hint: 'abcd', lastTest: null },
+  };
+
+  it('says what Setup would say for each state of the token', () => {
+    expect(copilotSetupStep({ ...saved, token: null })).toEqual({
+      state: 'optional',
+      detail:
+        "Not saved: your runs use the cluster's ahoy-copilot-q1abcde Secret, if there is one.",
+    });
+    expect(copilotSetupStep({ ...saved, tokenReadable: false }).state).toBe(
+      'attention'
+    );
+    expect(copilotSetupStep(saved)).toEqual({
+      state: 'done',
+      detail: 'Saved, ending in abcd; test it to see that GitHub takes it.',
+    });
+    const tested = (result: 'works' | 'refused' | 'unreachable') =>
+      copilotSetupStep({
+        ...saved,
+        token: { hint: 'abcd', lastTest: { result, detail: 'alex' } },
+      });
+    expect(tested('works')).toEqual({
+      state: 'done',
+      detail: 'Saved, ending in abcd; it works as alex.',
+    });
+    expect(tested('refused')).toEqual({
+      state: 'attention',
+      detail: 'GitHub refused it at the last test.',
+    });
+    expect(tested('unreachable').state).toBe('done');
   });
 });

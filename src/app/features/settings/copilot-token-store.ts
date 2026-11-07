@@ -2,14 +2,16 @@ import { Injectable, inject, signal } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 import type { ApiError, ApiResult } from '@core/api/api-error';
 import type { CopilotTokenTest, MyCopilotToken } from '@core/api/types';
+import { SetupStore } from '@core/stores/setup-store';
 
 /**
  * The state of My Copilot token: the person's own token as the API last showed it (never in clear). Every change is
- * shown at once from the answer. Setup is not read again: the app reads it only when it starts. 0 AIU.
+ * shown at once from the answer, also in Setup's step for the token, which is not read again. 0 AIU.
  */
 @Injectable()
 export class CopilotTokenStore {
   private readonly api = inject(ApiClient);
+  private readonly setup = inject(SetupStore);
 
   /** The page as last read. */
   readonly page = signal<MyCopilotToken | null>(null);
@@ -24,7 +26,7 @@ export class CopilotTokenStore {
     const result = await this.api.getMyCopilotToken();
     this.loading.set(false);
     if (result.ok) {
-      this.page.set(result.value);
+      this.show(result.value);
       this.loadError.set(null);
     } else this.loadError.set(result.error);
   }
@@ -52,9 +54,15 @@ export class CopilotTokenStore {
   ): Promise<ApiResult<MyCopilotToken>> {
     const result = await request;
     if (result.ok) {
-      this.page.set(result.value);
+      this.show(result.value);
       this.loadError.set(null);
     } else await this.load();
     return result;
+  }
+
+  /** Shows the page as answered, and the token's step in Setup with it. */
+  private show(page: MyCopilotToken): void {
+    this.page.set(page);
+    this.setup.acceptCopilotToken(page);
   }
 }
