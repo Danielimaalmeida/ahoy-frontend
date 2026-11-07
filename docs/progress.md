@@ -23,6 +23,14 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   - **Jira from one-off meetings:** a one-off meeting keeps its own Jira project and issue type (set in New meeting,
     prefilled from the last one-off's, or changed on the meeting); Create in Jira works there as in a series.
   - A series meeting links to the previous and next meeting of its series.
+- **`perf/meeting-open-requests` (PR #74, 2026-11-07, asked for by the user after opening a meeting fired duplicate
+  requests):** opening a meeting reads it, its open actions and questions and its drafts once. The page is drawn anew
+  when the address changes from `/meetings` to `/meetings/:id`; the second ask reads nothing while the same meeting is
+  being read, is live, or was read less than 10 s ago (`REOPEN_FRESH_MS`), so opening it again later still shows what
+  others changed. The People form's Role and Add line up with Qnumber. The contract is synced from `ahoy-hosted`'s
+  PR #98 (`5ff12d6`): a new stream of every story replays only the last two minutes, and the mock backend does the
+  same. Checks: `npm run build`, typecheck, lint, `ng test --watch=false` and format, on Node 22.23.4 with
+  `@acme-fedev/auth` stubbed (see Proof); not run on Node 24, nor against a live API or TEST.
 - **Merged before (`feat/portability-5-mcp-defaults`, #73, 2026-11-06, D23 step 5, on top of step 4):** Team settings ›
   Phases shows, under each phase's name, the MCP servers its runs get and where they come from, read-only since only
   the deployment sets them: "Jira, Confluence (set by the deployment)", "density-mcp (built in)", "the agent profile's

@@ -10,7 +10,7 @@ import {
   provideMockBackend,
 } from '@core/mock/mock-backend';
 import { CLOCK, type Clock } from '@core/realtime/clock';
-import { LIVE_POLL_MS, meetingDay } from '@domain/meetings';
+import { LIVE_POLL_MS, meetingDay, REOPEN_FRESH_MS } from '@domain/meetings';
 import { DRAFT_POLL_MS } from '@domain/story-drafts';
 import type { ManualClock } from '@testing/mock-backend/clock';
 import { MOCK_DRAFT_MS } from '@testing/mock-backend/meetings';
@@ -203,6 +203,33 @@ describe('Meetings on the mock backend', () => {
     expect(
       page.requests.filter((r) => r.path.endsWith('/settings/meetings'))
     ).toHaveLength(1);
+  });
+
+  it('reads a meeting that is not live and its drafts again when it is opened again later, so what others changed shows', async () => {
+    const page = await open('/meetings', (server) => {
+      for (const m of server.meetingDesk.list('in_progress'))
+        call(server, 'POST', `/meetings/${m.id}/end`, { carryOver: [] });
+    });
+    const shown = page.requests.find(
+      (r) => r.method === 'GET' && /^\/meetings\/[^/]+$/.test(r.path)
+    )!.path;
+    const reads = (path: string) =>
+      page.requests.filter((r) => r.method === 'GET' && r.path === path).length;
+    expect(reads(shown)).toBe(1);
+    expect(reads(`${shown}/story-drafts`)).toBe(1);
+
+    await page.harness.navigateByUrl(shown);
+    await flush(page);
+    expect(reads(shown)).toBe(1);
+    expect(reads(`${shown}/story-drafts`)).toBe(1);
+
+    await page.harness.navigateByUrl('/meetings');
+    await flush(page);
+    page.clock.advance(REOPEN_FRESH_MS);
+    await page.harness.navigateByUrl(shown);
+    await flush(page);
+    expect(reads(shown)).toBe(2);
+    expect(reads(`${shown}/story-drafts`)).toBe(2);
   });
 
   it('reads a meeting and its drafts once when it opens, and not again when the address names the meeting on screen', async () => {

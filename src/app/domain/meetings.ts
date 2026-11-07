@@ -330,6 +330,13 @@ export function noteKindFields(
 /** How often an open meeting in progress is read again, so notes others take show up without a refresh. */
 export const LIVE_POLL_MS = 5000;
 
+/**
+ * How long a meeting (or its drafts) read for the page stays fresh enough that asking for it again reads nothing: the
+ * page asks once more when the address changes from `/meetings` to `/meetings/:id` for the meeting on screen. Opened
+ * again later, it is read again, so what others changed meanwhile shows.
+ */
+export const REOPEN_FRESH_MS = 10_000;
+
 const SHORTCUTS: Readonly<Record<string, NoteKind>> = {
   n: 'note',
   d: 'decision',

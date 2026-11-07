@@ -62,6 +62,22 @@ describe('GET /events/stream on the mock', () => {
     ]);
   });
 
+  it('starts a stream of every story without a cursor with the last two minutes, and one story with all of it', async () => {
+    const { server, clock } = testServer({ seed: false });
+    const fetch = createMockFetch(server, { actor: () => 'alex@example.com' });
+    call(server, 'POST', '/stories', { key: 'OLD-1', budgetNanoAiu: AIU });
+    clock.advance(3 * 60_000);
+    await settle();
+    const before = server.state.lastEventId;
+    call(server, 'POST', '/stories', { key: 'NEW-1', budgetNanoAiu: AIU });
+    const every = await open(fetch);
+    expect(every.ids.length).toBeGreaterThan(0);
+    expect(every.ids.every((id) => Number(id) > before)).toBe(true);
+    expect(every.text).not.toContain('"storyKey":"OLD-1"');
+    const one = await open(fetch, '?story=OLD-1');
+    expect(one.ids[0]).toBe('1');
+  });
+
   it('follows one story with `story=`', async () => {
     const { server, clock } = testServer();
     const fetch = createMockFetch(server, { actor: () => 'alex@example.com' });

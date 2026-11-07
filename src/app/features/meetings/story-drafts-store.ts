@@ -9,6 +9,7 @@ import { ApiClient } from '@core/api/api-client';
 import type { ApiError, ApiResult } from '@core/api/api-error';
 import type { MeetingStoryDraft, MeetingStoryMode } from '@core/api/types';
 import { CLOCK, type Timer } from '@core/realtime/clock';
+import { REOPEN_FRESH_MS } from '@domain/meetings';
 import {
   anyDrafting,
   DRAFT_POLL_MS,
@@ -30,6 +31,9 @@ export class StoryDraftsStore {
   /** Counts loads, so an answer for a meeting no longer open is dropped. */
   private generation = 0;
   private meetingId: string | null = null;
+  /** When the drafts of `meetingId` were last read, and whether a read of them is in flight. */
+  private readAt = Number.NEGATIVE_INFINITY;
+  private fetching = false;
   private timer: Timer | null = null;
 
   /** The open meeting's drafts that were not discarded, newest first. */
@@ -48,12 +52,20 @@ export class StoryDraftsStore {
   }
 
   /**
-   * Reads the drafts of `meetingId` (none for no meeting), and keeps reading while one is being written. The meeting
-   * already shown (or being read) is not read again: the page asks each time it is drawn, and it is drawn anew when
-   * the address changes from `/meetings` to `/meetings/:id`.
+   * Reads the drafts of `meetingId` (none for no meeting), and keeps reading while one is being written. The page asks
+   * each time it is drawn, and it is drawn anew when the address changes from `/meetings` to `/meetings/:id`: the same
+   * meeting's drafts are not read again while they are being read, polled, or were read less than
+   * {@link REOPEN_FRESH_MS} ago without an error.
    */
   async load(meetingId: string | null): Promise<void> {
-    if (meetingId === this.meetingId && this.loadError() === null) return;
+    if (
+      meetingId === this.meetingId &&
+      this.loadError() === null &&
+      (this.fetching ||
+        this.timer !== null ||
+        this.clock.now().getTime() - this.readAt < REOPEN_FRESH_MS)
+    )
+      return;
     return this.read(meetingId);
   }
 
@@ -66,6 +78,7 @@ export class StoryDraftsStore {
     this.stopPolling();
     const generation = ++this.generation;
     this.meetingId = meetingId;
+    this.fetching = false;
     if (meetingId === null) {
       this.drafts.set([]);
       this.loadError.set(null);
@@ -161,8 +174,11 @@ export class StoryDraftsStore {
   }
 
   private async fetch(generation: number, meetingId: string): Promise<void> {
+    this.fetching = true;
     const result = await this.api.listMeetingStoryDrafts(meetingId);
     if (generation !== this.generation) return;
+    this.fetching = false;
+    this.readAt = this.clock.now().getTime();
     if (!result.ok) {
       this.loadError.set(result.error);
     } else {

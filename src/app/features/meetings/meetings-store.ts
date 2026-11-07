@@ -29,6 +29,7 @@ import {
   isClosed,
   LIVE_POLL_MS,
   moveInOrder,
+  REOPEN_FRESH_MS,
   type NoteKind,
 } from '@domain/meetings';
 
@@ -94,8 +95,11 @@ export class MeetingsStore {
   readonly labels = this.labelsStore.labels;
   /** Counts loads of the open meeting, so an answer to an older one is dropped. */
   private generation = 0;
-  /** The meeting the last `open` asked for, so asking for it again while it is open reads nothing. */
+  /** The meeting the last `open` asked for, and when its read ended: asking for it again soon after reads nothing. */
   private openedId: string | null = null;
+  private openedAt = Number.NEGATIVE_INFINITY;
+  /** The read `open` has in flight, so asking for the same meeting meanwhile waits on it rather than reading again. */
+  private opening: Promise<void> | null = null;
   private timer: Timer | null = null;
 
   constructor() {
@@ -224,17 +228,35 @@ export class MeetingsStore {
   }
 
   /**
-   * Opens one meeting on the right, with the open actions of its series. The meeting already open is not read again:
-   * the page is drawn anew when the address changes from `/meetings` to `/meetings/:id`, and asks for it once more.
+   * Opens one meeting on the right, with the open actions of its series. The page is drawn anew when the address
+   * changes from `/meetings` to `/meetings/:id`, and asks for the meeting once more: that reads nothing while the same
+   * meeting is being read, is live (in progress) or was read less than {@link REOPEN_FRESH_MS} ago without an error.
    */
   async open(id: string): Promise<void> {
-    if (
-      this.openedId === id &&
-      this.meeting()?.id === id &&
-      this.openError() === null
-    )
-      return;
+    if (this.openedId === id) {
+      if (this.opening !== null) return this.opening;
+      const meeting = this.meeting();
+      if (
+        meeting?.id === id &&
+        this.openError() === null &&
+        this.actionsError() === null &&
+        (meeting.status === 'in_progress' ||
+          this.clock.now().getTime() - this.openedAt < REOPEN_FRESH_MS)
+      )
+        return;
+    }
     this.openedId = id;
+    const reading = this.read(id);
+    this.opening = reading;
+    try {
+      await reading;
+    } finally {
+      if (this.opening === reading) this.opening = null;
+    }
+  }
+
+  /** Reads the meeting `open` asked for and the open actions, then keeps it live while it is in progress. */
+  private async read(id: string): Promise<void> {
     const generation = ++this.generation;
     this.stopLive();
     await this.flushRemovals();
@@ -251,6 +273,8 @@ export class MeetingsStore {
     this.openError.set(null);
     this.meeting.set(result.value);
     await this.loadActions();
+    if (generation !== this.generation) return;
+    this.openedAt = this.clock.now().getTime();
     this.keepLive();
   }
 

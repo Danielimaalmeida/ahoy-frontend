@@ -1200,8 +1200,9 @@ export interface paths {
      *     `Event` JSON. IDs are stable and increase monotonically. To resume, reconnect with the
      *     `Last-Event-ID` header (or `after`); the server replays every later event before streaming
      *     new ones. Without either, the stream of one `story` replays all its events first, and the
-     *     stream of every story starts with new events only. Comment lines (`: keepalive`) are sent
-     *     periodically. Clients that cannot use SSE may poll `listStoryEvents` instead.
+     *     stream of every story replays only the events of the last two minutes. Comment lines
+     *     (`: keepalive`) are sent periodically. Clients that cannot use SSE may poll
+     *     `listStoryEvents` instead.
      */
     readonly get: operations['streamEvents'];
     readonly put?: never;

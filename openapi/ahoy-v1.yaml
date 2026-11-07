@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 3fbcbc00c5812b5a05c428be519e89801a83b37d
+# Commit: 5ff12d652b68362216d54f649affdec4b493d48b
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -1464,8 +1464,9 @@ paths:
         `Event` JSON. IDs are stable and increase monotonically. To resume, reconnect with the
         `Last-Event-ID` header (or `after`); the server replays every later event before streaming
         new ones. Without either, the stream of one `story` replays all its events first, and the
-        stream of every story starts with new events only. Comment lines (`: keepalive`) are sent
-        periodically. Clients that cannot use SSE may poll `listStoryEvents` instead.
+        stream of every story replays only the events of the last two minutes. Comment lines
+        (`: keepalive`) are sent periodically. Clients that cannot use SSE may poll
+        `listStoryEvents` instead.
       parameters:
         - name: story
           in: query
