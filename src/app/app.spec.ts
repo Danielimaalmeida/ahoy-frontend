@@ -18,6 +18,7 @@ import { FakeFetch, type SseBody } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
 import { THEME_STORAGE } from '@ui/theme/theme.service';
 import { ToastService } from '@ui/toast/toast';
+import { AccessControl } from '@core/auth/access-control';
 import { App, SEARCH_DEBOUNCE_MS } from './app';
 import { routes } from './app.routes';
 
@@ -198,30 +199,30 @@ describe('App shell', () => {
   });
 
   describe('access', () => {
-    it('shows only "Access denied" to a user whose qnumber is not on the list, and calls nothing', async () => {
+    it('shows only "Access denied" to a user the API refused', async () => {
       profile.set({ sub: 'Q654321', email: 'alex@example.com' });
-      const { root, api, net } = await shell('/', {
-        allowedQnumbers: ['q123456'],
-      });
+      const { root, flush } = await shell('/');
+      TestBed.inject(AccessControl).refuseByApi();
+      await flush();
       expect(
         Array.from(root.children).map((child) => child.tagName.toLowerCase())
       ).toEqual(['main']);
       expect(text(root.querySelector('h1'))).toBe('Access denied');
       expect(text(root)).toContain('You are signed in as q654321');
       expect(root.querySelector('ah-top-bar')).toBeNull();
-      expect(api.calls).toEqual([]);
-      expect(net.requests).toEqual([]);
     });
 
     it('signs out from the "Access denied" page', async () => {
       profile.set({ sub: 'q654321' });
-      const { root } = await shell('/', { allowedQnumbers: ['q123456'] });
+      const { root, flush } = await shell('/');
+      TestBed.inject(AccessControl).refuseByApi();
+      await flush();
       root.querySelector<HTMLButtonElement>('ah-access-denied button')!.click();
       expect(logout).toHaveBeenCalledTimes(1);
     });
 
-    it('opens the app for a user on the list', async () => {
-      profile.set({ sub: 'Q123456', email: 'alex@example.com' });
+    it("opens the app for someone the configuration's old allowedQnumbers leaves out: the API decides", async () => {
+      profile.set({ sub: 'Q654321', email: 'alex@example.com' });
       const { root, api } = await shell('/', {
         allowedQnumbers: ['q123456'],
       });

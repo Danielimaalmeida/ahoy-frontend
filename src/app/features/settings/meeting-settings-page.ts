@@ -113,8 +113,8 @@ function problemOf(typed: string): string | null {
     } @else if (store.page(); as page) {
       @if (!page.canEdit) {
         <ah-banner variant="info" heading="Only admins change these">
-          You can read the team settings. Ask an admin to add you to
-          AHOY_ADMIN_QNUMBERS.
+          You can read the team settings. Ask an admin to make you one in
+          People.
         </ah-banner>
       }
 

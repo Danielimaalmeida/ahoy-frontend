@@ -1006,6 +1006,22 @@ export type PrCommentSettings = Schemas['PrCommentSettings'];
 /** Body of `updatePrCommentSettings`; turning replies on needs `confirmReplies: true`. */
 export type PrCommentSettingsChange = Schemas['PrCommentSettingsChange'];
 
+/** Answer of `getPeopleSettings`, `putPerson` and `removePerson`: the deployment's people and the members added. */
+export type PeoplePage = Schemas['PeoplePage'];
+
+/** One of the deployment's own people (`AHOY_ALLOWED_QNUMBERS`, `AHOY_ADMIN_QNUMBERS`), read-only in the UI. */
+export type DeploymentPerson = Schemas['DeploymentPerson'];
+
+/** Someone an admin let into Ahoy from Team settings › People. */
+export type Member = Schemas['Member'];
+
+/** `member` uses Ahoy; `admin` also changes the team's settings (`MemberRole`). */
+export type MemberRole = Schemas['MemberRole'];
+export const MEMBER_ROLES = listOf<MemberRole>()(['member', 'admin']);
+
+/** Body of `putPerson`. */
+export type PersonChange = Schemas['PersonChange'];
+
 /** Answer of `getMeetingSettings`: the names of the two sides of a meeting, and whether the person may change them. */
 export type MeetingSettingsPage = Schemas['MeetingSettingsPage'];
 

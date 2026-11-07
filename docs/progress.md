@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-06 (`feat/portability-1-meeting-labels`; offline checks passed with a stubbed `@acme-fedev/auth`). One
+Updated 2026-11-06 (`feat/portability-2-people`; offline checks passed with a stubbed `@acme-fedev/auth`). One
 page: replace it, do not append; git history is the archive (the 3,692-line page before this one:
 `git show b1f9b88:docs/progress.md`). The review of both repositories, with its proposals (not yet agreed), is
 `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on 2026-10-24
@@ -8,7 +8,16 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
 
 ## Where we are
 
-- **This branch (`feat/portability-1-meeting-labels`, 2026-11-06, asked for by the user on 2026-11-06: another team of
+- **This branch (`feat/portability-2-people`, 2026-11-06, D23 step 2, on top of step 1):** Team settings has a new
+  section, **People** (`/settings/people`): an admin adds a qnumber as member or admin, makes an admin a member or the
+  reverse, and removes someone after a second click; their own row shows no controls. The deployment's own people
+  (`AHOY_ALLOWED_QNUMBERS`, `AHOY_ADMIN_QNUMBERS`) are listed read-only. The box refuses what is not a qnumber and
+  someone already listed before sending; the API's refusals show as a banner. The navigation counts the people. The app no longer refuses on `/config.json`'s
+  `allowedQnumbers`: the API decides, so a person added in People gets in. The
+  contract is `ahoy-hosted`'s `feat/portability-2-people` (migration 0042), which deploys with this branch (134
+  operations implemented). With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (212 files, 3,701
+  tests), `ng build`, typecheck, lint and format pass; e2e was not run and nothing ran against an API.
+- **Step 1 (`feat/portability-1-meeting-labels`, 2026-11-06, asked for by the user on 2026-11-06: another team of
   the company installs its own Ahoy, `ahoy-hosted` D23):** the names of a meeting's two sides are a team setting.
   Team settings has a new section, **Meetings** (`/settings/meetings`): "Our side" and "Stakeholders' side", 1 to 40
   characters on one line, with their history; the navigation says "Defaults" until an admin saves them. The meeting
@@ -216,7 +225,7 @@ page: replace it, do not append; git history is the archive (the 3,692-line page
   two names in Team settings › Meetings, or TEST's meeting pages and Confluence copies say "Us" and "Stakeholders".
 - **Before the next TEST deploy of the front end** (2026-10-30): mount a `/config.json` with FIO's `auth` (realm and
   client from `environment.test.ts`, and the three redirect URIs exactly as FIO's client registered them: today's
-  build sends `<origin>/`, and `<origin>//ui/oauth/silent-refresh.html` for silent refresh), `jiraBaseUrl` (`https://atc.acmegroup.net/jira`) and `allowedQnumbers`, then
+  build sends `<origin>/`, and `<origin>//ui/oauth/silent-refresh.html` for silent refresh), `jiraBaseUrl` (`https://atc.acmegroup.net/jira`) (no `allowedQnumbers`: the API decides, D23), then
   sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's (audit #16).
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.

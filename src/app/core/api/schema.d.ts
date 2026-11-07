@@ -2025,7 +2025,7 @@ export interface paths {
     };
     /**
      * Who the signed-in person is, and whether they may change the team's settings.
-     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).
+     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` or one with the `admin` role in Team settings › People (under `AHOY_AUTH=dev` without the list, everyone).
      */
     readonly get: operations['getMe'];
     readonly put?: never;
@@ -2501,6 +2501,60 @@ export interface paths {
      *     and absent before (`409 stale_version`).
      */
     readonly patch: operations['updateMeetingSettings'];
+    readonly trace?: never;
+  };
+  readonly '/settings/people': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Who may use Ahoy and who is an admin.
+     * @description Anyone allowed into Ahoy reads it; only an admin changes it (`canEdit`). `deployment` lists the deployment's
+     *     own people (`AHOY_ALLOWED_QNUMBERS` and `AHOY_ADMIN_QNUMBERS`), which change only in the chart; `members` the
+     *     ones the team added. The API reads the members at most every 30 seconds, so a change reaches every replica
+     *     within that time. 0 AIU.
+     */
+    readonly get: operations['getPeopleSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/people/{qnumber}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description A qnumber, `q` then 1 to 62 letters or digits (case-insensitive). */
+        readonly qnumber: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Let someone use Ahoy, or change their role.
+     * @description Admins only. Adds the qnumber with the role, or changes the role of a member already there. `400` for a value
+     *     that is not a qnumber; `409 invalid_state` for the person's own qnumber, for one of the deployment's own
+     *     people, and for a change that would leave Ahoy with no admin.
+     */
+    readonly put: operations['putPerson'];
+    readonly post?: never;
+    /**
+     * Stop someone using Ahoy.
+     * @description Admins only. Removes a member; within 30 seconds every replica refuses them (`403`). `404` for a qnumber that
+     *     is not a member; `409 invalid_state` for the person's own qnumber, one of the deployment's own people, or the
+     *     last admin.
+     */
+    readonly delete: operations['removePerson'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
     readonly trace?: never;
   };
   readonly '/defects': {
@@ -4865,6 +4919,46 @@ export interface components {
       readonly updatedByName: string | null;
       /** Format: date-time */
       readonly updatedAt: string | null;
+    };
+    /**
+     * @description `member` uses Ahoy; `admin` also changes the team's settings.
+     * @enum {string}
+     */
+    readonly MemberRole: 'member' | 'admin';
+    readonly PeoplePage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description The person's own qnumber, lower case: their row cannot be changed. */
+      readonly you: string;
+      /** @description True only under `AHOY_AUTH=dev` without `AHOY_ALLOWED_QNUMBERS`: everyone is let in. */
+      readonly everyoneAllowed: boolean;
+      /** @description True only under `AHOY_AUTH=dev` without `AHOY_ADMIN_QNUMBERS`: everyone is an admin. */
+      readonly everyoneAdmin: boolean;
+      /** @description The deployment's own people, admins first; they change only in the chart. */
+      readonly deployment: readonly components['schemas']['DeploymentPerson'][];
+      /** @description The people the team added, by qnumber. */
+      readonly members: readonly components['schemas']['Member'][];
+    };
+    readonly DeploymentPerson: {
+      readonly qnumber: string;
+      readonly name: string | null;
+      readonly role: components['schemas']['MemberRole'];
+    };
+    readonly Member: {
+      readonly qnumber: string;
+      /** @description The name WebEAM gave, once the person has signed in. */
+      readonly name: string | null;
+      readonly role: components['schemas']['MemberRole'];
+      readonly addedBy: string;
+      readonly addedByName: string | null;
+      /** Format: date-time */
+      readonly addedAt: string;
+      readonly updatedBy: string;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly PersonChange: {
+      readonly role: components['schemas']['MemberRole'];
     };
     readonly MeetingSettingsChange: {
       readonly version?: number;
@@ -8763,6 +8857,87 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly getPeopleSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The people. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PeoplePage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly putPerson: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description A qnumber, `q` then 1 to 62 letters or digits (case-insensitive). */
+        readonly qnumber: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['PersonChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The people, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PeoplePage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly removePerson: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description A qnumber, `q` then 1 to 62 letters or digits (case-insensitive). */
+        readonly qnumber: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The people, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PeoplePage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly listDefects: {
     readonly parameters: {
       readonly query?: never;
@@ -9094,7 +9269,8 @@ export interface operations {
           | 'pr_comments'
           | 'defects'
           | 'branch_releases'
-          | 'meetings';
+          | 'meetings'
+          | 'people';
       };
       readonly header?: never;
       readonly path?: never;

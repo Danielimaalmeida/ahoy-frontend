@@ -41,6 +41,7 @@ import {
   isAgentSettingsPage,
   isPrCommentSettingsPage,
   isMeetingSettingsPage,
+  isPeoplePage,
   isBranchRelease,
   isBranchReleaseBatch,
   isBranchReleaseRepository,
@@ -126,6 +127,8 @@ import type {
   PrCommentSettingsPage,
   MeetingSettingsChange,
   MeetingSettingsPage,
+  PeoplePage,
+  PersonChange,
   BranchRelease,
   BranchReleaseRepository,
   BranchReleaseRepositoryChange,
@@ -1781,6 +1784,39 @@ export class ApiClient {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })
+    );
+  }
+
+  /** Who may use Ahoy: the deployment's own people and the members the team added. */
+  getPeopleSettings(): Promise<ApiResult<PeoplePage>> {
+    return this.get('getPeopleSettings', '/settings/people', isPeoplePage);
+  }
+
+  /** Lets someone use Ahoy with a role, or changes their role (admins only). */
+  putPerson(
+    qnumber: string,
+    body: PersonChange
+  ): Promise<ApiResult<PeoplePage>> {
+    return this.send(
+      'putPerson',
+      isPeoplePage,
+      this.http.put<unknown>(
+        this.url(`/settings/people/${segment(qnumber)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Stops someone using Ahoy (admins only). */
+  removePerson(qnumber: string): Promise<ApiResult<PeoplePage>> {
+    return this.send(
+      'removePerson',
+      isPeoplePage,
+      this.http.delete<unknown>(
+        this.url(`/settings/people/${segment(qnumber)}`),
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
     );
   }
 

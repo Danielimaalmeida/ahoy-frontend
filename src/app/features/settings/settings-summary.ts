@@ -8,6 +8,7 @@ import type {
   PhaseSettingsPage,
   PrCommentSettingsPage,
   MeetingSettingsPage,
+  PeoplePage,
   DefectSettingsPage,
   SonarSettings,
   TeamsSettingsPage,
@@ -98,6 +99,13 @@ export function meetingsState(page: MeetingSettingsPage): SectionState {
     : { label: 'Named', off: false };
 }
 
+/** "N people": everyone who may use Ahoy, the deployment's and the members; "Everyone" when the deployment lets all in. */
+export function peopleState(page: PeoplePage): SectionState {
+  if (page.everyoneAllowed) return { label: 'Everyone', off: false };
+  const n = page.deployment.length + page.members.length;
+  return { label: n === 1 ? '1 person' : `${n} people`, off: false };
+}
+
 /** A section the frame shows a state for. */
 export type SettingsSectionKey =
   | 'sonar'
@@ -109,7 +117,8 @@ export type SettingsSectionKey =
   | 'pr_comments'
   | 'defects'
   | 'branch_releases'
-  | 'meetings';
+  | 'meetings'
+  | 'people';
 
 /**
  * What the Team settings' frame shows around a section: whether the person is an admin and each section's state. The
@@ -142,6 +151,8 @@ export class SettingsSummary {
   readonly branchReleases = signal<SectionState | null>(null);
   /** The meeting names' state, once read. */
   readonly meetings = signal<SectionState | null>(null);
+  /** Who may use Ahoy's state, once read. */
+  readonly people = signal<SectionState | null>(null);
 
   /** The sections whose page reads them itself. */
   private readonly claimed = new Set<SettingsSectionKey>();
@@ -164,6 +175,7 @@ export class SettingsSummary {
       defects,
       releases,
       meetings,
+      people,
     ] = await Promise.all([
       this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
       this.claimed.has('jira') ? null : this.api.getJiraSettings(),
@@ -177,6 +189,7 @@ export class SettingsSummary {
         ? null
         : this.api.getBranchReleaseSettings(),
       this.claimed.has('meetings') ? null : this.api.getMeetingSettings(),
+      this.claimed.has('people') ? null : this.api.getPeopleSettings(),
     ]);
     if (sonar?.ok && this.sonar() === null) this.sonarRead(sonar.value);
     if (jira?.ok && this.jira() === null) this.jiraRead(jira.value);
@@ -191,6 +204,7 @@ export class SettingsSummary {
       this.branchReleasesRead(releases.value);
     if (meetings?.ok && this.meetings() === null)
       this.meetingsRead(meetings.value);
+    if (people?.ok && this.people() === null) this.peopleRead(people.value);
   }
 
   /** What the SonarQube section read. */
@@ -251,5 +265,11 @@ export class SettingsSummary {
   meetingsRead(page: MeetingSettingsPage): void {
     this.admin.set(page.canEdit);
     this.meetings.set(meetingsState(page));
+  }
+
+  /** What the People section read. */
+  peopleRead(page: PeoplePage): void {
+    this.admin.set(page.canEdit);
+    this.people.set(peopleState(page));
   }
 }
