@@ -261,7 +261,8 @@ export class EndMeetingDialog {
     return n === 0 ? confirm : `${confirm} · move ${topics(n)}`;
   });
 
-  protected readonly label = raisedByLabel;
+  protected readonly label = (topic: Parameters<typeof raisedByLabel>[0]) =>
+    raisedByLabel(topic, this.store.labels());
 
   /** "no notes", "1 note", "3 notes". */
   protected notes(n: number): string {

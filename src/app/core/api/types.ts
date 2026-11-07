@@ -1018,6 +1018,83 @@ export type PrCommentSettings = Schemas['PrCommentSettings'];
 /** Body of `updatePrCommentSettings`; turning replies on needs `confirmReplies: true`. */
 export type PrCommentSettingsChange = Schemas['PrCommentSettingsChange'];
 
+/** Answer of `getPeopleSettings`, `putPerson` and `removePerson`: the deployment's people and the members added. */
+export type PeoplePage = Schemas['PeoplePage'];
+
+/** One of the deployment's own people (`AHOY_ALLOWED_QNUMBERS`, `AHOY_ADMIN_QNUMBERS`), read-only in the UI. */
+export type DeploymentPerson = Schemas['DeploymentPerson'];
+
+/** Someone an admin let into Ahoy from Team settings › People. */
+export type Member = Schemas['Member'];
+
+/** `member` uses Ahoy; `admin` also changes the team's settings (`MemberRole`). */
+export type MemberRole = Schemas['MemberRole'];
+export const MEMBER_ROLES = listOf<MemberRole>()(['member', 'admin']);
+
+/** Body of `putPerson`. */
+export type PersonChange = Schemas['PersonChange'];
+
+/** Answer of `getSetup` and `keepPhaseDefaults`: what the installation and the team still need before stories run. */
+export type Setup = Schemas['Setup'];
+
+/** One step of the Setup page: who fixes it, whether voyages need it, where it stands and the section that fixes it. */
+export type SetupStep = Schemas['SetupStep'];
+export const SETUP_STEP_STATES = listOf<SetupStep['state']>()([
+  'done',
+  'missing',
+  'attention',
+  'optional',
+]);
+export const SETUP_STEP_GROUPS = listOf<SetupStep['group']>()([
+  'installation',
+  'team',
+  'you',
+]);
+export const SETUP_STEP_KEYS = listOf<SetupStep['key']>()([
+  'database',
+  'content',
+  'secrets',
+  'runs',
+  'mcp',
+  'jira',
+  'people',
+  'agents',
+  'phases',
+  'meetings',
+  'teams',
+  'sonar',
+  'figma',
+  'defects',
+  'branch_releases',
+  'copilot',
+]);
+
+/** Answer of `getMyCopilotToken`: the person's own Copilot token, only as its last four characters. */
+export type MyCopilotToken = Schemas['MyCopilotToken'];
+
+/** The saved Copilot token, as the API shows it. */
+export type CopilotTokenSaved = NonNullable<MyCopilotToken['token']>;
+
+/** What "Test" found: who GitHub says the token is, or why not. */
+export type CopilotTokenTest = Schemas['CopilotTokenTest'];
+export const COPILOT_TEST_RESULTS = listOf<CopilotTokenTest['result']>()([
+  'works',
+  'refused',
+  'unreachable',
+]);
+
+/** Body of `putMyCopilotToken`. */
+export type CopilotTokenRequest = Schemas['CopilotTokenRequest'];
+
+/** Answer of `getMeetingSettings`: the names of the two sides of a meeting, and whether the person may change them. */
+export type MeetingSettingsPage = Schemas['MeetingSettingsPage'];
+
+/** The names shown for our side and the stakeholders' side of a meeting. */
+export type MeetingSettings = Schemas['MeetingSettings'];
+
+/** Body of `updateMeetingSettings`: either name or both. */
+export type MeetingSettingsChange = Schemas['MeetingSettingsChange'];
+
 /** Answer of `getDefectSettings`: the defect watch's settings and whether the person may change them. */
 export type DefectSettingsPage = Schemas['DefectSettingsPage'];
 
@@ -1114,6 +1191,19 @@ export const PHASE_SETTING_FIELDS = listOf<PhaseSettingField>()([
   'timeoutSeconds',
   'ciWaitMinutes',
 ]);
+
+/** A phase's MCP servers and where they come from: the deployment, the code, the agent profile, or none (D23). */
+export type PhaseMcpServers = PhaseSettingsRow['mcpServers'];
+export type McpSource = PhaseMcpServers['from'];
+export const MCP_SOURCES = listOf<McpSource>()([
+  'deployment',
+  'built_in',
+  'profile',
+  'none',
+]);
+
+/** An agent profile at HEAD that uses MCP servers, with its servers. */
+export type AgentMcpServers = PhaseSettingsPage['agentMcpServers'][number];
 
 /** Where the model catalogue comes from. */
 export type CatalogSource = ModelCatalog['source'];

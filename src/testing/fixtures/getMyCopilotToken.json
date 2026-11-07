@@ -1,0 +1,14 @@
+{
+  "qnumber": "q1abcde",
+  "secretsConfigured": true,
+  "token": {
+    "hint": "wxyz",
+    "savedAt": "2026-11-06T09:00:00.000Z",
+    "lastTest": {
+      "result": "works",
+      "detail": "alex",
+      "at": "2026-11-06T09:01:00.000Z"
+    }
+  },
+  "tokenReadable": true
+}

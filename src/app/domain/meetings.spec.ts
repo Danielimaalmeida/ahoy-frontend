@@ -23,6 +23,7 @@ import {
   normalizeStakeholders,
   parseStakeholders,
   raisedByLabel,
+  DEFAULT_MEETING_LABELS,
   shortEmail,
   stakeholderLabel,
   stakeholderName,
@@ -96,23 +97,34 @@ describe('meetings', () => {
     expect(defaultMeeting([])).toBeNull();
   });
 
-  it('says who raised a topic, keeping a stakeholder short', () => {
-    expect(raisedByLabel(topic({ id: 'a' }))).toBe('OTHER_COMPANY');
-    expect(raisedByLabel(topic({ id: 'b', raisedBy: 'them' }))).toBe('ACME');
+  it('says who raised a topic with the team’s names for the two sides, keeping a stakeholder short', () => {
+    const labels = { us: 'Northwind', them: 'Contoso' };
+    expect(raisedByLabel(topic({ id: 'a' }), labels)).toBe('Northwind');
+    expect(raisedByLabel(topic({ id: 'b', raisedBy: 'them' }), labels)).toBe(
+      'Contoso'
+    );
     expect(
       raisedByLabel(
         topic({
           id: 'c',
           raisedBy: 'them',
           raisedByStakeholder: 'maria@example.com',
-        })
+        }),
+        labels
       )
-    ).toBe('ACME · maria@');
+    ).toBe('Contoso · maria@');
     expect(
       raisedByLabel(
-        topic({ id: 'd', raisedBy: 'them', raisedByStakeholder: 'Ana Silva' })
+        topic({ id: 'd', raisedBy: 'them', raisedByStakeholder: 'Ana Silva' }),
+        labels
       )
-    ).toBe('ACME · Ana Silva');
+    ).toBe('Contoso · Ana Silva');
+    expect(
+      raisedByLabel(
+        topic({ id: 'e', raisedBy: 'them' }),
+        DEFAULT_MEETING_LABELS
+      )
+    ).toBe('Stakeholders');
     expect(shortEmail('no-at-sign')).toBe('no-at-sign');
   });
 
@@ -421,7 +433,7 @@ describe('meetingToConfluence', () => {
     );
     expect(markup).toContain('h3. 1. Late fees');
     expect(markup).toContain(
-      '_ACME · maria@ · raised at 09:45 · moved to Tue 20 Oct_'
+      '_Stakeholders · maria@ · raised at 09:45 · moved to Tue 20 Oct_'
     );
     expect(markup).toContain('* Agree a cap _(Alex Doe, 09:50)_');
     expect(markup).not.toContain('*Series:*');

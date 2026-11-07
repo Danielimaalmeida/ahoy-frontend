@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  agentMcpLabel,
   aiuLabel,
   capsRaised,
   describePhaseEvent,
   isStoryPhase,
   MAX_TIMEOUT_MINUTES,
+  mcpServersLabel,
   minutesLabel,
   MIN_TIMEOUT_MINUTES,
   phaseName,
@@ -20,6 +22,24 @@ describe('the phases in words', () => {
     expect(phaseName('pr_review')).toBe('Review');
     expect(phaseName('refinement')).toBe('Pre-refinement');
     expect(phaseName('security_scan')).toBe('security_scan');
+  });
+
+  it("says which MCP servers a phase's runs get and where they come from", () => {
+    expect(
+      mcpServersLabel({ from: 'deployment', names: ['Jira', 'Confluence'] })
+    ).toBe('MCP servers: Jira, Confluence (set by the deployment)');
+    expect(mcpServersLabel({ from: 'built_in', names: ['density-mcp'] })).toBe(
+      'MCP servers: density-mcp (built in)'
+    );
+    expect(mcpServersLabel({ from: 'profile', names: [] })).toBe(
+      "MCP servers: the agent profile's own"
+    );
+    expect(mcpServersLabel({ from: 'none', names: [] })).toBe(
+      'MCP servers: none'
+    );
+    expect(
+      agentMcpLabel({ agent: 'planner', servers: ['Jira', 'Confluence'] })
+    ).toBe('planner: Jira, Confluence');
   });
 
   it("tells a story's phases from the agents' jobs outside one", () => {
@@ -114,6 +134,9 @@ describe('an entry of the phases’ history', () => {
     ).toBe('Models: the built-in list → claude-sonnet-5, gpt-5.6-luna');
     expect(describePhaseEvent('phase_settings.updated', 'odd')).toBe(
       'Saved the phases'
+    );
+    expect(describePhaseEvent('phase_settings.defaults_kept', {})).toBe(
+      'Kept the defaults (from Setup)'
     );
     expect(describePhaseEvent('agent_settings.updated', {})).toBeUndefined();
   });

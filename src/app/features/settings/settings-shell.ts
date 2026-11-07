@@ -1,5 +1,7 @@
-import { Component, afterNextRender, inject } from '@angular/core';
+import { Component, afterNextRender, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { SetupStore } from '@core/stores/setup-store';
+import { setupProgressLabel, setupReady } from '@domain/setup';
 import { Icon } from '@ui/icon/icon';
 import { SettingsSummary, type SectionState } from './settings-summary';
 
@@ -103,6 +105,10 @@ interface Section {
     .nav__state--off {
       color: var(--ink-disabled);
     }
+    .nav__state--todo {
+      color: var(--status-input-fg);
+      font-weight: 600;
+    }
     .section {
       flex: 1 1 640px;
       min-width: 0;
@@ -128,6 +134,19 @@ interface Section {
 
     <div class="frame">
       <nav class="nav" aria-label="Settings sections">
+        <span class="nav__group">Start here</span>
+        <a
+          class="nav__item"
+          routerLink="setup"
+          routerLinkActive="nav__item--current"
+          ariaCurrentWhenActive="page"
+          >Setup
+          @if (setupState(); as state) {
+            <span class="nav__state" [class.nav__state--todo]="!state.ready">{{
+              state.label
+            }}</span>
+          }
+        </a>
         <span class="nav__group">Team</span>
         @for (s of sections; track s.path) {
           <a
@@ -143,6 +162,19 @@ interface Section {
             }
           </a>
         }
+        <span class="nav__group">You</span>
+        <a
+          class="nav__item"
+          routerLink="copilot-token"
+          routerLinkActive="nav__item--current"
+          ariaCurrentWhenActive="page"
+          >My Copilot token
+          @if (copilotState(); as state) {
+            <span class="nav__state" [class.nav__state--todo]="state.todo">{{
+              state.label
+            }}</span>
+          }
+        </a>
       </nav>
       <div class="section">
         <router-outlet />
@@ -152,6 +184,22 @@ interface Section {
 })
 export class SettingsShell {
   protected readonly summary = inject(SettingsSummary);
+  private readonly setup = inject(SetupStore);
+  /** "6 of 8" beside Setup, once the API has answered. */
+  protected readonly setupState = computed(() => {
+    const setup = this.setup.setup();
+    return setup === null
+      ? null
+      : { label: setupProgressLabel(setup), ready: setupReady(setup) };
+  });
+  /** "Saved" beside My Copilot token, from Setup's last step; nothing for a sign-in without a qnumber. */
+  protected readonly copilotState = computed(() => {
+    const step = this.setup.setup()?.steps.find((s) => s.key === 'copilot');
+    if (step === undefined) return null;
+    if (step.state === 'done') return { label: 'Saved', todo: false };
+    if (step.state === 'attention') return { label: 'Check', todo: true };
+    return null;
+  });
   protected readonly sections: readonly Section[] = [
     { path: 'sonar', label: 'SonarQube', state: () => this.summary.sonar() },
     { path: 'jira', label: 'Jira', state: () => this.summary.jira() },
@@ -174,10 +222,25 @@ export class SettingsShell {
       label: 'Branch releases',
       state: () => this.summary.branchReleases(),
     },
+    {
+      path: 'meetings',
+      label: 'Meetings',
+      state: () => this.summary.meetings(),
+    },
+    {
+      path: 'people',
+      label: 'People',
+      state: () => this.summary.people(),
+    },
   ];
 
   constructor() {
     // After the first render, which creates the routed section, so it has claimed the settings it reads itself.
-    afterNextRender(() => void this.summary.load());
+    afterNextRender(() => {
+      void this.summary.load();
+      // Setup reads it itself when it is the section on show; the app read it at start, but may have failed.
+      if (this.setup.setup() === null && !this.setup.loading())
+        void this.setup.load();
+    });
   }
 }

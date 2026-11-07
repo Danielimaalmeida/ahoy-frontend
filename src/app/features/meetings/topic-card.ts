@@ -1171,7 +1171,9 @@ export class TopicCard {
   });
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  protected readonly raisedBy = computed(() => raisedByLabel(this.topic()));
+  protected readonly raisedBy = computed(() =>
+    raisedByLabel(this.topic(), this.store.labels())
+  );
   protected readonly when = computed(() => topicWhen(this.topic()));
   /** The topic's notes without the answers, and each question's answers, which show under it. */
   protected readonly thread = computed(() => threadNotes(this.topic().notes));

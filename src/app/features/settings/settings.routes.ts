@@ -1,26 +1,36 @@
 import type { Routes } from '@angular/router';
 import { AgentSettingsPage } from './agent-settings-page';
 import { BranchReleaseSettingsPage } from './branch-release-settings-page';
+import { CopilotTokenPage } from './copilot-token-page';
 import { DefectSettingsPage } from './defect-settings-page';
 import { FigmaSettingsPage } from './figma-settings-page';
 import { JiraSettingsPage } from './jira-settings-page';
+import { MeetingSettingsPage } from './meeting-settings-page';
+import { PeopleSettingsPage } from './people-settings-page';
 import { PhaseSettingsPage } from './phase-settings-page';
 import { PrCommentSettingsPage } from './pr-comment-settings-page';
 import { SettingsPage } from './settings-page';
 import { SettingsShell } from './settings-shell';
+import { SetupPage } from './setup-page';
 import { TeamsSettingsPage } from './teams-settings-page';
 
 /**
- * Team settings: SonarQube, Jira, the crew's Teams channel, Figma, the agents' jobs, the phases, pull request
- * comments, the defect watch and branch releases, kept in the database and changed by admins, one section per page.
- * Reading and changing them is 0 AIU.
+ * Team settings: Setup first (what is still needed before stories run), then SonarQube, Jira, the crew's Teams
+ * channel, Figma, the agents' jobs, the phases, pull request comments, the defect watch, branch releases, the names of a
+ * meeting's two sides and who may use Ahoy, kept in the database and changed by admins, one section per page; last, the
+ * person's own Copilot token. Reading and changing them is 0 AIU.
  */
 export const SETTINGS_ROUTES: Routes = [
   {
     path: '',
     component: SettingsShell,
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'sonar' },
+      { path: '', pathMatch: 'full', redirectTo: 'setup' },
+      {
+        path: 'setup',
+        title: 'Setup · Team settings · Ahoy',
+        component: SetupPage,
+      },
       {
         path: 'sonar',
         title: 'SonarQube · Team settings · Ahoy',
@@ -65,6 +75,21 @@ export const SETTINGS_ROUTES: Routes = [
         path: 'branch-releases',
         title: 'Branch releases · Team settings · Ahoy',
         component: BranchReleaseSettingsPage,
+      },
+      {
+        path: 'meetings',
+        title: 'Meetings · Team settings · Ahoy',
+        component: MeetingSettingsPage,
+      },
+      {
+        path: 'people',
+        title: 'People · Team settings · Ahoy',
+        component: PeopleSettingsPage,
+      },
+      {
+        path: 'copilot-token',
+        title: 'My Copilot token · Team settings · Ahoy',
+        component: CopilotTokenPage,
       },
     ],
   },

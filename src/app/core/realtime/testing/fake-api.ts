@@ -40,6 +40,8 @@ export type FakeApiOps = Pick<
   | 'unignoreDefect'
   | 'startDefect'
   | 'getDefectSettings'
+  | 'getSetup'
+  | 'keepPhaseDefaults'
 >;
 
 /** A call the fake saw. */
@@ -265,5 +267,15 @@ export class FakeApi implements FakeApiOps {
   getDefectSettings: FakeApiOps['getDefectSettings'] = () => {
     this.calls.push({ op: 'getDefectSettings', args: [] });
     return this.handlers.getDefectSettings?.() ?? unreachable();
+  };
+
+  getSetup: FakeApiOps['getSetup'] = () => {
+    this.calls.push({ op: 'getSetup', args: [] });
+    return this.handlers.getSetup?.() ?? unreachable();
+  };
+
+  keepPhaseDefaults: FakeApiOps['keepPhaseDefaults'] = () => {
+    this.calls.push({ op: 'keepPhaseDefaults', args: [] });
+    return this.handlers.keepPhaseDefaults?.() ?? unreachable();
   };
 }

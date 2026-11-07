@@ -43,11 +43,13 @@ import {
   JIRA_ISSUE_TYPES,
   AGENT_JOBS,
   CATALOG_SOURCES,
+  MCP_SOURCES,
   PHASE_SETTING_FIELDS,
   FIGMA_TEST_RESULTS,
   TEAMS_CARD_RESULTS,
   MEETING_NOTE_IMAGE_TYPES,
   MEETING_NOTE_KINDS,
+  MEMBER_ROLES,
   MEETING_STATUSES,
   GRILL_CHOICES,
   MEETING_STORY_DRAFT_STATUSES,
@@ -89,6 +91,20 @@ import {
   type AgentSettingsPage,
   type PrCommentSettings,
   type PrCommentSettingsPage,
+  type MeetingSettings,
+  type MeetingSettingsPage,
+  type Member,
+  type PeoplePage,
+  type Setup,
+  type SetupStep,
+  SETUP_STEP_GROUPS,
+  SETUP_STEP_KEYS,
+  SETUP_STEP_STATES,
+  COPILOT_TEST_RESULTS,
+  type CopilotTokenSaved,
+  type CopilotTokenTest,
+  type MyCopilotToken,
+  type DeploymentPerson,
   BRANCH_RELEASE_STATUSES,
   type BranchRelease,
   type BranchReleaseBatch,
@@ -1796,6 +1812,105 @@ export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
   })
 );
 
+const memberRole = oneOf(MEMBER_ROLES);
+
+/** The People settings page, as `getPeopleSettings`, `putPerson` and `removePerson` answer it. */
+export const isPeoplePage = guard<PeoplePage>(
+  'PeoplePage',
+  shape<PeoplePage>({
+    canEdit: flag,
+    you: actor,
+    everyoneAllowed: flag,
+    everyoneAdmin: flag,
+    deployment: arrayOf(
+      shape<DeploymentPerson>({
+        qnumber: actor,
+        name: nullable(text),
+        role: memberRole,
+      })
+    ),
+    members: arrayOf(
+      shape<Member>({
+        qnumber: actor,
+        name: nullable(text),
+        role: memberRole,
+        addedBy: actor,
+        addedByName: nullable(text),
+        addedAt: timestamp,
+        updatedBy: actor,
+        updatedAt: timestamp,
+      })
+    ),
+  })
+);
+
+/** The Setup page, as `getSetup` and `keepPhaseDefaults` answer it. */
+export const isSetup = guard<Setup>(
+  'Setup',
+  shape<Setup>({
+    canEdit: flag,
+    steps: arrayOf(
+      shape<SetupStep>({
+        key: oneOf(SETUP_STEP_KEYS),
+        group: oneOf(SETUP_STEP_GROUPS),
+        title: text,
+        required: flag,
+        state: oneOf(SETUP_STEP_STATES),
+        detail: text,
+        section: nullable(text),
+      })
+    ),
+    requiredDone: count,
+    requiredTotal: count,
+    checkedAt: timestamp,
+  })
+);
+
+const copilotTokenTest = shape<CopilotTokenTest>({
+  result: oneOf(COPILOT_TEST_RESULTS),
+  detail: nullable(text),
+  at: timestamp,
+});
+
+/** The person's own Copilot token, as `getMyCopilotToken`, `putMyCopilotToken` and `deleteMyCopilotToken` answer it. */
+export const isMyCopilotToken = guard<MyCopilotToken>(
+  'MyCopilotToken',
+  shape<MyCopilotToken>({
+    qnumber: nonEmptyText,
+    secretsConfigured: flag,
+    token: nullable(
+      shape<CopilotTokenSaved>({
+        hint: boundedText('at most four characters', 0, 4),
+        savedAt: timestamp,
+        lastTest: nullable(copilotTokenTest),
+      })
+    ),
+    tokenReadable: flag,
+  })
+);
+
+/** What a test of the person's Copilot token found, as `testMyCopilotToken` answers it. */
+export const isCopilotTokenTest = guard<CopilotTokenTest>(
+  'CopilotTokenTest',
+  copilotTokenTest
+);
+
+/** The meetings settings page, as `getMeetingSettings` and `updateMeetingSettings` answer it. */
+export const isMeetingSettingsPage = guard<MeetingSettingsPage>(
+  'MeetingSettingsPage',
+  shape<MeetingSettingsPage>({
+    canEdit: flag,
+    meetings: shape<MeetingSettings>({
+      usLabel: nonEmptyText,
+      themLabel: nonEmptyText,
+      version: nullable(wholeNumber('a version', 1)),
+      updatedBy: nullable(actor),
+      updatedByName: nullable(text),
+      updatedAt: nullable(timestamp),
+    }),
+  })
+);
+
 /** The defect watch's settings page, as `getDefectSettings` and `updateDefectSettings` answer it. */
 export const isDefectSettingsPage = guard<DefectSettingsPage>(
   'DefectSettingsPage',
@@ -1989,6 +2104,16 @@ export const isPhaseSettingsPage = guard<PhaseSettingsPage>(
         pinned: arrayOf(oneOf(PHASE_SETTING_FIELDS)),
         fields: arrayOf(oneOf(PHASE_SETTING_FIELDS)),
         budgetCapNanoAiu: nanoAiu,
+        mcpServers: shape<PhaseSettingsRow['mcpServers']>({
+          from: oneOf(MCP_SOURCES),
+          names: arrayOf(nonEmptyText),
+        }),
+      })
+    ),
+    agentMcpServers: arrayOf(
+      shape<PhaseSettingsPage['agentMcpServers'][number]>({
+        agent: nonEmptyText,
+        servers: arrayOf(nonEmptyText),
       })
     ),
     catalog: shape<PhaseSettingsPage['catalog']>({

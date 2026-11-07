@@ -10,7 +10,9 @@ import {
 import { ok } from '@core/api/api-error';
 import { AppConfigStore, DEFAULT_APP_CONFIG } from '@core/config/app-config';
 import { parseAiu } from '@domain/aiu';
-import type { Story } from '@core/api/types';
+import type { Setup, Story } from '@core/api/types';
+import { isSetup } from '@core/api/guards';
+import getSetup from '@testing/fixtures/getSetup.json';
 import { aStory, anEvent } from '@core/realtime/testing/events';
 import { FakeApi } from '@core/realtime/testing/fake-api';
 import { FakeClock, settle } from '@core/realtime/testing/fake-clock';
@@ -18,6 +20,7 @@ import { FakeFetch, type SseBody } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
 import { THEME_STORAGE } from '@ui/theme/theme.service';
 import { ToastService } from '@ui/toast/toast';
+import { AccessControl } from '@core/auth/access-control';
 import { App, SEARCH_DEBOUNCE_MS } from './app';
 import { routes } from './app.routes';
 
@@ -68,6 +71,13 @@ const STORIES: readonly Story[] = [
   spentNanoAiu: aiu('3'),
 }));
 
+/** The Setup fixture, as its guard proves it. */
+function proven(value: unknown): Setup {
+  if (!isSetup(value))
+    throw new Error('the Setup fixture does not pass its guard');
+  return value;
+}
+
 const text = (node: Node | null | undefined): string =>
   (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
@@ -93,6 +103,8 @@ interface ShellOptions {
   readonly hang?: boolean;
   /** The `allowedQnumbers` of the configuration; without it the app does not check. */
   readonly allowedQnumbers?: readonly string[];
+  /** What `GET /setup` answers; without it the API cannot be reached for it. */
+  readonly setup?: Setup;
 }
 
 /** Renders the shell over fakes at `url`, with the real routes. */
@@ -115,6 +127,8 @@ async function shell(url = '/', options: ShellOptions = {}): Promise<Shell> {
     Promise.resolve(ok({ items: [], lastEventId: null }))
   );
   api.on('listStoryRuns', () => Promise.resolve(ok([])));
+  const setup = options.setup;
+  if (setup !== undefined) api.on('getSetup', () => Promise.resolve(ok(setup)));
   const storedTheme = options.storedTheme ?? null;
   TestBed.configureTestingModule({
     providers: [
@@ -198,30 +212,30 @@ describe('App shell', () => {
   });
 
   describe('access', () => {
-    it('shows only "Access denied" to a user whose qnumber is not on the list, and calls nothing', async () => {
+    it('shows only "Access denied" to a user the API refused', async () => {
       profile.set({ sub: 'Q654321', email: 'alex@example.com' });
-      const { root, api, net } = await shell('/', {
-        allowedQnumbers: ['q123456'],
-      });
+      const { root, flush } = await shell('/');
+      TestBed.inject(AccessControl).refuseByApi();
+      await flush();
       expect(
         Array.from(root.children).map((child) => child.tagName.toLowerCase())
       ).toEqual(['main']);
       expect(text(root.querySelector('h1'))).toBe('Access denied');
       expect(text(root)).toContain('You are signed in as q654321');
       expect(root.querySelector('ah-top-bar')).toBeNull();
-      expect(api.calls).toEqual([]);
-      expect(net.requests).toEqual([]);
     });
 
     it('signs out from the "Access denied" page', async () => {
       profile.set({ sub: 'q654321' });
-      const { root } = await shell('/', { allowedQnumbers: ['q123456'] });
+      const { root, flush } = await shell('/');
+      TestBed.inject(AccessControl).refuseByApi();
+      await flush();
       root.querySelector<HTMLButtonElement>('ah-access-denied button')!.click();
       expect(logout).toHaveBeenCalledTimes(1);
     });
 
-    it('opens the app for a user on the list', async () => {
-      profile.set({ sub: 'Q123456', email: 'alex@example.com' });
+    it("opens the app for someone the configuration's old allowedQnumbers leaves out: the API decides", async () => {
+      profile.set({ sub: 'Q654321', email: 'alex@example.com' });
       const { root, api } = await shell('/', {
         allowedQnumbers: ['q123456'],
       });
@@ -407,6 +421,61 @@ describe('App shell', () => {
       expect(document.title).toBe('Needs you · Ahoy');
       await go('/voyages?status=halted');
       expect(document.title).toBe('Voyages · Ahoy');
+    });
+  });
+
+  describe('the setup banner', () => {
+    const NOT_READY: Setup = proven(getSetup);
+    const READY: Setup = {
+      ...NOT_READY,
+      steps: NOT_READY.steps.map((s) =>
+        s.required ? { ...s, state: 'done' } : s
+      ),
+      requiredDone: 8,
+    };
+
+    it('tells an admin what is left and the next step on every page, and leads to Setup', async () => {
+      const { root, api } = await shell('/voyages', { setup: NOT_READY });
+      expect(api.callsOf('getSetup')).toHaveLength(1);
+      const banner = root.querySelector('ah-setup-banner');
+      expect(text(banner?.querySelector('.words'))).toBe(
+        'Ahoy is not ready yet: 6 of 8 required steps done. Voyages may fail until the rest are. ' +
+          'Next: Agents, in Team settings.'
+      );
+      expect(banner?.querySelector('a')?.getAttribute('href')).toBe(
+        '/settings/setup'
+      );
+      expect(
+        Array.from(root.children).map((child) => child.tagName.toLowerCase())
+      ).toEqual(['ah-top-bar', 'ah-setup-banner', 'main', 'ah-toast-host']);
+    });
+
+    it('checks again on each page while not ready, so a step fixed elsewhere clears the banner', async () => {
+      const { root, api, go } = await shell('/voyages', { setup: NOT_READY });
+      api.on('getSetup', () => Promise.resolve(ok(READY)));
+      // Another voyages filter: a page whose own reads the fake answers, so nothing is left unhandled.
+      await go('/voyages?status=halted');
+      expect(api.callsOf('getSetup')).toHaveLength(2);
+      expect(root.querySelector('ah-setup-banner')).toBeNull();
+      await go('/voyages');
+      expect(api.callsOf('getSetup')).toHaveLength(2);
+    });
+
+    it('tells a member only that the admins are setting Ahoy up', async () => {
+      const { root } = await shell('/', {
+        setup: { ...NOT_READY, canEdit: false },
+      });
+      expect(text(root.querySelector('ah-setup-banner'))).toContain(
+        'Ahoy is being set up. Some features may not work until the admins finish (6 of 8 required steps).'
+      );
+    });
+
+    it('shows nothing once every required step is done, or when the steps cannot be read', async () => {
+      const ready = await shell('/', { setup: READY });
+      expect(ready.root.querySelector('ah-setup-banner')).toBeNull();
+      TestBed.resetTestingModule();
+      const unread = await shell('/');
+      expect(unread.root.querySelector('ah-setup-banner')).toBeNull();
     });
   });
 

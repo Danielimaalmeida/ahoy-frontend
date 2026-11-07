@@ -1,14 +1,15 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-06 (`feat/meeting-notes-ux`: the meeting notes page reworked; offline checks passed with a stubbed auth library). One page: replace it,
-do not append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`).
-The review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user
-kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
+Updated 2026-11-07 (`feat/meeting-notes-ux`: the meeting notes page reworked, main merged in; offline checks passed with
+a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the archive (the 3,692-line page
+before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories, with its proposals (not yet
+agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on
+2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
 - **This branch (`feat/meeting-notes-ux`, 2026-11-06, asked for by the user on 2026-11-06 after a UX study of the
-  meeting notes page):** deploys with `ahoy-hosted`'s `feat/meeting-notes-ux` (PR #91, migration 0041).
+  meeting notes page):** deploys with `ahoy-hosted`'s `feat/meeting-notes-ux` (PR #91, migration 0044).
   - **A list that grows:** the left column pins the running meeting, then switches between Upcoming (grouped by week),
     Past (by month, 12 at a time) and Series (each series' next and last meetings, 3 at a time), and searches meetings,
     topics and notes (`GET /meeting-search`, debounced). The list still comes whole from `listMeetings`; the UI only
@@ -22,10 +23,57 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
   - **Jira from one-off meetings:** a one-off meeting keeps its own Jira project and issue type (set in New meeting,
     prefilled from the last one-off's, or changed on the meeting); Create in Jira works there as in a series.
   - A series meeting links to the previous and next meeting of its series.
-- **Before (`feature/R3DA-14787-auto-defects`, 2026-11-06):** merges `origin/main` at `1330060b` without
+- **Merged before (`feat/portability-5-mcp-defaults`, #73, 2026-11-06, D23 step 5, on top of step 4):** Team settings ›
+  Phases shows, under each phase's name, the MCP servers its runs get and where they come from, read-only since only
+  the deployment sets them: "Jira, Confluence (set by the deployment)", "density-mcp (built in)", "the agent profile's
+  own" (the built-in phases name no other server) or "none"; under the table, each agent profile's own servers at the
+  content repository's HEAD. Setup's MCP step comes from the API, which now lists what the phases and agent profiles
+  ask for and points at the reconciler's preflight. The contract is `ahoy-hosted`'s `feat/portability-5-mcp-defaults`
+  (140 operations implemented). With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (218 files, 3,736 tests),
+  `ng build`, typecheck, lint and format pass; e2e was not run and nothing ran against an API.
+- **Step 4 (`feat/portability-4-copilot-token`, 2026-11-06, D23 step 4, on top of step 3):** Team settings has a
+  "You" group with **My Copilot token** (`/settings/copilot-token`): each person pastes their own Copilot PAT, which
+  the API seals and never shows again (only `••••` and its last four characters); Test asks GitHub who it is (0 AIU)
+  and keeps the answer as the last test (a refusal shows a banner with what to do); Replace and Remove (after a second
+  press). Nobody else sees it, admins included. Without `AHOY_SECRETS_KEY`, or when the key no longer opens the
+  stored token, a banner says so; a sign-in without a qnumber is told the page is not for it. Setup lists it in a
+  "You" panel, never required, with a link for admins and members alike, and the side navigation says "Saved" or
+  "Check" from Setup. The settings history names "Saved/Replaced/Removed their Copilot token". The contract is
+  `ahoy-hosted`'s `feat/portability-4-copilot-token` (140 operations implemented).
+- **Step 3 (`feat/portability-3-setup`, 2026-11-06, D23 step 3, on top of step 2):** Team settings opens on a
+  new section, **Setup** (`/settings/setup`, "Start here"): how many required steps are done ("6 of 8") with a bar,
+  what is left by who fixes it, and when the API checked; the installation's steps read-only (the chart fixes them);
+  the team's, each with a way to the section that fixes it (Open, Set, Fix in…, Review) and, for an admin, Keep
+  defaults on Phases. A member sees the steps and a link to People. While a required step is not done, every page shows
+  a banner under the top bar (admins: the next step and where it is fixed; members: that the admins are setting Ahoy
+  up) with Open setup; while not ready, each page checks again, so a step fixed in Team settings clears it. Start voyage stays on: the API does not refuse a story while a step is missing (`ahoy-hosted`
+  design §5 "Setup"). The Phases history reads "Kept the defaults (from Setup)". The contract is `ahoy-hosted`'s
+  `feat/portability-3-setup` (136 operations implemented).
+- **Step 2 (`feat/portability-2-people`, 2026-11-06, D23 step 2, on top of step 1):** Team settings has a new
+  section, **People** (`/settings/people`): an admin adds a qnumber as member or admin, makes an admin a member or the
+  reverse, and removes someone after a second click; their own row shows no controls. The deployment's own people
+  (`AHOY_ALLOWED_QNUMBERS`, `AHOY_ADMIN_QNUMBERS`) are listed read-only. The box refuses what is not a qnumber and
+  someone already listed before sending; the API's refusals show as a banner. The navigation counts the people. The app no longer refuses on `/config.json`'s
+  `allowedQnumbers`: the API decides, so a person added in People gets in. The
+  contract is `ahoy-hosted`'s `feat/portability-2-people` (migration 0042), which deploys with this branch (134
+  operations implemented). With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (212 files, 3,701
+  tests), `ng build`, typecheck, lint and format pass; e2e was not run and nothing ran against an API.
+- **Step 1 (`feat/portability-1-meeting-labels`, 2026-11-06, asked for by the user on 2026-11-06: another team of
+  the company installs its own Ahoy, `ahoy-hosted` D23):** the names of a meeting's two sides are a team setting.
+  Team settings has a new section, **Meetings** (`/settings/meetings`): "Our side" and "Stakeholders' side", 1 to 40
+  characters on one line, with their history; the navigation says "Defaults" until an admin saves them. The meeting
+  pages (topic tags, composer, end-of-meeting summary, story draft, Confluence page) read them through
+  `MeetingLabelsStore` instead of the fixed names, and show "Us" and "Stakeholders" until then. The contract is
+  `ahoy-hosted`'s `feat/portability-1-meeting-labels` (migration 0041), which deploys with this branch (131
+  operations implemented). The `build:compress` and `analyze` scripts now read `dist/ahoy-frontend`, the folder the
+  build writes. `environment.test.ts` and the dev proxy still name our TEST host and SSO: another team's image takes
+  its realm and client from `/config.json` (F17), and our TEST build keeps its fallback until its deployment mounts
+  that file. With `@acme-fedev/auth` stubbed in `node_modules`, the whole suite (210 files, 3,694 tests), `ng build`,
+  typecheck and lint pass; `npm run format` passes on every changed file (`docs/architecture.md` was already
+  unformatted on main); e2e was not run and nothing ran against an API.
+- **Merged before (`feature/R3DA-14787-auto-defects`, 2026-11-06):** merges `origin/main` at `1330060b` without
   rewriting history. The combined contract preserves automatic defect handling, voyage restart and the new plan
-  panel endpoints (136 operations, 129 implemented). API provenance records both source contracts; generated types
-  and the JSON mirror match the combined contract. No API or TEST environment was used for validation.
+  panel endpoints. No API or TEST environment was used for validation.
 - **Included (`feat/restart-voyage`, 2026-11-06, asked for by the user on 2026-11-06: a cancelled voyage could not
   be started again later):** a cancelled voyage's header has **Start again…** as its primary action
   (`dialogs/restart-voyage-dialog.ts`): a total cap (the current one when it leaves room, more than what is already
@@ -164,7 +212,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 ## Proof
 
 - **This branch** (2026-11-06, cloud container): `npm run build`, typecheck (app, specs and boundaries), lint (ESLint
-  and Stylelint), `npm test -- --watch=false` (207 files, 3,702 tests, after the code review fixes) and format (only `docs/architecture.md` warns,
+  and Stylelint), `npm test -- --watch=false` (218 files, 3,758 tests, after merging main on 2026-11-07) and format (only `docs/architecture.md` warns,
   as on `main`) passed, with `@acme-fedev/auth` replaced by a local stub in `node_modules` and native bindings installed
   by hand (the private registry is not reachable here). The contract was synced from `ahoy-hosted`'s branch; the
   mirror check passes and `schema.d.ts` is kept Prettier-formatted (see `api:check` below). Not run: the real auth
@@ -220,10 +268,15 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
 
 ## Next, in order
 
+- **After `feat/portability-1-meeting-labels` deploys with its API** (2026-11-06, D23): an admin saves our team's own
+  two names in Team settings › Meetings, or TEST's meeting pages and Confluence copies say "Us" and "Stakeholders".
+- **After `feat/portability-4-copilot-token` deploys with its API** (2026-11-06, D23): each person saves their Copilot
+  token in Team settings › My Copilot token and tests it; once everyone has, the cluster's `ahoy-copilot-<qnumber>`
+  Secrets can be deleted (implementation on Actions still reads the repository secrets).
 - **Before the next TEST deploy of the front end** (2026-10-30): mount a `/config.json` with FIO's `auth` (realm and
   client from `environment.test.ts`, and the three redirect URIs exactly as FIO's client registered them: today's
-  build sends `<origin>/`, and `<origin>//ui/oauth/silent-refresh.html` for silent refresh), `jiraBaseUrl` (`https://atc.acmegroup.net/jira`) and `allowedQnumbers`, then
-  sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's.
+  build sends `<origin>/`, and `<origin>//ui/oauth/silent-refresh.html` for silent refresh), `jiraBaseUrl` (`https://atc.acmegroup.net/jira`) (no `allowedQnumbers`: the API decides, D23), then
+  sign in once on TEST; after that, drop the values from `environment.test.ts` so the image carries no team's (audit #16).
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran.
 1. Merge `ahoy-hosted`'s `feat/defects-without-repositories` (migration 0038) and ahoy-agents'
@@ -242,7 +295,7 @@ kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 an
    turn Business-rule review on and see the confirmation; lower a phase's cap, raise one with the confirmation, and save
    a catalogue; at the delivery gate, Assess comments with a note; set a defects query and priorities, wait
    for a pass, ignore a defect and undo it; add a repository's release workflow and deploy a package's branch with a fake `gh`). The Copilot token page waits on security.
-4. Merge `ahoy-hosted` PR #91 (migration 0041) with or before this branch; then open Meetings against a local API: move a
+4. Merge `ahoy-hosted` PR #91 (migration 0044) with or before this branch; then open Meetings against a local API: move a
    topic to a one-off, set a one-off's Jira target and draft a story, search, undo a removal.
    Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
    then publishing to Confluence through its API (today the page copies wiki markup).

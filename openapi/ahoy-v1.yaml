@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 3126a2e0c500d82a07ff8122e161e38ddc267a0a
+# Commit: d161509881ab8e827967e7541801f3d63f524f3d
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2535,7 +2535,7 @@ paths:
       operationId: getMe
       tags: [settings]
       summary: Who the signed-in person is, and whether they may change the team's settings.
-      description: An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).
+      description: An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` or one with the `admin` role in Team settings › People (under `AHOY_AUTH=dev` without the list, everyone).
       responses:
         '200':
           description: The signed-in person.
@@ -2544,6 +2544,78 @@ paths:
               schema: { $ref: '#/components/schemas/Me' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+  /me/copilot-token:
+    get:
+      operationId: getMyCopilotToken
+      tags: [settings]
+      summary: The signed-in person's own Copilot token, never in clear.
+      description: |
+        Each person's own (design D23, §5 "My Copilot token"): nobody else reads or changes it, admins included. The
+        token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) for the person's qnumber; only its last four characters come
+        back. A run the person starts reads it; without one, the run reads the cluster's `ahoy-copilot-<qnumber>`
+        Secret. `409 invalid_state` for a sign-in that is not a qnumber.
+      responses:
+        '200':
+          description: The person's token, if saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCopilotToken' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: putMyCopilotToken
+      tags: [settings]
+      summary: Save your Copilot token, the first or a new one.
+      description: |
+        Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else
+        github.com) by Test and to your runs' pods. A new
+        token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CopilotTokenRequest' }
+      responses:
+        '200':
+          description: Your token, as saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCopilotToken' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteMyCopilotToken
+      tags: [settings]
+      summary: Remove your Copilot token; your runs read the cluster's Secret again, if there is one.
+      responses:
+        '200':
+          description: Your page, with no token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyCopilotToken' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /me/copilot-token/test:
+    post:
+      operationId: testMyCopilotToken
+      tags: [settings]
+      summary: Ask GitHub who your token is, and keep the answer as the last test.
+      description: "`GET /user` on the Copilot host with your token. No Copilot request is made, so it spends nothing (0 AIU). GitHub's own text is never returned."
+      responses:
+        '200':
+          description: What GitHub answered.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CopilotTokenTest' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /settings/sonar:
     get:
       operationId: getSonarSettings
@@ -3105,6 +3177,148 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /settings/meetings:
+    get:
+      operationId: getMeetingSettings
+      tags: [settings]
+      summary: The names the meeting pages show for the two sides of a meeting.
+      description: |
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). Topics keep `us` and `them`
+        (`raisedBy`); these are only the names shown for them. Without a save they are "Us" and "Stakeholders". 0 AIU.
+      responses:
+        '200':
+          description: The meeting settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingSettingsPage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateMeetingSettings
+      tags: [settings]
+      summary: Rename one side of a meeting, or both.
+      description: |
+        Admins only. Each name is trimmed and must be 1 to 40 characters on one line (`400`). A change renames the tag
+        of every topic, before and after it, and changes no topic. `version` is required once the settings are saved,
+        and absent before (`409 stale_version`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingSettingsChange' }
+      responses:
+        '200':
+          description: The settings, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingSettingsPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /setup:
+    get:
+      operationId: getSetup
+      tags: [settings]
+      summary: What the installation and the team still need before stories can run.
+      description: |
+        Anyone allowed into Ahoy. The installation's steps (fixed in the chart, read-only here), then the team's (fixed
+        in Team settings, the required ones first). Each says `done`, `missing`, `attention` or `optional`, one line,
+        and the settings section that fixes it. Until every required step is done the UI says Ahoy is not ready.
+        It saves nothing and spends nothing: every state comes from a settings row or a check the API already makes.
+        The MCP servers are not required: the API cannot read the MCP Secret, so the step lists what the phases ask
+        for. 0 AIU.
+      responses:
+        '200':
+          description: The steps.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Setup' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /setup/phases/keep-defaults:
+    post:
+      operationId: keepPhaseDefaults
+      tags: [settings]
+      summary: Say the phases run on the defaults, so their Setup step is done.
+      description: |
+        Admins only. Records `phase_settings.defaults_kept` in the phases' history, once; nothing changes once the
+        phases are saved or kept. The phases keep running on the deployment's defaults.
+      responses:
+        '200':
+          description: The steps, with Phases done.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Setup' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /settings/people:
+    get:
+      operationId: getPeopleSettings
+      tags: [settings]
+      summary: Who may use Ahoy and who is an admin.
+      description: |
+        Anyone allowed into Ahoy reads it; only an admin changes it (`canEdit`). `deployment` lists the deployment's
+        own people (`AHOY_ALLOWED_QNUMBERS` and `AHOY_ADMIN_QNUMBERS`), which change only in the chart; `members` the
+        ones the team added. The API reads the members at most every 30 seconds, so a change reaches every replica
+        within that time. 0 AIU.
+      responses:
+        '200':
+          description: The people.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PeoplePage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+  /settings/people/{qnumber}:
+    parameters:
+      - name: qnumber
+        in: path
+        required: true
+        description: A qnumber, `q` then 1 to 62 letters or digits (case-insensitive).
+        schema: { type: string, minLength: 2, maxLength: 63 }
+    put:
+      operationId: putPerson
+      tags: [settings]
+      summary: Let someone use Ahoy, or change their role.
+      description: |
+        Admins only. Adds the qnumber with the role, or changes the role of a member already there. `400` for a value
+        that is not a qnumber; `409 invalid_state` for the person's own qnumber, for one of the deployment's own
+        people, and for a change that would leave Ahoy with no admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonChange' }
+      responses:
+        '200':
+          description: The people, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PeoplePage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: removePerson
+      tags: [settings]
+      summary: Stop someone using Ahoy.
+      description: |
+        Admins only. Removes a member; within 30 seconds every replica refuses them (`403`). `404` for a qnumber that
+        is not a member; `409 invalid_state` for the person's own qnumber, one of the deployment's own people, or the
+        last admin.
+      responses:
+        '200':
+          description: The people, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PeoplePage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /defects:
     get:
       operationId: listDefects
@@ -3400,6 +3614,8 @@ paths:
                   pr_comments,
                   defects,
                   branch_releases,
+                  meetings,
+                  people,
                 ],
             }
       responses:
@@ -7490,6 +7706,59 @@ components:
         updatedBy: { type: [string, 'null'] }
         updatedByName: { type: [string, 'null'] }
         updatedAt: { type: [string, 'null'], format: date-time }
+    MyCopilotToken:
+      type: object
+      additionalProperties: false
+      required: [qnumber, secretsConfigured, token, tokenReadable]
+      properties:
+        qnumber:
+          {
+            type: string,
+            description: "The person's qnumber, lower case: the token is theirs alone.",
+          }
+        secretsConfigured:
+          {
+            type: boolean,
+            description: 'Whether the server has `AHOY_SECRETS_KEY`, without which no token can be saved.',
+          }
+        token:
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [hint, savedAt, lastTest]
+              properties:
+                hint:
+                  {
+                    type: string,
+                    description: "The token's last four characters; empty for a short token.",
+                  }
+                savedAt: { type: string, format: date-time }
+                lastTest:
+                  oneOf:
+                    - type: 'null'
+                    - { $ref: '#/components/schemas/CopilotTokenTest' }
+        tokenReadable:
+          {
+            type: boolean,
+            description: "Whether the stored token opens with this server's key; false means it must be typed again.",
+          }
+    CopilotTokenTest:
+      type: object
+      additionalProperties: false
+      required: [result, detail, at]
+      properties:
+        result: { type: string, enum: [works, refused, unreachable] }
+        detail:
+          type: [string, 'null']
+          description: 'Who GitHub says the token is, the HTTP status it refused with, or why it could not be reached.'
+        at: { type: string, format: date-time }
+    CopilotTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token: { type: string, minLength: 1, maxLength: 255, writeOnly: true }
     FigmaTest:
       type: object
       additionalProperties: false
@@ -7684,6 +7953,179 @@ components:
         confirmReplies:
           type: boolean
           description: "Must be true when the change turns replies on, which posts on colleagues' pull requests."
+    MeetingSettingsPage:
+      type: object
+      additionalProperties: false
+      required: [canEdit, meetings]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        meetings: { $ref: '#/components/schemas/MeetingSettings' }
+    MeetingSettings:
+      type: object
+      additionalProperties: false
+      required:
+        [usLabel, themLabel, version, updatedBy, updatedByName, updatedAt]
+      properties:
+        usLabel:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: 'The name shown for our side (`raisedBy: us`); "Us" until an admin saves one.'
+        themLabel:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: 'The name shown for the stakeholders'' side (`raisedBy: them`); "Stakeholders" until saved.'
+        version:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            description: 'Null until an admin saves anything.',
+          }
+        updatedBy: { type: [string, 'null'] }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: [string, 'null'], format: date-time }
+    Setup:
+      type: object
+      additionalProperties: false
+      required: [canEdit, steps, requiredDone, requiredTotal, checkedAt]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: "Whether the person is an admin, who may fix the team's steps.",
+          }
+        steps:
+          type: array
+          description: The installation's steps, then the team's, in the order an admin sets them.
+          items: { $ref: '#/components/schemas/SetupStep' }
+        requiredDone: { type: integer, minimum: 0 }
+        requiredTotal: { type: integer, minimum: 0 }
+        checkedAt: { type: string, format: date-time }
+    SetupStep:
+      type: object
+      additionalProperties: false
+      required: [key, group, title, required, state, detail, section]
+      properties:
+        key:
+          type: string
+          enum:
+            [
+              database,
+              content,
+              secrets,
+              runs,
+              mcp,
+              jira,
+              people,
+              agents,
+              phases,
+              meetings,
+              teams,
+              sonar,
+              figma,
+              defects,
+              branch_releases,
+              copilot,
+            ]
+        group:
+          type: string
+          enum: [installation, team, you]
+          description: 'Who fixes it: the chart, an admin, or the person reading the page (their own Copilot token).'
+        title: { type: string }
+        required: { type: boolean }
+        state: { type: string, enum: [done, missing, attention, optional] }
+        detail: { type: string }
+        section:
+          type: [string, 'null']
+          description: The Team settings section that fixes it (its path, such as `branch-releases`); null for the chart.
+    MemberRole:
+      type: string
+      enum: [member, admin]
+      description: "`member` uses Ahoy; `admin` also changes the team's settings."
+    PeoplePage:
+      type: object
+      additionalProperties: false
+      required:
+        [canEdit, you, everyoneAllowed, everyoneAdmin, deployment, members]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        you:
+          {
+            type: string,
+            description: "The person's own qnumber, lower case: their row cannot be changed.",
+          }
+        everyoneAllowed:
+          type: boolean
+          description: 'True only under `AHOY_AUTH=dev` without `AHOY_ALLOWED_QNUMBERS`: everyone is let in.'
+        everyoneAdmin:
+          type: boolean
+          description: 'True only under `AHOY_AUTH=dev` without `AHOY_ADMIN_QNUMBERS`: everyone is an admin.'
+        deployment:
+          type: array
+          description: The deployment's own people, admins first; they change only in the chart.
+          items: { $ref: '#/components/schemas/DeploymentPerson' }
+        members:
+          type: array
+          description: The people the team added, by qnumber.
+          items: { $ref: '#/components/schemas/Member' }
+    DeploymentPerson:
+      type: object
+      additionalProperties: false
+      required: [qnumber, name, role]
+      properties:
+        qnumber: { type: string }
+        name: { type: [string, 'null'] }
+        role: { $ref: '#/components/schemas/MemberRole' }
+    Member:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          qnumber,
+          name,
+          role,
+          addedBy,
+          addedByName,
+          addedAt,
+          updatedBy,
+          updatedAt,
+        ]
+      properties:
+        qnumber: { type: string }
+        name:
+          {
+            type: [string, 'null'],
+            description: 'The name WebEAM gave, once the person has signed in.',
+          }
+        role: { $ref: '#/components/schemas/MemberRole' }
+        addedBy: { type: string }
+        addedByName: { type: [string, 'null'] }
+        addedAt: { type: string, format: date-time }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+    PersonChange:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role: { $ref: '#/components/schemas/MemberRole' }
+    MeetingSettingsChange:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        version: { type: integer, minimum: 1 }
+        usLabel: { type: string, minLength: 1, maxLength: 200 }
+        themLabel: { type: string, minLength: 1, maxLength: 200 }
     DefectSettingsPage:
       type: object
       additionalProperties: false
@@ -8111,6 +8553,7 @@ components:
           canEdit,
           maxBudgetNanoAiu,
           phases,
+          agentMcpServers,
           catalog,
           version,
           updatedBy,
@@ -8140,6 +8583,7 @@ components:
                 pinned,
                 fields,
                 budgetCapNanoAiu,
+                mcpServers,
               ]
             properties:
               phase: { type: string }
@@ -8160,6 +8604,38 @@ components:
                   minimum: 0,
                   description: 'The most an admin may cap one run at.',
                 }
+              mcpServers:
+                type: object
+                additionalProperties: false
+                required: [from, names]
+                description: >-
+                  The MCP servers the phase's runs get, read only here (each must be in the deployment's MCP Secret):
+                  `deployment` (`AHOY_PHASE_CONFIG` names them), `built_in` (the code names them, as design's
+                  `density-mcp`), `profile` (none named: the agent profile's own, see `agentMcpServers`; `names` is
+                  empty), or `none` (the job gets none).
+                properties:
+                  from:
+                    {
+                      type: string,
+                      enum: [deployment, built_in, profile, none],
+                    }
+                  names:
+                    type: array
+                    items: { type: string, minLength: 1 }
+        agentMcpServers:
+          type: array
+          description: >-
+            Each agent profile at the content repository's HEAD that uses an MCP server, with its servers: what a phase
+            whose servers come from the `profile` runs on.
+          items:
+            type: object
+            additionalProperties: false
+            required: [agent, servers]
+            properties:
+              agent: { type: string }
+              servers:
+                type: array
+                items: { type: string, minLength: 1 }
         catalog:
           type: object
           additionalProperties: false

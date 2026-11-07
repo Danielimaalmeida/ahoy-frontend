@@ -1,0 +1,32 @@
+{
+  "canEdit": true,
+  "you": "q100001",
+  "everyoneAllowed": false,
+  "everyoneAdmin": false,
+  "deployment": [
+    { "qnumber": "q100001", "name": "Alex Example", "role": "admin" },
+    { "qnumber": "q100002", "name": null, "role": "member" }
+  ],
+  "members": [
+    {
+      "qnumber": "q200001",
+      "name": "Bea Example",
+      "role": "admin",
+      "addedBy": "q100001",
+      "addedByName": "Alex Example",
+      "addedAt": "2026-11-04T09:00:00.000Z",
+      "updatedBy": "q100001",
+      "updatedAt": "2026-11-05T10:00:00.000Z"
+    },
+    {
+      "qnumber": "q300001",
+      "name": null,
+      "role": "member",
+      "addedBy": "q100001",
+      "addedByName": "Alex Example",
+      "addedAt": "2026-11-06T14:10:00.000Z",
+      "updatedBy": "q100001",
+      "updatedAt": "2026-11-06T14:10:00.000Z"
+    }
+  ]
+}

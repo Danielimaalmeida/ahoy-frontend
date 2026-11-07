@@ -13,6 +13,17 @@ import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import updatePhaseSettings from '@testing/fixtures/updatePhaseSettings.json';
 import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
 import updatePrCommentSettings from '@testing/fixtures/updatePrCommentSettings.json';
+import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
+import getPeopleSettings from '@testing/fixtures/getPeopleSettings.json';
+import putPerson from '@testing/fixtures/putPerson.json';
+import removePerson from '@testing/fixtures/removePerson.json';
+import getSetup from '@testing/fixtures/getSetup.json';
+import keepPhaseDefaults from '@testing/fixtures/keepPhaseDefaults.json';
+import getMyCopilotToken from '@testing/fixtures/getMyCopilotToken.json';
+import putMyCopilotToken from '@testing/fixtures/putMyCopilotToken.json';
+import deleteMyCopilotToken from '@testing/fixtures/deleteMyCopilotToken.json';
+import testMyCopilotToken from '@testing/fixtures/testMyCopilotToken.json';
+import updateMeetingSettings from '@testing/fixtures/updateMeetingSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
 import addBranchReleaseRepository from '@testing/fixtures/addBranchReleaseRepository.json';
@@ -281,6 +292,17 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['updatePhaseSettings', updatePhaseSettings],
   ['getPrCommentSettings', getPrCommentSettings],
   ['updatePrCommentSettings', updatePrCommentSettings],
+  ['getMeetingSettings', getMeetingSettings],
+  ['updateMeetingSettings', updateMeetingSettings],
+  ['getPeopleSettings', getPeopleSettings],
+  ['putPerson', putPerson],
+  ['removePerson', removePerson],
+  ['getSetup', getSetup],
+  ['keepPhaseDefaults', keepPhaseDefaults],
+  ['getMyCopilotToken', getMyCopilotToken],
+  ['putMyCopilotToken', putMyCopilotToken],
+  ['deleteMyCopilotToken', deleteMyCopilotToken],
+  ['testMyCopilotToken', testMyCopilotToken],
   ['getDefectSettings', getDefectSettings],
   ['getBranchReleaseSettings', getBranchReleaseSettings],
   ['addBranchReleaseRepository', addBranchReleaseRepository],
@@ -343,7 +365,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      131
+      142
     );
   });
 

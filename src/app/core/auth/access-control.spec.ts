@@ -39,18 +39,10 @@ describe('AccessControl', () => {
     expect(configure(null, undefined, 'Q9').qnumber()).toBe('q9');
   });
 
-  it('allows everyone when the configuration has no list', () => {
+  it("leaves the decision to the API: the configuration's old allowedQnumbers refuses nobody", () => {
     expect(configure({ sub: 'q654321' }).denied()).toBe(false);
-  });
-
-  it('allows a user on the list and denies one who is not', () => {
-    expect(configure({ sub: 'q123456' }, ['q123456']).denied()).toBe(false);
     TestBed.resetTestingModule();
-    expect(configure({ sub: 'q654321' }, ['q123456']).denied()).toBe(true);
-  });
-
-  it('denies a user whose qnumber cannot be read when there is a list', () => {
-    expect(configure({ sub: 'alex' }, ['q123456']).denied()).toBe(true);
+    expect(configure({ sub: 'q654321' }, ['q123456']).denied()).toBe(false);
   });
 
   it('denies a user the API refused, whatever the configuration says', () => {

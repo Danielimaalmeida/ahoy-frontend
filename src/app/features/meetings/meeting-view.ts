@@ -413,7 +413,8 @@ export class MeetingView {
                     topicTitle: q.topicTitle,
                     meetingStartsAt: q.meetingStartsAt,
                   },
-          }))
+          })),
+          this.store.labels()
         )
       );
       this.toasts.show('Meeting copied as Confluence markup.');

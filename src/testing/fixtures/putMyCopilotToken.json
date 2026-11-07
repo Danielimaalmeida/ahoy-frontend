@@ -1,0 +1,10 @@
+{
+  "qnumber": "q1abcde",
+  "secretsConfigured": true,
+  "token": {
+    "hint": "abcd",
+    "savedAt": "2026-11-06T10:00:00.000Z",
+    "lastTest": null
+  },
+  "tokenReadable": true
+}

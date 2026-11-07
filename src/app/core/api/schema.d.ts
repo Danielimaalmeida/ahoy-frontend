@@ -2078,11 +2078,61 @@ export interface paths {
     };
     /**
      * Who the signed-in person is, and whether they may change the team's settings.
-     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` (under `AHOY_AUTH=dev` without it, everyone).
+     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` or one with the `admin` role in Team settings › People (under `AHOY_AUTH=dev` without the list, everyone).
      */
     readonly get: operations['getMe'];
     readonly put?: never;
     readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/me/copilot-token': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The signed-in person's own Copilot token, never in clear.
+     * @description Each person's own (design D23, §5 "My Copilot token"): nobody else reads or changes it, admins included. The
+     *     token is sealed (AES-256-GCM, `AHOY_SECRETS_KEY`) for the person's qnumber; only its last four characters come
+     *     back. A run the person starts reads it; without one, the run reads the cluster's `ahoy-copilot-<qnumber>`
+     *     Secret. `409 invalid_state` for a sign-in that is not a qnumber.
+     */
+    readonly get: operations['getMyCopilotToken'];
+    /**
+     * Save your Copilot token, the first or a new one.
+     * @description Sealed before it is stored, and only sent to the Copilot host (`AHOY_COPILOT_HOST`, else
+     *     github.com) by Test and to your runs' pods. A new
+     *     token clears the last test. `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+     */
+    readonly put: operations['putMyCopilotToken'];
+    readonly post?: never;
+    /** Remove your Copilot token; your runs read the cluster's Secret again, if there is one. */
+    readonly delete: operations['deleteMyCopilotToken'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/me/copilot-token/test': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask GitHub who your token is, and keep the answer as the last test.
+     * @description `GET /user` on the Copilot host with your token. No Copilot request is made, so it spends nothing (0 AIU). GitHub's own text is never returned.
+     */
+    readonly post: operations['testMyCopilotToken'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -2527,6 +2577,133 @@ export interface paths {
      *     (`409 stale_version`).
      */
     readonly patch: operations['updatePrCommentSettings'];
+    readonly trace?: never;
+  };
+  readonly '/settings/meetings': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The names the meeting pages show for the two sides of a meeting.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). Topics keep `us` and `them`
+     *     (`raisedBy`); these are only the names shown for them. Without a save they are "Us" and "Stakeholders". 0 AIU.
+     */
+    readonly get: operations['getMeetingSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Rename one side of a meeting, or both.
+     * @description Admins only. Each name is trimmed and must be 1 to 40 characters on one line (`400`). A change renames the tag
+     *     of every topic, before and after it, and changes no topic. `version` is required once the settings are saved,
+     *     and absent before (`409 stale_version`).
+     */
+    readonly patch: operations['updateMeetingSettings'];
+    readonly trace?: never;
+  };
+  readonly '/setup': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * What the installation and the team still need before stories can run.
+     * @description Anyone allowed into Ahoy. The installation's steps (fixed in the chart, read-only here), then the team's (fixed
+     *     in Team settings, the required ones first). Each says `done`, `missing`, `attention` or `optional`, one line,
+     *     and the settings section that fixes it. Until every required step is done the UI says Ahoy is not ready.
+     *     It saves nothing and spends nothing: every state comes from a settings row or a check the API already makes.
+     *     The MCP servers are not required: the API cannot read the MCP Secret, so the step lists what the phases ask
+     *     for. 0 AIU.
+     */
+    readonly get: operations['getSetup'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/setup/phases/keep-defaults': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Say the phases run on the defaults, so their Setup step is done.
+     * @description Admins only. Records `phase_settings.defaults_kept` in the phases' history, once; nothing changes once the
+     *     phases are saved or kept. The phases keep running on the deployment's defaults.
+     */
+    readonly post: operations['keepPhaseDefaults'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/people': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Who may use Ahoy and who is an admin.
+     * @description Anyone allowed into Ahoy reads it; only an admin changes it (`canEdit`). `deployment` lists the deployment's
+     *     own people (`AHOY_ALLOWED_QNUMBERS` and `AHOY_ADMIN_QNUMBERS`), which change only in the chart; `members` the
+     *     ones the team added. The API reads the members at most every 30 seconds, so a change reaches every replica
+     *     within that time. 0 AIU.
+     */
+    readonly get: operations['getPeopleSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/people/{qnumber}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description A qnumber, `q` then 1 to 62 letters or digits (case-insensitive). */
+        readonly qnumber: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Let someone use Ahoy, or change their role.
+     * @description Admins only. Adds the qnumber with the role, or changes the role of a member already there. `400` for a value
+     *     that is not a qnumber; `409 invalid_state` for the person's own qnumber, for one of the deployment's own
+     *     people, and for a change that would leave Ahoy with no admin.
+     */
+    readonly put: operations['putPerson'];
+    readonly post?: never;
+    /**
+     * Stop someone using Ahoy.
+     * @description Admins only. Removes a member; within 30 seconds every replica refuses them (`403`). `404` for a qnumber that
+     *     is not a member; `409 invalid_state` for the person's own qnumber, one of the deployment's own people, or the
+     *     last admin.
+     */
+    readonly delete: operations['removePerson'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
     readonly trace?: never;
   };
   readonly '/defects': {
@@ -4827,6 +5004,32 @@ export interface components {
       /** Format: date-time */
       readonly updatedAt: string | null;
     };
+    readonly MyCopilotToken: {
+      /** @description The person's qnumber, lower case: the token is theirs alone. */
+      readonly qnumber: string;
+      /** @description Whether the server has `AHOY_SECRETS_KEY`, without which no token can be saved. */
+      readonly secretsConfigured: boolean;
+      readonly token: null | {
+        /** @description The token's last four characters; empty for a short token. */
+        readonly hint: string;
+        /** Format: date-time */
+        readonly savedAt: string;
+        readonly lastTest: null | components['schemas']['CopilotTokenTest'];
+      };
+      /** @description Whether the stored token opens with this server's key; false means it must be typed again. */
+      readonly tokenReadable: boolean;
+    };
+    readonly CopilotTokenTest: {
+      /** @enum {string} */
+      readonly result: 'works' | 'refused' | 'unreachable';
+      /** @description Who GitHub says the token is, the HTTP status it refused with, or why it could not be reached. */
+      readonly detail: string | null;
+      /** Format: date-time */
+      readonly at: string;
+    };
+    readonly CopilotTokenRequest: {
+      readonly token: string;
+    };
     readonly FigmaTest: {
       /** @enum {string} */
       readonly result: 'ok' | 'refused' | 'unreachable';
@@ -4925,6 +5128,110 @@ export interface components {
       readonly commentsPerRound?: number;
       /** @description Must be true when the change turns replies on, which posts on colleagues' pull requests. */
       readonly confirmReplies?: boolean;
+    };
+    readonly MeetingSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      readonly meetings: components['schemas']['MeetingSettings'];
+    };
+    readonly MeetingSettings: {
+      /** @description The name shown for our side (`raisedBy: us`); "Us" until an admin saves one. */
+      readonly usLabel: string;
+      /** @description The name shown for the stakeholders' side (`raisedBy: them`); "Stakeholders" until saved. */
+      readonly themLabel: string;
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly Setup: {
+      /** @description Whether the person is an admin, who may fix the team's steps. */
+      readonly canEdit: boolean;
+      /** @description The installation's steps, then the team's, in the order an admin sets them. */
+      readonly steps: readonly components['schemas']['SetupStep'][];
+      readonly requiredDone: number;
+      readonly requiredTotal: number;
+      /** Format: date-time */
+      readonly checkedAt: string;
+    };
+    readonly SetupStep: {
+      /** @enum {string} */
+      readonly key:
+        | 'database'
+        | 'content'
+        | 'secrets'
+        | 'runs'
+        | 'mcp'
+        | 'jira'
+        | 'people'
+        | 'agents'
+        | 'phases'
+        | 'meetings'
+        | 'teams'
+        | 'sonar'
+        | 'figma'
+        | 'defects'
+        | 'branch_releases'
+        | 'copilot';
+      /**
+       * @description Who fixes it: the chart, an admin, or the person reading the page (their own Copilot token).
+       * @enum {string}
+       */
+      readonly group: 'installation' | 'team' | 'you';
+      readonly title: string;
+      readonly required: boolean;
+      /** @enum {string} */
+      readonly state: 'done' | 'missing' | 'attention' | 'optional';
+      readonly detail: string;
+      /** @description The Team settings section that fixes it (its path, such as `branch-releases`); null for the chart. */
+      readonly section: string | null;
+    };
+    /**
+     * @description `member` uses Ahoy; `admin` also changes the team's settings.
+     * @enum {string}
+     */
+    readonly MemberRole: 'member' | 'admin';
+    readonly PeoplePage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description The person's own qnumber, lower case: their row cannot be changed. */
+      readonly you: string;
+      /** @description True only under `AHOY_AUTH=dev` without `AHOY_ALLOWED_QNUMBERS`: everyone is let in. */
+      readonly everyoneAllowed: boolean;
+      /** @description True only under `AHOY_AUTH=dev` without `AHOY_ADMIN_QNUMBERS`: everyone is an admin. */
+      readonly everyoneAdmin: boolean;
+      /** @description The deployment's own people, admins first; they change only in the chart. */
+      readonly deployment: readonly components['schemas']['DeploymentPerson'][];
+      /** @description The people the team added, by qnumber. */
+      readonly members: readonly components['schemas']['Member'][];
+    };
+    readonly DeploymentPerson: {
+      readonly qnumber: string;
+      readonly name: string | null;
+      readonly role: components['schemas']['MemberRole'];
+    };
+    readonly Member: {
+      readonly qnumber: string;
+      /** @description The name WebEAM gave, once the person has signed in. */
+      readonly name: string | null;
+      readonly role: components['schemas']['MemberRole'];
+      readonly addedBy: string;
+      readonly addedByName: string | null;
+      /** Format: date-time */
+      readonly addedAt: string;
+      readonly updatedBy: string;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly PersonChange: {
+      readonly role: components['schemas']['MemberRole'];
+    };
+    readonly MeetingSettingsChange: {
+      readonly version?: number;
+      readonly usLabel?: string;
+      readonly themLabel?: string;
     };
     readonly DefectSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
@@ -5165,6 +5472,17 @@ export interface components {
         readonly fields: readonly components['schemas']['PhaseSettingField'][];
         /** @description The most an admin may cap one run at. */
         readonly budgetCapNanoAiu: number;
+        /** @description The MCP servers the phase's runs get, read only here (each must be in the deployment's MCP Secret): `deployment` (`AHOY_PHASE_CONFIG` names them), `built_in` (the code names them, as design's `density-mcp`), `profile` (none named: the agent profile's own, see `agentMcpServers`; `names` is empty), or `none` (the job gets none). */
+        readonly mcpServers: {
+          /** @enum {string} */
+          readonly from: 'deployment' | 'built_in' | 'profile' | 'none';
+          readonly names: readonly string[];
+        };
+      }[];
+      /** @description Each agent profile at the content repository's HEAD that uses an MCP server, with its servers: what a phase whose servers come from the `profile` runs on. */
+      readonly agentMcpServers: readonly {
+        readonly agent: string;
+        readonly servers: readonly string[];
       }[];
       readonly catalog: {
         /** @enum {string} */
@@ -8101,6 +8419,105 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
     };
   };
+  readonly getMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The person's token, if saved. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MyCopilotToken'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly putMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['CopilotTokenRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description Your token, as saved. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MyCopilotToken'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly deleteMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description Your page, with no token. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MyCopilotToken'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly testMyCopilotToken: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description What GitHub answered. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['CopilotTokenTest'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
   readonly getSonarSettings: {
     readonly parameters: {
       readonly query?: never;
@@ -8827,6 +9244,181 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly getMeetingSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The meeting settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updateMeetingSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['MeetingSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getSetup: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The steps. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Setup'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly keepPhaseDefaults: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The steps, with Phases done. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Setup'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly getPeopleSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The people. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PeoplePage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly putPerson: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description A qnumber, `q` then 1 to 62 letters or digits (case-insensitive). */
+        readonly qnumber: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['PersonChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The people, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PeoplePage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly removePerson: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        /** @description A qnumber, `q` then 1 to 62 letters or digits (case-insensitive). */
+        readonly qnumber: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The people, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['PeoplePage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly listDefects: {
     readonly parameters: {
       readonly query?: never;
@@ -9157,7 +9749,9 @@ export interface operations {
           | 'phases'
           | 'pr_comments'
           | 'defects'
-          | 'branch_releases';
+          | 'branch_releases'
+          | 'meetings'
+          | 'people';
       };
       readonly header?: never;
       readonly path?: never;

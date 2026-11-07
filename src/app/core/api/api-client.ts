@@ -40,6 +40,11 @@ import {
   isJiraTest,
   isAgentSettingsPage,
   isPrCommentSettingsPage,
+  isMeetingSettingsPage,
+  isPeoplePage,
+  isSetup,
+  isMyCopilotToken,
+  isCopilotTokenTest,
   isBranchRelease,
   isBranchReleaseBatch,
   isBranchReleaseRepository,
@@ -124,6 +129,14 @@ import type {
   AgentSettingsPage,
   PrCommentSettingsChange,
   PrCommentSettingsPage,
+  MeetingSettingsChange,
+  MeetingSettingsPage,
+  PeoplePage,
+  Setup,
+  MyCopilotToken,
+  CopilotTokenTest,
+  CopilotTokenRequest,
+  PersonChange,
   BranchRelease,
   BranchReleaseRepository,
   BranchReleaseRepositoryChange,
@@ -1789,6 +1802,118 @@ export class ApiClient {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })
+    );
+  }
+
+  /** The names the meeting pages show for the two sides of a meeting. */
+  getMeetingSettings(): Promise<ApiResult<MeetingSettingsPage>> {
+    return this.get(
+      'getMeetingSettings',
+      '/settings/meetings',
+      isMeetingSettingsPage
+    );
+  }
+
+  /** Renames one side of a meeting, or both (admins only). */
+  updateMeetingSettings(
+    body: MeetingSettingsChange
+  ): Promise<ApiResult<MeetingSettingsPage>> {
+    return this.send(
+      'updateMeetingSettings',
+      isMeetingSettingsPage,
+      this.http.patch<unknown>(this.url('/settings/meetings'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** What the installation and the team still need before stories run; it saves nothing. */
+  getSetup(): Promise<ApiResult<Setup>> {
+    return this.get('getSetup', '/setup', isSetup);
+  }
+
+  /** Says the phases run on the defaults, so their Setup step is done (admins only). */
+  keepPhaseDefaults(): Promise<ApiResult<Setup>> {
+    return this.post(
+      'keepPhaseDefaults',
+      '/setup/phases/keep-defaults',
+      null,
+      isSetup
+    );
+  }
+
+  /** The person's own Copilot token, only as its last four characters; 409 for a sign-in without a qnumber. */
+  getMyCopilotToken(): Promise<ApiResult<MyCopilotToken>> {
+    return this.get('getMyCopilotToken', '/me/copilot-token', isMyCopilotToken);
+  }
+
+  /** Saves the person's Copilot token, the first or a new one; a new one clears the last test. */
+  putMyCopilotToken(
+    body: CopilotTokenRequest
+  ): Promise<ApiResult<MyCopilotToken>> {
+    return this.send(
+      'putMyCopilotToken',
+      isMyCopilotToken,
+      this.http.put<unknown>(this.url('/me/copilot-token'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Removes the person's Copilot token; their runs read the cluster's Secret again, if there is one. */
+  deleteMyCopilotToken(): Promise<ApiResult<MyCopilotToken>> {
+    return this.send(
+      'deleteMyCopilotToken',
+      isMyCopilotToken,
+      this.http.delete<unknown>(this.url('/me/copilot-token'), {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Asks GitHub who the person's token is (0 AIU), kept as the last test. */
+  testMyCopilotToken(): Promise<ApiResult<CopilotTokenTest>> {
+    return this.post(
+      'testMyCopilotToken',
+      '/me/copilot-token/test',
+      null,
+      isCopilotTokenTest
+    );
+  }
+
+  /** Who may use Ahoy: the deployment's own people and the members the team added. */
+  getPeopleSettings(): Promise<ApiResult<PeoplePage>> {
+    return this.get('getPeopleSettings', '/settings/people', isPeoplePage);
+  }
+
+  /** Lets someone use Ahoy with a role, or changes their role (admins only). */
+  putPerson(
+    qnumber: string,
+    body: PersonChange
+  ): Promise<ApiResult<PeoplePage>> {
+    return this.send(
+      'putPerson',
+      isPeoplePage,
+      this.http.put<unknown>(
+        this.url(`/settings/people/${segment(qnumber)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Stops someone using Ahoy (admins only). */
+  removePerson(qnumber: string): Promise<ApiResult<PeoplePage>> {
+    return this.send(
+      'removePerson',
+      isPeoplePage,
+      this.http.delete<unknown>(
+        this.url(`/settings/people/${segment(qnumber)}`),
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
     );
   }
 

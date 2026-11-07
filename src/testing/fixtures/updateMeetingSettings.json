@@ -1,0 +1,11 @@
+{
+  "canEdit": true,
+  "meetings": {
+    "usLabel": "Northwind",
+    "themLabel": "Contoso",
+    "version": 1,
+    "updatedBy": "bea@example.com",
+    "updatedByName": "Bea Example",
+    "updatedAt": "2026-11-06T14:10:00.000Z"
+  }
+}
