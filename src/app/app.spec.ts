@@ -450,15 +450,14 @@ describe('App shell', () => {
       ).toEqual(['ah-top-bar', 'ah-setup-banner', 'main', 'ah-toast-host']);
     });
 
-    it('checks again on each page while not ready, so a step fixed elsewhere clears the banner', async () => {
+    it('reads the setup once when the app opens, not again on each page', async () => {
       const { root, api, go } = await shell('/voyages', { setup: NOT_READY });
       api.on('getSetup', () => Promise.resolve(ok(READY)));
-      // Another voyages filter: a page whose own reads the fake answers, so nothing is left unhandled.
+      // Other voyages filters: pages whose own reads the fake answers, so nothing is left unhandled.
       await go('/voyages?status=halted');
-      expect(api.callsOf('getSetup')).toHaveLength(2);
-      expect(root.querySelector('ah-setup-banner')).toBeNull();
       await go('/voyages');
-      expect(api.callsOf('getSetup')).toHaveLength(2);
+      expect(api.callsOf('getSetup')).toHaveLength(1);
+      expect(root.querySelector('ah-setup-banner')).not.toBeNull();
     });
 
     it('tells a member only that the admins are setting Ahoy up', async () => {

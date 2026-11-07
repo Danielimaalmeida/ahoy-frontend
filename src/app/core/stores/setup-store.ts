@@ -7,9 +7,9 @@ import { StoreResource } from './resource';
 
 /**
  * What the installation and the team still need (`GET /setup`, `ahoy-hosted` design D23), for the banner every page
- * shows and for Team settings › Setup. Read when the app starts, on each page while Ahoy is not ready, and when the
- * Setup page opens or checks again; a read asked for during another runs once more after it, and a read that fails
- * keeps the last answer (with none, the banner stays hidden). 0 AIU.
+ * shows and for Team settings › Setup. Read only when the app starts; after that, only the Setup page's Check again
+ * and Try again read it. A read asked for during another runs once more after it, and a read that fails keeps the last
+ * answer (with none, the banner stays hidden). 0 AIU.
  */
 @Injectable({ providedIn: 'root' })
 export class SetupStore {

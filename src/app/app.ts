@@ -198,12 +198,11 @@ export class App {
       using = true;
       untracked(() => {
         this.stories.use(destroyRef);
+        // Setup is read here, once, when the app starts; no page reads it again on its own.
         void this.setup.load();
       });
     });
     destroyRef.onDestroy(() => this.pendingSearch?.cancel());
-    // The first page is read with the setup at start; the pages after it check again.
-    let navigated = false;
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
@@ -215,11 +214,6 @@ export class App {
         this.query.set(
           textParam(this.router.parseUrl(event.urlAfterRedirects), 'q') ?? ''
         );
-        // While Ahoy is not ready, each page checks again, so a step an admin just fixed in Team settings clears the
-        // banner without a reload.
-        if (navigated && this.setup.notReady() && !this.setup.loading())
-          void this.setup.load();
-        navigated = true;
       });
   }
 

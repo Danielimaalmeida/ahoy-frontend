@@ -54,6 +54,8 @@ describe('the Setup section of Team settings', () => {
       ],
     });
     http = TestBed.inject(HttpTestingController);
+    // The app's one read at start; the page does not read Setup itself.
+    void TestBed.inject(SetupStore).load();
     fixture = TestBed.createComponent(SetupPage);
     root = fixture.nativeElement as HTMLElement;
     fixture.detectChanges();
@@ -151,6 +153,19 @@ describe('the Setup section of Team settings', () => {
         a.getAttribute('href')
       )
     ).toEqual(['/settings/people']);
+  });
+
+  it('shows the steps the app read at start, without reading them itself', async () => {
+    await open();
+    fixture.destroy();
+    fixture = TestBed.createComponent(SetupPage);
+    root = fixture.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    await settle();
+    http.expectNone({ method: 'GET', url: `${BASE}/setup` });
+    expect(text(root.querySelector('.count'))).toMatch(
+      /^6 of 8\s*required steps done$/
+    );
   });
 
   it('checks again on demand, and says when the steps cannot be read', async () => {

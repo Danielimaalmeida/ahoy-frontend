@@ -1,14 +1,21 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-07 (`fix/design-audit`: layout faults found by opening every page against a local API, and fixed;
-offline checks passed with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
+Updated 2026-11-07 (`perf/setup-once`: Setup is read once, when the app starts; offline checks passed). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
 outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`fix/design-audit`, 2026-11-07, asked for by the user after the People form's misaligned Add):** every
+- **This branch (`perf/setup-once`, 2026-11-07, asked for by the user: "Só carrega quando a app arranca e mais
+  nada"):** `GET /setup` is read once, when the app starts. No page reads it again on its own: not each navigation
+  while Ahoy is not ready, not opening Team settings or its Setup section, not a change to My Copilot token. Only the
+  Setup section's Check again and Try again read it, so the banner and the section show the start's answer until a
+  reload or a press. Its 22 queries had been competing with each page's own reads for the API's 5 database
+  connections. Unit and component tests only (`ng test`, 218 files, 3763 tests); `npm run build`, `typecheck`, `lint`
+  and `format` pass on Node 22.23.4 (not 24). Not run in a browser. Pairs with `ahoy-hosted`'s
+  `perf/fewer-db-round-trips` but needs nothing from it.
+- **`fix/design-audit` (merged, PR #75, 2026-11-07, asked for by the user after the People form's misaligned Add):** every
   page was opened at 1440 and 390 px against a local `ahoy-hosted` (stub dispatcher, fictional data) and checked for
   misaligned or unequal controls, cut-off text and sideways scroll. Fixed: table row headers (`<th scope="row">`) no
   longer look like grey capitals column headers (one rule in `_ahoy-angular.scss`); a "Try again" no longer stretches

@@ -448,10 +448,6 @@ export class SetupPage {
     return error === null ? null : settingsErrorView(error);
   });
 
-  constructor() {
-    void this.store.load();
-  }
-
   /** Says the phases run on the defaults, so their step is done. */
   protected async keepDefaults(): Promise<void> {
     this.keeping.set(true);
