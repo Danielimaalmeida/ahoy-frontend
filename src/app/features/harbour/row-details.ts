@@ -142,6 +142,15 @@ export class RowDetails {
     };
   }
 
+  /**
+   * Whether a voyage's event history was read, or could not be: until then its row cannot say whether an aground
+   * voyage can be unblocked. `false` for a voyage this does not hold or does not read events for; reactive.
+   */
+  eventsRead(key: string): boolean {
+    const status = this.held().get(key)?.feed()?.status();
+    return status === 'ready' || status === 'error';
+  }
+
   /** The run a voyage at sea is on, once its runs are read; reactive. */
   runOf(story: Story): RunModel | null {
     const runs = this.held().get(story.key)?.handle.runs.value();

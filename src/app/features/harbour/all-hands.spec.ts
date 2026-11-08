@@ -250,11 +250,16 @@ function panel(root: HTMLElement, heading: string): HTMLElement {
   return found;
 }
 
-/** A cell's text, its direct children apart: the key link and the title have only a margin between them. */
+/**
+ * A cell's text, its direct children apart (and those of the boxes that keep its lines): the key link and the title
+ * have only a margin between them.
+ */
 function cellText(td: Element): string {
   return Array.from(td.childNodes)
     .filter((node) => node.nodeType !== Node.COMMENT_NODE)
-    .map((node) => text(node))
+    .map((node) =>
+      node instanceof HTMLDivElement ? cellText(node) : text(node)
+    )
     .filter((part) => part !== '')
     .join(' ');
 }
@@ -649,6 +654,75 @@ describe('All hands', () => {
       expect(root.querySelectorAll('a.tile b')).toHaveLength(0);
       expect(root.querySelectorAll('a.tile ah-skeleton')).toHaveLength(4);
       expect(text(root)).not.toContain('Calm seas');
+    });
+
+    it('draws both tables with their headers and fixed columns from the start, with placeholder rows', async () => {
+      const never = new Promise<never>(() => undefined);
+      const { root } = await render(EIGHT, (api) =>
+        api.on('listStories', () => never)
+      );
+      for (const [heading, columns, rows] of [
+        ['Needs you', 8, 4],
+        ['In progress', 7, 2],
+      ] as const) {
+        const section = panel(root, heading);
+        const table = section.querySelector('table');
+        expect(table?.getAttribute('aria-busy')).toBe('true');
+        expect(section.querySelectorAll('thead th')).toHaveLength(columns);
+        expect(section.querySelectorAll('colgroup col')).toHaveLength(columns);
+        expect(section.querySelectorAll('tbody tr.placeholder')).toHaveLength(
+          rows
+        );
+        expect(
+          section.querySelectorAll('tbody tr.placeholder:first-child td')
+        ).toHaveLength(columns);
+      }
+    });
+
+    it('keeps the placeholders until the events of an aground voyage say whether it belongs, so no row is added later', async () => {
+      const aground = aStory('PROJ-150', {
+        title: 'Generate the API types from the contract',
+        owner: 'jordan@example.com',
+        phase: 'blocked',
+        status: 'terminal',
+        updatedAt: '2026-10-02T10:00:00.000Z',
+      });
+      const blocked = [
+        anEvent(
+          40,
+          'story.phase_changed',
+          { from: 'implementation', to: 'blocked' },
+          'PROJ-150'
+        ),
+      ];
+      let answer: (() => void) | undefined;
+      const { root, flush } = await render([...EIGHT, aground], (api) =>
+        api.on('listStoryEvents', (key) =>
+          key === 'PROJ-150'
+            ? new Promise((resolve) => {
+                answer = () =>
+                  resolve(ok({ items: blocked, lastEventId: blocked[0]!.id }));
+              })
+            : Promise.resolve(
+                ok({
+                  items: EVENTS[key] ?? [],
+                  lastEventId: EVENTS[key]?.at(-1)?.id ?? null,
+                })
+              )
+        )
+      );
+      const needs = panel(root, 'Needs you');
+      expect(needs.querySelectorAll('tbody tr.placeholder')).toHaveLength(4);
+      expect(root.querySelectorAll('a.tile b')).toHaveLength(0);
+      answer?.();
+      await flush();
+      expect(needs.querySelectorAll('tbody tr.placeholder')).toHaveLength(0);
+      expect(needs.querySelector('table')?.hasAttribute('aria-busy')).toBe(
+        false
+      );
+      expect(rowsOf(needs).map((cells) => cells[1]?.split(' ')[0])).toContain(
+        'PROJ-150'
+      );
     });
   });
 

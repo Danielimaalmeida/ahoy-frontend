@@ -1,4 +1,11 @@
-import { Component, DestroyRef, computed, effect, inject } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import { StoriesStore } from '@core/stores/stories-store';
@@ -8,13 +15,9 @@ import { Banner } from '@ui/banner/banner';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
-import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
+import { Panel, PanelHead } from '@ui/panel/panel';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
-import {
-  Skeleton,
-  SkeletonRows,
-  type SkeletonColumn,
-} from '@ui/skeleton/skeleton';
+import { Skeleton } from '@ui/skeleton/skeleton';
 import { StatusBadge } from '@ui/status-badge/status-badge';
 import { CellSub, Key, Nowrap, Table } from '@ui/table/table';
 import { atSeaCrew, canUnblock, needsAction, whatsNeeded } from './needs';
@@ -56,17 +59,14 @@ const TILES: readonly {
   },
 ];
 
-/** The columns of the "Needs you" table, for its placeholder rows. */
-const NEEDS_COLUMNS: readonly SkeletonColumn[] = [
-  { track: '90px', height: 20 },
-  { track: 'minmax(0, 1.4fr)' },
-  { track: '80px' },
-  { track: 'minmax(0, 1.4fr)' },
-  { track: 'minmax(0, 0.8fr)' },
-  { track: '56px' },
-  { track: '110px' },
-  { track: '90px', height: 28 },
-];
+/** How many placeholder rows each table shows while the first read is under way. */
+const PLACEHOLDER_ROWS = {
+  needs: [0, 1, 2, 3],
+  sea: [0, 1],
+} as const;
+
+/** The widths text-like placeholder bars cycle through from one row to the next, so the rows do not look stamped. */
+const BAR_WIDTHS = ['85%', '65%', '75%'] as const;
 
 /** What the page says when the list cannot be read: the heading, the sentence and the technical line. */
 interface Failure {
@@ -125,12 +125,10 @@ function describeFailure(error: ApiError): Failure {
     Key,
     Nowrap,
     Panel,
-    PanelBody,
     PanelHead,
     RelativePipe,
     RouterLink,
     Skeleton,
-    SkeletonRows,
     StatusBadge,
     Table,
   ],
@@ -170,6 +168,13 @@ function describeFailure(error: ApiError): Failure {
     .tile:hover {
       border-color: var(--accent);
     }
+    /* The count keeps its box while it loads, so the badge beside it never moves. */
+    .tile__count {
+      flex: none;
+      display: flex;
+      align-items: center;
+      height: 30px;
+    }
     .tile b {
       font-size: 30px;
       line-height: 1;
@@ -184,21 +189,87 @@ function describeFailure(error: ApiError): Failure {
       position: relative;
       overflow-x: auto;
     }
+    /* The columns have fixed widths and every row of "Needs you" a fixed height, from the first placeholder to the
+       last live update: what loads later (questions, gates, halts, diagnoses, runs) fills the space kept for it and
+       moves nothing. "What's needed" takes what the other columns leave. */
     .scroll table {
-      min-width: 860px;
+      min-width: 1000px;
+      table-layout: fixed;
     }
-    /* A key never breaks across lines, and the title gets room to wrap beside it. */
-    .voyage {
-      min-width: 120px;
+    .c-status {
+      width: 144px;
+    }
+    .c-voyage {
+      width: 200px;
+    }
+    .c-phase {
+      width: 128px;
+    }
+    .c-owner {
+      width: 160px;
+    }
+    .c-when {
+      width: 100px;
+    }
+    .c-budget {
+      width: 164px;
+    }
+    .c-action {
+      width: 152px;
+    }
+    td {
+      line-height: 18px;
+    }
+    /* A short cell keeps to one line and ends in an ellipsis rather than widening its column. */
+    .clip {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    /* Three lines in every row of "Needs you": the voyage's title wraps into them; "What's needed" puts its sentence
+       in the first and its detail in the other two, or the detail in one and a halted voyage's diagnosis, read after
+       the list, in the last. */
+    .rows3 {
+      height: 56px;
+      overflow: hidden;
+    }
+    .title {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+    .title--one {
+      -webkit-line-clamp: 1;
+      line-clamp: 1;
     }
     .voyage a {
       white-space: nowrap;
     }
-    /* A halt's detail can hold a long path or hash: it breaks anywhere rather than pushing the actions off the panel. */
-    .need {
+    .line {
+      display: block;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .line--head {
+      line-height: 20px;
+    }
+    .line--two {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
       white-space: normal;
-      min-width: 240px;
       overflow-wrap: anywhere;
+    }
+    .placeholder .rows3 {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
     }
     .retry {
       margin-top: 8px;
@@ -248,11 +319,13 @@ function describeFailure(error: ApiError): Failure {
             routerLink="/voyages"
             [queryParams]="{ status: tile.filter }"
           >
-            @if (loaded()) {
-              <b>{{ counts()[tile.filter] }}</b>
-            } @else {
-              <ah-skeleton width="28px" [height]="28" />
-            }
+            <span class="tile__count">
+              @if (loaded()) {
+                <b>{{ counts()[tile.filter] }}</b>
+              } @else {
+                <ah-skeleton width="18px" [height]="30" />
+              }
+            </span>
             <div>
               <ah-status-badge [status]="tile.status" [phase]="tile.phase" />
               <div class="ah-muted tile__hint">{{ tile.hint }}</div>
@@ -263,11 +336,7 @@ function describeFailure(error: ApiError): Failure {
 
       <ah-panel>
         <ah-panel-head heading="Needs you" [subtitle]="needsSubtitle()" />
-        @if (!loaded()) {
-          <ah-panel-body
-            ><ah-skeleton-rows [rows]="4" [columns]="needsColumns"
-          /></ah-panel-body>
-        } @else if (needsYou().length === 0) {
+        @if (loaded() && needsYou().length === 0) {
           <ah-empty-state heading="Calm seas">
             Nothing needs you right now. Questions, decisions, halted voyages
             and blocked ones you can unblock show up here.
@@ -280,7 +349,17 @@ function describeFailure(error: ApiError): Failure {
             tabindex="0"
             aria-label="Voyages that need you"
           >
-            <table ahTable>
+            <table ahTable [attr.aria-busy]="loaded() ? null : 'true'">
+              <colgroup>
+                <col class="c-status" />
+                <col class="c-voyage" />
+                <col class="c-phase" />
+                <col />
+                <col class="c-owner" />
+                <col class="c-when" />
+                <col class="c-budget" />
+                <col class="c-action" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Status</th>
@@ -294,57 +373,105 @@ function describeFailure(error: ApiError): Failure {
                 </tr>
               </thead>
               <tbody>
-                @for (row of needsRows(); track row.story.key) {
-                  <tr>
-                    <td ahNowrap>
-                      <ah-status-badge
-                        [status]="row.story.status"
-                        [phase]="row.story.phase"
-                      />
-                    </td>
-                    <td class="voyage">
-                      <a ahKey [routerLink]="['/voyages', row.story.key]">{{
-                        row.story.key
-                      }}</a
-                      >{{ row.story.title }}
-                    </td>
-                    <td class="ah-mono">{{ row.story.phase }}</td>
-                    <td class="need">
-                      {{ row.needed.headline }}
-                      @if (row.needed.sub; as sub) {
-                        <small ahCellSub>{{ sub }}</small>
-                      }
-                      @if (row.needed.diagnosis; as diagnosis) {
-                        <small ahCellSub class="need__diagnosis"
-                          >Diagnosis: {{ diagnosis }}</small
+                @if (!loaded()) {
+                  @for (i of placeholderRows.needs; track i) {
+                    <tr class="placeholder">
+                      <td><ah-skeleton width="110px" [height]="20" /></td>
+                      <td>
+                        <div class="rows3">
+                          <ah-skeleton [width]="barWidth(i)" />
+                          <ah-skeleton [width]="barWidth(i + 2)" />
+                        </div>
+                      </td>
+                      <td><ah-skeleton width="70%" /></td>
+                      <td>
+                        <div class="rows3">
+                          <ah-skeleton [width]="barWidth(i)" />
+                          <ah-skeleton [width]="barWidth(i + 1)" />
+                          <ah-skeleton [width]="barWidth(i + 2)" />
+                        </div>
+                      </td>
+                      <td><ah-skeleton width="75%" /></td>
+                      <td><ah-skeleton width="65%" /></td>
+                      <td><ah-skeleton width="70px" /></td>
+                      <td><ah-skeleton width="96px" [height]="28" /></td>
+                    </tr>
+                  }
+                } @else {
+                  @for (row of needsRows(); track row.story.key) {
+                    <tr>
+                      <td class="clip">
+                        <ah-status-badge
+                          [status]="row.story.status"
+                          [phase]="row.story.phase"
+                        />
+                      </td>
+                      <td class="voyage">
+                        <div class="rows3">
+                          <div class="title" [title]="row.story.title">
+                            <a
+                              ahKey
+                              [routerLink]="['/voyages', row.story.key]"
+                              >{{ row.story.key }}</a
+                            >{{ row.story.title }}
+                          </div>
+                        </div>
+                      </td>
+                      <td class="ah-mono clip">{{ row.story.phase }}</td>
+                      <td>
+                        <div class="rows3">
+                          <span
+                            class="line line--head"
+                            [title]="row.needed.headline"
+                            >{{ row.needed.headline }}</span
+                          >
+                          @if (row.needed.sub; as sub) {
+                            <small
+                              ahCellSub
+                              class="line"
+                              [class.line--two]="!row.needed.diagnosis"
+                              [title]="sub"
+                              >{{ sub }}</small
+                            >
+                          }
+                          @if (row.needed.diagnosis; as diagnosis) {
+                            <small
+                              ahCellSub
+                              class="line need__diagnosis"
+                              [title]="diagnosis"
+                              >Diagnosis: {{ diagnosis }}</small
+                            >
+                          }
+                        </div>
+                      </td>
+                      <td class="clip" [title]="row.story.owner">
+                        {{ row.story.owner }}
+                      </td>
+                      <td class="clip">
+                        {{ row.story.updatedAt | ahRelative: 'waiting' }}
+                      </td>
+                      <td class="clip">
+                        <ah-budget-meter
+                          variant="compact"
+                          [width]="70"
+                          [spentNanoAiu]="row.story.spentNanoAiu"
+                          [capNanoAiu]="row.story.budgetNanoAiu"
+                          [label]="'Budget of ' + row.story.key"
+                        />
+                      </td>
+                      <td ahNowrap>
+                        <a
+                          [ahButton]="row.action.variant"
+                          size="sm"
+                          [routerLink]="row.action.link"
+                          [attr.aria-label]="
+                            row.action.label + ' ' + row.story.key
+                          "
+                          >{{ row.action.label }}</a
                         >
-                      }
-                    </td>
-                    <td ahNowrap>{{ row.story.owner }}</td>
-                    <td ahNowrap>
-                      {{ row.story.updatedAt | ahRelative: 'waiting' }}
-                    </td>
-                    <td ahNowrap>
-                      <ah-budget-meter
-                        variant="compact"
-                        [width]="70"
-                        [spentNanoAiu]="row.story.spentNanoAiu"
-                        [capNanoAiu]="row.story.budgetNanoAiu"
-                        [label]="'Budget of ' + row.story.key"
-                      />
-                    </td>
-                    <td ahNowrap>
-                      <a
-                        [ahButton]="row.action.variant"
-                        size="sm"
-                        [routerLink]="row.action.link"
-                        [attr.aria-label]="
-                          row.action.label + ' ' + row.story.key
-                        "
-                        >{{ row.action.label }}</a
-                      >
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -359,11 +486,7 @@ function describeFailure(error: ApiError): Failure {
         >
           <a ahPanelActions routerLink="/voyages">All voyages</a>
         </ah-panel-head>
-        @if (!loaded()) {
-          <ah-panel-body
-            ><ah-skeleton-rows [rows]="2" [columns]="needsColumns"
-          /></ah-panel-body>
-        } @else if (atSea().length === 0) {
+        @if (loaded() && atSea().length === 0) {
           <ah-empty-state heading="Nothing in progress"
             >No voyage is running or queued.</ah-empty-state
           >
@@ -374,7 +497,16 @@ function describeFailure(error: ApiError): Failure {
             tabindex="0"
             aria-label="Voyages in progress"
           >
-            <table ahTable>
+            <table ahTable [attr.aria-busy]="loaded() ? null : 'true'">
+              <colgroup>
+                <col class="c-status" />
+                <col />
+                <col class="c-phase" />
+                <col />
+                <col class="c-owner" />
+                <col class="c-when" />
+                <col class="c-budget" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Status</th>
@@ -387,39 +519,59 @@ function describeFailure(error: ApiError): Failure {
                 </tr>
               </thead>
               <tbody>
-                @for (row of seaRows(); track row.story.key) {
-                  <tr>
-                    <td ahNowrap>
-                      <ah-status-badge
-                        [status]="row.story.status"
-                        [phase]="row.story.phase"
-                      />
-                    </td>
-                    <td class="voyage">
-                      <a ahKey [routerLink]="['/voyages', row.story.key]">{{
-                        row.story.key
-                      }}</a
-                      >{{ row.story.title }}
-                    </td>
-                    <td class="ah-mono">{{ row.story.phase }}</td>
-                    <td>
-                      {{ row.sea.member }}
-                      @if (row.sea.runtime; as runtime) {
-                        · <span class="ah-mono">{{ runtime }}</span>
-                      }
-                    </td>
-                    <td ahNowrap>{{ row.story.owner }}</td>
-                    <td ahNowrap>{{ row.story.updatedAt | ahRelative }}</td>
-                    <td ahNowrap>
-                      <ah-budget-meter
-                        variant="compact"
-                        [width]="70"
-                        [spentNanoAiu]="row.story.spentNanoAiu"
-                        [capNanoAiu]="row.story.budgetNanoAiu"
-                        [label]="'Budget of ' + row.story.key"
-                      />
-                    </td>
-                  </tr>
+                @if (!loaded()) {
+                  @for (i of placeholderRows.sea; track i) {
+                    <tr class="placeholder">
+                      <td><ah-skeleton width="110px" [height]="20" /></td>
+                      <td><ah-skeleton [width]="barWidth(i)" /></td>
+                      <td><ah-skeleton width="70%" /></td>
+                      <td><ah-skeleton [width]="barWidth(i + 1)" /></td>
+                      <td><ah-skeleton width="75%" /></td>
+                      <td><ah-skeleton width="65%" /></td>
+                      <td><ah-skeleton width="70px" /></td>
+                    </tr>
+                  }
+                } @else {
+                  @for (row of seaRows(); track row.story.key) {
+                    <tr>
+                      <td class="clip">
+                        <ah-status-badge
+                          [status]="row.story.status"
+                          [phase]="row.story.phase"
+                        />
+                      </td>
+                      <td class="voyage" [title]="row.story.title">
+                        <div class="title title--one">
+                          <a ahKey [routerLink]="['/voyages', row.story.key]">{{
+                            row.story.key
+                          }}</a
+                          >{{ row.story.title }}
+                        </div>
+                      </td>
+                      <td class="ah-mono clip">{{ row.story.phase }}</td>
+                      <td class="clip" [title]="row.agentLine">
+                        {{ row.sea.member }}
+                        @if (row.sea.runtime; as runtime) {
+                          · <span class="ah-mono">{{ runtime }}</span>
+                        }
+                      </td>
+                      <td class="clip" [title]="row.story.owner">
+                        {{ row.story.owner }}
+                      </td>
+                      <td class="clip">
+                        {{ row.story.updatedAt | ahRelative }}
+                      </td>
+                      <td class="clip">
+                        <ah-budget-meter
+                          variant="compact"
+                          [width]="70"
+                          [spentNanoAiu]="row.story.spentNanoAiu"
+                          [capNanoAiu]="row.story.budgetNanoAiu"
+                          [label]="'Budget of ' + row.story.key"
+                        />
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -434,7 +586,7 @@ export class AllHandsPage {
   private readonly details = inject(RowDetails);
 
   protected readonly tiles = TILES;
-  protected readonly needsColumns = NEEDS_COLUMNS;
+  protected readonly placeholderRows = PLACEHOLDER_ROWS;
   protected readonly counts = this.store.boardCounts;
   /**
    * The inbox: the statuses that wait on a person, and the aground voyages a person can Unblock (their events say so; a
@@ -454,15 +606,30 @@ export class AllHandsPage {
   );
   protected readonly atSea = this.store.atSea;
 
-  /** Whether there is something to show: the list was read, or an earlier read is still in hand. */
-  protected readonly loaded = computed(
+  /** Whether the list was read, or an earlier read is still in hand. */
+  private readonly listRead = computed(
     () => this.store.status() === 'ready' || this.store.stories().length > 0
+  );
+  /** Set once the first full read is on screen; live updates after it change rows in place, never the placeholders. */
+  private readonly shown = signal(false);
+
+  /**
+   * Whether there is something to show: the list was read and so were the events of each aground voyage, which say
+   * whether it belongs in the inbox. Showing the list before them would add rows under the person's eyes.
+   */
+  protected readonly loaded = computed(
+    () =>
+      this.shown() ||
+      (this.listRead() &&
+        this.store
+          .aground()
+          .every((story) => this.details.eventsRead(story.key)))
   );
 
   /** Why there is nothing to show, when the first read failed. A later failure keeps the list on screen. */
   protected readonly failure = computed((): Failure | null => {
     const error = this.store.error();
-    return !this.loaded() && this.store.status() === 'error' && error !== null
+    return !this.listRead() && this.store.status() === 'error' && error !== null
       ? describeFailure(error)
       : null;
   });
@@ -481,10 +648,15 @@ export class AllHandsPage {
 
   /** The rows of "At sea", each with its crew member and, once known, the model and effort of its run. */
   protected readonly seaRows = computed(() =>
-    this.atSea().map((story) => ({
-      story,
-      sea: atSeaCrew(story, this.details.runOf(story)),
-    }))
+    this.atSea().map((story) => {
+      const sea = atSeaCrew(story, this.details.runOf(story));
+      return {
+        story,
+        sea,
+        agentLine:
+          sea.runtime === null ? sea.member : `${sea.member} · ${sea.runtime}`,
+      };
+    })
   );
 
   protected readonly needsSubtitle = computed(() => {
@@ -496,6 +668,9 @@ export class AllHandsPage {
 
   constructor() {
     this.store.use(inject(DestroyRef));
+    effect(() => {
+      if (this.loaded()) this.shown.set(true);
+    });
     effect(() =>
       this.details.sync([
         ...this.store.needsYou(),
@@ -503,6 +678,11 @@ export class AllHandsPage {
         ...this.atSea(),
       ])
     );
+  }
+
+  /** The width of a text-like placeholder bar on row `i`. */
+  protected barWidth(i: number): string {
+    return BAR_WIDTHS[i % BAR_WIDTHS.length] ?? '75%';
   }
 
   protected retry(): void {
