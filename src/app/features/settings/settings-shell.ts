@@ -240,9 +240,6 @@ export class SettingsShell {
     // After the first render, which creates the routed section, so it has claimed the settings it reads itself.
     afterNextRender(() => {
       void this.summary.load();
-      // Setup reads it itself when it is the section on show; the app read it at start, but may have failed.
-      if (this.setup.setup() === null && !this.setup.loading())
-        void this.setup.load();
     });
   }
 }

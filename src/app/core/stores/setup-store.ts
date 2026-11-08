@@ -1,14 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 import type { ApiError } from '@core/api/api-error';
-import type { Setup } from '@core/api/types';
-import { setupReady } from '@domain/setup';
+import type { MyCopilotToken, Setup } from '@core/api/types';
+import { copilotSetupStep, setupReady } from '@domain/setup';
 import { StoreResource } from './resource';
 
 /**
  * What the installation and the team still need (`GET /setup`, `ahoy-hosted` design D23), for the banner every page
- * shows and for Team settings › Setup. Read when the app starts, on each page while Ahoy is not ready, and when the
- * Setup page opens or checks again; a read asked for during another runs once more after it, and a read that fails
+ * shows and for Team settings › Setup. Read only when the app starts; after that, only the Setup page's Check again
+ * and Try again read it, and Keep defaults when a read was under way. A change to the reader's own Copilot token is
+ * shown in its step without a read. A read asked for during another runs once more after it, and a read that fails
  * keeps the last answer (with none, the banner stays hidden). 0 AIU.
  */
 @Injectable({ providedIn: 'root' })
@@ -36,6 +37,19 @@ export class SetupStore {
   /** Reads the steps again. */
   load(): Promise<void> {
     return this.resource.refresh();
+  }
+
+  /** Shows the reader's own Copilot token, as its page last answered, in its step, without reading Setup again. */
+  acceptCopilotToken(page: MyCopilotToken): void {
+    const setup = this.resource.value();
+    if (setup === undefined) return;
+    const { state, detail } = copilotSetupStep(page);
+    this.resource.accept({
+      ...setup,
+      steps: setup.steps.map((s) =>
+        s.key === 'copilot' ? { ...s, state, detail } : s
+      ),
+    });
   }
 
   /**

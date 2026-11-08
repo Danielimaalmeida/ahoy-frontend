@@ -6,6 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { API_BASE } from '@core/api/api-base';
+import { SetupStore } from '@core/stores/setup-store';
 import {
   bannerHeadings,
   buttonNamed,
@@ -19,6 +20,7 @@ import {
 import { requestViolations } from '@testing/fixtures/contract';
 import deleteMyCopilotToken from '@testing/fixtures/deleteMyCopilotToken.json';
 import getMyCopilotToken from '@testing/fixtures/getMyCopilotToken.json';
+import getSetup from '@testing/fixtures/getSetup.json';
 import putMyCopilotToken from '@testing/fixtures/putMyCopilotToken.json';
 import testMyCopilotToken from '@testing/fixtures/testMyCopilotToken.json';
 import { ToastService } from '@ui/toast/toast';
@@ -58,7 +60,7 @@ describe('My Copilot token in Team settings', () => {
   }
 
   const read = () => http.expectOne({ method: 'GET', url: PATH });
-  /** Setup is read again after each change, since its last step is this token. */
+  /** Setup is read only when the app starts, never after a change here. */
   const setupReads = () =>
     http.match({ method: 'GET', url: `${BASE}/setup` }).length;
   const input = () =>
@@ -97,7 +99,7 @@ describe('My Copilot token in Team settings', () => {
     expect(bannerHeadings(root)).toEqual([]);
   });
 
-  it('saves a pasted token as the contract takes it, then clears the field and reads Setup again', async () => {
+  it('saves a pasted token as the contract takes it, then clears the field without reading Setup again', async () => {
     await respond(read(), deleteMyCopilotToken);
     expect(text(root)).toContain('ahoy-copilot-q1abcde');
     buttonNamed(root, 'Save token').click();
@@ -112,13 +114,33 @@ describe('My Copilot token in Team settings', () => {
       []
     );
     await respond(put, putMyCopilotToken);
-    expect(setupReads()).toBe(1);
+    expect(setupReads()).toBe(0);
     expect(definition(root, 'Token')).toContain('••••abcd');
     expect(definition(root, 'Last test')).toContain('Not tested');
     expect(input().value).toBe('');
     expect(toasts()).toEqual([
       'Your Copilot token is saved. Test it to see that GitHub takes it.',
     ]);
+  });
+
+  it("shows a saved token in Setup's step at once, without reading Setup again", async () => {
+    const setup = TestBed.inject(SetupStore);
+    void setup.load();
+    http.expectOne({ method: 'GET', url: `${BASE}/setup` }).flush(getSetup);
+    await respond(read(), deleteMyCopilotToken);
+    type(input(), TOKEN);
+    buttonNamed(root, 'Save token').click();
+    await respond(
+      http.expectOne({ method: 'PUT', url: PATH }),
+      putMyCopilotToken
+    );
+    expect(setupReads()).toBe(0);
+    expect(setup.setup()?.steps.find((s) => s.key === 'copilot')).toMatchObject(
+      {
+        state: 'done',
+        detail: 'Saved, ending in abcd; test it to see that GitHub takes it.',
+      }
+    );
   });
 
   it('tests the token, and shows a refusal as the last test with what to do', async () => {
@@ -132,7 +154,7 @@ describe('My Copilot token in Team settings', () => {
       ...putMyCopilotToken,
       token: { ...putMyCopilotToken.token, lastTest: testMyCopilotToken },
     });
-    expect(setupReads()).toBe(1);
+    expect(setupReads()).toBe(0);
     expect(definition(root, 'Last test')).toContain('Refused (HTTP 401)');
     expect(bannerHeadings(root)).toEqual(['GitHub refused the token']);
   });
@@ -147,7 +169,7 @@ describe('My Copilot token in Team settings', () => {
       http.expectOne({ method: 'DELETE', url: PATH }),
       deleteMyCopilotToken
     );
-    expect(setupReads()).toBe(1);
+    expect(setupReads()).toBe(0);
     expect(root.querySelector('dt')).toBeNull();
     expect(buttonsNamed(root, 'Test')).toEqual([]);
     expect(toasts()).toEqual(['Your Copilot token is removed.']);

@@ -6,7 +6,7 @@ import { SetupStore } from '@core/stores/setup-store';
 
 /**
  * The state of My Copilot token: the person's own token as the API last showed it (never in clear). Every change is
- * shown at once from the answer; Setup is read again after it, since its last step is this token. 0 AIU.
+ * shown at once from the answer, also in Setup's step for the token, which is not read again. 0 AIU.
  */
 @Injectable()
 export class CopilotTokenStore {
@@ -26,7 +26,7 @@ export class CopilotTokenStore {
     const result = await this.api.getMyCopilotToken();
     this.loading.set(false);
     if (result.ok) {
-      this.page.set(result.value);
+      this.show(result.value);
       this.loadError.set(null);
     } else this.loadError.set(result.error);
   }
@@ -45,7 +45,6 @@ export class CopilotTokenStore {
   async test(): Promise<ApiResult<CopilotTokenTest>> {
     const result = await this.api.testMyCopilotToken();
     await this.load();
-    void this.setup.load();
     return result;
   }
 
@@ -55,10 +54,15 @@ export class CopilotTokenStore {
   ): Promise<ApiResult<MyCopilotToken>> {
     const result = await request;
     if (result.ok) {
-      this.page.set(result.value);
+      this.show(result.value);
       this.loadError.set(null);
     } else await this.load();
-    void this.setup.load();
     return result;
+  }
+
+  /** Shows the page as answered, and the token's step in Setup with it. */
+  private show(page: MyCopilotToken): void {
+    this.page.set(page);
+    this.setup.acceptCopilotToken(page);
   }
 }

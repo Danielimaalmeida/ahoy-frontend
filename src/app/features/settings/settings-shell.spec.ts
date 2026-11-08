@@ -7,6 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { API_BASE } from '@core/api/api-base';
+import { SetupStore } from '@core/stores/setup-store';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
@@ -123,6 +124,8 @@ describe('the Team settings frame', () => {
   afterEach(() => http.verify());
 
   it('opens on Setup, names each section with its state and marks the one on show', async () => {
+    // The app's one read of Setup, at start.
+    void TestBed.inject(SetupStore).load();
     await harness.navigateByUrl('/settings');
     answerAll();
     await settle();
@@ -160,7 +163,7 @@ describe('the Team settings frame', () => {
     expect(links[0]?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('reads each section once: the one on show for itself, the others for the navigation', async () => {
+  it('reads each section once: the one on show for itself, the others for the navigation, and not Setup', async () => {
     await harness.navigateByUrl('/settings/jira');
     await settle();
     for (const section of [
@@ -179,7 +182,8 @@ describe('the Team settings frame', () => {
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
         1
       );
-    expect(http.match(`${BASE}/setup`), 'setup').toHaveLength(1);
+    // Setup is the app's to read, once when it starts.
+    expect(http.match(`${BASE}/setup`), 'setup').toHaveLength(0);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
       r.flush({ items: [] });
   });
