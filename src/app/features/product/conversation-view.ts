@@ -588,6 +588,10 @@ const ACTIVITY_SHOWN = 6;
                 Reads what is pinned, and the content repository’s knowledge.
               </li>
               <li>
+                Follows Jira links and searches Jira and Confluence beyond the
+                pins, read-only.
+              </li>
+              <li>
                 Proposes stories and meeting topics, with the risks it sees.
               </li>
               <li>Asks you what only you can settle.</li>

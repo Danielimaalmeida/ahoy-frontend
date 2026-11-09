@@ -21,7 +21,8 @@ review of both repositories, with its proposals (not yet agreed), is `ahoy-hoste
   as numbered cards with their flags, without buttons (Create in Jira and Add to meeting are step 2), and its questions
   as cards with the recommended option. The right column shows what was spent, the session (starting, answering, warm
   for ten minutes, stopping) and Cancel question; Share and Delete for the owner, read-only for others. Team settings ›
-  Agents has the optional **Product conversations** job. The mock backend simulates every conversation operation
+  Agents has the optional **Product conversations** job. Beyond the pins, the agent reads Jira and Confluence read-only
+  when the API's configuration gives it those tools (the user's choice on 2026-11-09); the side panel says so. The mock backend simulates every conversation operation
   (a pretend session that streams, proposes and stays warm). Contract synced from `ahoy-hosted`'s `feat/product-page`
   (PR #107, migration 0048), which must deploy with it.
 - **`feat/metrics-trends` (merged into `main`, 2026-11-09, asked for by the user: "is the harness getting better?"):** a
