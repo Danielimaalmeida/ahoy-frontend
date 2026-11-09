@@ -15,13 +15,14 @@ import {
   defectTriageView,
   defectsLabel,
 } from '@domain/defects';
+import { phaseName } from '@domain/phase-settings';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { StatusBadge } from '@ui/status-badge/status-badge';
-import { Api, Key, Nowrap, Table } from '@ui/table/table';
+import { CellSub, Key, Nowrap, Table } from '@ui/table/table';
 import { ToastService } from '@ui/toast/toast';
 import { TryToFixDialogs } from './try-to-fix-dialog';
 
@@ -50,7 +51,7 @@ type ListState =
     Table,
     Nowrap,
     Key,
-    Api,
+    CellSub,
   ],
   styles: `
     :host {
@@ -58,34 +59,41 @@ type ListState =
       flex-direction: column;
       gap: 12px;
     }
-    .defects__head {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: baseline;
-      padding: 14px 16px 0;
+    .defects__table td {
+      vertical-align: top;
+      padding-top: 10px;
+      padding-bottom: 10px;
     }
-    .defects__head h2 {
-      margin: 0;
-      font-size: 16px;
-    }
-    .defects__sub {
-      display: block;
+    .defects__table .ah-cell-sub {
       margin-top: 4px;
-      font-size: 12px;
+      line-height: 1.4;
+    }
+    .defects__summary {
+      width: 30%;
+    }
+    .defects__component {
+      min-width: 140px;
+    }
+    .defects__triage {
+      width: 22%;
+    }
+    .defects__voyage {
+      display: inline-flex;
+      text-decoration: none;
+    }
+    .defects__tag--fit {
+      background: var(--status-done-bg);
+      color: var(--status-done-fg);
+    }
+    .defects__failed {
+      color: var(--danger-text);
+      white-space: normal;
     }
     .defects__actions {
       text-align: right;
     }
     .defects__actions > * + * {
       margin-left: 6px;
-    }
-    .defects__failed {
-      display: block;
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--danger-text);
-      white-space: normal;
     }
   `,
   template: `
@@ -181,27 +189,29 @@ type ListState =
             </ah-empty-state>
           } @else {
             <section class="ah-panel" aria-label="Defects">
-              <div class="defects__head">
-                <h2>Defects</h2>
+              <div class="ah-panel__head">
+                <h2 class="ah-panel__title">Defects</h2>
                 <span class="ah-muted"
-                  >{{ countLabel(list.defects.length) }}, the latest first.
-                  Triage runs fixed rules and spends nothing.</span
-                >
-                @if (list.lastPass; as pass) {
-                  <span class="ah-muted"
-                    >Last check {{ pass.checkedAt | ahRelative }}</span
-                  >
-                }
+                  >{{ countLabel(list.defects.length) }}, the latest first
+                  @if (list.lastPass; as pass) {
+                    · last check {{ pass.checkedAt | ahRelative }}
+                  }
+                </span>
               </div>
-              <table ahTable aria-label="Open defects">
+              <table ahTable class="defects__table" aria-label="Open defects">
                 <thead>
                   <tr>
                     <th>Key</th>
-                    <th>Summary</th>
+                    <th class="defects__summary">Summary</th>
                     <th>Priority</th>
-                    <th>Component</th>
+                    <th class="defects__component">Component</th>
                     <th>Seen</th>
-                    <th>Triage</th>
+                    <th
+                      class="defects__triage"
+                      title="Fixed rules, no AIU spent"
+                    >
+                      Triage
+                    </th>
                     <th>Ahoy</th>
                     <th class="defects__actions">Actions</th>
                   </tr>
@@ -217,11 +227,11 @@ type ListState =
                         {{ defect.priority ?? '—' }}
                       </td>
                       <td data-label="Component">
-                        <span ahApi>{{
+                        {{
                           defect.components.length === 0
                             ? '—'
-                            : defect.components.join(' + ')
-                        }}</span>
+                            : defect.components.join(', ')
+                        }}
                       </td>
                       <td ahNowrap data-label="Seen">
                         {{ defect.firstSeenAt | ahRelative }}
@@ -231,44 +241,42 @@ type ListState =
                         <span
                           [class]="
                             view.tone === 'fit'
-                              ? 'ah-tag ah-tag--accent'
+                              ? 'ah-tag defects__tag--fit'
                               : view.tone === 'ignored'
                                 ? 'ah-tag ah-tag--outline'
                                 : 'ah-tag'
                           "
                           >{{ view.label }}</span
-                        >&ngsp;
-                        <span class="ah-muted defects__sub">{{
-                          view.detail
-                        }}</span>
+                        >
+                        @if (view.detail) {
+                          &ngsp;<span ahCellSub>{{ view.detail }}</span>
+                        }
                       </td>
                       <td ahNowrap data-label="Ahoy">
                         @if (defect.voyage; as voyage) {
-                          <a [routerLink]="['/voyages', defect.key]">
+                          <a
+                            class="defects__voyage"
+                            [routerLink]="['/voyages', defect.key]"
+                          >
                             @if (storyStatus(voyage.status); as status) {
                               <ah-status-badge
                                 [status]="status"
                                 [phase]="voyage.phase"
-                              />&ngsp;
+                              />
                             } @else {
-                              <span ahApi>{{ voyage.status }}</span
-                              >&ngsp;
-                            }
-                            @if (voyage.phase) {
-                              <span ahApi>{{ voyage.phase }}</span>
+                              <span class="ah-tag">{{ voyage.status }}</span>
                             }
                           </a>
                         } @else if (defect.ignored) {
-                          <span class="ah-tag ah-tag--outline">Ignored</span>
+                          <span class="ah-muted" aria-label="Ignored">—</span>
                         } @else {
                           <span class="ah-tag ah-tag--outline"
                             >Not started</span
                           >
                         }
-                        @if (startLine(defect); as line) {
-                          <span
-                            class="defects__sub"
-                            [class.ah-muted]="!line.failed"
+                        @if (voyageLine(defect); as line) {
+                          &ngsp;<span
+                            ahCellSub
                             [class.defects__failed]="line.failed"
                             >{{ line.text }}</span
                           >
@@ -410,8 +418,15 @@ export class BacklogDefects {
     return STORY_STATUSES.find((s) => s === status) ?? null;
   }
 
-  protected startLine(defect: Defect) {
-    return defectStartLine(defect);
+  /** The line under the Ahoy cell: the voyage's phase and who started it ("Planning · Started by Ahoy"), or why not. */
+  protected voyageLine(
+    defect: Defect
+  ): { readonly text: string; readonly failed: boolean } | null {
+    const start = defectStartLine(defect);
+    const phase = defect.voyage?.phase ? phaseName(defect.voyage.phase) : null;
+    if (phase === null) return start;
+    if (start === null) return { text: phase, failed: false };
+    return { text: `${phase} · ${start.text}`, failed: start.failed };
   }
 
   protected tryable(defect: Defect): boolean {
