@@ -96,6 +96,7 @@ import getCrew from '@testing/fixtures/getCrew.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
+import getMetricsTrends from '@testing/fixtures/getMetricsTrends.json';
 import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getStoryPlanFit from '@testing/fixtures/getStoryPlanFit.json';
 import getRun from '@testing/fixtures/getRun.json';
@@ -199,6 +200,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['listModels', listModels],
   ['listJiraBacklog', jiraBacklog],
   ['getMetrics', getMetrics],
+  ['getMetricsTrends', getMetricsTrends],
   ['getHealth', getHealth],
   ['listStories', listStories],
   ['startStory', startStory],
@@ -382,7 +384,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      150
+      151
     );
   });
 
