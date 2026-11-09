@@ -128,6 +128,7 @@ describe('trendVerdict', () => {
     expect(changeLabel('better', -27, 0.6, 0.9)).toBe('↓ 27%');
     expect(changeLabel('flat', 2, 1, 1)).toBe('flat');
     expect(changeLabel('none', null, null, 1)).toBe('no data');
+    expect(changeLabel('none', null, 5.5, null)).toBe('nothing before');
   });
 });
 

@@ -259,7 +259,10 @@ export function trendVerdict(
   };
 }
 
-/** How a change reads on its pill: "↓ 37%", "↑ 13%", "flat", or "new" when it grew from nothing. */
+/**
+ * How a change reads on its pill: "↓ 37%", "↑ 13%", "flat", "↑ from 0", "nothing before" when the 4 weeks before had
+ * nothing to compare with (no voyages yet), or "no data".
+ */
 export function changeLabel(
   verdict: TrendVerdict,
   change: number | null,
@@ -267,7 +270,8 @@ export function changeLabel(
   was: number | null
 ): string {
   if (verdict === 'flat') return 'flat';
-  if (verdict === 'none') return 'no data';
+  if (verdict === 'none')
+    return now !== null && was === null ? 'nothing before' : 'no data';
   if (change === null)
     return now !== null && was !== null && now > was ? '↑ from 0' : '—';
   return `${change >= 0 ? '↑' : '↓'} ${Math.abs(change)}%`;

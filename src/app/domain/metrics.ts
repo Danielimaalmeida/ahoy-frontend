@@ -216,7 +216,7 @@ export function outcomesLine(
         .join(' · ');
 }
 
-/** How many series a chart colours before it folds the rest into "Other". */
+/** How many series a chart colours before it folds the rest into one series. */
 export const MAX_SERIES = 5;
 
 /** One series of the weekly chart: its label and its colour slot (1–5, in the design's fixed order). */
@@ -235,7 +235,7 @@ export interface WeekColumn {
 
 /**
  * The weekly AIU chart: one series per phase in `phaseOrder` (the API's order), with the phases past the fifth folded
- * into "Other" so a colour is never generated; then one column per week.
+ * into one series ("3 more") so a colour is never generated; then one column per week.
  */
 export function stackWeeks(
   weeks: readonly {
@@ -261,7 +261,8 @@ export function stackWeeks(
             phases: [phase],
           })),
           {
-            label: 'Other',
+            // Named by what it holds, so it never reads as a series called "other" (a halt kind is).
+            label: `${seen.length - (MAX_SERIES - 1)} more`,
             slot: MAX_SERIES,
             phases: seen.slice(MAX_SERIES - 1),
           },
