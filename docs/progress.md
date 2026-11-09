@@ -8,7 +8,15 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/plan-panel-models`, 2026-11-09, asked for by the user: the panel's and the judge's models were
+- **This branch (`style/defects-table`, 2026-11-09, asked for by the user: the Backlog › Defects table "looks a bit
+  messy"):** the table uses the panel head and cell-sub line of the other tables. Header: one muted line ("4 defects,
+  the latest first · last check 12 min ago"); the triage note moved to the column's tooltip. Component is plain text,
+  comma-separated. Triage "Ahoy can try" is green; its reasons sit under it. Ahoy shows the status badge alone (no
+  underlined mono phase beside it), with "Planning · Started by Ahoy" under it; an ignored defect shows "—" there, since
+  Triage already says Ignored. Cells are top-aligned. Checks (cloud, Node 22.23.4, `@acme-fedev/auth` stubbed in a
+  scratch copy): build, typecheck, lint, `ng test` (218 files, 3,769 tests) and format pass. Screenshots came from the
+  component's test DOM with the global styles, not a running app. Not run: Node 24, Playwright, a local or live API.
+- **`feat/plan-panel-models` (merged, PR #79, 2026-11-09, asked for by the user: the panel's and the judge's models were
   not configurable):** Team settings › Phases has a **Plan panel** section: two to five planners, each a model and an
   effort, with what each may spend of the panel run's cap, and the judge's models in order (the first the owner's
   account may use, the rest fallbacks) with one effort. Only catalogue models; a model two planners share is allowed

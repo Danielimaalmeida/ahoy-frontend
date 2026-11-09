@@ -1660,10 +1660,12 @@ describe('Docks', () => {
       expect(text(cell(rowOf(f, 'PROJ-212'), 5))).toBe(
         'Ahoy can try steps to reproduce · expected result'
       );
-      expect(text(cell(rowOf(f, 'PROJ-212'), 6))).toContain('implementation');
+      expect(text(cell(rowOf(f, 'PROJ-212'), 6))).toContain(
+        'Implementation · Started by Ahoy'
+      );
       expect(text(cell(rowOf(f, 'PROJ-212'), 7))).toBe('Open voyage');
       expect(text(cell(rowOf(f, 'PROJ-201'), 3))).toBe(
-        'web-portal + billing-api'
+        'web-portal, billing-api'
       );
       expect(text(cell(rowOf(f, 'PROJ-201'), 5))).toBe(
         'Not for Ahoy No steps to reproduce or expected result'
