@@ -1166,6 +1166,7 @@ export class MockAhoyServer {
       key: body.key,
       title: body.title ?? null,
       owner: call.actor,
+      ownerName: null,
       phase: 'intake',
       status: 'ready',
       haltReason: null,

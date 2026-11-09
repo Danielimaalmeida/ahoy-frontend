@@ -18,7 +18,7 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   waited for, there); the week still running is faded and marked "(so far)". Required checks (Node 24 with the private
   `@acme-fedev` registry): **not run**, so the branch is not done. Substitutes (cloud, Node 22.23.4, `@acme-fedev/auth`
   stubbed and native bindings installed by hand in `node_modules`): `npm run build`, typecheck (app, specs and
-  boundaries), lint, `ng test` (219 files, 3,800 tests) and `npm run format` pass. The page was opened at 1440 px (light
+  boundaries), lint, `ng test` (219 files, 3,805 tests, after merging `main`) and `npm run format` pass. The page was opened at 1440 px (light
   and dark) and 390 px on the in-browser mock with its fictional trend before the review fixes, not after. Not run:
   Node 24, the real auth library, Playwright, a local or live API, TEST. No AIU was spent.
 - **This branch (`style/defects-table`, 2026-11-09, asked for by the user: the Backlog › Defects table "looks a bit

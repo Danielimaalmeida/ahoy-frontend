@@ -584,6 +584,23 @@ describe('All hands', () => {
       ]);
     });
 
+    it("shows the owner's name when the API knows it, with the q-number as the cell's tooltip", async () => {
+      const named = EIGHT.map((story) =>
+        story.key === 'PROJ-140'
+          ? { ...story, owner: 'qxz1iiw', ownerName: 'Jordan Example' }
+          : story
+      );
+      const { root } = await render(named);
+      const sea = panel(root, 'In progress');
+      const [running, queued] = rowsOf(sea);
+      expect([running?.[4], queued?.[4]]).toEqual([
+        'Jordan Example',
+        'alex@example.com',
+      ]);
+      const cell = sea.querySelector('tbody tr:first-child td:nth-child(5)');
+      expect(cell?.getAttribute('title')).toBe('qxz1iiw');
+    });
+
     it('names the crew member with the model and effort of its run, or who goes next', async () => {
       const { root } = await render();
       const [running, queued] = rowsOf(panel(root, 'In progress'));

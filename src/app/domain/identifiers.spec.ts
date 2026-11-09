@@ -3,6 +3,7 @@ import {
   actorLabel,
   formatTokens,
   isStoryKey,
+  ownerLabel,
   shortSha,
 } from './identifiers';
 
@@ -84,5 +85,24 @@ describe('formatTokens', () => {
   it('shows an em dash for a negative or invalid count', () => {
     expect(formatTokens(-1)).toBe('—');
     expect(formatTokens(Number.NaN)).toBe('—');
+  });
+});
+
+describe('ownerLabel', () => {
+  it("shows the owner's name when the API knows it", () => {
+    expect(ownerLabel({ owner: 'qxz1iiw', ownerName: ' Alex Rivera ' })).toBe(
+      'Alex Rivera'
+    );
+  });
+
+  it('shows the q-number while the name is not known', () => {
+    expect(ownerLabel({ owner: 'qxz1iiw', ownerName: null })).toBe('qxz1iiw');
+    expect(ownerLabel({ owner: 'qxz1iiw', ownerName: '  ' })).toBe('qxz1iiw');
+  });
+
+  it('shows the defect watch as "Ahoy"', () => {
+    expect(ownerLabel({ owner: 'ahoy-defect-watch', ownerName: null })).toBe(
+      'Ahoy'
+    );
   });
 });

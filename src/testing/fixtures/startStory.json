@@ -2,6 +2,7 @@
   "key": "PROJ-145",
   "title": "Allow exporting invoices as CSV",
   "owner": "alex@example.com",
+  "ownerName": null,
   "phase": "intake",
   "status": "ready",
   "haltReason": null,

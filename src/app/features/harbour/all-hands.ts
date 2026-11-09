@@ -9,6 +9,7 @@ import {
 import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import { StoriesStore } from '@core/stores/stories-store';
+import { ownerLabel } from '@domain/identifiers';
 import { AGROUND, type BoardStatus } from '@domain/status';
 import type { Phase, StoryStatus } from '@domain/types';
 import { Banner } from '@ui/banner/banner';
@@ -445,7 +446,7 @@ function describeFailure(error: ApiError): Failure {
                         </div>
                       </td>
                       <td class="clip" [title]="row.story.owner">
-                        {{ row.story.owner }}
+                        {{ ownerLabel(row.story) }}
                       </td>
                       <td class="clip">
                         {{ row.story.updatedAt | ahRelative: 'waiting' }}
@@ -556,7 +557,7 @@ function describeFailure(error: ApiError): Failure {
                         }
                       </td>
                       <td class="clip" [title]="row.story.owner">
-                        {{ row.story.owner }}
+                        {{ ownerLabel(row.story) }}
                       </td>
                       <td class="clip">
                         {{ row.story.updatedAt | ahRelative }}
@@ -586,6 +587,8 @@ export class AllHandsPage {
   private readonly details = inject(RowDetails);
 
   protected readonly tiles = TILES;
+  /** The owner's name, or the q-number while the name is not known; the q-number is the cell's tooltip. */
+  protected readonly ownerLabel = ownerLabel;
   protected readonly placeholderRows = PLACEHOLDER_ROWS;
   protected readonly counts = this.store.boardCounts;
   /**

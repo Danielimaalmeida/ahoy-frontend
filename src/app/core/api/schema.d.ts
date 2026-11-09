@@ -151,7 +151,7 @@ export interface paths {
      * Whether the harness is getting better, week by week and per harness version.
      * @description Read-only and 0 AIU (design §5, "Metrics", trends): the same signals per Monday-based week for the last
      *     `weeks` weeks (the last one is the current, partial week), for the last 28 days and the 28 before them, and per
-     *     harness version (the control commit the runs used; at most six, newest first). Every signal is a count or a
+     *     harness version (the control commit the runs used; at most six, the most recently used first). Every signal is a count or a
      *     median, never a ratio: halts and the halts that repeat the story's previous diagnosis, agents' questions, human
      *     gate decisions and send-backs, gate verdicts and passes (a poll whose CI is still running left out), finished,
      *     done and reworked stories, work packages worked and delivered unverified, runs and run errors, AIU and the AIU
@@ -3138,6 +3138,7 @@ export interface components {
       readonly key: components['schemas']['StoryKey'];
       readonly title: string | null;
       readonly owner: components['schemas']['Actor'];
+      readonly ownerName: components['schemas']['ActorName'];
       readonly phase: components['schemas']['Phase'];
       readonly status: components['schemas']['StoryStatus'];
       readonly haltReason: string | null;

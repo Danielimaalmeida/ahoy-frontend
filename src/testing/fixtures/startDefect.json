@@ -2,6 +2,7 @@
   "key": "PROJ-207",
   "title": "Export to CSV drops rows with an apostrophe in the name",
   "owner": "alex@example.com",
+  "ownerName": null,
   "phase": "intake",
   "status": "ready",
   "haltReason": null,

@@ -14,6 +14,7 @@ import { Banner } from '@ui/banner/banner';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
+import { ownerLabel } from '@domain/identifiers';
 import { PHASES } from '@domain/phases';
 import { FilterChips, type StatusFilter } from '@ui/filter-chips/filter-chips';
 import { Panel, PanelBody, PanelFoot } from '@ui/panel/panel';
@@ -290,7 +291,9 @@ function describeFailure(error: ApiError): Failure {
                       />
                     </td>
                     <td>{{ row.note }}</td>
-                    <td>{{ row.story.owner }}</td>
+                    <td [title]="row.story.owner">
+                      {{ ownerLabel(row.story) }}
+                    </td>
                     <td ahNowrap>
                       <ah-budget-meter
                         variant="compact"
@@ -331,6 +334,8 @@ function describeFailure(error: ApiError): Failure {
   `,
 })
 export class VoyagesPage {
+  /** The owner's name, or the q-number while the name is not known; the q-number is the cell's tooltip. */
+  protected readonly ownerLabel = ownerLabel;
   /** `?status=`, bound from the address. It is untrusted: see {@link filterOf}. */
   readonly status = input<unknown>(undefined);
   /** `?q=`, bound from the address: the text to look for in keys and titles. */

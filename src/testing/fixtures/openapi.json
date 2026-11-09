@@ -277,7 +277,7 @@
         "operationId": "getMetricsTrends",
         "tags": ["metrics"],
         "summary": "Whether the harness is getting better, week by week and per harness version.",
-        "description": "Read-only and 0 AIU (design §5, \"Metrics\", trends): the same signals per Monday-based week for the last\n`weeks` weeks (the last one is the current, partial week), for the last 28 days and the 28 before them, and per\nharness version (the control commit the runs used; at most six, newest first). Every signal is a count or a\nmedian, never a ratio: halts and the halts that repeat the story's previous diagnosis, agents' questions, human\ngate decisions and send-backs, gate verdicts and passes (a poll whose CI is still running left out), finished,\ndone and reworked stories, work packages worked and delivered unverified, runs and run errors, AIU and the AIU\nof runs that redid work, the median AIU of a done story, the median time from its first run to done, and the\nmedian wait on a person. `owner`, `repo` and `model` filter as in `GET /metrics`. AIU in integer nano-AIU,\ndurations in whole seconds.\n",
+        "description": "Read-only and 0 AIU (design §5, \"Metrics\", trends): the same signals per Monday-based week for the last\n`weeks` weeks (the last one is the current, partial week), for the last 28 days and the 28 before them, and per\nharness version (the control commit the runs used; at most six, the most recently used first). Every signal is a count or a\nmedian, never a ratio: halts and the halts that repeat the story's previous diagnosis, agents' questions, human\ngate decisions and send-backs, gate verdicts and passes (a poll whose CI is still running left out), finished,\ndone and reworked stories, work packages worked and delivered unverified, runs and run errors, AIU and the AIU\nof runs that redid work, the median AIU of a done story, the median time from its first run to done, and the\nmedian wait on a person. `owner`, `repo` and `model` filter as in `GET /metrics`. AIU in integer nano-AIU,\ndurations in whole seconds.\n",
         "parameters": [
           {
             "name": "weeks",
@@ -6923,6 +6923,7 @@
           "key",
           "title",
           "owner",
+          "ownerName",
           "phase",
           "status",
           "haltReason",
@@ -6944,6 +6945,9 @@
           },
           "owner": {
             "$ref": "#/components/schemas/Actor"
+          },
+          "ownerName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "phase": {
             "$ref": "#/components/schemas/Phase"

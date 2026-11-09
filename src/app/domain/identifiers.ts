@@ -22,6 +22,18 @@ export function actorLabel(actor: string): string {
   return AHOY_ACTORS.includes(actor) ? 'Ahoy' : actor;
 }
 
+/**
+ * Who owns a voyage, for a table or a header: the owner's name when the API knows it (`ownerName`), else the actor as
+ * `actorLabel` shows it (the q-number).
+ */
+export function ownerLabel(story: {
+  readonly owner: string;
+  readonly ownerName?: string | null;
+}): string {
+  const name = story.ownerName?.trim();
+  return name ? name : actorLabel(story.owner);
+}
+
 /** Token counts for run detail: "999", "182k", "1.5M". */
 export function formatTokens(tokens: number): string {
   if (!Number.isFinite(tokens) || tokens < 0) return '—';

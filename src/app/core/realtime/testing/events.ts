@@ -25,6 +25,7 @@ export function aStory(key: string, changes: Partial<Story> = {}): Story {
     key,
     title: `Story ${key}`,
     owner: 'alex@example.com',
+    ownerName: null,
     phase: 'planning',
     status: 'running',
     haltReason: null,

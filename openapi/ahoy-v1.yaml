@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 39337e077d7343a85e3dc8e0f73291b747a676d5
+# Commit: 07cd121dcd2807764cf785ad41d0deaf82e5cb7d
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -207,7 +207,7 @@ paths:
       description: |
         Read-only and 0 AIU (design §5, "Metrics", trends): the same signals per Monday-based week for the last
         `weeks` weeks (the last one is the current, partial week), for the last 28 days and the 28 before them, and per
-        harness version (the control commit the runs used; at most six, newest first). Every signal is a count or a
+        harness version (the control commit the runs used; at most six, the most recently used first). Every signal is a count or a
         median, never a ratio: halts and the halts that repeat the story's previous diagnosis, agents' questions, human
         gate decisions and send-backs, gate verdicts and passes (a poll whose CI is still running left out), finished,
         done and reworked stories, work packages worked and delivered unverified, runs and run errors, AIU and the AIU
@@ -4026,6 +4026,7 @@ components:
           key,
           title,
           owner,
+          ownerName,
           phase,
           status,
           haltReason,
@@ -4042,6 +4043,7 @@ components:
         key: { $ref: '#/components/schemas/StoryKey' }
         title: { type: [string, 'null'] }
         owner: { $ref: '#/components/schemas/Actor' }
+        ownerName: { $ref: '#/components/schemas/ActorName' }
         phase: { $ref: '#/components/schemas/Phase' }
         status: { $ref: '#/components/schemas/StoryStatus' }
         haltReason: { type: [string, 'null'] }
