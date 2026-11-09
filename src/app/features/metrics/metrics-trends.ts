@@ -5,6 +5,7 @@ import {
   changeLabel,
   formatTrend,
   isTrendSpan,
+  lastWeekPartial,
   MIN_VOYAGES,
   RECENT_WEEKS,
   sparkline,
@@ -14,6 +15,7 @@ import {
   TREND_SPANS,
   trendVerdict,
   versionWeeks,
+  weekPosition,
   weekStartLabel,
   type Sparkline,
   type TrendSignal,
@@ -103,8 +105,19 @@ function cardsOf(t: MetricsTrends): {
 }[] {
   const recentWeeks = weeksOf(t.recent.from, t.recent.to);
   const previousWeeks = weeksOf(t.previous.from, t.previous.to);
-  const labels = t.series.map((w) => weekLabel(w.weekStart));
-  const faded = t.series.map((w) => w.signals.voyages < MIN_VOYAGES);
+  const partial = lastWeekPartial(
+    t.series.map((w) => w.weekStart),
+    t.to
+  );
+  const last = t.series.length - 1;
+  // The current week has only its first days: it is drawn faded and named so, never read as a fall.
+  const labels = t.series.map(
+    (w, i) =>
+      `${weekLabel(w.weekStart)}${partial && i === last ? ' (so far)' : ''}`
+  );
+  const faded = t.series.map(
+    (w, i) => w.signals.voyages < MIN_VOYAGES || (partial && i === last)
+  );
   return TREND_GROUPS.map((group) => ({
     ...group,
     cards: TREND_SIGNALS.filter((s) => s.group === group.id).map((signal) => {
@@ -183,9 +196,10 @@ function versionRows(t: MetricsTrends): readonly VersionRow[] {
     <div class="section">
       <div class="trends__head">
         <p class="ah-muted trends__lede">
-          The same signals week by week: the last {{ recentWeeks }} weeks
-          against the {{ recentWeeks }} before. The period above does not apply
-          here; the filters do.
+          The same signals week by week: the last {{ recentWeeks * 7 }} days
+          against the {{ recentWeeks * 7 }} before. A trend always ends today,
+          so the period of the other sections does not apply; the owner,
+          repository and model filters do.
         </p>
         <ah-section-tabs
           variant="pill"
@@ -204,8 +218,10 @@ function versionRows(t: MetricsTrends): readonly VersionRow[] {
           </button>
         </ah-banner>
       } @else if (store.trends(); as t) {
-        @if (t.recent.signals.runs === 0 && t.previous.signals.runs === 0) {
-          <ah-empty-state heading="No runs in the last eight weeks" />
+        @if (noRuns()) {
+          <ah-empty-state
+            [heading]="'No runs in these ' + t.weeks + ' weeks'"
+          />
         } @else {
           <section class="verdict" aria-label="Verdict">
             <div>
@@ -224,9 +240,9 @@ function versionRows(t: MetricsTrends): readonly VersionRow[] {
           <p class="note">
             Arrows show which way a number moved; green means that is better for
             the harness, red that it is worse. The shaded band is the last
-            {{ recentWeeks }} weeks, dashed lines mark a new harness version
+            {{ recentWeeks * 7 }} days, dashed lines mark a new harness version
             (the control commit the runs used), and weeks with fewer than
-            {{ minVoyages }} voyages are drawn faded.
+            {{ minVoyages }} voyages, and this week so far, are drawn faded.
           </p>
 
           @for (g of groups(); track g.id) {
@@ -501,10 +517,21 @@ export class MetricsTrendsSection {
   );
 
   /** The shaded band of the recent weeks. */
+  /** Nothing ran in any week of the span. */
+  protected readonly noRuns = computed(
+    () => this.store.trends()?.series.every((w) => w.signals.runs === 0) ?? true
+  );
+
+  /** The shaded band of the recent window: from its start (a rolling 28 days, not a Monday) to now. */
   protected readonly band = computed(() => {
     const n = this.weekStarts().length;
-    const first = sparkX(Math.max(0, n - RECENT_WEEKS), n, SPARK_W);
-    return { x: first - 6, width: SPARK_W - first + 6 };
+    const from = this.store.trends()?.recent.from;
+    const at =
+      from === undefined
+        ? Math.max(0, n - RECENT_WEEKS)
+        : weekPosition(this.weekStarts(), from);
+    const first = sparkX(at, n, SPARK_W);
+    return { x: first, width: SPARK_W - first };
   });
 
   protected readonly firstWeek = computed(() => {
@@ -538,7 +565,10 @@ export class MetricsTrendsSection {
   protected readonly haltColumns = computed(() => {
     const t = this.store.trends();
     const versions = new Set(this.versionIndexes());
+    const partial = t !== null && lastWeekPartial(this.weekStarts(), t.to);
+    const last = this.haltChart().columns.length - 1;
     return this.haltChart().columns.map((c, i) => {
+      const soFar = partial && i === last;
       const week = t?.series[i];
       const voyages = week?.signals.voyages ?? 0;
       const perVoyage = formatTrend(
@@ -549,9 +579,9 @@ export class MetricsTrendsSection {
         ...c,
         short: week ? weekStartLabel(week.weekStart) : c.label,
         voyages,
-        faded: voyages < MIN_VOYAGES,
+        faded: voyages < MIN_VOYAGES || soFar,
         version: versions.has(i),
-        title: `${c.label}: ${c.total} halts in ${voyages} voyages (${perVoyage} per voyage)${versions.has(i) ? ', new harness version' : ''}`,
+        title: `${c.label}${soFar ? ' (so far)' : ''}: ${c.total} halts in ${voyages} voyages (${perVoyage} per voyage)${versions.has(i) ? ', new harness version' : ''}`,
       };
     });
   });
@@ -566,7 +596,7 @@ export class MetricsTrendsSection {
   });
 
   constructor() {
-    void this.store.loadTrends();
+    void this.store.ensureTrends();
   }
 
   protected chooseSpan(id: string | null): void {

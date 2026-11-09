@@ -367,3 +367,30 @@ export function weekStartLabel(weekStart: string): string {
   const month = label.split(' ').at(-1) ?? '';
   return /\s/.test(start ?? '') ? (start ?? label) : `${start} ${month}`;
 }
+
+const WEEK_MS = 7 * 86_400_000;
+
+/** Whether the last week of `weekStarts` was still running at `to`: its counts are of part of a week. */
+export function lastWeekPartial(
+  weekStarts: readonly string[],
+  to: string
+): boolean {
+  const last = weekStarts.at(-1);
+  if (last === undefined) return false;
+  return Date.parse(to) < Date.parse(`${last}T00:00:00Z`) + WEEK_MS;
+}
+
+/**
+ * Where `at` falls among the weeks, as a fractional week index (0 is the first Monday, 1.5 the middle of the second
+ * week), kept within the weeks: the start of the recent window, which is a rolling 28 days, not a Monday.
+ */
+export function weekPosition(
+  weekStarts: readonly string[],
+  at: string
+): number {
+  const first = weekStarts[0];
+  if (first === undefined) return 0;
+  const position =
+    (Date.parse(at) - Date.parse(`${first}T00:00:00Z`)) / WEEK_MS;
+  return Math.min(Math.max(0, position), Math.max(0, weekStarts.length - 1));
+}

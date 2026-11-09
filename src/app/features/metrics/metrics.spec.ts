@@ -569,6 +569,7 @@ describe('Metrics: Trends', () => {
   it('reads 12 weeks by default and hides the period, which does not apply to a trend', async () => {
     const page = await open('/metrics/trends');
     expect(trendQueries(page).map((q) => q.get('weeks'))).toEqual(['12']);
+    expect(metricsQueries(page)).toEqual([]);
     expect(page.root.querySelector('[aria-label="Period"]')).toBeNull();
     expect(
       page.root.querySelector(
@@ -643,9 +644,14 @@ describe('Metrics: Trends', () => {
 
   it('says the trend could not be read and reads again on Try again', async () => {
     const page = await open('/metrics');
+    await flush(page);
+    const before = page.requests.length;
     page.server.switches.failNext = 503;
     await page.harness.navigateByUrl('/metrics/trends');
     await flush(page);
+    expect(page.requests.slice(before).map((r) => r.path)).toEqual([
+      '/metrics/trends',
+    ]);
     expect(text(page.root.querySelector('ah-banner'))).toContain(
       "Can't reach Ahoy"
     );
@@ -654,5 +660,49 @@ describe('Metrics: Trends', () => {
     await flush(page);
     expect(page.root.querySelector('ah-banner')).toBeNull();
     expect(page.root.querySelectorAll('.trend-card').length).toBe(13);
+  });
+
+  it('reads the trend once: not again on a return with the same span and filters, nor for a filter applied on another section', async () => {
+    const page = await open('/metrics/trends');
+    await page.harness.navigateByUrl('/metrics/cost');
+    await flush(page);
+    expect(metricsQueries(page).length).toBe(2);
+    const owner = page.root.querySelector<HTMLInputElement>(
+      'input[aria-label="Owner"]'
+    )!;
+    owner.value = 'alex@example.com';
+    owner.dispatchEvent(new Event('input'));
+    button(page.root, 'Apply').click();
+    await flush(page);
+    expect(trendQueries(page).length).toBe(1);
+    await page.harness.navigateByUrl('/metrics/trends');
+    await flush(page);
+    expect(trendQueries(page).map((q) => q.get('owner'))).toEqual([
+      null,
+      'alex@example.com',
+    ]);
+    await page.harness.navigateByUrl('/metrics/cost');
+    await flush(page);
+    await page.harness.navigateByUrl('/metrics/trends');
+    await flush(page);
+    expect(trendQueries(page).length).toBe(2);
+  });
+
+  it('shows the trend when the period report cannot be read, and fades this week so far', async () => {
+    const page = await open('/metrics/trends', (server) => {
+      const handle = server.handle.bind(server);
+      server.handle = (request) =>
+        request.path === '/metrics'
+          ? handle({ ...request, path: '/no-such-route' })
+          : handle(request);
+    });
+    expect(page.root.querySelectorAll('.trend-card').length).toBe(13);
+    const dots = page.root
+      .querySelectorAll('.spark')[0]!
+      .querySelectorAll('circle');
+    expect(text(dots[dots.length - 1]!.querySelector('title'))).toMatch(
+      /\(so far\):/
+    );
+    expect(dots[dots.length - 1]!.classList).toContain('spark__dot--faded');
   });
 });

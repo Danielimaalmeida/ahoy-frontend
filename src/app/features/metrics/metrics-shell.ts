@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject, untracked } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
@@ -96,33 +96,36 @@ export function metricsFailure(error: ApiError): {
             repeat. Read-only, built from runs, gates and events.
           </p>
         </div>
-        <div class="metrics__export" role="group" aria-label="Export">
-          <select
-            class="ah-input metrics__select"
-            aria-label="Table to export"
-            [formControl]="table"
-          >
-            @for (t of tables; track t) {
-              <option [value]="t">{{ tableLabels[t] }}</option>
-            }
-          </select>
-          <button
-            ahButton
-            type="button"
-            [disabled]="saving()"
-            (click)="exportAs('csv')"
-          >
-            Export CSV
-          </button>
-          <button
-            ahButton
-            type="button"
-            [disabled]="saving()"
-            (click)="exportAs('json')"
-          >
-            Export JSON
-          </button>
-        </div>
+        <!-- The export is of the period, which the Trends section does not show. -->
+        @if (!onTrends()) {
+          <div class="metrics__export" role="group" aria-label="Export">
+            <select
+              class="ah-input metrics__select"
+              aria-label="Table to export"
+              [formControl]="table"
+            >
+              @for (t of tables; track t) {
+                <option [value]="t">{{ tableLabels[t] }}</option>
+              }
+            </select>
+            <button
+              ahButton
+              type="button"
+              [disabled]="saving()"
+              (click)="exportAs('csv')"
+            >
+              Export CSV
+            </button>
+            <button
+              ahButton
+              type="button"
+              [disabled]="saving()"
+              (click)="exportAs('json')"
+            >
+              Export JSON
+            </button>
+          </div>
+        }
       </header>
 
       <div class="metrics__filters">
@@ -172,25 +175,34 @@ export function metricsFailure(error: ApiError): {
 
       <ah-section-tabs label="Metrics sections" [items]="sections" />
 
-      @if (failure(); as f) {
-        <ah-banner variant="error" [heading]="f.heading" [tech]="f.tech">
-          Nothing changed in Ahoy.
-          <button ahButton size="sm" type="button" (click)="store.load()">
-            Try again
-          </button>
-        </ah-banner>
-      } @else if (store.report() === null) {
-        <div
-          class="metrics__loading"
-          aria-busy="true"
-          aria-label="Loading metrics"
-        >
-          <ah-skeleton [height]="88" />
-          <ah-skeleton [height]="240" />
-        </div>
-      } @else {
-        <router-outlet />
+      @if (!onTrends()) {
+        @if (failure(); as f) {
+          <ah-banner variant="error" [heading]="f.heading" [tech]="f.tech">
+            Nothing changed in Ahoy.
+            <button ahButton size="sm" type="button" (click)="store.load()">
+              Try again
+            </button>
+          </ah-banner>
+        } @else if (store.report() === null) {
+          <div
+            class="metrics__loading"
+            aria-busy="true"
+            aria-label="Loading metrics"
+          >
+            <ah-skeleton [height]="88" />
+            <ah-skeleton [height]="240" />
+          </div>
+        }
       }
+      <!-- One outlet, always there, so a section is not created twice when the URL settles. Trends reads its own answer
+           and says itself when it cannot; the other sections are hidden while their report fails or is read. -->
+      <div
+        [hidden]="
+          !onTrends() && (failure() !== null || store.report() === null)
+        "
+      >
+        <router-outlet />
+      </div>
     </div>
   `,
 })
@@ -242,7 +254,10 @@ export class MetricsShell {
   });
 
   constructor() {
-    void this.store.load();
+    // The period's report is read for the sections that show it, not for Trends.
+    effect(() => {
+      if (!this.onTrends()) untracked(() => void this.store.ensureReport());
+    });
   }
 
   private isTrends(): boolean {
@@ -257,7 +272,10 @@ export class MetricsShell {
   }
 
   protected applyFilters(): void {
-    void this.store.setFilters(this.filters.getRawValue());
+    void this.store.setFilters(
+      this.filters.getRawValue(),
+      this.onTrends() ? 'trends' : 'report'
+    );
   }
 
   protected exportAs(format: MetricsFormat): void {

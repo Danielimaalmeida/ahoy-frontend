@@ -2,11 +2,13 @@ import {
   changeLabel,
   formatTrend,
   isTrendSpan,
+  lastWeekPartial,
   sparkline,
   sparkX,
   TREND_SIGNALS,
   trendVerdict,
   versionWeeks,
+  weekPosition,
   weekStartLabel,
   type TrendCounts,
 } from './metrics-trends';
@@ -174,5 +176,21 @@ describe('weekStartLabel', () => {
   it('names a week by its Monday', () => {
     expect(weekStartLabel('2026-09-14')).toBe('14 Sep');
     expect(weekStartLabel('2026-09-28')).toBe('28 Sep');
+  });
+});
+
+describe('lastWeekPartial and weekPosition', () => {
+  const weeks = ['2026-10-12', '2026-10-19', '2026-10-26'];
+
+  it('says the last week is still running until its Monday a week on', () => {
+    expect(lastWeekPartial(weeks, '2026-10-28T12:00:00Z')).toBe(true);
+    expect(lastWeekPartial(weeks, '2026-11-02T00:00:00Z')).toBe(false);
+    expect(lastWeekPartial([], '2026-10-28T12:00:00Z')).toBe(false);
+  });
+
+  it('places a time among the weeks, within them', () => {
+    expect(weekPosition(weeks, '2026-10-15T12:00:00Z')).toBe(0.5);
+    expect(weekPosition(weeks, '2026-09-01T00:00:00Z')).toBe(0);
+    expect(weekPosition(weeks, '2026-12-01T00:00:00Z')).toBe(2);
   });
 });

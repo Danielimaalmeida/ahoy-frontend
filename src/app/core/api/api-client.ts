@@ -273,10 +273,17 @@ function errorBody(raw: unknown): unknown {
   }
 }
 
-/** The query parameters of `getMetrics` and `exportMetrics`, only those that are set. */
-function metricsParams(query: MetricsQuery): HttpParams {
+/** The query parameters of the metrics operations (`getMetrics`, `getMetricsTrends`...), only those that are set. */
+function metricsParams(query: MetricsQuery & MetricsTrendsQuery): HttpParams {
   let params = new HttpParams();
-  for (const name of ['from', 'to', 'owner', 'repo', 'model'] as const) {
+  for (const name of [
+    'from',
+    'to',
+    'weeks',
+    'owner',
+    'repo',
+    'model',
+  ] as const) {
     const value = query[name];
     if (value !== undefined) params = params.set(name, value);
   }
@@ -376,17 +383,11 @@ export class ApiClient {
   getMetricsTrends(
     query: MetricsTrendsQuery = {}
   ): Promise<ApiResult<MetricsTrends>> {
-    let params = new HttpParams();
-    if (query.weeks !== undefined) params = params.set('weeks', query.weeks);
-    for (const name of ['owner', 'repo', 'model'] as const) {
-      const value = query[name];
-      if (value !== undefined) params = params.set(name, value);
-    }
     return this.get(
       'getMetricsTrends',
       '/metrics/trends',
       isMetricsTrends,
-      params
+      metricsParams(query)
     );
   }
 

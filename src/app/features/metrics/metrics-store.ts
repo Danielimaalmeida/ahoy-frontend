@@ -72,10 +72,12 @@ export class MetricsStore {
   readonly trends = signal<MetricsTrends | null>(null);
   /** Why the trend could not be read; the other sections do not depend on it. */
   readonly trendsError = signal<ApiError | null>(null);
-  /** Whether the Trends section has been opened, so a change of filters reads the trend again too. */
-  private trendsWanted = false;
   /** Counts trend loads, so an answer to an older one is dropped. */
   private trendGeneration = 0;
+  /** The span and filters of the trend on screen, or being read; null when there is none to keep. */
+  private trendsKey: string | null = null;
+  /** The period and filters of the report on screen, or being read; null when there is none to keep. */
+  private reportKey: string | null = null;
 
   /** Whether any filter is set. */
   readonly filtered = computed(() => {
@@ -86,6 +88,7 @@ export class MetricsStore {
   /** Reads the report of the period and of the one before it, and the plan panel ratings of the period. */
   async load(now = this.clock.now()): Promise<void> {
     const generation = ++this.generation;
+    this.reportKey = this.reportKeyNow();
     const span = periodRange(this.period(), now);
     this.loading.set(true);
     const reports = Promise.all([
@@ -99,6 +102,7 @@ export class MetricsStore {
     this.loading.set(false);
     if (!current.ok) {
       this.error.set(current.error);
+      this.reportKey = null;
       return;
     }
     this.error.set(null);
@@ -149,17 +153,34 @@ export class MetricsStore {
     else this.planPanelsError.set(result.error);
   }
 
-  /** Changes the filters and reads the report again, and the trend when the Trends section was opened. */
-  setFilters(filters: MetricsFilters): Promise<void> {
+  /** Reads the report unless the one on screen, or being read, is of the current period and filters. */
+  ensureReport(): Promise<void> {
+    return this.reportKey === this.reportKeyNow()
+      ? Promise.resolve()
+      : this.load();
+  }
+
+  /**
+   * Changes the filters and reads what the open section shows again: the report, or the trend on the Trends section.
+   * The other is read when its section opens.
+   */
+  setFilters(
+    filters: MetricsFilters,
+    section: 'report' | 'trends' = 'report'
+  ): Promise<void> {
     this.filters.set({
       owner: filters.owner.trim(),
       repo: filters.repo.trim(),
       model: filters.model.trim(),
     });
-    return Promise.all([
-      this.load(),
-      this.trendsWanted ? this.loadTrends() : Promise.resolve(),
-    ]).then(() => undefined);
+    return section === 'trends' ? this.ensureTrends() : this.ensureReport();
+  }
+
+  /** Reads the trend unless the one on screen, or being read, is of the current span and filters. */
+  ensureTrends(): Promise<void> {
+    return this.trendsKey === this.trendsKeyNow()
+      ? Promise.resolve()
+      : this.loadTrends();
   }
 
   /**
@@ -167,8 +188,8 @@ export class MetricsStore {
    * trend always ends now. An answer to a read that was replaced meanwhile is dropped.
    */
   async loadTrends(): Promise<void> {
-    this.trendsWanted = true;
     const generation = ++this.trendGeneration;
+    this.trendsKey = this.trendsKeyNow();
     this.trends.set(null);
     this.trendsError.set(null);
     const { owner, repo, model } = this.filters();
@@ -180,13 +201,24 @@ export class MetricsStore {
     });
     if (generation !== this.trendGeneration) return;
     if (result.ok) this.trends.set(result.value);
-    else this.trendsError.set(result.error);
+    else {
+      this.trendsError.set(result.error);
+      this.trendsKey = null;
+    }
   }
 
-  /** Changes how many weeks the trend spans and reads it again. */
+  /** Changes how many weeks the trend spans and reads it, unless it is already on screen. */
   setTrendSpan(span: TrendSpan): Promise<void> {
     this.trendSpan.set(span);
-    return this.loadTrends();
+    return this.ensureTrends();
+  }
+
+  private reportKeyNow(): string {
+    return JSON.stringify([this.period(), this.filters()]);
+  }
+
+  private trendsKeyNow(): string {
+    return JSON.stringify([this.trendSpan(), this.filters()]);
   }
 
   /** Saves one table of rows behind the report, for the current period and filters, as a file. */
