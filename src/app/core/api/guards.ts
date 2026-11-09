@@ -58,6 +58,7 @@ import {
   MODEL_SOURCES,
   PLAN_FIT_VERDICTS,
   PLANNING_MODES,
+  PLAN_PANEL_SOURCES,
   PANELIST_STATUSES,
   READINESS_VERDICTS,
   REASONING_EFFORTS,
@@ -483,6 +484,7 @@ const slotDefault = shape<SlotDefault>({
 });
 
 const planPanelConfig = shape<PlanPanelConfig>({
+  source: optional(oneOf(PLAN_PANEL_SOURCES)),
   panelists: arrayOf(
     shape<PlanPanelConfig['panelists'][number]>({
       model: modelId,
@@ -2118,6 +2120,15 @@ export const isPhaseSettingsPage = guard<PhaseSettingsPage>(
         servers: arrayOf(nonEmptyText),
       })
     ),
+    planPanel: shape<PhaseSettingsPage['planPanel']>({
+      source: oneOf(PLAN_PANEL_SOURCES),
+      editable: flag,
+      runsOn: planPanelConfig,
+      builtIn: planPanelConfig,
+      saved: nullable(planPanelConfig),
+      runFactor: wholeNumber('a run factor', 1),
+      panelistsBudgetPercent: wholeNumber('a percentage', 1, 100),
+    }),
     catalog: shape<PhaseSettingsPage['catalog']>({
       source: oneOf(CATALOG_SOURCES),
       editable: flag,

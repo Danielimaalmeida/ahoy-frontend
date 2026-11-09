@@ -367,6 +367,9 @@ describe('ModelsTab on the mock backend', () => {
       expect(planningFact(page, 'Judge')).toBe(
         'claude-opus-5.5, or Claude Sonnet 5 if your Copilot account may not use it'
       );
+      expect(planningFact(page, 'Models')).toBe(
+        'Team setting · Team settings › Phases'
+      );
       expect(section?.textContent).not.toContain(
         'does not use the planning model'
       );

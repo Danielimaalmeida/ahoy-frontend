@@ -329,7 +329,7 @@ describe('the Phases section of Team settings', () => {
       'The built-in list. Save a list to choose your own.'
     );
     expect(buttonsNamed(root, 'Use the built-in list')).toEqual([]);
-    buttonNamed(root, 'Remove').click();
+    buttonNamed(control('Model catalogue'), 'Remove').click();
     await settle();
     type(control('Model 2 efforts'), 'low, huge');
     await settle();
@@ -354,6 +354,19 @@ describe('the Phases section of Team settings', () => {
           reasoningEfforts: ['low', 'high'],
         },
         { id: 'gpt-5.6-luna' },
+        { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5' },
+        {
+          id: 'claude-sonnet-5.5',
+          label: 'Claude Sonnet 5.5',
+          reasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+        },
+        {
+          id: 'claude-opus-5.5',
+          label: 'Claude Opus 5.5',
+          reasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+        },
+        { id: 'gpt-6-luna', label: 'GPT-6 Luna' },
+        { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
       ],
     });
     expect(
@@ -479,5 +492,154 @@ describe('the Phases section of Team settings', () => {
       (td) => text(td.querySelector('.cell > span') ?? td)
     );
     expect(cells).toEqual(['claude-sonnet-5', 'high', '40 AIU', '30 min', '—']);
+  });
+  describe('the plan panel', () => {
+    const panel = () => {
+      const found = root.querySelector('ah-plan-panel-settings');
+      if (found === null) throw new Error('no plan panel');
+      return found;
+    };
+    const plannerModels = () =>
+      [1, 2, 3, 4, 5]
+        .map((i) =>
+          root.querySelector<HTMLSelectElement>(
+            `[aria-label="Planner ${i} model"]`
+          )
+        )
+        .filter((s) => s !== null)
+        .map((s) => s.value);
+    const withPanel = (planPanel: object) => ({
+      ...getPhaseSettings,
+      planPanel: { ...getPhaseSettings.planPanel, ...planPanel },
+    });
+
+    it('shows the built-in panel with what each planner may spend, and saves the models and efforts the admin chose', async () => {
+      await answer();
+      expect(text(panel())).toContain('Built-in');
+      expect(plannerModels()).toEqual([
+        'claude-haiku-5.5',
+        'gpt-6-luna',
+        'gemini-3.8-flash',
+      ]);
+      expect(text(panel())).toContain("Up to 16 AIU each, of the run's 80 AIU");
+      expect(
+        options('Judge effort').every((e) =>
+          ['Default', 'low', 'medium', 'high', 'xhigh', 'max'].includes(e)
+        )
+      ).toBe(true);
+
+      choose(
+        control<HTMLSelectElement>('Planner 2 model'),
+        'claude-sonnet-5.5'
+      );
+      choose(control<HTMLSelectElement>('Planner 2 effort'), 'high');
+      buttonNamed(panel(), 'Add fallback').click();
+      await settle();
+      expect(control<HTMLSelectElement>('Judge model 3').value).toBe(
+        'claude-haiku-4.5'
+      );
+      choose(control<HTMLSelectElement>('Judge model 3'), 'gpt-6-luna');
+      await settle();
+      choose(control<HTMLSelectElement>('Judge effort'), 'xhigh');
+      await settle();
+      expect(text(panel())).toContain('Unsaved changes');
+      buttonNamed(panel(), 'Save panel').click();
+      await settle();
+      const [patch] = patches();
+      expect(patch?.request.body).toEqual({
+        version: 3,
+        planPanel: {
+          panelists: [
+            { model: 'claude-haiku-5.5' },
+            { model: 'claude-sonnet-5.5', reasoningEffort: 'high' },
+            { model: 'gemini-3.8-flash' },
+          ],
+          judge: {
+            models: ['claude-opus-5.5', 'claude-sonnet-5.5', 'gpt-6-luna'],
+            reasoningEffort: 'xhigh',
+          },
+        },
+      });
+      expect(
+        requestViolations('updatePhaseSettings', patch?.request.body)
+      ).toEqual([]);
+      await respond(patch!, updatePhaseSettings);
+      await answer(updatePhaseSettings);
+      expect(toasts()).toContain('Plan panel saved.');
+    });
+
+    it('flags a model two planners share, refuses an effort a model does not take, and keeps between two and five planners', async () => {
+      await answer();
+      choose(control<HTMLSelectElement>('Planner 3 model'), 'claude-haiku-5.5');
+      await settle();
+      expect(text(panel())).toContain(
+        'Same model as planner 1: allowed, but Claude Haiku 5.5 then gets two ratings per panel in Metrics.'
+      );
+      choose(control<HTMLSelectElement>('Planner 2 effort'), 'max');
+      choose(control<HTMLSelectElement>('Planner 2 model'), 'claude-haiku-4.5');
+      await settle();
+      expect(text(panel())).toContain('claude-haiku-4.5 takes no effort.');
+      expect(buttonNamed(panel(), 'Save panel').disabled).toBe(true);
+
+      buttonNamed(panel(), 'Remove planner 3').click();
+      await settle();
+      expect(buttonNamed(panel(), 'Remove planner 1').disabled).toBe(true);
+      for (let i = 0; i < 3; i++) buttonNamed(panel(), 'Add planner').click();
+      await settle();
+      expect(plannerModels()).toHaveLength(5);
+      expect(buttonNamed(panel(), 'Add planner').disabled).toBe(true);
+
+      buttonNamed(panel(), 'Cancel').click();
+      await settle();
+      expect(plannerModels()).toEqual([
+        'claude-haiku-5.5',
+        'gpt-6-luna',
+        'gemini-3.8-flash',
+      ]);
+      expect(patches()).toEqual([]);
+    });
+
+    it('moves a judge model up, and gives a saved panel back to the built-in one with null', async () => {
+      const saved = {
+        panelists: [
+          { model: 'gpt-6-luna', reasoningEffort: null },
+          { model: 'gemini-3.8-flash', reasoningEffort: null },
+        ],
+        judge: {
+          models: ['claude-sonnet-5.5', 'claude-opus-5.5'],
+          reasoningEffort: 'high',
+        },
+      };
+      await answer(withPanel({ source: 'settings', runsOn: saved, saved }));
+      expect(text(panel())).toContain('Team setting');
+      buttonNamed(panel(), 'Move judge model 2 up').click();
+      await settle();
+      expect(control<HTMLSelectElement>('Judge model 1').value).toBe(
+        'claude-opus-5.5'
+      );
+      buttonNamed(panel(), 'Back to the built-in panel').click();
+      await settle();
+      const [patch] = patches();
+      expect(patch?.request.body).toEqual({ version: 3, planPanel: null });
+      expect(
+        requestViolations('updatePhaseSettings', patch?.request.body)
+      ).toEqual([]);
+      await respond(patch!, updatePhaseSettings);
+      await answer(updatePhaseSettings);
+      expect(toasts()).toContain('Back to the built-in plan panel.');
+      expect(control<HTMLSelectElement>('Judge model 1').value).toBe(
+        'claude-opus-5.5'
+      );
+    });
+
+    it('shows a panel the deployment sets as text, without controls', async () => {
+      await answer(withPanel({ source: 'deployment', editable: false }));
+      expect(text(panel())).toContain('Set by the deployment');
+      expect(text(panel())).toContain(
+        'Set by the deployment (AHOY_PHASE_CONFIG, planning.planPanel).'
+      );
+      expect(panel().querySelectorAll('select, button')).toHaveLength(0);
+      expect(text(panel())).toContain('gemini-3.8-flash');
+    });
   });
 });

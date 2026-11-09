@@ -153,3 +153,45 @@ export function judgeModelsLine(names: readonly string[]): string {
     ? first
     : `${first}, or ${rest.join(' or ')} if your Copilot account may not use it`;
 }
+
+/** The fewest and the most planners a panel has, and the most models its judge names (the API's bounds). */
+export const MIN_PLANNERS = 2;
+export const MAX_PLANNERS = 5;
+export const MAX_JUDGE_MODELS = 5;
+
+/** Where a plan panel comes from: the built-in one, Team settings › Phases, or the deployment's `AHOY_PHASE_CONFIG`. */
+export type PlanPanelOrigin = 'built_in' | 'settings' | 'deployment';
+
+/** Where a plan panel comes from, in words, as a tag beside it. */
+export const PLAN_PANEL_ORIGIN_LABELS: Readonly<
+  Record<PlanPanelOrigin, string>
+> = {
+  built_in: 'Built-in',
+  settings: 'Team setting',
+  deployment: 'Set by the deployment',
+};
+
+/**
+ * What one planner may spend, in nano-AIU: an equal part of the planners' share of a panel run's cap, rounded down as
+ * the worker rounds it. `runCapNanoAiu` is the panel run's cap (the planning phase's times the run factor).
+ */
+export function plannerShareNanoAiu(
+  runCapNanoAiu: number,
+  plannersPercent: number,
+  planners: number
+): number {
+  return Math.floor(
+    (runCapNanoAiu * plannersPercent) / 100 / Math.max(1, planners)
+  );
+}
+
+/** The 0-based index of the first planner before `index` that runs on the same model, or null when none does. */
+export function earlierPlannerOnSameModel(
+  models: readonly string[],
+  index: number
+): number | null {
+  const model = models[index];
+  if (model === undefined || model === '') return null;
+  const at = models.indexOf(model);
+  return at >= 0 && at < index ? at : null;
+}

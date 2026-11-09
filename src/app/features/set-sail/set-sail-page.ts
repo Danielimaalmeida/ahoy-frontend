@@ -21,7 +21,11 @@ import { StoriesStore } from '@core/stores/stories-store';
 import { CurrentUser } from '@core/auth/current-user';
 import { MODEL_SLOTS } from '@domain/models';
 import { PHASES } from '@domain/phases';
-import { catalogModelLabel, judgeModelsLine } from '@domain/plan-panel';
+import {
+  catalogModelLabel,
+  judgeModelsLine,
+  PLAN_PANEL_ORIGIN_LABELS,
+} from '@domain/plan-panel';
 import {
   DEFAULT_PLANNING_MODE,
   plannersLabel,
@@ -298,6 +302,15 @@ function singleText(value: unknown): string | null {
                   <dd>{{ panel.planners }}</dd>
                   <dt>Panel judge</dt>
                   <dd>{{ panel.judge }}</dd>
+                  @if (panel.origin; as origin) {
+                    <dt>Panel models</dt>
+                    <dd>
+                      {{ origin }} ·
+                      <a routerLink="/settings/phases"
+                        >Team settings › Phases</a
+                      >
+                    </dd>
+                  }
                 </dl>
               }
               <span class="ah-hint"
@@ -527,6 +540,10 @@ export class SetSailPage {
     return {
       planners: panel.panelists.map((p) => name(p.model)).join(', '),
       judge: judgeModelsLine(panel.judge.models.map(name)),
+      origin:
+        panel.source === undefined
+          ? null
+          : PLAN_PANEL_ORIGIN_LABELS[panel.source],
     };
   });
 
