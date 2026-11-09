@@ -213,21 +213,36 @@ describe('the Defects section of Team settings', () => {
       'project = PROJ AND issuetype = Defect AND status in (Open, Reopened)',
       'Highest, High, Medium',
       'Off',
+      'Sam Example (q123456)',
       '20 AIU',
     ]);
   });
 
-  it('turns automatic starts on only with an AIU cap and a yes to the spend, sending confirmSpend', async () => {
+  it('turns automatic starts on only with an AIU cap, a person to start as and a yes to the spend, sending confirmSpend', async () => {
     await answer({
       ...updateDefectSettings,
-      defects: { ...updateDefectSettings.defects, budgetNanoAiu: null },
+      defects: {
+        ...updateDefectSettings.defects,
+        budgetNanoAiu: null,
+        startAs: null,
+        startAsName: null,
+      },
     });
     choose(field<HTMLSelectElement>(root, 'Automatic starts'), 'on');
     await settle();
     expect(text(root)).toContain(
       'Automatic starts need an AIU cap per defect.'
     );
+    expect(text(root)).toContain(
+      'Automatic starts need a person to start as: their Copilot token runs the voyages.'
+    );
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    type(field(root, 'Start as'), 'ahoy-defect-watch');
+    await settle();
+    expect(text(root)).toContain(
+      'A qnumber is q then letters or digits, such as q123456.'
+    );
+    type(field(root, 'Start as'), ' Q777 ');
     type(field(root, 'AIU cap per defect'), '15');
     type(field(root, 'Starts per day'), '3');
     await settle();
@@ -242,6 +257,7 @@ describe('the Defects section of Team settings', () => {
     expect(patch?.request.body).toEqual({
       version: 1,
       autoStart: true,
+      startAs: 'q777',
       budgetNanoAiu: 15_000_000_000,
       maxStartsPerDay: 3,
       confirmSpend: true,
@@ -254,6 +270,8 @@ describe('the Defects section of Team settings', () => {
       defects: {
         ...updateDefectSettings.defects,
         autoStart: true,
+        startAs: 'q777',
+        startAsName: null,
         budgetNanoAiu: 15_000_000_000,
         maxStartsPerDay: 3,
         version: 2,

@@ -8151,6 +8151,8 @@ components:
           budgetNanoAiu,
           maxStartsPerDay,
           maxActive,
+          startAs,
+          startAsName,
           version,
           updatedBy,
           updatedByName,
@@ -8190,6 +8192,17 @@ components:
           minimum: 1
           maximum: 20
           description: 'The most stories the watch started that may be open at once (not done, not cancelled).'
+        startAs:
+          type: [string, 'null']
+          pattern: '^q[a-z0-9]{1,62}$'
+          description: >-
+            Who the stories the watch starts run as: their owner, whose Copilot token their runs use. Required while
+            `autoStart` is on.
+        startAsName:
+          {
+            type: [string, 'null'],
+            description: 'The name Ahoy knows for `startAs`, if any.',
+          }
         version:
           {
             type: [integer, 'null'],
@@ -8216,6 +8229,11 @@ components:
           { type: [integer, 'null'], minimum: 1, maximum: 200000000000 }
         maxStartsPerDay: { type: integer, minimum: 1, maximum: 20 }
         maxActive: { type: integer, minimum: 1, maximum: 20 }
+        startAs:
+          type: [string, 'null']
+          minLength: 2
+          maxLength: 63
+          description: 'A qnumber (case and surrounding spaces ignored); required while automatic starts are on.'
         confirmSpend:
           type: boolean
           description: >-

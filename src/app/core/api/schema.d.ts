@@ -5254,6 +5254,10 @@ export interface components {
       readonly maxStartsPerDay: number;
       /** @description The most stories the watch started that may be open at once (not done, not cancelled). */
       readonly maxActive: number;
+      /** @description Who the stories the watch starts run as: their owner, whose Copilot token their runs use. Required while `autoStart` is on. */
+      readonly startAs: string | null;
+      /** @description The name Ahoy knows for `startAs`, if any. */
+      readonly startAsName: string | null;
       /** @description Null until an admin saves anything. */
       readonly version: number | null;
       readonly updatedBy: string | null;
@@ -5270,6 +5274,8 @@ export interface components {
       readonly budgetNanoAiu?: number | null;
       readonly maxStartsPerDay?: number;
       readonly maxActive?: number;
+      /** @description A qnumber (case and surrounding spaces ignored); required while automatic starts are on. */
+      readonly startAs?: string | null;
       /** @description Must be true when the change turns automatic starts on, or raises the cap per defect or the starts per day while they are on: each lets Ahoy spend more AIU by itself. */
       readonly confirmSpend?: boolean;
     };

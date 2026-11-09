@@ -118,9 +118,11 @@ describe('describeDefectEvent', () => {
         watchOn: { from: false, to: true },
         defectsJql: { from: null, to: 'project = PROJ' },
         priorities: { from: ['High'], to: [] },
+        startAs: { from: null, to: 'q123456' },
       },
     };
-    const words = 'Watch: on; Query: changed; Priorities: none';
+    const words =
+      'Watch: on; Query: changed; Priorities: none; Start as: q123456';
     expect(describeDefectEvent('defect_settings.updated', payload)).toBe(words);
     expect(describeSettingsEvent('defect_settings.updated', payload)).toBe(
       words

@@ -112,6 +112,7 @@ const FIELD_NAMES: Readonly<Record<string, string>> = {
   budgetNanoAiu: 'AIU cap per defect',
   maxStartsPerDay: 'Starts per day',
   maxActive: 'Open voyages',
+  startAs: 'Start as',
   // Kept so the history still names a change the component map once made.
   components: 'Components',
 };
@@ -124,6 +125,7 @@ function toWords(field: string, value: unknown): string {
     return typeof value === 'number' ? aiuLabel(value) : 'none';
   if (field === 'maxStartsPerDay' || field === 'maxActive')
     return typeof value === 'number' ? String(value) : '?';
+  if (field === 'startAs') return typeof value === 'string' ? value : 'nobody';
   if (field === 'defectsJql')
     return typeof value === 'string' ? 'changed' : 'removed';
   if (Array.isArray(value))

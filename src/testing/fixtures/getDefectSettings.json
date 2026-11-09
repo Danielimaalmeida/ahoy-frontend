@@ -8,6 +8,8 @@
     "budgetNanoAiu": null,
     "maxStartsPerDay": 2,
     "maxActive": 3,
+    "startAs": null,
+    "startAsName": null,
     "version": null,
     "updatedBy": null,
     "updatedByName": null,
