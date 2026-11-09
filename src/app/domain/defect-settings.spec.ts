@@ -66,12 +66,15 @@ describe('automatic starts in words', () => {
       autoStart: true,
       budgetNanoAiu: 20_000_000_000,
       maxStartsPerDay: 2,
+      startAs: 'q123456',
     };
     const off = { ...on, autoStart: false };
     expect(spendsMore(off, on)).toBe(true);
     expect(spendsMore({ ...on, watchOn: false }, on)).toBe(true);
     expect(spendsMore(on, { ...on, budgetNanoAiu: 30_000_000_000 })).toBe(true);
     expect(spendsMore(on, { ...on, maxStartsPerDay: 3 })).toBe(true);
+    expect(spendsMore(on, { ...on, startAs: 'q777' })).toBe(true);
+    expect(spendsMore(off, { ...off, startAs: 'q777' })).toBe(false);
     expect(
       spendsMore(on, {
         ...on,

@@ -51,19 +51,22 @@ export interface DefectSpend {
   readonly autoStart: boolean;
   readonly budgetNanoAiu: number | null;
   readonly maxStartsPerDay: number;
+  /** Whose Copilot token the voyages run on. */
+  readonly startAs: string | null;
 }
 
 /**
  * Whether going from `was` to `now` lets the watch spend more by itself, which needs the admin's yes (`confirmSpend`):
- * turning automatic starts on, or raising the cap per defect or the starts per day while they are on. Mirrors
- * `ahoy-hosted`'s `spendsMore`.
+ * turning automatic starts on, or, while they are on, raising the cap per defect or the starts per day, or changing
+ * who they start as (another person's Copilot token). Mirrors `ahoy-hosted`'s `spendsMore`.
  */
 export function spendsMore(was: DefectSpend, now: DefectSpend): boolean {
   if (!now.watchOn || !now.autoStart) return false;
   if (!was.watchOn || !was.autoStart) return true;
   return (
     (now.budgetNanoAiu ?? 0) > (was.budgetNanoAiu ?? 0) ||
-    now.maxStartsPerDay > was.maxStartsPerDay
+    now.maxStartsPerDay > was.maxStartsPerDay ||
+    now.startAs !== was.startAs
   );
 }
 

@@ -358,7 +358,9 @@ type PreviewState =
                         ' a day by itself'
                       "
                     >
-                      @if (alreadyOn()) {
+                      @if (alreadyOn() && startAsChanged()) {
+                        The voyages will run on another person's Copilot token.
+                      } @else if (alreadyOn()) {
                         This raises what Ahoy may spend by itself.
                       }
                       Each voyage it starts is capped at the AIU cap per defect,
@@ -591,6 +593,12 @@ export class DefectSettingsPage {
   protected readonly alreadyOn = computed(() => {
     const saved = this.saved();
     return saved !== null && saved.watchOn && saved.autoStart;
+  });
+  /** Whether the form names another person to start as than the saved settings. */
+  protected readonly startAsChanged = computed(() => {
+    const saved = this.saved();
+    const typed = this.typed();
+    return saved !== null && typed !== null && typed.startAs !== saved.startAs;
   });
   /** The most AIU automatic starts may spend in a day, as typed. */
   protected readonly dailySpend = computed(() => {

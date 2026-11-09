@@ -331,6 +331,45 @@ describe('the Defects section of Team settings', () => {
     expect(toasts()).toContain('Defect settings saved.');
   });
 
+  it('asks again for a yes when automatic starts move to another person', async () => {
+    const on = {
+      ...updateDefectSettings,
+      defects: { ...updateDefectSettings.defects, autoStart: true },
+    };
+    await answer(on);
+    type(field(root, 'Start as'), 'q777');
+    await settle();
+    expect(text(root)).toContain(
+      "The voyages will run on another person's Copilot token."
+    );
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    root.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await settle();
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 1,
+      startAs: 'q777',
+      confirmSpend: true,
+    });
+    expect(
+      requestViolations('updateDefectSettings', patch?.request.body)
+    ).toEqual([]);
+    const moved = {
+      ...on,
+      defects: {
+        ...on.defects,
+        startAs: 'q777',
+        startAsName: null,
+        version: 2,
+      },
+    };
+    await respond(patch!, moved);
+    await answer(moved);
+    expect(toasts()).toContain('Defect settings saved.');
+  });
+
   it('refuses caps on starts it cannot keep', async () => {
     await answer(updateDefectSettings);
     type(field(root, 'Open voyages at once'), '21');

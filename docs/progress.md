@@ -1,13 +1,22 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-07 (`perf/setup-once`: Setup is read once, when the app starts; offline checks passed on Node 22
-with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
+Updated 2026-11-09 (`feat/defect-start-as`: Team settings › Defects names who automatic starts run as; offline
+checks passed on Node 22 with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
 outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
+- **This branch (`feat/defect-start-as`, 2026-11-09, asked for by the user: the defect auto-start "didn't know which
+  copilot secret to use"):** Team settings › Defects has **Start as**, a qnumber required while automatic starts are
+  on: the person who owns each voyage the watch starts and whose Copilot token runs it. Changing it while they are on
+  asks for the spend confirmation again ("The voyages will run on another person's Copilot token."). The read-only
+  view shows the person's name and qnumber, and the history names the change. Contract synced from `ahoy-hosted`'s
+  `fix/defect-auto-start-copilot` (migration 0046), which must deploy with it. Checks (cloud container, Node 22.23.4,
+  `@acme-fedev/auth` stubbed in a scratch copy, native bindings installed by hand): `npm run build`, typecheck (app,
+  specs and boundaries), lint, `ng test --watch=false` (218 files, 3,769 tests) and format pass; `api:check` passes.
+  Not run: Node 24, the real auth library, Playwright, a browser, a local or live API, TEST. No AIU was spent.
 - **This branch (`perf/setup-once`, 2026-11-07, asked for by the user: "Só carrega quando a app arranca e mais
   nada"):** `GET /setup` is read once, when the app starts. No page reads it again on its own: not each navigation
   while Ahoy is not ready, not opening Team settings or its Setup section, not a change to My Copilot token. Only the
