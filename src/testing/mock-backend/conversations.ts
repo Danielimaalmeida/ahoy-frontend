@@ -195,7 +195,11 @@ export class ConversationDesk {
         case 'defect':
           if (!JIRA_KEY.test(ref))
             throw refused(at, `There is no defect ${ref}`);
-          items.push({ kind: 'defect', ref, label: `Defect ${ref}` });
+          items.push({
+            kind: 'defect',
+            ref,
+            label: 'Late fee shown twice on the PDF',
+          });
           break;
         case 'meeting_topic': {
           const title = this.topicTitle(ref);
@@ -522,7 +526,7 @@ export class ConversationDesk {
       story: {
         title,
         role: 'a finance user',
-        want: title.charAt(0).toLowerCase() + title.slice(1),
+        want: `Ahoy to ${title.charAt(0).toLowerCase()}${title.slice(1)}`,
         soThat: 'customers pay on time and see why they pay more',
         context: null,
         implementedFeature: null,

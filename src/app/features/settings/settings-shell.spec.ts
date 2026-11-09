@@ -243,7 +243,7 @@ describe('the state of the Teams, Figma, Agents and Phases sections in the navig
 
   it('counts the jobs on, and the paused ones first', () => {
     expect(agentsState(agents(getAgentSettings))).toEqual({
-      label: '2 of 4 on',
+      label: '2 of 5 on',
       off: false,
     });
     expect(

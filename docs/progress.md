@@ -1,7 +1,7 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`feat/product-page`: the Product page with its conversations; typecheck, boundaries and lint
-passed on Node 22 with a stubbed `@acme-fedev/auth`; build and Vitest not run, see Proof). One page: replace it, do not
+Updated 2026-11-09 (`feat/product-page`: the Product page with its conversations, admins only for now; build, typecheck,
+lint, Vitest and format passed on Node 22 with a stubbed `@acme-fedev/auth`). One page: replace it, do not
 append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The
 review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s
 `docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md`
@@ -10,7 +10,8 @@ review of both repositories, with its proposals (not yet agreed), is `ahoy-hoste
 ## Where we are
 
 - **This branch (`feat/product-page`, 2026-11-09, asked for and approved by the user: a page for product people, first
-  slice "conversation with context"):** a **Product** destination (`/product`, between Meetings and Voyages). The left
+  slice "conversation with context"):** a **Product** destination (`/product`, between Meetings and Voyages), shown to admins only for now (the user's call:
+  the link shows when Setup says `canEdit`, and `adminOnly` sends anyone else to Needs you; the API answers 403 too). The left
   column starts a conversation, blank or from a recipe (split an epic, is this story ready, how does it work today),
   and lists one's own and those shared with the team. A conversation pins what the agent reads (Jira issues or epics,
   defects, meeting topics found by a search, Figma links, up to three repositories) and asks; the answer shows as the
@@ -279,11 +280,12 @@ review of both repositories, with its proposals (not yet agreed), is `ahoy-hoste
 ## Proof
 
 - **This branch** (`feat/product-page`, 2026-11-09, cloud container, Node 22.23.4, `@acme-fedev/auth` stubbed in
-  `node_modules`): typecheck (app, specs and boundaries) and lint (ESLint and Stylelint) pass, and the new and changed
-  files are Prettier-formatted. **Not run:** `ng build` and `ng test`, because the platform packages (`sass-embedded`,
-  `rollup`, `lightningcss`, `rolldown`) are missing from this install and fetching them from the public registry was
-  not approved; so the new specs (`domain/conversations`, `features/product`, the mock's conversations) have not run
-  yet. Not run either: Node 24, the real auth library, Playwright, a local or live API, TEST. No AIU was spent.
+  `node_modules`, the platform packages fetched from the public npm registry with the user's approval): `npm run
+build`, typecheck (app, specs and boundaries), lint, `ng test --watch=false` (223 files, 3,820 tests) and `npm run
+format` pass. The page was driven in Chromium against the mock backend (`scripts/mock-api.mjs` run on Node 22 through
+  a local copy with JSON and parameter-property support, not committed: the script itself needs Node 24); screenshots
+  are in the thread. Not run: Node 24, the real auth library, the Playwright e2e suite, a local or live API, TEST. No
+  AIU was spent.
 - **This branch** (`perf/setup-once`, 2026-11-07, cloud container, Node 22.23.4): `npm run build`, typecheck (app,
   specs and boundaries), lint (ESLint and Stylelint), `ng test --watch=false` (218 files, 3,765 tests) and `npm run format` all passed, with
   `@acme-fedev/auth` stubbed in `node_modules` as below. Unit and component tests only; nothing was opened in a

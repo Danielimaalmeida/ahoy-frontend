@@ -100,8 +100,8 @@ describe('pinning context', () => {
       'PROJ-120',
       'Late fees for enterprise accounts',
       'PROJ-456 · Late fee shown twice on the PDF',
-      'Figma · Billing invoices',
-      'repo · web',
+      'Billing invoices',
+      'web',
     ]);
   });
 });

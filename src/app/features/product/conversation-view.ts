@@ -514,7 +514,7 @@ const ACTIVITY_SHOWN = 6;
                 <textarea
                   id="conversation-question"
                   class="ah-input"
-                  [maxlength]="questionMax"
+                  [attr.maxlength]="questionMax"
                   [placeholder]="placeholder()"
                   [value]="draft()"
                   (input)="draft.set(text($event))"

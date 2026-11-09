@@ -103,6 +103,7 @@ import {
 import { World } from './world';
 import listModels from '@testing/fixtures/listModels.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
+import getSetup from '@testing/fixtures/getSetup.json';
 
 const jiraBacklog: JiraBacklog = {
   items: [
@@ -1065,6 +1066,9 @@ export class MockAhoyServer {
           200,
           this.meetings.createIssue(call.actor, call.path['draftId'] ?? '')
         );
+      // Setup as the fixture has it: the person is an admin (`canEdit`), so the admin-only pages open on the mock.
+      case 'getSetup':
+        return jsonResponse(200, getSetup, { 'Cache-Control': 'no-store' });
       case 'listConversations':
         return jsonResponse(200, {
           items: this.conversations.list(call.actor),

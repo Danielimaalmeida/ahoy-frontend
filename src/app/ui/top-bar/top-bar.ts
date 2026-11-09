@@ -75,14 +75,16 @@ const SNOWFLAKE_PATH =
           [routerLinkActiveOptions]="prefix"
           >Meetings</a
         >
-        <a
-          class="ah-nav__item"
-          routerLink="/product"
-          routerLinkActive
-          ariaCurrentWhenActive="page"
-          [routerLinkActiveOptions]="prefix"
-          >Product</a
-        >
+        @if (product()) {
+          <a
+            class="ah-nav__item"
+            routerLink="/product"
+            routerLinkActive
+            ariaCurrentWhenActive="page"
+            [routerLinkActiveOptions]="prefix"
+            >Product</a
+          >
+        }
         <a
           class="ah-nav__item"
           routerLink="/voyages"
@@ -247,6 +249,8 @@ const SNOWFLAKE_PATH =
 export class TopBar {
   /** How many voyages need a person: `awaiting_input`, `awaiting_decision` and `halted`. */
   readonly needsYou = input(0);
+  /** Whether the Product destination shows: to admins only while the page is new. */
+  readonly product = input(false);
   /** The state of the live event stream. */
   readonly live = input<LiveState>('live');
   /** The signed-in person; no avatar when `null`. */

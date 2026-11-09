@@ -12,6 +12,7 @@ class Page {}
   imports: [TopBar],
   template: `<ah-top-bar
     [needsYou]="needsYou()"
+    [product]="product()"
     [live]="live()"
     [user]="user()"
     [(query)]="query"
@@ -20,6 +21,7 @@ class Page {}
 })
 class Host {
   readonly needsYou = signal(4);
+  readonly product = signal(true);
   readonly live = signal<LiveState>('live');
   readonly user = signal<TopBarUser | null>({
     email: 'alex@example.com',
@@ -31,7 +33,7 @@ class Host {
   readonly increment = (count: number): number => count + 1;
 }
 
-async function render(url = '/') {
+async function render(url = '/', product = true) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ path: '**', component: Page }]),
@@ -39,6 +41,7 @@ async function render(url = '/') {
     ],
   });
   const fixture = TestBed.createComponent(Host);
+  fixture.componentInstance.product.set(product);
   const router = TestBed.inject(Router);
   await router.navigateByUrl(url);
   fixture.detectChanges();
@@ -100,6 +103,11 @@ describe('ah-top-bar', () => {
     ]);
   });
 
+  it('shows Product to admins only', async () => {
+    const { nav } = await render('/', false);
+    expect(nav().map((a) => a.getAttribute('href'))).not.toContain('/product');
+  });
+
   for (const [url, destination] of [
     ['/', 'Needs you 4'],
     ['/meetings', 'Meetings'],
@@ -146,7 +154,7 @@ describe('ah-top-bar', () => {
     const { nav } = await render();
     expect(
       nav().map((a) => a.querySelector('.ah-soon')?.textContent ?? null)
-    ).toEqual([null, null, null, null, null, null]);
+    ).toEqual([null, null, null, null, null, null, null]);
   });
 
   it('has Start voyage as its only primary button, a link to the form with the sail icon', async () => {

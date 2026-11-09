@@ -195,7 +195,7 @@ export function pinRefusal(
   return null;
 }
 
-/** What a pinned item's chip says: its key, its title when the page knows it, or a short form of a link. */
+/** What a pinned item's chip says after its kind: its key, its title when the page knows it, or a link's file name. */
 export function contextChipText(item: ContextItemLike): string {
   switch (item.kind) {
     case 'jira':
@@ -209,10 +209,12 @@ export function contextChipText(item: ContextItemLike): string {
         /figma\.com\/(?:design|file|proto)\/[A-Za-z0-9]+\/([^/?#]+)/.exec(
           item.ref
         )?.[1];
-      return `Figma · ${name === undefined ? 'design' : decodeURIComponent(name).replaceAll('-', ' ')}`;
+      return name === undefined
+        ? 'design'
+        : decodeURIComponent(name).replaceAll('-', ' ');
     }
     case 'repository':
-      return `repo · ${item.ref}`;
+      return item.ref;
   }
 }
 

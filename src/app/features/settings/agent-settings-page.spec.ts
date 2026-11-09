@@ -369,7 +369,13 @@ describe('the Agents section of Team settings', () => {
         '[aria-label="Agent jobs"] tbody td:first-of-type'
       ),
     ].map((c) => text(c));
-    expect(cells).toEqual(['story-refiner', 'halt-diagnoser', 'Off', 'Off']);
+    expect(cells).toEqual([
+      'story-refiner',
+      'halt-diagnoser',
+      'Off',
+      'Off',
+      'Off',
+    ]);
     expect(text(root)).toContain(
       'Knowledge repository: none (the proposals stay on the reviews)'
     );

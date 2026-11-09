@@ -184,8 +184,12 @@ describe('Product on the mock backend', () => {
     expect(text(page.root.querySelector('aside'))).toContain(
       'None yet. Start one above'
     );
-    expect(text(page.root.querySelector('a.line'))).toContain(
-      'How does dunning work today? CONV-1 · 1 question · Sam Example'
+    const line = page.root.querySelector('a.line');
+    expect(text(line?.querySelector('.title'))).toBe(
+      'How does dunning work today?'
+    );
+    expect(text(line?.querySelector('.ah-hint'))).toBe(
+      'CONV-1 · 1 question · Sam Example'
     );
     expect(text(page.root.querySelector('ah-empty-state'))).toContain(
       'Start a conversation'
@@ -268,7 +272,9 @@ describe('Product on the mock backend', () => {
       [...page.root.querySelectorAll('.reads .pin .text')].map(text);
     expect(chips()).toEqual(['PROJ-120', 'Late fees for enterprise accounts']);
 
-    buttonNamed(page.root, 'Unpin PROJ-120').click();
+    page.root
+      .querySelector<HTMLButtonElement>('button[aria-label="Unpin PROJ-120"]')!
+      .click();
     await flush(page);
     expect(chips()).toEqual(['Late fees for enterprise accounts']);
   });
@@ -304,7 +310,7 @@ describe('Product on the mock backend', () => {
     );
     expect(buttonNamed(composer(page.root)!, 'Send').disabled).toBe(true);
 
-    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 4);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 7);
     const turn = () => page.root.querySelector('article.turn')!;
     expect(text(turn())).toContain('Answering');
     expect([...turn().querySelectorAll('.activity li')].map(text)).toContain(
@@ -328,8 +334,8 @@ describe('Product on the mock backend', () => {
     expect(text(turn().querySelector('.ask'))).toContain(
       'Q1 · Should the fee show on invoices already sent?'
     );
-    expect(text(page.root.querySelector('aside.side'))).toMatch(
-      /Spent \d+\.\d AIU/
+    expect(text(page.root.querySelector('aside.side dl dd'))).toMatch(
+      /^\d+\.\d AIU$/
     );
     expect(text(page.root.querySelector('aside.side'))).toContain('Warm:');
 
