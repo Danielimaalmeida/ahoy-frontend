@@ -2,6 +2,7 @@
   "key": "PROJ-126",
   "title": "Search orders by customer email",
   "owner": "priya@example.com",
+  "ownerName": null,
   "phase": "intake",
   "status": "halted",
   "haltReason": "stopped_by_user",

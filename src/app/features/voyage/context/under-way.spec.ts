@@ -9,6 +9,7 @@ function story(overrides: Partial<Story> = {}): Story {
     key: 'PROJ-140',
     title: 'Add audit trail to admin role changes',
     owner: 'jordan@example.com',
+    ownerName: null,
     phase: 'implementation',
     status: 'running',
     haltReason: null,

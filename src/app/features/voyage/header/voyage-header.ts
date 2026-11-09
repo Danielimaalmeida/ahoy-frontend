@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { shortSha } from '@domain/identifiers';
+import { ownerLabel, shortSha } from '@domain/identifiers';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { PhaseStepper } from '@ui/phase-stepper/phase-stepper';
@@ -155,8 +155,8 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
           <dl class="header__meta">
             <div>
               <dt>Owner · billed</dt>
-              <dd>
-                {{ v.story.owner }}
+              <dd [title]="v.story.owner">
+                {{ ownerLabel(v.story) }}
                 @if (isOwner()) {
                   <span class="ah-hint">(you)</span>
                 }
@@ -231,6 +231,8 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
 export class VoyageHeader {
   private readonly context = inject(VoyageContext);
   private readonly dialogs = inject(VoyageDialogs);
+  /** The owner's name, or the q-number while the name is not known; the q-number is the tooltip. */
+  protected readonly ownerLabel = ownerLabel;
 
   protected readonly stoppedAt = this.context.stoppedAt;
   protected readonly isOwner = this.context.isOwner;

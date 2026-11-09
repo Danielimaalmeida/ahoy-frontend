@@ -3110,6 +3110,7 @@ export interface components {
       readonly key: components['schemas']['StoryKey'];
       readonly title: string | null;
       readonly owner: components['schemas']['Actor'];
+      readonly ownerName: components['schemas']['ActorName'];
       readonly phase: components['schemas']['Phase'];
       readonly status: components['schemas']['StoryStatus'];
       readonly haltReason: string | null;

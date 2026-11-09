@@ -2,6 +2,7 @@
   "key": "PROJ-118",
   "title": "Rate-limit the public search endpoint",
   "owner": "jordan@example.com",
+  "ownerName": null,
   "phase": "planning",
   "status": "ready",
   "haltReason": null,

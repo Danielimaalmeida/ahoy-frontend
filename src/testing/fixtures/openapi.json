@@ -6874,6 +6874,7 @@
           "key",
           "title",
           "owner",
+          "ownerName",
           "phase",
           "status",
           "haltReason",
@@ -6895,6 +6896,9 @@
           },
           "owner": {
             "$ref": "#/components/schemas/Actor"
+          },
+          "ownerName": {
+            "$ref": "#/components/schemas/ActorName"
           },
           "phase": {
             "$ref": "#/components/schemas/Phase"

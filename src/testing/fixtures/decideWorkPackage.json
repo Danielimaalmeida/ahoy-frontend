@@ -2,6 +2,7 @@
   "key": "PROJ-131",
   "title": "Show invoice totals in the billing dashboard",
   "owner": "alex@example.com",
+  "ownerName": null,
   "phase": "implementation",
   "status": "ready",
   "haltReason": null,

@@ -275,8 +275,8 @@ describe('isModelCatalog', () => {
 describe('isStory', () => {
   const REQUIRED = Object.keys(getStory);
 
-  it('checks all thirteen fields of the contract', () => {
-    expect(REQUIRED).toHaveLength(13);
+  it('checks all fourteen fields of the contract', () => {
+    expect(REQUIRED).toHaveLength(14);
   });
 
   it.each(REQUIRED)(
