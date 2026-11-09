@@ -1,13 +1,26 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`feat/plan-panel-models`: Team settings › Phases sets the plan panel's models; offline checks
-passed on Node 22 with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
+Updated 2026-11-09 (`feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
+checks on Node 24 with the private registry did not run, substitutes passed on Node 22). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
 outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
+- **This branch (`feat/metrics-trends`, 2026-11-09, asked for by the user: "is the harness getting better?"):** a
+  Trends section on Metrics (`/metrics/trends`) reads `GET /metrics/trends` (ahoy-hosted `feat/metrics-trends`, which
+  must deploy with it) and shows 13 signals in three groups (autonomy, quality, cost and speed), each the last 4 weeks
+  against the 4 before with a weekly sparkline, green or red by whether the harness got better (a change under a tenth
+  is flat); the halts per week by diagnosis; and the signals per harness version (control commit). The span is 8, 12
+  or 26 weeks; the owner, repository and model filters apply, the period does not and is hidden there. The division
+  and the verdicts are in `domain/metrics-trends.ts`. Trends loads on its own (the period report is not read, nor
+  waited for, there); the week still running is faded and marked "(so far)". Required checks (Node 24 with the private
+  `@acme-fedev` registry): **not run**, so the branch is not done. Substitutes (cloud, Node 22.23.4, `@acme-fedev/auth`
+  stubbed and native bindings installed by hand in `node_modules`): `npm run build`, typecheck (app, specs and
+  boundaries), lint, `ng test` (219 files, 3,805 tests, after merging `main`) and `npm run format` pass. The page was opened at 1440 px (light
+  and dark) and 390 px on the in-browser mock with its fictional trend before the review fixes, not after. Not run:
+  Node 24, the real auth library, Playwright, a local or live API, TEST. No AIU was spent.
 - **This branch (`style/defects-table`, 2026-11-09, asked for by the user: the Backlog › Defects table "looks a bit
   messy"):** the table uses the panel head and cell-sub line of the other tables. Header: one muted line ("4 defects,
   the latest first · last check 12 min ago"); the triage note moved to the column's tooltip. Component is plain text,

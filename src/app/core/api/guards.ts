@@ -151,6 +151,8 @@ import {
   type MetricsError,
   type MetricsHalt,
   type MetricsReport,
+  type MetricsTrends,
+  type TrendSignals,
   type DiagnosisFinding,
   type AnswerAccepted,
   type Artifact,
@@ -1005,6 +1007,71 @@ const planPanelModelRatings = shape<PlanPanelModelRatings>({
   unfinished: count,
   averageNanoAiu: nullable(nanoAiu),
 });
+
+/** The span of a trend: 8, 12 or 26 weeks. */
+const trendWeeks: Check = (value, at) =>
+  value === 8 || value === 12 || value === 26
+    ? null
+    : // An empty range: every other value is refused, with the words of a whole number.
+      wholeNumber('8, 12 or 26 weeks', 1, 0)(value, at);
+
+/** The counts and medians of one window of the trends. */
+const trendSignals = shape<TrendSignals>({
+  voyages: count,
+  halts: count,
+  repeatedHalts: count,
+  questions: count,
+  humanDecisions: count,
+  sentBack: count,
+  gateEvaluations: count,
+  gatePasses: count,
+  finished: count,
+  done: count,
+  finishedWithRework: count,
+  packages: count,
+  unverified: count,
+  runs: count,
+  runErrors: count,
+  nanoAiu,
+  fixNanoAiu: nanoAiu,
+  medianNanoAiuPerDone: nullable(nanoAiu),
+  medianSecondsToDone: nullableCount,
+  waits: count,
+  medianWaitSeconds: nullableCount,
+});
+
+const trendWindow = shape<MetricsTrends['recent']>({
+  from: timestamp,
+  to: timestamp,
+  signals: trendSignals,
+});
+
+/** Whether the harness is getting better: the signals per week, the recent window against the one before, per version. */
+export const isMetricsTrends = guard<MetricsTrends>(
+  'MetricsTrends',
+  shape<MetricsTrends>({
+    weeks: trendWeeks,
+    from: timestamp,
+    to: timestamp,
+    series: arrayOf(
+      shape<Item<MetricsTrends['series']>>({
+        weekStart: isoDate,
+        signals: trendSignals,
+        haltsByKind: recordOf(count),
+      })
+    ),
+    recent: trendWindow,
+    previous: trendWindow,
+    versions: arrayOf(
+      shape<Item<MetricsTrends['versions']>>({
+        controlSha: nonEmptyText,
+        firstRunAt: timestamp,
+        lastRunAt: timestamp,
+        signals: trendSignals,
+      })
+    ),
+  })
+);
 
 /** How the judges rated each model's plans over a period, and how many panels each judge model ran. */
 export const isPlanPanelMetrics = guard<PlanPanelMetrics>(

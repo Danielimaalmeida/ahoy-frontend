@@ -342,6 +342,9 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   get('/runs/PROJ-123-planning-1/plan-panel');
   get('/stories/NOPE-1/plan-panels');
   get('/metrics/plan-panel');
+  get('/metrics/trends');
+  get('/metrics/trends?weeks=8&owner=alex%40example.com');
+  get('/metrics/trends?weeks=5');
   get('/metrics/plan-panel?from=2026-09-01T00:00:00Z&to=2026-11-01T00:00:00Z');
   get('/metrics/plan-panel?from=2026-10-02T00:00:00Z&to=2026-10-01T00:00:00Z');
   get('/metrics/plan-panel?from=2024-01-01T00:00:00Z&to=2026-10-01T00:00:00Z');
@@ -515,6 +518,7 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'listStoryPlanPanels',
       'getRunPlanPanel',
       'getPlanPanelMetrics',
+      'getMetricsTrends',
       'getRun',
       'listQuestions',
       'answerQuestion',

@@ -75,6 +75,7 @@ import {
   isMeetingStoryDraftList,
   isMeetingTopic,
   isMetricsReport,
+  isMetricsTrends,
   isMeetingNoteAnswerResult,
   isMoveMeetingTopicResult,
   isMeetingSearchResult,
@@ -206,6 +207,8 @@ import type {
   MetricsFormat,
   MetricsQuery,
   MetricsReport,
+  MetricsTrends,
+  MetricsTrendsQuery,
   MetricsTable,
   ModelPlan,
   ModelCatalog,
@@ -270,10 +273,17 @@ function errorBody(raw: unknown): unknown {
   }
 }
 
-/** The query parameters of `getMetrics` and `exportMetrics`, only those that are set. */
-function metricsParams(query: MetricsQuery): HttpParams {
+/** The query parameters of the metrics operations (`getMetrics`, `getMetricsTrends`...), only those that are set. */
+function metricsParams(query: MetricsQuery & MetricsTrendsQuery): HttpParams {
   let params = new HttpParams();
-  for (const name of ['from', 'to', 'owner', 'repo', 'model'] as const) {
+  for (const name of [
+    'from',
+    'to',
+    'weeks',
+    'owner',
+    'repo',
+    'model',
+  ] as const) {
     const value = query[name];
     if (value !== undefined) params = params.set(name, value);
   }
@@ -365,6 +375,18 @@ export class ApiClient {
       'getMetrics',
       '/metrics',
       isMetricsReport,
+      metricsParams(query)
+    );
+  }
+
+  /** Whether the harness is getting better: the signals per week, recent against before, per version. Spends nothing. */
+  getMetricsTrends(
+    query: MetricsTrendsQuery = {}
+  ): Promise<ApiResult<MetricsTrends>> {
+    return this.get(
+      'getMetricsTrends',
+      '/metrics/trends',
+      isMetricsTrends,
       metricsParams(query)
     );
   }

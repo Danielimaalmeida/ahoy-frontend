@@ -140,6 +140,34 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/metrics/trends': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Whether the harness is getting better, week by week and per harness version.
+     * @description Read-only and 0 AIU (design §5, "Metrics", trends): the same signals per Monday-based week for the last
+     *     `weeks` weeks (the last one is the current, partial week), for the last 28 days and the 28 before them, and per
+     *     harness version (the control commit the runs used; at most six, the most recently used first). Every signal is a count or a
+     *     median, never a ratio: halts and the halts that repeat the story's previous diagnosis, agents' questions, human
+     *     gate decisions and send-backs, gate verdicts and passes (a poll whose CI is still running left out), finished,
+     *     done and reworked stories, work packages worked and delivered unverified, runs and run errors, AIU and the AIU
+     *     of runs that redid work, the median AIU of a done story, the median time from its first run to done, and the
+     *     median wait on a person. `owner`, `repo` and `model` filter as in `GET /metrics`. AIU in integer nano-AIU,
+     *     durations in whole seconds.
+     */
+    readonly get: operations['getMetricsTrends'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/metrics/plan-panel': {
     readonly parameters: {
       readonly query?: never;
@@ -3986,6 +4014,64 @@ export interface components {
       /** @description Pass as `after` to continue. */
       readonly lastEventId: components['schemas']['EventId'] | null;
     };
+    /** @description The signals of one window of `GET /metrics/trends`. Counts and medians; the reader divides. */
+    readonly TrendSignals: {
+      readonly voyages: number;
+      readonly halts: number;
+      readonly repeatedHalts: number;
+      readonly questions: number;
+      readonly humanDecisions: number;
+      readonly sentBack: number;
+      readonly gateEvaluations: number;
+      readonly gatePasses: number;
+      readonly finished: number;
+      readonly done: number;
+      readonly finishedWithRework: number;
+      readonly packages: number;
+      readonly unverified: number;
+      readonly runs: number;
+      readonly runErrors: number;
+      readonly nanoAiu: number;
+      readonly fixNanoAiu: number;
+      readonly medianNanoAiuPerDone: number | null;
+      readonly medianSecondsToDone: number | null;
+      readonly waits: number;
+      readonly medianWaitSeconds: number | null;
+    };
+    readonly TrendWindow: {
+      /** Format: date-time */
+      readonly from: string;
+      /** Format: date-time */
+      readonly to: string;
+      readonly signals: components['schemas']['TrendSignals'];
+    };
+    /** @description Whether the harness is getting better (`GET /metrics/trends`). */
+    readonly MetricsTrends: {
+      /** @enum {integer} */
+      readonly weeks: 8 | 12 | 26;
+      /** Format: date-time */
+      readonly from: string;
+      /** Format: date-time */
+      readonly to: string;
+      readonly series: readonly {
+        /** Format: date */
+        readonly weekStart: string;
+        readonly signals: components['schemas']['TrendSignals'];
+        readonly haltsByKind: {
+          readonly [key: string]: number;
+        };
+      }[];
+      readonly recent: components['schemas']['TrendWindow'];
+      readonly previous: components['schemas']['TrendWindow'];
+      readonly versions: readonly {
+        readonly controlSha: string;
+        /** Format: date-time */
+        readonly firstRunAt: string;
+        /** Format: date-time */
+        readonly lastRunAt: string;
+        readonly signals: components['schemas']['TrendSignals'];
+      }[];
+    };
     /** @description The metrics of one period (`GET /metrics`). AIU in integer nano-AIU, durations in whole seconds. */
     readonly MetricsReport: {
       /** Format: date-time */
@@ -5766,6 +5852,34 @@ export interface operations {
         content: {
           readonly 'text/csv': string;
           readonly 'application/json': readonly Record<string, never>[];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly getMetricsTrends: {
+    readonly parameters: {
+      readonly query?: {
+        readonly weeks?: 8 | 12 | 26;
+        readonly owner?: components['parameters']['MetricsOwner'];
+        readonly repo?: components['parameters']['MetricsRepo'];
+        readonly model?: components['parameters']['MetricsModel'];
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The trend of the weeks. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MetricsTrends'];
         };
       };
       readonly 400: components['responses']['Problem'];
