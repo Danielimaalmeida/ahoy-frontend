@@ -3,6 +3,7 @@
     "key": "PROJ-131",
     "title": "Let customers download receipts as PDF",
     "owner": "sam@example.com",
+    "ownerName": null,
     "phase": "planning",
     "status": "awaiting_input",
     "haltReason": null,

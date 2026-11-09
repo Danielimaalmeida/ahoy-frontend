@@ -2,6 +2,7 @@
   "key": "PROJ-123",
   "title": "Show invoice due date on the billing page",
   "owner": "alex@example.com",
+  "ownerName": null,
   "phase": "pr_review",
   "status": "ready",
   "haltReason": null,

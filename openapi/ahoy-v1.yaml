@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 5e94ac07c107107492a2eb9e4815cf85a7a5b460, with the plan panel settings of ahoy-hosted feat/plan-panel-models
+# Commit: 90e59a69cc81e71f5f20ed3b0d31be5fccdbffe9
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -3995,6 +3995,7 @@ components:
           key,
           title,
           owner,
+          ownerName,
           phase,
           status,
           haltReason,
@@ -4011,6 +4012,7 @@ components:
         key: { $ref: '#/components/schemas/StoryKey' }
         title: { type: [string, 'null'] }
         owner: { $ref: '#/components/schemas/Actor' }
+        ownerName: { $ref: '#/components/schemas/ActorName' }
         phase: { $ref: '#/components/schemas/Phase' }
         status: { $ref: '#/components/schemas/StoryStatus' }
         haltReason: { type: [string, 'null'] }

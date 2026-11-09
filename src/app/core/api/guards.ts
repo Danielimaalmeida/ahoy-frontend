@@ -273,6 +273,7 @@ const story = shape<Story>({
   key: storyKey,
   title: nullable(text),
   owner: actor,
+  ownerName: nullable(text),
   phase: nonEmptyText,
   status: oneOf(STORY_STATUSES),
   haltReason: nullable(text),

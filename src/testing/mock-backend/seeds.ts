@@ -147,6 +147,7 @@ class SeedBuilder {
       key: fields.key,
       title: fields.title,
       owner: fields.owner,
+      ownerName: null,
       phase: 'intake',
       status: 'ready',
       haltReason: null,

@@ -143,6 +143,8 @@ export interface Story {
   readonly key: string;
   readonly title: string | null;
   readonly owner: string;
+  /** The owner's name from the identity provider; null when none is known, and then the q-number is shown. */
+  readonly ownerName: string | null;
   readonly phase: Phase;
   readonly status: StoryStatus;
   readonly haltReason: string | null;
