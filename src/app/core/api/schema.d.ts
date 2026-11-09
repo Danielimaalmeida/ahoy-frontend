@@ -2866,9 +2866,9 @@ export interface paths {
      *     phase's own limit).
      *     Raising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`
      *     otherwise). A field `AHOY_PHASE_CONFIG` sets, the plan panel when it sets `planning.planPanel`, and the
-     *     catalogue when `AHOY_MODEL_CATALOG` is set, are refused (`400`). A catalogue that drops a model the saved plan
-     *     panel names is refused too. `version` is required once the settings are saved, and absent before
-     *     (`409 stale_version`).
+     *     catalogue when `AHOY_MODEL_CATALOG` is set, are refused (`400`). The panel's models stay in the catalogue, as
+     *     the phases' do; a catalogue change that leaves one of them an effort it no longer takes is refused. `version`
+     *     is required once the settings are saved, and absent before (`409 stale_version`).
      */
     readonly patch: operations['updatePhaseSettings'];
     readonly trace?: never;
@@ -5502,8 +5502,8 @@ export interface components {
         readonly agent: string;
         readonly servers: readonly string[];
       }[];
-      /** @description The plan panel stories planned by panel run on (D22). Its run's cap and deadline are the planning phase's times `runFactor`; the planners share `panelistsBudgetPercent` of the cap equally, the judge keeps the rest. */
-      readonly planPanel: {
+      /** @description The plan panel stories planned by panel run on (D22). Its run's cap and deadline are the planning phase's times `runFactor`; the planners share `panelistsBudgetPercent` of the cap equally, the judge keeps the rest. Always sent; absent only on a server older than the plan panel settings. */
+      readonly planPanel?: {
         readonly source: components['schemas']['PlanPanelSource'];
         /** @description False when `AHOY_PHASE_CONFIG` sets the panel. */
         readonly editable: boolean;

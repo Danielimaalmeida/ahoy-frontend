@@ -314,6 +314,12 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
               phase's.
             </p>
           }
+          @if (p.models) {
+            <p class="ah-hint models__note">
+              These are the team's panel models now: a planning run that has
+              already started keeps the models it started on.
+            </p>
+          }
         } @else {
           <ah-skeleton-rows [rows]="1" [columns]="planningColumns" />
         }

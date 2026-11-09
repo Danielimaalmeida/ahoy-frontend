@@ -370,6 +370,9 @@ describe('ModelsTab on the mock backend', () => {
       expect(planningFact(page, 'Models')).toBe(
         'Team setting · Team settings › Phases'
       );
+      expect(section?.textContent).toContain(
+        'a planning run that has already started keeps the models it started on'
+      );
       expect(section?.textContent).not.toContain(
         'does not use the planning model'
       );

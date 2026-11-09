@@ -1221,7 +1221,9 @@ export const CATALOG_SOURCES = listOf<CatalogSource>()([
 ]);
 
 /** The plan panel on the Phases page: what stories planned by panel run on, where it comes from, and what was saved. */
-export type PhaseSettingsPlanPanel = PhaseSettingsPage['planPanel'];
+export type PhaseSettingsPlanPanel = NonNullable<
+  PhaseSettingsPage['planPanel']
+>;
 
 /** A plan panel as `updatePhaseSettings` takes it; null in `PhaseSettingsChange.planPanel` is the built-in one. */
 export type PlanPanelChange = NonNullable<PhaseSettingsChange['planPanel']>;

@@ -447,7 +447,11 @@ function isEffort(word: string): word is ReasoningEffort {
                 </tr>
               }
             } @else {
-              @for (m of panel().runsOn.judge.models; track m; let i = $index) {
+              @for (
+                m of panel().runsOn.judge.models;
+                track $index;
+                let i = $index
+              ) {
                 <tr>
                   <th scope="row" class="order">{{ i + 1 }}</th>
                   <td>
@@ -724,9 +728,9 @@ export class PlanPanelSettings {
   /** The efforts every judge model takes, with the one chosen now. */
   protected judgeEffortChoices(): string[] {
     const typed = this.typed();
-    const choices = REASONING_EFFORTS.filter((e) =>
+    const choices: string[] = REASONING_EFFORTS.filter((e) =>
       typed.judges.every((m) => this.effortsOf(m)?.includes(e) ?? true)
-    ) as string[];
+    );
     return typed.judgeEffort !== MODEL_DEFAULT &&
       !choices.includes(typed.judgeEffort)
       ? [typed.judgeEffort, ...choices]
@@ -824,7 +828,7 @@ export class PlanPanelSettings {
   private effortProblem(model: string, effort: string): string | null {
     if (effort === MODEL_DEFAULT) return null;
     const efforts = this.effortsOf(model);
-    if (efforts === null || efforts.includes(effort as ReasoningEffort))
+    if (efforts === null || (isEffort(effort) && efforts.includes(effort)))
       return null;
     return efforts.length === 0
       ? `${model} takes no effort.`

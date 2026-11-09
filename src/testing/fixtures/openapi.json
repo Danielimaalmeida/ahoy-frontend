@@ -6018,7 +6018,7 @@
         "operationId": "updatePhaseSettings",
         "tags": ["settings"],
         "summary": "Change a phase's model, effort, AIU cap, timeout or wait for CI, the plan panel, or the model catalogue.",
-        "description": "Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model\nmust be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed\n`budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap, whichever is higher, and never a\nphase's own limit).\nRaising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`\notherwise). A field `AHOY_PHASE_CONFIG` sets, the plan panel when it sets `planning.planPanel`, and the\ncatalogue when `AHOY_MODEL_CATALOG` is set, are refused (`400`). A catalogue that drops a model the saved plan\npanel names is refused too. `version` is required once the settings are saved, and absent before\n(`409 stale_version`).\n",
+        "description": "Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model\nmust be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed\n`budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap, whichever is higher, and never a\nphase's own limit).\nRaising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`\notherwise). A field `AHOY_PHASE_CONFIG` sets, the plan panel when it sets `planning.planPanel`, and the\ncatalogue when `AHOY_MODEL_CATALOG` is set, are refused (`400`). The panel's models stay in the catalogue, as\nthe phases' do; a catalogue change that leaves one of them an effort it no longer takes is refused. `version`\nis required once the settings are saved, and absent before (`409 stale_version`).\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -14506,7 +14506,6 @@
           "maxBudgetNanoAiu",
           "phases",
           "agentMcpServers",
-          "planPanel",
           "catalog",
           "version",
           "updatedBy",
@@ -14624,7 +14623,7 @@
               "runFactor",
               "panelistsBudgetPercent"
             ],
-            "description": "The plan panel stories planned by panel run on (D22). Its run's cap and deadline are the planning phase's times `runFactor`; the planners share `panelistsBudgetPercent` of the cap equally, the judge keeps the rest.",
+            "description": "The plan panel stories planned by panel run on (D22). Its run's cap and deadline are the planning phase's times `runFactor`; the planners share `panelistsBudgetPercent` of the cap equally, the judge keeps the rest. Always sent; absent only on a server older than the plan panel settings.",
             "properties": {
               "source": {
                 "$ref": "#/components/schemas/PlanPanelSource"

@@ -560,11 +560,14 @@ function catalogOf(
                 >Default and an empty field take the deployment's value, shown
                 in grey. A story's own budget still bounds every run.</span
               >
-              <span class="ah-hint"
-                >A story planned by panel does not run on the Planning model: it
-                runs on the plan panel below, with twice the Planning cap and
-                timeout.</span
-              >
+              @if (page.planPanel; as panel) {
+                <span class="ah-hint"
+                  >A story planned by panel does not run on the Planning model:
+                  it runs on the plan panel below, with
+                  {{ factorLabel(panel.runFactor) }} the Planning cap and
+                  timeout.</span
+                >
+              }
               @if (page.agentMcpServers.length) {
                 <span class="ah-hint agent-mcp"
                   >The agent profiles' own MCP servers, at the content
@@ -623,16 +626,18 @@ function catalogOf(
             }
           </ah-panel>
 
-          <ah-plan-panel-settings
-            [panel]="page.planPanel"
-            [catalog]="page.catalog.models"
-            [planningCapNanoAiu]="planningCap(page)"
-            [canEdit]="page.canEdit"
-            [busy]="busy()"
-            [saving]="saving()"
-            [error]="panelFailure()"
-            (save)="savePlanPanel(page, $event)"
-          />
+          @if (page.planPanel; as panel) {
+            <ah-plan-panel-settings
+              [panel]="panel"
+              [catalog]="page.catalog.models"
+              [planningCapNanoAiu]="planningCap(page)"
+              [canEdit]="page.canEdit"
+              [busy]="busy()"
+              [saving]="saving()"
+              [error]="panelFailure()"
+              (save)="savePlanPanel(page, $event)"
+            />
+          }
 
           <ah-panel>
             <ah-panel-head
@@ -1281,6 +1286,11 @@ export class PhaseSettingsPage {
   }
 
   /** The Planning phase's AIU cap per run now, from which a panel run's cap is counted; null when there is none. */
+  /** "twice", or "3 times": how much more a panel run may spend and take than a Planning run. */
+  protected factorLabel(factor: number): string {
+    return factor === 2 ? 'twice' : `${factor} times`;
+  }
+
   protected planningCap(page: PhasesPage): number | null {
     return (
       page.phases.find((row) => row.phase === 'planning')?.runsOn
@@ -1303,7 +1313,10 @@ export class PhaseSettingsPage {
       change === null
         ? 'Back to the built-in plan panel.'
         : 'Plan panel saved.',
-      (fresh) => this.planPanelSettings()?.show(fresh.planPanel.runsOn)
+      (fresh) => {
+        if (fresh.planPanel)
+          this.planPanelSettings()?.show(fresh.planPanel.runsOn);
+      }
     );
   }
 

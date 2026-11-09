@@ -19,6 +19,7 @@ import {
   type,
 } from '@testing/dom';
 import { requestViolations } from '@testing/fixtures/contract';
+import { withoutField } from '@testing/fixtures/mutate';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import listPhaseSettingsEvents from '@testing/fixtures/listPhaseSettingsEvents.json';
 import updatePhaseSettings from '@testing/fixtures/updatePhaseSettings.json';
@@ -522,6 +523,9 @@ describe('the Phases section of Team settings', () => {
         'gemini-3.8-flash',
       ]);
       expect(text(panel())).toContain("Up to 16 AIU each, of the run's 80 AIU");
+      expect(text(root)).toContain(
+        'it runs on the plan panel below, with twice the Planning cap and timeout.'
+      );
       expect(
         options('Judge effort').every((e) =>
           ['Default', 'low', 'medium', 'high', 'xhigh', 'max'].includes(e)
@@ -630,6 +634,13 @@ describe('the Phases section of Team settings', () => {
       expect(control<HTMLSelectElement>('Judge model 1').value).toBe(
         'claude-opus-5.5'
       );
+    });
+
+    it('shows no Plan panel section for a server older than the plan panel settings', async () => {
+      await answer(withoutField(getPhaseSettings, 'planPanel') as object);
+      expect(root.querySelector('ah-plan-panel-settings')).toBeNull();
+      expect(text(root)).not.toContain('A story planned by panel');
+      expect(text(row('Planning'))).toContain('claude-sonnet-5');
     });
 
     it('shows a panel the deployment sets as text, without controls', async () => {

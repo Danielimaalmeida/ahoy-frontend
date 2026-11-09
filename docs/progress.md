@@ -17,7 +17,7 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   (Built-in, Team setting, Set by the deployment) with a link to Team settings › Phases. Contract synced from
   `ahoy-hosted`'s `feat/plan-panel-models` (migration 0047), which must deploy with it. Checks (cloud container, Node
   22.23.4, `@acme-fedev/auth` stubbed in a scratch copy): `npm run build`, typecheck (app, specs and boundaries), lint,
-  `ng test --watch=false` (218 files, 3,776 tests) and format pass; the mirror half of `api:check` passes. Not run:
+  `ng test --watch=false` (218 files, 3,777 tests) and format pass; the mirror half of `api:check` passes. Not run:
   Node 24, the real auth library, Playwright, a browser, a local or live API, TEST. No AIU was spent.
 - **This branch (`feat/defect-start-as`, 2026-11-09, asked for by the user: the defect auto-start "didn't know which
   copilot secret to use"):** Team settings › Defects has **Start as**, a qnumber required while automatic starts are

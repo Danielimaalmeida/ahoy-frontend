@@ -180,9 +180,9 @@ export function plannerShareNanoAiu(
   plannersPercent: number,
   planners: number
 ): number {
-  return Math.floor(
-    (runCapNanoAiu * plannersPercent) / 100 / Math.max(1, planners)
-  );
+  // Integer steps: the planners' share first, then each one's part (the same result as the worker's single floor).
+  const share = Math.floor((runCapNanoAiu * plannersPercent) / 100);
+  return Math.floor(share / Math.max(1, planners));
 }
 
 /** The 0-based index of the first planner before `index` that runs on the same model, or null when none does. */
