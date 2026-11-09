@@ -2620,9 +2620,10 @@ export interface paths {
      * @description Anyone allowed into Ahoy. The installation's steps (fixed in the chart, read-only here), then the team's (fixed
      *     in Team settings, the required ones first). Each says `done`, `missing`, `attention` or `optional`, one line,
      *     and the settings section that fixes it. Until every required step is done the UI says Ahoy is not ready.
-     *     It saves nothing and spends nothing: every state comes from a settings row or a check the API already makes.
-     *     The MCP servers are not required: the API cannot read the MCP Secret, so the step lists what the phases ask
-     *     for. 0 AIU.
+     *     It saves nothing and spends nothing: every state comes from a settings row, a check the API already makes, or
+     *     what the running reconciler last reported (its dispatch, the MCP server names it could read, and when it was
+     *     last seen), since the API cannot see the reconciler's environment or the MCP Secret. The MCP servers are not
+     *     required: the step compares what the phases and agent profiles ask for with those names. 0 AIU.
      */
     readonly get: operations['getSetup'];
     readonly put?: never;
@@ -2844,12 +2845,12 @@ export interface paths {
       readonly cookie?: never;
     };
     /**
-     * Each phase's default model and effort, AIU cap per run, timeout and wait for CI, and the model catalogue.
+     * Each phase's default model and effort, AIU cap per run, timeout and wait for CI, the plan panel, and the model catalogue.
      * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). For each phase, `runsOn` is what
      *     its runs use now, `deployment` what the deployment gives it (the built-in phases and `AHOY_PHASE_CONFIG`),
      *     `saved` what an admin set (null: the deployment's), and `pinned` the fields `AHOY_PHASE_CONFIG` sets, which
-     *     only the deployment can change. The reconciler and the API read a change within seconds, without a restart.
-     *     0 AIU.
+     *     only the deployment can change. `planPanel` is the models a story planned by panel runs on, and where they come
+     *     from. The reconciler and the API read a change within seconds, without a restart. 0 AIU.
      */
     readonly get: operations['getPhaseSettings'];
     readonly put?: never;
@@ -2858,14 +2859,16 @@ export interface paths {
     readonly options?: never;
     readonly head?: never;
     /**
-     * Change a phase's model, effort, AIU cap, timeout or wait for CI, or the model catalogue.
+     * Change a phase's model, effort, AIU cap, timeout or wait for CI, the plan panel, or the model catalogue.
      * @description Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model
      *     must be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed
      *     `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap, whichever is higher, and never a
      *     phase's own limit).
      *     Raising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`
-     *     otherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused
-     *     (`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).
+     *     otherwise). A field `AHOY_PHASE_CONFIG` sets, the plan panel when it sets `planning.planPanel`, and the
+     *     catalogue when `AHOY_MODEL_CATALOG` is set, are refused (`400`). The panel's models stay in the catalogue, as
+     *     the phases' do; a catalogue change that leaves one of them an effort it no longer takes is refused. `version`
+     *     is required once the settings are saved, and absent before (`409 stale_version`).
      */
     readonly patch: operations['updatePhaseSettings'];
     readonly trace?: never;
@@ -3403,7 +3406,7 @@ export interface components {
       /** @description The control commit whose `phases.tsv` filled the defaults; null when it could not be read. */
       readonly controlSha: string | null;
       readonly defaults: readonly components['schemas']['SlotDefault'][];
-      /** @description The models a story planned by panel runs on (`setStoryPlanningMode`). Absent on a server older than the plan panel. */
+      /** @description The models a story planned by panel runs on (`setStoryPlanningMode`), with `source`. Absent on a server older than the plan panel. */
       readonly planPanel?: components['schemas']['PlanPanelConfig'];
     };
     /**
@@ -3416,8 +3419,15 @@ export interface components {
       readonly planningMode: components['schemas']['PlanningMode'];
       readonly reason?: string;
     };
+    /**
+     * @description Where a plan panel comes from: `built_in` (the code's), `settings` (Team settings › Phases) or `deployment` (`AHOY_PHASE_CONFIG`'s `planning.planPanel`, which wins and which the team settings cannot change).
+     * @enum {string}
+     */
+    readonly PlanPanelSource: 'built_in' | 'settings' | 'deployment';
     /** @description The models of a panel: its planners, and the judge's models, best first. */
     readonly PlanPanelConfig: {
+      /** @description Where the panel comes from; `GET /models` sets it, absent on a server older than the setting. */
+      readonly source?: components['schemas']['PlanPanelSource'];
       readonly panelists: readonly {
         readonly model: components['schemas']['ModelId'];
         readonly reasoningEffort:
@@ -5107,7 +5117,7 @@ export interface components {
       /** @description Whether the person is an admin, who may change them. */
       readonly canEdit: boolean;
       readonly prComments: components['schemas']['PrCommentSettings'];
-      /** @description Whether this deployment's reconciler can post replies (Docker or Kubernetes dispatch). */
+      /** @description Whether the reconciler, as it last reported, can post replies (Docker or Kubernetes dispatch). */
       readonly repliesPostable: boolean;
       /** @description The most comments a round may be given. */
       readonly maxCommentsPerRound: number;
@@ -5344,7 +5354,7 @@ export interface components {
     readonly BranchReleaseSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
       readonly canEdit: boolean;
-      /** @description Whether this deployment's reconciler starts workflows (Docker or Kubernetes dispatch). */
+      /** @description Whether the reconciler, as it last reported, starts workflows (Docker or Kubernetes dispatch). */
       readonly dispatchable: boolean;
       readonly repositories: readonly components['schemas']['BranchReleaseRepository'][];
     };
@@ -5442,7 +5452,7 @@ export interface components {
     };
     readonly StoryBranchReleases: {
       readonly key: string;
-      /** @description Whether this deployment's reconciler starts workflows; where it does not, releases stay queued. */
+      /** @description Whether the reconciler, as it last reported, starts workflows; where it does not, releases stay queued. */
       readonly dispatchable: boolean;
       readonly targets: readonly components['schemas']['BranchReleaseTarget'][];
       readonly releases: readonly components['schemas']['BranchRelease'][];
@@ -5492,6 +5502,18 @@ export interface components {
         readonly agent: string;
         readonly servers: readonly string[];
       }[];
+      /** @description The plan panel stories planned by panel run on (D22). Its run's cap and deadline are the planning phase's times `runFactor`; the planners share `panelistsBudgetPercent` of the cap equally, the judge keeps the rest. Always sent; absent only on a server older than the plan panel settings. */
+      readonly planPanel?: {
+        readonly source: components['schemas']['PlanPanelSource'];
+        /** @description False when `AHOY_PHASE_CONFIG` sets the panel. */
+        readonly editable: boolean;
+        readonly runsOn: components['schemas']['PlanPanelConfig'];
+        readonly builtIn: components['schemas']['PlanPanelConfig'];
+        /** @description The panel an admin saved; null: none. */
+        readonly saved: components['schemas']['PlanPanelConfig'] | null;
+        readonly runFactor: number;
+        readonly panelistsBudgetPercent: number;
+      };
       readonly catalog: {
         /** @enum {string} */
         readonly source: 'built_in' | 'file' | 'settings';
@@ -5499,7 +5521,7 @@ export interface components {
         readonly editable: boolean;
         /** @description The catalogue an admin saved; null: none. */
         readonly saved: readonly components['schemas']['CatalogModel'][] | null;
-        /** @description The models people may choose now, with each model a phase names. */
+        /** @description The models people may choose now, with each model a phase or the plan panel names. */
         readonly models: readonly components['schemas']['CatalogModel'][];
       };
       /** @description Null until an admin saves anything. */
@@ -5531,6 +5553,19 @@ export interface components {
               readonly components['schemas']['ReasoningEffort'][] | null;
           }[]
         | null;
+      /** @description The plan panel stories planned by panel run on; null gives it back to the built-in one. Every model must be in the catalogue the change leaves, and each effort one its model takes (the judge's, one every judge model takes). It changes no cap. */
+      readonly planPanel?: {
+        readonly panelists: readonly {
+          readonly model: components['schemas']['ModelId'];
+          readonly reasoningEffort?:
+            components['schemas']['ReasoningEffort'] | null;
+        }[];
+        readonly judge: {
+          readonly models: readonly components['schemas']['ModelId'][];
+          readonly reasoningEffort?:
+            components['schemas']['ReasoningEffort'] | null;
+        };
+      } | null;
       /** @description Must be true when the change raises any phase's AIU cap per run. */
       readonly confirmSpend?: boolean;
     };

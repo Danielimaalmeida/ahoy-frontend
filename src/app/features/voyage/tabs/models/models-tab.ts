@@ -8,7 +8,7 @@ import {
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiClient } from '@core/api/api-client';
 import type { ModelCatalog, ModelSlot, SlotModel } from '@core/api/types';
 import {
@@ -17,7 +17,11 @@ import {
   type CommandErrorView,
 } from '@core/commands/command-error';
 import { CREW } from '@domain/models';
-import { catalogModelLabel, judgeModelsLine } from '@domain/plan-panel';
+import {
+  catalogModelLabel,
+  judgeModelsLine,
+  PLAN_PANEL_ORIGIN_LABELS,
+} from '@domain/plan-panel';
 import {
   PLANNING_MODE_LABELS,
   plannersLabel,
@@ -83,6 +87,7 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
     PanelBody,
     PanelFoot,
     PanelHead,
+    RouterLink,
     SkeletonRows,
     Source,
     Table,
@@ -293,6 +298,13 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
               <dd>{{ m.planners }}</dd>
               <dt>Judge</dt>
               <dd>{{ m.judge }}</dd>
+              @if (m.origin; as origin) {
+                <dt>Models</dt>
+                <dd>
+                  {{ origin }} ·
+                  <a routerLink="/settings/phases">Team settings › Phases</a>
+                </dd>
+              }
             </dl>
           }
           @if (p.mode === 'panel') {
@@ -300,6 +312,12 @@ const SKELETON_COLUMNS: readonly SkeletonColumn[] = [
               A panel does not use the planning model above. It costs more AIU
               than one planner: its cap and its deadline are twice the planning
               phase's.
+            </p>
+          }
+          @if (p.models) {
+            <p class="ah-hint models__note">
+              These are the team's panel models now: a planning run that has
+              already started keeps the models it started on.
             </p>
           }
         } @else {
@@ -355,6 +373,10 @@ export class ModelsTab {
           : {
               planners: panel.panelists.map((p) => name(p.model)).join(', '),
               judge: judgeModelsLine(panel.judge.models.map(name)),
+              origin:
+                panel.source === undefined
+                  ? null
+                  : PLAN_PANEL_ORIGIN_LABELS[panel.source],
             },
     };
   });

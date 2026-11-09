@@ -1,4 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   FormArray,
@@ -18,6 +25,7 @@ import {
   type PhaseSettingsChange,
   type PhaseSettingsPage as PhasesPage,
   type PhaseSettingsRow,
+  type PlanPanelChange,
   type ReasoningEffort,
 } from '@core/api/types';
 import { MODEL_ID, MODEL_ID_MAX } from '@core/api/guards';
@@ -48,6 +56,7 @@ import { Table } from '@ui/table/table';
 import { ToastService } from '@ui/toast/toast';
 import { PhaseSettingsStore } from './phase-settings-store';
 import { PhasesSpendDialog, type PhasesSpendData } from './phases-spend-dialog';
+import { PlanPanelSettings } from './plan-panel-settings';
 import { SECTION_STYLES } from './section-styles';
 import { settingsErrorView } from './settings-errors';
 import { SettingsHistory } from './settings-history';
@@ -213,6 +222,7 @@ function catalogOf(
     Panel,
     PanelFoot,
     PanelHead,
+    PlanPanelSettings,
     ReactiveFormsModule,
     SettingsHistory,
     Skeleton,
@@ -289,7 +299,8 @@ function catalogOf(
       <h2>Phases</h2>
       <span class="ah-muted"
         >Each phase's default model and effort, the AIU cap of one run, its
-        timeout, and the models people may choose.</span
+        timeout, the plan panel's models, and the models people may
+        choose.</span
       >
     </div>
 
@@ -549,6 +560,14 @@ function catalogOf(
                 >Default and an empty field take the deployment's value, shown
                 in grey. A story's own budget still bounds every run.</span
               >
+              @if (page.planPanel; as panel) {
+                <span class="ah-hint"
+                  >A story planned by panel does not run on the Planning model:
+                  it runs on the plan panel below, with
+                  {{ factorLabel(panel.runFactor) }} the Planning cap and
+                  timeout.</span
+                >
+              }
               @if (page.agentMcpServers.length) {
                 <span class="ah-hint agent-mcp"
                   >The agent profiles' own MCP servers, at the content
@@ -606,6 +625,19 @@ function catalogOf(
               </ah-panel-foot>
             }
           </ah-panel>
+
+          @if (page.planPanel; as panel) {
+            <ah-plan-panel-settings
+              [panel]="panel"
+              [catalog]="page.catalog.models"
+              [planningCapNanoAiu]="planningCap(page)"
+              [canEdit]="page.canEdit"
+              [busy]="busy()"
+              [saving]="saving()"
+              [error]="panelFailure()"
+              (save)="savePlanPanel(page, $event)"
+            />
+          }
 
           <ah-panel>
             <ah-panel-head
@@ -702,7 +734,7 @@ function catalogOf(
                 <span class="ah-hint"
                   >Efforts as a list, such as "low, medium, high"; "none" for a
                   model that takes no effort; empty, any effort. A model a phase
-                  runs on stays one people can pick.</span
+                  or the plan panel runs on stays one people can pick.</span
                 >
                 @if (catalogProblem(); as problem) {
                   <span class="err">{{ problem }}</span>
@@ -881,6 +913,11 @@ export class PhaseSettingsPage {
   protected readonly busy = computed(() => this.saving() || this.confirming());
   private readonly saveError = signal<ApiError | null>(null);
   private readonly catalogError = signal<ApiError | null>(null);
+  private readonly panelError = signal<ApiError | null>(null);
+  private readonly planPanelSettings = viewChild(PlanPanelSettings);
+  protected readonly panelFailure = computed(() =>
+    this.errorView(this.panelError())
+  );
   protected readonly saveFailure = computed(() =>
     this.errorView(this.saveError())
   );
@@ -1245,6 +1282,41 @@ export class PhaseSettingsPage {
       this.catalogError,
       'Back to the built-in models.',
       (fresh) => this.showCatalog(fresh)
+    );
+  }
+
+  /** The Planning phase's AIU cap per run now, from which a panel run's cap is counted; null when there is none. */
+  /** "twice", or "3 times": how much more a panel run may spend and take than a Planning run. */
+  protected factorLabel(factor: number): string {
+    return factor === 2 ? 'twice' : `${factor} times`;
+  }
+
+  protected planningCap(page: PhasesPage): number | null {
+    return (
+      page.phases.find((row) => row.phase === 'planning')?.runsOn
+        .budgetNanoAiu ?? null
+    );
+  }
+
+  /** Saves the plan panel, or gives it back to the built-in one (null). It changes no cap, so it asks nothing first. */
+  protected async savePlanPanel(
+    page: PhasesPage,
+    change: PlanPanelChange | null
+  ): Promise<void> {
+    if (this.busy()) return;
+    await this.send(
+      {
+        ...(page.version !== null ? { version: page.version } : {}),
+        planPanel: change,
+      },
+      this.panelError,
+      change === null
+        ? 'Back to the built-in plan panel.'
+        : 'Plan panel saved.',
+      (fresh) => {
+        if (fresh.planPanel)
+          this.planPanelSettings()?.show(fresh.planPanel.runsOn);
+      }
     );
   }
 

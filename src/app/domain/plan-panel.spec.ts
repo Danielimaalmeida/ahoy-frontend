@@ -3,6 +3,7 @@ import {
   PANELIST_STATUS_LABELS,
   bestMembers,
   catalogModelLabel,
+  earlierPlannerOnSameModel,
   formatAverageScore,
   formatGateRatio,
   formatScore,
@@ -10,6 +11,8 @@ import {
   judgeModelsLine,
   panelSummaryLine,
   panelistStatusModifier,
+  plannerShareNanoAiu,
+  PLAN_PANEL_ORIGIN_LABELS,
   rankMembers,
   scoreBarPercent,
   unfinishedMembers,
@@ -212,5 +215,34 @@ describe('judgeModelsLine', () => {
 
   it('shows a dash when there is no judge model', () => {
     expect(judgeModelsLine([])).toBe('—');
+  });
+});
+
+describe('plannerShareNanoAiu', () => {
+  it("splits the planners' share of the run cap equally, rounded down as the worker does", () => {
+    // An 80 AIU panel run: 60% for the planners.
+    expect(plannerShareNanoAiu(80_000_000_000, 60, 3)).toBe(16_000_000_000);
+    expect(plannerShareNanoAiu(80_000_000_000, 60, 4)).toBe(12_000_000_000);
+    expect(plannerShareNanoAiu(10, 60, 4)).toBe(1);
+  });
+});
+
+describe('earlierPlannerOnSameModel', () => {
+  it('names the first earlier planner on the same model, and none for the first or a blank one', () => {
+    const models = ['haiku', 'luna', 'flash', 'luna', ''];
+    expect(earlierPlannerOnSameModel(models, 3)).toBe(1);
+    expect(earlierPlannerOnSameModel(models, 1)).toBeNull();
+    expect(earlierPlannerOnSameModel(models, 4)).toBeNull();
+    expect(earlierPlannerOnSameModel(models, 9)).toBeNull();
+  });
+});
+
+describe('PLAN_PANEL_ORIGIN_LABELS', () => {
+  it('says where a panel comes from in a word or two', () => {
+    expect(PLAN_PANEL_ORIGIN_LABELS).toEqual({
+      built_in: 'Built-in',
+      settings: 'Team setting',
+      deployment: 'Set by the deployment',
+    });
   });
 });

@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 5ff12d652b68362216d54f649affdec4b493d48b
+# Commit: 5e94ac07c107107492a2eb9e4815cf85a7a5b460, with the plan panel settings of ahoy-hosted feat/plan-panel-models
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -3227,9 +3227,10 @@ paths:
         Anyone allowed into Ahoy. The installation's steps (fixed in the chart, read-only here), then the team's (fixed
         in Team settings, the required ones first). Each says `done`, `missing`, `attention` or `optional`, one line,
         and the settings section that fixes it. Until every required step is done the UI says Ahoy is not ready.
-        It saves nothing and spends nothing: every state comes from a settings row or a check the API already makes.
-        The MCP servers are not required: the API cannot read the MCP Secret, so the step lists what the phases ask
-        for. 0 AIU.
+        It saves nothing and spends nothing: every state comes from a settings row, a check the API already makes, or
+        what the running reconciler last reported (its dispatch, the MCP server names it could read, and when it was
+        last seen), since the API cannot see the reconciler's environment or the MCP Secret. The MCP servers are not
+        required: the step compares what the phases and agent profiles ask for with those names. 0 AIU.
       responses:
         '200':
           description: The steps.
@@ -3462,13 +3463,15 @@ paths:
     get:
       operationId: getPhaseSettings
       tags: [settings]
-      summary: Each phase's default model and effort, AIU cap per run, timeout and wait for CI, and the model catalogue.
+      summary: >-
+        Each phase's default model and effort, AIU cap per run, timeout and wait for CI, the plan panel, and the model
+        catalogue.
       description: |
         Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). For each phase, `runsOn` is what
         its runs use now, `deployment` what the deployment gives it (the built-in phases and `AHOY_PHASE_CONFIG`),
         `saved` what an admin set (null: the deployment's), and `pinned` the fields `AHOY_PHASE_CONFIG` sets, which
-        only the deployment can change. The reconciler and the API read a change within seconds, without a restart.
-        0 AIU.
+        only the deployment can change. `planPanel` is the models a story planned by panel runs on, and where they come
+        from. The reconciler and the API read a change within seconds, without a restart. 0 AIU.
       responses:
         '200':
           description: The phases' settings.
@@ -3480,15 +3483,17 @@ paths:
     patch:
       operationId: updatePhaseSettings
       tags: [settings]
-      summary: Change a phase's model, effort, AIU cap, timeout or wait for CI, or the model catalogue.
+      summary: Change a phase's model, effort, AIU cap, timeout or wait for CI, the plan panel, or the model catalogue.
       description: |
         Admins only. A value sets a field, `null` gives it back to the deployment, a field left out keeps it. A model
         must be in the catalogue the change leaves, and an effort one the model takes. A cap may not exceed
         `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU` or the deployment's own cap, whichever is higher, and never a
         phase's own limit).
         Raising any phase's cap lets each of its runs spend more AIU, so it needs `confirmSpend: true` (`400`
-        otherwise). A field `AHOY_PHASE_CONFIG` sets, and the catalogue when `AHOY_MODEL_CATALOG` is set, are refused
-        (`400`). `version` is required once the settings are saved, and absent before (`409 stale_version`).
+        otherwise). A field `AHOY_PHASE_CONFIG` sets, the plan panel when it sets `planning.planPanel`, and the
+        catalogue when `AHOY_MODEL_CATALOG` is set, are refused (`400`). The panel's models stay in the catalogue, as
+        the phases' do; a catalogue change that leaves one of them an effort it no longer takes is refused. `version`
+        is required once the settings are saved, and absent before (`409 stale_version`).
       requestBody:
         required: true
         content:
@@ -4570,8 +4575,8 @@ components:
         planPanel:
           $ref: '#/components/schemas/PlanPanelConfig'
           description: >-
-            The models a story planned by panel runs on (`setStoryPlanningMode`). Absent on a server older than the plan
-            panel.
+            The models a story planned by panel runs on (`setStoryPlanningMode`), with `source`. Absent on a server older
+            than the plan panel.
     PlanningMode:
       type: string
       enum: [standard, panel]
@@ -4586,12 +4591,21 @@ components:
         expectedVersion: { $ref: '#/components/schemas/Version' }
         planningMode: { $ref: '#/components/schemas/PlanningMode' }
         reason: { type: string, minLength: 1, maxLength: 2000 }
+    PlanPanelSource:
+      type: string
+      enum: [built_in, settings, deployment]
+      description: >-
+        Where a plan panel comes from: `built_in` (the code's), `settings` (Team settings › Phases) or `deployment`
+        (`AHOY_PHASE_CONFIG`'s `planning.planPanel`, which wins and which the team settings cannot change).
     PlanPanelConfig:
       type: object
       required: [panelists, judge]
       additionalProperties: false
       description: "The models of a panel: its planners, and the judge's models, best first."
       properties:
+        source:
+          $ref: '#/components/schemas/PlanPanelSource'
+          description: 'Where the panel comes from; `GET /models` sets it, absent on a server older than the setting.'
         panelists:
           type: array
           minItems: 2
@@ -7908,7 +7922,7 @@ components:
         prComments: { $ref: '#/components/schemas/PrCommentSettings' }
         repliesPostable:
           type: boolean
-          description: "Whether this deployment's reconciler can post replies (Docker or Kubernetes dispatch)."
+          description: 'Whether the reconciler, as it last reported, can post replies (Docker or Kubernetes dispatch).'
         maxCommentsPerRound:
           {
             type: integer,
@@ -8367,7 +8381,7 @@ components:
           }
         dispatchable:
           type: boolean
-          description: "Whether this deployment's reconciler starts workflows (Docker or Kubernetes dispatch)."
+          description: 'Whether the reconciler, as it last reported, starts workflows (Docker or Kubernetes dispatch).'
         repositories:
           type: array
           items: { $ref: '#/components/schemas/BranchReleaseRepository' }
@@ -8528,7 +8542,7 @@ components:
         key: { type: string }
         dispatchable:
           type: boolean
-          description: "Whether this deployment's reconciler starts workflows; where it does not, releases stay queued."
+          description: 'Whether the reconciler, as it last reported, starts workflows; where it does not, releases stay queued.'
         targets:
           type: array
           items: { $ref: '#/components/schemas/BranchReleaseTarget' }
@@ -8656,6 +8670,39 @@ components:
               servers:
                 type: array
                 items: { type: string, minLength: 1 }
+        planPanel:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              source,
+              editable,
+              runsOn,
+              builtIn,
+              saved,
+              runFactor,
+              panelistsBudgetPercent,
+            ]
+          description: >-
+            The plan panel stories planned by panel run on (D22). Its run's cap and deadline are the planning phase's
+            times `runFactor`; the planners share `panelistsBudgetPercent` of the cap equally, the judge keeps the rest.
+            Always sent; absent only on a server older than the plan panel settings.
+          properties:
+            source: { $ref: '#/components/schemas/PlanPanelSource' }
+            editable:
+              {
+                type: boolean,
+                description: 'False when `AHOY_PHASE_CONFIG` sets the panel.',
+              }
+            runsOn: { $ref: '#/components/schemas/PlanPanelConfig' }
+            builtIn: { $ref: '#/components/schemas/PlanPanelConfig' }
+            saved:
+              description: 'The panel an admin saved; null: none.'
+              oneOf:
+                - $ref: '#/components/schemas/PlanPanelConfig'
+                - { type: 'null' }
+            runFactor: { type: integer, minimum: 1 }
+            panelistsBudgetPercent: { type: integer, minimum: 1, maximum: 100 }
         catalog:
           type: object
           additionalProperties: false
@@ -8675,7 +8722,7 @@ components:
                 - { type: 'null' }
             models:
               type: array
-              description: 'The models people may choose now, with each model a phase names.'
+              description: 'The models people may choose now, with each model a phase or the plan panel names.'
               items: { $ref: '#/components/schemas/CatalogModel' }
         version:
           {
@@ -8732,6 +8779,45 @@ components:
                         maxItems: 5
                         items: { $ref: '#/components/schemas/ReasoningEffort' }
                       - { type: 'null' }
+            - { type: 'null' }
+        planPanel:
+          description: >-
+            The plan panel stories planned by panel run on; null gives it back to the built-in one. Every model must be
+            in the catalogue the change leaves, and each effort one its model takes (the judge's, one every judge model
+            takes). It changes no cap.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [panelists, judge]
+              properties:
+                panelists:
+                  type: array
+                  minItems: 2
+                  maxItems: 5
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [model]
+                    properties:
+                      model: { $ref: '#/components/schemas/ModelId' }
+                      reasoningEffort:
+                        oneOf:
+                          - { $ref: '#/components/schemas/ReasoningEffort' }
+                          - { type: 'null' }
+                judge:
+                  type: object
+                  additionalProperties: false
+                  required: [models]
+                  properties:
+                    models:
+                      type: array
+                      minItems: 1
+                      maxItems: 5
+                      items: { $ref: '#/components/schemas/ModelId' }
+                    reasoningEffort:
+                      oneOf:
+                        - { $ref: '#/components/schemas/ReasoningEffort' }
+                        - { type: 'null' }
             - { type: 'null' }
         confirmSpend:
           type: boolean

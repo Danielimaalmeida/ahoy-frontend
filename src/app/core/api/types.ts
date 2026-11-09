@@ -35,6 +35,8 @@ export type SlotDefault = Schemas['SlotDefault'];
 export type ModelCatalog = Schemas['ModelCatalog'];
 /** The models a story planned by panel runs on: its planners, and the judge's models, best first (`ModelCatalog.planPanel`). */
 export type PlanPanelConfig = Schemas['PlanPanelConfig'];
+/** Where a plan panel comes from: the built-in one, Team settings › Phases, or the deployment's `AHOY_PHASE_CONFIG`. */
+export type PlanPanelSource = Schemas['PlanPanelSource'];
 
 /** One Jira issue from the configured read-only backlog search. */
 export type JiraBacklogIssue = Schemas['JiraBacklogIssue'];
@@ -83,6 +85,11 @@ export const STORY_STATUSES = listOf<StoryStatus>()([
 /** How a story is planned (`PlanningMode`): by one planner, or by a panel of planners and a judge. */
 export type PlanningMode = Schemas['PlanningMode'];
 export const PLANNING_MODES = listOf<PlanningMode>()(['standard', 'panel']);
+export const PLAN_PANEL_SOURCES = listOf<PlanPanelSource>()([
+  'built_in',
+  'settings',
+  'deployment',
+]);
 
 /** How a panel planner's session ended (`PlanPanelMember.status`). Only `completed` leaves a draft for the judge. */
 export type PanelistStatus = Schemas['PlanPanelMember']['status'];
@@ -1212,6 +1219,14 @@ export const CATALOG_SOURCES = listOf<CatalogSource>()([
   'file',
   'settings',
 ]);
+
+/** The plan panel on the Phases page: what stories planned by panel run on, where it comes from, and what was saved. */
+export type PhaseSettingsPlanPanel = NonNullable<
+  PhaseSettingsPage['planPanel']
+>;
+
+/** A plan panel as `updatePhaseSettings` takes it; null in `PhaseSettingsChange.planPanel` is the built-in one. */
+export type PlanPanelChange = NonNullable<PhaseSettingsChange['planPanel']>;
 
 /** One phase's change: a value sets a field, null gives it back to the deployment. */
 export type PhaseChange = Schemas['PhaseChange'];
