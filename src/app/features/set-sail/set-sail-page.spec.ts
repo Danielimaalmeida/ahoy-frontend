@@ -432,6 +432,12 @@ describe('the Set sail page', () => {
       expect(page.fact('Panel judge')).toBe(
         'claude-opus-5.5, or Claude Sonnet 5 if your Copilot account may not use it'
       );
+      expect(page.fact('Panel models')?.replace(/\s+/g, ' ')).toBe(
+        'Team setting · Team settings › Phases'
+      );
+      expect(page.link('Team settings › Phases')?.getAttribute('href')).toBe(
+        '/settings/phases'
+      );
     });
 
     it('shows no panel models, and does not say how many planners, for a server older than the plan panel', async () => {
@@ -440,6 +446,7 @@ describe('the Set sail page', () => {
         from(Promise.resolve(new HttpResponse({ status: 200, body: older })))
       );
       expect(page.fact('Panel planners')).toBeUndefined();
+      expect(page.fact('Panel models')).toBeUndefined();
       expect(
         choice(page.root, 'Panel · several planners and a judge')
       ).toBeDefined();

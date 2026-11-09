@@ -1,7 +1,7 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`feat/defect-start-as`: Team settings › Defects names who automatic starts run as; offline
-checks passed on Node 22 with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
+Updated 2026-11-09 (`feat/plan-panel-models`: Team settings › Phases sets the plan panel's models; offline checks
+passed on Node 22 with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
 outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
@@ -16,6 +16,17 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   Triage already says Ignored. Cells are top-aligned. Checks (cloud, Node 22.23.4, `@acme-fedev/auth` stubbed in a
   scratch copy): build, typecheck, lint, `ng test` (218 files, 3,769 tests) and format pass. Screenshots came from the
   component's test DOM with the global styles, not a running app. Not run: Node 24, Playwright, a local or live API.
+- **`feat/plan-panel-models` (merged, PR #79, 2026-11-09, asked for by the user: the panel's and the judge's models were
+  not configurable):** Team settings › Phases has a **Plan panel** section: two to five planners, each a model and an
+  effort, with what each may spend of the panel run's cap, and the judge's models in order (the first the owner's
+  account may use, the rest fallbacks) with one effort. Only catalogue models; a model two planners share is allowed
+  but flagged. "Back to the built-in panel" sends `null`; a panel the deployment sets (`AHOY_PHASE_CONFIG`
+  `planning.planPanel`) is shown as text. Set sail and the voyage's Models tab say where the panel's models come from
+  (Built-in, Team setting, Set by the deployment) with a link to Team settings › Phases. Contract synced from
+  `ahoy-hosted`'s `feat/plan-panel-models` (migration 0047), which must deploy with it. Checks (cloud container, Node
+  22.23.4, `@acme-fedev/auth` stubbed in a scratch copy): `npm run build`, typecheck (app, specs and boundaries), lint,
+  `ng test --watch=false` (218 files, 3,777 tests) and format pass; the mirror half of `api:check` passes. Not run:
+  Node 24, the real auth library, Playwright, a browser, a local or live API, TEST. No AIU was spent.
 - **This branch (`feat/defect-start-as`, 2026-11-09, asked for by the user: the defect auto-start "didn't know which
   copilot secret to use"):** Team settings › Defects has **Start as**, a qnumber required while automatic starts are
   on: the person who owns each voyage the watch starts and whose Copilot token runs it. Changing it while they are on
@@ -318,6 +329,8 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Next, in order
 
+- **`feat/plan-panel-models`** (2026-11-09): review and merge with `ahoy-hosted`'s branch of the same name (the API
+  first or together; migration 0047 with the others), then check the section on TEST as an admin.
 - **After `feat/portability-1-meeting-labels` deploys with its API** (2026-11-06, D23): an admin saves our team's own
   two names in Team settings › Meetings, or TEST's meeting pages and Confluence copies say "Us" and "Stakeholders".
 - **After `feat/portability-4-copilot-token` deploys with its API** (2026-11-06, D23): each person saves their Copilot
