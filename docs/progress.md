@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
+Updated 2026-11-09 (`fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
 checks on Node 24 with the private registry did not run, substitutes passed on Node 22). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
@@ -8,7 +8,13 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
-- **This branch (`feat/metrics-trends`, 2026-11-09, asked for by the user: "is the harness getting better?"):** a
+- **This branch (`fix/metrics-trends-labels`, 2026-11-09, after the user's first look at Trends on TEST):** a pill
+  whose 4 weeks before had nothing to compare (runs start on 2026-10-13) reads "nothing before", not "no data"; a
+  chart's folded series reads "3 more", not "Other", which read like the halt kind `other`. The zeros in Voyages done
+  and the 250% unverified were the API's (ahoy-hosted `fix/metrics-done-by-decision`). Required checks (Node 24, private
+  registry): **not run**. Substitutes (Node 22.23.4, `@acme-fedev/auth` stubbed): build, typecheck, lint, `ng test`
+  (219 files, 3,805 tests) and format pass. Not opened in a browser; not run against an API.
+- **`feat/metrics-trends` (merged 2026-11-09, asked for by the user: "is the harness getting better?"):** a
   Trends section on Metrics (`/metrics/trends`) reads `GET /metrics/trends` (ahoy-hosted `feat/metrics-trends`, which
   must deploy with it) and shows 13 signals in three groups (autonomy, quality, cost and speed), each the last 4 weeks
   against the 4 before with a weekly sparkline, green or red by whether the harness got better (a change under a tenth
