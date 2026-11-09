@@ -4,8 +4,9 @@ import { MetricsGates } from './metrics-gates';
 import { MetricsHalts } from './metrics-halts';
 import { MetricsOverview } from './metrics-overview';
 import { MetricsShell } from './metrics-shell';
+import { MetricsTrendsSection } from './metrics-trends';
 
-/** Metrics: the overview and its three sections, which share the shell's `MetricsStore`. Read-only, 0 AIU. */
+/** Metrics: the overview and its four sections, which share the shell's `MetricsStore`. Read-only, 0 AIU. */
 export const METRICS_ROUTES: Routes = [
   {
     path: '',
@@ -16,6 +17,11 @@ export const METRICS_ROUTES: Routes = [
         pathMatch: 'full',
         title: 'Metrics · Ahoy',
         component: MetricsOverview,
+      },
+      {
+        path: 'trends',
+        title: 'Trends · Metrics · Ahoy',
+        component: MetricsTrendsSection,
       },
       { path: 'cost', title: 'Cost · Metrics · Ahoy', component: MetricsCost },
       {

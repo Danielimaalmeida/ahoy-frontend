@@ -401,3 +401,220 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+// Trends: the verdict, the signal cards with their sparklines, and the versions table.
+.trends__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.trends__lede {
+  margin: 0;
+  max-width: 70ch;
+}
+
+.verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.verdict > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.verdict__line {
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.verdict__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding: 1px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pill--better {
+  background: var(--status-done-bg);
+  color: var(--status-done-fg);
+}
+
+.pill--worse {
+  background: var(--status-halted-bg);
+  color: var(--status-halted-fg);
+}
+
+.pill--flat,
+.pill--none {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+}
+
+.trend-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trend-group__title {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.trend-group__title .ah-muted {
+  margin-left: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.trend-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.trend-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 13px 15px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.trend-card__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.trend-card__better {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.trend-card__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.trend-card__value strong {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.trend-card__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.trend-card__foot span:nth-child(2) {
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trend-card__foot span:first-child,
+.trend-card__foot span:last-child {
+  flex: none;
+}
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 54px;
+}
+
+.spark__recent {
+  fill: var(--accent-soft);
+  opacity: 0.6;
+}
+
+.spark__version {
+  stroke: var(--ink-disabled);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.spark__line {
+  fill: none;
+  stroke: var(--metrics-s1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.spark__dot {
+  fill: var(--metrics-s1);
+}
+
+.spark__dot--faded {
+  opacity: 0.35;
+}
+
+.week--faded {
+  opacity: 0.45;
+}
+
+.week--version {
+  box-shadow: -10px 0 0 -9px var(--ink-disabled);
+}
+
+.is-better {
+  color: var(--status-done-fg);
+  font-weight: 600;
+}
+
+.is-worse {
+  color: var(--status-halted-fg);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .trend-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.nowrap {
+  white-space: nowrap;
+}

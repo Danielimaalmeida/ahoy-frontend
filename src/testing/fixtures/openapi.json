@@ -272,6 +272,55 @@
         }
       }
     },
+    "/metrics/trends": {
+      "get": {
+        "operationId": "getMetricsTrends",
+        "tags": ["metrics"],
+        "summary": "Whether the harness is getting better, week by week and per harness version.",
+        "description": "Read-only and 0 AIU (design §5, \"Metrics\", trends): the same signals per Monday-based week for the last\n`weeks` weeks (the last one is the current, partial week), for the last 28 days and the 28 before them, and per\nharness version (the control commit the runs used; at most six, newest first). Every signal is a count or a\nmedian, never a ratio: halts and the halts that repeat the story's previous diagnosis, agents' questions, human\ngate decisions and send-backs, gate verdicts and passes (a poll whose CI is still running left out), finished,\ndone and reworked stories, work packages worked and delivered unverified, runs and run errors, AIU and the AIU\nof runs that redid work, the median AIU of a done story, the median time from its first run to done, and the\nmedian wait on a person. `owner`, `repo` and `model` filter as in `GET /metrics`. AIU in integer nano-AIU,\ndurations in whole seconds.\n",
+        "parameters": [
+          {
+            "name": "weeks",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [8, 12, 26],
+              "default": 12
+            }
+          },
+          {
+            "$ref": "#/components/parameters/MetricsOwner"
+          },
+          {
+            "$ref": "#/components/parameters/MetricsRepo"
+          },
+          {
+            "$ref": "#/components/parameters/MetricsModel"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The trend of the weeks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsTrends"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/metrics/plan-panel": {
       "get": {
         "operationId": "getPlanPanelMetrics",
@@ -9622,6 +9671,221 @@
               }
             ],
             "description": "Pass as `after` to continue."
+          }
+        }
+      },
+      "TrendSignals": {
+        "type": "object",
+        "description": "The signals of one window of `GET /metrics/trends`. Counts and medians; the reader divides.",
+        "additionalProperties": false,
+        "required": [
+          "voyages",
+          "halts",
+          "repeatedHalts",
+          "questions",
+          "humanDecisions",
+          "sentBack",
+          "gateEvaluations",
+          "gatePasses",
+          "finished",
+          "done",
+          "finishedWithRework",
+          "packages",
+          "unverified",
+          "runs",
+          "runErrors",
+          "nanoAiu",
+          "fixNanoAiu",
+          "medianNanoAiuPerDone",
+          "medianSecondsToDone",
+          "waits",
+          "medianWaitSeconds"
+        ],
+        "properties": {
+          "voyages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "halts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "repeatedHalts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "questions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "humanDecisions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sentBack": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gateEvaluations": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gatePasses": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "finished": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "done": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "finishedWithRework": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "packages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unverified": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "runErrors": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nanoAiu": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fixNanoAiu": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "medianNanoAiuPerDone": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "medianSecondsToDone": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "waits": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "medianWaitSeconds": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          }
+        }
+      },
+      "TrendWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "signals"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "signals": {
+            "$ref": "#/components/schemas/TrendSignals"
+          }
+        }
+      },
+      "MetricsTrends": {
+        "type": "object",
+        "description": "Whether the harness is getting better (`GET /metrics/trends`).",
+        "additionalProperties": false,
+        "required": [
+          "weeks",
+          "from",
+          "to",
+          "series",
+          "recent",
+          "previous",
+          "versions"
+        ],
+        "properties": {
+          "weeks": {
+            "type": "integer",
+            "enum": [8, 12, 26]
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["weekStart", "signals", "haltsByKind"],
+              "properties": {
+                "weekStart": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "signals": {
+                  "$ref": "#/components/schemas/TrendSignals"
+                },
+                "haltsByKind": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "recent": {
+            "$ref": "#/components/schemas/TrendWindow"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/TrendWindow"
+          },
+          "versions": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["controlSha", "firstRunAt", "lastRunAt", "signals"],
+              "properties": {
+                "controlSha": {
+                  "type": "string"
+                },
+                "firstRunAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastRunAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "signals": {
+                  "$ref": "#/components/schemas/TrendSignals"
+                }
+              }
+            }
           }
         }
       },

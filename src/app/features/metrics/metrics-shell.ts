@@ -1,6 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { isUnreachable, type ApiError } from '@core/api/api-error';
 import {
   METRICS_TABLES,
@@ -17,6 +19,7 @@ import { MetricsStore } from './metrics-store';
 /** The sections of the Metrics page, one route each. */
 export const METRICS_SECTIONS: readonly SectionTab[] = [
   { id: 'overview', label: 'Overview', link: '/metrics', exact: true },
+  { id: 'trends', label: 'Trends', link: '/metrics/trends' },
   { id: 'cost', label: 'Cost', link: '/metrics/cost' },
   { id: 'halts', label: 'Halts & errors', link: '/metrics/halts' },
   { id: 'gates', label: 'Gates & human wait', link: '/metrics/gates' },
@@ -69,7 +72,7 @@ export function metricsFailure(error: ApiError): {
 
 /**
  * Metrics: where the harness spends AIU, where voyages stop and which errors repeat. The shell holds the period, the
- * filters and the export, and provides the `MetricsStore` its four sections read. Read-only, 0 AIU.
+ * filters and the export, and provides the `MetricsStore` its five sections read. Read-only, 0 AIU.
  */
 @Component({
   selector: 'ah-metrics-shell',
@@ -123,13 +126,15 @@ export function metricsFailure(error: ApiError): {
       </header>
 
       <div class="metrics__filters">
-        <ah-section-tabs
-          variant="pill"
-          label="Period"
-          [items]="periodTabs"
-          [selected]="period()"
-          (selectedChange)="choosePeriod($event)"
-        />
+        @if (!onTrends()) {
+          <ah-section-tabs
+            variant="pill"
+            label="Period"
+            [items]="periodTabs"
+            [selected]="period()"
+            (selectedChange)="choosePeriod($event)"
+          />
+        }
         <form
           class="metrics__form"
           [formGroup]="filters"
@@ -191,6 +196,7 @@ export function metricsFailure(error: ApiError): {
 })
 export class MetricsShell {
   protected readonly store = inject(MetricsStore);
+  private readonly router = inject(Router);
   protected readonly sections = METRICS_SECTIONS;
   protected readonly periodTabs = PERIOD_TABS;
   protected readonly tables = METRICS_TABLES;
@@ -206,6 +212,14 @@ export class MetricsShell {
   });
 
   protected readonly period = computed(() => String(this.store.period()));
+  /** Whether the Trends section is open: its weeks replace the period, so the period's tabs are hidden. */
+  protected readonly onTrends = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      map(() => this.isTrends())
+    ),
+    { initialValue: this.isTrends() }
+  );
   protected readonly failure = computed(() => {
     const error = this.store.error();
     return error === null ? null : metricsFailure(error);
@@ -229,6 +243,12 @@ export class MetricsShell {
 
   constructor() {
     void this.store.load();
+  }
+
+  private isTrends(): boolean {
+    return (
+      this.router.url.split(/[?#]/)[0]?.endsWith('/metrics/trends') ?? false
+    );
   }
 
   protected choosePeriod(id: string | null): void {

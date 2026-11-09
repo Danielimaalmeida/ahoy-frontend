@@ -75,6 +75,7 @@ import {
   isMeetingStoryDraftList,
   isMeetingTopic,
   isMetricsReport,
+  isMetricsTrends,
   isMeetingNoteAnswerResult,
   isMoveMeetingTopicResult,
   isMeetingSearchResult,
@@ -206,6 +207,8 @@ import type {
   MetricsFormat,
   MetricsQuery,
   MetricsReport,
+  MetricsTrends,
+  MetricsTrendsQuery,
   MetricsTable,
   ModelPlan,
   ModelCatalog,
@@ -366,6 +369,24 @@ export class ApiClient {
       '/metrics',
       isMetricsReport,
       metricsParams(query)
+    );
+  }
+
+  /** Whether the harness is getting better: the signals per week, recent against before, per version. Spends nothing. */
+  getMetricsTrends(
+    query: MetricsTrendsQuery = {}
+  ): Promise<ApiResult<MetricsTrends>> {
+    let params = new HttpParams();
+    if (query.weeks !== undefined) params = params.set('weeks', query.weeks);
+    for (const name of ['owner', 'repo', 'model'] as const) {
+      const value = query[name];
+      if (value !== undefined) params = params.set(name, value);
+    }
+    return this.get(
+      'getMetricsTrends',
+      '/metrics/trends',
+      isMetricsTrends,
+      params
     );
   }
 

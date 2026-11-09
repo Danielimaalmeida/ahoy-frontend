@@ -546,3 +546,113 @@ describe('metricsFailure', () => {
     );
   });
 });
+
+describe('Metrics: Trends', () => {
+  /** The cards of the section, as "label · value · pill · was". */
+  function cards(root: HTMLElement): string[] {
+    return Array.from(root.querySelectorAll('.trend-card')).map((card) =>
+      [
+        text(card.querySelector('.trend-card__label span')),
+        text(card.querySelector('.trend-card__value strong')),
+        text(card.querySelector('.pill')),
+        text(card.querySelector('.trend-card__value .ah-muted')),
+      ].join(' · ')
+    );
+  }
+
+  function trendQueries(page: Page): URLSearchParams[] {
+    return page.requests
+      .filter((r) => r.path === '/metrics/trends')
+      .map((r) => r.query);
+  }
+
+  it('reads 12 weeks by default and hides the period, which does not apply to a trend', async () => {
+    const page = await open('/metrics/trends');
+    expect(trendQueries(page).map((q) => q.get('weeks'))).toEqual(['12']);
+    expect(page.root.querySelector('[aria-label="Period"]')).toBeNull();
+    expect(
+      page.root.querySelector(
+        'nav[aria-label="Metrics sections"] [aria-current="page"]'
+      )?.textContent
+    ).toContain('Trends');
+    expect(page.root.querySelectorAll('.spark').length).toBe(13);
+    expect(
+      page.root.querySelectorAll('.spark')[0]!.querySelectorAll('circle').length
+    ).toBe(12);
+  });
+
+  it('compares the last four weeks with the four before, green when the harness got better whichever way the number moved', async () => {
+    const page = await open('/metrics/trends');
+    const all = cards(page.root);
+    expect(all[0]).toBe('Halts per voyage · 0.6 · ↓ 27% · was 0.9');
+    expect(all.find((c) => c.startsWith('Gate verdicts that pass'))).toBe(
+      'Gate verdicts that pass · 79% · flat · was 77%'
+    );
+    const halts = page.root.querySelector('.trend-card .pill');
+    expect(halts?.className).toContain('pill--better');
+    expect(halts?.getAttribute('aria-label')).toBe('↓ 27%, better');
+    expect(text(page.root.querySelector('.verdict__line'))).toMatch(
+      /^Better on \d+ of 13 signals, worse on \d+$/
+    );
+  });
+
+  it('charts the halts per week by diagnosis and lists the harness versions, each against the one before', async () => {
+    const page = await open('/metrics/trends');
+    const halts = rows(page.root, 'Halts per week, by diagnosis');
+    expect(halts.length).toBe(12);
+    const versions = rows(page.root, 'By harness version');
+    expect(versions.map((r) => r[0])).toEqual([
+      'a41f9c2 latest',
+      '7c0e5b1',
+      'e93d270',
+      '5b2a91f',
+    ]);
+    expect(
+      panel(page.root, 'By harness version').querySelectorAll(
+        'tbody tr:last-child .is-better, tbody tr:last-child .is-worse'
+      ).length
+    ).toBe(0);
+  });
+
+  it('reads another span when one is chosen, and the filters when they are applied', async () => {
+    const page = await open('/metrics/trends');
+    const tabs = page.root.querySelector('[aria-label="Weeks"]');
+    const tab26 = Array.from(tabs?.querySelectorAll('button, a') ?? []).find(
+      (b) => text(b) === '26 weeks'
+    ) as HTMLElement | undefined;
+    tab26!.click();
+    await flush(page);
+    expect(trendQueries(page).at(-1)!.get('weeks')).toBe('26');
+    expect(
+      page.root.querySelectorAll('.spark')[0]!.querySelectorAll('circle').length
+    ).toBe(26);
+
+    const owner = page.root.querySelector<HTMLInputElement>(
+      'input[aria-label="Owner"]'
+    )!;
+    owner.value = 'alex@example.com';
+    owner.dispatchEvent(new Event('input'));
+    button(page.root, 'Apply').click();
+    await flush(page);
+    const last = trendQueries(page).at(-1)!;
+    expect([last.get('weeks'), last.get('owner')]).toEqual([
+      '26',
+      'alex@example.com',
+    ]);
+  });
+
+  it('says the trend could not be read and reads again on Try again', async () => {
+    const page = await open('/metrics');
+    page.server.switches.failNext = 503;
+    await page.harness.navigateByUrl('/metrics/trends');
+    await flush(page);
+    expect(text(page.root.querySelector('ah-banner'))).toContain(
+      "Can't reach Ahoy"
+    );
+    expect(page.root.querySelector('.trend-card')).toBeNull();
+    button(page.root, 'Try again').click();
+    await flush(page);
+    expect(page.root.querySelector('ah-banner')).toBeNull();
+    expect(page.root.querySelectorAll('.trend-card').length).toBe(13);
+  });
+});

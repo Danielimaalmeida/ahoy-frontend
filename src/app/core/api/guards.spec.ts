@@ -6,6 +6,7 @@ import decideHumanGate from '@testing/fixtures/decideHumanGate.json';
 import getStoryPlanFit from '@testing/fixtures/getStoryPlanFit.json';
 import getHealth from '@testing/fixtures/getHealth.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
+import getMetricsTrends from '@testing/fixtures/getMetricsTrends.json';
 import getRefinements from '@testing/fixtures/getRefinements.json';
 import getStoryDiagnosis from '@testing/fixtures/getStoryDiagnosis.json';
 import getRun from '@testing/fixtures/getRun.json';
@@ -59,6 +60,7 @@ import {
   isModelCatalog,
   isPlanPanel,
   isPlanPanelList,
+  isMetricsTrends,
   isPlanPanelMetrics,
   isProblem,
   isQuestion,
@@ -165,6 +167,7 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['requestKnowledgeReview', isKnowledgeReview, requestKnowledgeReview],
     ['cancelKnowledgeReview', isKnowledgeReview, cancelKnowledgeReview],
     ['getMetrics', isMetricsReport, getMetrics],
+    ['getMetricsTrends', isMetricsTrends, getMetricsTrends],
   ];
 
   it.each(cases)('%s', (_name, accepts, fixture) => {

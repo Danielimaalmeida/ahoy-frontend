@@ -581,6 +581,17 @@ export type MetricsQuery = NonNullable<
   operations['getMetrics']['parameters']['query']
 >;
 
+/** The counts and medians of one window of `getMetricsTrends`; the reader divides them into signals. */
+export type TrendSignals = Schemas['TrendSignals'];
+
+/** Answer of `getMetricsTrends`: the signals per week, the last 28 days against the 28 before, and per harness version. */
+export type MetricsTrends = Schemas['MetricsTrends'];
+
+/** Query of `getMetricsTrends`: how many weeks (8, 12 or 26) and the owner, repository and model filters. */
+export type MetricsTrendsQuery = NonNullable<
+  operations['getMetricsTrends']['parameters']['query']
+>;
+
 /** How the judges rated one model's plans over a period (`getPlanPanelMetrics`). */
 export type PlanPanelModelRatings = Schemas['PlanPanelModelRatings'];
 

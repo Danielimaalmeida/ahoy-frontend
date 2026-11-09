@@ -7,8 +7,10 @@ import type {
   MetricsQuery,
   MetricsReport,
   MetricsTable,
+  MetricsTrends,
   PlanPanelMetrics,
 } from '@core/api/types';
+import type { TrendSpan } from '@domain/metrics-trends';
 import {
   periodRange,
   previousRange,
@@ -63,6 +65,17 @@ export class MetricsStore {
   readonly planPanels = signal<PlanPanelMetrics | null>(null);
   /** Why the plan panel ratings could not be read; the rest of the page does not depend on them. */
   readonly planPanelsError = signal<ApiError | null>(null);
+
+  /** How many weeks the Trends section reads. */
+  readonly trendSpan = signal<TrendSpan>(12);
+  /** The trend of those weeks, once read; null before, and while it is read again. */
+  readonly trends = signal<MetricsTrends | null>(null);
+  /** Why the trend could not be read; the other sections do not depend on it. */
+  readonly trendsError = signal<ApiError | null>(null);
+  /** Whether the Trends section has been opened, so a change of filters reads the trend again too. */
+  private trendsWanted = false;
+  /** Counts trend loads, so an answer to an older one is dropped. */
+  private trendGeneration = 0;
 
   /** Whether any filter is set. */
   readonly filtered = computed(() => {
@@ -136,14 +149,44 @@ export class MetricsStore {
     else this.planPanelsError.set(result.error);
   }
 
-  /** Changes the filters and reads the report again. */
+  /** Changes the filters and reads the report again, and the trend when the Trends section was opened. */
   setFilters(filters: MetricsFilters): Promise<void> {
     this.filters.set({
       owner: filters.owner.trim(),
       repo: filters.repo.trim(),
       model: filters.model.trim(),
     });
-    return this.load();
+    return Promise.all([
+      this.load(),
+      this.trendsWanted ? this.loadTrends() : Promise.resolve(),
+    ]).then(() => undefined);
+  }
+
+  /**
+   * Reads the trend of the chosen weeks (`getMetricsTrends`) with the current filters. The period does not apply: a
+   * trend always ends now. An answer to a read that was replaced meanwhile is dropped.
+   */
+  async loadTrends(): Promise<void> {
+    this.trendsWanted = true;
+    const generation = ++this.trendGeneration;
+    this.trends.set(null);
+    this.trendsError.set(null);
+    const { owner, repo, model } = this.filters();
+    const result = await this.api.getMetricsTrends({
+      weeks: this.trendSpan(),
+      ...(owner !== '' ? { owner } : {}),
+      ...(repo !== '' ? { repo } : {}),
+      ...(model !== '' ? { model } : {}),
+    });
+    if (generation !== this.trendGeneration) return;
+    if (result.ok) this.trends.set(result.value);
+    else this.trendsError.set(result.error);
+  }
+
+  /** Changes how many weeks the trend spans and reads it again. */
+  setTrendSpan(span: TrendSpan): Promise<void> {
+    this.trendSpan.set(span);
+    return this.loadTrends();
   }
 
   /** Saves one table of rows behind the report, for the current period and filters, as a file. */

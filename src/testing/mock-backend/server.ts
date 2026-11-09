@@ -35,6 +35,7 @@ import type {
   ModelChoice,
   ModelSlot,
   PlanPanel,
+  MetricsTrends,
   PlanPanelMetrics,
   ProblemCode,
   RefinementRequest,
@@ -98,6 +99,7 @@ import {
 import { World } from './world';
 import listModels from '@testing/fixtures/listModels.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
+import getMetricsTrends from '@testing/fixtures/getMetricsTrends.json';
 
 const jiraBacklog: JiraBacklog = {
   items: [
@@ -1050,6 +1052,10 @@ export class MockAhoyServer {
         return jsonResponse(200, this.planPanelRatings(call), {
           'Cache-Control': 'no-store',
         });
+      case 'getMetricsTrends':
+        return jsonResponse(200, this.trends(call), {
+          'Cache-Control': 'no-store',
+        });
       case 'exportMetrics':
         return this.exportMetrics(call);
       default:
@@ -1823,6 +1829,23 @@ export class MockAhoyServer {
   private metrics(call: Call): typeof getMetrics {
     const { from, to } = this.period(call);
     return { ...getMetrics, from, to };
+  }
+
+  /** The fixture's trend cut to the weeks asked for (8, 12 or 26), its last weeks kept. */
+  private trends(call: Call): MetricsTrends {
+    const weeks = Number(call.query['weeks'] ?? 12);
+    if (weeks !== 8 && weeks !== 12 && weeks !== 26)
+      throw new MockProblem(
+        'validation_failed',
+        'weeks must be one of 8, 12, 26'
+      );
+    const series = getMetricsTrends.series.slice(-weeks);
+    return {
+      ...(getMetricsTrends as MetricsTrends),
+      weeks,
+      from: `${series[0]?.weekStart ?? '2026-05-11'}T00:00:00.000Z`,
+      series,
+    };
   }
 
   /** The period `[from, to)` a metrics query names: the 30 days before now by default. */
