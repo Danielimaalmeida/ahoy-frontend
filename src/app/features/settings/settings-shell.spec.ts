@@ -139,7 +139,7 @@ describe('the Team settings frame', () => {
       'Jira On',
       'Teams On',
       'Figma On',
-      'Agents 2 of 4 on',
+      'Agents 2 of 5 on',
       'Phases 1 changed',
       'Pull request comments Replies off',
       'Defects Off',

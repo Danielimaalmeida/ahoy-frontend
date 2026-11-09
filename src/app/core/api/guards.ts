@@ -211,6 +211,16 @@ import {
   type GrillOption,
   type GrillQuestion,
   type Usage,
+  CONVERSATION_CONTEXT_KINDS,
+  CONVERSATION_RECIPES,
+  CONVERSATION_TURN_STATUSES,
+  type Conversation,
+  type ConversationContextItem,
+  type ConversationList,
+  type ConversationProposal,
+  type ConversationSummary,
+  type ConversationTurn,
+  type ProposalFlag,
 } from './types';
 
 const storyKey = patterned(
@@ -1775,6 +1785,7 @@ export const isAgentSettingsPage = guard<AgentSettingsPage>(
       refinementAgent: profileName,
       diagnosisAgent: profileName,
       storyDraftAgent: nullable(profileName),
+      productAgent: nullable(profileName),
       knowledgeAgent: nullable(profileName),
       knowledgeRepo: nullable(nonEmptyText),
       version: nullable(wholeNumber('a version', 1)),
@@ -2161,5 +2172,113 @@ export const isSettingsEventPage = guard<SettingsEventPage>(
         createdAt: timestamp,
       })
     ),
+  })
+);
+
+const proposalFlag = shape<ProposalFlag>({
+  label: boundedText('a label of 1 to 80 characters', 1, 80),
+  evidence: boundedText('evidence of 1 to 500 characters', 1, 500),
+});
+
+/** A proposal carries the story or the topic its kind names. */
+const proposalConsistency: Check = (value, at) => {
+  if (!isRecord(value)) return null;
+  if (value['kind'] === 'story' && value['story'] === undefined)
+    return `${at}.story must be set for a story proposal`;
+  if (value['kind'] === 'topic' && value['topic'] === undefined)
+    return `${at}.topic must be set for a topic proposal`;
+  return null;
+};
+
+const conversationProposal: Check = (value, at) =>
+  shape<ConversationProposal>({
+    id: uuid,
+    turn: positive,
+    kind: oneOf(['story', 'topic'] as const),
+    story: optional(storyTemplate),
+    topic: optional(
+      shape<NonNullable<ConversationProposal['topic']>>({
+        title: boundedText('a title of 1 to 255 characters', 1, 255),
+        note: boundedText('a note of 1 to 4000 characters', 1, 4000),
+      })
+    ),
+    flags: arrayOf(proposalFlag),
+  })(value, at) ?? proposalConsistency(value, at);
+
+/** Only a turn being answered has live text; a failed one says why. */
+const turnConsistency: Check = (value, at) => {
+  if (!isRecord(value)) return null;
+  if ((value['status'] === 'handed') !== (value['liveText'] !== null))
+    return `${at}.liveText must be set exactly while the turn is handed`;
+  return null;
+};
+
+const conversationTurn: Check = (value, at) =>
+  shape<ConversationTurn>({
+    n: wholeNumber('a turn number from 1 to 40', 1, 40),
+    question: text,
+    askedBy: actor,
+    askedByName: nullable(text),
+    askedAt: timestamp,
+    status: oneOf(CONVERSATION_TURN_STATUSES),
+    liveText: nullable(text),
+    activity: arrayOf(text),
+    answer: nullable(text),
+    proposals: arrayOf(conversationProposal),
+    questions: arrayOf(grillQuestion),
+    error: nullable(text),
+    endedAt: nullable(timestamp),
+  })(value, at) ?? turnConsistency(value, at);
+
+const conversationContextItem = shape<ConversationContextItem>({
+  kind: oneOf(CONVERSATION_CONTEXT_KINDS),
+  ref: boundedText('a reference of 1 to 2000 characters', 1, 2000),
+  label: nullable(text),
+});
+
+const conversationSummaryFields = {
+  id: uuid,
+  key: patterned('a conversation key like CONV-3', /^CONV-[1-9][0-9]*$/, 20),
+  title: text,
+  recipe: nullable(oneOf(CONVERSATION_RECIPES)),
+  owner: actor,
+  ownerName: nullable(text),
+  shared: flag,
+  turnCount: wholeNumber('a whole number of questions, 0 or more', 0),
+  lastQuestion: nullable(text),
+  createdAt: timestamp,
+  updatedAt: timestamp,
+} as const;
+
+const conversationSummary = shape<ConversationSummary>(
+  conversationSummaryFields
+);
+
+/** The Product page's conversations, latest first. */
+export const isConversationList = guard<ConversationList>(
+  'ConversationList',
+  shape<ConversationList>({ items: arrayOf(conversationSummary) })
+);
+
+/** A conversation with its context, turns and session, as every conversation command answers it. */
+export const isConversation = guard<Conversation>(
+  'Conversation',
+  shape<Conversation>({
+    ...conversationSummaryFields,
+    canAsk: flag,
+    context: arrayOf(conversationContextItem),
+    turns: arrayOf(conversationTurn),
+    session: nullable(
+      shape<NonNullable<Conversation['session']>>({
+        id: nonEmptyText,
+        status: oneOf(['queued', 'running'] as const),
+        warm: flag,
+        budgetNanoAiu: positive,
+        spentNanoAiu: nanoAiu,
+        cancelRequested: flag,
+        startedAt: nullable(timestamp),
+      })
+    ),
+    spentNanoAiu: nanoAiu,
   })
 );

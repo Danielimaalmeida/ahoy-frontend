@@ -1,14 +1,28 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`feat/plan-panel-models`: Team settings › Phases sets the plan panel's models; offline checks
-passed on Node 22 with a stubbed `@acme-fedev/auth`). One page: replace it, do not append; git history is the
-archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
-with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
-outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
+Updated 2026-11-09 (`feat/product-page`: the Product page with its conversations; typecheck, boundaries and lint
+passed on Node 22 with a stubbed `@acme-fedev/auth`; build and Vitest not run, see Proof). One page: replace it, do not
+append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The
+review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s
+`docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md`
+§1 and §5).
 
 ## Where we are
 
-- **This branch (`style/defects-table`, 2026-11-09, asked for by the user: the Backlog › Defects table "looks a bit
+- **This branch (`feat/product-page`, 2026-11-09, asked for and approved by the user: a page for product people, first
+  slice "conversation with context"):** a **Product** destination (`/product`, between Meetings and Voyages). The left
+  column starts a conversation, blank or from a recipe (split an epic, is this story ready, how does it work today),
+  and lists one's own and those shared with the team. A conversation pins what the agent reads (Jira issues or epics,
+  defects, meeting topics found by a search, Figma links, up to three repositories) and asks; the answer shows as the
+  agent writes it, with the latest files it reads, because the page reads the conversation every second while a
+  question is open (`streamConversation` is not in the client yet). The agent's story and meeting-topic proposals show
+  as numbered cards with their flags, without buttons (Create in Jira and Add to meeting are step 2), and its questions
+  as cards with the recommended option. The right column shows what was spent, the session (starting, answering, warm
+  for ten minutes, stopping) and Cancel question; Share and Delete for the owner, read-only for others. Team settings ›
+  Agents has the optional **Product conversations** job. The mock backend simulates every conversation operation
+  (a pretend session that streams, proposes and stays warm). Contract synced from `ahoy-hosted`'s `feat/product-page`
+  (PR #107, migration 0048), which must deploy with it.
+- **`style/defects-table` (2026-11-09, asked for by the user: the Backlog › Defects table "looks a bit
   messy"):** the table uses the panel head and cell-sub line of the other tables. Header: one muted line ("4 defects,
   the latest first · last check 12 min ago"); the triage note moved to the column's tooltip. Component is plain text,
   comma-separated. Triage "Ahoy can try" is green; its reasons sit under it. Ahoy shows the status badge alone (no
@@ -264,6 +278,12 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Proof
 
+- **This branch** (`feat/product-page`, 2026-11-09, cloud container, Node 22.23.4, `@acme-fedev/auth` stubbed in
+  `node_modules`): typecheck (app, specs and boundaries) and lint (ESLint and Stylelint) pass, and the new and changed
+  files are Prettier-formatted. **Not run:** `ng build` and `ng test`, because the platform packages (`sass-embedded`,
+  `rollup`, `lightningcss`, `rolldown`) are missing from this install and fetching them from the public registry was
+  not approved; so the new specs (`domain/conversations`, `features/product`, the mock's conversations) have not run
+  yet. Not run either: Node 24, the real auth library, Playwright, a local or live API, TEST. No AIU was spent.
 - **This branch** (`perf/setup-once`, 2026-11-07, cloud container, Node 22.23.4): `npm run build`, typecheck (app,
   specs and boundaries), lint (ESLint and Stylelint), `ng test --watch=false` (218 files, 3,765 tests) and `npm run format` all passed, with
   `@acme-fedev/auth` stubbed in `node_modules` as below. Unit and component tests only; nothing was opened in a
@@ -329,6 +349,10 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Next, in order
 
+- **`feat/product-page`** (2026-11-09): run `npm run build && npm run typecheck && npm run lint && npm test && npm run
+format` where the platform packages install, then review and merge with `ahoy-hosted` PR #107 (migration 0048). An
+  admin turns Product conversations on in Team settings › Agents; the first live question needs the user's approval
+  and a low AIU cap.
 - **`feat/plan-panel-models`** (2026-11-09): review and merge with `ahoy-hosted`'s branch of the same name (the API
   first or together; migration 0047 with the others), then check the section on TEST as an admin.
 - **After `feat/portability-1-meeting-labels` deploys with its API** (2026-11-06, D23): an admin saves our team's own

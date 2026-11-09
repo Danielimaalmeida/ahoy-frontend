@@ -7,13 +7,18 @@ import { isRecord } from './records';
 
 /** A job whose profile is a setting, as the API names it. */
 export type AgentJobKey =
-  'refinementAgent' | 'diagnosisAgent' | 'storyDraftAgent' | 'knowledgeAgent';
+  | 'refinementAgent'
+  | 'diagnosisAgent'
+  | 'storyDraftAgent'
+  | 'productAgent'
+  | 'knowledgeAgent';
 
 /** Who runs each job; a null profile turns the job off. */
 export interface AgentJobChoice {
   readonly refinementAgent: string;
   readonly diagnosisAgent: string;
   readonly storyDraftAgent: string | null;
+  readonly productAgent: string | null;
   readonly knowledgeAgent: string | null;
 }
 
@@ -57,6 +62,15 @@ export const AGENT_JOB_WORDS: readonly AgentJobWords[] = [
     optional: true,
     warning:
       'Anyone can then draft a story from a meeting topic; each draft is a run that spends AIU outside any story’s budget.',
+  },
+  {
+    key: 'productAgent',
+    name: 'Product conversations',
+    when: 'When someone asks a question on the Product page',
+    spends: 'Each conversation session, when on',
+    optional: true,
+    warning:
+      'Anyone can then ask an agent questions on the Product page; each session is a run that spends AIU outside any story’s budget.',
   },
   {
     key: 'knowledgeAgent',

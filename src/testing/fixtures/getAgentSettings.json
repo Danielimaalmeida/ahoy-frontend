@@ -4,6 +4,7 @@
     "refinementAgent": "story-refiner",
     "diagnosisAgent": "halt-diagnoser",
     "storyDraftAgent": null,
+    "productAgent": null,
     "knowledgeAgent": null,
     "knowledgeRepo": null,
     "version": 2,

@@ -50,6 +50,11 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'product',
+    loadChildren: () =>
+      import('@features/product/product.routes').then((m) => m.PRODUCT_ROUTES),
+  },
+  {
     path: 'metrics',
     loadChildren: () =>
       import('@features/metrics/metrics.routes').then((m) => m.METRICS_ROUTES),

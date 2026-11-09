@@ -97,6 +97,8 @@ import {
   isStoryPlanFit,
   isStoryPrComments,
   isStoryStateDocument,
+  isConversation,
+  isConversationList,
 } from './guards';
 import type {
   AddMeetingTopicRequest,
@@ -245,6 +247,12 @@ import type {
   UpdateMeetingTopicRequest,
   WorkPackageDecisionRequest,
   UnblockStoryRequest,
+  Conversation,
+  ConversationChange,
+  ConversationContextChange,
+  ConversationList,
+  ConversationTurnRequest,
+  NewConversation,
 } from './types';
 import { MEETING_NOTE_IMAGE_TYPES } from './types';
 
@@ -1393,6 +1401,90 @@ export class ApiClient {
       `/meeting-story-drafts/${segment(draftId)}/create-issue`,
       null,
       isMeetingStoryDraft
+    );
+  }
+
+  /** The person's Product page conversations and the shared ones, latest first, without their turns. */
+  listConversations(): Promise<ApiResult<ConversationList>> {
+    return this.get('listConversations', '/conversations', isConversationList);
+  }
+
+  /** Starts an empty conversation, the person's own. 0 AIU. The answer is 201. */
+  createConversation(body: NewConversation): Promise<ApiResult<Conversation>> {
+    return this.post(
+      'createConversation',
+      '/conversations',
+      body,
+      isConversation
+    );
+  }
+
+  /** One conversation, with its context, its turns (the one being answered with what it said so far) and its session. */
+  getConversation(id: string): Promise<ApiResult<Conversation>> {
+    return this.get(
+      'getConversation',
+      `/conversations/${segment(id)}`,
+      isConversation
+    );
+  }
+
+  /** Renames or shares a conversation; its owner only. */
+  updateConversation(
+    id: string,
+    body: ConversationChange
+  ): Promise<ApiResult<Conversation>> {
+    return this.send(
+      'updateConversation',
+      isConversation,
+      this.http.patch<unknown>(
+        this.url(`/conversations/${segment(id)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Deletes a conversation; its session in progress is stopped first. The answer (204) has no body. */
+  deleteConversation(id: string): Promise<ApiResult<null>> {
+    return this.delete('deleteConversation', `/conversations/${segment(id)}`);
+  }
+
+  /** Replaces what the agent reads; refused while a question is open. A warm session is stopped. 0 AIU. */
+  setConversationContext(
+    id: string,
+    body: ConversationContextChange
+  ): Promise<ApiResult<Conversation>> {
+    return this.send(
+      'setConversationContext',
+      isConversation,
+      this.http.put<unknown>(
+        this.url(`/conversations/${segment(id)}/context`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Asks a question. May start a session that spends AIU: needs `confirmSpend`. The answer is 202. */
+  askConversation(
+    id: string,
+    body: ConversationTurnRequest
+  ): Promise<ApiResult<Conversation>> {
+    return this.post(
+      'askConversation',
+      `/conversations/${segment(id)}/turns`,
+      body,
+      isConversation
+    );
+  }
+
+  /** Cancels the question waiting or being answered; the session stops and what it spent is kept. */
+  cancelConversationTurn(id: string): Promise<ApiResult<Conversation>> {
+    return this.post(
+      'cancelConversationTurn',
+      `/conversations/${segment(id)}/cancel`,
+      null,
+      isConversation
     );
   }
 

@@ -13,15 +13,17 @@ const SAVED: AgentJobChoice = {
   refinementAgent: 'story-refiner',
   diagnosisAgent: 'halt-diagnoser',
   storyDraftAgent: null,
+  productAgent: null,
   knowledgeAgent: null,
 };
 
 describe('the agents’ jobs', () => {
-  it('list the four jobs, and only Story drafts and Business-rule review can be off', () => {
+  it('list the five jobs, and only Story drafts, Product conversations and Business-rule review can be off', () => {
     expect(AGENT_JOB_WORDS.map((j) => [j.name, j.optional])).toEqual([
       ['Pre-refinement', false],
       ['Halt diagnosis', false],
       ['Story drafts', true],
+      ['Product conversations', true],
       ['Business-rule review', true],
     ]);
   });
@@ -54,14 +56,15 @@ describe('the agents’ jobs', () => {
     for (const job of AGENT_JOB_WORDS)
       if (job.optional) expect(job.warning).toMatch(/spends AIU outside/);
       else expect(job.warning).toBeNull();
-    expect(jobsOnLabel(SAVED)).toBe('2 of 4 on');
+    expect(jobsOnLabel(SAVED)).toBe('2 of 5 on');
     expect(
       jobsOnLabel({
         ...SAVED,
         storyDraftAgent: 'story-drafter',
+        productAgent: 'product-analyst',
         knowledgeAgent: 'x',
       })
-    ).toBe('4 of 4 on');
+    ).toBe('5 of 5 on');
   });
 
   it('take a knowledge repository as owner/name, or nothing', () => {

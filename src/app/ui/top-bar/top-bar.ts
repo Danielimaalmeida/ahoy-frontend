@@ -77,6 +77,14 @@ const SNOWFLAKE_PATH =
         >
         <a
           class="ah-nav__item"
+          routerLink="/product"
+          routerLinkActive
+          ariaCurrentWhenActive="page"
+          [routerLinkActiveOptions]="prefix"
+          >Product</a
+        >
+        <a
+          class="ah-nav__item"
           routerLink="/voyages"
           routerLinkActive
           ariaCurrentWhenActive="page"

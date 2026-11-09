@@ -4,6 +4,7 @@
     "refinementAgent": "story-refiner",
     "diagnosisAgent": "halt-diagnoser",
     "storyDraftAgent": null,
+    "productAgent": null,
     "knowledgeAgent": "knowledge-curator",
     "knowledgeRepo": "acme/business-rules",
     "version": 3,

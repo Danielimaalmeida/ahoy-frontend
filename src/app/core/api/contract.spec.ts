@@ -8,6 +8,13 @@ import deleteFigmaToken from '@testing/fixtures/deleteFigmaToken.json';
 import updateFigmaSettings from '@testing/fixtures/updateFigmaSettings.json';
 import testFigmaToken from '@testing/fixtures/testFigmaToken.json';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
+import listConversations from '@testing/fixtures/listConversations.json';
+import createConversation from '@testing/fixtures/createConversation.json';
+import getConversation from '@testing/fixtures/getConversation.json';
+import updateConversation from '@testing/fixtures/updateConversation.json';
+import setConversationContext from '@testing/fixtures/setConversationContext.json';
+import askConversation from '@testing/fixtures/askConversation.json';
+import cancelConversationTurn from '@testing/fixtures/cancelConversationTurn.json';
 import updateAgentSettings from '@testing/fixtures/updateAgentSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import updatePhaseSettings from '@testing/fixtures/updatePhaseSettings.json';
@@ -315,6 +322,13 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['ignoreDefect', ignoreDefect],
   ['unignoreDefect', unignoreDefect],
   ['startDefect', startDefect],
+  ['listConversations', listConversations],
+  ['createConversation', createConversation],
+  ['getConversation', getConversation],
+  ['updateConversation', updateConversation],
+  ['setConversationContext', setConversationContext],
+  ['askConversation', askConversation],
+  ['cancelConversationTurn', cancelConversationTurn],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -332,10 +346,12 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteJiraSettings',
   'deleteTeamsSettings',
   'deleteBranchReleaseRepository',
+  'deleteConversation',
 ];
 
 /**
- * In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...), the live stream (lane 2B) and a
+ * In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...), the live streams (lane 2B; the Product page polls instead of
+ * `streamConversation`) and a
  * run's input.
  */
 const NOT_IN_THE_CLIENT_YET: readonly string[] = [
@@ -346,6 +362,7 @@ const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'streamEvents',
   'getRunInput',
   'getRunInputContent',
+  'streamConversation',
 ];
 
 /** The members of a list, sorted, so that the order the contract lists enum values in does not matter. */
@@ -365,7 +382,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      142
+      150
     );
   });
 

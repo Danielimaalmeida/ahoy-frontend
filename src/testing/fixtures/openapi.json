@@ -55,6 +55,9 @@
     },
     {
       "name": "settings"
+    },
+    {
+      "name": "product"
     }
   ],
   "paths": {
@@ -4094,6 +4097,363 @@
         }
       }
     },
+    "/conversations": {
+      "get": {
+        "operationId": "listConversations",
+        "tags": ["product"],
+        "summary": "The person's Product page conversations and the shared ones, latest first.",
+        "description": "At most 200, without their turns. Read one with `getConversation`. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The conversations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["items"],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ConversationSummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createConversation",
+        "tags": ["product"],
+        "summary": "Start a conversation on the Product page, empty, owned by the person. 0 AIU.",
+        "description": "A conversation is its owner's until they share it. `recipe` names a built-in recipe whose instructions every\nturn of the conversation follows (`split-epic`, `story-ready`, `how-today`); without one it takes free questions.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewConversation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The conversation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        }
+      ],
+      "get": {
+        "operationId": "getConversation",
+        "tags": ["product"],
+        "summary": "One conversation, with its context, its turns and its session.",
+        "description": "The person's own conversation or a shared one; `404` for any other. A turn being answered (`handed`) carries\nwhat the agent has said (`liveText`) and read (`activity`) so far; `streamConversation` sends it as it changes.\n",
+        "responses": {
+          "200": {
+            "description": "The conversation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateConversation",
+        "tags": ["product"],
+        "summary": "Rename a conversation, or share it with the team (read-only to them). Its owner only. 0 AIU.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The conversation, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteConversation",
+        "tags": ["product"],
+        "summary": "Delete a conversation; its session in progress is stopped. Its owner only.",
+        "responses": {
+          "204": {
+            "description": "The conversation is deleted."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/context": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        }
+      ],
+      "put": {
+        "operationId": "setConversationContext",
+        "tags": ["product"],
+        "summary": "Replace what the agent reads. Its owner only. 0 AIU.",
+        "description": "At most 12 items, 3 of them repositories and 3 Figma links, none twice: a Jira key, a meeting topic's id, a\ndefect of the defect watch (its Jira key), a Figma link, or a repository alias of the content repository's\nrouting. Pinning reads nothing; a session reads them when it starts. A warm session read the old context, so it\nis stopped, and the next question starts a new one. `409 invalid_state` while a question waits or is answered.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationContextChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The conversation, with its new context.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/turns": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        }
+      ],
+      "post": {
+        "operationId": "askConversation",
+        "tags": ["product"],
+        "summary": "Ask a question in a conversation. May spend AIU.",
+        "description": "The conversation's warm session answers it in seconds; without one, a session of the Product profile of Team\nsettings › Agents is queued (one worker run, labelled `CONV-<n>`), capped at `budgetNanoAiu`, else the server's\ncap, and answers it once it starts. It reads what the conversation pins, read-only, and hands in its proposals\nand questions with tools; it never writes to Jira, a meeting or a repository. `confirmSpend` must be true.\n`409 invalid_state` while the last question waits or is answered, or after 40 questions; `403` for anyone but\nthe owner; `503 unavailable` when Product conversations are off.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationTurnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The conversation, with the question waiting.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        }
+      ],
+      "post": {
+        "operationId": "cancelConversationTurn",
+        "tags": ["product"],
+        "summary": "Cancel the question waiting or being answered; the session stops. Its owner only.",
+        "description": "A queued session spends nothing; a running one is stopped by the reconciler, which records what it spent. `409\ninvalid_state` when no question waits or is answered.\n",
+        "responses": {
+          "200": {
+            "description": "The conversation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/stream": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ConversationId"
+        }
+      ],
+      "get": {
+        "operationId": "streamConversation",
+        "tags": ["product"],
+        "summary": "The conversation as Server-Sent Events, each time it changes.",
+        "description": "Each message is `event: conversation` and one `data:` line holding the `Conversation` JSON, sent at once and\nthen whenever it changes (a turn's live text, an answer, the session). Comment lines (`: keepalive`) are sent\nperiodically. Clients that cannot use SSE may poll `getConversation` instead.\n",
+        "responses": {
+          "200": {
+            "description": "An open event stream.",
+            "x-sse-data-schema": {
+              "$ref": "#/components/schemas/Conversation"
+            },
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/crew": {
       "get": {
         "operationId": "getCrew",
@@ -6413,6 +6773,15 @@
       },
       "MeetingSeriesId": {
         "name": "seriesId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ConversationId": {
+        "name": "conversationId",
         "in": "path",
         "required": true,
         "schema": {
@@ -13195,6 +13564,465 @@
           }
         }
       },
+      "ConversationRecipe": {
+        "type": "string",
+        "enum": ["split-epic", "story-ready", "how-today"],
+        "description": "`split-epic`: split the pinned epic into stories. `story-ready`: whether the pinned story is ready for\nrefinement. `how-today`: what the product does today, from the pinned repositories.\n"
+      },
+      "NewConversation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "recipe": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConversationRecipe"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ConversationChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "shared": {
+            "type": "boolean",
+            "description": "True shares it with every member, read-only to them."
+          }
+        }
+      },
+      "ConversationContextKind": {
+        "type": "string",
+        "enum": ["jira", "meeting_topic", "defect", "figma", "repository"]
+      },
+      "ConversationContextItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "ref", "label"],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ConversationContextKind"
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "label": {
+            "type": ["string", "null"],
+            "description": "What the page shows for it (a topic's or a defect's title); null when the ref says it."
+          }
+        }
+      },
+      "ConversationContextChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["items"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "ref"],
+              "properties": {
+                "kind": {
+                  "$ref": "#/components/schemas/ConversationContextKind"
+                },
+                "ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConversationTurnRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "confirmSpend"],
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20000000000,
+            "description": "The cap of a session this question starts, at most 20 AIU; the server's cap when absent."
+          }
+        }
+      },
+      "ProposalFlag": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "evidence"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "ConversationProposal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "turn", "kind", "flags"],
+        "description": "A story (in the story drafts' template) or a topic for a meeting, as the agent handed it in.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turn": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["story", "topic"]
+          },
+          "story": {
+            "$ref": "#/components/schemas/StoryTemplate"
+          },
+          "topic": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title", "note"],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              }
+            }
+          },
+          "flags": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/ProposalFlag"
+            }
+          }
+        }
+      },
+      "ConversationTurn": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "n",
+          "question",
+          "askedBy",
+          "askedByName",
+          "askedAt",
+          "status",
+          "liveText",
+          "activity",
+          "answer",
+          "proposals",
+          "questions",
+          "error",
+          "endedAt"
+        ],
+        "properties": {
+          "n": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 40
+          },
+          "question": {
+            "type": "string"
+          },
+          "askedBy": {
+            "type": "string"
+          },
+          "askedByName": {
+            "type": ["string", "null"]
+          },
+          "askedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "handed", "answered", "failed", "cancelled"],
+            "description": "`queued`: waits for a session to start. `handed`: the session is answering it. `answered`, `failed` (see\n`error`) or `cancelled`: done.\n"
+          },
+          "liveText": {
+            "type": ["string", "null"],
+            "description": "What the agent has said so far, while `handed`; null otherwise."
+          },
+          "activity": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What the agent has read so far (the latest 20), while `handed`."
+          },
+          "answer": {
+            "type": ["string", "null"],
+            "description": "The agent's answer, in Markdown."
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationProposal"
+            }
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrillQuestion"
+            }
+          },
+          "error": {
+            "type": ["string", "null"]
+          },
+          "endedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          }
+        }
+      },
+      "ConversationSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "key",
+          "title",
+          "recipe",
+          "owner",
+          "ownerName",
+          "shared",
+          "turnCount",
+          "lastQuestion",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^CONV-[1-9][0-9]*$",
+            "description": "The label its sessions' runs carry."
+          },
+          "title": {
+            "type": "string"
+          },
+          "recipe": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConversationRecipe"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": ["string", "null"]
+          },
+          "shared": {
+            "type": "boolean"
+          },
+          "turnCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How many questions were asked in it."
+          },
+          "lastQuestion": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Conversation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "key",
+          "title",
+          "recipe",
+          "owner",
+          "ownerName",
+          "shared",
+          "turnCount",
+          "lastQuestion",
+          "createdAt",
+          "updatedAt",
+          "canAsk",
+          "context",
+          "turns",
+          "session",
+          "spentNanoAiu"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^CONV-[1-9][0-9]*$",
+            "description": "The label its sessions' runs carry."
+          },
+          "title": {
+            "type": "string"
+          },
+          "recipe": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConversationRecipe"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": ["string", "null"]
+          },
+          "shared": {
+            "type": "boolean"
+          },
+          "turnCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How many questions were asked in it."
+          },
+          "lastQuestion": {
+            "type": ["string", "null"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canAsk": {
+            "type": "boolean",
+            "description": "Whether the person owns it, and so may ask and change it."
+          },
+          "context": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationContextItem"
+            }
+          },
+          "turns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationTurn"
+            }
+          },
+          "session": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "status",
+                  "warm",
+                  "budgetNanoAiu",
+                  "spentNanoAiu",
+                  "cancelRequested",
+                  "startedAt"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["queued", "running"]
+                  },
+                  "warm": {
+                    "type": "boolean",
+                    "description": "Started and waiting for questions, or answering one."
+                  },
+                  "budgetNanoAiu": {
+                    "type": "integer"
+                  },
+                  "spentNanoAiu": {
+                    "type": "integer"
+                  },
+                  "cancelRequested": {
+                    "type": "boolean"
+                  },
+                  "startedAt": {
+                    "type": ["string", "null"],
+                    "format": "date-time"
+                  }
+                }
+              }
+            ]
+          },
+          "spentNanoAiu": {
+            "type": "integer",
+            "description": "What every session of the conversation spent."
+          }
+        }
+      },
       "AgentSettingsPage": {
         "type": "object",
         "additionalProperties": false,
@@ -13258,6 +14086,7 @@
           "refinementAgent",
           "diagnosisAgent",
           "storyDraftAgent",
+          "productAgent",
           "knowledgeAgent"
         ]
       },
@@ -13268,6 +14097,7 @@
           "refinementAgent",
           "diagnosisAgent",
           "storyDraftAgent",
+          "productAgent",
           "knowledgeAgent",
           "knowledgeRepo",
           "version",
@@ -13287,6 +14117,10 @@
           "storyDraftAgent": {
             "type": ["string", "null"],
             "description": "Story drafts from a meeting topic, when someone asks; null: off."
+          },
+          "productAgent": {
+            "type": ["string", "null"],
+            "description": "The Product page's conversations, when someone asks; null: off."
           },
           "knowledgeAgent": {
             "type": ["string", "null"],
@@ -13337,6 +14171,11 @@
             "minLength": 1,
             "maxLength": 100
           },
+          "productAgent": {
+            "type": ["string", "null"],
+            "minLength": 1,
+            "maxLength": 100
+          },
           "knowledgeAgent": {
             "type": ["string", "null"],
             "minLength": 1,
@@ -13349,7 +14188,7 @@
           },
           "confirmSpend": {
             "type": "boolean",
-            "description": "Must be true when the change turns on Story drafts or Business-rule review, which spend AIU."
+            "description": "Must be true when the change turns on Story drafts, Product conversations or Business-rule review, which spend AIU."
           }
         }
       },

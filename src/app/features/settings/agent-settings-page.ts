@@ -42,6 +42,7 @@ function formValueOf(agents: AgentSettings): FormValue {
     refinementAgent: agents.refinementAgent,
     diagnosisAgent: agents.diagnosisAgent,
     storyDraftAgent: agents.storyDraftAgent ?? OFF,
+    productAgent: agents.productAgent ?? OFF,
     knowledgeAgent: agents.knowledgeAgent ?? OFF,
     knowledgeRepo: agents.knowledgeRepo ?? '',
   };
@@ -56,6 +57,7 @@ function choiceOf(value: FormValue, saved: AgentSettings): AgentJobChoice {
     diagnosisAgent: or(value.diagnosisAgent, saved.diagnosisAgent),
     storyDraftAgent:
       value.storyDraftAgent === OFF ? null : value.storyDraftAgent,
+    productAgent: value.productAgent === OFF ? null : value.productAgent,
     knowledgeAgent: value.knowledgeAgent === OFF ? null : value.knowledgeAgent,
   };
 }
@@ -334,6 +336,7 @@ export class AgentSettingsPage {
     refinementAgent: new FormControl(OFF, { nonNullable: true }),
     diagnosisAgent: new FormControl(OFF, { nonNullable: true }),
     storyDraftAgent: new FormControl(OFF, { nonNullable: true }),
+    productAgent: new FormControl(OFF, { nonNullable: true }),
     knowledgeAgent: new FormControl(OFF, { nonNullable: true }),
     knowledgeRepo: new FormControl('', { nonNullable: true }),
   });
@@ -469,6 +472,7 @@ export class AgentSettingsPage {
       ...(changed('storyDraftAgent')
         ? { storyDraftAgent: draft.storyDraftAgent }
         : {}),
+      ...(changed('productAgent') ? { productAgent: draft.productAgent } : {}),
       ...(changed('knowledgeAgent')
         ? { knowledgeAgent: draft.knowledgeAgent }
         : {}),

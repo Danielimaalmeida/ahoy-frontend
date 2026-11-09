@@ -1004,6 +1004,7 @@ export const AGENT_JOBS = listOf<AgentJob>()([
   'refinementAgent',
   'diagnosisAgent',
   'storyDraftAgent',
+  'productAgent',
   'knowledgeAgent',
 ]);
 
@@ -1242,3 +1243,64 @@ export type ListMeetingNotesQuery =
 export type ListMeetingsQuery = NonNullable<
   operations['listMeetings']['parameters']['query']
 >;
+
+/** A built-in recipe of a Product page conversation: what it adds to every question. */
+export type ConversationRecipe = Schemas['ConversationRecipe'];
+export const CONVERSATION_RECIPES = listOf<ConversationRecipe>()([
+  'split-epic',
+  'story-ready',
+  'how-today',
+]);
+
+/** What may be pinned to a conversation for the agent to read. */
+export type ConversationContextKind = Schemas['ConversationContextKind'];
+export const CONVERSATION_CONTEXT_KINDS = listOf<ConversationContextKind>()([
+  'jira',
+  'meeting_topic',
+  'defect',
+  'figma',
+  'repository',
+]);
+
+/** One pinned item, with what the page shows for it. */
+export type ConversationContextItem = Schemas['ConversationContextItem'];
+
+/** A story or a meeting topic the agent proposed in a turn. */
+export type ConversationProposal = Schemas['ConversationProposal'];
+
+/** Something the agent flagged about a proposal, with its evidence. */
+export type ProposalFlag = Schemas['ProposalFlag'];
+
+/** One question of a conversation and how it was answered. */
+export type ConversationTurn = Schemas['ConversationTurn'];
+
+/** Where a turn is: waiting, being answered, or done. */
+export type ConversationTurnStatus = ConversationTurn['status'];
+export const CONVERSATION_TURN_STATUSES = listOf<ConversationTurnStatus>()([
+  'queued',
+  'handed',
+  'answered',
+  'failed',
+  'cancelled',
+]);
+
+/** A conversation as the list shows it. */
+export type ConversationSummary = Schemas['ConversationSummary'];
+
+/** Answer of `listConversations`. */
+export type ConversationList = ItemList<ConversationSummary>;
+
+/** A conversation with its context, turns and session. */
+export type Conversation = Schemas['Conversation'];
+
+/** Body of `createConversation`. */
+export type NewConversation = Schemas['NewConversation'];
+
+/** Body of `updateConversation`: a new title, or sharing. */
+export type ConversationChange = Schemas['ConversationChange'];
+
+/** Body of `setConversationContext`: everything pinned, replacing what was. */
+export type ConversationContextChange = Schemas['ConversationContextChange'];
+
+/** Body of `askConversation`; it may start a session that spends AIU, so `confirmSpend` is required. */
+export type ConversationTurnRequest = Schemas['ConversationTurnRequest'];
