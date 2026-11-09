@@ -8,6 +8,8 @@
     "budgetNanoAiu": 20000000000,
     "maxStartsPerDay": 2,
     "maxActive": 3,
+    "startAs": "q123456",
+    "startAsName": "Sam Example",
     "version": 1,
     "updatedBy": "alex@example.com",
     "updatedByName": "Alex Example",

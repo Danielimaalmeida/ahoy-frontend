@@ -1924,6 +1924,8 @@ export const isDefectSettingsPage = guard<DefectSettingsPage>(
       budgetNanoAiu: nullable(positive),
       maxStartsPerDay: wholeNumber('a count of starts', 1),
       maxActive: wholeNumber('a count of voyages', 1),
+      startAs: nullable(actor),
+      startAsName: nullable(text),
       version: nullable(wholeNumber('a version', 1)),
       updatedBy: nullable(actor),
       updatedByName: nullable(text),

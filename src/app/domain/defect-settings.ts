@@ -51,19 +51,22 @@ export interface DefectSpend {
   readonly autoStart: boolean;
   readonly budgetNanoAiu: number | null;
   readonly maxStartsPerDay: number;
+  /** Whose Copilot token the voyages run on. */
+  readonly startAs: string | null;
 }
 
 /**
  * Whether going from `was` to `now` lets the watch spend more by itself, which needs the admin's yes (`confirmSpend`):
- * turning automatic starts on, or raising the cap per defect or the starts per day while they are on. Mirrors
- * `ahoy-hosted`'s `spendsMore`.
+ * turning automatic starts on, or, while they are on, raising the cap per defect or the starts per day, or changing
+ * who they start as (another person's Copilot token). Mirrors `ahoy-hosted`'s `spendsMore`.
  */
 export function spendsMore(was: DefectSpend, now: DefectSpend): boolean {
   if (!now.watchOn || !now.autoStart) return false;
   if (!was.watchOn || !was.autoStart) return true;
   return (
     (now.budgetNanoAiu ?? 0) > (was.budgetNanoAiu ?? 0) ||
-    now.maxStartsPerDay > was.maxStartsPerDay
+    now.maxStartsPerDay > was.maxStartsPerDay ||
+    now.startAs !== was.startAs
   );
 }
 
@@ -112,6 +115,7 @@ const FIELD_NAMES: Readonly<Record<string, string>> = {
   budgetNanoAiu: 'AIU cap per defect',
   maxStartsPerDay: 'Starts per day',
   maxActive: 'Open voyages',
+  startAs: 'Start as',
   // Kept so the history still names a change the component map once made.
   components: 'Components',
 };
@@ -124,6 +128,7 @@ function toWords(field: string, value: unknown): string {
     return typeof value === 'number' ? aiuLabel(value) : 'none';
   if (field === 'maxStartsPerDay' || field === 'maxActive')
     return typeof value === 'number' ? String(value) : '?';
+  if (field === 'startAs') return typeof value === 'string' ? value : 'nobody';
   if (field === 'defectsJql')
     return typeof value === 'string' ? 'changed' : 'removed';
   if (Array.isArray(value))

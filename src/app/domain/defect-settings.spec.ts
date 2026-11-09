@@ -66,12 +66,15 @@ describe('automatic starts in words', () => {
       autoStart: true,
       budgetNanoAiu: 20_000_000_000,
       maxStartsPerDay: 2,
+      startAs: 'q123456',
     };
     const off = { ...on, autoStart: false };
     expect(spendsMore(off, on)).toBe(true);
     expect(spendsMore({ ...on, watchOn: false }, on)).toBe(true);
     expect(spendsMore(on, { ...on, budgetNanoAiu: 30_000_000_000 })).toBe(true);
     expect(spendsMore(on, { ...on, maxStartsPerDay: 3 })).toBe(true);
+    expect(spendsMore(on, { ...on, startAs: 'q777' })).toBe(true);
+    expect(spendsMore(off, { ...off, startAs: 'q777' })).toBe(false);
     expect(
       spendsMore(on, {
         ...on,
@@ -118,9 +121,11 @@ describe('describeDefectEvent', () => {
         watchOn: { from: false, to: true },
         defectsJql: { from: null, to: 'project = PROJ' },
         priorities: { from: ['High'], to: [] },
+        startAs: { from: null, to: 'q123456' },
       },
     };
-    const words = 'Watch: on; Query: changed; Priorities: none';
+    const words =
+      'Watch: on; Query: changed; Priorities: none; Start as: q123456';
     expect(describeDefectEvent('defect_settings.updated', payload)).toBe(words);
     expect(describeSettingsEvent('defect_settings.updated', payload)).toBe(
       words

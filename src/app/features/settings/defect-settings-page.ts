@@ -17,6 +17,7 @@ import {
   prioritiesText,
   startCapOf,
 } from '@domain/defect-settings';
+import { qnumberOf } from '@domain/people-settings';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import { MAX_BACKLOG_JQL_CHARS } from '@domain/jira-settings';
 import { Banner } from '@ui/banner/banner';
@@ -37,6 +38,8 @@ interface FormValue {
   readonly jql: string;
   readonly priorities: string;
   readonly auto: 'on' | 'off';
+  /** The qnumber of the person the voyages Ahoy starts by itself run as. */
+  readonly startAs: string;
   /** The AIU cap per defect, in AIU. */
   readonly cap: string;
   readonly perDay: string;
@@ -52,6 +55,7 @@ function formValueOf(settings: DefectSettings): FormValue {
     jql: settings.defectsJql ?? '',
     priorities: prioritiesText(settings.priorities),
     auto: settings.autoStart ? 'on' : 'off',
+    startAs: settings.startAs ?? '',
     cap:
       settings.budgetNanoAiu === null
         ? ''
@@ -294,6 +298,20 @@ type PreviewState =
                     </select>
                   </ah-field>
                   <ah-field
+                    label="Start as"
+                    [optional]="value().auto === 'off'"
+                    hint="The qnumber of the person who owns the voyages Ahoy starts by itself. Their Copilot token runs them, and they get the plan and the delivery to review."
+                    [errorText]="startAsError() ?? ''"
+                  >
+                    <input
+                      ahInput
+                      autocomplete="off"
+                      spellcheck="false"
+                      placeholder="q123456"
+                      [formControl]="form.controls.startAs"
+                    />
+                  </ah-field>
+                  <ah-field
                     label="AIU cap per defect"
                     unit="AIU"
                     [optional]="value().auto === 'off'"
@@ -340,7 +358,9 @@ type PreviewState =
                         ' a day by itself'
                       "
                     >
-                      @if (alreadyOn()) {
+                      @if (alreadyOn() && startAsChanged()) {
+                        The voyages will run on another person's Copilot token.
+                      } @else if (alreadyOn()) {
                         This raises what Ahoy may spend by itself.
                       }
                       Each voyage it starts is capped at the AIU cap per defect,
@@ -383,6 +403,17 @@ type PreviewState =
                       {{ page.defects.maxActive }} open at once
                     } @else {
                       Off
+                    }
+                  </dd>
+                  <dt>Start as</dt>
+                  <dd>
+                    @if (page.defects.startAs; as startAs) {
+                      {{ page.defects.startAsName ?? startAs }}
+                      @if (page.defects.startAsName) {
+                        <span class="ah-muted">({{ startAs }})</span>
+                      }
+                    } @else {
+                      <span class="ah-muted">Not set</span>
                     }
                   </dd>
                   <dt>AIU cap per defect</dt>
@@ -453,6 +484,7 @@ export class DefectSettingsPage {
     jql: new FormControl('', { nonNullable: true }),
     priorities: new FormControl('', { nonNullable: true }),
     auto: new FormControl<'on' | 'off'>('off', { nonNullable: true }),
+    startAs: new FormControl('', { nonNullable: true }),
     cap: new FormControl('', { nonNullable: true }),
     perDay: new FormControl('2', { nonNullable: true }),
     active: new FormControl('3', { nonNullable: true }),
@@ -473,6 +505,13 @@ export class DefectSettingsPage {
   private readonly capRead = computed(() =>
     checkAiuLimit(this.value().cap, MAX_DEFECT_BUDGET_NANO_AIU)
   );
+  /** The person to start as: a qnumber, null (none), or why it is refused. */
+  private readonly startAsRead = computed(
+    (): { readonly value: string | null } | { readonly problem: string } =>
+      this.value().startAs.trim() === ''
+        ? { value: null }
+        : qnumberOf(this.value().startAs)
+  );
   private readonly perDayRead = computed(() => startCapOf(this.value().perDay));
   private readonly activeRead = computed(() => startCapOf(this.value().active));
   /** What the form would save, or null while a field is refused. */
@@ -482,8 +521,10 @@ export class DefectSettingsPage {
     const cap = this.capRead();
     const perDay = this.perDayRead();
     const active = this.activeRead();
+    const startAs = this.startAsRead();
     if (
       'problem' in priorities ||
+      'problem' in startAs ||
       'error' in cap ||
       'problem' in perDay ||
       'problem' in active
@@ -495,6 +536,7 @@ export class DefectSettingsPage {
       defectsJql: jql === '' ? null : jql,
       priorities: priorities.value,
       autoStart: value.auto === 'on',
+      startAs: startAs.value,
       budgetNanoAiu: cap.cap,
       maxStartsPerDay: perDay.value,
       maxActive: active.value,
@@ -518,6 +560,7 @@ export class DefectSettingsPage {
       ...(typed.autoStart !== saved.autoStart
         ? { autoStart: typed.autoStart }
         : {}),
+      ...(typed.startAs !== saved.startAs ? { startAs: typed.startAs } : {}),
       ...(typed.budgetNanoAiu !== saved.budgetNanoAiu
         ? { budgetNanoAiu: typed.budgetNanoAiu }
         : {}),
@@ -551,6 +594,12 @@ export class DefectSettingsPage {
     const saved = this.saved();
     return saved !== null && saved.watchOn && saved.autoStart;
   });
+  /** Whether the form names another person to start as than the saved settings. */
+  protected readonly startAsChanged = computed(() => {
+    const saved = this.saved();
+    const typed = this.typed();
+    return saved !== null && typed !== null && typed.startAs !== saved.startAs;
+  });
   /** The most AIU automatic starts may spend in a day, as typed. */
   protected readonly dailySpend = computed(() => {
     const typed = this.typed();
@@ -568,6 +617,13 @@ export class DefectSettingsPage {
           : 'Type an amount in AIU, such as 20 or 12.5.';
     return this.value().auto === 'on' && read.cap === null
       ? 'Automatic starts need an AIU cap per defect.'
+      : null;
+  });
+  protected readonly startAsError = computed(() => {
+    const read = this.startAsRead();
+    if ('problem' in read) return read.problem;
+    return this.value().auto === 'on' && read.value === null
+      ? 'Automatic starts need a person to start as: their Copilot token runs the voyages.'
       : null;
   });
   protected readonly perDayError = computed(() => {
@@ -591,6 +647,7 @@ export class DefectSettingsPage {
     const value = this.value();
     return (
       value.priorities.trim() !== was.priorities ||
+      value.startAs.trim().toLowerCase() !== was.startAs ||
       value.cap.trim() !== was.cap ||
       value.perDay.trim() !== was.perDay ||
       value.active.trim() !== was.active
@@ -610,6 +667,7 @@ export class DefectSettingsPage {
       this.typed() === null ||
       this.jqlError() !== null ||
       this.capError() !== null ||
+      this.startAsError() !== null ||
       this.confirmMissing()
   );
   protected readonly saving = signal(false);
