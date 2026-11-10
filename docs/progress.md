@@ -26,6 +26,12 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   3:1. "Skip to content" button first in the shell; Meetings and `/_kit` no longer render a second `<main>`. Checks
   (cloud, Node 22.23.4, `@acme-fedev/auth` stubbed in a scratch copy): build, typecheck, lint, `ng test` (219 files,
   3,806 tests), format and `build-tokens --check` pass. Not run: Node 24, the real auth library, Playwright, a browser.
+- **Same branch, enforcement (the user: so every contributor follows the design system):** CLAUDE.md has a "UI: design
+  system and accessibility" section, copied to `.github/instructions.md` (which had drifted); `npm run lint` now runs
+  `tokens:check`, which also fails on a colour written literally outside `RAW_COLOUR_FILES` (checked against a planted
+  hex, a `rgba()` shadow and a component `styles` literal; selectors and comments are not flagged); a
+  `.github/pull_request_template.md` with a design-system and accessibility checklist. `npm run lint` passes (scratch
+  copy, stubbed auth).
 - **This branch (`fix/metrics-trends-labels`, 2026-11-09, after the user's first look at Trends on TEST):** a pill
   whose 4 weeks before had nothing to compare (runs start on 2026-10-13) reads "nothing before", not "no data"; a
   chart's folded series reads "3 more", not "Other", which read like the halt kind `other`. The zeros in Voyages done

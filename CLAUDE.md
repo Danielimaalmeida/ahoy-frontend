@@ -56,6 +56,23 @@ Earlier approvals, unspent budget and the presence of credentials grant nothing.
   API.
 - Match the surrounding code: short doc comments on exported symbols.
 
+## UI: design system and accessibility
+
+Every change to what people see follows the design system and WCAG 2.2 AA. Before building UI, read
+`docs/design-system.md` ("Rules for new UI") and `docs/accessibility.md`.
+
+- Build from the wrappers in `src/app/ui/` (`ah-*`, `ahButton`, `ahInput`, `ahTable`), then the bundle's `ah-*` classes,
+  and only then new CSS. A component or variant every screen could use goes into the design system first, then
+  `docs/design/` is re-synced and it is wrapped here.
+- Colours, spacing, radii and shadows come from tokens (`var(--…)`). `npm run lint` runs `npm run tokens:check`, which
+  fails on an undefined `var(--x)` and on a colour written literally outside the files listed in `RAW_COLOUR_FILES`
+  (`scripts/build-tokens.mjs`); adding a file there needs a reason a reviewer can check.
+- Labels follow `docs/design/design-system/vocabulary.md`: plain words for statuses, actions and navigation; the nautical
+  theme only in names and headings.
+- Each UI change: a keyboard path for every action, a visible focus ring, a name for every control (no icon-only button
+  without `aria-label`), status not by colour alone, text 4.5:1 and controls 3:1 in both themes, motion off under
+  `prefers-reduced-motion`, no sideways scroll at 390px. Say in the PR how it was checked (the PR template has the list).
+
 ## TypeScript
 
 `tsconfig.json` enables `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`,

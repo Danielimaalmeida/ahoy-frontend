@@ -94,8 +94,10 @@ folders, spec titles). They are identifiers, not UI text; rename them only toget
 ## Rules for new UI
 
 - Use a wrapper from `src/app/ui/` before writing markup with bundle classes, and bundle classes before new CSS.
-- Colours, spacing, radii and shadows come from tokens (`var(--…)`). A raw colour needs a comment that says why, and
-  both themes. A new feature-local property is listed above.
+- Colours, spacing, radii and shadows come from tokens (`var(--…)`). `npm run lint` runs `npm run tokens:check`, which
+  fails on an undefined `var(--x)` and on a colour written literally (hex, `rgb()`, `hsl()`…) in any style outside
+  `RAW_COLOUR_FILES` in `scripts/build-tokens.mjs`. A file goes on that list only with its reason, and its colours are
+  declared once per theme as feature-local properties (listed above).
 - Only dialogs, toasts and the selected segment are raised (`shadow-*`). A small popover may use a light shadow, as the
   Meetings topic menu does.
 - Keep the density: 34px controls (28px in rows), 7 × 14px table cells, 14 × 16px panel padding.
