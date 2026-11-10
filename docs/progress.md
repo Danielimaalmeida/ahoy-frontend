@@ -19,6 +19,13 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   Checks (cloud, Node 22.23.4, `@acme-fedev/*` removed in a scratch copy): `ng test` on `src/app/ui` (39 files, 476
   tests), ESLint on the changed files, Stylelint, `build-tokens --check` and Prettier 3.9 pass. Not run: Node 24, the
   build, typecheck, the full `ng test` (Meetings specs need the auth library), Playwright, a browser.
+- **Same branch, after the user's "fix every gap" (2026-11-10):** `src/styles/_ahoy-a11y.scss` overrides `focus` (light
+  `#1A64D6`), `line-strong` (`#7A8FA3` / `#566E85`) and dark `danger` (`#C53636`) so each passes 3:1, and adds
+  `progress-current` for the compact bars that used `focus`. Publishing the same change to the design-system artifact was
+  refused in this session, so it is pending there (values in `docs/accessibility.md`). Metrics light series darkened to
+  3:1. "Skip to content" button first in the shell; Meetings and `/_kit` no longer render a second `<main>`. Checks
+  (cloud, Node 22.23.4, `@acme-fedev/auth` stubbed in a scratch copy): build, typecheck, lint, `ng test` (219 files,
+  3,806 tests), format and `build-tokens --check` pass. Not run: Node 24, the real auth library, Playwright, a browser.
 - **This branch (`fix/metrics-trends-labels`, 2026-11-09, after the user's first look at Trends on TEST):** a pill
   whose 4 weeks before had nothing to compare (runs start on 2026-10-13) reads "nothing before", not "no data"; a
   chart's folded series reads "3 more", not "Other", which read like the halt kind `other`. The zeros in Voyages done

@@ -16,6 +16,8 @@ Checked against the code on 2026-11-10 (design system `1791619698-2405`).
 2. `styles/ahoy-bundle.css`: a copy of `components/bundle.css` (it imports the two Google Fonts).
 3. `styles/_ahoy-angular.scss` and `styles/_ahoy-1b.scss`: the few rules the bundle can't know about (Angular host
    elements, inline styles of the previews, the extensions below). Each rule says why it exists.
+4. `styles/_ahoy-a11y.scss`: contrast fixes to `focus`, `line-strong`, dark `danger` and a new `progress-current`, until
+   the design system has them ([accessibility.md](accessibility.md#fixes-the-design-system-does-not-have-yet)).
 
 The root component carries `class="ah"` (`<ah-root class="ah">`, the bundle's scope), and `data-theme` sits on `<html>` (`ThemeService`, light by
 default, remembered in `localStorage`). The `/_kit` gallery (development builds only) shows every component in both
@@ -104,9 +106,8 @@ folders, spec titles). They are identifiers, not UI text; rename them only toget
 
 - **ModelChoice.** The design system's preview has an `intake` row with model and effort. Intake runs no model in the
   app (`domain/models.ts`), so the app shows no row for it.
-- **Raw colours.** The Christmas decorations (`ui/top-bar/top-bar.scss`) and the Teams settings preview card
-  (`features/settings/teams-settings-page.ts`, `#fff` fallback and a shadow) use literal colours; the Meetings topic menu
-  uses a literal shadow.
+- **Raw colours.** The Christmas decorations (`ui/top-bar/top-bar.scss`) use literal colours; the Teams settings preview
+  card and the Meetings topic menu use literal shadows.
 - **Theme switch.** The app has no theme button yet (F16); only `/_kit` switches theme.
-- Accessibility gaps (focus ring contrast in light, control borders, light chart colours, no skip link) are listed in
-  [accessibility.md](accessibility.md#known-gaps).
+- **Tokens.** Four colour tokens differ from the design system for contrast (`_ahoy-a11y.scss`); they should move into
+  it, then the overrides go.

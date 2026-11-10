@@ -76,7 +76,7 @@ import {
         padding: 12px 14px;
         border: 1px solid var(--line-soft);
         border-radius: 6px;
-        background: var(--surface, #fff);
+        background: var(--surface);
         box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
         display: flex;
         flex-direction: column;

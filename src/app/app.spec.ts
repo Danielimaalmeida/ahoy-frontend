@@ -203,12 +203,22 @@ describe('App shell', () => {
     logout.mockClear();
   });
 
-  it('puts the top bar, the page and the toasts in that order, with the page in one main landmark', async () => {
+  it('puts the skip button, the top bar, the page and the toasts in that order, with the page in one main landmark', async () => {
     const { root } = await shell();
     expect(
       Array.from(root.children).map((child) => child.tagName.toLowerCase())
-    ).toEqual(['ah-top-bar', 'main', 'ah-toast-host']);
+    ).toEqual(['button', 'ah-top-bar', 'main', 'ah-toast-host']);
+    expect(root.querySelectorAll('main')).toHaveLength(1);
     expect(root.querySelector('main ah-all-hands')).not.toBeNull();
+  });
+
+  it('moves focus past the top bar to the page with "Skip to content", the first Tab stop', async () => {
+    const { root } = await shell();
+    const skip = root.firstElementChild as HTMLButtonElement;
+    expect(skip.textContent?.trim()).toBe('Skip to content');
+    expect(skip.type).toBe('button');
+    skip.click();
+    expect(document.activeElement).toBe(root.querySelector('main'));
   });
 
   describe('access', () => {
@@ -447,7 +457,13 @@ describe('App shell', () => {
       );
       expect(
         Array.from(root.children).map((child) => child.tagName.toLowerCase())
-      ).toEqual(['ah-top-bar', 'ah-setup-banner', 'main', 'ah-toast-host']);
+      ).toEqual([
+        'button',
+        'ah-top-bar',
+        'ah-setup-banner',
+        'main',
+        'ah-toast-host',
+      ]);
     });
 
     it('reads the setup once when the app opens, not again on each page', async () => {

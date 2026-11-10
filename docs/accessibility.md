@@ -2,33 +2,37 @@
 
 How Ahoy stays usable with a keyboard, a screen reader, zoom and reduced motion. The target is **WCAG 2.2 AA**. These
 rules apply the design system (`docs/design/design-system/`, "Focus and accessibility" in its README) to the Angular
-components in `src/app/ui/`; where the two differ, this page says so under "Known gaps". How the app builds on the design
+components in `src/app/ui/`; where the two differ, this page says so under "Fixes the design
+system does not have yet". How the app builds on the design
 system is in [design-system.md](design-system.md).
 
 ESLint's `angular-eslint` `templateAccessibility` rules (`npm run lint`) catch part of this. Nothing checks the rest
-automatically yet: `@axe-core/playwright` is an approved dependency, but there is no Playwright suite in the repository.
+automatically yet (see "Known gaps").
 
 ## Contrast
 
-Measured from `tokens.json` (WCAG relative luminance). Re-measure when a token changes.
+Measured from `tokens.json` with the app's fixes in `src/styles/_ahoy-a11y.scss` (WCAG relative luminance; see "Fixes the
+design system does not have yet"). Re-measure when a token changes.
 
-| Pair                                                            | Light         | Dark        | Rule                         |
-| --------------------------------------------------------------- | ------------- | ----------- | ---------------------------- |
-| `ink` on `surface` / `bg`                                       | 15.2 / 14.3   | 13.9 / 15.4 | Body text, 4.5:1             |
-| `ink-muted` on `surface` / `bg`                                 | 5.5 / 5.2     | 7.0 / 7.7   | Secondary text, 4.5:1        |
-| `ink-muted` on `surface-sunken`                                 | 4.9           | 6.4         | Tab tracks, neutral tags     |
-| `ink-soft` on `surface`                                         | 7.7           | 9.1         | Ghost buttons, captions      |
-| `accent-text` on `surface`                                      | 8.4           | 8.2         | Links and Jira keys          |
-| `on-accent` on `accent`                                         | 5.5           | 4.7         | Primary buttons              |
-| `on-accent` on `danger`                                         | 6.6           | 5.5         | Destructive buttons          |
-| `danger-text` on `surface`                                      | 7.7           | 6.8         | Danger-outline buttons       |
-| Every `status-*-fg` on its `status-*-bg`                        | 6.2 – 11.7    | 7.6 – 12.3  | Badges, 4.5:1                |
-| `notice-fg`, `error-fg`, `diff-*-fg` on their backgrounds       | 8.1 – 11.8    | 8.9 – 11.0  | Banners and diffs            |
-| `accent` on `surface` (meters, selected chips, current phase)   | 5.5           | 3.5         | Non-text, 3:1                |
-| `live` dot on `surface`                                         | 3.5           | 7.2         | Non-text, 3:1 (with "Live")  |
-| `ink-disabled` on `surface`                                     | 3.1           | 3.8         | Disabled labels only, exempt |
-| `focus` ring on `surface` / `bg`                                | **1.9 / 1.8** | 4.6 / 5.0   | Non-text, 3:1 (see gaps)     |
-| `line-strong` (input and secondary-button borders) on `surface` | **1.4**       | **1.8**     | Non-text, 3:1 (see gaps)     |
+| Pair                                                            | Light       | Dark        | Rule                         |
+| --------------------------------------------------------------- | ----------- | ----------- | ---------------------------- |
+| `ink` on `surface` / `bg`                                       | 15.2 / 14.3 | 13.9 / 15.4 | Body text, 4.5:1             |
+| `ink-muted` on `surface` / `bg`                                 | 5.5 / 5.2   | 7.0 / 7.7   | Secondary text, 4.5:1        |
+| `ink-muted` on `surface-sunken`                                 | 4.9         | 6.4         | Tab tracks, neutral tags     |
+| `ink-soft` on `surface`                                         | 7.7         | 9.1         | Ghost buttons, captions      |
+| `accent-text` on `surface`                                      | 8.4         | 8.2         | Links and Jira keys          |
+| `on-accent` on `accent`                                         | 5.5         | 4.7         | Primary buttons              |
+| `on-accent` on `danger`                                         | 6.6         | 5.3         | Destructive buttons          |
+| `danger` fill on `surface`                                      | 6.6         | 3.1         | Non-text, 3:1                |
+| `danger-text` on `surface`                                      | 7.7         | 6.8         | Danger-outline buttons       |
+| Every `status-*-fg` on its `status-*-bg`                        | 6.2 – 11.7  | 7.6 – 12.3  | Badges, 4.5:1                |
+| `notice-fg`, `error-fg`, `diff-*-fg` on their backgrounds       | 8.1 – 11.8  | 8.9 – 11.0  | Banners and diffs            |
+| `accent` on `surface` (meters, selected chips, current phase)   | 5.5         | 3.5         | Non-text, 3:1                |
+| `live` dot on `surface`                                         | 3.5         | 7.2         | Non-text, 3:1 (with "Live")  |
+| `ink-disabled` on `surface`                                     | 3.1         | 3.8         | Disabled labels only, exempt |
+| `focus` ring on `surface` / `bg`                                | 5.5 / 5.1   | 4.6 / 5.0   | Non-text, 3:1                |
+| `line-strong` (input and secondary-button borders) on `surface` | 3.3         | 3.1         | Non-text, 3:1                |
+| Metrics series colours on `surface`                             | 3.1 – 11.7  | 4.8 – 9.0   | Non-text, 3:1                |
 
 Rules:
 
@@ -51,7 +55,7 @@ The design system's rule, and how each component keeps it:
 - **Artifact diffs** mark lines with + and −, not only green and red.
 - **Outcome pills, toasts and banners** have a word or a title; the icon is decorative.
 - **Charts** (Metrics) label their series in a legend and give the values in text or a table. Several light series
-  colours are under 3:1 on white (see gaps), so a chart can't rely on telling two of them apart by colour.
+  colours pass 3:1 on `surface`, but a chart still can't rely on telling two of them apart by colour.
 - **Trends verdicts** say "better", "worse" or "about the same" in words next to the green or red.
 
 ## Focus
@@ -59,6 +63,9 @@ The design system's rule, and how each component keeps it:
 - Every interactive element shows the 2px `focus` outline with a 1px offset. The bundle sets it on `.ah :focus-visible`;
   inputs show it on `:focus`. Don't remove an outline without replacing it, and don't set `outline: none` on a
   component's host.
+- **Skip to content** is the first Tab stop on every page: a button, hidden until it has focus, that moves focus to
+  `<main>` (`tabindex="-1"`). It is a button, not an `href="#main"` link, because `<base href="/">` would turn the
+  fragment into a navigation to `/`.
 - Focus order follows reading order. Don't use a positive `tabindex`. `tabindex="-1"` is only for an element that
   receives focus from code (a dialog container, a heading moved to after navigation).
 - Nothing sticky may cover the focused element (WCAG 2.4.11). The top bar is not sticky; if that changes, add
@@ -102,7 +109,7 @@ The design system's rule, and how each component keeps it:
 - **Meters** (`ah-budget-meter`) are `role="meter"` with `aria-valuenow`, `aria-valuemax` and an `aria-valuetext` in
   words ("12.4 of 30 AIU").
 - **Navigation**: the top bar is `<nav aria-label="Main">` with `aria-current="page"` on the current destination. A
-  page has one `<main>` and one `<h1>` (the page-title style), and headings don't skip levels.
+  page has one `<main>`, the app shell's, so a feature's layout uses a `<div>`, never a second `<main>`; and one `<h1>` (the page-title style), and headings don't skip levels.
 - **Page titles**: every route sets a `title` ("Needs you · Ahoy"), so the tab and the screen reader name the page.
 - **Visually hidden text** uses the bundle's `ah-sr` class, for example a count's meaning ("4 voyages need you").
 - Agent text (plans, questions, logs) is rendered only by `ah-markdown`; keep its headings and lists as real elements.
@@ -150,17 +157,22 @@ reduce)`. Today the status badge, phase stepper, section tabs, Under way strip, 
 5. Check light and dark.
 6. With a screen reader (VoiceOver or NVDA), check that new controls, statuses and errors are named and announced.
 
+## Fixes the design system does not have yet
+
+`src/styles/_ahoy-a11y.scss` overrides these tokens so the app passes 3:1 now. Each one should move into the design
+system's `tokens.json` (and the compact bars' rule into its `bundle.css`); after the re-sync, delete the matching rule.
+
+| Token                    | Was (light / dark)    | Now (light / dark)    | Why                                              |
+| ------------------------ | --------------------- | --------------------- | ------------------------------------------------ |
+| `focus`                  | `#9DBDF1` / `#4F86E0` | `#1A64D6` / `#4F86E0` | Ring was 1.9:1 on `surface` in light             |
+| `line-strong`            | `#D5DCE3` / `#3A4A5A` | `#7A8FA3` / `#566E85` | Control borders were 1.4:1 and 1.8:1             |
+| `danger`                 | `#B42323` / `#C03535` | `#B42323` / `#C53636` | Dark fill was 3.0:1 on `surface`                 |
+| `progress-current` (new) | none                  | `#9DBDF1` / `#4F86E0` | The current compact bar used `focus`; keeps look |
+
+The Metrics series colours are the app's own (`features/metrics/metrics.scss`); in light, `--metrics-s3`, `-s4`, `-s5`
+and `-fail` were darkened to reach 3:1 on `surface`.
+
 ## Known gaps
 
-These need a change in the design system (re-synced into `docs/design/`) or a decision; they are not fixed here.
-
-- **The light focus ring is too faint.** `focus` `#9DBDF1` is 1.9:1 on `surface` and 1.8:1 on `bg`; WCAG 1.4.11 asks
-  3:1 for a focus indicator. Using `accent` (`#1A64D6`, 5.5:1 on `surface`, 5.1:1 on `bg`) in light would pass. Dark
-  passes (4.6:1).
-- **Control borders.** `line-strong` is 1.4:1 (light) and 1.8:1 (dark) on `surface`. The design system keeps it from the
-  wireframes and relies on labels and fills; an empty input on a white panel is still hard to see.
-- **Light chart colours.** In light, `--metrics-s3` (2.8:1), `--metrics-s4` and `--metrics-fail` (2.2:1) and
-  `--metrics-s5` (2.8:1) are under 3:1 on `surface`. Dark passes.
-- **Dark danger fill.** `danger` is 3.0:1 on the dark `surface`; the white label passes (5.5:1), so the button still reads.
-- **No skip link.** The top bar has about ten stops before the content; a "Skip to content" link to `<main>` would help.
-- **No automated audit.** No axe run in CI; add one to the Playwright suite when it exists.
+- **No automated audit.** There is no Playwright suite yet, and `@axe-core/playwright` is approved but not installed.
+  Add an axe run over the main pages when the suite exists.

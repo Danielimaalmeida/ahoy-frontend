@@ -1,14 +1,15 @@
 // The Metrics pages (docs/design: Metrics, MetricsCost, MetricsHalts, MetricsGates). Shared by the shell and its
-// sections; the series colours follow the design's order and are restepped for the dark theme.
+// sections; the series colours follow the design's order and are restepped for the dark theme. Every series colour is at
+// least 3:1 on surface in both themes (docs/accessibility.md); the design's green, amber and grey were darkened for light.
 :host {
   display: block;
   --metrics-s1: #2a78d6;
   --metrics-s2: #eb6834;
-  --metrics-s3: #1baf7a;
-  --metrics-s4: #eda100;
-  --metrics-s5: #8f9ba8;
+  --metrics-s3: #1aa674;
+  --metrics-s4: #c48500;
+  --metrics-s5: #8693a1;
   --metrics-pass: #1c6337;
-  --metrics-fail: #eda100;
+  --metrics-fail: #c48500;
   --metrics-reject: #c23b3b;
   --metrics-error: #2b3a47;
 }
