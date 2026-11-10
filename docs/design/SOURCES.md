@@ -1,12 +1,13 @@
 # Design references: sources
 
 Snapshot copied on **2026-10-06** by lane P0, so agents don't depend on access to the Claude Design artifacts. These files
-are references, not code: they are excluded from lint, format, `tsc` and the build. **Don't edit them; re-sync them.**
+are references, not code: they are excluded from lint, `tsc` and the build, but `npm run format` checks them, so a re-sync
+runs Prettier on the copied files. **Don't edit them; re-sync them.**
 
 | Folder           | Artifact                                                                    | Version           | Type          |
 | ---------------- | --------------------------------------------------------------------------- | ----------------- | ------------- |
 | `wireframes/`    | "Ahoy UI wireframes", <https://claude.ai/artifact/LTbtxVqPbLAodmy4Vr44dY>   | `1791303315-8e37` | Design        |
-| `design-system/` | "Ahoy" (design system), <https://claude.ai/artifact/LAzfVgbze8zdoaShrSabtf> | `1791303933-1d4d` | Design System |
+| `design-system/` | "Ahoy" (design system), <https://claude.ai/artifact/LAzfVgbze8zdoaShrSabtf> | `1791619698-2405` | Design System |
 
 The four Metrics boards (`Metrics`, `MetricsCost`, `MetricsHalts`, `MetricsGates`) were copied on **2026-10-11** from
 the copy of the wireframes the metrics design was made in, <https://claude.ai/artifact/HS3s2BFGctCdHQByyyu5JF>. The other
@@ -17,6 +18,15 @@ The six Meetings boards (`Meetings`, `MeetingNext`, `UserStory`, `StoryGrill`, `
 `1792136579-db86`. Slice 1 (meetings, topics, notes, carry-over) builds `Meetings` and `MeetingNext`; the other four are
 later slices and not built. `ahoy-tokens.css` carries the light tokens and a fix for `bundle.css` colouring link-buttons
 (`.ah a`); the app's own styles don't have that problem. `canvas.json` and the other boards were not re-synced.
+
+`design-system/` was re-synced on **2026-11-10** from version `1791619698-2405` (the design system's change of
+2026-10-10: plain labels for statuses, actions and navigation, the nautical theme kept for names and headings; the
+ModelChoice component reads models from `GET /models`). The app already used those labels; the snapshot had not been
+re-synced. `bundle.css`, the token values and the assets did not change; only `usage` texts and samples in
+`tokens.json` did, so `src/styles/tokens.css` is unchanged.
+
+How the app builds on this snapshot (wrappers, local additions, known gaps) is in [`../design-system.md`](../design-system.md),
+and the accessibility rules in [`../accessibility.md`](../accessibility.md).
 
 ## What is here
 
@@ -45,7 +55,8 @@ later slices and not built. `ahoy-tokens.css` carries the light tokens and a fix
 
 1. List the files and the current version of each artifact (`Artifact` tool, `action: "list"`, `scope: "files"`, with the
    URL above). If the version is unchanged, stop.
-2. Read the `project/` files with `action: "read"` and `paths` (one call per artifact), and copy them over this folder.
+2. Read the `project/` files with `action: "read"` and `paths` (one call per artifact), copy them over this folder, and
+   run `npx prettier --write docs/design/` so `npm run format` passes.
 3. For the SVGs, read `assetGroups` in `design-system.json`, then read each asset **one at a time** with `path` set to its
    `blob` id (a multi-path read of asset ids failed on 2026-10-06), and save it as `assets/<Group>/<name>`.
 4. Update the versions and the date in this file, and say in `docs/progress.md` what changed. If `bundle.css` changed,

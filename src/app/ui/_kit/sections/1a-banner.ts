@@ -12,7 +12,7 @@ import { Banner } from '@ui/banner/banner';
     >
     <ah-banner
       variant="error"
-      heading="Anchored: the planning run failed before it started"
+      heading="Halted: the planning run failed before it started"
       tech="run_failed · r-03 · preflight: model not enabled for this account"
       ><span
         >The owner's Copilot account can't use gpt-5.6-terra. No prompt was sent

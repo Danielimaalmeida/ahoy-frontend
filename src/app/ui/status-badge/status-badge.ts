@@ -44,9 +44,9 @@ function neutral(status: string): StatusPresentation {
 export class StatusBadge {
   /** The API status. */
   readonly status = input.required<StoryStatus>();
-  /** The API phase; it tells a terminal voyage that is Docked (`done`) from one that is Aground (`blocked`). */
+  /** The API phase; it tells a terminal voyage that is Done (`done`) from one that is Blocked (`blocked`). */
   readonly phase = input<string | null>(null);
-  /** Also show the API status word, in `ah-api`, beside the badge: "Your orders" then `awaiting_decision`. */
+  /** Also show the API status word, in `ah-api`, beside the badge: "Needs decision" then `awaiting_decision`. */
   readonly showApi = input(false, { transform: booleanAttribute });
   /** Another API word to show after the status word, such as the gate (`plan_accepted`) or the halt reason. */
   readonly detail = input('');

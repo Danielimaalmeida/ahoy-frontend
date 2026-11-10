@@ -20,7 +20,7 @@ export interface AppConfig {
   /** Base path of the API: a same-origin path such as `/api/v1` (F9). It is what `API_BASE` provides. */
   readonly apiBase: string;
   /**
-   * Who the UI says you are. **Must match** the `AHOY_ACTOR` the dev proxy sends as `X-Ahoy-Actor` (`proxy.conf.mjs`),
+   * Who the UI says you are. **Must match** the `X-Ahoy-Actor` the dev proxy sends (`src/proxy.conf.json`),
    * or "(you)", the avatar and the owner checks will disagree with what the API records.
    */
   readonly actor: string;

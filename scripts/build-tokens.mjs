@@ -7,8 +7,10 @@
 //   - light values go in `:root, [data-theme="light"]`, dark values in `[data-theme="dark"]`; a token without a dark
 //     value inherits the light one.
 //
-// With --check it writes nothing. It fails when tokens.css differs from what tokens.json produces, or when a
-// `var(--x)` in src/styles/ or src/app/ names a custom property that neither the tokens nor the sources define.
+// With --check it writes nothing. It fails when tokens.css differs from what tokens.json produces, when a
+// `var(--x)` in src/styles/ or src/app/ names a custom property that neither the tokens nor the sources define, or when
+// a style outside RAW_COLOUR_FILES writes a colour literally (a hex value or rgb()/hsl()/…) instead of using a token
+// (docs/design-system.md, "Rules for new UI"). `npm run lint` runs it as `npm run tokens:check`.
 //
 // Usage: node scripts/build-tokens.mjs [--check] [root]   (root defaults to the repository root)
 import {
@@ -154,6 +156,65 @@ function listFiles(dir, extensions) {
   return out;
 }
 
+/**
+ * The only style sources that may write colours literally, each with its reason. Add a file here only with a reason a
+ * reviewer can check; prefer a token, or a feature-local custom property declared once in an allowed file.
+ */
+const RAW_COLOUR_FILES = {
+  'src/styles/_ahoy-a11y.scss':
+    'token values the design system does not have yet (docs/accessibility.md)',
+  'src/app/features/metrics/metrics.scss':
+    'the chart series palette, declared once per theme as --metrics-*',
+  'src/app/ui/top-bar/top-bar.scss': 'the Christmas decorations',
+  'src/app/features/crew/crew-page.ts':
+    "the lunch host's orange, declared once as --crew-lunch",
+  'src/app/features/meetings/topic-card.ts':
+    'the topic menu shadow (no design-system token)',
+  'src/app/features/settings/teams-settings-page.ts':
+    'the card preview shadow (no design-system token)',
+};
+
+/** A colour written literally in a CSS value: a hex colour or a colour function. */
+const RAW_COLOUR =
+  /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/;
+
+/** The CSS of a component: the template literals of its `styles`. */
+function componentStyles(text) {
+  const out = [];
+  for (const m of text.matchAll(/\bstyles:\s*(\[[\s\S]*?\]|`[\s\S]*?`)/g)) {
+    for (const lit of m[1].matchAll(/`([\s\S]*?)`/g)) out.push(lit[1]);
+  }
+  return out.join('\n');
+}
+
+/** Lists the declarations in src/styles/ and src/app/ styles that write a colour literally, as `file:line: text`. */
+function rawColours() {
+  const files = [
+    ...listFiles(join(root, 'src/styles'), ['.css', '.scss']),
+    ...listFiles(join(root, 'src/app'), ['.css', '.scss', '.ts']),
+  ];
+  const out = [];
+  for (const file of files) {
+    const rel = relative(root, file).split(sep).join('/');
+    if (rel === OUTPUT || rel === 'src/styles/ahoy-bundle.css') continue;
+    if (rel in RAW_COLOUR_FILES || /\.spec\.ts$|\/testing\//.test(rel))
+      continue;
+    const text = readFileSync(file, 'utf8');
+    const css = (rel.endsWith('.ts') ? componentStyles(text) : text)
+      .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+      .replace(/\/\/[^\n]*/g, '');
+    for (const line of css.split('\n')) {
+      // Only declaration values (`prop: value` between braces and semicolons): `#cafe` in a selector is no colour.
+      const bad = line.split(/[{};]/).some((part) => {
+        const value = /^\s*[\w-]+\s*:\s*(.*)$/.exec(part)?.[1];
+        return value !== undefined && RAW_COLOUR.test(value);
+      });
+      if (bad) out.push(`${rel}: ${line.trim()}`);
+    }
+  }
+  return out;
+}
+
 const IDENT = String.raw`(?:[\w-]|\\[^\n])+`;
 
 /** Returns the custom properties a CSS text reads with `var(--x)` and the ones it declares with `--x:`. */
@@ -225,11 +286,15 @@ else if (current !== css)
   problems.push(`${OUTPUT} is out of date with ${SOURCE}; run npm run tokens`);
 for (const u of undefinedProperties(css))
   problems.push(`undefined custom property ${u}`);
+for (const r of rawColours())
+  problems.push(
+    `raw colour (use a token, or see RAW_COLOUR_FILES in this script) ${r}`
+  );
 
 if (problems.length > 0) {
   for (const p of problems) console.error(`build-tokens: ${p}`);
   process.exit(1);
 }
 console.log(
-  'build-tokens: ok (tokens.css is current; every var(--x) is defined)'
+  'build-tokens: ok (tokens.css is current; every var(--x) is defined; no raw colours outside RAW_COLOUR_FILES)'
 );

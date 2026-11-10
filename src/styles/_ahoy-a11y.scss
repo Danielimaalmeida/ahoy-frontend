@@ -1,0 +1,29 @@
+// Contrast fixes (WCAG 2.2 AA, docs/accessibility.md) that the design system does not have yet. Each value is what the
+// design system should carry; when it does and docs/design/ is re-synced, delete the matching rule here (and this file
+// once it is empty). Same selectors as tokens.css, loaded after it, so these win in both themes.
+
+:root,
+[data-theme='light'] {
+  // Focus ring: #9DBDF1 was 1.9:1 on surface; the accent is 5.5:1 on surface and 5.1:1 on bg.
+  --focus: #1a64d6;
+  // Input, select and secondary-button borders: #D5DCE3 was 1.4:1; this is 3.3:1 on surface, 3.1:1 on bg.
+  --line-strong: #7a8fa3;
+  // The current phase in the compact bars used the old focus colour; it keeps it, so it still sits between done and
+  // to do.
+  --progress-current: #9dbdf1;
+}
+
+[data-theme='dark'] {
+  // Unchanged (4.6:1), but restated: the light rule above comes later and would otherwise win here too.
+  --focus: #4f86e0;
+  // #3A4A5A was 1.8:1 on surface; this is 3.1:1 on surface and 3.4:1 on bg.
+  --line-strong: #566e85;
+  // #C03535 was 3.0:1 on surface; this is 3.1:1, and white on it stays 5.3:1.
+  --danger: #c53636;
+  --progress-current: #4f86e0;
+}
+
+// The bundle colours the current compact bar with `focus`; now that the ring is the accent, it would look done.
+.ah-dots > .is-current {
+  background: var(--progress-current);
+}

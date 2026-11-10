@@ -1,11 +1,13 @@
 import {
   Component,
   DestroyRef,
+  type ElementRef,
   computed,
   effect,
   inject,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -24,6 +26,7 @@ import { SetupStore } from '@core/stores/setup-store';
 import { StoriesStore } from '@core/stores/stories-store';
 import { setupBannerText, setupPercent } from '@domain/setup';
 import { AccessDenied } from '@ui/access-denied/access-denied';
+import { Button } from '@ui/button/button';
 import { CLOCK as UI_CLOCK, type Clock } from '@ui/pipes/clock';
 import { SetupBanner } from '@ui/setup-banner/setup-banner';
 import { ThemeService } from '@ui/theme/theme.service';
@@ -87,7 +90,7 @@ function isVoyagesList(tree: UrlTree): boolean {
 /**
  * The shell: the top bar on every screen (the count of voyages that need a person, the Live indicator, who is signed
  * in, and the search that leads to `/voyages?q=`), the setup banner while Ahoy is not ready, the page in one `main`, and
- * the toasts. It keeps the voyage list alive for the whole session, which holds the event stream open, so the count and
+ * the toasts. A "Skip to content" button, hidden until it has focus, is the first Tab stop and moves focus to `main`. It keeps the voyage list alive for the whole session, which holds the event stream open, so the count and
  * the pages follow the stream.
  *
  * A user who may not use Ahoy ({@link AccessControl}) sees only "Access denied": no top bar, no page, and no call to the
@@ -95,7 +98,7 @@ function isVoyagesList(tree: UrlTree): boolean {
  */
 @Component({
   selector: 'ah-root',
-  imports: [AccessDenied, RouterOutlet, SetupBanner, ToastHost, TopBar],
+  imports: [AccessDenied, Button, RouterOutlet, SetupBanner, ToastHost, TopBar],
   providers: [{ provide: UI_CLOCK, useFactory: tickingClock }],
   styles: `
     :host {
@@ -116,6 +119,23 @@ function isVoyagesList(tree: UrlTree): boolean {
         padding-inline: 16px;
       }
     }
+    .page:focus {
+      outline: none;
+    }
+    /* Off screen until it has keyboard focus (docs/accessibility.md, Focus). */
+    .skip-link {
+      position: absolute;
+      top: var(--space-2);
+      left: var(--space-2);
+      z-index: 1200;
+    }
+    .skip-link:not(:focus) {
+      clip-path: inset(50%);
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
   `,
   template: `
     @if (access.denied()) {
@@ -126,6 +146,14 @@ function isVoyagesList(tree: UrlTree): boolean {
         />
       </main>
     } @else {
+      <button
+        ahButton
+        type="button"
+        class="skip-link"
+        (click)="skipToContent()"
+      >
+        Skip to content
+      </button>
       <ah-top-bar
         [needsYou]="needsYou()"
         [live]="live()"
@@ -141,7 +169,7 @@ function isVoyagesList(tree: UrlTree): boolean {
           [percent]="banner.percent"
         />
       }
-      <main class="page"><router-outlet /></main>
+      <main #content class="page" tabindex="-1"><router-outlet /></main>
       <ah-toast-host />
     }
   `,
@@ -155,6 +183,7 @@ export class App {
   private pendingSearch: Timer | undefined;
   protected readonly auth = inject(FedevAuthService);
   protected readonly access = inject(AccessControl);
+  private readonly content = viewChild<ElementRef<HTMLElement>>('content');
 
   /** The text in the search box: that of the `?q=` of the page, if it has one. */
   protected readonly query = signal('');
@@ -215,6 +244,11 @@ export class App {
           textParam(this.router.parseUrl(event.urlAfterRedirects), 'q') ?? ''
         );
       });
+  }
+
+  /** Moves focus past the top bar to the page, for keyboard and screen-reader users. */
+  protected skipToContent(): void {
+    this.content()?.nativeElement.focus();
   }
 
   /**

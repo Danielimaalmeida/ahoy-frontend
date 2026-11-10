@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
+Updated 2026-11-10 (`docs/design-system-a11y`: design system re-synced, accessibility guidelines; before it `fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
 checks on Node 24 with the private registry did not run, substitutes passed on Node 22). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
@@ -8,6 +8,35 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
+- **This branch (`docs/design-system-a11y`, 2026-11-10, asked for by the user: "check the frontend design system to
+  see if it's updated. Add accessibility guidelines"):** `docs/design/design-system/` re-synced from the design system's
+  version `1791619698-2405` (its plain labels of 2026-10-10, which the app already used; `bundle.css`, token values and
+  assets unchanged). New `docs/design-system.md` (how `src/` uses it, app-only components, extensions, known
+  differences) and `docs/accessibility.md` (WCAG 2.2 AA: contrast measured from the tokens, focus, keyboard, ARIA, live
+  regions, motion, reflow, and the gaps: the light `focus` ring is 1.9:1, `line-strong` borders, light chart colours, no
+  skip link). Stale nautical labels in `ui/` doc comments, the `/_kit` gallery and `icon.spec.ts` replaced; the
+  Meetings topic menu no longer names the undefined `--shadow-md` (`build-tokens --check` failed on it; same look).
+  Checks (cloud, Node 22.23.4, `@acme-fedev/*` removed in a scratch copy): `ng test` on `src/app/ui` (39 files, 476
+  tests), ESLint on the changed files, Stylelint, `build-tokens --check` and Prettier 3.9 pass. Not run: Node 24, the
+  build, typecheck, the full `ng test` (Meetings specs need the auth library), Playwright, a browser.
+- **Same branch, after the user's "fix every gap" (2026-11-10):** `src/styles/_ahoy-a11y.scss` overrides `focus` (light
+  `#1A64D6`), `line-strong` (`#7A8FA3` / `#566E85`) and dark `danger` (`#C53636`) so each passes 3:1, and adds
+  `progress-current` for the compact bars that used `focus`. Publishing the same change to the design-system artifact was
+  refused in this session, so it is pending there (values in `docs/accessibility.md`). Metrics light series darkened to
+  3:1. "Skip to content" button first in the shell; Meetings and `/_kit` no longer render a second `<main>`. Checks
+  (cloud, Node 22.23.4, `@acme-fedev/auth` stubbed in a scratch copy): build, typecheck, lint, `ng test` (219 files,
+  3,806 tests), format and `build-tokens --check` pass. Not run: Node 24, the real auth library, Playwright, a browser.
+- **Same branch, enforcement (the user: so every contributor follows the design system):** CLAUDE.md has a "UI: design
+  system and accessibility" section, copied to `.github/instructions.md` (which had drifted); `npm run lint` now runs
+  `tokens:check`, which also fails on a colour written literally outside `RAW_COLOUR_FILES` (checked against a planted
+  hex, a `rgba()` shadow and a component `styles` literal; selectors and comments are not flagged); a
+  `.github/pull_request_template.md` with a design-system and accessibility checklist. `npm run lint` passes (scratch
+  copy, stubbed auth).
+- **Same branch, duplicate configs (asked for by the user):** each tool keeps the file it read: `.prettierrc` (gone:
+  `.prettierrc.json`; CLAUDE.md "Style" now says single quotes and 80 columns), `eslint.config.js` (gone:
+  `eslint.config.mjs`), `.lintstagedrc.json` (gone: the `lint-staged` key in `package.json`, verified with
+  `lint-staged --debug`), `src/proxy.conf.json` (gone: `proxy.conf.mjs`), `.nvmrc` 24 (gone: `.tool-versions` 26.0.0).
+  The skills in `.agents/`, `.claude/` and `.opencode/` are identical copies, one per agent tool, and stay.
 - **This branch (`fix/metrics-trends-labels`, 2026-11-09, after the user's first look at Trends on TEST):** a pill
   whose 4 weeks before had nothing to compare (runs start on 2026-10-13) reads "nothing before", not "no data"; a
   chart's folded series reads "3 more", not "Other", which read like the halt kind `other`. The zeros in Voyages done
@@ -340,8 +369,6 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Open decisions
 
-- Which Prettier configuration stays: `.prettierrc` (single quotes, 80 columns) is read before `.prettierrc.json`
-  (double quotes, 120 columns), while CLAUDE.md asks for double quotes.
 - Whether to wire the mock backend back into a build (`start:mock`) or delete it.
 - `@acme-fedev/auth` is `^8.0.0` in runtime dependencies (the rule is exact pins) and `@acme-fedev/playwright-helpers`,
   a test helper, is a runtime dependency. Changing either is a dependency change and needs approval.

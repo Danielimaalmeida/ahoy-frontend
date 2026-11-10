@@ -9,11 +9,11 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 /** The table of `assets/Icons/README.md`. `satisfies` fails to compile if a name is missing or extra. */
 const README_TABLE = {
   wheel: 'The brand; models per phase',
-  bell: 'All hands (Needs you)',
+  bell: 'Needs you',
   compass: "Voyages; an agent's recommendation",
-  anchor: 'Anchored (halted); The Docks',
-  sail: 'Set sail; resume',
-  aground: 'Aground (blocked); reject',
+  anchor: 'Halted; Backlog',
+  sail: 'Start voyage; resume',
+  aground: 'Blocked; reject',
   'send-back': 'Send back',
   lock: 'A final answer',
   check: 'Done; success toast',

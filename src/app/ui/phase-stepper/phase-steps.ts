@@ -17,7 +17,7 @@ export interface PhaseStep {
 /** The stepper's content for one voyage: the eight steps and the sentence that names the position. */
 export interface PhaseProgress {
   readonly steps: readonly PhaseStep[];
-  /** 1-based position of the current or stopped step; `null` when it is unknown or the voyage is Docked. */
+  /** 1-based position of the current or stopped step; `null` when it is unknown or the voyage is Done. */
   readonly position: number | null;
   /** The accessible name of the compact bars: "Phase 3 of 8", "Stopped at phase 2", "Blocked at phase 3", "Done". */
   readonly label: string;
@@ -26,10 +26,10 @@ export interface PhaseProgress {
 /**
  * Works out the eight steps for a voyage (the vocabulary lives in `@domain`).
  *
- * - Docked: every step is done, none is current.
- * - Anchored: the phase it is in is `stopped`, replacing `current`; the ones before are done.
- * - Cancelled: as Anchored, the phase it was cancelled in is `stopped`; the label says "Cancelled at phase N".
- * - Aground: the phase is `blocked`, so the position comes from `stoppedAt` (the `from` of the last
+ * - Done: every step is done, none is current.
+ * - Halted: the phase it is in is `stopped`, replacing `current`; the ones before are done.
+ * - Cancelled: as Halted, the phase it was cancelled in is `stopped`; the label says "Cancelled at phase N".
+ * - Blocked: the phase is `blocked`, so the position comes from `stoppedAt` (the `from` of the last
  *   `story.phase_changed`, G12); without it no step is marked and the label says only "Blocked".
  * - Everything else: the phase it is in is `current`, the ones before are done, the rest are ahead.
  *

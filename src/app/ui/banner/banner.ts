@@ -34,7 +34,7 @@ const DEFAULT_ANNOUNCE: Readonly<Record<BannerVariant, BannerAnnounce>> = {
  * much may be spent and the content who is billed.
  *
  * ```html
- * <ah-banner variant="error" heading="Anchored: the planning run failed" tech="run_failed · r-03">No AIU was spent.</ah-banner>
+ * <ah-banner variant="error" heading="Halted: the planning run failed" tech="run_failed · r-03">No AIU was spent.</ah-banner>
  * ```
  */
 @Component({

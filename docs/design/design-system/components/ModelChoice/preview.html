@@ -1,4 +1,4 @@
-<!-- @dsCard group="Forms" height=190 subtitle="Model and reasoning effort per phase" -->
+<!-- @dsCard group="Forms" height=210 subtitle="Model and reasoning effort per phase" -->
 <!doctype html>
 <html>
   <head>
@@ -13,12 +13,22 @@
       <div style="display: flex; flex-direction: column; gap: 8px">
         <div class="ah-model">
           <span class="ah-model__phase"
+            >intake<span class="ah-model__crew">Navigator</span></span
+          ><select class="ah-input" aria-label="Intake model">
+            <option>Default · GPT-5.6 Terra</option>
+            <option>Claude Sonnet 5 (claude-sonnet-5)</option>
+            <option>GPT-5.6 Terra (gpt-5.6-terra)</option>
+            <option>Other model id…</option></select
+          ><select class="ah-input" aria-label="Intake effort">
+            <option>Default (medium)</option></select
+          ><span class="ah-source">Server default</span>
+        </div>
+        <div class="ah-model">
+          <span class="ah-model__phase"
             >planning<span class="ah-model__crew">Cartographer</span></span
-          ><input
-            class="ah-input ah-input--mono"
-            value="claude-sonnet-5"
-            aria-label="Planning model"
-          /><select class="ah-input" aria-label="Planning effort">
+          ><select class="ah-input" aria-label="Planning model">
+            <option>Claude Sonnet 5 (claude-sonnet-5)</option></select
+          ><select class="ah-input" aria-label="Planning effort">
             <option>high</option></select
           ><span style="display: flex; gap: 6px; align-items: center"
             ><span class="ah-source ah-source--chosen"
@@ -46,19 +56,27 @@
         </div>
         <div class="ah-model">
           <span class="ah-model__phase"
-            >pr_review<span class="ah-model__crew">Lookout · design</span></span
+            >implementation<span class="ah-model__crew">Implementer</span></span
           ><input
             class="ah-input ah-input--mono"
-            value="claude-sonnet-5"
-            aria-invalid="true"
-            aria-label="Design reviewer model"
-          /><select class="ah-input" aria-label="Design reviewer effort">
+            value="claude-sonnet-5-preview"
+            aria-label="Implementation model id"
+          /><select class="ah-input" aria-label="Implementation effort">
+            <option>Default (model's own)</option></select
+          ><span class="ah-source ah-source--chosen">Other model id</span>
+        </div>
+        <div class="ah-model">
+          <span class="ah-model__phase"
+            >pr_review<span class="ah-model__crew">Lookout</span></span
+          ><select class="ah-input" aria-label="Review model">
+            <option>Default · GPT-5.6 Terra</option></select
+          ><select class="ah-input" aria-label="Review effort">
             <option>Default (high)</option></select
           ><span class="ah-source">Server default</span>
         </div>
-        <span class="ah-field__error"
-          >The two Lookouts must use different models: both would run on
-          claude-sonnet-5.</span
+        <span class="ah-hint"
+          >The effort list shows only what the chosen model takes. Changes apply
+          from each phase's next run.</span
         >
       </div>
     </div>

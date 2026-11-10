@@ -1149,15 +1149,15 @@ describe('Meetings on the mock backend', () => {
     const page = await open('/meetings', (server) => {
       server.switches.failNext = 503;
     });
-    expect(text(page.root.querySelector('main ah-banner'))).toContain(
+    expect(text(page.root.querySelector('.meetings-main ah-banner'))).toContain(
       "Can't reach Ahoy"
     );
     buttonNamed(
-      page.root.querySelector('main ah-banner')!,
+      page.root.querySelector('.meetings-main ah-banner')!,
       'Try again'
     ).click();
     await flush(page);
-    expect(page.root.querySelector('main > ah-banner')).toBeNull();
+    expect(page.root.querySelector('.meetings-main > ah-banner')).toBeNull();
     expect(text(page.root.querySelector('h1'))).toBe('Finance sync');
   });
 

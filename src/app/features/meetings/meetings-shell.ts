@@ -187,7 +187,8 @@ export const SERIES_PAGE = 3;
         overflow-y: auto;
       }
     }
-    main {
+    /* Not a <main>: the app shell already has the page's one main landmark. */
+    .meetings-main {
       flex: 1;
       min-width: 0;
       display: flex;
@@ -379,7 +380,7 @@ export const SERIES_PAGE = 3;
         </li>
       </ng-template>
     </aside>
-    <main>
+    <div class="meetings-main">
       @if (listFailure(); as problem) {
         <ah-banner
           [variant]="problem.variant"
@@ -393,7 +394,7 @@ export const SERIES_PAGE = 3;
         </ah-banner>
       }
       <router-outlet />
-    </main>
+    </div>
   `,
 })
 export class MeetingsShell {

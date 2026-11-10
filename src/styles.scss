@@ -4,9 +4,11 @@
  *                   dark under [data-theme="dark"] on <html>;
  *   ahoy-bundle.css copy of the design system's components/bundle.css (its @import of Google Fonts stays);
  *   ahoy-angular    the few rules the bundle can't know about: Angular host elements and gaps in its markup;
- *   ahoy-1b         the same for the state, progress and navigation components (lane 1B).
+ *   ahoy-1b         the same for the state, progress and navigation components (lane 1B);
+ *   ahoy-a11y       contrast fixes the design system does not have yet (docs/accessibility.md).
  */
 @use 'styles/tokens';
 @use 'styles/ahoy-bundle';
 @use 'styles/ahoy-angular';
 @use 'styles/ahoy-1b';
+@use 'styles/ahoy-a11y';
