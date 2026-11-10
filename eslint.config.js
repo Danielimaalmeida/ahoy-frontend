@@ -120,7 +120,7 @@ export default defineConfig(
   },
   {
     // Tool configuration files must default-export their config.
-    files: ['eslint.config.js', 'proxy.conf.mjs', '*.config.{js,mjs,ts}'],
+    files: ['eslint.config.js', '*.config.{js,mjs,ts}'],
     rules: {
       'no-restricted-exports': 'off',
     },

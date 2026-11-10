@@ -118,8 +118,9 @@ clashes with an Angular type, stop and ask. `tsconfig.app.json` and `tsconfig.sp
   templates pass the `angular-eslint` accessibility rules.
 - **Dependencies.** Runtime dependencies are pinned exactly (`"@angular/core": "22.2.1"`); dev dependencies use `^`,
   except `typescript` (`~6.0.x`: Angular 22 needs `>=6.0 <6.1`). Ask before adding any dependency.
-- **Style.** 2 spaces, double quotes, semicolons, trailing commas, lines up to about 120 characters, `readonly` where a
-  field never changes, and small exported functions with a one-line doc comment.
+- **Style.** As `.prettierrc` formats it: 2 spaces, single quotes, semicolons, trailing commas where ES5 allows them,
+  80 columns for code (comments and docs wrap at about 120). `readonly` where a field never changes, and small exported
+  functions with a one-line doc comment.
 - **Tests.** Vitest (`describe`/`it`/`expect`) with Angular's `TestBed`, in `*.spec.ts` next to the code. Use
   hand-written fakes, not module mocking (`vi.mock`). Name each test after the behaviour it proves.
 

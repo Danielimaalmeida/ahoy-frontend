@@ -286,7 +286,7 @@ rest without fetching it again.
 
 `npm start` = `ng serve`, whose `proxyConfig` is `src/proxy.conf.json` (`angular.json`). It forwards `/api` to
 `http://127.0.0.1:8080` with `X-Ahoy-Actor: dev-user`, and the WebEAM paths (`/auth/oauth2/realms/root/realms/alpha`)
-to the SSO host. `proxy.conf.mjs` (with `AHOY_API_TARGET` and `AHOY_ACTOR`) is no longer read by `ng serve`. The app
+to the SSO host. (The older `proxy.conf.mjs`, which `ng serve` no longer read, is gone.) The app
 itself sends `Authorization: Bearer` when a WebEAM session exists (see "Application config").
 
 - `AHOY_AUTH=dev` (which makes the API trust `X-Ahoy-Actor`) is for a local API only. The proxy is part of `ng serve`
@@ -299,17 +299,19 @@ itself sends `Authorization: Bearer` when a WebEAM session exists (see "Applicat
 
 ## Tooling (tasks 0.4, 0.5, 0.8)
 
-The company template (2026-10-08) brought its own tool files beside the original ones. Where both exist, the tool reads
-the template's first:
+The company template (2026-10-08) brought its own tool files beside the original ones. On 2026-11-10 each tool was left
+with the one file it actually read; the others were deleted:
 
-- **Prettier**: `.prettierrc` (single quotes, `trailingComma: es5`, the default 80-column width) is found before
-  `.prettierrc.json` (120 columns, double quotes, `angular` parser for HTML), so the code now follows `.prettierrc`.
-  `npm run format` checks and `npm run format:fix` writes. `.prettierignore` skips generated files and build output; `docs/design/` is
-  formatted too, so a re-sync runs Prettier on the copied files. Decide which file stays, and align `CLAUDE.md` ("Style") with it.
-- **ESLint**: `eslint.config.js` (the original flat config: `typescript-eslint` `strict` + `stylistic`, `angular-eslint`
+- **Prettier**: `.prettierrc` (single quotes, `trailingComma: es5`, the default 80-column width). `npm run format`
+  checks and `npm run format:fix` writes. `.prettierignore` skips generated files and build output; `docs/design/` is
+  formatted too, so a re-sync runs Prettier on the copied files. (`.prettierrc.json`, never read, is gone.)
+- **ESLint**: `eslint.config.js` (flat config: `typescript-eslint` `strict` + `stylistic`, `angular-eslint`
   `tsRecommended`, `templateRecommended` and `templateAccessibility`, `no-explicit-any`, `ban-ts-comment`,
   `consistent-type-imports`, no enum, namespace or `as unknown as`, no default exports, selector prefix `ah`, the OnPush
-  rule) is found before `eslint.config.mjs`. `npm run lint` runs ESLint and Stylelint (`.stylelintrc.json`).
-- **Husky + lint-staged** (`.lintstagedrc.json`) on staged files before a commit.
+  rule). `npm run lint` runs ESLint, Stylelint (`.stylelintrc.json`) and `tokens:check`. (`eslint.config.mjs`, never
+  read, is gone.)
+- **Husky + lint-staged** (`.lintstagedrc.json`) on staged files before a commit. (The `lint-staged` key in
+  `package.json` was never read for files `.lintstagedrc.json` covers, and is gone.)
+- **Node**: `.nvmrc` (24). (`.tool-versions`, which said 26.0.0, is gone.)
 - **CI**: `.github/workflows/lints-format.yml` and `test.yml` call the company's reusable workflows (lint, format,
   Vitest with coverage); `release.yaml` and `branch-release.yaml` build the image and publish it to the ACR.

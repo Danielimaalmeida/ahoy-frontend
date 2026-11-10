@@ -46,9 +46,6 @@
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check"
   },
-  "lint-staged": {
-    "*": "prettier --write --ignore-unknown"
-  },
   "dependencies": {
     "@angular/cdk": "22.2.1",
     "@angular/common": "22.2.1",

@@ -32,6 +32,11 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   hex, a `rgba()` shadow and a component `styles` literal; selectors and comments are not flagged); a
   `.github/pull_request_template.md` with a design-system and accessibility checklist. `npm run lint` passes (scratch
   copy, stubbed auth).
+- **Same branch, duplicate configs (asked for by the user):** each tool keeps the file it read: `.prettierrc` (gone:
+  `.prettierrc.json`; CLAUDE.md "Style" now says single quotes and 80 columns), `eslint.config.js` (gone:
+  `eslint.config.mjs`), `.lintstagedrc.json` (gone: the `lint-staged` key in `package.json`, verified with
+  `lint-staged --debug`), `src/proxy.conf.json` (gone: `proxy.conf.mjs`), `.nvmrc` 24 (gone: `.tool-versions` 26.0.0).
+  The skills in `.agents/`, `.claude/` and `.opencode/` are identical copies, one per agent tool, and stay.
 - **This branch (`fix/metrics-trends-labels`, 2026-11-09, after the user's first look at Trends on TEST):** a pill
   whose 4 weeks before had nothing to compare (runs start on 2026-10-13) reads "nothing before", not "no data"; a
   chart's folded series reads "3 more", not "Other", which read like the halt kind `other`. The zeros in Voyages done
@@ -364,8 +369,6 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Open decisions
 
-- Which Prettier configuration stays: `.prettierrc` (single quotes, 80 columns) is read before `.prettierrc.json`
-  (double quotes, 120 columns), while CLAUDE.md asks for double quotes.
 - Whether to wire the mock backend back into a build (`start:mock`) or delete it.
 - `@acme-fedev/auth` is `^8.0.0` in runtime dependencies (the rule is exact pins) and `@acme-fedev/playwright-helpers`,
   a test helper, is a runtime dependency. Changing either is a dependency change and needs approval.

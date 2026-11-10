@@ -36,7 +36,7 @@ src/
                           meetings/
 scripts/check-boundaries.mjs                  layer rules, part of npm run typecheck
 scripts/redact.mjs                            redacted copy for an external model, and --unredact (as in ahoy-hosted)
-src/proxy.conf.json                           dev-server proxy to a local hosted API (proxy.conf.mjs is not read)
+src/proxy.conf.json                           dev-server proxy to a local hosted API
 docs/design/                                  copies of the wireframes and the design system (don't edit)
 ```
 
