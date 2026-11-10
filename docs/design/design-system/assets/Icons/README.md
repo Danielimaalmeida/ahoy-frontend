@@ -5,11 +5,11 @@ Line icons on a 24px grid, 1.8px stroke, round caps and joins, no fill. The file
 | Icon      | Meaning                               |
 | --------- | ------------------------------------- |
 | wheel     | The brand; models per phase           |
-| bell      | All hands (Needs you)                 |
+| bell      | Needs you                             |
 | compass   | Voyages; an agent's recommendation    |
-| anchor    | Anchored (halted); The Docks          |
-| sail      | Set sail; resume                      |
-| aground   | Aground (blocked); reject             |
+| anchor    | Halted; Backlog                       |
+| sail      | Start voyage; resume                  |
+| aground   | Blocked; reject                       |
 | send-back | Send back                             |
 | lock      | A final answer                        |
 | check     | Done; success toast                   |

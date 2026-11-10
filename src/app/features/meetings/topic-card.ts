@@ -342,7 +342,8 @@ export const NOTE_MAX = 4000;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
-      box-shadow: var(--shadow-md, 0 6px 20px rgb(0 0 0 / 12%));
+      /* The design system raises only dialogs, toasts and the selected segment; this menu floats like a small popover. */
+      box-shadow: 0 6px 20px rgb(0 0 0 / 12%);
       list-style: none;
     }
     [role='menu'] button {

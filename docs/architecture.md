@@ -304,8 +304,8 @@ the template's first:
 
 - **Prettier**: `.prettierrc` (single quotes, `trailingComma: es5`, the default 80-column width) is found before
   `.prettierrc.json` (120 columns, double quotes, `angular` parser for HTML), so the code now follows `.prettierrc`.
-  `npm run format` checks and `npm run format:fix` writes. `.prettierignore` skips `docs/design/`, generated files and
-  build output. Decide which file stays, and align `CLAUDE.md` ("Style") with it.
+  `npm run format` checks and `npm run format:fix` writes. `.prettierignore` skips generated files and build output; `docs/design/` is
+  formatted too, so a re-sync runs Prettier on the copied files. Decide which file stays, and align `CLAUDE.md` ("Style") with it.
 - **ESLint**: `eslint.config.js` (the original flat config: `typescript-eslint` `strict` + `stylistic`, `angular-eslint`
   `tsRecommended`, `templateRecommended` and `templateAccessibility`, `no-explicit-any`, `ban-ts-comment`,
   `consistent-type-imports`, no enum, namespace or `as unknown as`, no default exports, selector prefix `ah`, the OnPush

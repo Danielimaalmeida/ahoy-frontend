@@ -4,7 +4,7 @@ Buttons start an action: one primary per view, for the thing the screen is for.
 
 ## Variants
 
-- `ah-btn--primary` (accent fill): the one main action, such as **Review plan**, **Send answer** or **Set sail**. At most one per panel or dialog.
+- `ah-btn--primary` (accent fill): the one main action, such as **Review plan**, **Send answer** or **Start voyage**. At most one per panel or dialog.
 - default (surface, `line-strong` border): secondary actions such as **Budget** or **Models**.
 - `ah-btn--soft` (accent-soft): an action that belongs to an item, such as **Use recommendation** or **Open voyage**.
 - `ah-btn--ghost`: low-emphasis links in dense rows, such as **Jira ↗** or **Reset**.

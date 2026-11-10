@@ -36,7 +36,8 @@ Earlier approvals, unspent budget and the presence of credentials grant nothing.
 - Example data is fictional (PROJ-123, alex@example.com). Never put real story content in fixtures, docs or design
   tools; captured API responses are reviewed before any commit.
 - `docs/design/` is a copy of the Claude Design artifacts (`docs/design/SOURCES.md`): re-sync it, don't edit it.
-  `ahoy-hosted`, `agents-github-repository` and child repos are read-only from here.
+  `ahoy-hosted`, `agents-github-repository` and child repos are read-only from here. How `src/` builds on the design
+  system is in `docs/design-system.md`; UI work follows `docs/accessibility.md` (WCAG 2.2 AA).
 
 ## Code
 

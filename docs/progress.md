@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
+Updated 2026-11-10 (`docs/design-system-a11y`: design system re-synced, accessibility guidelines; before it `fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
 checks on Node 24 with the private registry did not run, substitutes passed on Node 22). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
@@ -8,6 +8,17 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
+- **This branch (`docs/design-system-a11y`, 2026-11-10, asked for by the user: "check the frontend design system to
+  see if it's updated. Add accessibility guidelines"):** `docs/design/design-system/` re-synced from the design system's
+  version `1791619698-2405` (its plain labels of 2026-10-10, which the app already used; `bundle.css`, token values and
+  assets unchanged). New `docs/design-system.md` (how `src/` uses it, app-only components, extensions, known
+  differences) and `docs/accessibility.md` (WCAG 2.2 AA: contrast measured from the tokens, focus, keyboard, ARIA, live
+  regions, motion, reflow, and the gaps: the light `focus` ring is 1.9:1, `line-strong` borders, light chart colours, no
+  skip link). Stale nautical labels in `ui/` doc comments, the `/_kit` gallery and `icon.spec.ts` replaced; the
+  Meetings topic menu no longer names the undefined `--shadow-md` (`build-tokens --check` failed on it; same look).
+  Checks (cloud, Node 22.23.4, `@acme-fedev/*` removed in a scratch copy): `ng test` on `src/app/ui` (39 files, 476
+  tests), ESLint on the changed files, Stylelint, `build-tokens --check` and Prettier 3.9 pass. Not run: Node 24, the
+  build, typecheck, the full `ng test` (Meetings specs need the auth library), Playwright, a browser.
 - **This branch (`fix/metrics-trends-labels`, 2026-11-09, after the user's first look at Trends on TEST):** a pill
   whose 4 weeks before had nothing to compare (runs start on 2026-10-13) reads "nothing before", not "no data"; a
   chart's folded series reads "3 more", not "Other", which read like the halt kind `other`. The zeros in Voyages done

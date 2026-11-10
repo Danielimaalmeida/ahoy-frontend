@@ -2,7 +2,7 @@
 
 Shows AIU spent against a voyage's or a run's hard cap, always with the numbers beside the bar.
 
-Write figures as "12.4 / 30 AIU" with tabular numerals; one decimal in lists, two on run detail (3.84). AIU is stored in integer nano-AIU: format on display, never round in storage. The bar is `accent` on `surface-sunken`; it does not change colour as it fills, because the cap is a limit the owner chose, not a warning. When a voyage halts on `budget_exhausted`, the Anchored badge says so.
+Write figures as "12.4 / 30 AIU" with tabular numerals; one decimal in lists, two on run detail (3.84). AIU is stored in integer nano-AIU: format on display, never round in storage. The bar is `accent` on `surface-sunken`; it does not change colour as it fills, because the cap is a limit the owner chose, not a warning. When a voyage halts on `budget_exhausted`, the Halted badge and its reason say so.
 
 ## Markup
 

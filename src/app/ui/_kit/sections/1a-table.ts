@@ -40,7 +40,7 @@ import { Source } from '@ui/tags/source';
             <tr>
               <td ahNowrap>
                 <span class="ah-badge ah-badge--input"
-                  ><i class="ah-badge__dot"></i>Crew asks</span
+                  ><i class="ah-badge__dot"></i>Needs answers</span
                 >
               </td>
               <td>
@@ -65,7 +65,7 @@ import { Source } from '@ui/tags/source';
             <tr>
               <td ahNowrap>
                 <span class="ah-badge ah-badge--decision"
-                  ><i class="ah-badge__dot"></i>Your orders</span
+                  ><i class="ah-badge__dot"></i>Needs decision</span
                 >
               </td>
               <td>
@@ -90,7 +90,7 @@ import { Source } from '@ui/tags/source';
       </div>
     </ah-panel>
     <div class="kit-row">
-      <span>Your orders <span ahApi>awaiting_decision</span></span>
+      <span>Needs decision <span ahApi>awaiting_decision</span></span>
       <ah-source>Server default</ah-source>
       <ah-source chosen>Chosen for this voyage</ah-source>
     </div>

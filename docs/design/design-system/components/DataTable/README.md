@@ -26,7 +26,7 @@ The dense table for lists of voyages, runs, gates and backlog items.
   <tbody>
     <tr>
       <td class="ah-nowrap">
-        <span class="ah-badge ah-badge--input"><i class="ah-badge__dot"></i>Crew asks</span>
+        <span class="ah-badge ah-badge--input"><i class="ah-badge__dot"></i>Needs answers</span>
       </td>
       <td><a class="ah-key" href="#">PROJ-131</a>Let customers download receipts as PDF<span class="ah-cell-sub">Round 1 · 1 of 3 answered</span></td>
       <td class="ah-nowrap">…</td>
