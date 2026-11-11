@@ -10,6 +10,8 @@
   "failure": null,
   "questions": null,
   "answers": null,
+  "editedBy": null,
+  "editedAt": null,
   "spentNanoAiu": 0,
   "target": {
     "projectKey": "PROJ",

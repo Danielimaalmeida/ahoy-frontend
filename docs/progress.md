@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-10 (`docs/design-system-a11y`: design system re-synced, accessibility guidelines; before it `fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
+Updated 2026-11-11 (`feat/edit-meeting-story`: edit a drafted story by hand before Create in Jira; before it `docs/design-system-a11y`: design system re-synced, accessibility guidelines; before it `fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
 checks on Node 24 with the private registry did not run, substitutes passed on Node 22). One page: replace it, do not append; git history is the
 archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
 with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
@@ -8,6 +8,22 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
+- **This branch (`feat/edit-meeting-story`, 2026-11-11, asked for by the user: after "grill me" or a draft proposes a
+  user story, edit its fields by hand; the user chose editing in place, on hover, over a separate dialog):** in "Check
+  the user story" each section of a ready story (title, the As a / I want / So that sentence, context, implemented
+  feature, criteria, out of scope, open questions, dependencies, test notes) shows "Edit" on hover or keyboard focus
+  (always on touch screens) and turns into its field in place (`story-inline-section.ts`), one section at a time; Save
+  or Ctrl+Enter sends the whole story with `editMeetingStory` (`PUT /meeting-story-drafts/{id}/story`, new in
+  `ahoy-hosted`, vendored with `api:sync` and `api:types`), 0 AIU; Cancel or Esc puts it back without closing the dialog;
+  Create in Jira waits while a section is open; while a save is in flight Save and Cancel stay focusable
+  (`aria-disabled`), Esc does nothing and a failed save keeps the typed text. Lists are one item per line, checked
+  against the API's limits (`storyLines`, `storyLinesProblem`, `withStoryEdit` in `domain/story-drafts.ts`). An edited
+  story says "Edited by … on …". Mock backend and fixtures follow the contract. Checks (cloud, Node 22.23.4,
+  `@acme-fedev/auth` stubbed in `node_modules` only): build, typecheck, lint, format and `ng test` (219 files, 3,812
+  tests) pass; seen in Chromium against a local `ahoy-hosted` API in its default mode, without `--live` (`AHOY_AUTH=dev`,
+  local Postgres 16, a ready draft seeded by SQL, 0 AIU) at 1280px and 390px (no sideways scroll), in light and dark
+  (dark: `ink-soft` 7.8:1 on `surface-hover`, `accent` ring 3.2:1 on `surface-sunken`), with the keyboard path. Not
+  run: Node 24, the real auth library, Playwright e2e, 200% zoom, a screen reader.
 - **This branch (`docs/design-system-a11y`, 2026-11-10, asked for by the user: "check the frontend design system to
   see if it's updated. Add accessibility guidelines"):** `docs/design/design-system/` re-synced from the design system's
   version `1791619698-2405` (its plain labels of 2026-10-10, which the app already used; `bundle.css`, token values and

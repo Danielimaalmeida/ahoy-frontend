@@ -88,6 +88,139 @@ export function storySentence(story: StoryLike): string {
   return `As ${end(story.role)}, I want ${end(story.want)}, so that ${end(story.soThat)}.`;
 }
 
+/** The longest story title the API takes: Jira's summary limit. */
+export const STORY_TITLE_MAX = 255;
+/** The longest role, want, so-that, criterion, out-of-scope item, dependency, test note or open question. */
+export const STORY_TEXT_MAX = 1000;
+/** The longest context or implemented feature. */
+export const STORY_PROSE_MAX = 2000;
+/** The most items one of a story's lists holds. */
+export const STORY_LIST_MAX = 20;
+
+/** A list typed one item per line, as the API takes it: each line trimmed, blank lines left out. */
+export function storyLines(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+}
+
+/** A story's list as the text of its field, one item per line. */
+export function linesText(items: readonly string[]): string {
+  return items.join('\n');
+}
+
+/** The fields of a story in the template, as the API's `StoryTemplate` has them. */
+export interface StoryTemplateLike {
+  readonly title: string;
+  readonly role: string;
+  readonly want: string;
+  readonly soThat: string;
+  readonly context: string | null;
+  readonly implementedFeature: string | null;
+  readonly acceptanceCriteria: readonly string[];
+  readonly outOfScope: readonly string[];
+  readonly dependencies: readonly string[];
+  readonly testNotes: readonly string[];
+  readonly openQuestions: readonly string[];
+}
+
+/** One field of a story. */
+export type StoryFieldKey = keyof StoryTemplateLike;
+
+/** How a field is typed: one line, prose that may be left empty, or a list one item per line. */
+export type StoryFieldKind = 'text' | 'prose' | 'lines';
+
+/** The kind of each field of the template. */
+export const STORY_FIELD_KINDS: Readonly<
+  Record<StoryFieldKey, StoryFieldKind>
+> = {
+  title: 'text',
+  role: 'text',
+  want: 'text',
+  soThat: 'text',
+  context: 'prose',
+  implementedFeature: 'prose',
+  acceptanceCriteria: 'lines',
+  outOfScope: 'lines',
+  dependencies: 'lines',
+  testNotes: 'lines',
+  openQuestions: 'lines',
+};
+
+/** A field of a story as the text it is edited in: lists one item per line, an empty section as empty text. */
+export function storyFieldText(
+  story: StoryTemplateLike,
+  key: StoryFieldKey
+): string {
+  const value = story[key];
+  return value === null
+    ? ''
+    : typeof value === 'string'
+      ? value
+      : linesText(value);
+}
+
+/**
+ * The story with the edited fields put back in the template: text trimmed, empty prose as null, lists one item per line
+ * without blank lines. Fields not given keep their value.
+ */
+export function withStoryEdit(
+  story: StoryTemplateLike,
+  edits: Readonly<Partial<Record<StoryFieldKey, string>>>
+): StoryTemplateLike {
+  const text = (key: 'title' | 'role' | 'want' | 'soThat'): string =>
+    edits[key]?.trim() ?? story[key];
+  const prose = (key: 'context' | 'implementedFeature'): string | null => {
+    const edit = edits[key];
+    if (edit === undefined) return story[key];
+    const trimmed = edit.trim();
+    return trimmed === '' ? null : trimmed;
+  };
+  const lines = (
+    key:
+      | 'acceptanceCriteria'
+      | 'outOfScope'
+      | 'dependencies'
+      | 'testNotes'
+      | 'openQuestions'
+  ): readonly string[] => {
+    const edit = edits[key];
+    return edit === undefined ? story[key] : storyLines(edit);
+  };
+  return {
+    title: text('title'),
+    role: text('role'),
+    want: text('want'),
+    soThat: text('soThat'),
+    context: prose('context'),
+    implementedFeature: prose('implementedFeature'),
+    acceptanceCriteria: lines('acceptanceCriteria'),
+    outOfScope: lines('outOfScope'),
+    dependencies: lines('dependencies'),
+    testNotes: lines('testNotes'),
+    openQuestions: lines('openQuestions'),
+  };
+}
+
+/**
+ * Why a list typed one item per line cannot be saved, or null: fewer than `min` items, more than
+ * {@link STORY_LIST_MAX}, or an item longer than {@link STORY_TEXT_MAX}.
+ */
+export function storyLinesProblem(text: string, min: number): string | null {
+  const lines = storyLines(text);
+  if (lines.length < min)
+    return min === 1
+      ? 'Write at least one, one per line.'
+      : `Write at least ${min}.`;
+  if (lines.length > STORY_LIST_MAX)
+    return `At most ${STORY_LIST_MAX}, one per line; this has ${lines.length}.`;
+  const long = lines.findIndex((line) => line.length > STORY_TEXT_MAX);
+  return long === -1
+    ? null
+    : `Line ${long + 1} is longer than ${STORY_TEXT_MAX} characters.`;
+}
+
 /** "PROJ · Story", or null when the series has no Jira project (a one-off meeting never has one). */
 export function targetText(target: TargetLike): string | null {
   if (target.projectKey === null) return null;

@@ -4100,6 +4100,56 @@
         }
       }
     },
+    "/meeting-story-drafts/{draftId}/story": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingStoryDraftId"
+        }
+      ],
+      "put": {
+        "operationId": "editMeetingStory",
+        "tags": ["meetings"],
+        "summary": "Save a person's edit of a ready draft's story, which Create in Jira then sends. 0 AIU.",
+        "description": "The whole story, in the template: it replaces the agent's story (kept in its run), and the draft answers who\nedited it last (`editedBy`, `editedAt`). Checked like an agent's reply: text trimmed, at least one acceptance\ncriterion. Calls nothing outside Ahoy. `409 invalid_state` when the draft is not `ready` (still being written,\nasking, failed or already created in Jira); `404` when it was discarded.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoryTemplate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The draft, with the edited story.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingStoryDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meeting-story-drafts/{draftId}/create-issue": {
       "parameters": [
         {
@@ -11069,6 +11119,8 @@
           "failure",
           "questions",
           "answers",
+          "editedBy",
+          "editedAt",
           "spentNanoAiu",
           "target",
           "jiraKey",
@@ -11147,6 +11199,27 @@
                 "items": {
                   "$ref": "#/components/schemas/GrillAnswer"
                 }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "editedBy": {
+            "description": "Who last edited the story by hand; null when it is the agent's as written.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "editedAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
               },
               {
                 "type": "null"

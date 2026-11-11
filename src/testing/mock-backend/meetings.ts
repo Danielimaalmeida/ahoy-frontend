@@ -890,6 +890,8 @@ export class MeetingDesk {
       failure: null,
       questions: null,
       answers: null,
+      editedBy: null,
+      editedAt: null,
       spentNanoAiu: 0,
       target: this.targetOf(topic.meetingId),
       jiraKey: null,
@@ -1025,6 +1027,52 @@ export class MeetingDesk {
       draft.run = { ...draft.run!, status: 'cancelled', cancelRequested: true };
     }
     draft.discarded = true;
+  }
+
+  /**
+   * Saves a person's edit of a ready draft's story over the simulated agent's, trimmed as the API keeps it. The body
+   * was checked against `StoryTemplate`; a list item or text that is only spaces is refused, as the API does.
+   */
+  editStory(
+    actor: string,
+    id: string,
+    story: StoryTemplate
+  ): MeetingStoryDraft {
+    const draft = this.draft(id);
+    if (draft.jiraKey !== null)
+      throw invalid(
+        `Story draft ${id} was created in Jira as ${draft.jiraKey}`
+      );
+    if (draft.status !== 'ready')
+      throw invalid(
+        `Story draft ${id} is ${draft.status}; only a ready draft can be edited`
+      );
+    const trim = (value: string, field: string): string => {
+      const trimmed = value.trim();
+      if (trimmed === '') throw refused(`/body/${field}`, `${field} is empty`);
+      return trimmed;
+    };
+    const list = (items: readonly string[], field: string): string[] =>
+      items.map((item, i) => trim(item, `${field}/${i}`));
+    draft.story = {
+      title: trim(story.title, 'title'),
+      role: trim(story.role, 'role'),
+      want: trim(story.want, 'want'),
+      soThat: trim(story.soThat, 'soThat'),
+      context: story.context === null ? null : trim(story.context, 'context'),
+      implementedFeature:
+        story.implementedFeature === null
+          ? null
+          : trim(story.implementedFeature, 'implementedFeature'),
+      acceptanceCriteria: list(story.acceptanceCriteria, 'acceptanceCriteria'),
+      outOfScope: list(story.outOfScope, 'outOfScope'),
+      dependencies: list(story.dependencies, 'dependencies'),
+      testNotes: list(story.testNotes, 'testNotes'),
+      openQuestions: list(story.openQuestions, 'openQuestions'),
+    };
+    draft.editedBy = actor;
+    draft.editedAt = this.now();
+    return this.draftDto(draft);
   }
 
   /** "Creates" a ready draft's story in the pretend Jira, once; a second call answers the same issue. */

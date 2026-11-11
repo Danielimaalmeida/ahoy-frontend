@@ -61,6 +61,8 @@
       "answer": "30 days after the due date — Matches the reminder emails customers already get."
     }
   ],
+  "editedBy": null,
+  "editedAt": null,
   "spentNanoAiu": 600000000,
   "target": {
     "projectKey": "PROJ",

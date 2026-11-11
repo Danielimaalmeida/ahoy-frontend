@@ -25,6 +25,8 @@
   "failure": null,
   "questions": null,
   "answers": null,
+  "editedBy": null,
+  "editedAt": null,
   "spentNanoAiu": 1200000000,
   "target": {
     "projectKey": "PROJ",
