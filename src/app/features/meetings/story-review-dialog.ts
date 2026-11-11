@@ -65,9 +65,9 @@ export interface StoryReviewData {
 /**
  * "Check the user story" (board `StoryReview`): the story the agent wrote, rendered as it will be in Jira, and where it
  * goes (the series' project and issue type). Create in Jira is one click. Each section of a ready story is edited where
- * it stands (point at it, then "Edit"), one at a time, and saved at once; Create in Jira waits until the edit is saved
- * or cancelled. Otherwise "Write it again" or "Grill me on it" (questions first). An edited story says who edited it. While the agent is still
- * writing, it says so and can be stopped; a grill's questions are answered in their own dialog; a failed draft says
+ * it stands (point at it or tab to it, then "Edit"), one at a time, and saved at once; Create in Jira waits until the
+ * edit is saved or cancelled. Otherwise "Write it again" or "Grill me on it" (questions first). An edited story says
+ * who edited it. While the agent is still writing, it says so and can be stopped; a grill's questions are answered in their own dialog; a failed draft says
  * why. The draft is read live from the page's store, so it updates as the agent finishes.
  */
 @Component({
@@ -149,7 +149,7 @@ export interface StoryReviewData {
       heading="Check the user story"
       [cancelLabel]="draft()?.status === 'created' ? 'Close' : 'Cancel'"
       [confirmLabel]="confirmLabel()"
-      busyLabel="Creating…"
+      [busyLabel]="editing() !== null ? 'Saving…' : 'Creating…'"
       [busy]="busy()"
       [confirmDisabled]="
         (!canCreate() || editing() !== null) && draft()?.status !== 'created'
@@ -450,9 +450,9 @@ export interface StoryReviewData {
                   }
                 </div>
                 <span class="ah-hint"
-                  >Point at any part to edit it. Created with Ahoy's Jira
-                  account; the description says it came from this meeting and
-                  who created it.</span
+                  >Point at any part, or tab to it, to edit it. Created with
+                  Ahoy's Jira account; the description says it came from this
+                  meeting and who created it.</span
                 >
               }
             }
@@ -678,7 +678,7 @@ export class StoryReviewDialog {
     this.ref.close();
   }
 
-  /** Starts editing one section; any other edit in progress is dropped. */
+  /** Starts editing one section, when no other section is open and nothing is being sent. */
   startEdit(section: StorySection): void {
     if (!this.canEdit()) return;
     this.failure.set(null);

@@ -14,6 +14,8 @@ import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
   STORY_FIELD_KINDS,
+  STORY_LIST_MAX,
+  STORY_TEXT_MAX,
   storyLinesProblem,
   type StoryFieldKey,
 } from '@domain/story-drafts';
@@ -30,7 +32,7 @@ export interface InlineField {
   readonly max: number;
 }
 
-/** A list typed one item per line: at least `min` items, at most 20, each within the API's length. */
+/** A list typed one item per line: at least `min` items, at most `STORY_LIST_MAX`, each within the API's length. */
 function linesValidator(
   min: number
 ): (control: AbstractControl<string>) => ValidationErrors | null {
@@ -155,7 +157,7 @@ function validatorsOf(field: InlineField) {
               [required]="field.required"
               [optional]="!field.required"
               [hint]="hintOf(field)"
-              [errorMessages]="messages"
+              [errorMessages]="messagesOf(field)"
             >
               @if (field.key === 'title' || field.key === 'role') {
                 <input
@@ -179,8 +181,8 @@ function validatorsOf(field: InlineField) {
                 ahButton="ghost"
                 size="sm"
                 type="button"
-                [disabled]="busy()"
-                (click)="cancelled.emit()"
+                [attr.aria-disabled]="busy() ? 'true' : null"
+                (click)="cancel()"
               >
                 Cancel
               </button>
@@ -188,9 +190,9 @@ function validatorsOf(field: InlineField) {
                 ahButton="primary"
                 size="sm"
                 type="submit"
-                [disabled]="busy()"
+                [attr.aria-disabled]="busy() ? 'true' : null"
               >
-                Save
+                {{ busy() ? 'Saving…' : 'Save' }}
               </button>
             </span>
           </div>
@@ -234,11 +236,6 @@ export class StoryInlineSection {
   readonly cancelled = output();
   /** Save: the typed text of each field, by key, untrimmed. */
   readonly save = output<Partial<Record<StoryFieldKey, string>>>();
-
-  protected readonly messages: Readonly<Record<string, string>> = {
-    required: 'This is required.',
-    maxlength: 'This is too long.',
-  };
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -284,8 +281,16 @@ export class StoryInlineSection {
 
   protected hintOf(field: InlineField): string {
     return STORY_FIELD_KINDS[field.key] === 'lines'
-      ? 'One per line, at most 20.'
+      ? `One per line, at most ${STORY_LIST_MAX}, each up to ${STORY_TEXT_MAX} characters.`
       : '';
+  }
+
+  /** What each error says, with the field's own limit. */
+  protected messagesOf(field: InlineField): Readonly<Record<string, string>> {
+    return {
+      required: 'This is required.',
+      maxlength: `Keep this to ${field.max} characters.`,
+    };
   }
 
   /** Esc cancels without closing the dialog; Ctrl+Enter (⌘+Enter) saves. */
@@ -293,19 +298,33 @@ export class StoryInlineSection {
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      this.cancelled.emit();
+      this.cancel();
     } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       this.submit();
     }
   }
 
-  /** Sends the typed text when every field is valid; otherwise shows what to fix. */
+  /** Goes back to the text, unless a save is in flight: if it fails, the typed text is still there. */
+  protected cancel(): void {
+    if (!this.busy()) this.cancelled.emit();
+  }
+
+  /** Sends the typed text when every field is valid; otherwise moves focus to the first field to fix. */
   protected submit(): void {
     const form = this.form();
     if (form === null || this.busy()) return;
     form.markAllAsTouched();
-    if (form.invalid) return;
+    if (form.invalid) {
+      afterNextRender(
+        () =>
+          this.host.nativeElement
+            .querySelector<HTMLElement>('[aria-invalid="true"]')
+            ?.focus(),
+        { injector: this.injector }
+      );
+      return;
+    }
     if (!form.dirty) {
       this.cancelled.emit();
       return;

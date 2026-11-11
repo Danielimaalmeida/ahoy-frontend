@@ -25,8 +25,8 @@ import {
 /**
  * The user stories drafted from the open meeting's topics (slices 2 and 3): read when a meeting opens, read again every
  * few seconds while the agent is writing one, and changed by asking for a draft, answering a grill's questions,
- * editing its story by hand, discarding one or creating it in Jira. Asking for a draft and answering may spend AIU; creating one writes to Jira.
- * Nothing else here calls outside Ahoy.
+ * editing its story by hand, discarding one or creating it in Jira. Asking for a draft and answering may spend AIU;
+ * creating one writes to Jira. Nothing else here calls outside Ahoy.
  */
 @Injectable()
 export class StoryDraftsStore {

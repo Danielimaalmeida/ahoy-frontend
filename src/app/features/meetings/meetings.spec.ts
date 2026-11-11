@@ -1748,9 +1748,20 @@ describe('Meetings on the mock backend', () => {
       fieldNamed(dialog(), 'Title'),
       '  Charge late fees on overdue invoices '
     );
+
+    // A save that fails keeps the section open with the typed text, and says why.
+    page.server.switches.failNext = 503;
     buttonNamed(dialog(), 'Save').click();
     await flush(page);
     expect(puts()).toHaveLength(1);
+    expect(fieldNamed(dialog(), 'Title').value).toBe(
+      '  Charge late fees on overdue invoices '
+    );
+    expect(dialog().querySelector('[role="alert"]')).not.toBeNull();
+
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(puts()).toHaveLength(2);
     expect(text(dialog().querySelector('article h3'))).toBe(
       'Charge late fees on overdue invoices'
     );
@@ -1775,8 +1786,8 @@ describe('Meetings on the mock backend', () => {
     );
     await flush(page);
 
-    expect(puts()).toHaveLength(2);
-    expect(puts()[1]?.body).toMatchObject({
+    expect(puts()).toHaveLength(3);
+    expect(puts()[2]?.body).toMatchObject({
       title: 'Charge late fees on overdue invoices',
       acceptanceCriteria: [
         'Only enterprise accounts get a fee.',

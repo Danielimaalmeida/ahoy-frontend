@@ -15,13 +15,15 @@ outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
   (always on touch screens) and turns into its field in place (`story-inline-section.ts`), one section at a time; Save
   or Ctrl+Enter sends the whole story with `editMeetingStory` (`PUT /meeting-story-drafts/{id}/story`, new in
   `ahoy-hosted`, vendored with `api:sync` and `api:types`), 0 AIU; Cancel or Esc puts it back without closing the dialog;
-  Create in Jira waits while a section is open. Lists are one item per line, checked against the API's limits
-  (`storyLines`, `storyLinesProblem`, `withStoryEdit` in `domain/story-drafts.ts`). An edited story says "Edited by … on
-  …". Mock backend and fixtures follow the contract. Checks (cloud, Node 22.23.4, `@acme-fedev/auth` stubbed in
-  `node_modules` only): build, typecheck, lint, format and `ng test` (219 files, 3,812 tests) pass; seen in Chromium
-  against a local `ahoy-hosted` API (`AHOY_AUTH=dev`, local Postgres 16, a ready draft seeded by SQL, 0 AIU) at 1280px
-  and 390px (no sideways scroll), with the keyboard path. Not run: Node 24, the real auth library, Playwright e2e, the
-  dark theme.
+  Create in Jira waits while a section is open; while a save is in flight Save and Cancel stay focusable
+  (`aria-disabled`), Esc does nothing and a failed save keeps the typed text. Lists are one item per line, checked
+  against the API's limits (`storyLines`, `storyLinesProblem`, `withStoryEdit` in `domain/story-drafts.ts`). An edited
+  story says "Edited by … on …". Mock backend and fixtures follow the contract. Checks (cloud, Node 22.23.4,
+  `@acme-fedev/auth` stubbed in `node_modules` only): build, typecheck, lint, format and `ng test` (219 files, 3,812
+  tests) pass; seen in Chromium against a local `ahoy-hosted` API in its default mode, without `--live` (`AHOY_AUTH=dev`,
+  local Postgres 16, a ready draft seeded by SQL, 0 AIU) at 1280px and 390px (no sideways scroll), in light and dark
+  (dark: `ink-soft` 7.8:1 on `surface-hover`, `accent` ring 3.2:1 on `surface-sunken`), with the keyboard path. Not
+  run: Node 24, the real auth library, Playwright e2e, 200% zoom, a screen reader.
 - **This branch (`docs/design-system-a11y`, 2026-11-10, asked for by the user: "check the frontend design system to
   see if it's updated. Add accessibility guidelines"):** `docs/design/design-system/` re-synced from the design system's
   version `1791619698-2405` (its plain labels of 2026-10-10, which the app already used; `bundle.css`, token values and
