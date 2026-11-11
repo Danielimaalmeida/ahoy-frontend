@@ -134,6 +134,23 @@ function dialog(): HTMLElement {
   return element;
 }
 
+/** The input or textarea a field's label names. */
+function fieldNamed(
+  root: HTMLElement,
+  label: string
+): HTMLInputElement | HTMLTextAreaElement {
+  const found = [...root.querySelectorAll('label')].find(
+    (l) => text(l).replace(/\s*(\*|\(optional\))$/, '') === label
+  );
+  const id = found?.getAttribute('for');
+  const control =
+    id === null || id === undefined
+      ? null
+      : root.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`);
+  if (control === null) throw new Error(`no field labelled ${label}`);
+  return control;
+}
+
 const titles = (root: HTMLElement) =>
   [...root.querySelectorAll('ah-topic-card h3')].map((h) => text(h));
 const card = (root: HTMLElement, title: string): HTMLElement => {
@@ -1677,6 +1694,111 @@ describe('Meetings on the mock backend', () => {
     expect(
       buttonNamed(card(page.root, title), 'Turn into a user story')
     ).toBeDefined();
+  });
+
+  it('edits the drafted story by hand before creating it, and Jira gets the story as edited', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Draft it for me').click();
+    await flush(page);
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    buttonNamed(card(page.root, title), 'Check the story').click();
+    await flush(page);
+
+    const editOf = (name: string) => {
+      const button = dialog().querySelector<HTMLButtonElement>(
+        `button[aria-label="Edit ${name}"]`
+      );
+      if (button === null) throw new Error(`no Edit for ${name}`);
+      return button;
+    };
+    const puts = () =>
+      page.requests.filter(
+        (r) => r.method === 'PUT' && r.path.endsWith('/story')
+      );
+
+    // Only the section being edited turns into its field; Esc puts it back unchanged, and the dialog stays open.
+    editOf('title').click();
+    await flush(page);
+    const titleField = fieldNamed(dialog(), 'Title');
+    expect(document.activeElement).toBe(titleField);
+    expect(dialog().querySelectorAll('textarea, input')).toHaveLength(1);
+    expect(buttonNamed(dialog(), 'Create in Jira').disabled).toBe(true);
+    expect(dialog().querySelector('button[aria-label^="Edit "]')).toBeNull();
+    type(titleField, 'Something else');
+    titleField.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
+    await flush(page);
+    expect(dialog().querySelectorAll('textarea, input')).toHaveLength(0);
+    expect(document.activeElement).toBe(editOf('title'));
+    expect(puts()).toHaveLength(0);
+
+    // A blank title or no criterion is refused before anything is sent.
+    editOf('title').click();
+    await flush(page);
+    type(fieldNamed(dialog(), 'Title'), '   ');
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(text(dialog())).toContain('This is required.');
+    type(
+      fieldNamed(dialog(), 'Title'),
+      '  Charge late fees on overdue invoices '
+    );
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(puts()).toHaveLength(1);
+    expect(text(dialog().querySelector('article h3'))).toBe(
+      'Charge late fees on overdue invoices'
+    );
+
+    editOf('acceptance criteria').click();
+    await flush(page);
+    const criteria = fieldNamed(dialog(), 'Acceptance criteria');
+    type(criteria, '\n  \n');
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(text(dialog())).toContain('Write at least one, one per line.');
+    type(
+      criteria,
+      'Only enterprise accounts get a fee.\n\nFinance approves each waiver.'
+    );
+    criteria.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        ctrlKey: true,
+        bubbles: true,
+      })
+    );
+    await flush(page);
+
+    expect(puts()).toHaveLength(2);
+    expect(puts()[1]?.body).toMatchObject({
+      title: 'Charge late fees on overdue invoices',
+      acceptanceCriteria: [
+        'Only enterprise accounts get a fee.',
+        'Finance approves each waiver.',
+      ],
+    });
+    expect(
+      [...dialog().querySelectorAll('article ol li')].map((li) => text(li))
+    ).toEqual([
+      'Only enterprise accounts get a fee.',
+      'Finance approves each waiver.',
+    ]);
+    expect(text(dialog())).toContain('Edited by dev@ on');
+
+    buttonNamed(dialog(), 'Create in Jira').click();
+    await flush(page);
+    const meetingId = page.server.meetingDesk.list('in_progress')[0]!.id;
+    const created = page.server.meetingDesk.listDrafts(meetingId)[0]!;
+    expect([created.status, created.story?.title]).toEqual([
+      'created',
+      'Charge late fees on overdue invoices',
+    ]);
   });
 
   it('does not create a story until the series has a Jira project, and lets the person set it from the review', async () => {

@@ -1427,11 +1427,13 @@ const grillAnswer: Check = (value, at) =>
 
 /**
  * A ready draft has its story and a drafting, asking or failed one none; a failed one says why; a created one has its
- * issue; only a grill has questions or answers, and an asking grill has its questions.
+ * issue; only a grill has questions or answers, and an asking grill has its questions; an edit names who and when.
  */
 const draftConsistency: Check = (value, at) => {
   if (!isRecord(value)) return null;
   const status = value['status'];
+  if ((value['editedBy'] === null) !== (value['editedAt'] === null))
+    return `${at}.editedBy and editedAt must be set together`;
   if (status === 'ready' && value['story'] === null)
     return `${at}.story must be set for a ready draft`;
   if (
@@ -1466,6 +1468,8 @@ const meetingStoryDraft: Check = (value, at) =>
     failure: nullable(text),
     questions: nullable(grillQuestions),
     answers: nullable(arrayOf(grillAnswer)),
+    editedBy: nullable(actor),
+    editedAt: nullable(timestamp),
     spentNanoAiu: nanoAiu,
     target: shape<MeetingStoryDraft['target']>({
       projectKey: nullable(text),
@@ -1490,8 +1494,8 @@ const meetingStoryDraft: Check = (value, at) =>
   })(value, at) ?? draftConsistency(value, at);
 
 /**
- * A story draft, as `requestMeetingStoryDraft`, `getMeetingStoryDraft`, `answerMeetingStoryQuestions` and
- * `createMeetingStoryIssue` answer it.
+ * A story draft, as `requestMeetingStoryDraft`, `getMeetingStoryDraft`, `answerMeetingStoryQuestions`,
+ * `editMeetingStory` and `createMeetingStoryIssue` answer it.
  */
 export const isMeetingStoryDraft = guard<MeetingStoryDraft>(
   'MeetingStoryDraft',

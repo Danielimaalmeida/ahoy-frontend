@@ -238,6 +238,7 @@ import type {
   CancelStoryRequest,
   RestartStoryRequest,
   Story,
+  StoryTemplate,
   StoryPage,
   StoryPlanFit,
   StoryPrComments,
@@ -1403,6 +1404,22 @@ export class ApiClient {
     return this.delete(
       'discardMeetingStoryDraft',
       `/meeting-story-drafts/${segment(draftId)}`
+    );
+  }
+
+  /** Saves a person's edit of a ready draft's story over the agent's; Create in Jira then sends it. 0 AIU. */
+  editMeetingStory(
+    draftId: string,
+    story: StoryTemplate
+  ): Promise<ApiResult<MeetingStoryDraft>> {
+    return this.send(
+      'editMeetingStory',
+      isMeetingStoryDraft,
+      this.http.put<unknown>(
+        this.url(`/meeting-story-drafts/${segment(draftId)}/story`),
+        story,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
     );
   }
 

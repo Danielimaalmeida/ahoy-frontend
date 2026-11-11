@@ -27,6 +27,8 @@
       "failure": null,
       "questions": null,
       "answers": null,
+      "editedBy": null,
+      "editedAt": null,
       "spentNanoAiu": 1200000000,
       "target": {
         "projectKey": "PROJ",
@@ -57,6 +59,8 @@
       "failure": "the agent's reply is not a story: acceptanceCriteria needs at least 1 item",
       "questions": null,
       "answers": null,
+      "editedBy": null,
+      "editedAt": null,
       "spentNanoAiu": 300000000,
       "target": {
         "projectKey": "PROJ",
@@ -125,6 +129,8 @@
         }
       ],
       "answers": null,
+      "editedBy": null,
+      "editedAt": null,
       "spentNanoAiu": 600000000,
       "target": {
         "projectKey": "PROJ",

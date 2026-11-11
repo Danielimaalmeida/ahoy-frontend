@@ -50,6 +50,7 @@ import type {
   CancelStoryRequest,
   RestartStoryRequest,
   StoryPage,
+  StoryTemplate,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
@@ -1039,6 +1040,15 @@ export class MockAhoyServer {
       case 'discardMeetingStoryDraft':
         this.meetings.discardDraft(call.path['draftId'] ?? '');
         return { kind: 'empty', status: 204, headers: {} };
+      case 'editMeetingStory':
+        return jsonResponse(
+          200,
+          this.meetings.editStory(
+            call.actor,
+            call.path['draftId'] ?? '',
+            call.body as StoryTemplate // validated
+          )
+        );
       case 'createMeetingStoryIssue':
         return jsonResponse(
           200,

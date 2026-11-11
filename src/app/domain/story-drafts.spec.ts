@@ -7,13 +7,20 @@ import {
   grillProgress,
   isProjectKey,
   latestDraftByTopic,
+  linesText,
   normaliseProjectKey,
   notesCount,
   optionLetter,
   pickComplete,
   pickSummary,
+  storyFieldText,
+  storyLines,
+  storyLinesProblem,
   storySentence,
+  STORY_LIST_MAX,
+  STORY_TEXT_MAX,
   targetText,
+  withStoryEdit,
   type DraftLike,
   type GrillPick,
   type GrillQuestionLike,
@@ -226,6 +233,65 @@ describe('story drafts', () => {
 
     it('counts the questions from one', () => {
       expect(grillProgress(2, 4)).toBe('Question 3 of 4');
+    });
+  });
+
+  it('reads a list typed one item per line, trimmed and without blank lines, and writes it back the same way', () => {
+    expect(storyLines('  First \r\n\n  \nSecond\n')).toEqual([
+      'First',
+      'Second',
+    ]);
+    expect(storyLines('   ')).toEqual([]);
+    expect(linesText(['First', 'Second'])).toBe('First\nSecond');
+    expect(storyLines(linesText(['A', 'B']))).toEqual(['A', 'B']);
+  });
+
+  it('says why a typed list cannot be saved: too few, too many or a line too long', () => {
+    expect(storyLinesProblem('\n \n', 1)).toBe(
+      'Write at least one, one per line.'
+    );
+    expect(storyLinesProblem('', 0)).toBeNull();
+    expect(storyLinesProblem('One', 1)).toBeNull();
+    const many = Array.from({ length: STORY_LIST_MAX + 1 }, (_, i) => `${i}`);
+    expect(storyLinesProblem(many.join('\n'), 0)).toBe(
+      `At most ${STORY_LIST_MAX}, one per line; this has ${STORY_LIST_MAX + 1}.`
+    );
+    expect(storyLinesProblem(`ok\n${'x'.repeat(STORY_TEXT_MAX + 1)}`, 1)).toBe(
+      `Line 2 is longer than ${STORY_TEXT_MAX} characters.`
+    );
+  });
+
+  it('edits only the fields given, trimmed, with empty prose as none and lists one item per line', () => {
+    const story = {
+      title: 'Late fees',
+      role: 'a finance user',
+      want: 'a late fee',
+      soThat: 'customers pay on time',
+      context: 'None today.',
+      implementedFeature: null,
+      acceptanceCriteria: ['Only enterprise accounts.'],
+      outOfScope: [],
+      dependencies: [],
+      testNotes: [],
+      openQuestions: ['Who approves a waiver?'],
+    };
+    expect(storyFieldText(story, 'acceptanceCriteria')).toBe(
+      'Only enterprise accounts.'
+    );
+    expect(storyFieldText(story, 'implementedFeature')).toBe('');
+    expect(
+      withStoryEdit(story, {
+        title: '  Charge late fees ',
+        context: '   ',
+        acceptanceCriteria: 'Only enterprise accounts.\n\n  Capped at 10%. ',
+        openQuestions: '',
+      })
+    ).toEqual({
+      ...story,
+      title: 'Charge late fees',
+      context: null,
+      acceptanceCriteria: ['Only enterprise accounts.', 'Capped at 10%.'],
+      openQuestions: [],
     });
   });
 });

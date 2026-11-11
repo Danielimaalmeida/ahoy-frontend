@@ -1932,6 +1932,31 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/meeting-story-drafts/{draftId}/story': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Save a person's edit of a ready draft's story, which Create in Jira then sends. 0 AIU.
+     * @description The whole story, in the template: it replaces the agent's story (kept in its run), and the draft answers who
+     *     edited it last (`editedBy`, `editedAt`). Checked like an agent's reply: text trimmed, at least one acceptance
+     *     criterion. Calls nothing outside Ahoy. `409 invalid_state` when the draft is not `ready` (still being written,
+     *     asking, failed or already created in Jira); `404` when it was discarded.
+     */
+    readonly put: operations['editMeetingStory'];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meeting-story-drafts/{draftId}/create-issue': {
     readonly parameters: {
       readonly query?: never;
@@ -4447,6 +4472,9 @@ export interface components {
         readonly components['schemas']['GrillQuestion'][] | null;
       /** @description A grill's answers, one per question in their order, once sent; null before and for a plain draft. */
       readonly answers: readonly components['schemas']['GrillAnswer'][] | null;
+      /** @description Who last edited the story by hand; null when it is the agent's as written. */
+      readonly editedBy: components['schemas']['Actor'] | null;
+      readonly editedAt: components['schemas']['Timestamp'] | null;
       /** @description What every run of the draft spent, a grill's two runs together. */
       readonly spentNanoAiu: number;
       /** @description Where Create in Jira puts it, from the series; a null project means it cannot be created. */
@@ -8311,6 +8339,37 @@ export interface operations {
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly editMeetingStory: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['StoryTemplate'];
+      };
+    };
+    readonly responses: {
+      /** @description The draft, with the edited story. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly createMeetingStoryIssue: {

@@ -744,6 +744,52 @@ describe('the mock meetings', () => {
       ).toBe(409);
     });
 
+    it('saves an edit of a ready story, trimmed, and refuses one while it is written, blank or after Jira', () => {
+      const { server, clock, topic } = withTopic();
+      const draft = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        { confirmSpend: true }
+      ).body as MeetingStoryDraft;
+      const story = {
+        title: '  Charge late fees ',
+        role: 'a finance user',
+        want: 'a late fee on overdue invoices',
+        soThat: 'customers pay on time',
+        context: null,
+        implementedFeature: null,
+        acceptanceCriteria: ['Only enterprise accounts get a fee.'],
+        outOfScope: [],
+        dependencies: [],
+        testNotes: [],
+        openQuestions: [],
+      };
+      const path = `/meeting-story-drafts/${draft.id}/story`;
+      expect(call(server, 'PUT', path, story).status).toBe(409);
+      clock.advance(MOCK_DRAFT_MS);
+      expect(
+        call(server, 'PUT', path, { ...story, acceptanceCriteria: [] }).status
+      ).toBe(400);
+      expect(call(server, 'PUT', path, { ...story, want: '  ' }).status).toBe(
+        400
+      );
+      const edited = call(server, 'PUT', path, story).body as MeetingStoryDraft;
+      expect([
+        edited.status,
+        edited.story?.title,
+        edited.editedBy !== null,
+        edited.editedAt !== null,
+      ]).toEqual(['ready', 'Charge late fees', true, true]);
+      const created = call(
+        server,
+        'POST',
+        `/meeting-story-drafts/${draft.id}/create-issue`
+      ).body as MeetingStoryDraft;
+      expect(created.story?.title).toBe('Charge late fees');
+      expect(call(server, 'PUT', path, story).status).toBe(409);
+    });
+
     it('follows the series when its Jira project is turned off, and then refuses to create', () => {
       const { server, clock, meeting, topic } = withTopic();
       const draft = call(
