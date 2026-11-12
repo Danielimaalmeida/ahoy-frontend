@@ -1,0 +1,19 @@
+{
+  "connection": {
+    "baseUrl": "https://confluence.example.com/confluence",
+    "tokenHint": "9f3a",
+    "tokenSetBy": "alex@example.com",
+    "tokenSetByName": "Alex Example",
+    "tokenSetAt": "2026-10-29T09:40:00.000Z",
+    "lastTest": {
+      "result": "ok",
+      "detail": "Ahoy service",
+      "at": "2026-10-31T10:20:00.000Z"
+    }
+  },
+  "spaceKey": null,
+  "version": 3,
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-11-02T08:20:00.000Z"
+}

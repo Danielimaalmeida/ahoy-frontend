@@ -3,6 +3,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   untracked,
 } from '@angular/core';
@@ -21,7 +22,8 @@ const SOMEONE_ELSE = '';
  * The one line that adds a topic to the open meeting (boards `Meetings` and `MeetingNext`): the title, who raised it
  * (our side or the stakeholders', as Team settings › Meetings names them, and which stakeholder) and Add. Before the
  * meeting the topic is one to raise; during it, one that came up. Enter adds it; the choice of side stays for the
- * next topic.
+ * next topic. It starts on the signed-in person's side (Team settings › People) and, on the stakeholders' side, on the
+ * stakeholder named like them, if the meeting lists one.
  */
 @Component({
   selector: 'ah-topic-composer',
@@ -114,8 +116,10 @@ export class TopicComposer {
   protected readonly labels = this.store.labels;
   protected readonly title = new FormControl('', { nonNullable: true });
   protected readonly who = new FormControl(SOMEONE_ELSE, { nonNullable: true });
-  /** Who raised the next topic; `us` until the person picks Them. */
-  readonly raisedBy = signal<RaisedBy>('us');
+  /** Who raised the next topic: the signed-in person's side (`us` until known) until they pick the other. */
+  readonly raisedBy = linkedSignal<RaisedBy>(
+    () => this.store.me()?.side ?? 'us'
+  );
   private readonly typed = signal('');
 
   protected readonly busy = this.store.busy;
@@ -129,17 +133,31 @@ export class TopicComposer {
       : 'A topic to raise in this meeting'
   );
 
+  /** The stakeholder the signed-in person is, by name or sign-in (ignoring case), if the meeting lists them. */
+  private readonly self = computed(() => {
+    const me = this.store.me();
+    if (me === null) return undefined;
+    const names = [me.name, me.actor].flatMap((n) =>
+      n === null ? [] : [n.trim().toLowerCase()]
+    );
+    return this.stakeholders().find((s) =>
+      names.includes(s.trim().toLowerCase())
+    );
+  });
+
   /** Which meeting is open; the same id while the answer to a command replaces the meeting with a fresh copy. */
   private readonly meetingId = computed(() => this.store.meeting()?.id ?? null);
 
   constructor() {
     this.title.valueChanges.subscribe((value) => this.typed.set(value));
-    // Another meeting has other stakeholders: start again from its first one. Only a change of meeting does that: a
-    // topic moved up or down in the same meeting keeps the stakeholder that was picked.
+    // Another meeting has other stakeholders: start again from the signed-in person, if listed, else its first one.
+    // Only a change of meeting (or learning who is signed in) does that: a topic moved up or down in the same meeting
+    // keeps the stakeholder that was picked.
     effect(() => {
       this.meetingId();
+      this.store.me();
       untracked(() =>
-        this.who.setValue(this.stakeholders()[0] ?? SOMEONE_ELSE)
+        this.who.setValue(this.self() ?? this.stakeholders()[0] ?? SOMEONE_ELSE)
       );
     });
   }

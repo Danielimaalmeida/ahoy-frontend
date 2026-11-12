@@ -1,5 +1,5 @@
 /** The 16 icon names of the design system (`docs/design/design-system/assets/Icons/README.md`), in its order. */
-export const ICON_NAMES = [
+export const DESIGN_SYSTEM_ICON_NAMES = [
   'wheel',
   'bell',
   'compass',
@@ -18,7 +18,19 @@ export const ICON_NAMES = [
   'offline',
 ] as const;
 
-/** One of the design system's icons. */
+/**
+ * Icons the app draws for its empty states that the design system does not have yet (a known difference in
+ * `docs/design-system.md`); they move into it, then here, when it adds them.
+ */
+export const APP_ICON_NAMES = ['calendar-plus', 'document', 'waves'] as const;
+
+/** Every icon the app draws: the design system's, then the app's own. */
+export const ICON_NAMES = [
+  ...DESIGN_SYSTEM_ICON_NAMES,
+  ...APP_ICON_NAMES,
+] as const;
+
+/** One of the icons the app draws. */
 export type IconName = (typeof ICON_NAMES)[number];
 
 /** One SVG element of an icon, drawn on the 24px grid. */
@@ -47,7 +59,10 @@ const circle = (cx: number, cy: number, r: number): IconShape => ({
   r,
 });
 
-/** The shapes of each icon, copied from the design system's SVG files. The `Record` makes the map exhaustive. */
+/**
+ * The shapes of each icon, copied from the design system's SVG files (the app's own drawn in the same style: 24px grid,
+ * round line ends). The `Record` makes the map exhaustive.
+ */
 export const ICONS: Readonly<Record<IconName, readonly IconShape[]>> = {
   wheel: [
     circle(12, 12, 6),
@@ -86,9 +101,23 @@ export const ICONS: Readonly<Record<IconName, readonly IconShape[]>> = {
     path('M12 19h.01'),
     path('M3 3l18 18'),
   ],
+  'calendar-plus': [
+    { kind: 'rect', x: 3, y: 5, width: 18, height: 16, rx: 2 },
+    path('M8 3v4M16 3v4M3 10h18'),
+    path('M12 13v5M9.5 15.5h5'),
+  ],
+  document: [
+    path('M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'),
+    path('M14 3v5h5'),
+    path('M9 13h6M9 17h4'),
+  ],
+  waves: [
+    path('M2 9c2 0 3-2 5-2s3 2 5 2 3-2 5-2 3 2 5 2'),
+    path('M2 15c2 0 3-2 5-2s3 2 5 2 3-2 5-2 3 2 5 2'),
+  ],
 };
 
-/** Whether a value names one of the design system's icons. */
+/** Whether a value names one of the icons the app draws. */
 export function isIconName(value: unknown): value is IconName {
   return (
     typeof value === 'string' &&

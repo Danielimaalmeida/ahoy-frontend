@@ -269,6 +269,19 @@ export const NOTE_MAX = 4000;
     form .due {
       flex: 0 1 150px;
     }
+    /* A topic with no notes yet: the line for the first note is its empty state, light until it is used. */
+    form.first .line {
+      border-style: dashed;
+      background: transparent;
+    }
+    form.first.collapsed select,
+    form.first.collapsed .add-note-image {
+      display: none;
+    }
+    .first-hint {
+      flex: 1 0 100%;
+      margin: 0;
+    }
     .story {
       display: flex;
       flex-wrap: wrap;
@@ -412,6 +425,9 @@ export const NOTE_MAX = 4000;
             >{{ raisedBy() }}</span
           >
           <span class="ah-hint">{{ when() }}</span>
+          @if (firstNote()) {
+            <span class="ah-hint no-notes">· no notes yet</span>
+          }
           @if (t.carriedFrom; as from) {
             <a
               class="ah-tag ah-tag--outline"
@@ -957,7 +973,13 @@ export const NOTE_MAX = 4000;
         </div>
       }
       @if (editable()) {
-        <form (submit)="$event.preventDefault(); addNote()">
+        <form
+          [class.first]="firstNote()"
+          [class.collapsed]="collapsed()"
+          (submit)="$event.preventDefault(); addNote()"
+          (focusin)="composing.set(true)"
+          (focusout)="leaveComposer($event)"
+        >
           <label class="ah-sr" [for]="'kind-' + t.id"
             >Kind of note for {{ t.title }}</label
           >
@@ -1014,6 +1036,7 @@ export const NOTE_MAX = 4000;
             ahButton="ghost"
             size="sm"
             type="button"
+            class="add-note-image"
             [attr.aria-label]="'Add an image to the next note on ' + t.title"
             [disabled]="busy() || pending().length >= maxImages"
             (click)="composerPicker.click()"
@@ -1045,6 +1068,12 @@ export const NOTE_MAX = 4000;
           }
           @if (imageHint(); as hint) {
             <p class="ah-hint image-hint" role="status">{{ hint }}</p>
+          }
+          @if (firstNote() && !collapsed()) {
+            <p class="ah-hint first-hint">
+              Enter adds it · Shift+Enter for a new line · /d /a /q for a
+              decision, action or question
+            </p>
           }
         </form>
       }
@@ -1135,10 +1164,33 @@ export class TopicCard {
   protected readonly kindNow = toSignal(this.kind.valueChanges, {
     initialValue: this.kind.value,
   });
+  /** What is typed on the line for the next note, as a signal for the template. */
+  private readonly noteNow = toSignal(this.note.valueChanges, {
+    initialValue: this.note.value,
+  });
+  /** Whether focus is on the line for the next note or beside it. */
+  readonly composing = signal(false);
+  /** Whether the topic can take notes and has none yet, so its line is the empty state. */
+  protected readonly firstNote = computed(
+    () => this.editable() && this.topic().notes.length === 0
+  );
+  /** Whether the first note's line rests light: not in use, empty, with no images and a plain note chosen. */
+  protected readonly collapsed = computed(
+    () =>
+      this.firstNote() &&
+      !this.composing() &&
+      this.noteNow() === '' &&
+      this.pending().length === 0 &&
+      this.kindNow() === 'note'
+  );
   protected readonly placeholder = computed(() =>
-    this.kindNow() === 'note'
-      ? 'Add a note (/d decision, /a action, /q question)'
-      : `Add a ${NOTE_KIND_LABELS[this.kindNow()].toLowerCase()}`
+    this.kindNow() !== 'note'
+      ? `Add a ${NOTE_KIND_LABELS[this.kindNow()].toLowerCase()}`
+      : !this.firstNote()
+        ? 'Add a note (/d decision, /a action, /q question)'
+        : this.collapsed()
+          ? 'Write a note…'
+          : 'Write the first note. What was said, decided or agreed?'
   );
   /** The question whose answer line is open, if any. */
   readonly answering = signal<string | null>(null);
@@ -1522,6 +1574,15 @@ export class TopicCard {
     if (files.length === 0) return;
     event.preventDefault();
     this.take(files);
+  }
+
+  /** Keeps the line for the next note open while focus moves within it, and lets it rest when focus leaves. */
+  protected leaveComposer(event: FocusEvent): void {
+    const form = event.currentTarget;
+    const to = event.relatedTarget;
+    if (form instanceof HTMLElement && to instanceof Node && form.contains(to))
+      return;
+    this.composing.set(false);
   }
 
   /** Takes the images chosen with Add image beside the line for the next note. */

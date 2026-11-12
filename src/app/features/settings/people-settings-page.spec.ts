@@ -12,6 +12,7 @@ import getPeopleSettings from '@testing/fixtures/getPeopleSettings.json';
 import listPeopleSettingsEvents from '@testing/fixtures/listPeopleSettingsEvents.json';
 import putPerson from '@testing/fixtures/putPerson.json';
 import removePerson from '@testing/fixtures/removePerson.json';
+import updateMeetingSettings from '@testing/fixtures/updateMeetingSettings.json';
 import { ToastService } from '@ui/toast/toast';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PeopleSettingsPage } from './people-settings-page';
@@ -86,6 +87,10 @@ describe('the People section of Team settings', () => {
     fixture = TestBed.createComponent(PeopleSettingsPage);
     root = fixture.nativeElement as HTMLElement;
     fixture.detectChanges();
+    // The names of the two sides of a meeting (Team settings › Meetings): Northwind and Contoso.
+    http
+      .expectOne({ method: 'GET', url: `${BASE}/settings/meetings` })
+      .flush(updateMeetingSettings);
     await settle();
   });
 
@@ -101,12 +106,12 @@ describe('the People section of Team settings', () => {
     await settle();
     expect(rows('People added in Ahoy')).toEqual([
       expect.stringMatching(
-        /^Bea Example q200001 \| Admin \| Alex Example .+ \| Make member Remove$/
+        /^Bea Example q200001 \| Admin \| Northwind \| Alex Example .+ \| Make member Move to Contoso Remove$/
       ),
     ]);
     expect(rows('People set by the deployment')).toEqual([
-      'Alex Example q100001You | Admin',
-      'q100002 | Member',
+      'Alex Example q100001You | Admin | Northwind',
+      'q100002 | Member | Northwind',
     ]);
     expect(
       [...root.querySelectorAll('[aria-label="Changes to People"] li')].map(
@@ -115,21 +120,42 @@ describe('the People section of Team settings', () => {
     ).toEqual(['q200001: Member → Admin', 'Added q200001 as member']);
   });
 
-  it('adds a qnumber with its role, lower-cased', async () => {
+  it('adds a qnumber with its role and side of a meeting, lower-cased', async () => {
     await answer();
+    expect(
+      [...field<HTMLSelectElement>(root, 'Side in meetings').options].map((o) =>
+        text(o)
+      )
+    ).toEqual(['Northwind', 'Contoso']);
     type(field(root, 'Qnumber'), ' Q300001 ');
     choose(field<HTMLSelectElement>(root, 'Role'), 'member');
+    choose(field<HTMLSelectElement>(root, 'Side in meetings'), 'them');
     await settle();
     buttonNamed(root, 'Add').click();
     await settle();
     const [put] = changes('PUT', 'q300001');
-    expect(put?.request.body).toEqual({ role: 'member' });
+    expect(put?.request.body).toEqual({ role: 'member', side: 'them' });
     expect(requestViolations('putPerson', put?.request.body)).toEqual([]);
     await respond(put!, putPerson);
     await answer(putPerson);
-    expect(toasts()).toContain('q300001 added.');
+    expect(toasts()).toContain('q300001 added (Contoso).');
     expect(field(root, 'Qnumber').value).toBe('');
-    expect(rows('People added in Ahoy')).toHaveLength(2);
+    expect(field<HTMLSelectElement>(root, 'Side in meetings').value).toBe('us');
+    expect(rows('People added in Ahoy')[1]).toMatch(
+      /^q300001 \| Member \| Contoso \| .+ \| Make admin Move to Northwind Remove$/
+    );
+  });
+
+  it('moves a member to the other side of a meeting, keeping their role', async () => {
+    await answer();
+    buttonNamed(root, 'Move q200001 to Contoso').click();
+    await settle();
+    const [put] = changes('PUT', 'q200001');
+    expect(put?.request.body).toEqual({ role: 'admin', side: 'them' });
+    expect(requestViolations('putPerson', put?.request.body)).toEqual([]);
+    await respond(put!, getPeopleSettings);
+    await answer();
+    expect(toasts()).toContain('q200001 moved to Contoso.');
   });
 
   it('refuses what is not a qnumber, or someone already listed, before sending anything', async () => {

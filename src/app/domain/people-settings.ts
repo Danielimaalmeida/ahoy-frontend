@@ -1,5 +1,6 @@
 /**
- * Team settings › People in words: the check of a qnumber as typed, and what one entry of its history says happened.
+ * Team settings › People in words: the check of a qnumber as typed, a role and a side, and what one entry of its
+ * history says happened.
  * Pure: the payloads come from the API as `unknown` and are read field by field.
  */
 
@@ -28,6 +29,13 @@ export function roleLabel(role: unknown): string {
   return '?';
 }
 
+/** A side of a meeting in words, as the history says it (it does not know the names Team settings › Meetings gives). */
+export function sideLabel(side: unknown): string {
+  if (side === 'us') return 'our side';
+  if (side === 'them') return "the stakeholders' side";
+  return '?';
+}
+
 /** What one People entry of the settings history says happened, or undefined for another section's. */
 export function describePeopleEvent(
   type: string,
@@ -37,14 +45,23 @@ export function describePeopleEvent(
   const fields = isRecord(payload) ? payload : {};
   const who = typeof fields['qnumber'] === 'string' ? fields['qnumber'] : '?';
   switch (type) {
-    case 'members.added':
-      return `Added ${who} as ${roleLabel(fields['role']).toLowerCase()}`;
+    case 'members.added': {
+      const added = `Added ${who} as ${roleLabel(fields['role']).toLowerCase()}`;
+      return fields['side'] === 'them'
+        ? `${added}, on ${sideLabel('them')}`
+        : added;
+    }
     case 'members.removed':
       return `Removed ${who}`;
     case 'members.role_changed': {
       const changes = isRecord(fields['changes']) ? fields['changes'] : {};
       const role = isRecord(changes['role']) ? changes['role'] : {};
       return `${who}: ${roleLabel(role['from'])} → ${roleLabel(role['to'])}`;
+    }
+    case 'members.side_changed': {
+      const changes = isRecord(fields['changes']) ? fields['changes'] : {};
+      const side = isRecord(changes['side']) ? changes['side'] : {};
+      return `${who}: ${sideLabel(side['from'])} → ${sideLabel(side['to'])}`;
     }
     default:
       return `Changed ${who}`;

@@ -22,6 +22,19 @@ describe('who may use Ahoy, in words', () => {
         changes: { role: { from: 'admin', to: 'member' } },
       })
     ).toBe('q1: Admin → Member');
+    expect(
+      describePeopleEvent('members.added', {
+        qnumber: 'q2',
+        role: 'member',
+        side: 'them',
+      })
+    ).toBe("Added q2 as member, on the stakeholders' side");
+    expect(
+      describePeopleEvent('members.side_changed', {
+        qnumber: 'q2',
+        changes: { side: { from: 'them', to: 'us' } },
+      })
+    ).toBe("q2: the stakeholders' side → our side");
     expect(describePeopleEvent('members.added', null)).toBe('Added ? as ?');
     expect(describePeopleEvent('meeting_settings.updated', {})).toBe(undefined);
   });

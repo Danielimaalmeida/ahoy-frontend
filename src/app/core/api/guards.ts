@@ -46,10 +46,12 @@ import {
   MCP_SOURCES,
   PHASE_SETTING_FIELDS,
   FIGMA_TEST_RESULTS,
+  CONFLUENCE_TEST_RESULTS,
   TEAMS_CARD_RESULTS,
   MEETING_NOTE_IMAGE_TYPES,
   MEETING_NOTE_KINDS,
   MEMBER_ROLES,
+  MEMBER_SIDES,
   MEETING_STATUSES,
   GRILL_CHOICES,
   MEETING_STORY_DRAFT_STATUSES,
@@ -157,6 +159,13 @@ import {
   type AnswerAccepted,
   type Artifact,
   type ArtifactList,
+  type ConfluencePage,
+  type ConfluencePageList,
+  type ConfluenceParent,
+  type ConfluenceSettings,
+  type ConfluenceSettingsPage,
+  type ConfluenceTest,
+  type MeetingConfluencePage,
   type DecisionAccepted,
   type EventPage,
   type GateRecord,
@@ -1102,6 +1111,31 @@ const jiraProjectKey = patterned(
   50
 );
 
+const confluencePageId = patterned(
+  "a Confluence page's id",
+  /^[0-9]{1,20}$/,
+  20
+);
+
+/** An http(s) address, so a link to it never runs script. */
+const webUrl = patterned('an http(s) URL', /^https?:\/\/\S+$/i, 2000);
+
+/** The parent page a series' last Confluence page went under. */
+const confluenceParent = shape<ConfluenceParent>({
+  id: confluencePageId,
+  title: text,
+});
+
+/** The Confluence page a meeting became. */
+const meetingConfluencePage = shape<MeetingConfluencePage>({
+  id: confluencePageId,
+  title: text,
+  url: webUrl,
+  createdBy: actor,
+  createdByName: nullable(text),
+  createdAt: timestamp,
+});
+
 /** A recurring meeting; `cadenceDays` is 1 to 366, or null when the series has none. */
 const meetingSeries = shape<MeetingSeries>({
   id: uuid,
@@ -1112,6 +1146,7 @@ const meetingSeries = shape<MeetingSeries>({
   ),
   jiraProjectKey: nullable(jiraProjectKey),
   jiraIssueType: oneOf(JIRA_ISSUE_TYPES),
+  confluenceParent: nullable(confluenceParent),
   createdBy: actor,
   createdByName: nullable(text),
   createdAt: timestamp,
@@ -1256,6 +1291,8 @@ const meetingSummaryFields = {
   openTopicCount: count,
   jiraProjectKey: nullable(jiraProjectKey),
   jiraIssueType: nullable(oneOf(JIRA_ISSUE_TYPES)),
+  confluencePage: nullable(meetingConfluencePage),
+  confluenceParent: nullable(confluenceParent),
   createdBy: actor,
   createdByName: nullable(text),
   createdAt: timestamp,
@@ -1580,7 +1617,12 @@ export const isNoContent = guard<null>('No content', (value, at) =>
 /** The signed-in person, as `getMe` answers it. */
 export const isMe = guard<Me>(
   'Me',
-  shape<Me>({ actor, name: nullable(text), admin: flag })
+  shape<Me>({
+    actor,
+    name: nullable(text),
+    admin: flag,
+    side: oneOf(MEMBER_SIDES),
+  })
 );
 
 const sonarServer = shape<SonarServer>({
@@ -1700,6 +1742,67 @@ export const isJiraSettings = guard<JiraSettings>('JiraSettings', jiraSettings);
 
 /** What a connection test found, as `testJiraConnection` answers it. */
 export const isJiraTest = guard<JiraTest>('JiraTest', jiraTest);
+
+const confluenceTest = shape<ConfluenceTest>({
+  result: oneOf(CONFLUENCE_TEST_RESULTS),
+  detail: nullable(text),
+  at: timestamp,
+});
+
+const confluenceSettings = shape<ConfluenceSettings>({
+  connection: shape<ConfluenceSettings['connection']>({
+    baseUrl: nonEmptyText,
+    tokenHint: boundedText('at most four characters', 0, 4),
+    tokenSetBy: actor,
+    tokenSetByName: nullable(text),
+    tokenSetAt: timestamp,
+    lastTest: nullable(confluenceTest),
+  }),
+  spaceKey: nullable(nonEmptyText),
+  version: wholeNumber('a version', 1),
+  updatedBy: actor,
+  updatedByName: nullable(text),
+  updatedAt: timestamp,
+});
+
+/** Confluence's settings page, as `getConfluenceSettings` answers it. */
+export const isConfluenceSettingsPage = guard<ConfluenceSettingsPage>(
+  'ConfluenceSettingsPage',
+  shape<ConfluenceSettingsPage>({
+    canEdit: flag,
+    secretsConfigured: flag,
+    tokenReadable: flag,
+    confluence: nullable(confluenceSettings),
+  })
+);
+
+/** Confluence's settings, as `putConfluenceConnection` and `updateConfluenceSettings` answer them. */
+export const isConfluenceSettings = guard<ConfluenceSettings>(
+  'ConfluenceSettings',
+  confluenceSettings
+);
+
+/** What a connection test found, as `testConfluenceConnection` answers it. */
+export const isConfluenceTest = guard<ConfluenceTest>(
+  'ConfluenceTest',
+  confluenceTest
+);
+
+/** The pages a parent page search found, as `searchConfluencePages` answers them. */
+export const isConfluencePageList = guard<ConfluencePageList>(
+  'ConfluencePageList',
+  shape<ConfluencePageList>({
+    items: arrayOf(
+      shape<ConfluencePage>({
+        id: confluencePageId,
+        title: text,
+        spaceKey: text,
+        spaceName: nullable(text),
+        ancestors: arrayOf(text),
+      })
+    ),
+  })
+);
 
 /** A backlog query's count and first issue, as `previewJiraBacklog` answers them. */
 export const isJiraBacklogPreview = guard<JiraBacklogPreview>(
@@ -1887,6 +1990,7 @@ export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
 );
 
 const memberRole = oneOf(MEMBER_ROLES);
+const memberSide = oneOf(MEMBER_SIDES);
 
 /** The People settings page, as `getPeopleSettings`, `putPerson` and `removePerson` answer it. */
 export const isPeoplePage = guard<PeoplePage>(
@@ -1908,6 +2012,7 @@ export const isPeoplePage = guard<PeoplePage>(
         qnumber: actor,
         name: nullable(text),
         role: memberRole,
+        side: memberSide,
         addedBy: actor,
         addedByName: nullable(text),
         addedAt: timestamp,

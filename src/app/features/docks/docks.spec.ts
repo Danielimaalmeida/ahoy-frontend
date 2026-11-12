@@ -639,6 +639,76 @@ describe('Docks', () => {
         );
       });
 
+      it('shows every story in one table without sprint groups when List is chosen, naming the sprint of each story', async () => {
+        const f = await mount(
+          new FakeBacklog(
+            [
+              anItem('PROJ-1', { sprint: active }),
+              anItem('PROJ-2', { sprint: future }),
+              anItem('PROJ-3'),
+            ],
+            false
+          )
+        );
+        const pill = (label: string): HTMLButtonElement =>
+          [...root(f).querySelectorAll('button')].find(
+            (button) => text(button) === label
+          )!;
+        pill('List').click();
+        await refresh(f);
+        expect(groups(f)).toHaveLength(0);
+        expect(pill('Collapse all')).toBeUndefined();
+        const rows = [
+          ...root(f).querySelectorAll<HTMLTableRowElement>(
+            'table[aria-label="Backlog"] tbody tr'
+          ),
+        ];
+        expect(rows.map((row) => text(row.cells[0]))).toEqual([
+          'PROJ-1',
+          'PROJ-2',
+          'PROJ-3',
+        ]);
+        expect(
+          rows.map((row) => text(row.cells[1]!.querySelector('.ah-muted')))
+        ).toEqual(['Sprint 24', 'Sprint 25', 'No sprint']);
+        pill('By sprint').click();
+        await refresh(f);
+        expect(groups(f)).toHaveLength(3);
+      });
+
+      it('lays the stories out in one lane per priority, most urgent first, when By priority is chosen', async () => {
+        const f = await mount(
+          new FakeBacklog(
+            [
+              anItem('PROJ-1', { sprint: active, priority: 'Low' }),
+              anItem('PROJ-2', { priority: 'Highest' }),
+              anItem('PROJ-3', { sprint: future, priority: 'Low' }),
+              anItem('PROJ-4', { priority: 'Urgent-ish' }),
+              anItem('PROJ-5', { priority: '' }),
+              anItem('PROJ-6', { priority: 'Medium' }),
+            ],
+            false
+          )
+        );
+        [...root(f).querySelectorAll('button')]
+          .find((button) => text(button) === 'By priority')!
+          .click();
+        await refresh(f);
+        expect(
+          groups(f).map((group) =>
+            text(group.querySelector('.docks__sprint-name'))
+          )
+        ).toEqual(['Highest', 'Medium', 'Low', 'Urgent-ish', 'No priority']);
+        expect(groups(f).every((group) => group.open)).toBe(true);
+        const low = groups(f)[2]!;
+        expect(text(low.querySelector('summary'))).toContain('2 stories');
+        expect(
+          [...low.querySelectorAll<HTMLTableRowElement>('tbody tr')].map(
+            (row) => text(row.cells[1]!.querySelector('.ah-muted'))
+          )
+        ).toEqual(['Sprint 24', 'Sprint 25']);
+      });
+
       it('collapses and expands all groups, and preserves an individually opened group after loading more', async () => {
         const f = await mount(
           new FakeBacklog(

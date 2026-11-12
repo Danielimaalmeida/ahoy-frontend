@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "id": 23,
+      "type": "confluence_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "confluence_settings:1",
+      "payload": {
+        "changes": {
+          "spaceKey": {
+            "from": null,
+            "to": "PROJ"
+          }
+        }
+      },
+      "createdAt": "2026-10-29T09:45:00.000Z"
+    },
+    {
+      "id": 22,
+      "type": "confluence_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "confluence_settings:1",
+      "payload": {
+        "changes": {
+          "tokenHint": {
+            "from": "51e0",
+            "to": "9f3a"
+          }
+        }
+      },
+      "createdAt": "2026-10-29T09:40:00.000Z"
+    },
+    {
+      "id": 21,
+      "type": "confluence_settings.connected",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "confluence_settings:1",
+      "payload": {
+        "baseUrl": "https://confluence.example.com/confluence",
+        "tokenHint": "51e0"
+      },
+      "createdAt": "2026-10-28T17:30:00.000Z"
+    }
+  ]
+}

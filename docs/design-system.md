@@ -74,6 +74,10 @@ Rules the app adds on top of the bundle, in `src/styles/`:
 - **Links styled as buttons** keep each variant's text colour (the bundle's `.ah a` rule would make them link-blue).
 - **Toast placement**: bottom centre, above dialogs (`z-index` 1100), not clickable.
 - **Empty-state icon** at 40px with a 1.6 stroke.
+- **Empty-state sizes** (`size` on `ah-empty-state`): `panel` (default, as the design system), `page` (the icon in a
+  72px `accent-soft` circle, for a whole screen's first use: Voyages, Meetings, a meeting with no topics or no notes)
+  and `compact` (a 24px icon, inside a table whose filter found nothing). Actions sit in `.ah-empty__actions`; an
+  `[ahEmptyExtra]` slot after them holds a form or a list (the Meetings topic composer).
 
 Feature-local custom properties (defined and used inside one feature, both themes set):
 
@@ -111,5 +115,7 @@ folders, spec titles). They are identifiers, not UI text; rename them only toget
 - **Raw colours.** The Christmas decorations (`ui/top-bar/top-bar.scss`) use literal colours; the Teams settings preview
   card and the Meetings topic menu use literal shadows.
 - **Theme switch.** The app has no theme button yet (F16); only `/_kit` switches theme.
+- **Icons.** `calendar-plus`, `document` and `waves` (`APP_ICON_NAMES` in `ui/icon/icons.ts`) are drawn in the app,
+  in the design system's line style, for the empty states; they should move into the design system's icon set.
 - **Tokens.** Four colour tokens differ from the design system for contrast (`_ahoy-a11y.scss`); they should move into
   it, then the overrides go.

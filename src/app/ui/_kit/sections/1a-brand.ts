@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Button } from '@ui/button/button';
 import { Icon } from '@ui/icon/icon';
-import { ICON_NAMES } from '@ui/icon/icons';
+import { DESIGN_SYSTEM_ICON_NAMES } from '@ui/icon/icons';
 import { Logo } from '@ui/logo/logo';
 
 /** Gallery: the logo, the app icon and the 16 icons at their three sizes. */
@@ -37,5 +37,5 @@ import { Logo } from '@ui/logo/logo';
   `,
 })
 export class KitBrand {
-  protected readonly names = ICON_NAMES;
+  protected readonly names = DESIGN_SYSTEM_ICON_NAMES;
 }

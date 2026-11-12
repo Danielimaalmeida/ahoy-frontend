@@ -255,6 +255,37 @@ export function hasNextMeeting(
   );
 }
 
+/** When a meeting is planned: its start and, if it has one, its planned end. */
+export interface MeetingSlot {
+  readonly startsAt: string;
+  readonly endsAt: string | null;
+}
+
+/**
+ * When the next meeting of a series goes, from its last one: a cadence later (same time of day in the browser's time
+ * zone), stepped on by the cadence until it starts after `now`, and as long as the last one was.
+ */
+export function nextSlot(
+  last: MeetingSlot,
+  cadenceDays: number,
+  now: Date
+): MeetingSlot {
+  const step = Math.max(1, Math.round(cadenceDays));
+  const start = new Date(last.startsAt);
+  const length =
+    last.endsAt === null ? null : Date.parse(last.endsAt) - start.getTime();
+  do {
+    start.setDate(start.getDate() + step);
+  } while (start.getTime() <= now.getTime());
+  return {
+    startsAt: start.toISOString(),
+    endsAt:
+      length === null || !(length > 0)
+        ? null
+        : new Date(start.getTime() + length).toISOString(),
+  };
+}
+
 /** A date as an `<input type="date">` takes it ("2026-10-22"), in the browser's time zone. */
 export function dateInputValue(at: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -432,6 +463,46 @@ function wiki(text: string): string {
     .trim()
     .replace(/[{}[\]|*_^~!+?#-]/g, (c) => `\\${c}`)
     .replace(/\s*\r?\n\s*/g, ' \\\\ ');
+}
+
+/** The most characters of a Confluence page's title. */
+export const MAX_CONFLUENCE_TITLE_CHARS = 255;
+
+/** A meeting's Confluence page title by default: its title and day, "Sprint review · Tue 13 Oct 2026". */
+export function confluencePageTitle(meeting: {
+  readonly title: string;
+  readonly startsAt: string;
+}): string {
+  const date = new Date(meeting.startsAt);
+  const day = Number.isNaN(date.getTime())
+    ? ''
+    : ` · ${meetingDay(meeting.startsAt)} ${date.getFullYear()}`;
+  return `${meeting.title.trim()}${day}`.slice(0, MAX_CONFLUENCE_TITLE_CHARS);
+}
+
+/**
+ * Where a Confluence page sits, for telling pages of the same title apart: its space, then the pages above it,
+ * "Project space › Meetings". The space's home page, named like the space, is not said twice.
+ */
+export function confluencePagePath(page: {
+  readonly spaceKey: string;
+  readonly spaceName: string | null;
+  readonly ancestors: readonly string[];
+}): string {
+  const space = page.spaceName ?? page.spaceKey;
+  const above =
+    page.ancestors[0] === space ? page.ancestors.slice(1) : page.ancestors;
+  return [space, ...above].join(' › ');
+}
+
+/** Why a typed Confluence page title would be refused, or null when the API should take it. */
+export function confluenceTitleProblem(typed: string): string | null {
+  const title = typed.trim();
+  if (title === '') return 'Give the page a title.';
+  if (title.length > MAX_CONFLUENCE_TITLE_CHARS)
+    return `A title has at most ${MAX_CONFLUENCE_TITLE_CHARS} characters.`;
+  if (/\p{Cc}/u.test(title)) return 'A title is one line.';
+  return null;
 }
 
 /**

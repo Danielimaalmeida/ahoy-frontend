@@ -32,7 +32,13 @@ describe('ah-empty-state', () => {
       Array.from(empty.children).map(
         (c) => c.tagName.toLowerCase() + (c.className ? '.' + c.className : '')
       )
-    ).toEqual(['ah-icon', 'span.ah-empty__title', 'span.ah-muted', 'a.ah-btn']);
+    ).toEqual([
+      'ah-icon',
+      'span.ah-empty__title',
+      'span.ah-muted',
+      'div.ah-empty__actions',
+    ]);
+    expect(empty.querySelector('.ah-empty__actions > a.ah-btn')).not.toBeNull();
     expect(empty.querySelector('.ah-empty__title')!.textContent).toBe(
       'Calm seas'
     );
@@ -79,5 +85,44 @@ describe('ah-empty-state', () => {
       'No anchored voyages'
     );
     expect(empty.querySelector('a, button')).toBeNull();
+  });
+
+  it('takes a panel by default, and a page or a compact space when asked', () => {
+    TestBed.resetTestingModule();
+    @Component({
+      imports: [EmptyState],
+      template: `
+        <ah-empty-state heading="No voyages yet" icon="sail" size="page">
+          Start one.
+          <a ahEmptyAction class="ah-btn" href="/voyages/new">Start voyage</a>
+          <a ahEmptyAction class="ah-btn" href="/docks">Open backlog</a>
+          <ol ahEmptyExtra>
+            <li>Pick a story</li>
+          </ol>
+        </ah-empty-state>
+        <ah-empty-state heading="Calm seas" size="compact"
+          >None.</ah-empty-state
+        >
+      `,
+    })
+    class Sizes {}
+    const fixture = TestBed.createComponent(Sizes);
+    fixture.detectChanges();
+    const [page, compact] = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.ah-empty')
+    );
+    expect(page!.classList).toContain('ah-empty--page');
+    expect(
+      page!.querySelector('.ah-empty__mark svg')!.getAttribute('data-icon')
+    ).toBe('sail');
+    expect(
+      Array.from(page!.querySelectorAll('.ah-empty__actions a')).map(
+        (a) => a.textContent
+      )
+    ).toEqual(['Start voyage', 'Open backlog']);
+    expect(page!.lastElementChild!.tagName).toBe('OL');
+    expect(compact!.classList).toContain('ah-empty--compact');
+    expect(compact!.classList).not.toContain('ah-empty--page');
+    expect(compact!.querySelector('.ah-empty__mark')).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import {
   isClosed,
   meetingDay,
   meetingTime,
+  nextSlot,
   pastByMonth,
   upcomingByWeek,
 } from '@domain/meetings';
@@ -18,7 +19,7 @@ import { Skeleton } from '@ui/skeleton/skeleton';
 import { meetingErrorView } from './meeting-errors';
 import { MeetingsStore } from './meetings-store';
 import { StoryDraftsStore } from './story-drafts-store';
-import { NewMeetingDialog, type NewMeetingData } from './new-meeting-dialog';
+import { openNewMeeting } from './new-meeting-dialog';
 
 /** One line of the left column. */
 interface MeetingLine {
@@ -174,6 +175,23 @@ export const SERIES_PAGE = 3;
     .status-line {
       padding: 8px 16px;
     }
+    /* Upcoming with nothing planned: when the last meeting was, and the way on to the next one. */
+    .nothing {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-2);
+      margin: var(--space-2) var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius-md);
+    }
+    .nothing p {
+      margin: 0;
+    }
+    .nothing .title {
+      font-weight: 600;
+    }
     /* On a narrow screen the list goes above the meeting instead of squeezing it, and scrolls on its own so the
        meeting opened from it starts within the first screen. */
     @media (max-width: 760px) {
@@ -219,9 +237,7 @@ export const SERIES_PAGE = 3;
           <ah-skeleton width="60%" />
         </div>
       } @else if (loaded() && total() === 0) {
-        <p class="empty ah-muted">
-          No meetings yet. Plan the first one with New meeting.
-        </p>
+        <p class="empty ah-muted">Your meetings will be listed here.</p>
       } @else {
         <div class="search" role="search">
           <label class="ah-sr" for="meeting-search"
@@ -346,7 +362,39 @@ export const SERIES_PAGE = 3;
                 </button>
               }
             } @empty {
-              <p class="status-line ah-hint">{{ emptyText() }}</p>
+              @if (lastMeeting(); as last) {
+                <div class="nothing">
+                  <p class="title">Nothing scheduled</p>
+                  <p class="ah-hint">
+                    The last meeting was
+                    <a [routerLink]="['/meetings', last.id]">{{
+                      last.seriesName ?? last.title
+                    }}</a>
+                    on {{ day(last.startsAt) }}.
+                  </p>
+                  @if (last.seriesId !== null) {
+                    <button
+                      ahButton="soft"
+                      size="sm"
+                      type="button"
+                      [disabled]="store.busy()"
+                      (click)="scheduleNext(last)"
+                    >
+                      Schedule next {{ last.seriesName ?? 'meeting' }}
+                    </button>
+                  }
+                  <button
+                    ahButton="ghost"
+                    size="sm"
+                    type="button"
+                    (click)="chosenView.set('past')"
+                  >
+                    See past meetings ({{ store.groups().past.length }})
+                  </button>
+                </div>
+              } @else {
+                <p class="status-line ah-hint">{{ emptyText() }}</p>
+              }
             }
             @if (olderHidden() > 0) {
               <button
@@ -493,6 +541,12 @@ export class MeetingsShell {
         ? 'No meeting has ended yet.'
         : 'No meetings yet.'
   );
+  /** With Upcoming chosen and nothing planned, the meeting that ended last (else the latest closed), to plan from. */
+  protected readonly lastMeeting = computed((): MeetingSummary | null => {
+    if (this.view() !== 'upcoming') return null;
+    const past = this.store.groups().past;
+    return past.find((m) => m.status === 'ended') ?? past[0] ?? null;
+  });
   protected readonly listFailure = computed(() => {
     const error = this.store.loadError();
     return error === null ? null : meetingErrorView(error);
@@ -519,13 +573,38 @@ export class MeetingsShell {
 
   /** Plans a meeting and opens it. */
   protected newMeeting(): void {
+    openNewMeeting(this.dialogs, this.router, this.store);
+  }
+
+  /**
+   * Plans the next meeting of the last one's series: with a cadence, at once, a cadence after the series' latest
+   * meeting and in the future, then opens it; without one, in the New meeting dialog with the series chosen.
+   */
+  protected async scheduleNext(last: MeetingSummary): Promise<void> {
+    const seriesId = last.seriesId;
+    if (seriesId === null) return;
+    const cadence =
+      this.store.series().find((s) => s.id === seriesId)?.cadenceDays ?? null;
+    if (cadence === null) {
+      openNewMeeting(this.dialogs, this.router, this.store, seriesId);
+      return;
+    }
+    // A cancelled meeting did not happen, so the next one goes a cadence after the latest that did or still will.
+    const latest = this.store
+      .meetings()
+      .filter((m) => m.seriesId === seriesId && m.status !== 'cancelled')
+      .reduce(
+        (a, b) => (Date.parse(b.startsAt) > Date.parse(a.startsAt) ? b : a),
+        last
+      );
+    const slot = nextSlot(latest, cadence, this.clock.now());
     this.store.dismissError();
-    const ref = this.dialogs.open<string, NewMeetingData>(NewMeetingDialog, {
-      data: { store: this.store },
-      width: '520px',
+    const id = await this.store.create({
+      seriesId,
+      title: '',
+      startsAt: slot.startsAt,
+      ...(slot.endsAt !== null ? { endsAt: slot.endsAt } : {}),
     });
-    ref.closed.subscribe((id) => {
-      if (id !== undefined) void this.router.navigate(['/meetings', id]);
-    });
+    if (id !== null) void this.router.navigate(['/meetings', id]);
   }
 }

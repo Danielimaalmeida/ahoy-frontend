@@ -743,6 +743,42 @@ describe('All hands', () => {
     });
   });
 
+  it('keeps the placeholders until each row has read what it shows, so no label or line changes later', async () => {
+    let answer: (() => void) | undefined;
+    const { root, flush } = await render(EIGHT, (api) =>
+      api.on('listStoryEvents', (key) =>
+        key === 'PROJ-123'
+          ? new Promise((resolve) => {
+              answer = () =>
+                resolve(
+                  ok({
+                    items: EVENTS[key] ?? [],
+                    lastEventId: EVENTS[key]?.at(-1)?.id ?? null,
+                  })
+                );
+            })
+          : Promise.resolve(
+              ok({
+                items: EVENTS[key] ?? [],
+                lastEventId: EVENTS[key]?.at(-1)?.id ?? null,
+              })
+            )
+      )
+    );
+    const needs = panel(root, 'Needs you');
+    expect(needs.querySelectorAll('tbody tr.placeholder')).toHaveLength(4);
+    answer?.();
+    await flush();
+    expect(needs.querySelectorAll('tbody tr.placeholder')).toHaveLength(0);
+    expect(
+      text(
+        needs.querySelector<HTMLAnchorElement>(
+          'a[href="/voyages/PROJ-123/plan"]'
+        )
+      )
+    ).toContain('Review plan');
+  });
+
   describe('when the harbour cannot be reached', () => {
     it('says contact was lost, that nothing was lost, and tries again on request', async () => {
       let attempt = 0;

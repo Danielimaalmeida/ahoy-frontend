@@ -643,21 +643,51 @@ describe('Voyages', () => {
       expect(text(root)).not.toContain('No voyages');
     });
 
-    it('says which status has no voyage and offers to show all of them', async () => {
+    it('says which status has no voyage under the table header, and offers to show all of them', async () => {
       const calm = EIGHT.filter((story) => story.status !== 'halted');
       const { root, router, keys, click } = await open(
         '/voyages?status=halted',
         calm
       );
-      expect(text(root)).toContain('No anchored voyages');
-      expect(text(root)).toContain('Every voyage is moving or in port.');
-      expect(root.querySelector('table')).toBeNull();
+      const empty = root.querySelector('.ah-empty--compact');
+      expect(text(empty)).toContain('No anchored voyages');
+      expect(text(empty)).toContain('Every voyage is moving or in port.');
+      expect(root.querySelectorAll('thead th')).toHaveLength(8);
+      expect(root.querySelectorAll('tbody tr')).toHaveLength(0);
+      expect(root.querySelector('.ah-panel__foot')).toBeNull();
+      expect(
+        Array.from(empty?.querySelectorAll('a') ?? [])
+          .find((a) => text(a) === 'Start voyage')
+          ?.getAttribute('href')
+      ).toBe('/voyages/new');
       const show = Array.from(root.querySelectorAll('button')).find(
-        (b) => text(b) === 'Show all statuses'
+        (b) => text(b) === 'Show all voyages'
       );
       await click(show);
       expect(router.url).toBe('/voyages');
       expect(keys()).toHaveLength(6);
+    });
+
+    it('says the seas are calm when nothing runs, and which voyage finished last', async () => {
+      const calm = EIGHT.filter((story) => story.status !== 'running');
+      const { root } = await open('/voyages?status=running', calm);
+      const empty = root.querySelector('.ah-empty--compact');
+      expect(text(empty)).toContain('Calm seas. No running voyages.');
+      expect(text(empty)).toContain('The last one finished');
+      const last = empty?.querySelector<HTMLAnchorElement>('a.ah-key');
+      expect(text(last)).toBe('PROJ-097');
+      expect(last?.getAttribute('href')).toBe('/voyages/PROJ-097');
+      expect(text(empty)).toContain('Fix the timezone in the weekly report');
+    });
+
+    it('says no agent is working when nothing runs and none has finished', async () => {
+      const calm = EIGHT.filter(
+        (story) => story.status !== 'running' && story.status !== 'terminal'
+      );
+      const { root } = await open('/voyages?status=running', calm);
+      const empty = root.querySelector('.ah-empty--compact');
+      expect(text(empty)).toContain('No agent is working right now.');
+      expect(text(empty)).not.toContain('The last one finished');
     });
 
     it('says which words found nothing and offers to clear the search', async () => {
@@ -683,13 +713,26 @@ describe('Voyages', () => {
       expect(router.url).toBe('/voyages?status=halted');
     });
 
-    it('invites to set sail when there is no voyage at all', async () => {
-      const { root } = await open('/voyages', []);
-      expect(text(root)).toContain('No voyages yet');
-      const link = Array.from(
-        root.querySelectorAll<HTMLAnchorElement>('a')
-      ).find((a) => text(a) === 'Start voyage');
-      expect(link?.getAttribute('href')).toBe('/voyages/new');
+    it('explains a voyage on the first use, with no chips or table, and invites to set sail', async () => {
+      const { root, chips } = await open('/voyages', []);
+      const empty = root.querySelector('.ah-empty--page');
+      expect(text(empty)).toContain('No voyages yet');
+      expect(chips()).toEqual([]);
+      expect(root.querySelector('table')).toBeNull();
+      const link = (label: string) =>
+        Array.from(
+          empty?.querySelectorAll<HTMLAnchorElement>('.ah-empty__actions a') ??
+            []
+        ).find((a) => text(a) === label);
+      expect(link('Start voyage')?.getAttribute('href')).toBe('/voyages/new');
+      expect(link('Open backlog')?.getAttribute('href')).toBe('/docks');
+      const steps = Array.from(empty?.querySelectorAll('ol.steps li') ?? []);
+      expect(steps.map((step) => text(step.querySelector('strong')))).toEqual([
+        'Pick a story',
+        'The crew sails',
+        'You decide',
+      ]);
+      expect(steps[2]?.querySelector('a')?.getAttribute('href')).toBe('/');
     });
 
     it('says contact was lost, that nothing was lost, and tries again on request', async () => {

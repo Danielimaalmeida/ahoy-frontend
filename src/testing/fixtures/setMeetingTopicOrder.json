@@ -13,6 +13,8 @@
   "openTopicCount": 2,
   "jiraProjectKey": null,
   "jiraIssueType": null,
+  "confluencePage": null,
+  "confluenceParent": null,
   "createdBy": "alex@example.com",
   "createdByName": "Alex Example",
   "createdAt": "2026-10-01T08:00:00.000Z",

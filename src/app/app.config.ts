@@ -26,8 +26,22 @@ import {
   FedevAuthService,
   provideFedevAuth,
   provideFedevAuthInitializer,
+  type IFedevAuthMockUserProfile,
 } from '@acme-fedev/auth';
 import type { environment } from '../environments/environment';
+
+/**
+ * Who `npm run start:local` signs in, through the auth library's mock (`env.mockAuth`): no WebEAM, and the library
+ * refuses it in a production environment. The local API ignores its token and takes the actor from the dev proxy's
+ * `X-Ahoy-Actor` (`AHOY_AUTH=dev`).
+ */
+export const LOCAL_USER: IFedevAuthMockUserProfile = {
+  given_name: 'Local',
+  family_name: 'Developer',
+  departmentnumber: 'LOCAL',
+  email: 'dev-user@localhost',
+  sub: 'dev-user',
+};
 
 /** The build's environment, or the one `loadRuntimeEnvironment` made from it with the team's sign-in. */
 export type AppEnvironment = typeof environment;
@@ -48,6 +62,7 @@ export function createAppConfig(
       provideFedevAuth({
         env,
         includeAccessTokenInBackendRequests: true,
+        ...(env.mockAuth ? { mock: true, mockUser: LOCAL_USER } : {}),
       }),
       {
         provide: FEDEV_AUTH_INIT_OPTIONS,

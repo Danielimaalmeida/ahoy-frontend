@@ -27,10 +27,12 @@ import type {
   MeetingNoteKind,
   MeetingNoteRequest,
   MeetingStatus,
+  MemberSide,
   MeetingStoryAnswersRequest,
   MeetingStoryDraftRequest,
   MeetingTopicOrderRequest,
   MeetingJiraTargetRequest,
+  ConfluencePageRequest,
   MoveMeetingTopicRequest,
   ModelChoice,
   ModelSlot,
@@ -257,6 +259,11 @@ export class MockAhoyServer {
   /** Team settings › Meetings: the names of the two sides, as saved. */
   private meetingLabels = { usLabel: 'Us', themLabel: 'Stakeholders' };
   private meetingLabelsVersion: number | null = null;
+  /** The signed-in person's name, and the side of a meeting they are on (Team settings › People). */
+  private me: { readonly name: string | null; readonly side: MemberSide } = {
+    name: null,
+    side: 'us',
+  };
 
   constructor(options: MockServerOptions) {
     if (!isRecord(options.contract) || !isRecord(options.contract['paths']))
@@ -822,6 +829,12 @@ export class MockAhoyServer {
         return this.listStoryEvents(call);
       case 'streamEvents':
         return this.streamEvents(call);
+      case 'getMe':
+        return jsonResponse(
+          200,
+          { actor: call.actor, admin: true, ...this.me },
+          { 'Cache-Control': 'no-store' }
+        );
       case 'getMeetingSettings':
         return jsonResponse(200, this.meetingSettingsPage(), {
           'Cache-Control': 'no-store',
@@ -891,6 +904,20 @@ export class MockAhoyServer {
             call.path['meetingId'] ?? '',
             call.body as MeetingJiraTargetRequest // validated
           )
+        );
+      case 'createMeetingConfluencePage':
+        return jsonResponse(
+          201,
+          this.meetings.createConfluencePage(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            call.body as ConfluencePageRequest // validated
+          )
+        );
+      case 'searchConfluencePages':
+        return jsonResponse(
+          200,
+          this.meetings.searchConfluencePages(String(call.query['q'] ?? '')) // validated
         );
       case 'searchMeetings':
         return jsonResponse(
@@ -1074,6 +1101,11 @@ export class MockAhoyServer {
           `The mock backend does not simulate ${operationId}`
         );
     }
+  }
+
+  /** Names the signed-in person and puts them on a side of a meeting, as an admin would in Team settings › People. */
+  setMe(name: string | null, side: MemberSide): void {
+    this.me = { name, side };
   }
 
   /** Names the two sides of a meeting, as an admin would in Team settings › Meetings. */

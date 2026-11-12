@@ -7,6 +7,10 @@
       "cadenceDays": 7,
       "jiraProjectKey": "PROJ",
       "jiraIssueType": "Story",
+      "confluenceParent": {
+        "id": "100003",
+        "title": "Finance sync notes"
+      },
       "createdBy": "alex@example.com",
       "createdByName": "Alex Example",
       "createdAt": "2026-09-01T08:00:00.000Z"
@@ -18,6 +22,7 @@
       "cadenceDays": null,
       "jiraProjectKey": null,
       "jiraIssueType": "Story",
+      "confluenceParent": null,
       "createdBy": "alex@example.com",
       "createdByName": "Alex Example",
       "createdAt": "2026-09-02T08:00:00.000Z"

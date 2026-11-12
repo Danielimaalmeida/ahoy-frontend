@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "100002",
+      "title": "Meeting notes",
+      "spaceKey": "PROJ",
+      "spaceName": "Project",
+      "ancestors": ["Project home"]
+    },
+    {
+      "id": "100003",
+      "title": "Finance sync notes",
+      "spaceKey": "PROJ",
+      "spaceName": "Project",
+      "ancestors": ["Project home", "Meeting notes"]
+    },
+    {
+      "id": "100001",
+      "title": "Project home",
+      "spaceKey": "PROJ",
+      "spaceName": null,
+      "ancestors": []
+    }
+  ]
+}

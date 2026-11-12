@@ -4,6 +4,8 @@ const oauth2Host = 'http://localhost:4200';
 export const environment = {
   name: 'DEV',
   production: false,
+  /** Signs in a fixed local user instead of WebEAM: only the `local` configuration sets it. */
+  mockAuth: false,
   issuer: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha`,
   redirectUri: `${host}`,
   clientId: `b89c6dd6-3640-47fd-9463-f336aaaaf070`,

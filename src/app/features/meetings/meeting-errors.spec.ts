@@ -1,5 +1,5 @@
 import type { ApiError } from '@core/api/api-error';
-import { meetingErrorView } from './meeting-errors';
+import { confluencePageErrorView, meetingErrorView } from './meeting-errors';
 
 const problem = (status: number, code: string, detail?: string): ApiError => ({
   kind: 'problem',
@@ -58,5 +58,36 @@ describe('meetingErrorView', () => {
       'Ahoy refused that',
       'title is required for a meeting outside a series',
     ]);
+  });
+});
+
+describe('confluencePageErrorView', () => {
+  it('says where an admin connects Confluence when it is not connected', () => {
+    expect(confluencePageErrorView(problem(409, 'invalid_state'))).toEqual({
+      variant: 'notice',
+      heading: "The page can't be created",
+      text: 'Confluence is not connected: an admin connects it in Team settings › Confluence.',
+      tech: '409 · invalid_state · req-7',
+    });
+  });
+
+  it('passes on why Confluence refused the title or could not be reached', () => {
+    const taken = confluencePageErrorView(
+      problem(
+        400,
+        'validation_failed',
+        'Space PROJ already has a page called "Finance sync"; choose another title'
+      )
+    );
+    expect([taken.heading, taken.text]).toEqual([
+      'Confluence refused that',
+      'Space PROJ already has a page called "Finance sync"; choose another title',
+    ]);
+    expect(confluencePageErrorView(problem(503, 'unavailable')).heading).toBe(
+      "Confluence didn't take the page"
+    );
+    expect(confluencePageErrorView({ kind: 'network' }).heading).toBe(
+      "Can't reach Ahoy"
+    );
   });
 });

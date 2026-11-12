@@ -1,0 +1,14 @@
+{
+  "printWidth": 120,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "proseWrap": "preserve",
+  "overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "angular"
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+// The `local` configuration (`npm run start:local`): the `DEV` environment, signed in as a fixed local user by the
+// auth library's mock instead of WebEAM, for an `ahoy-hosted` API started with `AHOY_AUTH=dev` (`npm run dev`).
+const host = 'http://localhost:4200';
+const oauth2Host = 'http://localhost:4200';
+
+export const environment = {
+  name: 'LOCAL',
+  production: false,
+  /** Signs in a fixed local user instead of WebEAM: only the `local` configuration sets it. */
+  mockAuth: true,
+  issuer: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha`,
+  redirectUri: `${host}`,
+  clientId: `b89c6dd6-3640-47fd-9463-f336aaaaf070`,
+  silentRefreshRedirectUri: `${host}/ui/oauth/silent-refresh.html`,
+  postLogoutRedirectUri: `${host}`,
+  showDebugInformation: true,
+  skipIssuerCheck: true,
+  useHttpBasicAuth: false,
+  callDiscoveryDocument: false,
+  setupAutomaticSilentRefresh: true,
+  loginUrl: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha/authorize`,
+  logoutUrl: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha/connect/endSession`,
+  tokenEndpoint: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha/access_token`,
+  userinfoEndpoint: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha/userinfo`,
+  sessionCheckIFrameUrl: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha/connect/checkSession`,
+  revocationEndpoint: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha/token/revoke`,
+  strictDiscoveryDocumentValidation: false,
+  scope: 'openid profile email groups',
+  devRoutes: [
+    {
+      path: '_kit',
+      title: 'Kit · Ahoy',
+      loadChildren: () =>
+        import('@ui/_kit/kit.routes').then((m) => m.KIT_ROUTES),
+    },
+  ],
+};

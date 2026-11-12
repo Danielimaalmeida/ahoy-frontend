@@ -6,6 +6,7 @@
 import { isRecord } from './records';
 import { describeCopilotTokenEvent } from './copilot-token';
 import { describeAgentEvent } from './agent-settings';
+import { describeConfluenceEvent } from './confluence-settings';
 import { describeFigmaEvent } from './figma-settings';
 import { describeJiraEvent } from './jira-settings';
 import { describePhaseEvent } from './phase-settings';
@@ -118,6 +119,7 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
     default:
       return (
         describeJiraEvent(type, payload) ??
+        describeConfluenceEvent(type, payload) ??
         describeTeamsEvent(type, payload) ??
         describeFigmaEvent(type, payload) ??
         describeAgentEvent(type, payload) ??
