@@ -126,9 +126,11 @@ clashes with an Angular type, stop and ask. `tsconfig.app.json` and `tsconfig.sp
 
 ## Reporting and handoff
 
-- After each item, rewrite `docs/progress.md` (it stays one page): what is proven and how, the test counts, what was
-  skipped or did not run and why, and "Next". The detail of a change goes in its commit message and pull request, not
-  in the page. Git history is the archive: never keep old versions or changelogs as files.
+- After each item, rewrite `docs/progress.md`: it stays one page, about 150 lines at most. Update "Where we are", the
+  feature's row in "Not checked yet" (remove it once checked), what was skipped or did not run and why, and "Next";
+  remove what is done. Never add an entry per branch: the detail of a change, its checks and test counts included,
+  goes in its commit message and pull request, not in the page. Git history is the archive: never keep old versions
+  or changelogs as files.
 - Be exact about proof. State whether something ran against the local API (`--simulate`), ran against the mock backend,
   was only unit-tested or was not run at all. Name every skipped suite. Never describe a check that did not run as
   passed.
