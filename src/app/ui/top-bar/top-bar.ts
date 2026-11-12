@@ -34,7 +34,7 @@ const SNOWFLAKE_PATH =
 /**
  * The app header on every screen: the logo, the three destinations, search, the Live indicator, **Start voyage** (the only
  * primary button) and the signed-in person. It wraps on narrow screens and is never sticky. The current destination
- * carries `aria-current="page"`; **All hands** shows how many voyages need a person (hidden at 0). When the stream
+ * carries `aria-current="page"`; **Needs you** shows how many voyages need a person (hidden at 0). When the stream
  * drops, "Live" becomes a "Reconnecting to live updates…" pill. The search text is two-way: `queryChange` emits as the
  * person types, and `query` puts back the text of the current `?q=`. The account disclosure shows the name and e-mail
  * and emits `logout`; authentication remains the shell's responsibility.

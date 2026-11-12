@@ -15,10 +15,16 @@ import {
   imageFileRefusal,
   MAX_NOTE_IMAGE_BYTES,
   meetingToConfluence,
+  confluencePagePath,
+  confluencePageTitle,
+  confluenceTitleProblem,
+  MAX_CONFLUENCE_TITLE_CHARS,
+  meetingDay,
   moveInOrder,
   noteKindFields,
   noteShortcut,
   hasNextMeeting,
+  nextSlot,
   isClosed,
   normalizeStakeholders,
   parseStakeholders,
@@ -191,6 +197,36 @@ describe('meetings', () => {
     );
   });
 
+  it('plans the next meeting of a series a cadence after the last, in the future, as long as the last', () => {
+    // June has no daylight saving change, so the hours stay put in any time zone.
+    const last = {
+      startsAt: '2026-06-01T09:00:00.000Z',
+      endsAt: '2026-06-01T10:00:00.000Z',
+    };
+    expect(nextSlot(last, 7, new Date('2026-06-02T12:00:00.000Z'))).toEqual({
+      startsAt: '2026-06-08T09:00:00.000Z',
+      endsAt: '2026-06-08T10:00:00.000Z',
+    });
+    expect(nextSlot(last, 7, new Date('2026-06-20T12:00:00.000Z'))).toEqual({
+      startsAt: '2026-06-22T09:00:00.000Z',
+      endsAt: '2026-06-22T10:00:00.000Z',
+    });
+    expect(
+      nextSlot(
+        { startsAt: last.startsAt, endsAt: null },
+        14,
+        new Date('2026-06-15T09:00:00.000Z')
+      )
+    ).toEqual({ startsAt: '2026-06-29T09:00:00.000Z', endsAt: null });
+    expect(
+      nextSlot(
+        { startsAt: last.startsAt, endsAt: last.startsAt },
+        0,
+        new Date('2026-06-01T09:00:00.000Z')
+      )
+    ).toEqual({ startsAt: '2026-06-02T09:00:00.000Z', endsAt: null });
+  });
+
   it('moves one topic up or down the order, and keeps the order at either end', () => {
     expect(moveInOrder(['a', 'b', 'c'], 'b', -1)).toEqual(['b', 'a', 'c']);
     expect(moveInOrder(['a', 'b', 'c'], 'b', 1)).toEqual(['a', 'c', 'b']);
@@ -359,6 +395,45 @@ describe('note kinds', () => {
     });
     expect(found.decisions.map((n) => n.text)).toEqual(['agreed']);
     expect(found.actions.map((n) => n.text)).toEqual(['act 1', 'act 2']);
+  });
+});
+
+describe('a Confluence page of a meeting', () => {
+  it('is titled with the meeting and its day by default, within what Confluence takes', () => {
+    const startsAt = '2026-10-06T09:00:00.000Z';
+    expect(confluencePageTitle({ title: ' Finance sync ', startsAt })).toBe(
+      `Finance sync · ${meetingDay(startsAt)} 2026`
+    );
+    expect(
+      confluencePageTitle({ title: 'x'.repeat(300), startsAt })
+    ).toHaveLength(MAX_CONFLUENCE_TITLE_CHARS);
+    expect(confluencePageTitle({ title: 'Retro', startsAt: 'soon' })).toBe(
+      'Retro'
+    );
+  });
+
+  it('refuses a blank, too long or multi-line title', () => {
+    expect(confluenceTitleProblem('  Finance sync  ')).toBeNull();
+    expect(confluenceTitleProblem(' ')).toBe('Give the page a title.');
+    expect(
+      confluenceTitleProblem('x'.repeat(MAX_CONFLUENCE_TITLE_CHARS + 1))
+    ).toMatch(/at most 255/);
+    expect(confluenceTitleProblem('Finance\nsync')).toBe(
+      'A title is one line.'
+    );
+  });
+
+  it('says where a parent page sits, without naming the space twice', () => {
+    expect(
+      confluencePagePath({
+        spaceKey: 'PROJ',
+        spaceName: 'Project',
+        ancestors: ['Project', 'Meeting notes'],
+      })
+    ).toBe('Project › Meeting notes');
+    expect(
+      confluencePagePath({ spaceKey: 'PROJ', spaceName: null, ancestors: [] })
+    ).toBe('PROJ');
   });
 });
 

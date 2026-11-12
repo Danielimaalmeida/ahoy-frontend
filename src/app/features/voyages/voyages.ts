@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
+import type { Story } from '@core/api/types';
 import { StoriesStore } from '@core/stores/stories-store';
 import { Banner } from '@ui/banner/banner';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
@@ -30,23 +31,26 @@ import { RowDetails } from './row-details';
 /** How many rows the table shows at first, and how many more each "Load more" adds. */
 const PAGE_SIZE = 50;
 
-/** The columns of the table, for its placeholder rows. */
+/**
+ * The columns of the table, for its placeholder rows: the widths of the table's `<col>`s less the 14px gap between
+ * tracks, so the placeholders sit where the cells will.
+ */
 const COLUMNS: readonly SkeletonColumn[] = [
-  { track: '90px', height: 20 },
-  { track: 'minmax(0, 1.6fr)' },
-  { track: '80px' },
-  { track: '100px', height: 5 },
-  { track: 'minmax(0, 1.4fr)' },
-  { track: 'minmax(0, 0.9fr)' },
-  { track: '100px' },
-  { track: '70px' },
+  { track: '130px', height: 20 },
+  { track: 'minmax(0, 1fr)' },
+  { track: '116px' },
+  { track: '136px', height: 5 },
+  { track: '13%' },
+  { track: '94px' },
+  { track: '182px' },
+  { track: '98px' },
 ];
 
 /** What the table says when the filter leaves nothing, and what the person can do about it. */
 interface Nothing {
   readonly heading: string;
   readonly text: string;
-  readonly action: 'clear' | 'all' | 'sail';
+  readonly action: 'clear' | 'all';
 }
 
 const NOTHING_BY_STATUS: Readonly<
@@ -56,7 +60,7 @@ const NOTHING_BY_STATUS: Readonly<
     'No queued voyages',
     'No voyage is waiting for the crew to pick it up.',
   ],
-  running: ['No voyages running', 'No agent is working right now.'],
+  running: ['Calm seas. No running voyages.', 'No agent is working right now.'],
   awaiting_input: [
     'No questions waiting',
     'No agent is waiting for an answer.',
@@ -161,8 +165,33 @@ function describeFailure(error: ApiError): Failure {
       position: relative;
       overflow-x: auto;
     }
+    /* Fixed widths, so a note or an owner read after the rows does not push the other columns about. The fixed ones
+       fit their widest content (a "Needs decision" badge, "implementation", the eight dots, "2044.8 / 3500", "23 h 59 m
+       ago"); Note has a share and Voyage the rest. */
     .scroll table {
-      min-width: 860px;
+      min-width: 1180px;
+      table-layout: fixed;
+    }
+    .col-status {
+      width: 144px;
+    }
+    .col-phase {
+      width: 130px;
+    }
+    .col-progress {
+      width: 164px;
+    }
+    .col-note {
+      width: 13%;
+    }
+    .col-owner {
+      width: 108px;
+    }
+    .col-budget {
+      width: 196px;
+    }
+    .col-updated {
+      width: 112px;
     }
     /* A key never breaks across lines, and the title gets room to wrap beside it. */
     .voyage {
@@ -173,6 +202,38 @@ function describeFailure(error: ApiError): Failure {
     }
     .retry {
       margin-top: 8px;
+    }
+    /* The three steps of a first voyage, side by side on a wide screen and one under the other on a phone. */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--space-3);
+      max-width: 720px;
+      margin: var(--space-2) auto 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: step;
+    }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface-sunken);
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+    .steps strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+    .steps strong::before {
+      content: counter(step) '. ';
+      color: var(--accent-text);
+      font-family: var(--font-mono);
     }
   `,
   template: `
@@ -201,57 +262,55 @@ function describeFailure(error: ApiError): Failure {
         </button>
       </ah-banner>
     } @else {
-      <ah-filter-chips
-        [counts]="counts()"
-        [selected]="filter()"
-        (selectedChange)="select($event)"
-      />
+      @if (!firstUse()) {
+        <ah-filter-chips
+          [counts]="counts()"
+          [selected]="filter()"
+          (selectedChange)="select($event)"
+        />
+      }
 
       <ah-panel>
         @if (!loaded()) {
           <ah-panel-body
             ><ah-skeleton-rows [rows]="6" [columns]="columns"
           /></ah-panel-body>
-        } @else if (matches().length === 0) {
-          @switch (nothing().action) {
-            @case ('clear') {
-              <ah-empty-state [heading]="nothing().heading">
-                {{ nothing().text }}
-                <button
-                  ahButton
-                  ahEmptyAction
-                  type="button"
-                  (click)="clearSearch()"
-                >
-                  Clear search
-                </button>
-              </ah-empty-state>
-            }
-            @case ('all') {
-              <ah-empty-state [heading]="nothing().heading">
-                {{ nothing().text }}
-                <button
-                  ahButton
-                  ahEmptyAction
-                  type="button"
-                  (click)="showAll()"
-                >
-                  Show all statuses
-                </button>
-              </ah-empty-state>
-            }
-            @case ('sail') {
-              <ah-empty-state [heading]="nothing().heading">
-                {{ nothing().text }}
-                <a ahButton="primary" ahEmptyAction routerLink="/voyages/new"
-                  >Start voyage</a
-                >
-              </ah-empty-state>
-            }
-          }
+        } @else if (firstUse()) {
+          <ah-empty-state heading="No voyages yet" icon="sail" size="page">
+            A voyage takes one story from the backlog to a reviewed pull
+            request. The crew does the work; you answer when they need you.
+            <a ahButton="primary" ahEmptyAction routerLink="/voyages/new"
+              >Start voyage</a
+            >
+            <a ahButton ahEmptyAction routerLink="/docks">Open backlog</a>
+            <ol ahEmptyExtra class="steps" aria-label="How a voyage goes">
+              <li>
+                <strong>Pick a story</strong>From the backlog, or paste a Jira
+                key.
+              </li>
+              <li>
+                <strong>The crew sails</strong>Plan, build and review run on
+                their own.
+              </li>
+              <li>
+                <strong>You decide</strong>
+                <span>Questions land in <a routerLink="/">Needs you</a>.</span>
+              </li>
+            </ol>
+          </ah-empty-state>
         } @else {
           <div class="scroll" role="region" tabindex="0" aria-label="Voyages">
             <table ahTable>
+              <colgroup>
+                <col class="col-status" />
+                <col />
+                <col class="col-phase" />
+                <col class="col-progress" />
+                <col class="col-note" />
+                <col class="col-owner" />
+                <col class="col-budget" />
+                <col class="col-updated" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Status</th>
@@ -309,20 +368,70 @@ function describeFailure(error: ApiError): Failure {
               </tbody>
             </table>
           </div>
-          <ah-panel-foot>
-            <span class="ah-muted"
-              >Showing {{ rows().length }} of {{ matches().length }}</span
-            >
-            <button
-              ahButton
-              size="sm"
-              type="button"
-              [disabled]="rows().length >= matches().length"
-              (click)="loadMore()"
-            >
-              Load more
-            </button>
-          </ah-panel-foot>
+          @if (matches().length === 0) {
+            @switch (nothing().action) {
+              @case ('clear') {
+                <ah-empty-state
+                  [heading]="nothing().heading"
+                  icon="waves"
+                  size="compact"
+                >
+                  {{ nothing().text }}
+                  <button
+                    ahButton
+                    ahEmptyAction
+                    type="button"
+                    (click)="clearSearch()"
+                  >
+                    Clear search
+                  </button>
+                </ah-empty-state>
+              }
+              @case ('all') {
+                <ah-empty-state
+                  [heading]="nothing().heading"
+                  icon="waves"
+                  size="compact"
+                >
+                  @if (lastFinished(); as last) {
+                    The last one finished {{ last.updatedAt | ahRelative }}:
+                    <a ahKey [routerLink]="['/voyages', last.key]">{{
+                      last.key
+                    }}</a
+                    >{{ last.title }}.
+                  } @else {
+                    {{ nothing().text }}
+                  }
+                  <button
+                    ahButton
+                    ahEmptyAction
+                    type="button"
+                    (click)="showAll()"
+                  >
+                    Show all voyages
+                  </button>
+                  <a ahButton="soft" ahEmptyAction routerLink="/voyages/new"
+                    >Start voyage</a
+                  >
+                </ah-empty-state>
+              }
+            }
+          } @else {
+            <ah-panel-foot>
+              <span class="ah-muted"
+                >Showing {{ rows().length }} of {{ matches().length }}</span
+              >
+              <button
+                ahButton
+                size="sm"
+                type="button"
+                [disabled]="rows().length >= matches().length"
+                (click)="loadMore()"
+              >
+                Load more
+              </button>
+            </ah-panel-foot>
+          }
         }
       </ah-panel>
 
@@ -364,6 +473,11 @@ export class VoyagesPage {
       ? describeFailure(error)
       : null;
   });
+
+  /** Whether the list was read and holds no voyage at all: the first use, which explains what a voyage is. */
+  protected readonly firstUse = computed(
+    () => this.loaded() && this.store.stories().length === 0
+  );
 
   protected readonly counts = computed(() =>
     this.loaded() ? chipCounts(this.store.stories(), this.query()) : {}
@@ -409,15 +523,27 @@ export class VoyagesPage {
         action: 'clear',
       };
     }
+    // All with no search holds every voyage, so it is only empty on the first use, which has its own state.
     if (filter === 'all') {
-      return {
-        heading: 'No voyages yet',
-        text: 'Start a story and it will show up here.',
-        action: 'sail',
-      };
+      return { heading: 'No voyages', text: '', action: 'clear' };
     }
     const [heading, text] = NOTHING_BY_STATUS[filter];
     return { heading, text, action: 'all' };
+  });
+
+  /** With Running pressed and none running, the voyage that ended last, to say the crew is resting, not lost. */
+  protected readonly lastFinished = computed((): Story | null => {
+    if (this.filter() !== 'running' || this.query().trim() !== '') return null;
+    let last: Story | null = null;
+    for (const story of this.store.stories()) {
+      if (!matchesFilter(story, 'terminal')) continue;
+      if (
+        last === null ||
+        Date.parse(story.updatedAt) > Date.parse(last.updatedAt)
+      )
+        last = story;
+    }
+    return last;
   });
 
   constructor() {

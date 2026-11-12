@@ -3,7 +3,8 @@ import { techLine, type CommandErrorView } from '@core/commands/command-error';
 import { meetingErrorView } from './meeting-errors';
 
 /** What the person was doing with a story when the API refused. */
-export type StoryAction = 'draft' | 'answer' | 'discard' | 'create' | 'target';
+export type StoryAction =
+  'draft' | 'answer' | 'edit' | 'discard' | 'create' | 'target';
 
 /** The API's own words for a problem, when it sent a `detail`; otherwise `fallback`. */
 function detailOr(error: ApiError, fallback: string): string {
@@ -18,6 +19,7 @@ function detailOr(error: ApiError, fallback: string): string {
 const NOT_NOW: Readonly<Record<StoryAction, string>> = {
   draft: "This topic can't be drafted now",
   answer: "These answers can't be sent now",
+  edit: "This story can't be changed now",
   discard: "This draft can't be discarded",
   create: "This story can't go to Jira yet",
   target: "The series can't take that",

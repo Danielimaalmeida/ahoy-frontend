@@ -7,7 +7,11 @@ import {
 } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 import type { ApiError, ApiResult } from '@core/api/api-error';
-import type { MeetingStoryDraft, MeetingStoryMode } from '@core/api/types';
+import type {
+  MeetingStoryDraft,
+  MeetingStoryMode,
+  StoryTemplate,
+} from '@core/api/types';
 import { CLOCK, type Timer } from '@core/realtime/clock';
 import { REOPEN_FRESH_MS } from '@domain/meetings';
 import {
@@ -21,8 +25,8 @@ import {
 /**
  * The user stories drafted from the open meeting's topics (slices 2 and 3): read when a meeting opens, read again every
  * few seconds while the agent is writing one, and changed by asking for a draft, answering a grill's questions,
- * discarding one or creating it in Jira. Asking for a draft and answering may spend AIU; creating one writes to Jira.
- * Nothing else here calls outside Ahoy.
+ * editing its story by hand, discarding one or creating it in Jira. Asking for a draft and answering may spend AIU;
+ * creating one writes to Jira. Nothing else here calls outside Ahoy.
  */
 @Injectable()
 export class StoryDraftsStore {
@@ -162,6 +166,18 @@ export class StoryDraftsStore {
     const discarded = await this.discard(draft.id);
     if (!discarded.ok) return discarded;
     return this.request(draft.topicId, draft.noteIds, null, mode);
+  }
+
+  /** Saves a person's edit of a ready draft's story over the agent's; Create in Jira then sends it. 0 AIU. */
+  async edit(
+    id: string,
+    story: StoryTemplate
+  ): Promise<ApiResult<MeetingStoryDraft>> {
+    const result = await this.command(() =>
+      this.api.editMeetingStory(id, story)
+    );
+    if (result.ok) this.put(result.value);
+    return result;
   }
 
   /** Creates a ready draft's story in Jira, in its series' project. A second call creates nothing new. */

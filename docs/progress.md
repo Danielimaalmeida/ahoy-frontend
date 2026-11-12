@@ -1,12 +1,10 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-09 (`feat/product-page`: the Product page with its conversations, admins only for now, after merging
-`main` with `feat/metrics-trends`; build, typecheck, lint, Vitest and format passed on Node 22 with a stubbed
-`@acme-fedev/auth`). One page: replace it, do not
-append; git history is the archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The
-review of both repositories, with its proposals (not yet agreed), is `ahoy-hosted`'s
-`docs/harness-review-2026-10-20.md`; the user kept Meetings outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md`
-§1 and §5).
+Updated 2026-11-12 (`feat/product-page`: the Product page with its conversations, admins only for now, after merging `main` again; before it `feature/R3DA-14787-confluence-pages`: Create in Confluence from a meeting; before it `feature/R3DA-14787-member-side`: each person on a side of a meeting; before it `feature/R3DA-14787-draft-meetings-improvements`: empty states for Voyages, Meetings and notes; before it `feat/edit-meeting-story`: edit a drafted story by hand before Create in Jira; before it `feature/R3DA-14787-cli`: a `local` configuration without WebEAM; before it `docs/design-system-a11y`: design system re-synced, accessibility guidelines; before it `fix/metrics-trends-labels`: clearer Trends labels; before it `feat/metrics-trends`: whether the harness is getting better, on Metrics › Trends; the required
+checks on Node 24 with the private registry did not run, substitutes passed on Node 22). One page: replace it, do not append; git history is the
+archive (the 3,692-line page before this one: `git show b1f9b88:docs/progress.md`). The review of both repositories,
+with its proposals (not yet agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept Meetings
+outside its freeze on 2026-10-24 (`ahoy-hosted` `design.md` §1 and §5).
 
 ## Where we are
 
@@ -24,8 +22,116 @@ review of both repositories, with its proposals (not yet agreed), is `ahoy-hoste
   Agents has the optional **Product conversations** job. Beyond the pins, the agent reads Jira and Confluence read-only
   when the API's configuration gives it those tools (the user's choice on 2026-11-09); the side panel says so. The mock backend simulates every conversation operation
   (a pretend session that streams, proposes and stays warm). Contract synced from `ahoy-hosted`'s `feat/product-page`
-  (PR #107, migration 0048), which must deploy with it.
-- **`feat/metrics-trends` (merged into `main`, 2026-11-09, asked for by the user: "is the harness getting better?"):** a
+  (PR #107, migration 0051 since main took 0048), which must deploy with it.
+- **This branch (`feature/R3DA-14787-confluence-pages`, 2026-11-12, asked for by the user: list Confluence's pages,
+  pick the parent and create the meeting's page):** a meeting's header has **Create in Confluence** beside Copy for
+  Confluence. Its dialog searches the parent page as you type (`GET /confluence/pages?q=`, each result with its space
+  and ancestors), starts on the parent the series used last, and names the page "<meeting title> · <day>"; the body is
+  what Copy for Confluence copies. Once created, the header shows **Open in Confluence** (new tab) instead; the series
+  remembers the parent for its next meeting. Pages are created as the token's owner (the user's choice); updating an
+  existing page is later. Team settings has a new section, **Confluence** (`/settings/confluence`): base URL, token
+  (write-only, its last four), an optional space key that narrows the search, Test connection, turning it off, and its
+  history; admins edit, others read. It is not a Setup step. The mock backend answers search and create (four
+  fictional pages in space PROJ). Contract: `ahoy-hosted`'s `feature/R3DA-14787-confluence-pages` (151 operations
+  implemented). Checks on Node 26: build, typecheck, lint, `ng test` (224 files, 3,874 tests) and format. Not run:
+  Node 24, a browser, Playwright, a screen reader, a real Confluence.
+- **This branch (`feature/R3DA-14787-member-side`, 2026-11-12, asked for by the user: put each person on a team, ours
+  or the stakeholders', so a stakeholder signs in and adds topics as their side):** Team settings › People adds a
+  person with a "Side in meetings" (named as Team settings › Meetings names the sides), shows a Side column and moves a
+  member with "Move to …", keeping their role; the deployment's people are on our side. The history says
+  `members.side_changed`. A new root `MeStore` reads `GET /me` once; Meetings reads it with the labels, and the topic
+  composer starts on the person's side (and, on the stakeholders' side, on the stakeholder named like them, if the
+  meeting lists one), still switchable. The mock backend answers `getMe` (`setMe`). Contract: `members.side`,
+  `Me.side`, `PersonChange.side` (`ahoy-hosted` migration 0049, commit 00fe223). Checks: build,
+  typecheck, lint, `ng test` (3835) and format on Node 26. Not run: Node 24, a browser, Playwright, a screen reader.
+- **This branch (2026-11-12, asked for by the user: backlog layouts and a still page on load):** a "By sprint / List /
+  By priority" pill; List shows every story in one table in the order read, By priority one collapsible lane per
+  priority (most urgent first); both name each story's sprint under its summary. The choice is not remembered. On load
+  the facet selects have fixed widths, the scope and layout pills sit on their own row, the summary keeps its height
+  behind a skeleton, Collapse all is always there, and the voyages arriving no longer re-read the backlog under "All".
+- **This branch (2026-11-12, asked for by the user: Voyages columns and a Meetings skeleton):** the Voyages table
+  uses fixed layout with a `<colgroup>` (skeleton tracks match), so columns no longer shift when notes arrive
+  (measured in a browser: one set of widths from first paint). Meetings shows the shape of a meeting while it is read,
+  and the store shows a meeting only with its open actions and questions, so nothing appears under it later (browser:
+  skeleton → whole meeting, no later change). Switching meetings keeps the old one until the new one is read.
+- **This branch (2026-11-12, asked for by the user: All hands no longer bounces on load):** a row's gate, halt and
+  blocked-from come only from a fully read history (`RowDetails.detail()`), since the first pages of a long history
+  name gates that are over (Decide → Review plan → Decide); the page keeps its placeholders until every row has read
+  what it shows (`RowDetails.settled`: events, questions, state, runs, and the diagnosis of a halted voyage; a failed
+  read counts as read). Trade-off: a voyage with a long history delays the first paint. Checks: build, typecheck, lint,
+  `ng test` (220 files, 3,834 tests), format. Not run: a browser.
+- **This branch (`feature/R3DA-14787-draft-meetings-improvements`, 2026-11-11, asked for by the user: the designer's
+  7 empty states):** Voyages first use (page-size empty state, Start voyage, Open backlog, 3 steps) and a filter with no
+  rows (the table stays, a compact "Calm seas. No running voyages." with the last finished voyage, Show all voyages);
+  Meetings first use (New meeting, New weekly series) and an Upcoming with nothing planned ("Nothing scheduled", the
+  last meeting, Schedule next: one cadence after the latest meeting with `nextSlot` in `domain/meetings.ts`, or New
+  meeting with the series chosen when it has no cadence; See past meetings); a meeting with no topics (the composer
+  inside the empty state, and what the series' previous meeting left open, with Carry over through `moveMeetingTopic`
+  only while that meeting is not closed); a topic with no notes (the note line is the empty state, light until focused);
+  an ended meeting with no notes. `ah-empty-state` gained `size` and an `[ahEmptyExtra]` slot; 3 app icons
+  (`docs/design-system.md`). The first-use copy for Voyages and Meetings is ours, not the designer's. Checks: build,
+  typecheck, lint, `ng test` and format (see the commit). Not run: a browser, Playwright, a screen reader.
+- **This branch (`feat/edit-meeting-story`, 2026-11-11, asked for by the user: after "grill me" or a draft proposes a
+  user story, edit its fields by hand; the user chose editing in place, on hover, over a separate dialog):** in "Check
+  the user story" each section of a ready story (title, the As a / I want / So that sentence, context, implemented
+  feature, criteria, out of scope, open questions, dependencies, test notes) shows "Edit" on hover or keyboard focus
+  (always on touch screens) and turns into its field in place (`story-inline-section.ts`), one section at a time; Save
+  or Ctrl+Enter sends the whole story with `editMeetingStory` (`PUT /meeting-story-drafts/{id}/story`, new in
+  `ahoy-hosted`, vendored with `api:sync` and `api:types`), 0 AIU; Cancel or Esc puts it back without closing the dialog;
+  Create in Jira waits while a section is open; while a save is in flight Save and Cancel stay focusable
+  (`aria-disabled`), Esc does nothing and a failed save keeps the typed text. Lists are one item per line, checked
+  against the API's limits (`storyLines`, `storyLinesProblem`, `withStoryEdit` in `domain/story-drafts.ts`). An edited
+  story says "Edited by … on …". Mock backend and fixtures follow the contract. Checks (cloud, Node 22.23.4,
+  `@acme-fedev/auth` stubbed in `node_modules` only): build, typecheck, lint, format and `ng test` (219 files, 3,812
+  tests) pass; seen in Chromium against a local `ahoy-hosted` API in its default mode, without `--live` (`AHOY_AUTH=dev`,
+  local Postgres 16, a ready draft seeded by SQL, 0 AIU) at 1280px and 390px (no sideways scroll), in light and dark
+  (dark: `ink-soft` 7.8:1 on `surface-hover`, `accent` ring 3.2:1 on `surface-sunken`), with the keyboard path. Not
+  run: Node 24, the real auth library, Playwright e2e, 200% zoom, a screen reader.
+- **This branch (`feature/R3DA-14787-cli`, 2026-11-11, asked for by the user: start the web app with the
+  hosted `npm run dev`, "without auth"):** a `local` configuration (`npm run start:local`; `ng serve` and `ng build`
+  in `angular.json`) replaces the environment with `environment.local.ts`, whose `mockAuth: true` makes
+  `createAppConfig` give `provideFedevAuth` the library's `mock` with `LOCAL_USER` (`app.config.ts`): signed in at
+  once, no WebEAM. Every other environment has `mockAuth: false`; the library throws `MOCK_AUTH_IN_PRODUCTION` when
+  `production` is true (`app.config.spec.ts`). `ahoy-hosted`'s `npm run dev -- --web` runs it as `[web]`. Checks
+  (Node 24.22.2 via `npx node@24`, the real auth library): `npm run format`, `build`, `typecheck`, `lint` and `ng test`
+  (220 files, 3,809 tests) pass; `ng build --configuration local` contains the mock. `ng serve --configuration local`
+  was started and stopped (no browser, no API calls). Not run: a browser, Playwright, against a running API.
+- **This branch (`docs/design-system-a11y`, 2026-11-10, asked for by the user: "check the frontend design system to
+  see if it's updated. Add accessibility guidelines"):** `docs/design/design-system/` re-synced from the design system's
+  version `1791619698-2405` (its plain labels of 2026-10-10, which the app already used; `bundle.css`, token values and
+  assets unchanged). New `docs/design-system.md` (how `src/` uses it, app-only components, extensions, known
+  differences) and `docs/accessibility.md` (WCAG 2.2 AA: contrast measured from the tokens, focus, keyboard, ARIA, live
+  regions, motion, reflow, and the gaps: the light `focus` ring is 1.9:1, `line-strong` borders, light chart colours, no
+  skip link). Stale nautical labels in `ui/` doc comments, the `/_kit` gallery and `icon.spec.ts` replaced; the
+  Meetings topic menu no longer names the undefined `--shadow-md` (`build-tokens --check` failed on it; same look).
+  Checks (cloud, Node 22.23.4, `@acme-fedev/*` removed in a scratch copy): `ng test` on `src/app/ui` (39 files, 476
+  tests), ESLint on the changed files, Stylelint, `build-tokens --check` and Prettier 3.9 pass. Not run: Node 24, the
+  build, typecheck, the full `ng test` (Meetings specs need the auth library), Playwright, a browser.
+- **Same branch, after the user's "fix every gap" (2026-11-10):** `src/styles/_ahoy-a11y.scss` overrides `focus` (light
+  `#1A64D6`), `line-strong` (`#7A8FA3` / `#566E85`) and dark `danger` (`#C53636`) so each passes 3:1, and adds
+  `progress-current` for the compact bars that used `focus`. Publishing the same change to the design-system artifact was
+  refused in this session, so it is pending there (values in `docs/accessibility.md`). Metrics light series darkened to
+  3:1. "Skip to content" button first in the shell; Meetings and `/_kit` no longer render a second `<main>`. Checks
+  (cloud, Node 22.23.4, `@acme-fedev/auth` stubbed in a scratch copy): build, typecheck, lint, `ng test` (219 files,
+  3,806 tests), format and `build-tokens --check` pass. Not run: Node 24, the real auth library, Playwright, a browser.
+- **Same branch, enforcement (the user: so every contributor follows the design system):** CLAUDE.md has a "UI: design
+  system and accessibility" section, copied to `.github/instructions.md` (which had drifted); `npm run lint` now runs
+  `tokens:check`, which also fails on a colour written literally outside `RAW_COLOUR_FILES` (checked against a planted
+  hex, a `rgba()` shadow and a component `styles` literal; selectors and comments are not flagged); a
+  `.github/pull_request_template.md` with a design-system and accessibility checklist. `npm run lint` passes (scratch
+  copy, stubbed auth).
+- **Same branch, duplicate configs (asked for by the user):** each tool keeps the file it read: `.prettierrc` (gone:
+  `.prettierrc.json`; CLAUDE.md "Style" now says single quotes and 80 columns), `eslint.config.js` (gone:
+  `eslint.config.mjs`), `.lintstagedrc.json` (gone: the `lint-staged` key in `package.json`, verified with
+  `lint-staged --debug`), `src/proxy.conf.json` (gone: `proxy.conf.mjs`), `.nvmrc` 24 (gone: `.tool-versions` 26.0.0).
+  The skills in `.agents/`, `.claude/` and `.opencode/` are identical copies, one per agent tool, and stay.
+- **This branch (`fix/metrics-trends-labels`, 2026-11-09, after the user's first look at Trends on TEST):** a pill
+  whose 4 weeks before had nothing to compare (runs start on 2026-10-13) reads "nothing before", not "no data"; a
+  chart's folded series reads "3 more", not "Other", which read like the halt kind `other`. The zeros in Voyages done
+  and the 250% unverified were the API's (ahoy-hosted `fix/metrics-done-by-decision`). Required checks (Node 24, private
+  registry): **not run**. Substitutes (Node 22.23.4, `@acme-fedev/auth` stubbed): build, typecheck, lint, `ng test`
+  (219 files, 3,805 tests) and format pass. Not opened in a browser; not run against an API.
+- **`feat/metrics-trends` (merged 2026-11-09, asked for by the user: "is the harness getting better?"):** a
   Trends section on Metrics (`/metrics/trends`) reads `GET /metrics/trends` (ahoy-hosted `feat/metrics-trends`, which
   must deploy with it) and shows 13 signals in three groups (autonomy, quality, cost and speed), each the last 4 weeks
   against the 4 before with a weekly sparkline, green or red by whether the harness got better (a change under a tenth
@@ -296,7 +402,7 @@ review of both repositories, with its proposals (not yet agreed), is `ahoy-hoste
 
 - **This branch** (`feat/product-page`, 2026-11-09, cloud container, Node 22.23.4, `@acme-fedev/auth` stubbed in
   `node_modules`, the platform packages fetched from the public npm registry with the user's approval): `npm run
-build`, typecheck (app, specs and boundaries), lint, `ng test --watch=false` (224 files, 3,843 tests, after merging `main`) and `npm run
+build`, typecheck (app, specs and boundaries), lint, `ng test --watch=false` (after merging `main` on 2026-11-12: 3,909 of 3,912 tests, 228 of 229 files; the 3 tests of `app.config.spec.ts` need the real auth library's mock and cannot pass on the stub) and `npm run
 format` pass. The page was driven in Chromium against the mock backend (`scripts/mock-api.mjs` run on Node 22 through
   a local copy with JSON and parameter-property support, not committed: the script itself needs Node 24); screenshots
   are in the thread. Not run: Node 24, the real auth library, the Playwright e2e suite, a local or live API, TEST. No
@@ -358,8 +464,6 @@ format` pass. The page was driven in Chromium against the mock backend (`scripts
 
 ## Open decisions
 
-- Which Prettier configuration stays: `.prettierrc` (single quotes, 80 columns) is read before `.prettierrc.json`
-  (double quotes, 120 columns), while CLAUDE.md asks for double quotes.
 - Whether to wire the mock backend back into a build (`start:mock`) or delete it.
 - `@acme-fedev/auth` is `^8.0.0` in runtime dependencies (the rule is exact pins) and `@acme-fedev/playwright-helpers`,
   a test helper, is a runtime dependency. Changing either is a dependency change and needs approval.
@@ -367,9 +471,11 @@ format` pass. The page was driven in Chromium against the mock backend (`scripts
 ## Next, in order
 
 - **`feat/product-page`** (2026-11-09): run `npm run build && npm run typecheck && npm run lint && npm test && npm run
-format` where the platform packages install, then review and merge with `ahoy-hosted` PR #107 (migration 0048). An
+format` where the platform packages install, then review and merge with `ahoy-hosted` PR #107 (migration 0051). An
   admin turns Product conversations on in Team settings › Agents; the first live question needs the user's approval
   and a low AIU cap.
+- **`feature/R3DA-14787-draft-meetings-improvements`**: check the 7 empty states on TEST against the designs (light,
+  dark, 390px), agree the first-use copy with the designer, and move the 3 app icons into the design system.
 - **`feat/plan-panel-models`** (2026-11-09): review and merge with `ahoy-hosted`'s branch of the same name (the API
   first or together; migration 0047 with the others), then check the section on TEST as an admin.
 - **After `feat/portability-1-meeting-labels` deploys with its API** (2026-11-06, D23): an admin saves our team's own
@@ -402,7 +508,7 @@ format` where the platform packages install, then review and merge with `ahoy-ho
 4. Merge `ahoy-hosted` PR #91 (migration 0044) with or before this branch; then open Meetings against a local API: move a
    topic to a one-off, set a one-off's Jira target and draft a story, search, undo a removal.
    Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click,
-   then publishing to Confluence through its API (today the page copies wiki markup).
+   then updating a meeting's Confluence page once it exists (Create in Confluence makes it once).
 5. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
    fixers' answers beside the delivery gate, the anchor amendment beside a `child_ready` rejection).
 

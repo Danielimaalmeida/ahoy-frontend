@@ -11,6 +11,9 @@
  */
 import type {
   AddMeetingTopicRequest,
+  ConfluencePage,
+  ConfluencePageList,
+  ConfluencePageRequest,
   CreateMeetingRequest,
   CreateMeetingSeriesRequest,
   EndMeetingResult,
@@ -63,7 +66,10 @@ const HALF_HOUR_MS = 1_800_000;
 
 type SeriesRecord = Writable<MeetingSeries>;
 type MeetingRecord = Writable<
-  Omit<MeetingSummary, 'topicCount' | 'openTopicCount' | 'seriesName'>
+  Omit<
+    MeetingSummary,
+    'topicCount' | 'openTopicCount' | 'seriesName' | 'confluenceParent'
+  >
 >;
 type TopicRecord = Writable<
   Omit<MeetingTopic, 'notes' | 'carriedFrom' | 'movedTo'>
@@ -77,6 +83,40 @@ type DraftRecord = Writable<MeetingStoryDraft> & {
   /** Stops the simulated agent of a draft still being written. */
   cancel: Cancel | null;
 };
+
+/** The pretend Confluence's pages, to pick a parent from. Fictional. */
+const CONFLUENCE_PAGES: readonly ConfluencePage[] = [
+  {
+    id: '100001',
+    title: 'Project home',
+    spaceKey: 'PROJ',
+    spaceName: 'Project',
+    ancestors: [],
+  },
+  {
+    id: '100002',
+    title: 'Meeting notes',
+    spaceKey: 'PROJ',
+    spaceName: 'Project',
+    ancestors: ['Project home'],
+  },
+  {
+    id: '100003',
+    title: 'Finance sync notes',
+    spaceKey: 'PROJ',
+    spaceName: 'Project',
+    ancestors: ['Project home', 'Meeting notes'],
+  },
+  {
+    id: '100004',
+    title: 'Release notes',
+    spaceKey: 'PROJ',
+    spaceName: 'Project',
+    ancestors: ['Project home'],
+  },
+];
+/** The pretend Confluence's base URL, which a created page's link starts with. */
+const CONFLUENCE_URL = 'https://confluence.example.com/confluence';
 
 /** How long the simulated agent takes to write a story. */
 export const MOCK_DRAFT_MS = 1_500;
@@ -107,6 +147,9 @@ export class MeetingDesk {
   private nextIssue = 123;
   /** When set, the pretend Jira refuses every issue with this message (a spec's switch). */
   jiraRefuses: string | null = null;
+  /** Whether the pretend Confluence is connected; while false, searching and creating pages is refused (a spec's switch). */
+  confluenceConnected = true;
+  private nextPage = 200001;
 
   constructor(private readonly clock: MockClock) {}
 
@@ -289,6 +332,69 @@ export class MeetingDesk {
       projectKey: body.jiraProjectKey,
       issueType: body.jiraIssueType ?? 'Story',
     };
+  }
+
+  /** The pretend Confluence's pages whose title words start with each word of `q`; a blank `q` lists them all. */
+  searchConfluencePages(q: string): ConfluencePageList {
+    this.confluenceOn();
+    const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const items = CONFLUENCE_PAGES.filter((page) => {
+      const titleWords = page.title.toLowerCase().split(/\s+/);
+      return words.every((w) => titleWords.some((t) => t.startsWith(w)));
+    });
+    return { items: items.map((p) => ({ ...p, ancestors: [...p.ancestors] })) };
+  }
+
+  /** Creates the meeting's page under `parentId` in the pretend Confluence; the series remembers the parent. */
+  createConfluencePage(
+    actor: string,
+    meetingId: string,
+    body: ConfluencePageRequest
+  ): Meeting {
+    this.confluenceOn();
+    const meeting = this.meeting(meetingId);
+    if (meeting.confluencePage !== null)
+      throw invalid(
+        'The meeting already has a Confluence page; open it from the meeting'
+      );
+    const parent = CONFLUENCE_PAGES.find((p) => p.id === body.parentId);
+    if (parent === undefined)
+      throw refused(
+        'body/parentId',
+        `Confluence has no page ${body.parentId} the token can see`
+      );
+    const title = body.title.trim();
+    const taken =
+      CONFLUENCE_PAGES.some((p) => p.title === title) ||
+      [...this.meetings.values()].some(
+        (m) => m.confluencePage?.title === title
+      );
+    if (taken)
+      throw refused(
+        'body/title',
+        `Space ${parent.spaceKey} already has a page called "${title}"; choose another title`
+      );
+    const id = String(this.nextPage++);
+    meeting.confluencePage = {
+      id,
+      title,
+      url: `${CONFLUENCE_URL}/pages/viewpage.action?pageId=${id}`,
+      createdBy: actor,
+      createdByName: this.nameOf(actor),
+      createdAt: this.now(),
+    };
+    const series =
+      meeting.seriesId === null ? undefined : this.series.get(meeting.seriesId);
+    if (series !== undefined)
+      series.confluenceParent = { id: parent.id, title: parent.title };
+    return this.meetingDto(meeting);
+  }
+
+  private confluenceOn(): void {
+    if (!this.confluenceConnected)
+      throw invalid(
+        'Confluence is not connected: an admin connects it in Team settings'
+      );
   }
 
   /**
@@ -838,6 +944,7 @@ export class MeetingDesk {
       cadenceDays: body.cadenceDays ?? null,
       jiraProjectKey: body.jiraProjectKey ?? null,
       jiraIssueType: body.jiraIssueType ?? 'Story',
+      confluenceParent: null,
       createdBy: actor,
       createdByName: this.nameOf(actor),
       createdAt: this.now(),
@@ -896,6 +1003,8 @@ export class MeetingDesk {
       failure: null,
       questions: null,
       answers: null,
+      editedBy: null,
+      editedAt: null,
       spentNanoAiu: 0,
       target: this.targetOf(topic.meetingId),
       jiraKey: null,
@@ -1033,6 +1142,52 @@ export class MeetingDesk {
     draft.discarded = true;
   }
 
+  /**
+   * Saves a person's edit of a ready draft's story over the simulated agent's, trimmed as the API keeps it. The body
+   * was checked against `StoryTemplate`; a list item or text that is only spaces is refused, as the API does.
+   */
+  editStory(
+    actor: string,
+    id: string,
+    story: StoryTemplate
+  ): MeetingStoryDraft {
+    const draft = this.draft(id);
+    if (draft.jiraKey !== null)
+      throw invalid(
+        `Story draft ${id} was created in Jira as ${draft.jiraKey}`
+      );
+    if (draft.status !== 'ready')
+      throw invalid(
+        `Story draft ${id} is ${draft.status}; only a ready draft can be edited`
+      );
+    const trim = (value: string, field: string): string => {
+      const trimmed = value.trim();
+      if (trimmed === '') throw refused(`/body/${field}`, `${field} is empty`);
+      return trimmed;
+    };
+    const list = (items: readonly string[], field: string): string[] =>
+      items.map((item, i) => trim(item, `${field}/${i}`));
+    draft.story = {
+      title: trim(story.title, 'title'),
+      role: trim(story.role, 'role'),
+      want: trim(story.want, 'want'),
+      soThat: trim(story.soThat, 'soThat'),
+      context: story.context === null ? null : trim(story.context, 'context'),
+      implementedFeature:
+        story.implementedFeature === null
+          ? null
+          : trim(story.implementedFeature, 'implementedFeature'),
+      acceptanceCriteria: list(story.acceptanceCriteria, 'acceptanceCriteria'),
+      outOfScope: list(story.outOfScope, 'outOfScope'),
+      dependencies: list(story.dependencies, 'dependencies'),
+      testNotes: list(story.testNotes, 'testNotes'),
+      openQuestions: list(story.openQuestions, 'openQuestions'),
+    };
+    draft.editedBy = actor;
+    draft.editedAt = this.now();
+    return this.draftDto(draft);
+  }
+
   /** "Creates" a ready draft's story in the pretend Jira, once; a second call answers the same issue. */
   createIssue(actor: string, id: string): MeetingStoryDraft {
     const draft = this.draft(id);
@@ -1117,6 +1272,7 @@ export class MeetingDesk {
       endedAt: null,
       jiraProjectKey: null,
       jiraIssueType: null,
+      confluencePage: null,
       createdBy: actor,
       createdByName: this.nameOf(actor),
       createdAt: at,
@@ -1286,6 +1442,10 @@ export class MeetingDesk {
         meeting.seriesId === null
           ? null
           : (this.series.get(meeting.seriesId)?.name ?? null),
+      confluenceParent:
+        meeting.seriesId === null
+          ? null
+          : (this.series.get(meeting.seriesId)?.confluenceParent ?? null),
       topicCount: topics.length,
       openTopicCount: topics.filter((t) => t.status === 'open').length,
     };

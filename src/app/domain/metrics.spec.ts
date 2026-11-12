@@ -126,13 +126,13 @@ describe('stackWeeks', () => {
     ]);
   });
 
-  it('folds the phases past the fifth into Other instead of making up a colour', () => {
+  it('folds the phases past the fifth into one series named by their count instead of making up a colour', () => {
     const phases = ['a', 'b', 'c', 'd', 'e', 'f'];
     const { series, columns } = stackWeeks(
       [{ weekStart: '2026-09-14', byPhase: { e: 1, f: 2, g: 4 } }],
       phases
     );
-    expect(series.map((s) => s.label)).toEqual(['a', 'b', 'c', 'd', 'Other']);
+    expect(series.map((s) => s.label)).toEqual(['a', 'b', 'c', 'd', '3 more']);
     expect(series.at(-1)!.phases).toEqual(['e', 'f', 'g']);
     expect(columns[0]!.parts.at(-1)).toEqual({ slot: 5, value: 7 });
   });

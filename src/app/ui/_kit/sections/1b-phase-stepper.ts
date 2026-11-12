@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { PhaseStepper } from '@ui/phase-stepper/phase-stepper';
 
 /**
- * Gallery: the PhaseStepper preview (current, stopped), the voyage that is Docked and the one that is Aground, then the
+ * Gallery: the PhaseStepper preview (current, stopped), the voyage that is Done and the one that is Blocked, then the
  * compact bars of the voyages table for the same cases.
  */
 @Component({

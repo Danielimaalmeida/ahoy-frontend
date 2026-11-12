@@ -147,23 +147,93 @@ describe('RowDetails (All hands)', () => {
     ]).toEqual(['PROJ-102']);
   });
 
-  it('says when the events of a voyage were read, or could not be, and not before', async () => {
+  it('says when what a row shows was read, or could not be, and not before', async () => {
     const { api, details } = rig();
     const aground = aStory('PROJ-102', {
       status: 'terminal',
       phase: 'blocked',
     });
-    expect(details.eventsRead('PROJ-102')).toBe(false);
-    details.sync([aground, asking]);
-    expect(details.eventsRead('PROJ-102')).toBe(false);
+    expect(details.settled(aground)).toBe(false);
+    expect(details.settled(docked)).toBe(true);
+    details.sync([aground, asking, deciding, running]);
+    expect(details.settled(aground)).toBe(false);
+    expect(details.settled(deciding)).toBe(false);
     await settle();
-    expect(details.eventsRead('PROJ-102')).toBe(true);
-    expect(details.eventsRead('PROJ-131')).toBe(false);
+    expect(
+      [aground, asking, deciding, running].map((s) => details.settled(s))
+    ).toEqual([true, true, true, true]);
     api.on('listStoryEvents', () => Promise.resolve(fail({ kind: 'network' })));
     const other = aStory('PROJ-103', { status: 'terminal', phase: 'blocked' });
     details.sync([other]);
     await settle();
-    expect(details.eventsRead('PROJ-103')).toBe(true);
+    expect(details.settled(other)).toBe(true);
+  });
+
+  it('waits for the diagnosis of a halted voyage, read or not', async () => {
+    const { api, details } = rig();
+    let answer: () => void = () => undefined;
+    api.on(
+      'getStoryDiagnosis',
+      () =>
+        new Promise(
+          (resolve) => (answer = () => resolve(fail({ kind: 'network' })))
+        )
+    );
+    details.sync([anchored]);
+    await settle();
+    expect(details.settled(anchored)).toBe(false);
+    answer();
+    await settle();
+    expect(details.settled(anchored)).toBe(true);
+    expect(
+      details.settled({ ...anchored, version: anchored.version + 1 })
+    ).toBe(false);
+  });
+
+  it('gives no gate while the history is still being read, since its first pages name gates that are over', async () => {
+    const { api, details } = rig();
+    const fillers = Array.from({ length: 499 }, (_, i) =>
+      anEvent(i + 1, 'run.started', {}, 'PROJ-123')
+    );
+    const firstPage = [
+      ...fillers,
+      anEvent(
+        500,
+        'story.awaiting_decision',
+        { gate: 'plan_accepted' },
+        'PROJ-123'
+      ),
+    ];
+    let rest: () => void = () => undefined;
+    api.on('listStoryEvents', (_key, query) =>
+      query?.after === undefined
+        ? Promise.resolve(ok({ items: firstPage, lastEventId: '500' }))
+        : new Promise((resolve) => {
+            rest = () =>
+              resolve(
+                ok({
+                  items: [
+                    anEvent(
+                      501,
+                      'story.awaiting_decision',
+                      { gate: 'delivery_accepted' },
+                      'PROJ-123'
+                    ),
+                  ],
+                  lastEventId: '501',
+                })
+              );
+          })
+    );
+    const delivering = { ...deciding, phase: 'delivery_gate' };
+    details.sync([delivering]);
+    await settle();
+    expect(details.detail('PROJ-123').gate).toBeNull();
+    expect(details.settled(delivering)).toBe(false);
+    rest();
+    await settle();
+    expect(details.detail('PROJ-123').gate).toBe('delivery_accepted');
+    expect(details.settled(delivering)).toBe(true);
   });
 
   it('does not open a voyage that needs nothing beyond its story', async () => {

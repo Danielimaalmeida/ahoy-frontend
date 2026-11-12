@@ -3,7 +3,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { map } from 'rxjs';
 import type { ApiError, ApiResult } from '@core/api/api-error';
-import type { Member, MemberRole, PeoplePage } from '@core/api/types';
+import type {
+  Member,
+  MemberRole,
+  MemberSide,
+  PeoplePage,
+} from '@core/api/types';
+import { MeetingLabelsStore } from '@core/stores/meeting-labels-store';
 import { qnumberOf, roleLabel } from '@domain/people-settings';
 import { absoluteDayTime } from '@domain/time';
 import { Banner } from '@ui/banner/banner';
@@ -21,9 +27,10 @@ import { SettingsHistory } from './settings-history';
 
 /**
  * Team settings › People (`ahoy-hosted` design D23): who may use Ahoy and who is an admin. The deployment's own people
- * (`AHOY_ALLOWED_QNUMBERS`, `AHOY_ADMIN_QNUMBERS`) are listed read-only, since they change only in the chart; an admin
- * adds members, changes their role or removes them, never their own row. A change reaches every replica of the API
- * within 30 seconds.
+ * (`AHOY_ALLOWED_QNUMBERS`, `AHOY_ADMIN_QNUMBERS`) are listed read-only, since they change only in the chart, and are
+ * on our side of a meeting; an admin adds members, changes their role or their side (named as Team settings › Meetings
+ * names them; the topics a person raises start on it) or removes them, never their own row. A change reaches every
+ * replica of the API within 30 seconds.
  */
 @Component({
   selector: 'ah-people-settings-page',
@@ -146,6 +153,12 @@ import { SettingsHistory } from './settings-history';
                       <option value="admin">Admin</option>
                     </select>
                   </ah-field>
+                  <ah-field label="Side in meetings">
+                    <select ahInput [formControl]="form.controls.side">
+                      <option value="us">{{ labels().us }}</option>
+                      <option value="them">{{ labels().them }}</option>
+                    </select>
+                  </ah-field>
                   <div class="add__submit">
                     <span class="ah-label" aria-hidden="true">&nbsp;</span>
                     <button
@@ -178,6 +191,7 @@ import { SettingsHistory } from './settings-history';
                       <tr>
                         <th scope="col">Person</th>
                         <th scope="col">Role</th>
+                        <th scope="col">Side</th>
                         <th scope="col">Added</th>
                         @if (store.canEdit()) {
                           <th scope="col">
@@ -201,6 +215,7 @@ import { SettingsHistory } from './settings-history';
                             }
                           </th>
                           <td>{{ role(m.role) }}</td>
+                          <td>{{ labels()[m.side] }}</td>
                           <td>
                             {{ m.addedByName ?? m.addedBy }}
                             <span class="ah-cell-sub">{{
@@ -259,6 +274,21 @@ import { SettingsHistory } from './settings-history';
                                     size="sm"
                                     type="button"
                                     [disabled]="busy()"
+                                    [attr.aria-label]="
+                                      'Move ' +
+                                      m.qnumber +
+                                      ' to ' +
+                                      labels()[other(m.side)]
+                                    "
+                                    (click)="move(m)"
+                                  >
+                                    Move to {{ labels()[other(m.side)] }}
+                                  </button>
+                                  <button
+                                    ahButton="ghost"
+                                    size="sm"
+                                    type="button"
+                                    [disabled]="busy()"
                                     [attr.aria-label]="'Remove ' + m.qnumber"
                                     (click)="removing.set(m.qnumber)"
                                   >
@@ -300,6 +330,7 @@ import { SettingsHistory } from './settings-history';
                       <tr>
                         <th scope="col">Person</th>
                         <th scope="col">Role</th>
+                        <th scope="col">Side</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -317,6 +348,7 @@ import { SettingsHistory } from './settings-history';
                             }
                           </th>
                           <td>{{ role(p.role) }}</td>
+                          <td>{{ labels().us }}</td>
                         </tr>
                       }
                     </tbody>
@@ -342,12 +374,16 @@ import { SettingsHistory } from './settings-history';
 export class PeopleSettingsPage {
   protected readonly store = inject(PeopleSettingsStore);
   private readonly toasts = inject(ToastService);
+  private readonly labelsStore = inject(MeetingLabelsStore);
   private readonly now = new Date();
+  /** The names of the two sides of a meeting (Team settings › Meetings); the defaults until read. */
+  protected readonly labels = this.labelsStore.labels;
 
-  /** Who to add, and with which role. */
+  /** Who to add, with which role, and on which side of a meeting. */
   protected readonly form = new FormGroup({
     qnumber: new FormControl('', { nonNullable: true }),
     role: new FormControl<MemberRole>('member', { nonNullable: true }),
+    side: new FormControl<MemberSide>('us', { nonNullable: true }),
   });
   private readonly value = toSignal(
     this.form.valueChanges.pipe(map(() => this.form.getRawValue())),
@@ -376,6 +412,12 @@ export class PeopleSettingsPage {
 
   constructor() {
     void this.store.load();
+    void this.labelsStore.load();
+  }
+
+  /** The other side of a meeting. */
+  protected other(side: MemberSide): MemberSide {
+    return side === 'us' ? 'them' : 'us';
   }
 
   /** "Admin" or "Member". */
@@ -399,20 +441,27 @@ export class PeopleSettingsPage {
     return null;
   }
 
-  /** Adds the qnumber typed, with the role chosen. */
+  /** Adds the qnumber typed, with the role and side chosen. */
   protected async add(): Promise<void> {
     const read = qnumberOf(this.form.getRawValue().qnumber);
     if (this.busy() || 'problem' in read || this.qnumberError() !== null)
       return;
-    const role = this.form.getRawValue().role;
-    const done = await this.run(this.store.put(read.value, role));
+    const { role, side } = this.form.getRawValue();
+    const done = await this.run(this.store.put(read.value, role, side));
     if (!done) return;
-    this.form.reset({ qnumber: '', role: 'member' });
-    this.toasts.show(
+    this.form.reset({ qnumber: '', role: 'member', side: 'us' });
+    const added =
       role === 'admin'
-        ? `${read.value} added as an admin.`
-        : `${read.value} added.`
-    );
+        ? `${read.value} added as an admin`
+        : `${read.value} added`;
+    this.toasts.show(`${added} (${this.labels()[side]}).`);
+  }
+
+  /** Moves a member to the other side of a meeting, keeping their role. */
+  protected async move(member: Member): Promise<void> {
+    const side = this.other(member.side);
+    if (await this.run(this.store.put(member.qnumber, member.role, side)))
+      this.toasts.show(`${member.qnumber} moved to ${this.labels()[side]}.`);
   }
 
   /** Makes a member an admin, or an admin a member. */

@@ -8,6 +8,8 @@ import {
 import { ApiClient } from '@core/api/api-client';
 import type { ApiError, ApiResult } from '@core/api/api-error';
 import type {
+  ConfluencePageList,
+  ConfluencePageRequest,
   EndMeetingResult,
   JiraIssueType,
   Meeting,
@@ -22,6 +24,7 @@ import type {
 } from '@core/api/types';
 import { CLOCK, type Timer } from '@core/realtime/clock';
 import { MeetingLabelsStore } from '@core/stores/meeting-labels-store';
+import { MeStore } from '@core/stores/me-store';
 import {
   dateInputValue,
   defaultMeeting,
@@ -45,6 +48,8 @@ export interface NewMeeting {
   readonly seriesId: string | null;
   readonly title: string;
   readonly startsAt: string;
+  /** When it is planned to end; none by default. */
+  readonly endsAt?: string;
   /** The stakeholders of a one-off meeting; a series' meeting takes the series'. */
   readonly stakeholders?: readonly string[];
   /** Where a one-off meeting's stories are created in Jira; a series' meeting uses the series'. */
@@ -93,6 +98,9 @@ export class MeetingsStore {
   private readonly labelsStore = inject(MeetingLabelsStore);
   /** The names shown for the two sides of a meeting (Team settings › Meetings); the defaults until read. */
   readonly labels = this.labelsStore.labels;
+  private readonly meStore = inject(MeStore);
+  /** The signed-in person (Team settings › People gives their side); null until read. */
+  readonly me = this.meStore.me;
   /** Counts loads of the open meeting, so an answer to an older one is dropped. */
   private generation = 0;
   /** The meeting the last `open` asked for, and when its read ended: asking for it again soon after reads nothing. */
@@ -191,7 +199,10 @@ export class MeetingsStore {
   /** Whether the list has been read once (successfully), so the page knows which meeting to open by default. */
   readonly loaded = signal(false);
 
-  /** Reads the meetings and the series for the left column, and the names of the two sides of a meeting. */
+  /**
+   * Reads the meetings and the series for the left column, the names of the two sides of a meeting, and who is signed in
+   * (the side their topics start on).
+   */
   async load(): Promise<void> {
     this.loading.set(true);
     const [meetings, series] = await Promise.all([
@@ -199,6 +210,7 @@ export class MeetingsStore {
       this.api.listMeetingSeries(),
       // The names of the two sides, read once (the list waits for them, so the tags never change under the reader).
       this.labelsStore.load(),
+      this.meStore.load(),
     ]);
     this.loading.set(false);
     if (!meetings.ok) {
@@ -270,10 +282,12 @@ export class MeetingsStore {
       this.openQuestions.set([]);
       return;
     }
+    // The meeting shows with its open actions and questions, so neither appears under it a moment later.
+    const actions = await this.readActions(result.value);
+    if (generation !== this.generation) return;
     this.openError.set(null);
     this.meeting.set(result.value);
-    await this.loadActions();
-    if (generation !== this.generation) return;
+    actions();
     this.openedAt = this.clock.now().getTime();
     this.keepLive();
   }
@@ -291,6 +305,12 @@ export class MeetingsStore {
     const meeting = this.meeting();
     if (meeting === null) return;
     const generation = this.generation;
+    const apply = await this.readActions(meeting);
+    if (generation === this.generation) apply();
+  }
+
+  /** Reads the open actions and questions for `meeting`, and returns what puts them on the page. */
+  private async readActions(meeting: Meeting): Promise<() => void> {
     const where =
       meeting.seriesId !== null
         ? { seriesId: meeting.seriesId }
@@ -299,12 +319,13 @@ export class MeetingsStore {
       this.api.listMeetingNotes({ kind: 'action', status: 'open', ...where }),
       this.api.listMeetingNotes({ kind: 'question', status: 'open', ...where }),
     ]);
-    if (generation !== this.generation) return;
-    if (actions.ok) this.openActions.set(actions.value.items);
-    if (questions.ok) this.openQuestions.set(questions.value.items);
-    this.actionsError.set(
-      !actions.ok ? actions.error : !questions.ok ? questions.error : null
-    );
+    return () => {
+      if (actions.ok) this.openActions.set(actions.value.items);
+      if (questions.ok) this.openQuestions.set(questions.value.items);
+      this.actionsError.set(
+        !actions.ok ? actions.error : !questions.ok ? questions.error : null
+      );
+    };
   }
 
   /** Reads the open meeting again in a few seconds while it is in progress, and so on until it ends or closes. */
@@ -353,6 +374,7 @@ export class MeetingsStore {
     const created = await this.run(() =>
       this.api.createMeeting({
         startsAt: request.startsAt,
+        ...(request.endsAt !== undefined ? { endsAt: request.endsAt } : {}),
         ...(request.seriesId !== null ? { seriesId: request.seriesId } : {}),
         ...(title !== '' ? { title } : {}),
         ...(request.stakeholders !== undefined &&
@@ -444,6 +466,48 @@ export class MeetingsStore {
         )
       );
     }
+    return result;
+  }
+
+  /** Finds Confluence pages whose title contains `q` (the latest changed when blank), to pick a parent from. */
+  searchConfluencePages(q: string): Promise<ApiResult<ConfluencePageList>> {
+    return this.api.searchConfluencePages(q);
+  }
+
+  /**
+   * Creates the meeting's Confluence page under a parent and keeps the changed meeting, its line in the list and its
+   * series, which remembers the parent for the next meeting. The dialog shows a refusal itself.
+   */
+  async createConfluencePage(
+    meetingId: string,
+    request: ConfluencePageRequest
+  ): Promise<ApiResult<Meeting>> {
+    const result = await this.api.createMeetingConfluencePage(
+      meetingId,
+      request
+    );
+    if (!result.ok) return result;
+    const changed = result.value;
+    if (this.meeting()?.id === meetingId) this.meeting.set(changed);
+    this.meetings.set(
+      this.meetings().map((m) =>
+        m.id === meetingId
+          ? {
+              ...m,
+              confluencePage: changed.confluencePage,
+              confluenceParent: changed.confluenceParent,
+            }
+          : m
+      )
+    );
+    if (changed.seriesId !== null)
+      this.series.set(
+        this.series().map((s) =>
+          s.id === changed.seriesId
+            ? { ...s, confluenceParent: changed.confluenceParent }
+            : s
+        )
+      );
     return result;
   }
 
@@ -583,6 +647,28 @@ export class MeetingsStore {
     await this.refreshList();
     await this.loadActions();
     return moved;
+  }
+
+  /**
+   * Brings a topic of another meeting (the previous one of the series, still open) into the open meeting, with its
+   * notes, at the end of its topics. Answers whether it came.
+   */
+  async carryOver(topicId: string): Promise<boolean> {
+    const meeting = this.meeting();
+    if (meeting === null) return false;
+    const moved = await this.run(() =>
+      this.api.moveMeetingTopic(topicId, { toMeetingId: meeting.id })
+    );
+    if (moved === null) return false;
+    const current = this.meeting();
+    if (current?.id === meeting.id)
+      this.meeting.set({
+        ...current,
+        topics: [...current.topics, moved.movedTo],
+      });
+    await this.refreshList();
+    await this.loadActions();
+    return true;
   }
 
   /**

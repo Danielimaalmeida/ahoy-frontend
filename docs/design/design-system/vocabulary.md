@@ -1,36 +1,45 @@
 # Vocabulary
 
-The nautical words Ahoy uses, and the API term behind each. Use these exactly; don't invent new ones without adding them here.
+Ahoy keeps its nautical theme in names and headings, and uses plain words wherever people act or must read a state at a glance. This page lists both, with the API term behind each. Use these exactly; don't invent new ones without adding them here.
 
-## Places and things
+## Names and headings (themed)
 
-| Ahoy says             | Means                                          | API                                                                 |
-| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
-| Voyage                | A story: one Jira issue delivered through Ahoy | `Story`                                                             |
-| Crew, crew member     | The AI agents                                  | `agent` (Navigator, Cartographer, Lookout)                          |
-| Set sail              | Start a story                                  | `POST /stories` (`startStory`)                                      |
-| All hands             | The "Needs you" inbox                          | stories with status `awaiting_input`, `awaiting_decision`, `halted` |
-| At sea                | Voyages being worked on, nothing needed        | status `running`, `ready`                                           |
-| The Docks             | The team's Jira backlog (planned screen)       | not in the API yet                                                  |
-| Ship's log            | The activity timeline                          | `/stories/{key}/events`                                             |
-| Drop anchor / Stop    | Halt a voyage                                  | `stopStory`                                                         |
-| Weigh anchor / Resume | Clear a halt                                   | `resumeStory`                                                       |
-| Your orders           | A human gate decision                          | `decideHumanGate`                                                   |
+| Ahoy says         | Means                                          | API                                                                 |
+| ----------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| Voyage            | A story: one Jira issue delivered through Ahoy | `Story`                                                             |
+| Crew              | The AI agents                                  | `agent` (Navigator, Cartographer, Lookout)                          |
+| First Mate        | The agent that discusses ideas (concept)       | not in the API yet                                                  |
+| All hands on deck | Heading of the Needs you page                  | stories with status `awaiting_input`, `awaiting_decision`, `halted` |
+| Calm seas         | Empty Needs you page                           | none                                                                |
+
+## Navigation and actions (plain)
+
+| Label                      | Means                                    | API                                                                 |
+| -------------------------- | ---------------------------------------- | ------------------------------------------------------------------- |
+| Needs you                  | The inbox of voyages waiting on a person | stories with status `awaiting_input`, `awaiting_decision`, `halted` |
+| Ideas                      | Ideas discussed before Jira (concept)    | not in the API yet                                                  |
+| Backlog                    | The team's Jira backlog (planned screen) | not in the API yet                                                  |
+| Activity                   | The timeline of a voyage's events        | `/stories/{key}/events`                                             |
+| In progress                | Voyages being worked on, nothing needed  | status `running`, `ready`                                           |
+| Start voyage               | Start a story                            | `POST /stories` (`startStory`)                                      |
+| Stop                       | Halt a voyage                            | `stopStory`                                                         |
+| Resume                     | Clear a halt                             | `resumeStory`                                                       |
+| Approve, Send back, Reject | A human gate decision                    | `decideHumanGate`                                                   |
 
 ## Statuses
 
-| Badge       | API status                  | Plain meaning                                                   |
-| ----------- | --------------------------- | --------------------------------------------------------------- |
-| Queued      | `ready`                     | Ahoy acts next                                                  |
-| Under way   | `running`                   | A crew member's run is in progress                              |
-| Crew asks   | `awaiting_input`            | Agent questions need answers                                    |
-| Your orders | `awaiting_decision`         | A human gate is open                                            |
-| Anchored    | `halted`                    | Stopped until a person resumes it; always shown with its reason |
-| Docked      | `terminal`, phase `done`    | Delivered                                                       |
-| Aground     | `terminal`, phase `blocked` | Rejected or failed for good                                     |
-| In port     | `terminal`                  | Filter name for Docked and Aground together                     |
+| Badge          | API status                  | Plain meaning                                                   |
+| -------------- | --------------------------- | --------------------------------------------------------------- |
+| Queued         | `ready`                     | Ahoy acts next                                                  |
+| Running        | `running`                   | An agent's run is in progress                                   |
+| Needs answers  | `awaiting_input`            | Agent questions need answers                                    |
+| Needs decision | `awaiting_decision`         | A human gate is open                                            |
+| Halted         | `halted`                    | Stopped until a person resumes it; always shown with its reason |
+| Done           | `terminal`, phase `done`    | Delivered                                                       |
+| Blocked        | `terminal`, phase `blocked` | Rejected or failed for good                                     |
+| Finished       | `terminal`                  | Filter name for Done and Blocked together                       |
 
-## Halt reasons (Anchored because…)
+## Halt reasons (Halted because…)
 
 | API                        | Say                                                                                   |
 | -------------------------- | ------------------------------------------------------------------------------------- |

@@ -4,15 +4,15 @@ Ahoy is the internal tool where team members start Jira story deliveries, watch 
 
 ## Principles
 
-1. **A person always knows what needs them.** Status is shown in form as well as words: a coloured badge, a stepper, a dot. The three statuses people act on (Crew asks, Your orders, Anchored) are the loudest things on any screen.
-2. **Nothing hides the API.** The nautical labels are a friendly layer. The real status, phase or outcome word is always one glance away, in mono, so people can match the UI with logs and support.
+1. **A person always knows what needs them.** Status is shown in form as well as words: a coloured badge, a stepper, a dot. The three statuses people act on (Needs answers, Needs decision, Halted) are the loudest things on any screen.
+2. **Nothing hides the API.** The nautical theme is a friendly layer for names and headings; statuses and actions use plain words. The real status, phase or outcome word is always one glance away, in mono, so people can match the UI with logs and support.
 3. **Money is said out loud.** Any action that may spend AIU says how much and who is billed, before the click.
 4. **Calm over clever.** Plain sentences, no exclamation marks, no blame. A tooling failure never reads like a verdict.
 5. **Dense, not cramped.** 13px base text, ~38px table rows, 34px controls. Tables wrap; pages never scroll sideways.
 
 ## Content fundamentals
 
-- **Voice.** A steady first mate: brief, specific, warm. Use the nautical words where they name a real thing (voyage, crew, anchored, set sail, ship's log, the Docks) and plain words everywhere else. Don't stack metaphors ("Batten down the hatches!" is out).
+- **Voice.** A steady first mate: brief, specific, warm. Keep the nautical words for names and headings (Ahoy, voyage, crew, the agents' names, "All hands on deck", "Calm seas"). Anything people act on or must read at a glance uses plain words: statuses (Running, Needs decision, Halted), buttons (Start voyage, Stop, Resume) and navigation (Needs you, Ideas, Backlog). Don't stack metaphors ("Batten down the hatches!" is out).
 - **Name things the way people do.** "Owner · billed", "Waiting 22 m", "Run failed before any prompt". The vocabulary section maps every label to its API term.
 - **Buttons are verbs** in sentence case and say exactly what happens: "Send back to Cartographer", "Resume · up to 10.2 AIU", "Stop voyage".
 - **Errors** say what went wrong, what it means and what to do: "The owner's Copilot account can't use gpt-5.6-terra. Pick another planning model, then resume."
@@ -32,7 +32,7 @@ Ahoy is the internal tool where team members start Jira story deliveries, watch 
 
 **Layout.** A light top bar (no sidebar) with pill navigation. Content is centred up to `page-max` (1360px) with a 24px gutter (`space-6`), 16px on phones. Panels stack with 14–16px gaps. Detail pages: a header panel (key, status, title, stepper, meta), section tabs, then content with an optional right column of about 360px that wraps under it on narrow screens.
 
-**density.** Table cells 7 × 14px, controls 34px (28px in rows), panel padding 14 × 16px. Keep this density in new screens rather than switching to large cards.
+**Density.** Table cells 7 × 14px, controls 34px (28px in rows), panel padding 14 × 16px. Keep this density in new screens rather than switching to large cards.
 
 **Motion.** Minimal: hover fills and the live pulse. Respect `prefers-reduced-motion`.
 

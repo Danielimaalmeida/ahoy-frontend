@@ -112,7 +112,7 @@ const THEME_LABELS: Readonly<Record<Theme, string>> = {
     }
   `,
   template: `
-    <main class="kit ah">
+    <div class="kit ah">
       <header class="kit__head">
         <ah-logo />
         <h1 class="kit__title">Kit</h1>
@@ -146,7 +146,7 @@ const THEME_LABELS: Readonly<Record<Theme, string>> = {
           <ng-container *ngComponentOutlet="section.component" />
         </section>
       }
-    </main>
+    </div>
   `,
 })
 export class Kit {

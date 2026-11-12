@@ -1,5 +1,6 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
+import type { Router } from '@angular/router';
 import {
   FormControl,
   FormGroup,
@@ -18,15 +19,19 @@ import {
   normaliseProjectKey,
   PROJECT_KEY_MAX,
 } from '@domain/story-drafts';
-import { DialogShell } from '@ui/dialog/dialog';
+import { DialogShell, type DialogService } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import { meetingErrorView } from './meeting-errors';
 import type { MeetingsStore } from './meetings-store';
 
-/** What the New meeting dialog is opened with: the page's store, which holds the series and plans the meeting. */
+/**
+ * What the New meeting dialog is opened with: the page's store, which holds the series and plans the meeting, and the
+ * series to choose at first (a series' id or {@link NEW_SERIES}); the first series by default.
+ */
 export interface NewMeetingData {
   readonly store: MeetingsStore;
+  readonly series?: string;
 }
 
 /** The select's value for a series that does not exist yet. */
@@ -153,7 +158,8 @@ const NAME_MAX = 200;
   `,
 })
 export class NewMeetingDialog {
-  private readonly store = inject<NewMeetingData>(DIALOG_DATA).store;
+  private readonly data = inject<NewMeetingData>(DIALOG_DATA);
+  private readonly store = this.data.store;
   private readonly ref = inject<DialogRef<string>>(DialogRef);
   private readonly clock = inject(CLOCK);
 
@@ -177,9 +183,12 @@ export class NewMeetingDialog {
     .sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
 
   protected readonly form = new FormGroup({
-    series: new FormControl(this.store.series()[0]?.id ?? NEW_SERIES, {
-      nonNullable: true,
-    }),
+    series: new FormControl(
+      this.data.series ?? this.store.series()[0]?.id ?? NEW_SERIES,
+      {
+        nonNullable: true,
+      }
+    ),
     name: new FormControl('', {
       nonNullable: true,
       validators: [requiredText, maxTrimmed(NAME_MAX)],
@@ -304,4 +313,23 @@ export class NewMeetingDialog {
     }
     this.ref.close(id);
   }
+}
+
+/**
+ * Opens the New meeting dialog over the page, with `series` chosen at first if given, and opens the meeting it plans.
+ */
+export function openNewMeeting(
+  dialogs: DialogService,
+  router: Router,
+  store: MeetingsStore,
+  series?: string
+): void {
+  store.dismissError();
+  const ref = dialogs.open<string, NewMeetingData>(NewMeetingDialog, {
+    data: series === undefined ? { store } : { store, series },
+    width: '520px',
+  });
+  ref.closed.subscribe((id) => {
+    if (id !== undefined) void router.navigate(['/meetings', id]);
+  });
 }

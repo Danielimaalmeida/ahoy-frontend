@@ -1,10 +1,23 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
 import type { ApiError } from '@core/api/api-error';
-import type { MeetingStoryDraft, MeetingStoryMode } from '@core/api/types';
+import type {
+  MeetingStoryDraft,
+  MeetingStoryMode,
+  StoryTemplate,
+} from '@core/api/types';
 import { AccessControl } from '@core/auth/access-control';
 import { authorLabel, meetingDay, meetingTime } from '@domain/meetings';
-import { storySentence, targetText } from '@domain/story-drafts';
+import {
+  STORY_PROSE_MAX,
+  STORY_TEXT_MAX,
+  STORY_TITLE_MAX,
+  storyFieldText,
+  storySentence,
+  targetText,
+  withStoryEdit,
+  type StoryFieldKey,
+} from '@domain/story-drafts';
 import { Banner } from '@ui/banner/banner';
 import { formatCap } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
@@ -12,9 +25,35 @@ import { DialogService, DialogShell } from '@ui/dialog/dialog';
 import { ToastService } from '@ui/toast/toast';
 import type { MeetingsStore } from './meetings-store';
 import { SeriesJiraDialog, type SeriesJiraData } from './series-jira-dialog';
+import { StoryInlineSection, type InlineField } from './story-inline-section';
 import { storyErrorView, type StoryAction } from './story-errors';
 import type { StoryDraftsStore } from './story-drafts-store';
 import { StoryGrillDialog, type StoryGrillData } from './story-grill-dialog';
+
+/** A part of the story edited on its own: one field, or "story" for the As a / I want / So that sentence. */
+type StorySection =
+  | 'title'
+  | 'story'
+  | 'context'
+  | 'implementedFeature'
+  | 'acceptanceCriteria'
+  | 'outOfScope'
+  | 'openQuestions'
+  | 'dependencies'
+  | 'testNotes';
+
+/** The list fields shown side by side, two to a row. */
+type ListKey = 'outOfScope' | 'openQuestions' | 'dependencies' | 'testNotes';
+const LIST_PAIRS: readonly (readonly { key: ListKey; label: string }[])[] = [
+  [
+    { key: 'outOfScope', label: 'Out of scope' },
+    { key: 'openQuestions', label: 'Open questions' },
+  ],
+  [
+    { key: 'dependencies', label: 'Dependencies' },
+    { key: 'testNotes', label: 'Test notes' },
+  ],
+];
 
 /** What the story review dialog is opened with: both stores of the page and the draft to show. */
 export interface StoryReviewData {
@@ -25,24 +64,26 @@ export interface StoryReviewData {
 
 /**
  * "Check the user story" (board `StoryReview`): the story the agent wrote, rendered as it will be in Jira, and where it
- * goes (the series' project and issue type). Create in Jira is one click; not right means "Write it again" or "Grill
- * me on it" (questions first). The story itself is not edited here: no manual typing. While the agent is still
- * writing, it says so and can be stopped; a grill's questions are answered in their own dialog; a failed draft says
+ * goes (the series' project and issue type). Create in Jira is one click. Each section of a ready story is edited where
+ * it stands (point at it or tab to it, then "Edit"), one at a time, and saved at once; Create in Jira waits until the
+ * edit is saved or cancelled. Otherwise "Write it again" or "Grill me on it" (questions first). An edited story says
+ * who edited it. While the agent is still writing, it says so and can be stopped; a grill's questions are answered in their own dialog; a failed draft says
  * why. The draft is read live from the page's store, so it updates as the agent finishes.
  */
 @Component({
   selector: 'ah-story-review-dialog',
-  imports: [Banner, Button, DialogShell],
+  imports: [Banner, Button, DialogShell, StoryInlineSection],
   styles: `
     article {
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      padding: 14px 16px;
+      gap: 6px;
+      padding: 8px;
       border: 1px solid var(--line);
       border-radius: var(--radius-lg);
     }
     .meta {
+      padding: 4px 8px;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -76,9 +117,18 @@ export interface StoryReviewData {
     .two {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      gap: 6px;
+    }
+    @media (max-width: 600px) {
+      .two {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    section {
+      padding: 6px 8px;
     }
     .source {
+      padding: 4px 8px;
       display: flex;
       flex-wrap: wrap;
       gap: 4px 14px;
@@ -99,9 +149,11 @@ export interface StoryReviewData {
       heading="Check the user story"
       [cancelLabel]="draft()?.status === 'created' ? 'Close' : 'Cancel'"
       [confirmLabel]="confirmLabel()"
-      busyLabel="Creating…"
+      [busyLabel]="editing() !== null ? 'Saving…' : 'Creating…'"
       [busy]="busy()"
-      [confirmDisabled]="!canCreate() && draft()?.status !== 'created'"
+      [confirmDisabled]="
+        (!canCreate() || editing() !== null) && draft()?.status !== 'created'
+      "
       [error]="error()"
       (confirm)="confirm()"
     >
@@ -198,45 +250,135 @@ export interface StoryReviewData {
                     >
                   }
                 </div>
-                <h3 class="text">{{ s.title }}</h3>
-                <section>
-                  <span class="label">User story</span>
+                <ah-story-inline-section
+                  heading="Title"
+                  [fields]="fields().title"
+                  [editable]="canEdit()"
+                  [editing]="editing() === 'title'"
+                  [busy]="busy()"
+                  (start)="startEdit('title')"
+                  (cancelled)="editing.set(null)"
+                  (save)="saveEdit($event)"
+                >
+                  <h3 class="text">{{ s.title }}</h3>
+                </ah-story-inline-section>
+                <ah-story-inline-section
+                  heading="User story"
+                  [fields]="fields().story"
+                  [editable]="canEdit()"
+                  [editing]="editing() === 'story'"
+                  [busy]="busy()"
+                  (start)="startEdit('story')"
+                  (cancelled)="editing.set(null)"
+                  (save)="saveEdit($event)"
+                >
                   <span class="text">{{ sentence(s) }}</span>
-                </section>
-                <section>
-                  <span class="label">Acceptance criteria</span>
+                </ah-story-inline-section>
+                @if (s.context !== null || d.status === 'ready') {
+                  <ah-story-inline-section
+                    heading="Context"
+                    [fields]="fields().context"
+                    [editable]="canEdit()"
+                    [editing]="editing() === 'context'"
+                    [busy]="busy()"
+                    (start)="startEdit('context')"
+                    (cancelled)="editing.set(null)"
+                    (save)="saveEdit($event)"
+                  >
+                    <span [class]="s.context === null ? 'ah-muted' : 'text'">{{
+                      s.context ?? 'None'
+                    }}</span>
+                  </ah-story-inline-section>
+                }
+                @if (s.implementedFeature !== null || d.status === 'ready') {
+                  <ah-story-inline-section
+                    heading="Implemented feature"
+                    [fields]="fields().implementedFeature"
+                    [editable]="canEdit()"
+                    [editing]="editing() === 'implementedFeature'"
+                    [busy]="busy()"
+                    (start)="startEdit('implementedFeature')"
+                    (cancelled)="editing.set(null)"
+                    (save)="saveEdit($event)"
+                  >
+                    <span
+                      [class]="
+                        s.implementedFeature === null ? 'ah-muted' : 'text'
+                      "
+                      >{{ s.implementedFeature ?? 'None' }}</span
+                    >
+                  </ah-story-inline-section>
+                }
+                <ah-story-inline-section
+                  heading="Acceptance criteria"
+                  [fields]="fields().acceptanceCriteria"
+                  [editable]="canEdit()"
+                  [editing]="editing() === 'acceptanceCriteria'"
+                  [busy]="busy()"
+                  (start)="startEdit('acceptanceCriteria')"
+                  (cancelled)="editing.set(null)"
+                  (save)="saveEdit($event)"
+                >
                   <ol>
                     @for (criterion of s.acceptanceCriteria; track $index) {
                       <li class="text">{{ criterion }}</li>
                     }
                   </ol>
-                </section>
+                </ah-story-inline-section>
                 <div class="two">
-                  <section>
-                    <span class="label">Out of scope</span>
-                    @if (s.outOfScope.length === 0) {
-                      <span class="ah-muted">None</span>
-                    } @else {
-                      <ul>
-                        @for (item of s.outOfScope; track $index) {
-                          <li class="text">{{ item }}</li>
-                        }
-                      </ul>
-                    }
-                  </section>
-                  <section>
-                    <span class="label">Open questions</span>
-                    @if (s.openQuestions.length === 0) {
-                      <span class="ah-muted">None</span>
-                    } @else {
-                      <ul>
-                        @for (item of s.openQuestions; track $index) {
-                          <li class="text">{{ item }}</li>
-                        }
-                      </ul>
-                    }
-                  </section>
+                  @for (list of pairOne; track list.key) {
+                    <ah-story-inline-section
+                      [heading]="list.label"
+                      [fields]="fields()[list.key]"
+                      [editable]="canEdit()"
+                      [editing]="editing() === list.key"
+                      [busy]="busy()"
+                      (start)="startEdit(list.key)"
+                      (cancelled)="editing.set(null)"
+                      (save)="saveEdit($event)"
+                    >
+                      @if (itemsOf(s, list.key).length === 0) {
+                        <span class="ah-muted">None</span>
+                      } @else {
+                        <ul>
+                          @for (item of itemsOf(s, list.key); track $index) {
+                            <li class="text">{{ item }}</li>
+                          }
+                        </ul>
+                      }
+                    </ah-story-inline-section>
+                  }
                 </div>
+                @if (
+                  s.dependencies.length > 0 ||
+                  s.testNotes.length > 0 ||
+                  d.status === 'ready'
+                ) {
+                  <div class="two">
+                    @for (list of pairTwo; track list.key) {
+                      <ah-story-inline-section
+                        [heading]="list.label"
+                        [fields]="fields()[list.key]"
+                        [editable]="canEdit()"
+                        [editing]="editing() === list.key"
+                        [busy]="busy()"
+                        (start)="startEdit(list.key)"
+                        (cancelled)="editing.set(null)"
+                        (save)="saveEdit($event)"
+                      >
+                        @if (itemsOf(s, list.key).length === 0) {
+                          <span class="ah-muted">None</span>
+                        } @else {
+                          <ul>
+                            @for (item of itemsOf(s, list.key); track $index) {
+                              <li class="text">{{ item }}</li>
+                            }
+                          </ul>
+                        }
+                      </ah-story-inline-section>
+                    }
+                  </div>
+                }
                 @if (givenAnswers().length > 0) {
                   <section>
                     <span class="label">Your answers</span>
@@ -252,6 +394,9 @@ export interface StoryReviewData {
                 <div class="source ah-hint">
                   <span>From “{{ d.topicTitle }}”</span>
                   <span>{{ notesUsed() }}</span>
+                  @if (editedText(); as edited) {
+                    <span>{{ edited }}</span>
+                  }
                   @if (d.jiraUrl !== null && d.jiraKey !== null) {
                     <a
                       [href]="d.jiraUrl"
@@ -305,8 +450,9 @@ export interface StoryReviewData {
                   }
                 </div>
                 <span class="ah-hint"
-                  >Created with Ahoy's Jira account; the description says it
-                  came from this meeting and who created it.</span
+                  >Point at any part, or tab to it, to edit it. Created with
+                  Ahoy's Jira account; the description says it came from this
+                  meeting and who created it.</span
                 >
               }
             }
@@ -388,6 +534,14 @@ export class StoryReviewDialog {
       ? 'Drafted from all its notes'
       : `Drafted from ${n === 1 ? '1 chosen note' : `${n} chosen notes`}`;
   });
+  /** "Edited by Sam on 15 Oct at 09:40" once a person edited the story by hand; null while it is the agent's. */
+  protected readonly editedText = computed(() => {
+    const draft = this.draft();
+    if (draft === null || draft.editedBy === null || draft.editedAt === null)
+      return null;
+    const who = authorLabel(draft.editedBy, this.access.nameOf(draft.editedBy));
+    return `Edited by ${who} on ${meetingDay(draft.editedAt)} at ${meetingTime(draft.editedAt)}`;
+  });
   protected readonly noTargetHeading = computed(() =>
     this.series() === null
       ? 'This meeting has no Jira project yet'
@@ -408,6 +562,72 @@ export class StoryReviewDialog {
   });
 
   protected readonly sentence = storySentence;
+  protected readonly pairOne = LIST_PAIRS[0];
+  protected readonly pairTwo = LIST_PAIRS[1];
+
+  /** The section being edited, or null; one at a time. */
+  protected readonly editing = signal<StorySection | null>(null);
+  /** Whether sections offer "Edit": a ready story, nothing being sent, no section already open. */
+  protected readonly canEdit = computed(
+    () =>
+      this.draft()?.status === 'ready' &&
+      this.draft()?.story !== null &&
+      this.editing() === null &&
+      !this.busy()
+  );
+  /** Each section's fields with their text now, by section. */
+  protected readonly fields = computed(
+    (): Record<StorySection, InlineField[]> => {
+      const story = this.draft()?.story ?? null;
+      const field = (
+        key: StoryFieldKey,
+        label: string,
+        required: boolean,
+        max: number
+      ): InlineField => ({
+        key,
+        label,
+        required,
+        max,
+        text: story === null ? '' : storyFieldText(story, key),
+      });
+      return {
+        title: [field('title', 'Title', true, STORY_TITLE_MAX)],
+        story: [
+          field('role', 'As a', true, STORY_TEXT_MAX),
+          field('want', 'I want', true, STORY_TEXT_MAX),
+          field('soThat', 'So that', true, STORY_TEXT_MAX),
+        ],
+        context: [field('context', 'Context', false, STORY_PROSE_MAX)],
+        implementedFeature: [
+          field(
+            'implementedFeature',
+            'Implemented feature',
+            false,
+            STORY_PROSE_MAX
+          ),
+        ],
+        acceptanceCriteria: [
+          field(
+            'acceptanceCriteria',
+            'Acceptance criteria',
+            true,
+            STORY_TEXT_MAX
+          ),
+        ],
+        outOfScope: [
+          field('outOfScope', 'Out of scope', false, STORY_TEXT_MAX),
+        ],
+        openQuestions: [
+          field('openQuestions', 'Open questions', false, STORY_TEXT_MAX),
+        ],
+        dependencies: [
+          field('dependencies', 'Dependencies', false, STORY_TEXT_MAX),
+        ],
+        testNotes: [field('testNotes', 'Test notes', false, STORY_TEXT_MAX)],
+      };
+    }
+  );
 
   /** Create in Jira, or Done once created. */
   async confirm(): Promise<void> {
@@ -456,6 +676,32 @@ export class StoryReviewDialog {
     }
     this.toasts.show('Story draft discarded.');
     this.ref.close();
+  }
+
+  /** Starts editing one section, when no other section is open and nothing is being sent. */
+  startEdit(section: StorySection): void {
+    if (!this.canEdit()) return;
+    this.failure.set(null);
+    this.editing.set(section);
+  }
+
+  /** Saves one section's edit into the whole story (0 AIU); the section goes back to text once it is saved. */
+  async saveEdit(edits: Partial<Record<StoryFieldKey, string>>): Promise<void> {
+    const draft = this.draft();
+    if (draft === null || draft.story === null || this.busy()) return;
+    this.failure.set(null);
+    const story: StoryTemplate = withStoryEdit(draft.story, edits);
+    const result = await this.data.drafts.edit(draft.id, story);
+    if (!result.ok) {
+      this.failure.set({ error: result.error, action: 'edit' });
+      return;
+    }
+    this.editing.set(null);
+  }
+
+  /** A list field's items, for the list sections the template repeats. */
+  protected itemsOf(story: StoryTemplate, key: ListKey): readonly string[] {
+    return story[key];
   }
 
   /** Opens the grill's questions in their own dialog, in place of this one. */

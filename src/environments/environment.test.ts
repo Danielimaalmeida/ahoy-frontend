@@ -4,6 +4,8 @@ const oauth2Host = 'https://emea.int.alpha.sso.acmegroup.com:443';
 export const environment = {
   name: 'TEST',
   production: false,
+  /** Signs in a fixed local user instead of WebEAM: only the `local` configuration sets it. */
+  mockAuth: false,
   apiBase: '/api/v1',
   issuer: `${oauth2Host}/auth/oauth2/realms/root/realms/alpha`,
   redirectUri: `${host}`,

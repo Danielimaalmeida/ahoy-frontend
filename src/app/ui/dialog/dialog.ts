@@ -63,7 +63,7 @@ let nextDialogId = 0;
  *   that opened it.
  *
  * ```html
- * <ah-dialog heading="Weigh anchor and resume?" icon="sail" confirmLabel="Resume · up to 10.2 AIU"
+ * <ah-dialog heading="Resume PROJ-118?" icon="sail" confirmLabel="Resume · up to 10.2 AIU"
  *            [busy]="busy()" [error]="error()" (confirm)="resume()">
  *   <span ahDialogLead>Ahoy retries <b>planning</b> with Cartographer.</span>
  *   <ah-banner ahDialogCost variant="cost" heading="This may spend up to 10.2 AIU">Billed to sam&#64;example.com.</ah-banner>
@@ -177,7 +177,7 @@ let nextDialogId = 0;
   `,
 })
 export class DialogShell {
-  /** The title: asks or states the action ("Weigh anchor and resume?"). */
+  /** The title: asks or states the action ("Resume PROJ-118?"). */
   readonly heading = input.required<string>();
   /** A hint under the title, such as what the thing being edited holds ("The default server · 2 repositories on it"). */
   readonly subtitle = input('');

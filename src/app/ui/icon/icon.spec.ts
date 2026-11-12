@@ -2,18 +2,24 @@ import { TestBed } from '@angular/core/testing';
 import type { IconSize } from './icon';
 import { Icon } from './icon';
 import type { IconName } from './icons';
-import { ICON_NAMES, ICONS, isIconName } from './icons';
+import {
+  APP_ICON_NAMES,
+  DESIGN_SYSTEM_ICON_NAMES,
+  ICON_NAMES,
+  ICONS,
+  isIconName,
+} from './icons';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** The table of `assets/Icons/README.md`. `satisfies` fails to compile if a name is missing or extra. */
 const README_TABLE = {
   wheel: 'The brand; models per phase',
-  bell: 'All hands (Needs you)',
+  bell: 'Needs you',
   compass: "Voyages; an agent's recommendation",
-  anchor: 'Anchored (halted); The Docks',
-  sail: 'Set sail; resume',
-  aground: 'Aground (blocked); reject',
+  anchor: 'Halted; Backlog',
+  sail: 'Start voyage; resume',
+  aground: 'Blocked; reject',
   'send-back': 'Send back',
   lock: 'A final answer',
   check: 'Done; success toast',
@@ -24,7 +30,20 @@ const README_TABLE = {
   info: 'Notes and planned screens',
   refresh: 'Changed since you opened it',
   offline: 'Lost contact with the API',
-} satisfies Record<IconName, string>;
+};
+
+/** The app's own icons, for empty states, until the design system has them. */
+const APP_TABLE = {
+  'calendar-plus': 'No meetings yet',
+  document: 'No topics or no notes in a meeting',
+  waves: 'Calm seas: a filter with no voyages',
+};
+
+/** `satisfies` fails to compile if a name is missing or extra. */
+const ALL = { ...README_TABLE, ...APP_TABLE } satisfies Record<
+  IconName,
+  string
+>;
 
 /** Renders one icon and returns its `<svg>`. */
 function render(
@@ -43,8 +62,14 @@ function render(
 
 describe('icons', () => {
   it('has exactly the 16 icons of the design system, in its order', () => {
-    expect(ICON_NAMES).toEqual(Object.keys(README_TABLE));
-    expect(new Set(ICON_NAMES).size).toBe(16);
+    expect(DESIGN_SYSTEM_ICON_NAMES).toEqual(Object.keys(README_TABLE));
+    expect(new Set(DESIGN_SYSTEM_ICON_NAMES).size).toBe(16);
+  });
+
+  it("adds the app's own icons after them, and draws every one", () => {
+    expect(APP_ICON_NAMES).toEqual(Object.keys(APP_TABLE));
+    expect(ICON_NAMES).toEqual(Object.keys(ALL));
+    expect(new Set(ICON_NAMES).size).toBe(ICON_NAMES.length);
     expect(Object.keys(ICONS).sort()).toEqual([...ICON_NAMES].sort());
   });
 

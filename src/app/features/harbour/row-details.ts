@@ -9,6 +9,7 @@ import {
 import { ApiClient } from '@core/api/api-client';
 import { readStoryState } from '@core/api/story-state';
 import type { Diagnosis, Story } from '@core/api/types';
+import type { ResourceStatus } from '@core/stores/resource';
 import type { StoryEventsHandle } from '@core/stores/story-events-feed';
 import { StoryStore, type StoryHandle } from '@core/stores/story-store';
 import { isAground } from '@domain/status';
@@ -31,6 +32,11 @@ const UNREAD: RowDetail = {
   diagnosis: null,
   blockedFrom: null,
 };
+
+/** Whether a read ended, with what it gave or with an error: what it shows will not change until the voyage does. */
+function done(status: ResourceStatus | undefined): boolean {
+  return status === 'ready' || status === 'error';
+}
 
 /** What the row of a voyage needs: the questions of one that asks, the state and events of one that waits, and so on. */
 function needsOf(story: Story): readonly Need[] {
@@ -73,6 +79,8 @@ export class RowDetails {
   );
   /** The version of each halted voyage on screen whose diagnosis was last asked for. */
   private readonly asked = new Map<string, number>();
+  /** The version of each halted voyage on screen whose diagnosis read ended, read or not. */
+  private readonly diagnosed = signal<ReadonlyMap<string, number>>(new Map());
   private disposed = false;
 
   constructor() {
@@ -126,11 +134,15 @@ export class RowDetails {
     });
   }
 
-  /** What a row has read of its voyage so far; reactive. */
+  /**
+   * What a row has read of its voyage so far; reactive. The events count only once the whole history is read: it is read
+   * oldest first, so a part of it names a gate or a halt that is over.
+   */
   detail(key: string): RowDetail {
     const held = this.held().get(key);
     if (held === undefined) return UNREAD;
-    const events = held.feed()?.events() ?? null;
+    const feed = held.feed();
+    const events = feed !== null && done(feed.status()) ? feed.events() : null;
     const state = held.handle.state.value();
     return {
       questions: held.handle.questions.value() ?? null,
@@ -143,12 +155,25 @@ export class RowDetails {
   }
 
   /**
-   * Whether a voyage's event history was read, or could not be: until then its row cannot say whether an aground
-   * voyage can be unblocked. `false` for a voyage this does not hold or does not read events for; reactive.
+   * Whether everything the row of a voyage shows was read, or could not be (its questions, state, events, runs and, when
+   * halted, its diagnosis): until then the row would change under the person's eyes, and an aground voyage could not say
+   * whether it can be unblocked. `true` for a voyage that needs nothing beyond its story; reactive.
    */
-  eventsRead(key: string): boolean {
-    const status = this.held().get(key)?.feed()?.status();
-    return status === 'ready' || status === 'error';
+  settled(story: Story): boolean {
+    const needs = needsOf(story);
+    if (needs.length === 0) return true;
+    const held = this.held().get(story.key);
+    if (held === undefined) return false;
+    const read = needs.every((need) =>
+      need === 'events'
+        ? done(held.feed()?.status())
+        : done(held.handle[need].status())
+    );
+    return (
+      read &&
+      (story.status !== 'halted' ||
+        this.diagnosed().get(story.key) === story.version)
+    );
   }
 
   /** The run a voyage at sea is on, once its runs are read; reactive. */
@@ -166,6 +191,9 @@ export class RowDetails {
     );
     for (const key of [...this.asked.keys()])
       if (!halted.has(key)) this.asked.delete(key);
+    const answered = [...this.diagnosed()].filter(([key]) => halted.has(key));
+    if (answered.length !== this.diagnosed().size)
+      this.diagnosed.set(new Map(answered));
     const kept = [...this.diagnoses()].filter(([key]) => halted.has(key));
     if (kept.length !== this.diagnoses().size)
       this.diagnoses.set(new Map(kept));
@@ -181,8 +209,10 @@ export class RowDetails {
    */
   private async readDiagnosis(key: string, version: number): Promise<void> {
     const result = await this.api.getStoryDiagnosis(key);
-    if (this.disposed || this.asked.get(key) !== version || !result.ok) return;
-    this.diagnoses.update((map) => new Map(map).set(key, result.value));
+    if (this.disposed || this.asked.get(key) !== version) return;
+    if (result.ok)
+      this.diagnoses.update((map) => new Map(map).set(key, result.value));
+    this.diagnosed.update((map) => new Map(map).set(key, version));
   }
 
   private open(key: string): Held {

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import type { ApiResult } from '@core/api/api-error';
-import type { MemberRole, PeoplePage } from '@core/api/types';
+import type { MemberRole, MemberSide, PeoplePage } from '@core/api/types';
 import { SectionStore } from './section-store';
 import type { SettingsSummary } from './settings-summary';
 
@@ -17,9 +17,21 @@ export class PeopleSettingsStore extends SectionStore<PeoplePage> {
     summary.peopleRead(page);
   }
 
-  /** Lets someone in with a role, or changes their role; then the page and its history are read again. */
-  put(qnumber: string, role: MemberRole): Promise<ApiResult<PeoplePage>> {
-    return this.reloadAfter(this.api.putPerson(qnumber, { role }));
+  /**
+   * Lets someone in with a role and a side of a meeting, or changes them (without a side, a member keeps theirs); then
+   * the page and its history are read again.
+   */
+  put(
+    qnumber: string,
+    role: MemberRole,
+    side?: MemberSide
+  ): Promise<ApiResult<PeoplePage>> {
+    return this.reloadAfter(
+      this.api.putPerson(
+        qnumber,
+        side === undefined ? { role } : { role, side }
+      )
+    );
   }
 
   /** Stops someone using Ahoy; then the page and its history are read again. */

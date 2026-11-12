@@ -686,6 +686,21 @@ export type MoveMeetingTopicRequest = Schemas['MoveMeetingTopicRequest'];
 /** Body of `setMeetingJiraTarget`: where a one-off meeting's stories are created in Jira; a null key clears it. */
 export type MeetingJiraTargetRequest = Schemas['MeetingJiraTargetRequest'];
 
+/** The Confluence page a meeting became (`createMeetingConfluencePage`): its id, title, link, who and when. */
+export type MeetingConfluencePage = Schemas['MeetingConfluencePage'];
+
+/** The parent page a series' last Confluence page went under, offered first for its next meeting. */
+export type ConfluenceParent = Schemas['ConfluenceParent'];
+
+/** One Confluence page found by `searchConfluencePages`, with its space and the titles above it. */
+export type ConfluencePage = Schemas['ConfluencePage'];
+
+/** Answer of `searchConfluencePages`: at most 20 pages, latest changed first. */
+export type ConfluencePageList = Schemas['ConfluencePageList'];
+
+/** Body of `createMeetingConfluencePage`: the parent page, the title and the page in Confluence wiki markup. */
+export type ConfluencePageRequest = Schemas['ConfluencePageRequest'];
+
 /** An open topic found by `searchMeetings`, with the meeting it is in. */
 export type MeetingTopicInContext = Schemas['MeetingTopicInContext'];
 
@@ -874,7 +889,7 @@ export type CrewTimeOffRequest = Schemas['CrewTimeOffRequest'];
 /** Body of `changeCrewSprint`. */
 export type CrewChangeRequest = Schemas['CrewChangeRequest'];
 
-/** Answer of `getMe`: the signed-in person, and whether they may change the team's settings. */
+/** Answer of `getMe`: the signed-in person, whether they may change the team's settings, and their side of a meeting. */
 export type Me = Schemas['Me'];
 
 /** Answer of `getSonarSettings`: the servers and repositories, and whether the person may change them. */
@@ -951,6 +966,30 @@ export type JiraFieldPage = Schemas['JiraFieldPage'];
 
 /** One of Jira's fields, found by `listJiraFields`. */
 export type JiraField = JiraFieldPage['items'][number];
+
+/** Answer of `getConfluenceSettings`: Confluence as set (null while it is off), and what the person and the API can do. */
+export type ConfluenceSettingsPage = Schemas['ConfluenceSettingsPage'];
+
+/** Confluence's settings: the connection (its token only as the last four characters) and the space searched. */
+export type ConfluenceSettings = Schemas['ConfluenceSettings'];
+
+/** What Confluence's "Test connection" found, kept as the last test. */
+export type ConfluenceTest = Schemas['ConfluenceTest'];
+
+/** What a Confluence connection test can find. */
+export type ConfluenceTestResult = ConfluenceTest['result'];
+export const CONFLUENCE_TEST_RESULTS = listOf<ConfluenceTestResult>()([
+  'ok',
+  'refused',
+  'unreachable',
+]);
+
+/** Body of `putConfluenceConnection`: the base URL and, to connect or move, the token. */
+export type ConfluenceConnectionRequest =
+  Schemas['ConfluenceConnectionRequest'];
+
+/** Body of `updateConfluenceSettings`: the version and the space key, null for every space. */
+export type ConfluenceSettingsChange = Schemas['ConfluenceSettingsChange'];
 
 /** Answer of `getTeamsSettings`: the crew's channel (null while it is off), and what the person and the API can do. */
 export type TeamsSettingsPage = Schemas['TeamsSettingsPage'];
@@ -1049,6 +1088,10 @@ export type Member = Schemas['Member'];
 /** `member` uses Ahoy; `admin` also changes the team's settings (`MemberRole`). */
 export type MemberRole = Schemas['MemberRole'];
 export const MEMBER_ROLES = listOf<MemberRole>()(['member', 'admin']);
+
+/** The side of a meeting a person is on (`MemberSide`): the topics they raise start on it. */
+export type MemberSide = Schemas['MemberSide'];
+export const MEMBER_SIDES = listOf<MemberSide>()(['us', 'them']);
 
 /** Body of `putPerson`. */
 export type PersonChange = Schemas['PersonChange'];

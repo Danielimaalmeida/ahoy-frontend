@@ -38,6 +38,10 @@ import {
   isJiraSettings,
   isJiraSettingsPage,
   isJiraTest,
+  isConfluencePageList,
+  isConfluenceSettings,
+  isConfluenceSettingsPage,
+  isConfluenceTest,
   isAgentSettingsPage,
   isPrCommentSettingsPage,
   isMeetingSettingsPage,
@@ -128,6 +132,13 @@ import type {
   JiraSettingsChange,
   JiraSettingsPage,
   JiraTest,
+  ConfluenceConnectionRequest,
+  ConfluencePageList,
+  ConfluencePageRequest,
+  ConfluenceSettings,
+  ConfluenceSettingsChange,
+  ConfluenceSettingsPage,
+  ConfluenceTest,
   AgentSettingsChange,
   AgentSettingsPage,
   PrCommentSettingsChange,
@@ -240,6 +251,7 @@ import type {
   CancelStoryRequest,
   RestartStoryRequest,
   Story,
+  StoryTemplate,
   StoryPage,
   StoryPlanFit,
   StoryPrComments,
@@ -1185,6 +1197,34 @@ export class ApiClient {
     );
   }
 
+  /**
+   * Creates the meeting's page in Confluence under `parentId`, as the owner of the team's token; the series remembers
+   * the parent. The answer (201) is the meeting with its page. Writes to Confluence; a meeting becomes one page.
+   */
+  createMeetingConfluencePage(
+    meetingId: string,
+    body: ConfluencePageRequest
+  ): Promise<ApiResult<Meeting>> {
+    return this.post(
+      'createMeetingConfluencePage',
+      `/meetings/${segment(meetingId)}/confluence-page`,
+      body,
+      isMeeting
+    );
+  }
+
+  /** Confluence pages whose titles match `q`, at most 20, latest changed first, to pick a parent from. 0 AIU. */
+  searchConfluencePages(q: string): Promise<ApiResult<ConfluencePageList>> {
+    const params =
+      q.trim() !== '' ? new HttpParams().set('q', q.trim()) : undefined;
+    return this.get(
+      'searchConfluencePages',
+      '/confluence/pages',
+      isConfluencePageList,
+      params
+    );
+  }
+
   /** Meetings by title, open topics by title and notes by text that contain `q` (2 to 100 characters). Spends nothing. */
   searchMeetings(q: string): Promise<ApiResult<MeetingSearchResult>> {
     return this.get(
@@ -1411,6 +1451,22 @@ export class ApiClient {
     return this.delete(
       'discardMeetingStoryDraft',
       `/meeting-story-drafts/${segment(draftId)}`
+    );
+  }
+
+  /** Saves a person's edit of a ready draft's story over the agent's; Create in Jira then sends it. 0 AIU. */
+  editMeetingStory(
+    draftId: string,
+    story: StoryTemplate
+  ): Promise<ApiResult<MeetingStoryDraft>> {
+    return this.send(
+      'editMeetingStory',
+      isMeetingStoryDraft,
+      this.http.put<unknown>(
+        this.url(`/meeting-story-drafts/${segment(draftId)}/story`),
+        story,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
     );
   }
 
@@ -1763,6 +1819,62 @@ export class ApiClient {
       '/settings/jira/fields',
       isJiraFieldPage,
       params
+    );
+  }
+
+  /** Confluence as the team set it (null while it is off), and whether the person may change it. No token comes back. */
+  getConfluenceSettings(): Promise<ApiResult<ConfluenceSettingsPage>> {
+    return this.get(
+      'getConfluenceSettings',
+      '/settings/confluence',
+      isConfluenceSettingsPage
+    );
+  }
+
+  /** Connects Confluence, or changes its base URL or token (admins only); moving to another URL needs the token again. */
+  putConfluenceConnection(
+    body: ConfluenceConnectionRequest
+  ): Promise<ApiResult<ConfluenceSettings>> {
+    return this.send(
+      'putConfluenceConnection',
+      isConfluenceSettings,
+      this.http.put<unknown>(
+        this.url('/settings/confluence/connection'),
+        body,
+        {
+          observe: 'response',
+          timeout: REQUEST_TIMEOUT_MS,
+        }
+      )
+    );
+  }
+
+  /** Sets or clears the space the parent page search looks in (admins only). */
+  updateConfluenceSettings(
+    body: ConfluenceSettingsChange
+  ): Promise<ApiResult<ConfluenceSettings>> {
+    return this.send(
+      'updateConfluenceSettings',
+      isConfluenceSettings,
+      this.http.patch<unknown>(this.url('/settings/confluence'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** Turns Confluence off (admins only); pages already created stay. The answer (204) has no body. */
+  deleteConfluenceSettings(): Promise<ApiResult<null>> {
+    return this.delete('deleteConfluenceSettings', '/settings/confluence');
+  }
+
+  /** Asks Confluence who the stored token is and keeps the answer as the last test (admins only). 0 AIU. */
+  testConfluenceConnection(): Promise<ApiResult<ConfluenceTest>> {
+    return this.post(
+      'testConfluenceConnection',
+      '/settings/confluence/test',
+      null,
+      isConfluenceTest
     );
   }
 

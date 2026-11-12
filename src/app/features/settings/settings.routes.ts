@@ -1,6 +1,7 @@
 import type { Routes } from '@angular/router';
 import { AgentSettingsPage } from './agent-settings-page';
 import { BranchReleaseSettingsPage } from './branch-release-settings-page';
+import { ConfluenceSettingsPage } from './confluence-settings-page';
 import { CopilotTokenPage } from './copilot-token-page';
 import { DefectSettingsPage } from './defect-settings-page';
 import { FigmaSettingsPage } from './figma-settings-page';
@@ -15,8 +16,8 @@ import { SetupPage } from './setup-page';
 import { TeamsSettingsPage } from './teams-settings-page';
 
 /**
- * Team settings: Setup first (what is still needed before stories run), then SonarQube, Jira, the crew's Teams
- * channel, Figma, the agents' jobs, the phases, pull request comments, the defect watch, branch releases, the names of a
+ * Team settings: Setup first (what is still needed before stories run), then SonarQube, Jira, Confluence, the crew's
+ * Teams channel, Figma, the agents' jobs, the phases, pull request comments, the defect watch, branch releases, the names of a
  * meeting's two sides and who may use Ahoy, kept in the database and changed by admins, one section per page; last, the
  * person's own Copilot token. Reading and changing them is 0 AIU.
  */
@@ -40,6 +41,11 @@ export const SETTINGS_ROUTES: Routes = [
         path: 'jira',
         title: 'Jira · Team settings · Ahoy',
         component: JiraSettingsPage,
+      },
+      {
+        path: 'confluence',
+        title: 'Confluence · Team settings · Ahoy',
+        component: ConfluenceSettingsPage,
       },
       {
         path: 'teams',

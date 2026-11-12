@@ -93,3 +93,40 @@ export function meetingErrorView(error: ApiError): CommandErrorView {
     tech,
   };
 }
+
+/**
+ * What the Create in Confluence dialog shows for an API error. A 409 is Confluence not connected, or a page the meeting
+ * already has; a 503 is Confluence refusing or out of reach. Anything else reads like the Meetings page.
+ */
+export function confluencePageErrorView(error: ApiError): CommandErrorView {
+  if (error.kind !== 'problem') return meetingErrorView(error);
+  const tech = techLine(error);
+  if (error.status === 409)
+    return {
+      variant: 'notice',
+      heading: "The page can't be created",
+      text: detailOr(
+        error,
+        'Confluence is not connected: an admin connects it in Team settings › Confluence.'
+      ),
+      tech,
+    };
+  if (error.status === 503)
+    return {
+      variant: 'error',
+      heading: "Confluence didn't take the page",
+      text: detailOr(
+        error,
+        "Confluence refused it or couldn't be reached. Try again in a moment."
+      ),
+      tech,
+    };
+  if (error.status === 400)
+    return {
+      variant: 'error',
+      heading: 'Confluence refused that',
+      text: detailOr(error, 'Check the parent page and the title.'),
+      tech,
+    };
+  return meetingErrorView(error);
+}

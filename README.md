@@ -6,6 +6,8 @@ system copied into [docs/design/](docs/design/SOURCES.md).
 
 - Working rules for agents: [CLAUDE.md](CLAUDE.md).
 - Architecture and decisions (F1–F18): [docs/architecture.md](docs/architecture.md).
+- How the app uses the design system: [docs/design-system.md](docs/design-system.md); accessibility rules:
+  [docs/accessibility.md](docs/accessibility.md).
 - Handoff and proof of what ran: [docs/progress.md](docs/progress.md).
 - Engineering review of the harness (2026-10-20):
   [ahoy-hosted/docs/harness-review-2026-10-20.md](https://github.com/Danielimaalmeida/ahoy-hosted/blob/main/docs/harness-review-2026-10-20.md).
@@ -34,7 +36,7 @@ src/
                           meetings/
 scripts/check-boundaries.mjs                  layer rules, part of npm run typecheck
 scripts/redact.mjs                            redacted copy for an external model, and --unredact (as in ahoy-hosted)
-src/proxy.conf.json                           dev-server proxy to a local hosted API (proxy.conf.mjs is not read)
+src/proxy.conf.json                           dev-server proxy to a local hosted API
 docs/design/                                  copies of the wireframes and the design system (don't edit)
 ```
 
@@ -43,6 +45,7 @@ docs/design/                                  copies of the wireframes and the d
 | Command                    | What it does                                                                                                          |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `npm start`                | `ng serve` on <http://localhost:4200> with the API proxy (`src/proxy.conf.json`).                                     |
+| `npm run start:local`      | `ng serve` with the `local` configuration: the same proxy, signed in as a fixed local user, no WebEAM (below).        |
 | `npm run start:test`       | `ng serve` with the `test` configuration and the checked-in TEST API proxy (`src/proxy.conf.test.json`).              |
 | `npm run build`            | Production build into `dist/ahoy-frontend/`.                                                                          |
 | `npm test`                 | Unit and component tests (Vitest through `ng test`, jsdom), once.                                                     |
@@ -62,9 +65,17 @@ writes `.work/unredacted/`, with the rules in `scripts/redact-rules.txt` and `.l
 ## Running against the hosted API (local, 0 AIU)
 
 ```bash
-cd ../ahoy-hosted && npm run dev -- --simulate   # local API with AHOY_AUTH=dev, simulated runs (0 AIU)
-cd ../ahoy-frontend && npm start                 # http://localhost:4200
+cd ../ahoy-hosted && npm run dev -- --simulate --web   # the local API (AHOY_AUTH=dev, 0 AIU) and this app, together
 ```
+
+Or on their own: `npm run dev -- --simulate` in `ahoy-hosted`, then `npm run start:local` here (or `npm start` to sign
+in through WebEAM). `--web` runs `ng serve --configuration local` in this clone (`AHOY_FRONTEND_DIR`, or the folder
+next to `ahoy-hosted`) as its `[web]` process, and Ctrl-C stops it with the API. Run `npm ci` here first.
+
+The `local` configuration (`src/environments/environment.local.ts`, `mockAuth: true`) gives the auth library's own
+mock (`MockAuthService`) the user `LOCAL_USER` of `app.config.ts`: signed in at once, no company network needed. The
+library refuses the mock when `production` is true. The local API ignores its token and takes the actor from the
+proxy's `X-Ahoy-Actor`.
 
 The browser only calls the relative `/api/v1`. `src/proxy.conf.json` forwards `/api` to `http://127.0.0.1:8080` with
 `X-Ahoy-Actor: dev-user`, which the API needs in `AHOY_AUTH=dev`, and the WebEAM paths to the SSO host.

@@ -4,7 +4,7 @@ Shows where a voyage is in intake → planning → plan_review → implementatio
 
 - `ah-step--done`: passed phases (accent-soft, check mark).
 - `ah-step--current`: the phase the voyage is in (accent fill). Exactly one.
-- `ah-step--stopped`: the phase a voyage is anchored or aground in (status-halted colours, "!"). Replaces current.
+- `ah-step--stopped`: the phase a voyage is halted or blocked in (status-halted colours, "!"). Replaces current.
 - plain `ah-step`: phases still ahead. Show all of them, even ones without screens yet.
 
 Labels are the API phase names; they are short and people learn them. In tables use the compact `ah-dots` form (7 bars, `is-done`, `is-current`, `is-stopped`) with an `aria-label` such as "Phase 3 of 7".

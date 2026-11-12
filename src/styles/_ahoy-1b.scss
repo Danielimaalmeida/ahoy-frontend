@@ -46,6 +46,65 @@ ah-status-badge {
   stroke-width: 1.6;
 }
 
+// The EmptyState's actions sit side by side (the main one first) and wrap on a phone; with none, the row takes no
+// room. Its sentence keeps to a readable measure.
+.ah-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.ah-empty__actions:empty {
+  display: none;
+}
+
+.ah-empty .ah-muted {
+  max-width: 62ch;
+}
+
+// The first use of a screen (`size="page"`): the icon in a soft circle, a little more air, and room below the actions
+// for steps or a form, which keep their own left alignment.
+.ah-empty--page {
+  padding: var(--space-8) var(--space-6);
+  gap: var(--space-3\.5);
+}
+
+.ah-empty__mark {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+}
+
+.ah-empty--page .ah-empty__title {
+  font-size: 18px;
+}
+
+.ah-empty--page > [ahEmptyExtra] {
+  align-self: stretch;
+  margin-top: var(--space-3);
+  text-align: left;
+}
+
+// Inside a table or a list that keeps its header (`size="compact"`): a smaller icon and less padding.
+.ah-empty--compact {
+  padding: var(--space-6) var(--space-4);
+  gap: var(--space-2);
+}
+
+.ah-empty--compact svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+}
+
+.ah-empty--compact .ah-empty__title {
+  font-size: 14px;
+}
+
 // Placeholder rows: the Skeleton preview lays each row out as a grid with a 14px gap, with the track widths inline.
 .ah-skeleton-rows {
   display: flex;

@@ -1,7 +1,11 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import {
+  provideRouter,
+  Router,
+  withComponentInputBinding,
+} from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { FedevAuthService } from '@acme-fedev/auth';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -62,9 +66,10 @@ async function flush(page: { harness: RouterTestingHarness }): Promise<void> {
 /** The Meetings routes on the seeded mock, opened at `url`. */
 async function open(
   url: string,
-  prepare: (server: MockAhoyServer) => void = () => undefined
+  prepare: (server: MockAhoyServer) => void = () => undefined,
+  options: { readonly seed?: boolean; readonly wait?: boolean } = {}
 ): Promise<Page> {
-  const { server, clock } = testServer();
+  const { server, clock } = testServer(options);
   prepare(server);
   const requests = record(server);
   TestBed.configureTestingModule({
@@ -91,7 +96,7 @@ async function open(
     requests,
     root: harness.fixture.nativeElement as HTMLElement,
   };
-  await flush(page);
+  if (options.wait !== false) await flush(page);
   return page;
 }
 
@@ -132,6 +137,23 @@ function dialog(): HTMLElement {
   );
   if (element === null) throw new Error('no dialog open');
   return element;
+}
+
+/** The input or textarea a field's label names. */
+function fieldNamed(
+  root: HTMLElement,
+  label: string
+): HTMLInputElement | HTMLTextAreaElement {
+  const found = [...root.querySelectorAll('label')].find(
+    (l) => text(l).replace(/\s*(\*|\(optional\))$/, '') === label
+  );
+  const id = found?.getAttribute('for');
+  const control =
+    id === null || id === undefined
+      ? null
+      : root.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`);
+  if (control === null) throw new Error(`no field labelled ${label}`);
+  return control;
 }
 
 const titles = (root: HTMLElement) =>
@@ -186,6 +208,43 @@ describe('Meetings on the mock backend', () => {
     expect(
       notesOf(card(page.root, 'Late fees for enterprise accounts'))
     ).toEqual(['1.5% per month, capped at 10% of the invoice.']);
+  });
+
+  it('shows the shape of a meeting until it is read with its open actions, so nothing appears under it later', async () => {
+    const page = await open(
+      '/meetings',
+      (server) => {
+        server.switches.latencyMs = 1000;
+      },
+      { wait: false }
+    );
+    // Every answer waits a second on the mock's clock, so the page is never stable until the last one.
+    const step = async () => {
+      page.clock.advance(1000);
+      for (let i = 0; i < 3; i++) {
+        await settle();
+        page.harness.detectChanges();
+      }
+    };
+    const loading = () =>
+      page.root.querySelector('[aria-label="Loading the meeting"]');
+    const notesRead = () =>
+      page.requests.some((r) => r.path.endsWith('/meeting-notes'));
+    page.harness.detectChanges();
+    expect(loading()?.getAttribute('aria-busy')).toBe('true');
+    for (let i = 0; i < 8 && !notesRead(); i++) {
+      expect(loading()).not.toBeNull();
+      expect(page.root.querySelector('h1')).toBeNull();
+      await step();
+    }
+    // The mock records a request when it answers it: the meeting was answered a step before its open notes.
+    expect(page.requests.some((r) => /^\/meetings\/[^/]+$/.test(r.path))).toBe(
+      true
+    );
+    expect(notesRead()).toBe(true);
+    expect(loading()).toBeNull();
+    expect(text(page.root.querySelector('h1'))).toBe('Finance sync');
+    expect(page.root.querySelector('ah-actions-panel section')).not.toBeNull();
   });
 
   it('tags topics and the composer with the names Team settings › Meetings gives the two sides', async () => {
@@ -302,6 +361,38 @@ describe('Meetings on the mock backend', () => {
       raisedBy: 'them',
       raisedByStakeholder: 'jordan@example.com',
     });
+  });
+
+  it('starts the composer on the side of the person signed in, as the stakeholder they are', async () => {
+    const page = await open('/meetings', (server) =>
+      server.setMe('Jordan@example.com', 'them')
+    );
+    const composer = page.root.querySelector<HTMLElement>('ah-topic-composer')!;
+    expect(
+      buttonNamed(composer, 'Stakeholders').getAttribute('aria-pressed')
+    ).toBe('true');
+    expect(composer.querySelector<HTMLSelectElement>('#topic-who')!.value).toBe(
+      'jordan@example.com'
+    );
+    type(composer.querySelector('#topic-title'), 'Invoices in two currencies');
+    submit(composer.querySelector('form'));
+    await flush(page);
+    expect(
+      page.requests.find(
+        (r) => r.method === 'POST' && r.path.endsWith('/topics')
+      )?.body
+    ).toEqual({
+      title: 'Invoices in two currencies',
+      raisedBy: 'them',
+      raisedByStakeholder: 'jordan@example.com',
+    });
+
+    buttonNamed(composer, 'Us').click();
+    await flush(page);
+    expect(buttonNamed(composer, 'Us').getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+    expect(page.requests.filter((r) => r.path === '/me')).toHaveLength(1);
   });
 
   it('keeps the stakeholder picked for the next topic when a topic is moved up in the same meeting', async () => {
@@ -956,10 +1047,17 @@ describe('Meetings on the mock backend', () => {
     expect(text(page.root.querySelector('.identity .ah-badge'))).toBe(
       'Planned'
     );
-    expect(text(page.root.querySelector('.topics-head h2'))).toBe(
-      'Topics to raise'
+    const empty = page.root.querySelector('.ah-empty--page');
+    expect(text(empty?.querySelector('.ah-empty__title'))).toBe(
+      'No topics yet'
     );
-    expect(text(page.root.querySelector('.none'))).toContain('No topics yet');
+    expect(empty?.querySelector('ah-topic-composer')).not.toBeNull();
+    expect(page.root.querySelectorAll('ah-topic-composer')).toHaveLength(1);
+    expect(page.root.querySelector('.topics-head')).toBeNull();
+    expect(
+      buttonNamed(page.root.querySelector('.header')!, 'Copy for Confluence')
+        .disabled
+    ).toBe(true);
     buttonNamed(page.root.querySelector('.header')!, 'Start meeting').click();
     await flush(page);
     expect(text(page.root.querySelector('.identity .ah-badge'))).toBe(
@@ -981,6 +1079,7 @@ describe('Meetings on the mock backend', () => {
       [...header.querySelectorAll('.actions button')].map((b) => text(b))
     ).toEqual([
       'Copy for Confluence',
+      'Create in Confluence',
       'Cancel meeting',
       'Mark done',
       'Start meeting',
@@ -1142,22 +1241,22 @@ describe('Meetings on the mock backend', () => {
       [...page.root.querySelectorAll('.header .actions button')].map((b) =>
         text(b)
       )
-    ).toEqual(['Copy for Confluence']);
+    ).toEqual(['Copy for Confluence', 'Create in Confluence']);
   });
 
   it('says it cannot reach Ahoy when the list fails, and reads it again on Try again', async () => {
     const page = await open('/meetings', (server) => {
       server.switches.failNext = 503;
     });
-    expect(text(page.root.querySelector('main ah-banner'))).toContain(
+    expect(text(page.root.querySelector('.meetings-main ah-banner'))).toContain(
       "Can't reach Ahoy"
     );
     buttonNamed(
-      page.root.querySelector('main ah-banner')!,
+      page.root.querySelector('.meetings-main ah-banner')!,
       'Try again'
     ).click();
     await flush(page);
-    expect(page.root.querySelector('main > ah-banner')).toBeNull();
+    expect(page.root.querySelector('.meetings-main > ah-banner')).toBeNull();
     expect(text(page.root.querySelector('h1'))).toBe('Finance sync');
   });
 
@@ -1679,6 +1778,122 @@ describe('Meetings on the mock backend', () => {
     ).toBeDefined();
   });
 
+  it('edits the drafted story by hand before creating it, and Jira gets the story as edited', async () => {
+    const page = await open('/meetings');
+    const title = 'Late fees for enterprise accounts';
+    buttonNamed(card(page.root, title), 'Turn into a user story').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Draft it for me').click();
+    await flush(page);
+    page.clock.advance(Math.max(MOCK_DRAFT_MS, DRAFT_POLL_MS));
+    await flush(page);
+    buttonNamed(card(page.root, title), 'Check the story').click();
+    await flush(page);
+
+    const editOf = (name: string) => {
+      const button = dialog().querySelector<HTMLButtonElement>(
+        `button[aria-label="Edit ${name}"]`
+      );
+      if (button === null) throw new Error(`no Edit for ${name}`);
+      return button;
+    };
+    const puts = () =>
+      page.requests.filter(
+        (r) => r.method === 'PUT' && r.path.endsWith('/story')
+      );
+
+    // Only the section being edited turns into its field; Esc puts it back unchanged, and the dialog stays open.
+    editOf('title').click();
+    await flush(page);
+    const titleField = fieldNamed(dialog(), 'Title');
+    expect(document.activeElement).toBe(titleField);
+    expect(dialog().querySelectorAll('textarea, input')).toHaveLength(1);
+    expect(buttonNamed(dialog(), 'Create in Jira').disabled).toBe(true);
+    expect(dialog().querySelector('button[aria-label^="Edit "]')).toBeNull();
+    type(titleField, 'Something else');
+    titleField.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
+    await flush(page);
+    expect(dialog().querySelectorAll('textarea, input')).toHaveLength(0);
+    expect(document.activeElement).toBe(editOf('title'));
+    expect(puts()).toHaveLength(0);
+
+    // A blank title or no criterion is refused before anything is sent.
+    editOf('title').click();
+    await flush(page);
+    type(fieldNamed(dialog(), 'Title'), '   ');
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(text(dialog())).toContain('This is required.');
+    type(
+      fieldNamed(dialog(), 'Title'),
+      '  Charge late fees on overdue invoices '
+    );
+
+    // A save that fails keeps the section open with the typed text, and says why.
+    page.server.switches.failNext = 503;
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(puts()).toHaveLength(1);
+    expect(fieldNamed(dialog(), 'Title').value).toBe(
+      '  Charge late fees on overdue invoices '
+    );
+    expect(dialog().querySelector('[role="alert"]')).not.toBeNull();
+
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(puts()).toHaveLength(2);
+    expect(text(dialog().querySelector('article h3'))).toBe(
+      'Charge late fees on overdue invoices'
+    );
+
+    editOf('acceptance criteria').click();
+    await flush(page);
+    const criteria = fieldNamed(dialog(), 'Acceptance criteria');
+    type(criteria, '\n  \n');
+    buttonNamed(dialog(), 'Save').click();
+    await flush(page);
+    expect(text(dialog())).toContain('Write at least one, one per line.');
+    type(
+      criteria,
+      'Only enterprise accounts get a fee.\n\nFinance approves each waiver.'
+    );
+    criteria.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Enter',
+        ctrlKey: true,
+        bubbles: true,
+      })
+    );
+    await flush(page);
+
+    expect(puts()).toHaveLength(3);
+    expect(puts()[2]?.body).toMatchObject({
+      title: 'Charge late fees on overdue invoices',
+      acceptanceCriteria: [
+        'Only enterprise accounts get a fee.',
+        'Finance approves each waiver.',
+      ],
+    });
+    expect(
+      [...dialog().querySelectorAll('article ol li')].map((li) => text(li))
+    ).toEqual([
+      'Only enterprise accounts get a fee.',
+      'Finance approves each waiver.',
+    ]);
+    expect(text(dialog())).toContain('Edited by dev@ on');
+
+    buttonNamed(dialog(), 'Create in Jira').click();
+    await flush(page);
+    const meetingId = page.server.meetingDesk.list('in_progress')[0]!.id;
+    const created = page.server.meetingDesk.listDrafts(meetingId)[0]!;
+    expect([created.status, created.story?.title]).toEqual([
+      'created',
+      'Charge late fees on overdue invoices',
+    ]);
+  });
+
   it('does not create a story until the series has a Jira project, and lets the person set it from the review', async () => {
     const page = await open('/meetings', (server) => {
       const series = server.meetingDesk.listSeries()[0]!;
@@ -1701,6 +1916,390 @@ describe('Meetings on the mock backend', () => {
       'This series has no Jira project yet'
     );
   });
+
+  describe('Create in Confluence', () => {
+    /** The parent page cards in the open dialog: their title and where they sit. */
+    const parents = () =>
+      [...dialog().querySelectorAll('.ah-choice')].map(
+        (c) =>
+          `${text(c.querySelector('b'))} — ${text(c.querySelector('.ah-choice__desc'))}`
+      );
+    const pick = (title: string) => {
+      const found = [
+        ...dialog().querySelectorAll<HTMLLabelElement>('.ah-choice'),
+      ].find((c) => text(c.querySelector('b')) === title);
+      if (found === undefined) throw new Error(`no page ${title}`);
+      found.querySelector('input')!.click();
+    };
+    const checked = () =>
+      text(
+        dialog()
+          .querySelector('.ah-choice input:checked')
+          ?.closest('.ah-choice')
+          ?.querySelector('b')
+      );
+
+    it('finds a parent page, creates the page with the meeting, then links to it; the series remembers the parent', async () => {
+      const page = await open('/meetings');
+      const header = () => page.root.querySelector('.header')!;
+      buttonNamed(header(), 'Create in Confluence').click();
+      await flush(page);
+      expect(text(dialog().querySelector('[role="status"]'))).toBe(
+        '4 pages changed lately.'
+      );
+      expect(parents()).toContain(
+        'Finance sync notes — Project › Project home › Meeting notes'
+      );
+      expect(buttonNamed(dialog(), 'Create page').disabled).toBe(true);
+      const title = fieldNamed(dialog(), 'Title');
+      expect(title.value).toMatch(/^Finance sync · .+ \d{4}$/);
+
+      type(fieldNamed(dialog(), 'Find the parent page'), 'fin no');
+      await flush(page);
+      expect(text(dialog().querySelector('[role="status"]'))).toBe(
+        'Looking for pages…'
+      );
+      page.clock.advance(SEARCH_PAUSE_MS);
+      await flush(page);
+      expect(text(dialog().querySelector('[role="status"]'))).toBe(
+        '1 page matches.'
+      );
+      pick('Finance sync notes');
+      await flush(page);
+      type(title, 'Finance sync minutes');
+      await flush(page);
+      buttonNamed(dialog(), 'Create page').click();
+      await flush(page);
+
+      expect(document.querySelector('.cdk-overlay-container .ah-dialog')).toBe(
+        null
+      );
+      const sent = page.requests.find((r) =>
+        r.path.endsWith('/confluence-page')
+      )!;
+      expect(sent.body).toMatchObject({
+        parentId: '100003',
+        title: 'Finance sync minutes',
+        body: expect.stringContaining('h1. Finance sync'),
+      });
+      const link = header().querySelector<HTMLAnchorElement>('a[ahButton]')!;
+      expect(text(link)).toBe('Open in Confluence');
+      expect(link.href).toMatch(/pageId=\d+$/);
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toContain('noopener');
+      expect(() => buttonNamed(header(), 'Create in Confluence')).toThrow();
+      expect(
+        TestBed.inject(ToastService)
+          .toasts()
+          .map((t) => t.text)
+      ).toContain('Page “Finance sync minutes” created in Confluence.');
+
+      page.root
+        .querySelector<HTMLAnchorElement>('aside ul:nth-of-type(2) a.line')!
+        .click();
+      await flush(page);
+      const composer =
+        page.root.querySelector<HTMLElement>('ah-topic-composer')!;
+      type(composer.querySelector('#topic-title'), 'Supplier prices');
+      submit(composer.querySelector('form'));
+      await flush(page);
+      buttonNamed(header(), 'Create in Confluence').click();
+      await flush(page);
+      expect(checked()).toBe('Finance sync notes');
+      expect(buttonNamed(dialog(), 'Create page').disabled).toBe(false);
+    });
+
+    it('says Confluence is not connected and where an admin connects it', async () => {
+      const page = await open('/meetings', (server) => {
+        server.meetingDesk.confluenceConnected = false;
+      });
+      buttonNamed(
+        page.root.querySelector('.header')!,
+        'Create in Confluence'
+      ).click();
+      await flush(page);
+      const banner = dialog().querySelector('ah-banner')!;
+      expect(text(banner)).toContain("Confluence isn't connected");
+      expect(banner.querySelector('a')?.getAttribute('href')).toBe(
+        '/settings/confluence'
+      );
+      expect(parents()).toEqual([]);
+    });
+
+    it('keeps the dialog open with the reason when Confluence refuses the title', async () => {
+      const page = await open('/meetings');
+      buttonNamed(
+        page.root.querySelector('.header')!,
+        'Create in Confluence'
+      ).click();
+      await flush(page);
+      pick('Meeting notes');
+      type(fieldNamed(dialog(), 'Title'), 'Release notes');
+      await flush(page);
+      buttonNamed(dialog(), 'Create page').click();
+      await flush(page);
+      expect(text(dialog().querySelector('ah-banner'))).toContain(
+        'Space PROJ already has a page called "Release notes"'
+      );
+      expect(fieldNamed(dialog(), 'Title').value).toBe('Release notes');
+    });
+  });
+});
+
+describe('Meetings empty states', () => {
+  const actor = 'alex@example.com';
+  /** The seeded Finance sync meetings: next week's planned one, today's running one and last week's. */
+  const seeded = (server: MockAhoyServer) => {
+    const [planned, running, past] = server.meetingDesk.list();
+    return { planned: planned!, running: running!, past: past! };
+  };
+
+  it('explains meetings on the first use, and opens New meeting with a new series for New weekly series', async () => {
+    const page = await open(
+      '/meetings',
+      (server) =>
+        void server.meetingDesk.createSeries(actor, {
+          name: 'Ops review',
+          stakeholders: [],
+        }),
+      { seed: false }
+    );
+    expect(text(page.root.querySelector('aside .empty'))).toBe(
+      'Your meetings will be listed here.'
+    );
+    const empty = page.root.querySelector<HTMLElement>('.ah-empty--page')!;
+    expect(text(empty.querySelector('.ah-empty__title'))).toBe(
+      'No meetings yet'
+    );
+    expect(text(empty)).toContain(
+      'In a series, open topics move on to the next meeting when one ends.'
+    );
+    expect(
+      [...empty.querySelectorAll('.ah-empty__actions button')].map((b) =>
+        text(b)
+      )
+    ).toEqual(['New meeting', 'New weekly series']);
+    const series = page.server.meetingDesk.listSeries()[0]!;
+
+    buttonNamed(empty, 'New meeting').click();
+    await flush(page);
+    expect(dialog().querySelector<HTMLSelectElement>('select')!.value).toBe(
+      series.id
+    );
+    document.querySelector('.cdk-overlay-container')?.replaceChildren();
+
+    buttonNamed(empty, 'New weekly series').click();
+    await flush(page);
+    expect(dialog().querySelector<HTMLSelectElement>('select')!.value).toBe(
+      'new'
+    );
+  });
+
+  it('says when the last meeting was when nothing is planned, and plans the next one a cadence later', async () => {
+    const page = await open('/meetings', (server) => {
+      const { planned, running } = seeded(server);
+      server.meetingDesk.cancel(actor, planned.id, []);
+      server.meetingDesk.end(actor, running.id, []);
+    });
+    const { running } = (() => {
+      const [, r] = page.server.meetingDesk.list();
+      return { running: r! };
+    })();
+    buttonNamed(page.root.querySelector('aside .views')!, 'Upcoming').click();
+    await flush(page);
+    const nothing = page.root.querySelector<HTMLElement>('aside .nothing')!;
+    expect(text(nothing)).toContain('Nothing scheduled');
+    expect(text(nothing)).toContain(
+      `The last meeting was Finance sync on ${meetingDay(running.startsAt)}.`
+    );
+    expect(nothing.querySelector('a')?.getAttribute('href')).toBe(
+      `/meetings/${running.id}`
+    );
+    expect(buttonNamed(nothing, 'See past meetings (3)')).toBeTruthy();
+
+    buttonNamed(nothing, 'Schedule next Finance sync').click();
+    await flush(page);
+    const next = page.server.meetingDesk
+      .list('planned')
+      .find((m) => m.startsAt > running.startsAt)!;
+    expect(next.startsAt).toBe('2026-10-13T09:40:00.000Z');
+    expect(next.endsAt).toBe('2026-10-13T10:40:00.000Z');
+    expect(TestBed.inject(Router).url).toBe(`/meetings/${next.id}`);
+  });
+
+  it('opens New meeting with the series chosen to schedule the next one when the series has no cadence', async () => {
+    const page = await open(
+      '/meetings',
+      (server) => {
+        const series = server.meetingDesk.createSeries(actor, {
+          name: 'Ops review',
+          stakeholders: [],
+        });
+        const met = server.meetingDesk.create(actor, {
+          seriesId: series.id,
+          startsAt: '2026-10-05T09:00:00.000Z',
+        });
+        server.meetingDesk.end(actor, met.id, []);
+      },
+      { seed: false }
+    );
+    buttonNamed(page.root.querySelector('aside .views')!, 'Upcoming').click();
+    await flush(page);
+    const before = page.server.meetingDesk.list().length;
+    buttonNamed(
+      page.root.querySelector('aside .nothing')!,
+      'Schedule next Ops review'
+    ).click();
+    await flush(page);
+    expect(dialog().querySelector<HTMLSelectElement>('select')!.value).toBe(
+      page.server.meetingDesk.listSeries()[0]!.id
+    );
+    expect(page.server.meetingDesk.list()).toHaveLength(before);
+  });
+
+  it('shows past meetings from the nothing-scheduled line', async () => {
+    const page = await open('/meetings', (server) => {
+      const { planned, running } = seeded(server);
+      server.meetingDesk.cancel(actor, planned.id, []);
+      server.meetingDesk.end(actor, running.id, []);
+    });
+    const views = page.root.querySelector('aside .views')!;
+    buttonNamed(views, 'Upcoming').click();
+    await flush(page);
+    buttonNamed(
+      page.root.querySelector('aside .nothing')!,
+      'See past meetings (3)'
+    ).click();
+    await flush(page);
+    expect(text(views.querySelector('[aria-pressed="true"]'))).toBe('Past');
+  });
+
+  it('offers to carry over what the previous meeting left open into a meeting with no topics', async () => {
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      const { planned, running } = seeded(server);
+      plannedId = planned.id;
+      const tax = server.meetingDesk
+        .get(running.id)
+        .topics.find((t) => t.title === 'Tax ID validation for EU customers')!;
+      server.meetingDesk.addNote(actor, tax.id, {
+        text: 'Check the VIES service',
+        kind: 'action',
+        owner: 'Sam',
+      });
+      server.meetingDesk.addNote(actor, tax.id, {
+        text: 'Which countries first?',
+        kind: 'question',
+      });
+    });
+    const running = page.server.meetingDesk.list('in_progress')[0]!;
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    const open_ = page.root.querySelector<HTMLElement>('.still-open')!;
+    expect(text(open_.querySelector('h2'))).toBe(
+      `Still open from ${meetingDay(running.startsAt)}`
+    );
+    const rows = [...open_.querySelectorAll('li')];
+    expect(rows).toHaveLength(1);
+    expect(text(rows[0])).toContain('Tax ID validation for EU customers');
+    expect(
+      [...rows[0]!.querySelectorAll('.ah-tag')].map((t) => text(t))
+    ).toEqual(['1 action open', '1 question']);
+
+    buttonNamed(rows[0]!, 'Carry over').click();
+    await flush(page);
+    expect(titles(page.root)).toEqual(['Tax ID validation for EU customers']);
+    expect(page.root.querySelector('.still-open')).toBeNull();
+    expect(
+      page.server.meetingDesk.get(plannedId).topics.map((t) => t.title)
+    ).toEqual(['Tax ID validation for EU customers']);
+  });
+
+  it('lists what a closed previous meeting left open without offering to move it', async () => {
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      const { planned, running } = seeded(server);
+      plannedId = planned.id;
+      const tax = server.meetingDesk
+        .get(running.id)
+        .topics.find((t) => t.title === 'Tax ID validation for EU customers')!;
+      server.meetingDesk.addNote(actor, tax.id, {
+        text: 'Check the VIES service',
+        kind: 'action',
+      });
+      server.meetingDesk.end(actor, running.id, []);
+    });
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    const open_ = page.root.querySelector<HTMLElement>('.still-open')!;
+    expect(text(open_)).toContain('Tax ID validation for EU customers');
+    expect([...open_.querySelectorAll('button')].map((b) => text(b))).toEqual(
+      []
+    );
+    expect(text(open_)).toContain('That meeting is closed');
+  });
+
+  it('says an ended meeting had no notes, and lists its topics instead of cards', async () => {
+    let id = '';
+    const page = await open('/meetings', (server) => {
+      id = server.meetingDesk.create(actor, {
+        title: 'Quiet review',
+        startsAt: '2026-10-05T09:00:00.000Z',
+      }).id;
+      server.meetingDesk.addTopic(actor, id, {
+        title: 'Budget',
+        raisedBy: 'us',
+      });
+      server.meetingDesk.addTopic(actor, id, {
+        title: 'Hiring',
+        raisedBy: 'us',
+      });
+      server.meetingDesk.end(actor, id, []);
+    });
+    await page.harness.navigateByUrl(`/meetings/${id}`);
+    await flush(page);
+    const empty = page.root.querySelector('.ah-empty--page');
+    expect(text(empty?.querySelector('.ah-empty__title'))).toBe(
+      'No notes were taken in this meeting'
+    );
+    expect(text(empty)).toContain(
+      '2 topics were on the list, with no notes under them.'
+    );
+    expect(empty?.querySelector('button')).toBeNull();
+    expect(page.root.querySelector('ah-topic-card')).toBeNull();
+    expect(
+      [...page.root.querySelectorAll('.silent-topics li')].map((li) => text(li))
+    ).toEqual(['Budget no notes', 'Hiring no notes']);
+  });
+
+  it('makes the line for the first note of a topic its empty state, light until it is used', async () => {
+    const page = await open('/meetings');
+    const quiet = card(page.root, 'Tax ID validation for EU customers');
+    const busy = card(page.root, 'Overdue invoice reminders');
+    expect(text(quiet.querySelector('.no-notes'))).toBe('· no notes yet');
+    expect(busy.querySelector('.no-notes')).toBeNull();
+    const form = quiet.querySelector<HTMLFormElement>('form')!;
+    const line = form.querySelector<HTMLTextAreaElement>('textarea')!;
+    expect(form.classList).toContain('first');
+    expect(form.classList).toContain('collapsed');
+    expect(line.placeholder).toBe('Write a note…');
+    expect(form.querySelector('.first-hint')).toBeNull();
+
+    line.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    page.harness.detectChanges();
+    expect(form.classList).not.toContain('collapsed');
+    expect(line.placeholder).toBe(
+      'Write the first note. What was said, decided or agreed?'
+    );
+    expect(text(form.querySelector('.first-hint'))).toBe(
+      'Enter adds it · Shift+Enter for a new line · /d /a /q for a decision, action or question'
+    );
+
+    line.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    page.harness.detectChanges();
+    expect(form.classList).toContain('collapsed');
+    expect(busy.querySelector('form')!.classList).not.toContain('first');
+  });
 });
 
 describe('meetingLine', () => {
@@ -1722,6 +2321,8 @@ describe('meetingLine', () => {
     updatedAt: '2026-10-01T10:00:00.000Z',
     jiraProjectKey: null,
     jiraIssueType: null,
+    confluencePage: null,
+    confluenceParent: null,
   } as const;
 
   it('says how many topics a meeting has, and that it is in progress when it runs', () => {

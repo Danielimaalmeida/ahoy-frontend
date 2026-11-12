@@ -1,4 +1,5 @@
 import type {
+  ConfluencePageList,
   EndMeetingResult,
   Meeting,
   MeetingList,
@@ -744,6 +745,52 @@ describe('the mock meetings', () => {
       ).toBe(409);
     });
 
+    it('saves an edit of a ready story, trimmed, and refuses one while it is written, blank or after Jira', () => {
+      const { server, clock, topic } = withTopic();
+      const draft = call(
+        server,
+        'POST',
+        `/meeting-topics/${topic.id}/story-drafts`,
+        { confirmSpend: true }
+      ).body as MeetingStoryDraft;
+      const story = {
+        title: '  Charge late fees ',
+        role: 'a finance user',
+        want: 'a late fee on overdue invoices',
+        soThat: 'customers pay on time',
+        context: null,
+        implementedFeature: null,
+        acceptanceCriteria: ['Only enterprise accounts get a fee.'],
+        outOfScope: [],
+        dependencies: [],
+        testNotes: [],
+        openQuestions: [],
+      };
+      const path = `/meeting-story-drafts/${draft.id}/story`;
+      expect(call(server, 'PUT', path, story).status).toBe(409);
+      clock.advance(MOCK_DRAFT_MS);
+      expect(
+        call(server, 'PUT', path, { ...story, acceptanceCriteria: [] }).status
+      ).toBe(400);
+      expect(call(server, 'PUT', path, { ...story, want: '  ' }).status).toBe(
+        400
+      );
+      const edited = call(server, 'PUT', path, story).body as MeetingStoryDraft;
+      expect([
+        edited.status,
+        edited.story?.title,
+        edited.editedBy !== null,
+        edited.editedAt !== null,
+      ]).toEqual(['ready', 'Charge late fees', true, true]);
+      const created = call(
+        server,
+        'POST',
+        `/meeting-story-drafts/${draft.id}/create-issue`
+      ).body as MeetingStoryDraft;
+      expect(created.story?.title).toBe('Charge late fees');
+      expect(call(server, 'PUT', path, story).status).toBe(409);
+    });
+
     it('follows the series when its Jira project is turned off, and then refuses to create', () => {
       const { server, clock, meeting, topic } = withTopic();
       const draft = call(
@@ -863,6 +910,70 @@ describe('the mock meetings', () => {
         call(server, 'POST', `/meeting-story-drafts/${draft.id}/answers`, {
           confirmSpend: true,
           answers: [],
+        }).status
+      ).toBe(409);
+    });
+  });
+  describe('Confluence pages', () => {
+    it('finds parent pages by the start of their title words, and lists them all for a blank search', () => {
+      const { server } = seeded();
+      const titles = (q: string) =>
+        (
+          call(server, 'GET', `/confluence/pages?q=${q}`)
+            .body as ConfluencePageList
+        ).items.map((p) => p.title);
+      expect(titles('')).toHaveLength(4);
+      expect(titles('meet')).toEqual(['Meeting notes']);
+      expect(titles('sync no')).toEqual(['Finance sync notes']);
+    });
+
+    it('creates the page of a meeting once, refuses a title the space has, and remembers the parent for the series', () => {
+      const { server, list } = seeded();
+      const ended = list.items.find((m) => m.status === 'ended')!;
+      const planned = list.items.find((m) => m.status === 'planned')!;
+      const path = `/meetings/${ended.id}/confluence-page`;
+      expect(
+        call(server, 'POST', path, {
+          parentId: '100002',
+          title: 'Release notes',
+          body: '<p>Notes</p>',
+        }).status
+      ).toBe(400);
+      const created = call(server, 'POST', path, {
+        parentId: '100002',
+        title: 'Finance sync · notes',
+        body: '<p>Notes</p>',
+      });
+      expect(created.status).toBe(201);
+      const meeting = created.body as Meeting;
+      expect(meeting.confluencePage?.title).toBe('Finance sync · notes');
+      expect(meeting.confluencePage?.url).toMatch(/pageId=/);
+      expect(meeting.confluenceParent).toEqual({
+        id: '100002',
+        title: 'Meeting notes',
+      });
+      expect(
+        (call(server, 'GET', `/meetings/${planned.id}`).body as Meeting)
+          .confluenceParent
+      ).toEqual({ id: '100002', title: 'Meeting notes' });
+      expect(
+        call(server, 'POST', path, {
+          parentId: '100002',
+          title: 'Another title',
+          body: '<p>Notes</p>',
+        }).status
+      ).toBe(409);
+    });
+
+    it('refuses to search or create while Confluence is not connected', () => {
+      const { server, running } = seeded();
+      server.meetingDesk.confluenceConnected = false;
+      expect(call(server, 'GET', '/confluence/pages').status).toBe(409);
+      expect(
+        call(server, 'POST', `/meetings/${running.id}/confluence-page`, {
+          parentId: '100002',
+          title: 'Finance sync',
+          body: '<p>Notes</p>',
         }).status
       ).toBe(409);
     });

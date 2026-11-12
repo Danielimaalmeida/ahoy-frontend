@@ -49,6 +49,12 @@ import addSonarRepository from '@testing/fixtures/addSonarRepository.json';
 import addSonarServer from '@testing/fixtures/addSonarServer.json';
 import getMe from '@testing/fixtures/getMe.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
+import getConfluenceSettings from '@testing/fixtures/getConfluenceSettings.json';
+import putConfluenceConnection from '@testing/fixtures/putConfluenceConnection.json';
+import updateConfluenceSettings from '@testing/fixtures/updateConfluenceSettings.json';
+import testConfluenceConnection from '@testing/fixtures/testConfluenceConnection.json';
+import searchConfluencePages from '@testing/fixtures/searchConfluencePages.json';
+import createMeetingConfluencePage from '@testing/fixtures/createMeetingConfluencePage.json';
 import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
 import listJiraFields from '@testing/fixtures/listJiraFields.json';
 import previewJiraBacklog from '@testing/fixtures/previewJiraBacklog.json';
@@ -67,6 +73,7 @@ import createMeeting from '@testing/fixtures/createMeeting.json';
 import createMeetingSeries from '@testing/fixtures/createMeetingSeries.json';
 import answerMeetingStoryQuestions from '@testing/fixtures/answerMeetingStoryQuestions.json';
 import createMeetingStoryIssue from '@testing/fixtures/createMeetingStoryIssue.json';
+import editMeetingStory from '@testing/fixtures/editMeetingStory.json';
 import getMeetingStoryDraft from '@testing/fixtures/getMeetingStoryDraft.json';
 import listMeetingStoryDrafts from '@testing/fixtures/listMeetingStoryDrafts.json';
 import requestMeetingStoryDraft from '@testing/fixtures/requestMeetingStoryDraft.json';
@@ -268,6 +275,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['requestMeetingStoryDraft', requestMeetingStoryDraft],
   ['getMeetingStoryDraft', getMeetingStoryDraft],
   ['answerMeetingStoryQuestions', answerMeetingStoryQuestions],
+  ['editMeetingStory', editMeetingStory],
   ['createMeetingStoryIssue', createMeetingStoryIssue],
   ['getCrew', getCrew],
   ['addCrewMember', addCrewMember],
@@ -286,6 +294,12 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['testJiraConnection', testJiraConnection],
   ['previewJiraBacklog', previewJiraBacklog],
   ['listJiraFields', listJiraFields],
+  ['getConfluenceSettings', getConfluenceSettings],
+  ['putConfluenceConnection', putConfluenceConnection],
+  ['updateConfluenceSettings', updateConfluenceSettings],
+  ['testConfluenceConnection', testConfluenceConnection],
+  ['searchConfluencePages', searchConfluencePages],
+  ['createMeetingConfluencePage', createMeetingConfluencePage],
   ['getTeamsSettings', getTeamsSettings],
   ['putTeamsWebhook', putTeamsWebhook],
   ['updateTeamsSettings', updateTeamsSettings],
@@ -346,6 +360,7 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteSonarServer',
   'deleteSonarRepository',
   'deleteJiraSettings',
+  'deleteConfluenceSettings',
   'deleteTeamsSettings',
   'deleteBranchReleaseRepository',
   'deleteConversation',
@@ -384,7 +399,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      151
+      159
     );
   });
 
@@ -455,6 +470,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'addMeetingNoteImage',
       'addMeetingNoteAnswer',
       'createMeetingSeries',
+      'createMeetingConfluencePage',
     ])
       expect(statusOf(id)).toEqual(['201']);
     expect(statusOf('requestMeetingStoryDraft')).toEqual(['202']);

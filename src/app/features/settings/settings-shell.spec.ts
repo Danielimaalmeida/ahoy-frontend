@@ -10,6 +10,7 @@ import { API_BASE } from '@core/api/api-base';
 import { SetupStore } from '@core/stores/setup-store';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
+import getConfluenceSettings from '@testing/fixtures/getConfluenceSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
@@ -25,18 +26,21 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SETTINGS_ROUTES } from './settings.routes';
 import {
   isAgentSettingsPage,
+  isConfluenceSettingsPage,
   isFigmaSettingsPage,
   isPhaseSettingsPage,
   isTeamsSettingsPage,
 } from '@core/api/guards';
 import type {
   AgentSettingsPage,
+  ConfluenceSettingsPage,
   FigmaSettingsPage,
   PhaseSettingsPage,
   TeamsSettingsPage,
 } from '@core/api/types';
 import {
   agentsState,
+  confluenceState,
   figmaState,
   phasesState,
   teamsState,
@@ -48,6 +52,8 @@ function proven<T>(guard: (v: unknown) => v is T, value: unknown): T {
   return value;
 }
 const teams = (v: unknown): TeamsSettingsPage => proven(isTeamsSettingsPage, v);
+const confluence = (v: unknown): ConfluenceSettingsPage =>
+  proven(isConfluenceSettingsPage, v);
 const figma = (v: unknown): FigmaSettingsPage => proven(isFigmaSettingsPage, v);
 const agents = (v: unknown): AgentSettingsPage =>
   proven(isAgentSettingsPage, v);
@@ -82,6 +88,8 @@ describe('the Team settings frame', () => {
     for (const r of http.match(`${BASE}/setup`)) r.flush(getSetup);
     for (const r of http.match(`${BASE}/settings/jira`)) r.flush(jira);
     for (const r of http.match(`${BASE}/settings/sonar`)) r.flush(sonar);
+    for (const r of http.match(`${BASE}/settings/confluence`))
+      r.flush(getConfluenceSettings);
     for (const r of http.match(`${BASE}/settings/teams`))
       r.flush(getTeamsSettings);
     for (const r of http.match(`${BASE}/settings/figma`))
@@ -137,6 +145,7 @@ describe('the Team settings frame', () => {
       'Setup 6 of 8',
       'SonarQube 2 servers',
       'Jira On',
+      'Confluence On',
       'Teams On',
       'Figma On',
       'Agents 2 of 5 on',
@@ -169,6 +178,7 @@ describe('the Team settings frame', () => {
     for (const section of [
       'jira',
       'sonar',
+      'confluence',
       'teams',
       'figma',
       'agents',
@@ -209,7 +219,7 @@ describe('the Team settings frame', () => {
   });
 });
 
-describe('the state of the Teams, Figma, Agents and Phases sections in the navigation', () => {
+describe('the state of the Confluence, Teams, Figma, Agents and Phases sections in the navigation', () => {
   it('says Off, On, or what is needed for the channel and the token', () => {
     expect(teamsState(teams({ ...getTeamsSettings, teams: null }))).toEqual({
       label: 'Off',
@@ -238,6 +248,20 @@ describe('the state of the Teams, Figma, Agents and Phases sections in the navig
     });
     expect(
       figmaState(figma({ ...getFigmaSettings, tokenReadable: false }))
+    ).toEqual({ label: 'Token needed', off: true });
+    expect(confluenceState(confluence(getConfluenceSettings))).toEqual({
+      label: 'On',
+      off: false,
+    });
+    expect(
+      confluenceState(
+        confluence({ ...getConfluenceSettings, confluence: null })
+      )
+    ).toEqual({ label: 'Off', off: true });
+    expect(
+      confluenceState(
+        confluence({ ...getConfluenceSettings, tokenReadable: false })
+      )
     ).toEqual({ label: 'Token needed', off: true });
   });
 

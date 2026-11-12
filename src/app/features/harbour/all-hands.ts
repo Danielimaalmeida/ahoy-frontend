@@ -617,16 +617,19 @@ export class AllHandsPage {
   private readonly shown = signal(false);
 
   /**
-   * Whether there is something to show: the list was read and so were the events of each aground voyage, which say
-   * whether it belongs in the inbox. Showing the list before them would add rows under the person's eyes.
+   * Whether there is something to show: the list was read and so was what each row shows (or could not be), including
+   * the events of each aground voyage, which say whether it belongs in the inbox. Showing the list before them would add
+   * rows, and change labels and lines, under the person's eyes.
    */
   protected readonly loaded = computed(
     () =>
       this.shown() ||
       (this.listRead() &&
-        this.store
-          .aground()
-          .every((story) => this.details.eventsRead(story.key)))
+        [
+          ...this.store.needsYou(),
+          ...this.store.aground(),
+          ...this.atSea(),
+        ].every((story) => this.details.settled(story)))
   );
 
   /** Why there is nothing to show, when the first read failed. A later failure keeps the list on screen. */

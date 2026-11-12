@@ -1399,6 +1399,33 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/meetings/{meetingId}/confluence-page': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Create the meeting's page in Confluence, under a parent page.
+     * @description `body` is the page in Confluence wiki markup, as "Copy for Confluence" writes it; Confluence converts it. The
+     *     page goes to the parent's space, created as the owner of the token in the team settings, and the parent is
+     *     remembered for the meeting's series (`confluenceParent`). Any status. A meeting becomes one page:
+     *     `409 invalid_state` once it has one, and while Confluence is not connected. `400` when the token cannot see
+     *     the parent or the space already has a page with the title; `503` when Confluence refuses or does not answer.
+     *     0 AIU.
+     */
+    readonly post: operations['createMeetingConfluencePage'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meetings/{meetingId}/start': {
     readonly parameters: {
       readonly query?: never;
@@ -1932,6 +1959,31 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/meeting-story-drafts/{draftId}/story': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Save a person's edit of a ready draft's story, which Create in Jira then sends. 0 AIU.
+     * @description The whole story, in the template: it replaces the agent's story (kept in its run), and the draft answers who
+     *     edited it last (`editedBy`, `editedAt`). Checked like an agent's reply: text trimmed, at least one acceptance
+     *     criterion. Calls nothing outside Ahoy. `409 invalid_state` when the draft is not `ready` (still being written,
+     *     asking, failed or already created in Jira); `404` when it was discarded.
+     */
+    readonly put: operations['editMeetingStory'];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meeting-story-drafts/{draftId}/create-issue': {
     readonly parameters: {
       readonly query?: never;
@@ -2256,8 +2308,8 @@ export interface paths {
       readonly cookie?: never;
     };
     /**
-     * Who the signed-in person is, and whether they may change the team's settings.
-     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` or one with the `admin` role in Team settings › People (under `AHOY_AUTH=dev` without the list, everyone).
+     * Who the signed-in person is, whether they may change the team's settings, and their side of a meeting.
+     * @description An admin is a qnumber in the server's `AHOY_ADMIN_QNUMBERS` or one with the `admin` role in Team settings › People (under `AHOY_AUTH=dev` without the list, everyone). `side` is the person's side in Team settings › People; the deployment's own people, and anyone the table does not name, are on ours (`us`).
      */
     readonly get: operations['getMe'];
     readonly put?: never;
@@ -2541,6 +2593,103 @@ export interface paths {
      * @description At most 25, by name. 0 AIU.
      */
     readonly get: operations['listJiraFields'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/confluence': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The team's Confluence, which Create in Confluence makes a meeting's page in.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). `confluence` is null while
+     *     Confluence is off. The token is never returned: only its last four characters. Every page is created as the
+     *     token's owner. 0 AIU.
+     */
+    readonly get: operations['getConfluenceSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Turn Confluence off, removing its settings and token. Admins only.
+     * @description Pages already created stay, and so do the meetings' links to them.
+     */
+    readonly delete: operations['deleteConfluenceSettings'];
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Set or clear the space the parent page search looks in. Admins only.
+     * @description `spaceKey: null` searches every space the token can see. `409 invalid_state` while Confluence is not
+     *     connected, `409 stale_version` when `version` is not the settings'.
+     */
+    readonly patch: operations['updateConfluenceSettings'];
+    readonly trace?: never;
+  };
+  readonly '/settings/confluence/connection': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Connect Confluence, or move it or give it a new token. Admins only.
+     * @description Connecting needs `token`; once connected, `version` is required. Moving Confluence to another `baseUrl` needs
+     *     `token` in the same request, so the old token never goes to a new host. The token is sealed (AES-256-GCM,
+     *     `AHOY_SECRETS_KEY`) before it is stored, and only sent to `baseUrl`. Either change clears the last test.
+     *     `503 unavailable` when the server has no `AHOY_SECRETS_KEY`.
+     */
+    readonly put: operations['putConfluenceConnection'];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/confluence/test': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask Confluence who the stored token is, and keep the answer as the last test. Admins only.
+     * @description `GET /rest/api/user/current` with the stored token. Confluence's own text is never returned. 0 AIU.
+     */
+    readonly post: operations['testConfluenceConnection'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/confluence/pages': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * Confluence pages whose titles match `q`, to pick a meeting page's parent from.
+     * @description Each word of `q` matches the start of a word of the title; punctuation is ignored. In the settings' space when
+     *     one is set. A blank `q` lists the space's latest pages, or without a space the token owner's. At most 20, latest
+     *     changed first. `409 invalid_state` while Confluence is not connected; `503` when it refuses the token or does
+     *     not answer. 0 AIU.
+     */
+    readonly get: operations['searchConfluencePages'];
     readonly put?: never;
     readonly post?: never;
     readonly delete?: never;
@@ -2867,10 +3016,10 @@ export interface paths {
     };
     readonly get?: never;
     /**
-     * Let someone use Ahoy, or change their role.
-     * @description Admins only. Adds the qnumber with the role, or changes the role of a member already there. `400` for a value
-     *     that is not a qnumber; `409 invalid_state` for the person's own qnumber, for one of the deployment's own
-     *     people, and for a change that would leave Ahoy with no admin.
+     * Let someone use Ahoy, or change their role or side.
+     * @description Admins only. Adds the qnumber with the role and side, or changes the role and side of a member already there.
+     *     `400` for a value that is not a qnumber; `409 invalid_state` for the person's own qnumber, for one of the
+     *     deployment's own people, and for a change that would leave Ahoy with no admin.
      */
     readonly put: operations['putPerson'];
     readonly post?: never;
@@ -4462,6 +4611,8 @@ export interface components {
       /** @description Where stories drafted from the series' meetings are created; null when creating is off. */
       readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType: components['schemas']['JiraIssueType'];
+      readonly confluenceParent:
+        components['schemas']['ConfluenceParent'] | null;
       readonly createdBy: components['schemas']['Actor'];
       readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
@@ -4596,6 +4747,9 @@ export interface components {
         readonly components['schemas']['GrillQuestion'][] | null;
       /** @description A grill's answers, one per question in their order, once sent; null before and for a plain draft. */
       readonly answers: readonly components['schemas']['GrillAnswer'][] | null;
+      /** @description Who last edited the story by hand; null when it is the agent's as written. */
+      readonly editedBy: components['schemas']['Actor'] | null;
+      readonly editedAt: components['schemas']['Timestamp'] | null;
       /** @description What every run of the draft spent, a grill's two runs together. */
       readonly spentNanoAiu: number;
       /** @description Where Create in Jira puts it, from the series; a null project means it cannot be created. */
@@ -4646,6 +4800,12 @@ export interface components {
       /** @description A one-off meeting's own Jira target; null for none and always for a series' meeting. */
       readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType: components['schemas']['JiraIssueType'] | null;
+      /** @description The Confluence page the meeting became; null until one is created. */
+      readonly confluencePage:
+        components['schemas']['MeetingConfluencePage'] | null;
+      /** @description The parent page the series' last page went under, offered first; null for a one-off meeting. */
+      readonly confluenceParent:
+        components['schemas']['ConfluenceParent'] | null;
       readonly createdBy: components['schemas']['Actor'];
       readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
@@ -4765,6 +4925,12 @@ export interface components {
       /** @description A one-off meeting's own Jira target; null for none and always for a series' meeting. */
       readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType: components['schemas']['JiraIssueType'] | null;
+      /** @description The Confluence page the meeting became; null until one is created. */
+      readonly confluencePage:
+        components['schemas']['MeetingConfluencePage'] | null;
+      /** @description The parent page the series' last page went under, offered first; null for a one-off meeting. */
+      readonly confluenceParent:
+        components['schemas']['ConfluenceParent'] | null;
       readonly createdBy: components['schemas']['Actor'];
       readonly createdByName: components['schemas']['ActorName'];
       readonly createdAt: components['schemas']['Timestamp'];
@@ -5017,6 +5183,7 @@ export interface components {
       readonly name: string | null;
       /** @description Whether the person may change the team's settings. */
       readonly admin: boolean;
+      readonly side: components['schemas']['MemberSide'];
     };
     readonly SonarSettings: {
       /** @description Whether the person is an admin, who may change them. */
@@ -5082,6 +5249,84 @@ export interface components {
       /** Format: uuid */
       readonly serverId?: string;
       readonly projectKey?: string | null;
+    };
+    readonly ConfluenceSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      /** @description Whether the server can save a token (`AHOY_SECRETS_KEY`). */
+      readonly secretsConfigured: boolean;
+      /** @description Whether the stored token opens with the server's key; false means it has to be entered again. */
+      readonly tokenReadable: boolean;
+      readonly confluence: components['schemas']['ConfluenceSettings'] | null;
+    };
+    readonly ConfluenceSettings: {
+      readonly connection: {
+        readonly baseUrl: string;
+        /** @description The token's last four characters; never the token. */
+        readonly tokenHint: string;
+        readonly tokenSetBy: string;
+        readonly tokenSetByName: string | null;
+        /** Format: date-time */
+        readonly tokenSetAt: string;
+        readonly lastTest: components['schemas']['ConfluenceTest'] | null;
+      };
+      /** @description The space the parent page search looks in; null searches every space the token can see. */
+      readonly spaceKey: string | null;
+      readonly version: number;
+      readonly updatedBy: string;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly ConfluenceTest: {
+      /** @enum {string} */
+      readonly result: 'ok' | 'refused' | 'unreachable';
+      /** @description Who Confluence says the token is, the HTTP status it refused with, or why it could not be reached. */
+      readonly detail: string | null;
+      /** Format: date-time */
+      readonly at: string;
+    };
+    readonly ConfluenceConnectionRequest: {
+      readonly version?: number;
+      readonly baseUrl: string;
+      readonly token?: string;
+    };
+    readonly ConfluenceSettingsChange: {
+      readonly version: number;
+      readonly spaceKey: string | null;
+    };
+    /** @description A Confluence page's id. */
+    readonly ConfluencePageId: string;
+    readonly ConfluencePage: {
+      readonly id: components['schemas']['ConfluencePageId'];
+      readonly title: string;
+      readonly spaceKey: string;
+      readonly spaceName: string | null;
+      /** @description The titles of the pages above it, the space's home first. */
+      readonly ancestors: readonly string[];
+    };
+    readonly ConfluencePageList: {
+      readonly items: readonly components['schemas']['ConfluencePage'][];
+    };
+    readonly ConfluencePageRequest: {
+      readonly parentId: components['schemas']['ConfluencePageId'];
+      readonly title: string;
+      /** @description The page in Confluence wiki markup. */
+      readonly body: string;
+    };
+    /** @description The parent page the series' last Confluence page went under. */
+    readonly ConfluenceParent: {
+      readonly id: components['schemas']['ConfluencePageId'];
+      readonly title: string;
+    };
+    readonly MeetingConfluencePage: {
+      readonly id: components['schemas']['ConfluencePageId'];
+      readonly title: string;
+      /** Format: uri */
+      readonly url: string;
+      readonly createdBy: components['schemas']['Actor'];
+      readonly createdByName: components['schemas']['ActorName'];
+      readonly createdAt: components['schemas']['Timestamp'];
     };
     readonly JiraSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
@@ -5580,6 +5825,12 @@ export interface components {
      * @enum {string}
      */
     readonly MemberRole: 'member' | 'admin';
+    /**
+     * @description Which side of a meeting the person is on: ours (`us`) or the stakeholders' (`them`), as Team settings › Meetings
+     *     names them. A topic they add is raised by their side unless they pick the other.
+     * @enum {string}
+     */
+    readonly MemberSide: 'us' | 'them';
     readonly PeoplePage: {
       /** @description Whether the person is an admin, who may change them. */
       readonly canEdit: boolean;
@@ -5604,6 +5855,7 @@ export interface components {
       /** @description The name WebEAM gave, once the person has signed in. */
       readonly name: string | null;
       readonly role: components['schemas']['MemberRole'];
+      readonly side: components['schemas']['MemberSide'];
       readonly addedBy: string;
       readonly addedByName: string | null;
       /** Format: date-time */
@@ -5614,6 +5866,8 @@ export interface components {
     };
     readonly PersonChange: {
       readonly role: components['schemas']['MemberRole'];
+      /** @description Left out, a member keeps their side and a new one is on ours (`us`). */
+      readonly side?: components['schemas']['MemberSide'];
     };
     readonly MeetingSettingsChange: {
       readonly version?: number;
@@ -7839,6 +8093,38 @@ export interface operations {
       readonly 404: components['responses']['Problem'];
     };
   };
+  readonly createMeetingConfluencePage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ConfluencePageRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The meeting, with its page. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Meeting'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
   readonly startMeeting: {
     readonly parameters: {
       readonly query?: never;
@@ -8600,6 +8886,37 @@ export interface operations {
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly editMeetingStory: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly draftId: components['parameters']['MeetingStoryDraftId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['StoryTemplate'];
+      };
+    };
+    readonly responses: {
+      /** @description The draft, with the edited story. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['MeetingStoryDraft'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly createMeetingStoryIssue: {
@@ -9588,6 +9905,157 @@ export interface operations {
       readonly 503: components['responses']['Problem'];
     };
   };
+  readonly getConfluenceSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The Confluence settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['ConfluenceSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly deleteConfluenceSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description Confluence is off. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly updateConfluenceSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ConfluenceSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['ConfluenceSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly putConfluenceConnection: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ConfluenceConnectionRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['ConfluenceSettings'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly testConfluenceConnection: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description What Confluence answered. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['ConfluenceTest'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly searchConfluencePages: {
+    readonly parameters: {
+      readonly query?: {
+        readonly q?: string;
+      };
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The pages. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['ConfluencePageList'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
   readonly getTeamsSettings: {
     readonly parameters: {
       readonly query?: never;
@@ -10438,6 +10906,7 @@ export interface operations {
         readonly section?:
           | 'sonar'
           | 'jira'
+          | 'confluence'
           | 'teams'
           | 'figma'
           | 'agents'

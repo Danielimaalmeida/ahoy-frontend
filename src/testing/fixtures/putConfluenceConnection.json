@@ -1,0 +1,15 @@
+{
+  "connection": {
+    "baseUrl": "https://confluence.example.com/confluence",
+    "tokenHint": "b2d4",
+    "tokenSetBy": "alex@example.com",
+    "tokenSetByName": "Alex Example",
+    "tokenSetAt": "2026-11-02T08:15:00.000Z",
+    "lastTest": null
+  },
+  "spaceKey": "PROJ",
+  "version": 3,
+  "updatedBy": "alex@example.com",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-11-02T08:15:00.000Z"
+}

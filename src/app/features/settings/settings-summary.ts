@@ -3,6 +3,7 @@ import { ApiClient } from '@core/api/api-client';
 import type {
   AgentSettingsPage,
   BranchReleaseSettingsPage,
+  ConfluenceSettingsPage,
   FigmaSettingsPage,
   JiraSettingsPage,
   PhaseSettingsPage,
@@ -34,6 +35,14 @@ export function sonarState(settings: SonarSettings): SectionState {
 /** "On" while Jira is connected and its token opens, "Off" otherwise. */
 export function jiraState(page: JiraSettingsPage): SectionState {
   if (page.jira === null) return { label: 'Off', off: true };
+  return page.tokenReadable
+    ? { label: 'On', off: false }
+    : { label: 'Token needed', off: true };
+}
+
+/** "On" while Confluence is connected and its token opens, "Off" otherwise. */
+export function confluenceState(page: ConfluenceSettingsPage): SectionState {
+  if (page.confluence === null) return { label: 'Off', off: true };
   return page.tokenReadable
     ? { label: 'On', off: false }
     : { label: 'Token needed', off: true };
@@ -110,6 +119,7 @@ export function peopleState(page: PeoplePage): SectionState {
 export type SettingsSectionKey =
   | 'sonar'
   | 'jira'
+  | 'confluence'
   | 'teams'
   | 'figma'
   | 'agents'
@@ -135,6 +145,8 @@ export class SettingsSummary {
   readonly sonar = signal<SectionState | null>(null);
   /** Jira's state, once read. */
   readonly jira = signal<SectionState | null>(null);
+  /** Confluence's state, once read. */
+  readonly confluence = signal<SectionState | null>(null);
   /** The Teams channel's state, once read. */
   readonly teams = signal<SectionState | null>(null);
   /** Figma's state, once read. */
@@ -167,6 +179,7 @@ export class SettingsSummary {
     const [
       sonar,
       jira,
+      confluence,
       teams,
       figma,
       agents,
@@ -179,6 +192,7 @@ export class SettingsSummary {
     ] = await Promise.all([
       this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
       this.claimed.has('jira') ? null : this.api.getJiraSettings(),
+      this.claimed.has('confluence') ? null : this.api.getConfluenceSettings(),
       this.claimed.has('teams') ? null : this.api.getTeamsSettings(),
       this.claimed.has('figma') ? null : this.api.getFigmaSettings(),
       this.claimed.has('agents') ? null : this.api.getAgentSettings(),
@@ -193,6 +207,8 @@ export class SettingsSummary {
     ]);
     if (sonar?.ok && this.sonar() === null) this.sonarRead(sonar.value);
     if (jira?.ok && this.jira() === null) this.jiraRead(jira.value);
+    if (confluence?.ok && this.confluence() === null)
+      this.confluenceRead(confluence.value);
     if (teams?.ok && this.teams() === null) this.teamsRead(teams.value);
     if (figma?.ok && this.figma() === null) this.figmaRead(figma.value);
     if (agents?.ok && this.agents() === null) this.agentsRead(agents.value);
@@ -217,6 +233,12 @@ export class SettingsSummary {
   jiraRead(page: JiraSettingsPage): void {
     this.admin.set(page.canEdit);
     this.jira.set(jiraState(page));
+  }
+
+  /** What the Confluence section read. */
+  confluenceRead(page: ConfluenceSettingsPage): void {
+    this.admin.set(page.canEdit);
+    this.confluence.set(confluenceState(page));
   }
 
   /** What the Teams section read. */
