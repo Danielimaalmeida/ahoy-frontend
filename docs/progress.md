@@ -72,10 +72,10 @@ What each feature still needs beyond the tests above. Its pull request has the d
 ## Next, in order
 
 0. **Decide on the review** (its §7): above all, nothing merges without a check that ran. Keep one source of truth:
-   the company copy is synced here by copying its working tree over `main`, which on 2026-11-12 brought back the three
-   config files `main` had removed as unread on 2026-11-10 (`.prettierrc.json`, `eslint.config.mjs`,
-   `.tool-versions`; the user decides whether they stay). Pull `main` into the company copy before the next sync, and
-   delete there what `main` deletes.
+   the company copy is synced here by copying its working tree over `main`, which on 2026-11-12 brought back three
+   config files `main` had removed as unread (now removed again). Pull `main` into the company copy before the next
+   sync, and delete there what `main` deletes: `.prettierrc.json`, `eslint.config.mjs`, `.tool-versions` and
+   `proxy.conf.mjs`.
 1. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
    `npm ci`, then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop
    `test:scripts`.
