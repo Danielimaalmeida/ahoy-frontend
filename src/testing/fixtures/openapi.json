@@ -4,7 +4,7 @@
     "title": "Ahoy control plane API",
     "version": "1.0.0-poc",
     "summary": "UI-independent HTTP/JSON contract for hosted Ahoy story deliveries.",
-    "description": "The public boundary for any Ahoy client (Angular UI, CLI, scripts). Clients never\ncall the SDK worker, read run directories or see Copilot tokens.\n\nConventions:\n- Every mutation records the authenticated actor and is rejected when stale\n  (`expectedVersion` does not match the story's `version`) or a duplicate\n  (for example a second decision at the same gate). Nothing is silently advanced.\n- Commands that the reconciler completes asynchronously return `202` with the\n  updated story; watch `/events/stream` or poll the read endpoints for the outcome.\n- Costs are integers in nano-AIU (1 AIU = 1_000_000_000 nano-AIU).\n- Errors use RFC 9457 problem details (`application/problem+json`) with a stable `code`.\n  Requests are validated against this document: unknown or repeated query parameters and\n  invalid path, query, header or body values answer `400 validation_failed` with `errors`, as does body\n  text Postgres cannot store (a NUL character or an unpaired surrogate);\n  a method the path does not support answers `400 bad_request` with an `Allow` header. Any\n  operation may answer `500 internal_error`.\n- Incompatible changes require a new major version (`/api/v2`).\n- A story's state lives in Postgres (`getStoryState`); artifacts are the files its agents wrote. A story created\n  before the relational state model (migration 0002) can still be read, but every change, its state and any\n  artifact whose bytes are not in Postgres answer `409 legacy_story`.\n\nEvery request except `/health` must carry a WebEAM (ForgeRock AM, Alpha realm) access token in\n`Authorization: Bearer <jwt>`. The API introspects the token at WebEAM (RFC 7662) with its client ID and\nsecret; the token's `sub` is the acting user. A missing or invalid\ntoken answers `401 unauthenticated`. Only the users named in the server's `AHOY_ALLOWED_QNUMBERS` may use the\nAPI: an authenticated user whose qnumber is not on that list answers `403 forbidden`. The `X-Ahoy-Actor` header\nis accepted only when the server runs with `AHOY_AUTH=dev` (local POC), where the list is optional.\n"
+    "description": "The public boundary for any Ahoy client (Angular UI, CLI, scripts). Clients never\ncall the SDK worker, read run directories or see Copilot tokens.\n\nConventions:\n- Every mutation records the authenticated actor and is rejected when stale\n  (`expectedVersion` does not match the story's `version`) or a duplicate\n  (for example a second decision at the same gate). Nothing is silently advanced.\n- Commands that the reconciler completes asynchronously return `202` with the\n  updated story; watch `/events/stream` or poll the read endpoints for the outcome.\n- Costs are integers in nano-AIU (1 AIU = 1_000_000_000 nano-AIU).\n- Errors use RFC 9457 problem details (`application/problem+json`) with a stable `code`.\n  Requests are validated against this document: unknown or repeated query parameters and\n  invalid path, query, header or body values answer `400 validation_failed` with `errors`, as does body\n  text Postgres cannot store (a NUL character or an unpaired surrogate);\n  a method the path does not support answers `400 bad_request` with an `Allow` header. Any\n  operation may answer `500 internal_error`.\n- Incompatible changes require a new major version (`/api/v2`).\n- A story's state lives in Postgres (`getStoryState`); artifacts are the files its agents wrote. A story created\n  before the relational state model (migration 0002) can still be read, but every change, its state and any\n  artifact whose bytes are not in Postgres answer `409 legacy_story`.\n\nEvery request except `/health` and `getRunDesignTrees` must carry a WebEAM (ForgeRock AM, Alpha realm) access token in\n`Authorization: Bearer <jwt>`. The API introspects the token at WebEAM (RFC 7662) with its client ID and\nsecret; the token's `sub` is the acting user. A missing or invalid\ntoken answers `401 unauthenticated`. Only the users named in the server's `AHOY_ALLOWED_QNUMBERS` may use the\nAPI: an authenticated user whose qnumber is not on that list answers `403 forbidden`. The `X-Ahoy-Actor` header\nis accepted only when the server runs with `AHOY_AUTH=dev` (local POC), where the list is optional.\n`getRunDesignTrees` takes the runner key in `X-Ahoy-Runner-Key` instead, and no other operation takes it.\n"
   },
   "servers": [
     {
@@ -1199,6 +1199,57 @@
             "$ref": "#/components/responses/Problem"
           },
           "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/runs/{runId}/design-trees": {
+      "parameters": [
+        {
+          "name": "runId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/RunId"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getRunDesignTrees",
+        "tags": ["runs"],
+        "security": [
+          {
+            "runnerKey": []
+          }
+        ],
+        "summary": "The design's node trees an implementation run was seeded with, for the implementation workflow.",
+        "description": "The implementation workflow fetches them before the agent starts, with the runner key (design §4, \"Design\"):\nthe node trees that did not fit in the run's context reach the agent this way. Served only while the run is an\nimplementation run that is queued or running; any other run is `404`, so a key never reads a finished story.\n`401 unauthenticated` without the key, with another, or while none is generated. 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The run's node trees, by story-relative path (`design/frames/<node>.json`), with their text.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDesignTrees"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
             "$ref": "#/components/responses/Problem"
           }
         }
@@ -5722,6 +5773,66 @@
         }
       }
     },
+    "/settings/figma/runner-key": {
+      "post": {
+        "operationId": "generateRunnerKey",
+        "tags": ["settings"],
+        "summary": "Generate the runner key, the first or a new one that replaces it at once. Admins only.",
+        "description": "The key is in this response only: Ahoy keeps its SHA-256 and its last four characters. An admin saves it as the\norganisation secret `AHOY_RUNNER_KEY` of the child repositories, with the variable `AHOY_API_URL`, and the\nimplementation workflow then fetches the node trees that did not fit in a run's context\n(`getRunDesignTrees`). A new key ends the old one: update the secret.\n",
+        "responses": {
+          "201": {
+            "description": "The key, once, and the settings.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedRunnerKey"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRunnerKey",
+        "tags": ["settings"],
+        "summary": "Remove the runner key. Admins only.",
+        "description": "The workflow then fetches no node trees, and runs with those its context carries, as before.",
+        "responses": {
+          "200": {
+            "description": "The settings, without a runner key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FigmaSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/settings/figma/test": {
       "post": {
         "operationId": "testFigmaToken",
@@ -6644,6 +6755,12 @@
         "in": "header",
         "name": "X-Ahoy-Actor",
         "description": "Local POC only; honoured when the server runs with AHOY_AUTH=dev. The value is the acting user's ID."
+      },
+      "runnerKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Ahoy-Runner-Key",
+        "description": "The runner key an admin generates in Team settings › Figma, kept as the organisation secret `AHOY_RUNNER_KEY` of\nthe child repositories (design §4, \"Design\"). It acts for no person and is taken only by `getRunDesignTrees`.\n"
       }
     },
     "parameters": {
@@ -13914,6 +14031,7 @@
         "additionalProperties": false,
         "required": [
           "token",
+          "runnerKey",
           "uiAgents",
           "selectorPrefix",
           "version",
@@ -13922,6 +14040,37 @@
           "updatedAt"
         ],
         "properties": {
+          "runnerKey": {
+            "description": "The runner key the implementation workflow fetches node trees with (`getRunDesignTrees`); never the key.",
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["hint", "setBy", "setByName", "setAt"],
+                "properties": {
+                  "hint": {
+                    "type": "string",
+                    "minLength": 4,
+                    "maxLength": 4,
+                    "description": "The key's last four characters."
+                  },
+                  "setBy": {
+                    "type": "string"
+                  },
+                  "setByName": {
+                    "type": ["string", "null"]
+                  },
+                  "setAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "token": {
             "oneOf": [
               {
@@ -14089,6 +14238,52 @@
           "at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "GeneratedRunnerKey": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "figma"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^ahoy_rk_[A-Za-z0-9_-]{43}$",
+            "description": "The runner key, shown this once; save it as the organisation secret AHOY_RUNNER_KEY."
+          },
+          "figma": {
+            "$ref": "#/components/schemas/FigmaSettings"
+          }
+        }
+      },
+      "RunDesignTrees": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["runId", "storyKey", "files"],
+        "properties": {
+          "runId": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "storyKey": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "content"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^design/frames/[^/]+\\.json$"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "The node tree, JSON text as the design read wrote it."
+                }
+              }
+            }
           }
         }
       },

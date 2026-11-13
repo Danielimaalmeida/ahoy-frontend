@@ -7,6 +7,8 @@ import putFigmaToken from '@testing/fixtures/putFigmaToken.json';
 import deleteFigmaToken from '@testing/fixtures/deleteFigmaToken.json';
 import updateFigmaSettings from '@testing/fixtures/updateFigmaSettings.json';
 import testFigmaToken from '@testing/fixtures/testFigmaToken.json';
+import generateRunnerKey from '@testing/fixtures/generateRunnerKey.json';
+import deleteRunnerKey from '@testing/fixtures/deleteRunnerKey.json';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import updateAgentSettings from '@testing/fixtures/updateAgentSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
@@ -302,6 +304,8 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['deleteFigmaToken', deleteFigmaToken],
   ['updateFigmaSettings', updateFigmaSettings],
   ['testFigmaToken', testFigmaToken],
+  ['generateRunnerKey', generateRunnerKey],
+  ['deleteRunnerKey', deleteRunnerKey],
   ['getAgentSettings', getAgentSettings],
   ['updateAgentSettings', updateAgentSettings],
   ['getPhaseSettings', getPhaseSettings],
@@ -365,6 +369,9 @@ const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'getRunInputContent',
 ];
 
+/** In the contract for the implementation workflow, with the runner key: no person's request, so never in the client. */
+const NEVER_IN_THE_CLIENT: readonly string[] = ['getRunDesignTrees'];
+
 /** The members of a list, sorted, so that the order the contract lists enum values in does not matter. */
 const members = (list: readonly string[]): readonly string[] =>
   [...list].sort();
@@ -379,10 +386,11 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       'exportMetrics',
       'getMeetingNoteImage',
       ...NOT_IN_THE_CLIENT_YET,
+      ...NEVER_IN_THE_CLIENT,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      151
+      153
     );
   });
 

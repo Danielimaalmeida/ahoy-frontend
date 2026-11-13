@@ -1,0 +1,28 @@
+{
+  "key": "ahoy_rk_EXAMPLEonlyNotARealKey_forTestsAndDocs-0042",
+  "figma": {
+    "runnerKey": {
+      "hint": "0042",
+      "setBy": "alex@example.com",
+      "setByName": "Alex Example",
+      "setAt": "2026-11-12T09:00:00.000Z"
+    },
+    "token": {
+      "hint": "c9d4",
+      "setBy": "alex@example.com",
+      "setByName": "Alex Example",
+      "setAt": "2026-10-29T18:00:00.000Z",
+      "lastTest": {
+        "result": "ok",
+        "detail": "design-bot@example.com",
+        "at": "2026-10-29T18:01:00.000Z"
+      }
+    },
+    "uiAgents": ["ahoy-frontend-developer"],
+    "selectorPrefix": "ds-",
+    "version": 3,
+    "updatedBy": "alex@example.com",
+    "updatedByName": "Alex Example",
+    "updatedAt": "2026-11-12T09:00:00.000Z"
+  }
+}

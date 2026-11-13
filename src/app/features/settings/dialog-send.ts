@@ -28,16 +28,25 @@ export class DialogSend {
     request: () => Promise<ApiResult<unknown>>,
     done: string
   ): Promise<void> {
-    if (this.busy()) return;
+    const result = await this.keepOpen(request);
+    if (result === null || !result.ok) return;
+    this.toasts.show(done);
+    this.ref.close(true);
+  }
+
+  /**
+   * Sends `request` and leaves the dialog open, for one that shows what came back; a refusal shows at its top. Null
+   * when a request was already in flight and nothing was sent.
+   */
+  async keepOpen<T>(
+    request: () => Promise<ApiResult<T>>
+  ): Promise<ApiResult<T> | null> {
+    if (this.busy()) return null;
     this.busy.set(true);
     this.failure.set(null);
     const result = await request();
     this.busy.set(false);
-    if (!result.ok) {
-      this.failure.set(result.error);
-      return;
-    }
-    this.toasts.show(done);
-    this.ref.close(true);
+    if (!result.ok) this.failure.set(result.error);
+    return result;
   }
 }

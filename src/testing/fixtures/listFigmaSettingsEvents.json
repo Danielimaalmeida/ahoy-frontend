@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": 42,
+      "type": "figma_settings.runner_key_set",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "figma_settings:1",
+      "payload": {
+        "keyHint": "a7c1"
+      },
+      "createdAt": "2026-11-10T10:00:00.000Z"
+    },
+    {
       "id": 41,
       "type": "figma_settings.updated",
       "actor": "bea@example.com",
