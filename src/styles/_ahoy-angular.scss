@@ -106,3 +106,65 @@ ah-banner {
 .ah-table tbody tr:hover th {
   background: var(--row-hover);
 }
+
+// Select arrows. The bundle gives `.ah-input` 12px of padding on both sides and leaves a `<select>` its native arrow,
+// which the browser draws inside that padding: in Chrome and Safari the arrow sits against the right border, in a box
+// with no room around it. A select draws its own chevron instead, 12px from the border in the muted ink of both themes,
+// with room for it in the padding (to move into the design system's bundle at its next sync). Two gradient strokes,
+// one in each half of a 10 by 5 box, draw the chevron, so its colour is a token and follows the theme. Under forced colours the native arrow
+// comes back, since a forced palette drops these backgrounds.
+select.ah-input {
+  appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.9px),
+      var(--ink-muted) calc(50% - 0.9px) calc(50% + 0.9px),
+      transparent calc(50% + 0.9px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 0.9px),
+      var(--ink-muted) calc(50% - 0.9px) calc(50% + 0.9px),
+      transparent calc(50% + 0.9px)
+    );
+  background-position:
+    calc(100% - 19px) 55%,
+    calc(100% - 13px) 55%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+select.ah-input:disabled {
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.9px),
+      var(--ink-disabled) calc(50% - 0.9px) calc(50% + 0.9px),
+      transparent calc(50% + 0.9px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 0.9px),
+      var(--ink-disabled) calc(50% - 0.9px) calc(50% + 0.9px),
+      transparent calc(50% + 0.9px)
+    );
+  cursor: not-allowed;
+}
+
+// A multi-line list box shows its options, not a closed value: it keeps no chevron.
+select.ah-input[multiple],
+select.ah-input[size]:not([size='1']) {
+  padding-right: 12px;
+  background-image: none;
+}
+
+@media (forced-colors: active) {
+  select.ah-input {
+    appearance: auto;
+    padding-right: 12px;
+    background-image: none;
+  }
+}
