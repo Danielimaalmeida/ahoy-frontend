@@ -1,4 +1,15 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { ApiError } from '@core/api/api-error';
 import type { FigmaSettings } from '@core/api/types';
 import {
@@ -50,7 +61,8 @@ import { SettingsHistory } from './settings-history';
       <h2>Figma</h2>
       <span class="ah-muted"
         >The token the design phase reads Figma with, the agents that get a
-        story's design, and the key runs fetch it with.</span
+        story's design, and the key a run fetches its left-out node trees
+        with.</span
       >
     </div>
 
@@ -104,7 +116,7 @@ import { SettingsHistory } from './settings-history';
 
       <div class="layout">
         <div class="main">
-          <ah-panel>
+          <ah-panel #tokenPanel>
             <ah-panel-head
               heading="Token"
               subtitle="Read by the design phase only, and sent only to api.figma.com."
@@ -124,7 +136,7 @@ import { SettingsHistory } from './settings-history';
                     ahButton="ghost"
                     size="sm"
                     type="button"
-                    (click)="token(page.figma, page.tokenReadable)"
+                    (click)="token(page.figma, page.tokenReadable, $event)"
                   >
                     Replace
                   </button>
@@ -204,7 +216,7 @@ import { SettingsHistory } from './settings-history';
                       size="sm"
                       type="button"
                       [disabled]="!store.canSaveToken()"
-                      (click)="token(page.figma, true)"
+                      (click)="token(page.figma, true, $event)"
                     >
                       Save a token
                     </button>
@@ -260,7 +272,7 @@ import { SettingsHistory } from './settings-history';
             }
           </ah-panel>
 
-          <ah-panel>
+          <ah-panel #runnerKeyPanel>
             <ah-panel-head
               heading="Runner key"
               subtitle="Lets a run fetch the design's node trees that did not fit in its context."
@@ -271,7 +283,7 @@ import { SettingsHistory } from './settings-history';
                   size="sm"
                   type="button"
                   ahPanelActions
-                  (click)="runnerKey(page.figma)"
+                  (click)="runnerKey(page.figma, $event)"
                 >
                   Replace key
                 </button>
@@ -312,7 +324,7 @@ import { SettingsHistory } from './settings-history';
                       ahButton="primary"
                       size="sm"
                       type="button"
-                      (click)="runnerKey(page.figma)"
+                      (click)="runnerKey(page.figma, $event)"
                     >
                       Generate a key
                     </button>
@@ -344,6 +356,17 @@ export class FigmaSettingsPage {
   protected readonly variable = AHOY_API_URL_VARIABLE;
   /** When the page opened, so a date from another year shows its year. */
   private readonly now = new Date();
+
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly tokenPanel = viewChild<unknown, ElementRef<HTMLElement>>(
+    'tokenPanel',
+    { read: ElementRef }
+  );
+  private readonly runnerKeyPanel = viewChild<unknown, ElementRef<HTMLElement>>(
+    'runnerKeyPanel',
+    { read: ElementRef }
+  );
 
   protected readonly testing = signal(false);
   private readonly testError = signal<ApiError | null>(null);
@@ -393,9 +416,13 @@ export class FigmaSettingsPage {
   }
 
   /** Opens the token dialog: save one, replace it, or remove it. */
-  protected token(figma: FigmaSettings, tokenReadable: boolean): void {
+  protected token(
+    figma: FigmaSettings,
+    tokenReadable: boolean,
+    click: Event
+  ): void {
     this.testError.set(null);
-    this.dialogs.open<boolean, FigmaTokenData>(FigmaTokenDialog, {
+    const ref = this.dialogs.open<boolean, FigmaTokenData>(FigmaTokenDialog, {
       data: {
         store: this.store,
         figma,
@@ -404,14 +431,40 @@ export class FigmaSettingsPage {
       },
       width: '520px',
     });
+    const opener = click.currentTarget;
+    ref.closed
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.focusBack(opener, this.tokenPanel));
   }
 
   /** Opens the runner key dialog: generate one, replace it, or remove it. */
-  protected runnerKey(figma: FigmaSettings): void {
-    this.dialogs.open<boolean, RunnerKeyData>(RunnerKeyDialog, {
+  protected runnerKey(figma: FigmaSettings, click: Event): void {
+    const ref = this.dialogs.open<boolean, RunnerKeyData>(RunnerKeyDialog, {
       data: { store: this.store, figma },
       width: '520px',
     });
+    const opener = click.currentTarget;
+    ref.closed
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.focusBack(opener, this.runnerKeyPanel));
+  }
+
+  /**
+   * A change reloads the page behind its dialog, which can replace the button that opened it (an empty state's "Save
+   * a token" becomes the panel's "Replace"). The dialog then has no opener to give the focus back to, so once the
+   * page is drawn again the focus goes to the panel's button that is there now instead of being lost to the page.
+   */
+  private focusBack(
+    opener: EventTarget | null,
+    panel: () => ElementRef<HTMLElement> | undefined
+  ): void {
+    afterNextRender(
+      () => {
+        if (opener instanceof HTMLElement && opener.isConnected) return;
+        panel()?.nativeElement.querySelector('button')?.focus();
+      },
+      { injector: this.injector }
+    );
   }
 
   /** Opens the design phase dialog. */

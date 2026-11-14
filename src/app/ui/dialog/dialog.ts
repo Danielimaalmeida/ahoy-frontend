@@ -58,7 +58,8 @@ let nextDialogId = 0;
  * - The body shows, in order: the error region, `[ahDialogLead]` (what will happen), `[ahDialogCost]` (an
  *   `<ah-banner variant="cost">`), then everything else (the fields).
  * - Esc, the close button and Cancel close the dialog with no result. While `busy`, they are disabled, Esc and the
- *   backdrop don't close it, and `confirm` is not emitted again: a slow request can't be sent twice.
+ *   backdrop don't close it, and `confirm` is not emitted again: a slow request can't be sent twice. With
+ *   `closeByButtonOnly`, Esc and the backdrop never close it; the close button and Cancel still do.
  * - Opened by `DialogService`, the focus starts on the first field (else on the dialog) and returns to the element
  *   that opened it.
  *
@@ -197,6 +198,11 @@ export class DialogShell {
   readonly confirmDisabled = input(false, { transform: booleanAttribute });
   /** The error to show at the top of the body; the dialog stays open and keeps its fields. */
   readonly error = input<DialogError | null>(null);
+  /**
+   * Only the dialog's own buttons close it, not Escape or a click outside: for a dialog that shows something once,
+   * which a stray key or click must not discard.
+   */
+  readonly closeByButtonOnly = input(false, { transform: booleanAttribute });
 
   /** The person confirmed; the concrete dialog sends its request and closes its `DialogRef` with the result. */
   readonly confirm = output();
@@ -219,7 +225,8 @@ export class DialogShell {
     if (ref !== null) {
       const configured = ref.disableClose === true;
       effect(() => {
-        ref.disableClose = configured || this.busy();
+        ref.disableClose =
+          configured || this.busy() || this.closeByButtonOnly();
       });
       // Registered before the CDK container's own initial focus, which keeps a focus that is already inside.
       afterNextRender(() => {

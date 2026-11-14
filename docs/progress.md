@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-13. The one status page: what is proven and how, what is not, and what comes next. Replace it after
+Updated 2026-11-14. The one status page: what is proven and how, what is not, and what comes next. Replace it after
 each item; never append to it. The detail of a change (its checks, test counts and screenshots) goes in its commit and
 pull request, and git history keeps every earlier version of this page (`git show cbb8f39:docs/progress.md` is the last
 long one, with an entry per branch since 2026-10-30). The review of both repositories, with its proposals (not yet
@@ -28,8 +28,10 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   cloud session cannot reach: most branches since 2026-11-05 ran substitutes instead (Node 22 or 26, the auth library
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,
   Node 24.22.2 through `npx node@24`): format, build, typecheck, lint and `ng test` (220 files, 3,809 tests) passed.
-  The latest substitute run, `feature/R3DA-14787-confluence-pages` (2026-11-12, Node 26): build, typecheck, lint,
-  `ng test` (224 files, 3,874 tests) and format passed.
+  The latest substitute run, `feat/runner-key` (2026-11-14, Node 22.23.4, the auth library stubbed): build, typecheck
+  and lint passed; `ng test` ran 224 files and 3,889 tests with one failure, `app.config.spec.ts`'s "refuses the mock
+  sign-in in a production environment", which tests the real library's refusal the stub lacks; format fails on
+  `docs/architecture.md` alone, as on `main`.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` and the runner key of its PR #117
   (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`); `schema.d.ts` and the test
   mirror are generated from it. Merge and deploy that API and its migrations with or before this front end: an older

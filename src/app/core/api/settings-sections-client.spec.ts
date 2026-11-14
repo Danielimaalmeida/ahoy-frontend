@@ -167,6 +167,17 @@ describe("the Teams, Figma and Agents settings' guards", () => {
     ).toBe(false);
   });
 
+  it('never quote a new key of the wrong shape in the reason, as it may be a live one', () => {
+    const almost = `${generateRunnerKey.key}=`;
+    const reason = isGeneratedRunnerKey.explain(
+      withField(generateRunnerKey, 'key', almost)
+    );
+    expect(reason).toBe(
+      'GeneratedRunnerKey.key must be a runner key (not shown)'
+    );
+    expect(reason).not.toContain('ahoy_rk_');
+  });
+
   it('refuse a job that is off but cannot be, a missing entry of an unknown job and profiles that are not names', () => {
     const agents = getAgentSettings.agents;
     expect(

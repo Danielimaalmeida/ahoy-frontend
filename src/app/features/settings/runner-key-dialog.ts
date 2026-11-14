@@ -34,7 +34,8 @@ export interface RunnerKeyData {
 /**
  * Generates the runner key, the first or one that ends the old at once, and shows it this once with where it goes in
  * GitHub; or removes it after a second press. Ahoy keeps only the key's digest and last four characters, so a key
- * that is closed without being copied is generated again.
+ * that is closed without being copied is generated again: while the key shows, only Done and the close button close
+ * the dialog, not Escape or a click outside (`docs/accessibility.md`, Focus).
  */
 @Component({
   selector: 'ah-runner-key-dialog',
@@ -67,8 +68,9 @@ export interface RunnerKeyData {
       [subtitle]="subtitle()"
       [confirmLabel]="confirmLabel()"
       [cancelLabel]="key() === null ? 'Cancel' : 'Done'"
-      busyLabel="Generating…"
+      [busyLabel]="removing() ? 'Removing…' : 'Generating…'"
       [busy]="send.busy()"
+      [closeByButtonOnly]="key() !== null"
       [error]="send.error()"
       (confirm)="confirm()"
     >
@@ -152,11 +154,11 @@ export interface RunnerKeyData {
 })
 export class RunnerKeyDialog {
   protected readonly data = inject<RunnerKeyData>(DIALOG_DATA);
+  private readonly toasts = inject(ToastService);
   protected readonly send = new DialogSend(
     inject<DialogRef<boolean>>(DialogRef),
-    inject(ToastService)
+    this.toasts
   );
-  private readonly toasts = inject(ToastService);
   protected readonly current = this.data.figma.runnerKey;
   protected readonly label = tokenLabel;
   protected readonly secret = RUNNER_KEY_SECRET;
@@ -169,6 +171,8 @@ export class RunnerKeyDialog {
   /** The new key, once generated; never stored anywhere else. */
   protected readonly key = signal<string | null>(null);
   protected readonly confirmingRemove = signal(false);
+  /** The request in flight removes the key, so the dialog says so. */
+  protected readonly removing = signal(false);
   private readonly keyField =
     viewChild<ElementRef<HTMLInputElement>>('keyField');
 
@@ -203,7 +207,7 @@ export class RunnerKeyDialog {
       await this.copy(shown);
       return;
     }
-    const result = await this.send.keepOpen(() =>
+    const result = await this.send.sendAndStay(() =>
       this.data.store.generateRunnerKey()
     );
     if (result?.ok) this.key.set(result.value.key);
@@ -223,9 +227,11 @@ export class RunnerKeyDialog {
 
   /** Removes the key and closes. */
   protected async remove(): Promise<void> {
+    this.removing.set(true);
     await this.send.run(
       () => this.data.store.removeRunnerKey(),
       'The runner key is removed.'
     );
+    this.removing.set(false);
   }
 }

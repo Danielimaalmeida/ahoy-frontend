@@ -459,10 +459,26 @@ describe('the Figma section of Team settings', () => {
         Reflect.deleteProperty(navigator, 'clipboard');
       }
 
+      // A stray Escape or click outside must not discard a key that cannot be shown again.
+      const escape = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(escape, 'keyCode', { get: () => 27 });
+      shown.dispatchEvent(escape);
+      await settle();
+      expect(openDialog()).not.toBeNull();
+      document.querySelector<HTMLElement>('.cdk-overlay-backdrop')?.click();
+      await settle();
+      expect(field(dialog(), 'Runner key').value).toBe(KEY);
+
       buttonNamed(dialog(), 'Done').click();
       await settle();
       expect(openDialog()).toBeNull();
       expect(document.body.innerHTML).not.toContain(KEY);
+      // "Generate a key", which opened the dialog, is gone: the focus goes to the button there now.
+      expect(document.activeElement).toBe(buttonNamed(root, 'Replace key'));
     });
 
     it('says the old key stops working before replacing it, and keeps a refusal in the dialog', async () => {
@@ -505,10 +521,12 @@ describe('the Figma section of Team settings', () => {
         }),
         deleteRunnerKey
       );
+      expect(buttonsNamed(dialog(), 'Removing…')).toHaveLength(1);
       await answer({ ...getFigmaSettings, figma: deleteRunnerKey });
       expect(openDialog()).toBeNull();
       expect(toasts()).toContain('The runner key is removed.');
       expect(text(root)).toContain('No runner key');
+      expect(document.activeElement).toBe(buttonNamed(root, 'Generate a key'));
     });
   });
 });
