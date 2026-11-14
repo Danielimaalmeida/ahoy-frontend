@@ -589,6 +589,31 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/runs/{runId}/design-trees': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The design's node trees an implementation run was seeded with, for the implementation workflow.
+     * @description The implementation workflow fetches them before the agent starts, with the runner key (design §4, "Design"):
+     *     the node trees that did not fit in the run's context reach the agent this way. Served only while the run is an
+     *     implementation run that is queued or running; any other run is `404`, so a key never reads a finished story.
+     *     `401 unauthenticated` without the key, with another, or while none is generated. 0 AIU.
+     */
+    readonly get: operations['getRunDesignTrees'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/questions': {
     readonly parameters: {
       readonly query?: never;
@@ -2821,6 +2846,33 @@ export interface paths {
      * @description A story that links a Figma design halts until a token is saved again; the other settings stay.
      */
     readonly delete: operations['deleteFigmaToken'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/figma/runner-key': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Generate the runner key, the first or a new one that replaces it at once. Admins only.
+     * @description The key is in this response only: Ahoy keeps its SHA-256 and its last four characters. An admin saves it as the
+     *     organisation secret `AHOY_RUNNER_KEY` of the child repositories, with the variable `AHOY_API_URL`, and the
+     *     implementation workflow then fetches the node trees that did not fit in a run's context
+     *     (`getRunDesignTrees`). A new key ends the old one: update the secret.
+     */
+    readonly post: operations['generateRunnerKey'];
+    /**
+     * Remove the runner key. Admins only.
+     * @description The workflow then fetches no node trees, and runs with those its context carries, as before.
+     */
+    readonly delete: operations['deleteRunnerKey'];
     readonly options?: never;
     readonly head?: never;
     readonly patch?: never;
@@ -5477,6 +5529,15 @@ export interface components {
       readonly figma: components['schemas']['FigmaSettings'];
     };
     readonly FigmaSettings: {
+      /** @description The runner key the implementation workflow fetches node trees with (`getRunDesignTrees`); never the key. */
+      readonly runnerKey: {
+        /** @description The key's last four characters. */
+        readonly hint: string;
+        readonly setBy: string;
+        readonly setByName: string | null;
+        /** Format: date-time */
+        readonly setAt: string;
+      } | null;
       readonly token: {
         /** @description The token's last four characters; never the token. */
         readonly hint: string;
@@ -5530,6 +5591,20 @@ export interface components {
       readonly detail: string | null;
       /** Format: date-time */
       readonly at: string;
+    };
+    readonly GeneratedRunnerKey: {
+      /** @description The runner key, shown this once; save it as the organisation secret AHOY_RUNNER_KEY. */
+      readonly key: string;
+      readonly figma: components['schemas']['FigmaSettings'];
+    };
+    readonly RunDesignTrees: {
+      readonly runId: components['schemas']['RunId'];
+      readonly storyKey: string;
+      readonly files: readonly {
+        readonly path: string;
+        /** @description The node tree, JSON text as the design read wrote it. */
+        readonly content: string;
+      }[];
     };
     readonly FigmaTokenRequest: {
       readonly version?: number;
@@ -6991,6 +7066,32 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getRunDesignTrees: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly runId: components['schemas']['RunId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The run's node trees, by story-relative path (`design/frames/<node>.json`), with their text. */
+      readonly 200: {
+        headers: {
+          readonly 'Cache-Control'?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['RunDesignTrees'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
     };
   };
   readonly listQuestions: {
@@ -10269,6 +10370,52 @@ export interface operations {
     readonly requestBody?: never;
     readonly responses: {
       /** @description The settings, without a token. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FigmaSettings'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly generateRunnerKey: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The key, once, and the settings. */
+      readonly 201: {
+        headers: {
+          readonly 'Cache-Control'?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['GeneratedRunnerKey'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly deleteRunnerKey: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The settings, without a runner key. */
       readonly 200: {
         headers: {
           readonly [name: string]: unknown;

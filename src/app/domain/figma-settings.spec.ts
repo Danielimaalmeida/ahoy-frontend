@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ahoyApiUrl,
   describeFigmaEvent,
   figmaTestView,
   figmaTokenProblem,
@@ -100,5 +101,57 @@ describe('the Figma entries of the settings history', () => {
       })
     ).toBe('UI builders: others → others');
     expect(describeFigmaEvent('teams_settings.updated', {})).toBeUndefined();
+  });
+});
+
+describe('the runner key in the Figma history', () => {
+  it('shows a key only as its last four, and says whether it replaced one', () => {
+    expect(
+      describeSettingsEvent('figma_settings.runner_key_set', {
+        keyHint: 'a7c1',
+      })
+    ).toBe('Generated the runner key ••••a7c1');
+    expect(
+      describeFigmaEvent('figma_settings.runner_key_set', {
+        keyHint: '0042',
+        previousKeyHint: 'a7c1',
+      })
+    ).toBe('Replaced the runner key ••••a7c1 with ••••0042');
+    expect(
+      describeFigmaEvent('figma_settings.runner_key_removed', {
+        keyHint: '0042',
+      })
+    ).toBe('Removed the runner key ••••0042');
+  });
+
+  it('reads a payload without hints as a plain sentence', () => {
+    expect(describeFigmaEvent('figma_settings.runner_key_set', null)).toBe(
+      'Generated the runner key'
+    );
+    expect(
+      describeFigmaEvent('figma_settings.runner_key_set', {
+        previousKeyHint: 'a7c1',
+      })
+    ).toBe('Replaced the runner key ••••a7c1 with a new one');
+    expect(describeFigmaEvent('figma_settings.runner_key_removed', {})).toBe(
+      'Removed the runner key'
+    );
+  });
+});
+
+describe('the AHOY_API_URL that goes with the runner key', () => {
+  it('is the https origin and the path before /api/v1', () => {
+    expect(ahoyApiUrl('https://ahoy.example.com', '/api/v1')).toBe(
+      'https://ahoy.example.com'
+    );
+    expect(ahoyApiUrl('https://example.com', '/ahoy/api/v1/')).toBe(
+      'https://example.com/ahoy'
+    );
+  });
+
+  it('is unknown on plain http or under another API path', () => {
+    expect(ahoyApiUrl('http://localhost:4200', '/api/v1')).toBeNull();
+    expect(ahoyApiUrl('https://ahoy.example.com', '/api/v2')).toBeNull();
+    expect(ahoyApiUrl('null', '/api/v1')).toBeNull();
   });
 });

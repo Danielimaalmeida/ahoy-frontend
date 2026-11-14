@@ -1,4 +1,10 @@
 {
+  "runnerKey": {
+    "hint": "a7c1",
+    "setBy": "alex@example.com",
+    "setByName": "Alex Example",
+    "setAt": "2026-11-10T10:00:00.000Z"
+  },
   "token": null,
   "uiAgents": ["ahoy-frontend-developer"],
   "selectorPrefix": "ds-",

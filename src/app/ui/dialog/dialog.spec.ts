@@ -22,6 +22,7 @@ interface ExampleData {
       confirmLabel="Resume · up to 10.2 AIU"
       [busy]="busy()"
       [error]="error()"
+      [closeByButtonOnly]="shownOnce()"
       (confirm)="onConfirm()"
     >
       <span ahDialogLead>Ahoy retries <b>planning</b> with Cartographer.</span>
@@ -40,6 +41,8 @@ class ExampleDialog {
   });
   readonly busy = signal(false);
   readonly error = signal<DialogError | null>(null);
+  /** The dialog shows something it cannot show again. */
+  readonly shownOnce = signal(false);
   confirms = 0;
 
   onConfirm(): void {
@@ -246,6 +249,21 @@ describe('ah-dialog on the CDK dialog', () => {
     pressEscape(ok);
     await settle();
     expect(page.results).toEqual([undefined]);
+  });
+
+  it('with closeByButtonOnly, ignores Escape and a click outside, and still closes on Cancel', async () => {
+    const { page, dialog, container } = await openDialog();
+    dialog.shownOnce.set(true);
+    await settle();
+    pressEscape(container.querySelector('textarea')!);
+    document.querySelector<HTMLElement>('.cdk-overlay-backdrop')!.click();
+    await settle();
+    expect(page.results).toEqual([]);
+    expect(document.querySelector('.cdk-dialog-container')).not.toBeNull();
+    buttons(container).cancel.click();
+    await settle();
+    expect(page.results).toEqual([undefined]);
+    expect(document.querySelector('.cdk-dialog-container')).toBeNull();
   });
 
   it('shows an error at the top of the body, stays open and keeps the typed text', async () => {

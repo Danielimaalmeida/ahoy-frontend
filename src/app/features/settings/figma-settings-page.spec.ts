@@ -20,6 +20,8 @@ import {
 } from '@testing/dom';
 import { requestViolations } from '@testing/fixtures/contract';
 import deleteFigmaToken from '@testing/fixtures/deleteFigmaToken.json';
+import deleteRunnerKey from '@testing/fixtures/deleteRunnerKey.json';
+import generateRunnerKey from '@testing/fixtures/generateRunnerKey.json';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import listFigmaSettingsEvents from '@testing/fixtures/listFigmaSettingsEvents.json';
@@ -134,6 +136,7 @@ describe('the Figma section of Team settings', () => {
         (li) => text(li.querySelector('.history__text span'))
       )
     ).toEqual([
+      'Generated the runner key ••••a7c1',
       'Set the design kit prefix to ds-',
       'Replaced the Figma token ••••1f2e with ••••c9d4',
       'Removed the Figma token ••••1f2e',
@@ -367,7 +370,163 @@ describe('the Figma section of Team settings', () => {
   it('shows the settings without buttons to someone who is not an admin', async () => {
     await answer({ ...getFigmaSettings, canEdit: false });
     expect(text(root)).toContain('Only admins change these');
-    for (const label of ['Test token', 'Replace', 'Edit'])
+    for (const label of ['Test token', 'Replace', 'Edit', 'Replace key'])
       expect(buttonsNamed(root, label)).toEqual([]);
+  });
+
+  it('offers no runner key button to someone who is not an admin when there is none', async () => {
+    await answer({
+      ...getFigmaSettings,
+      canEdit: false,
+      figma: { ...FIGMA, runnerKey: null },
+    });
+    expect(text(root)).toContain('No runner key');
+    expect(buttonsNamed(root, 'Generate a key')).toEqual([]);
+  });
+
+  describe('the runner key', () => {
+    const KEY = generateRunnerKey.key;
+
+    it('shows the key as its last four, who set it, and where it goes in GitHub', async () => {
+      await answer();
+      expect(definition(root, 'Key')).toMatch(
+        /^••••a7c1 Set by Alex Example · \w{3} \d{1,2} \w{3}$/
+      );
+      expect(definition(root, 'In GitHub')).toMatch(
+        /^AHOY_RUNNER_KEY AHOY_API_URL The organisation secret and variable/
+      );
+    });
+
+    it('generates a key and shows it this once, selected, with where to save it, then never again', async () => {
+      await answer({
+        ...getFigmaSettings,
+        figma: { ...FIGMA, runnerKey: null },
+      });
+      expect(text(root)).toContain('No runner key');
+      expect(text(root)).toContain("a large design's biggest frames");
+      buttonNamed(root, 'Generate a key').click();
+      await settle();
+      expect(text(dialog())).toContain('Generate a runner key');
+      expect(buttonsNamed(dialog(), 'Remove the key…')).toEqual([]);
+      buttonNamed(dialog(), 'Generate key').click();
+      await settle();
+      const post = http.expectOne({
+        method: 'POST',
+        url: `${BASE}/settings/figma/runner-key`,
+      });
+      expect(post.request.body).toBeNull();
+      await respond(post, generateRunnerKey, 201);
+      await answer({ ...getFigmaSettings, figma: generateRunnerKey.figma });
+
+      expect(openDialog()).not.toBeNull();
+      expect(text(dialog())).toContain('Copy the runner key now');
+      const shown = field(dialog(), 'Runner key');
+      expect(shown.value).toBe(KEY);
+      expect(shown.readOnly).toBe(true);
+      expect(document.activeElement).toBe(shown);
+      expect(shown.selectionStart).toBe(0);
+      expect(shown.selectionEnd).toBe(KEY.length);
+      expect(text(dialog())).toContain(
+        'save it as the organisation secret AHOY_RUNNER_KEY'
+      );
+      expect(text(dialog())).toContain(
+        'Set the organisation variable AHOY_API_URL'
+      );
+      expect(definition(root, 'Key')).toMatch(/^••••0042 /);
+      expect(root.innerHTML).not.toContain(KEY);
+
+      // No Clipboard API (as in jsdom): the key stays selectable, and the toast says so.
+      buttonNamed(dialog(), 'Copy key').click();
+      await settle();
+      expect(toasts()).toContain(
+        "Couldn't copy to the clipboard. Select the key and copy it."
+      );
+      const written: string[] = [];
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: (t: string) => (written.push(t), Promise.resolve()),
+        },
+      });
+      try {
+        buttonNamed(dialog(), 'Copy key').click();
+        await settle();
+        expect(written).toEqual([KEY]);
+        expect(toasts()).toContain(
+          'Runner key copied. Save it as AHOY_RUNNER_KEY.'
+        );
+      } finally {
+        Reflect.deleteProperty(navigator, 'clipboard');
+      }
+
+      // A stray Escape or click outside must not discard a key that cannot be shown again.
+      const escape = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(escape, 'keyCode', { get: () => 27 });
+      shown.dispatchEvent(escape);
+      await settle();
+      expect(openDialog()).not.toBeNull();
+      document.querySelector<HTMLElement>('.cdk-overlay-backdrop')?.click();
+      await settle();
+      expect(field(dialog(), 'Runner key').value).toBe(KEY);
+
+      buttonNamed(dialog(), 'Done').click();
+      await settle();
+      expect(openDialog()).toBeNull();
+      expect(document.body.innerHTML).not.toContain(KEY);
+      // "Generate a key", which opened the dialog, is gone: the focus goes to the button there now.
+      expect(document.activeElement).toBe(buttonNamed(root, 'Replace key'));
+    });
+
+    it('says the old key stops working before replacing it, and keeps a refusal in the dialog', async () => {
+      await answer();
+      buttonNamed(root, 'Replace key').click();
+      await settle();
+      expect(text(dialog())).toContain('Replace the runner key');
+      expect(text(dialog())).toContain(
+        'The key ••••a7c1 stops working at once'
+      );
+      buttonNamed(dialog(), 'Replace key').click();
+      await settle();
+      await respond(
+        http.expectOne({
+          method: 'POST',
+          url: `${BASE}/settings/figma/runner-key`,
+        }),
+        problem('forbidden'),
+        403
+      );
+      await answer();
+      expect(openDialog()).not.toBeNull();
+      expect(text(dialog())).toContain('Only admins change team settings');
+      expect(() => field(dialog(), 'Runner key')).toThrow();
+    });
+
+    it('removes the key only after a second, explicit press', async () => {
+      await answer();
+      buttonNamed(root, 'Replace key').click();
+      await settle();
+      buttonNamed(dialog(), 'Remove the key…').click();
+      await settle();
+      expect(text(dialog())).toContain('Remove the runner key ••••a7c1?');
+      buttonNamed(dialog(), 'Remove the key').click();
+      await settle();
+      await respond(
+        http.expectOne({
+          method: 'DELETE',
+          url: `${BASE}/settings/figma/runner-key`,
+        }),
+        deleteRunnerKey
+      );
+      expect(buttonsNamed(dialog(), 'Removing…')).toHaveLength(1);
+      await answer({ ...getFigmaSettings, figma: deleteRunnerKey });
+      expect(openDialog()).toBeNull();
+      expect(toasts()).toContain('The runner key is removed.');
+      expect(text(root)).toContain('No runner key');
+      expect(document.activeElement).toBe(buttonNamed(root, 'Generate a key'));
+    });
   });
 });
