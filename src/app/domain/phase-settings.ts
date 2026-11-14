@@ -152,6 +152,7 @@ export function capsRaised(changes: readonly CapChange[]): CapChange[] {
 /** A value of a field in words, for the history: null is the deployment's. */
 function valueWords(field: string, value: unknown): string {
   if (value === null || value === undefined) return 'the deployment’s';
+  if (typeof value === 'object') return JSON.stringify(value);
   if (typeof value !== 'number') return String(value);
   if (field === 'budgetNanoAiu') return aiuLabel(value);
   if (field === 'timeoutSeconds') return minutesLabel(Math.round(value / 60));
@@ -164,6 +165,60 @@ function catalogWords(value: unknown): string {
   return Array.isArray(value)
     ? value.filter((id) => typeof id === 'string').join(', ')
     : 'the built-in list';
+}
+
+/** A model, with its reasoning effort when it has one: "gpt-5.6-luna (high)". */
+function modelWithEffort(model: string, effort: unknown): string {
+  return typeof effort === 'string' ? `${model} (${effort})` : model;
+}
+
+/** A plan panel of the history in words, as its planners and its judge; null when the value is not one. */
+function panelParts(
+  value: unknown
+): { readonly planners: string; readonly judge: string } | null {
+  if (!isRecord(value)) return null;
+  const panelists = value['panelists'];
+  const judge = value['judge'];
+  if (!Array.isArray(panelists) || !isRecord(judge)) return null;
+  const planners = panelists.flatMap((p: unknown) =>
+    isRecord(p) && typeof p['model'] === 'string'
+      ? [modelWithEffort(p['model'], p['reasoningEffort'])]
+      : []
+  );
+  const judgeModels = Array.isArray(judge['models'])
+    ? judge['models'].filter((m): m is string => typeof m === 'string')
+    : [];
+  if (planners.length === 0 || judgeModels.length === 0) return null;
+  return {
+    planners: planners.join(', '),
+    judge: modelWithEffort(judgeModels.join(' or '), judge['reasoningEffort']),
+  };
+}
+
+/** A whole plan panel in words: "2 planners (a, b (high)), judge c". */
+function panelWords(value: unknown): string {
+  if (value === null || value === undefined) return 'the default panel';
+  const parts = panelParts(value);
+  if (parts === null) return 'a panel this page cannot read';
+  const count = parts.planners.split(', ').length;
+  return `${count} planner${count === 1 ? '' : 's'} (${parts.planners}), judge ${parts.judge}`;
+}
+
+/**
+ * A change of the plan panel in words. Between two saved panels it names only the part that changed, "Plan panel
+ * planners: a, b → a, b, c"; to or from the default panel it names the whole panel.
+ */
+function planPanelWords(from: unknown, to: unknown): string[] {
+  const before = panelParts(from);
+  const after = panelParts(to);
+  if (before === null || after === null)
+    return [`Plan panel: ${panelWords(from)} → ${panelWords(to)}`];
+  const words: string[] = [];
+  if (before.planners !== after.planners)
+    words.push(`Plan panel planners: ${before.planners} → ${after.planners}`);
+  if (before.judge !== after.judge)
+    words.push(`Plan panel judge: ${before.judge} → ${after.judge}`);
+  return words.length === 0 ? ['Saved the plan panel'] : words;
 }
 
 /** What one Phases entry of the settings history says happened, or undefined for an entry of another section. */
@@ -183,10 +238,14 @@ export function describePhaseEvent(
           return [
             `Models: ${catalogWords(change['from'])} → ${catalogWords(change['to'])}`,
           ];
+        if (key === 'planPanel')
+          return planPanelWords(change['from'], change['to']);
         const [phase = key, field = ''] = key.split('.');
         const name = FIELD_WORDS[field] ?? field;
+        const subject =
+          name === '' ? phaseName(phase) : `${phaseName(phase)} ${name}`;
         return [
-          `${phaseName(phase)} ${name}: ${valueWords(field, change['from'])} → ${valueWords(field, change['to'])}`,
+          `${subject}: ${valueWords(field, change['from'])} → ${valueWords(field, change['to'])}`,
         ];
       })
     : [];

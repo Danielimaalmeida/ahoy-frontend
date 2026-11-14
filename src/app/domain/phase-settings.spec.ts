@@ -141,6 +141,78 @@ describe('an entry of the phases’ history', () => {
     expect(describePhaseEvent('agent_settings.updated', {})).toBeUndefined();
   });
 
+  it('says a plan panel set or given back as its planners and judge, not [object Object]', () => {
+    const panel = {
+      panelists: [
+        { model: 'claude-sonnet-5', reasoningEffort: 'high' },
+        { model: 'gpt-5.6-luna' },
+      ],
+      judge: { models: ['claude-opus-5', 'claude-sonnet-5'] },
+    };
+    expect(
+      describePhaseEvent('phase_settings.updated', {
+        changes: { planPanel: { from: null, to: panel } },
+      })
+    ).toBe(
+      'Plan panel: the default panel → 2 planners (claude-sonnet-5 (high), gpt-5.6-luna), ' +
+        'judge claude-opus-5 or claude-sonnet-5'
+    );
+    expect(
+      describePhaseEvent('phase_settings.updated', {
+        changes: { planPanel: { from: panel, to: null } },
+      })
+    ).toBe(
+      'Plan panel: 2 planners (claude-sonnet-5 (high), gpt-5.6-luna), ' +
+        'judge claude-opus-5 or claude-sonnet-5 → the default panel'
+    );
+  });
+
+  it('says only the part of a saved plan panel that changed', () => {
+    const before = {
+      panelists: [{ model: 'a' }, { model: 'b' }],
+      judge: { models: ['j'], reasoningEffort: 'high' },
+    };
+    const morePlanners = {
+      ...before,
+      panelists: [...before.panelists, { model: 'c' }],
+    };
+    expect(
+      describePhaseEvent('phase_settings.updated', {
+        changes: { planPanel: { from: before, to: morePlanners } },
+      })
+    ).toBe('Plan panel planners: a, b → a, b, c');
+    expect(
+      describePhaseEvent('phase_settings.updated', {
+        changes: {
+          planPanel: {
+            from: before,
+            to: {
+              ...before,
+              judge: { models: ['k'], reasoningEffort: 'medium' },
+            },
+          },
+        },
+      })
+    ).toBe('Plan panel judge: j (high) → k (medium)');
+    expect(
+      describePhaseEvent('phase_settings.updated', {
+        changes: { planPanel: { from: before, to: { ...before } } },
+      })
+    ).toBe('Saved the plan panel');
+  });
+
+  it('never shows [object Object] for a value it does not know', () => {
+    const text = describePhaseEvent('phase_settings.updated', {
+      changes: {
+        planPanel: { from: { odd: 1 }, to: null },
+        somethingNew: { from: { a: 1 }, to: 2 },
+      },
+    });
+    expect(text).toBe(
+      'Plan panel: a panel this page cannot read → the default panel; somethingNew: {"a":1} → 2'
+    );
+  });
+
   it('is what the settings history shows for a Phases entry', () => {
     expect(describeSettingsEvent('phase_settings.updated', {})).toBe(
       'Saved the phases'
