@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-12. The one status page: what is proven and how, what is not, and what comes next. Replace it after
+Updated 2026-11-14. The one status page: what is proven and how, what is not, and what comes next. Replace it after
 each item; never append to it. The detail of a change (its checks, test counts and screenshots) goes in its commit and
 pull request, and git history keeps every earlier version of this page (`git show cbb8f39:docs/progress.md` is the last
 long one, with an entry per branch since 2026-10-30). The review of both repositories, with its proposals (not yet
@@ -16,8 +16,8 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   comments at the delivery gate); the run detail with live steps; Metrics with Trends; the halt diagnosis;
   knowledge-review lessons; WebEAM sign-in; Meetings (topics, notes, decisions, actions, questions, images, search,
   drafted stories edited in place, Create in Jira and Create in Confluence); the Crew page; Team settings (SonarQube,
-  Jira, Teams, Figma, Agents, Phases with the plan panel, Defects, Branch releases, Pull request comments, Meetings,
-  People with each person's side, Confluence, My Copilot token) and the Setup page.
+  Jira, Teams, Figma with the runner key, Agents, Phases with the plan panel, Defects, Branch releases, Pull request
+  comments, Meetings, People with each person's side, Confluence, My Copilot token) and the Setup page.
 - **How it is proven.** Every screen is proven by unit and component tests on the mock backend (Crew and Team settings
   over `HttpTestingController`). On 2026-11-07 every page was opened in Chromium on `ng serve` against a local
   `ahoy-hosted` with fictional data, for layout only; the inline story edit was seen in Chromium against a local API at
@@ -28,11 +28,14 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   cloud session cannot reach: most branches since 2026-11-05 ran substitutes instead (Node 22 or 26, the auth library
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,
   Node 24.22.2 through `npx node@24`): format, build, typecheck, lint and `ng test` (220 files, 3,809 tests) passed.
-  The latest substitute run, `feature/R3DA-14787-confluence-pages` (2026-11-12, Node 26): build, typecheck, lint,
-  `ng test` (224 files, 3,874 tests) and format passed.
-- **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` up to Create in Confluence
-  (migration 0050); `schema.d.ts` and the test mirror are generated from it. Deploy the API and its migrations with or
-  before this front end.
+  The latest substitute run, `feat/runner-key` (2026-11-14, Node 22.23.4, the auth library stubbed): build, typecheck
+  and lint passed; `ng test` ran 224 files and 3,889 tests with one failure, `app.config.spec.ts`'s "refuses the mock
+  sign-in in a production environment", which tests the real library's refusal the stub lacks; format fails on
+  `docs/architecture.md` alone, as on `main`.
+- **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` and the runner key of its PR #117
+  (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`); `schema.d.ts` and the test
+  mirror are generated from it. Merge and deploy that API and its migrations with or before this front end: an older
+  API sends no `runnerKey`, and the Figma page refuses its answer.
 
 ## Not checked yet
 
@@ -40,6 +43,7 @@ What each feature still needs beyond the tests above. Its pull request has the d
 
 | Feature                                                                                                | Not checked yet                                                                                            |
 | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                        | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
 | Create in Confluence, Team settings › Confluence                                                       | A real Confluence; updating a page once it exists is not built                                             |
 | Each person on a side of a meeting (People, `MeStore`)                                                 | A browser                                                                                                  |
 | Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                    | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |
@@ -97,10 +101,10 @@ What each feature still needs beyond the tests above. Its pull request has the d
    swap for a holiday, its Undo) and Team settings (`AHOY_SECRETS_KEY`, `AHOY_ADMIN_QNUMBERS`: add a server, put a
    repository on it, change its host with the token, and read the history; connect a fake Jira, preview a query, set a
    board and add a fixed field; connect a fake Teams webhook and send a test card, save a fake Figma token and test it,
-   turn Business-rule review on and see the confirmation; lower a phase's cap, raise one with the confirmation, and
-   save a catalogue; at the delivery gate, Assess comments with a note; set a defects query and priorities, wait for a
-   pass, ignore a defect and undo it; add a repository's release workflow and deploy a package's branch with a fake
-   `gh`).
+   generate a runner key and replace it, turn Business-rule review on and see the confirmation; lower a phase's cap,
+   raise one with the confirmation, and save a catalogue; at the delivery gate, Assess comments with a note; set a
+   defects query and priorities, wait for a pass, ignore a defect and undo it; add a repository's release workflow and
+   deploy a package's branch with a fake `gh`).
 6. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click, then
    updating a meeting's Confluence page once it exists.
 7. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the

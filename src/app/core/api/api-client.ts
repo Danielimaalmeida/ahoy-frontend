@@ -61,6 +61,7 @@ import {
   isFigmaSettings,
   isFigmaSettingsPage,
   isFigmaTest,
+  isGeneratedRunnerKey,
   isTeamsCardOutcome,
   isTeamsSettings,
   isTeamsSettingsPage,
@@ -169,6 +170,7 @@ import type {
   FigmaSettingsPage,
   FigmaTest,
   FigmaTokenRequest,
+  GeneratedRunnerKey,
   TeamsCardOutcome,
   TeamsSettings,
   TeamsSettingsChange,
@@ -1884,6 +1886,31 @@ export class ApiClient {
       '/settings/figma/test',
       null,
       isFigmaTest
+    );
+  }
+
+  /**
+   * Generates the runner key, the first or one that replaces it at once (admins only). The key is in this answer only:
+   * the API keeps its digest and its last four characters.
+   */
+  generateRunnerKey(): Promise<ApiResult<GeneratedRunnerKey>> {
+    return this.post(
+      'generateRunnerKey',
+      '/settings/figma/runner-key',
+      null,
+      isGeneratedRunnerKey
+    );
+  }
+
+  /** Removes the runner key (admins only): the workflow then fetches no node trees. */
+  deleteRunnerKey(): Promise<ApiResult<FigmaSettings>> {
+    return this.send(
+      'deleteRunnerKey',
+      isFigmaSettings,
+      this.http.delete<unknown>(this.url('/settings/figma/runner-key'), {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
     );
   }
 

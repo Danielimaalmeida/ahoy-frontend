@@ -1,6 +1,7 @@
 /**
- * Team settings › Figma in words: the checks of what an admin types before it is sent, the last token test, and what
- * one entry of Figma's history says. Pure: payloads come from the API as `unknown` and are read field by field.
+ * Team settings › Figma in words: the checks of what an admin types before it is sent, the last token test, the address
+ * the runner key goes with, and what one entry of Figma's history says. Pure: payloads come from the API as `unknown`
+ * and are read field by field.
  */
 
 import { isRecord } from './records';
@@ -76,6 +77,26 @@ export function figmaTestView(
   };
 }
 
+/** The GitHub organisation secret that holds the runner key. */
+export const RUNNER_KEY_SECRET = 'AHOY_RUNNER_KEY';
+/** The GitHub organisation variable that holds Ahoy's address, beside the runner key. */
+export const AHOY_API_URL_VARIABLE = 'AHOY_API_URL';
+
+const API_PATH = '/api/v1';
+
+/**
+ * The value of `AHOY_API_URL` for the Ahoy this page runs on: its origin and the path before `/api/v1`, such as
+ * `https://ahoy.example.com`. Null when the origin is not https (the workflow refuses plain http but to localhost, and
+ * a runner cannot reach a developer's machine) or the API base does not end in `/api/v1`.
+ */
+export function ahoyApiUrl(origin: string, apiBase: string): string | null {
+  if (!origin.startsWith('https://')) return null;
+  let base = apiBase;
+  while (base.endsWith('/')) base = base.slice(0, -1);
+  if (!base.endsWith(API_PATH)) return null;
+  return `${origin}${base.slice(0, -API_PATH.length)}`;
+}
+
 function names(value: unknown): string {
   return Array.isArray(value) && value.every((v) => typeof v === 'string')
     ? value.join(', ')
@@ -101,6 +122,8 @@ export function describeFigmaEvent(
   const p = isRecord(payload) ? payload : {};
   const hint = (key: string) =>
     typeof p[key] === 'string' ? `••••${p[key]}` : 'a token';
+  const keyHint = (key: string): string | null =>
+    typeof p[key] === 'string' ? `••••${p[key]}` : null;
   switch (type) {
     case 'figma_settings.token_set':
       return typeof p['previousTokenHint'] === 'string'
@@ -108,6 +131,21 @@ export function describeFigmaEvent(
         : `Saved the Figma token ${hint('tokenHint')}`;
     case 'figma_settings.token_removed':
       return `Removed the Figma token ${hint('tokenHint')}`;
+    case 'figma_settings.runner_key_set': {
+      const now = keyHint('keyHint');
+      const before = keyHint('previousKeyHint');
+      if (before !== null)
+        return `Replaced the runner key ${before} with ${now ?? 'a new one'}`;
+      return now === null
+        ? 'Generated the runner key'
+        : `Generated the runner key ${now}`;
+    }
+    case 'figma_settings.runner_key_removed': {
+      const was = keyHint('keyHint');
+      return was === null
+        ? 'Removed the runner key'
+        : `Removed the runner key ${was}`;
+    }
     case 'figma_settings.updated': {
       const changes = p['changes'];
       const words = isRecord(changes)

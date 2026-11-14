@@ -6,6 +6,8 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { requestViolations } from '@testing/fixtures/contract';
 import deleteFigmaToken from '@testing/fixtures/deleteFigmaToken.json';
+import deleteRunnerKey from '@testing/fixtures/deleteRunnerKey.json';
+import generateRunnerKey from '@testing/fixtures/generateRunnerKey.json';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
@@ -39,6 +41,7 @@ import {
   isFigmaSettings,
   isFigmaSettingsPage,
   isFigmaTest,
+  isGeneratedRunnerKey,
   isSettingsEventPage,
   isTeamsCardOutcome,
   isTeamsSettings,
@@ -70,6 +73,8 @@ describe("the Teams, Figma and Agents settings' guards", () => {
       })
     ).toBe(true);
     expect(isFigmaTest(testFigmaToken)).toBe(true);
+    expect(isGeneratedRunnerKey(generateRunnerKey)).toBe(true);
+    expect(isFigmaSettings(deleteRunnerKey)).toBe(true);
     expect(isAgentSettingsPage(getAgentSettings)).toBe(true);
     expect(isAgentSettingsPage(updateAgentSettings)).toBe(true);
     expect(isPrCommentSettingsPage(getPrCommentSettings)).toBe(true);
@@ -141,6 +146,36 @@ describe("the Teams, Figma and Agents settings' guards", () => {
     expect(isFigmaSettings.explain(withField(figma, 'uiAgents', []))).toMatch(
       /uiAgents/
     );
+  });
+
+  it('refuse a runner key shown whole, a hint that is not four characters and a new key of another shape', () => {
+    const figma = getFigmaSettings.figma;
+    const key = figma.runnerKey;
+    expect(isFigmaSettings(withField(figma, 'runnerKey', 'ahoy_rk_x'))).toBe(
+      false
+    );
+    expect(
+      isFigmaSettings(withField(figma, 'runnerKey', { ...key, hint: 'a7c' }))
+    ).toBe(false);
+    expect(
+      isGeneratedRunnerKey(withField(generateRunnerKey, 'key', 'ahoy_rk_short'))
+    ).toBe(false);
+    expect(
+      isGeneratedRunnerKey(
+        withField(generateRunnerKey, 'key', 'figd_' + 'a'.repeat(46))
+      )
+    ).toBe(false);
+  });
+
+  it('never quote a new key of the wrong shape in the reason, as it may be a live one', () => {
+    const almost = `${generateRunnerKey.key}=`;
+    const reason = isGeneratedRunnerKey.explain(
+      withField(generateRunnerKey, 'key', almost)
+    );
+    expect(reason).toBe(
+      'GeneratedRunnerKey.key must be a runner key (not shown)'
+    );
+    expect(reason).not.toContain('ahoy_rk_');
   });
 
   it('refuse a job that is off but cannot be, a missing entry of an unknown job and profiles that are not names', () => {
@@ -276,6 +311,26 @@ describe("ApiClient's Teams, Figma and Agents settings", () => {
       .expectOne({ method: 'DELETE', url: `${BASE}/settings/figma/token` })
       .flush(deleteFigmaToken);
     expect(await remove).toEqual({ ok: true, value: deleteFigmaToken });
+  });
+
+  it('generates the runner key with an empty POST and removes it, on the runner key path', async () => {
+    const generate = api.generateRunnerKey();
+    const post = http.expectOne({
+      method: 'POST',
+      url: `${BASE}/settings/figma/runner-key`,
+    });
+    expect(post.request.body).toBeNull();
+    post.flush(generateRunnerKey, { status: 201, statusText: 'Created' });
+    expect(await generate).toEqual({ ok: true, value: generateRunnerKey });
+
+    const remove = api.deleteRunnerKey();
+    http
+      .expectOne({
+        method: 'DELETE',
+        url: `${BASE}/settings/figma/runner-key`,
+      })
+      .flush(deleteRunnerKey);
+    expect(await remove).toEqual({ ok: true, value: deleteRunnerKey });
   });
 
   it('reads the agents’ jobs and sends a change that turns one on with confirmSpend, as the contract takes it', async () => {

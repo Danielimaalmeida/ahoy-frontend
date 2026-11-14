@@ -71,7 +71,9 @@ The design system's rule, and how each component keeps it:
 - Nothing sticky may cover the focused element (WCAG 2.4.11). The top bar is not sticky; if that changes, add
   `scroll-padding-top` for its height.
 - **Dialogs** (`DialogService` on the CDK `Dialog`) are modal, trap focus, focus the dialog on open (`autoFocus:
-'dialog'`) and return focus to the trigger on close (`restoreFocus: true`). Escape closes them, except while they are busy (`disableClose`).
+'dialog'`) and return focus to the trigger on close (`restoreFocus: true`). Escape closes them, except while they are
+  busy (`disableClose`) and while one shows something that cannot be shown again (`closeByButtonOnly`: the runner key
+  once generated, which only Done and the close button dismiss).
 - **Menus and popovers** close on Escape and return focus to their trigger, as the account menu in the top bar does
   (`closeMenu(true)`).
 - When a whole view changes without a route change (a tab that swaps content, a step in a form), move focus to the new

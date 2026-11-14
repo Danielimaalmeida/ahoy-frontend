@@ -1025,6 +1025,12 @@ export type FigmaSettings = Schemas['FigmaSettings'];
 /** The saved Figma token, as the API shows it. */
 export type FigmaToken = NonNullable<FigmaSettings['token']>;
 
+/** The runner key the implementation workflow fetches node trees with, as the API shows it: never the key. */
+export type RunnerKey = NonNullable<FigmaSettings['runnerKey']>;
+
+/** Answer of `generateRunnerKey`: the key, shown this once, and Figma's settings with its last four characters. */
+export type GeneratedRunnerKey = Schemas['GeneratedRunnerKey'];
+
 /** What "Test token" found, kept as the last test. */
 export type FigmaTest = Schemas['FigmaTest'];
 

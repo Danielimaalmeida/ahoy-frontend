@@ -125,6 +125,8 @@ import {
   type FigmaSettingsPage,
   type FigmaTest,
   type FigmaToken,
+  type GeneratedRunnerKey,
+  type RunnerKey,
   type TeamsCardOutcome,
   type TeamsLastCard,
   type TeamsSettings,
@@ -1897,6 +1899,14 @@ const someNames: Check = (value, at) => {
 };
 
 const figmaSettings = shape<FigmaSettings>({
+  runnerKey: nullable(
+    shape<RunnerKey>({
+      hint: boundedText('four characters', 4, 4),
+      setBy: actor,
+      setByName: nullable(text),
+      setAt: timestamp,
+    })
+  ),
   token: nullable(
     shape<FigmaToken>({
       hint: boundedText('at most four characters', 0, 4),
@@ -1933,6 +1943,26 @@ export const isFigmaSettings = guard<FigmaSettings>(
 
 /** What a token test found, as `testFigmaToken` answers it. */
 export const isFigmaTest = guard<FigmaTest>('FigmaTest', figmaTest);
+
+/**
+ * A runner key: `ahoy_rk_` and 32 random bytes in unpadded base64url, 51 characters. Unlike the other checks it never
+ * quotes what it got: a key of the wrong shape may still be a live one, and a refusal's text reaches the screen.
+ */
+const runnerKeyText: Check = (value, at) =>
+  typeof value === 'string' &&
+  value.length === 51 &&
+  /^ahoy_rk_[A-Za-z0-9_-]{43}$/.test(value)
+    ? null
+    : `${at} must be a runner key (not shown)`;
+
+/** A new runner key and Figma's settings, as `generateRunnerKey` answers them. */
+export const isGeneratedRunnerKey = guard<GeneratedRunnerKey>(
+  'GeneratedRunnerKey',
+  shape<GeneratedRunnerKey>({
+    key: runnerKeyText,
+    figma: figmaSettings,
+  })
+);
 
 const profileName = boundedText(
   'a profile name of 1 to 100 characters',

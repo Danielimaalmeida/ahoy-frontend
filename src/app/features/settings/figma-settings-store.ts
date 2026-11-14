@@ -7,11 +7,12 @@ import type {
   FigmaSettingsPage,
   FigmaTest,
   FigmaTokenRequest,
+  GeneratedRunnerKey,
 } from '@core/api/types';
 import { SectionStore } from './section-store';
 import type { SettingsSummary } from './settings-summary';
 
-/** The state of the Figma section: the token, the design phase's settings and their history. 0 AIU. */
+/** The state of the Figma section: the token, the design phase's settings, the runner key and their history. 0 AIU. */
 @Injectable()
 export class FigmaSettingsStore extends SectionStore<FigmaSettingsPage> {
   protected readonly section = 'figma' as const;
@@ -49,6 +50,16 @@ export class FigmaSettingsStore extends SectionStore<FigmaSettingsPage> {
   /** Asks Figma who the stored token is; the answer is kept as the last test, so the page is read again. */
   test(): Promise<ApiResult<FigmaTest>> {
     return this.reloadAfter(this.api.testFigmaToken());
+  }
+
+  /** Generates the runner key, the first or a new one that ends the old at once, then reads the page again. */
+  generateRunnerKey(): Promise<ApiResult<GeneratedRunnerKey>> {
+    return this.reloadAfter(this.api.generateRunnerKey());
+  }
+
+  /** Removes the runner key, then reads the page again. */
+  removeRunnerKey(): Promise<ApiResult<FigmaSettings>> {
+    return this.reloadAfter(this.api.deleteRunnerKey());
   }
 
   /** The content repository's agent profiles, for choosing the UI builders. */
