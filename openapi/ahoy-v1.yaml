@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 597c3c1c01b3e00020193c44b9f486c7177f60cf
+# Commit: 0840e53942141744be649d1629eca6a3dc283c53
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2539,7 +2539,7 @@ paths:
     patch:
       operationId: updateConversation
       tags: [product]
-      summary: Rename a conversation, or share it with the team (read-only to them). Its owner only. 0 AIU.
+      summary: Rename a conversation, or share it with the other admins (read-only to them). Its owner only. 0 AIU.
       requestBody:
         required: true
         content:
@@ -8527,7 +8527,7 @@ components:
         shared:
           {
             type: boolean,
-            description: 'True shares it with every member, read-only to them.',
+            description: 'True shares it with every other admin (the Product page is for admins only), read-only to them.',
           }
     ConversationContextKind:
       type: string

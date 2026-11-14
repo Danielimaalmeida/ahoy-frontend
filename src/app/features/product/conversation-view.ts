@@ -336,8 +336,8 @@ const ACTIVITY_SHOWN = 6;
                       ahButton="ghost"
                       size="sm"
                       type="button"
-                      [disabled]="store.busy()"
-                      (click)="store.share(!c.shared)"
+                      [attr.aria-disabled]="store.busy() ? 'true' : null"
+                      (click)="share(!c.shared)"
                     >
                       {{ c.shared ? 'Stop sharing' : 'Share' }}
                     </button>
@@ -345,7 +345,7 @@ const ACTIVITY_SHOWN = 6;
                       ahButton="ghost"
                       size="sm"
                       type="button"
-                      [disabled]="store.busy()"
+                      [attr.aria-disabled]="store.busy() ? 'true' : null"
                       (click)="remove()"
                     >
                       Delete
@@ -367,7 +367,7 @@ const ACTIVITY_SHOWN = 6;
                       <button
                         type="button"
                         [attr.aria-label]="'Unpin ' + chip(item)"
-                        [disabled]="store.busy()"
+                        [attr.aria-disabled]="store.busy() ? 'true' : null"
                         (click)="unpin(item)"
                       >
                         ×
@@ -385,7 +385,7 @@ const ACTIVITY_SHOWN = 6;
                     ahButton="ghost"
                     size="sm"
                     type="button"
-                    [disabled]="store.busy()"
+                    [attr.aria-disabled]="store.busy() ? 'true' : null"
                     (click)="addContext()"
                   >
                     + Add context
@@ -528,6 +528,12 @@ const ACTIVITY_SHOWN = 6;
                     <input
                       class="ah-input"
                       inputmode="decimal"
+                      [attr.aria-invalid]="
+                        capProblem() !== null ? 'true' : null
+                      "
+                      [attr.aria-describedby]="
+                        capProblem() !== null ? 'cap-problem' : null
+                      "
                       placeholder="default"
                       [value]="cap()"
                       (input)="cap.set(text($event))"
@@ -538,17 +544,16 @@ const ACTIVITY_SHOWN = 6;
                     class="push"
                     ahButton="primary"
                     type="submit"
-                    [disabled]="
-                      refusal() !== null ||
-                      store.busy() ||
-                      draft().trim() === ''
-                    "
+                    [disabled]="refusal() !== null || draft().trim() === ''"
+                    [attr.aria-disabled]="store.busy() ? 'true' : null"
                   >
                     Send
                   </button>
                 </div>
                 @if (capProblem(); as problem) {
-                  <span class="ah-hint" role="alert">{{ problem }}</span>
+                  <span class="ah-hint" id="cap-problem" role="alert">{{
+                    problem
+                  }}</span>
                 } @else if (refusal(); as why) {
                   <span class="ah-hint">{{ why }}</span>
                 }
@@ -576,8 +581,9 @@ const ACTIVITY_SHOWN = 6;
                 ahButton="danger"
                 size="sm"
                 type="button"
-                [disabled]="store.busy() || c.session?.cancelRequested === true"
-                (click)="store.cancel()"
+                [disabled]="c.session?.cancelRequested === true"
+                [attr.aria-disabled]="store.busy() ? 'true' : null"
+                (click)="cancel()"
               >
                 Cancel question
               </button>
@@ -658,7 +664,7 @@ export class ConversationView {
   /** What sending costs: a warm session goes on; otherwise a new one starts, capped. */
   protected readonly spendNote = computed(() => {
     const c = this.store.conversation();
-    if (c?.session?.status === 'running' && !c.session.cancelRequested)
+    if (c?.session?.warm === true && !c.session.cancelRequested)
       return 'The session is warm: it goes on from what it has read.';
     const typed = checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
     const cap =
@@ -732,13 +738,24 @@ export class ConversationView {
   /** Unpins one item. */
   protected async unpin(item: ConversationContextItem): Promise<void> {
     const c = this.store.conversation();
-    if (c === null) return;
+    if (c === null || this.store.busy()) return;
     await this.store.pin(
       c.context.filter((p) => !(p.kind === item.kind && p.ref === item.ref))
     );
   }
 
+  /** Shares the conversation with the team, or stops sharing it. */
+  protected share(shared: boolean): void {
+    if (!this.store.busy()) void this.store.share(shared);
+  }
+
+  /** Cancels the question being answered. */
+  protected cancel(): void {
+    if (!this.store.busy()) void this.store.cancel();
+  }
+
   protected addContext(): void {
+    if (this.store.busy()) return;
     this.store.dismissError();
     this.dialogs.open<boolean, AddContextData>(AddContextDialog, {
       data: { store: this.store },
@@ -747,6 +764,7 @@ export class ConversationView {
   }
 
   protected remove(): void {
+    if (this.store.busy()) return;
     this.store.dismissError();
     const ref = this.dialogs.open<boolean, DeleteConversationData>(
       DeleteConversationDialog,

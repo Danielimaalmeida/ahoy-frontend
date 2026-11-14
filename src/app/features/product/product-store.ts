@@ -12,7 +12,7 @@ import { AUTH_STRATEGY } from '@core/auth/auth-strategy';
 import { CLOCK, type Timer } from '@core/realtime/clock';
 import { ConversationStream } from '@core/realtime/conversation-stream';
 import { FETCH } from '@core/realtime/fetch';
-import { CONVERSATION_POLL_MS, needsPolling } from '@domain/conversations';
+import { pollDelay } from '@domain/conversations';
 
 /** One item to pin, as the context request takes it. */
 export interface PinRef {
@@ -22,10 +22,10 @@ export interface PinRef {
 
 /**
  * The Product page's conversations: the list on the left and the one open on the right, followed while one of its
- * questions waits or is being answered, so the answer shows as the agent writes it: from the conversation's event
- * stream, or, when the stream cannot be opened or breaks, by reading it again every second. Asking a question may
- * start a session that spends AIU (the person confirms it on the page); everything else here is 0 AIU and calls
- * nothing outside Ahoy.
+ * questions waits or is being answered, so the answer shows as the agent writes it, and while its session is warm,
+ * so the page sees it end: from the conversation's event stream, or, when the stream cannot be opened or breaks, by
+ * reading it again. Asking a question may start a session that spends AIU (the person confirms it on the page);
+ * everything else here is 0 AIU and calls nothing outside Ahoy.
  */
 @Injectable()
 export class ProductStore {
@@ -211,6 +211,11 @@ export class ProductStore {
     if (generation !== this.generation) return;
     if (!result.ok) {
       this.openError.set(result.error);
+      // Deleted, or no longer shared with the person: there is nothing left to follow.
+      if (isGone(result.error)) {
+        this.stopFollowing();
+        return;
+      }
     } else {
       this.openError.set(null);
       this.conversation.set(result.value);
@@ -220,13 +225,14 @@ export class ProductStore {
   }
 
   /**
-   * While a question is open (or after a read that failed while one was): follows the conversation on its stream, or,
-   * once the stream has failed for this question, reads it again in a second. Stops following when no question is open.
+   * While a question is open or the session is warm (or after a read that failed meanwhile): follows the conversation
+   * on its stream, or, once the stream has failed, reads it again after {@link pollDelay}. Stops when neither is true.
    */
   private follow(): void {
     const open = this.conversation();
     const id = this.openId();
-    if (id === null || open === null || open.id !== id || !needsPolling(open)) {
+    const delay = open === null ? null : pollDelay(open);
+    if (id === null || open === null || open.id !== id || delay === null) {
       this.stopFollowing();
       return;
     }
@@ -237,7 +243,7 @@ export class ProductStore {
     }
     this.stopFollowing();
     const generation = this.generation;
-    this.timer = this.clock.schedule(CONVERSATION_POLL_MS, () => {
+    this.timer = this.clock.schedule(delay, () => {
       this.timer = null;
       if (generation === this.generation) void this.fetch(generation, id);
     });
@@ -254,7 +260,7 @@ export class ProductStore {
           if (generation !== this.generation || this.openId() !== c.id) return;
           this.conversation.set(c);
           this.remember(c);
-          if (!needsPolling(c)) this.stopFollowing();
+          if (pollDelay(c) === null) this.stopFollowing();
         },
         onEnd: () => {
           if (this.stream !== stream) return;
@@ -304,4 +310,11 @@ export class ProductStore {
         : [summary, ...list]
     );
   }
+}
+
+/** Whether a read failed because the conversation is gone for the person (deleted, or no longer shared). */
+function isGone(error: ApiError): boolean {
+  return (
+    error.kind === 'problem' && (error.status === 404 || error.status === 403)
+  );
 }

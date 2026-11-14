@@ -5,7 +5,9 @@ import {
   contextChipText,
   conversationGroups,
   conversationSub,
-  needsPolling,
+  pollDelay,
+  WARM_POLL_MS,
+  CONVERSATION_POLL_MS,
   openTurn,
   pinInput,
   pinRefusal,
@@ -107,11 +109,12 @@ describe('pinning context', () => {
 });
 
 describe('a conversation’s state', () => {
-  it('finds the open question and polls only while there is one', () => {
+  it('finds the open question, follows every second while there is one, less often while the session is warm, and stops when it has ended', () => {
     expect(openTurn(OPEN.turns)?.n).toBe(2);
-    expect(needsPolling(OPEN)).toBe(true);
+    expect(pollDelay(OPEN)).toBe(CONVERSATION_POLL_MS);
     expect(openTurn(DONE.turns)).toBeNull();
-    expect(needsPolling(DONE)).toBe(false);
+    expect(pollDelay(DONE)).toBe(WARM_POLL_MS);
+    expect(pollDelay({ ...DONE, session: null })).toBeNull();
   });
 
   it('lets only the owner ask, one question at a time, up to the limit', () => {

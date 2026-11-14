@@ -70,7 +70,7 @@ export const AGENT_JOB_WORDS: readonly AgentJobWords[] = [
     spends: 'Each conversation session, when on',
     optional: true,
     warning:
-      'Anyone can then ask an agent questions on the Product page; each session is a run that spends AIU outside any story’s budget.',
+      'Admins can then ask an agent questions on the Product page; each session is a run that spends AIU outside any story’s budget.',
   },
   {
     key: 'knowledgeAgent',

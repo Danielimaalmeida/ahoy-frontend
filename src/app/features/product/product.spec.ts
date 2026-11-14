@@ -10,11 +10,12 @@ import {
   provideMockBackend,
 } from '@core/mock/mock-backend';
 import { CLOCK, type Clock } from '@core/realtime/clock';
-import { CONVERSATION_POLL_MS } from '@domain/conversations';
+import { CONVERSATION_POLL_MS, WARM_POLL_MS } from '@domain/conversations';
 import type { ManualClock } from '@testing/mock-backend/clock';
 import {
   MOCK_START_MS,
   MOCK_STEP_MS,
+  MOCK_WARM_MS,
 } from '@testing/mock-backend/conversations';
 import type { MockRequest, MockResponse } from '@testing/mock-backend/http';
 import type { MockAhoyServer } from '@testing/mock-backend/server';
@@ -55,10 +56,14 @@ async function flush(page: { harness: RouterTestingHarness }): Promise<void> {
   }
 }
 
-/** Moves the mock's clock (and so the pretend agent and the page's polling) on by `ms`, a poll at a time. */
-async function wait(page: Page, ms: number): Promise<void> {
-  for (let left = ms; left > 0; left -= CONVERSATION_POLL_MS) {
-    page.clock.advance(Math.min(CONVERSATION_POLL_MS, left));
+/** Moves the mock's clock (and so the pretend agent and the page's polling) on by `ms`, `step` at a time. */
+async function wait(
+  page: Page,
+  ms: number,
+  step = CONVERSATION_POLL_MS
+): Promise<void> {
+  for (let left = ms; left > 0; left -= step) {
+    page.clock.advance(Math.min(step, left));
     await flush(page);
   }
 }
@@ -279,7 +284,7 @@ describe('Product on the mock backend', () => {
     expect(chips()).toEqual(['Late fees for enterprise accounts']);
   });
 
-  it('asks, confirming the spend, streams the answer with what the agent reads, then shows its proposals and questions, and stops following', async () => {
+  it('asks, confirming the spend, streams the answer with what the agent reads, then shows its proposals and questions, and follows the warm session until it ends', async () => {
     let id = '';
     const page = await open('/product', (server) => {
       id = started(server, 'split-epic', [
@@ -330,7 +335,7 @@ describe('Product on the mock backend', () => {
     await wait(page, MOCK_STEP_MS * 20);
     expect(text(turn())).toContain('Answered');
     expect(
-      [...turn().querySelectorAll('ah-proposal-card h4')].map(text)
+      [...turn().querySelectorAll('ah-proposal-card h3')].map(text)
     ).toEqual([
       'Charge late fees on overdue enterprise invoices',
       'Show the late fee on the invoice PDF',
@@ -347,8 +352,16 @@ describe('Product on the mock backend', () => {
       /^\d+\.\d AIU$/
     );
     expect(text(page.root.querySelector('aside.side'))).toContain('Warm:');
+    expect(text(composer(page.root))).toContain('The session is warm');
 
-    // Answered: the stream is closed, and nothing reads the conversation again.
+    // The stream stays open while the session is warm, so the page sees it end and stops saying "warm".
+    await wait(page, MOCK_WARM_MS + WARM_POLL_MS, WARM_POLL_MS);
+    expect(text(page.root.querySelector('aside.side'))).toContain(
+      'No session running'
+    );
+    expect(text(composer(page.root))).toContain(
+      'Sending starts a session that spends AIU'
+    );
     expect(page.server.conversationDesk.dropStreams()).toBe(0);
     await wait(page, CONVERSATION_POLL_MS * 5);
     expect(reads()).toBe(readsBefore);
@@ -357,7 +370,7 @@ describe('Product on the mock backend', () => {
     ).toHaveLength(1);
   });
 
-  it('reads the conversation every second once its stream breaks, until the answer is in', async () => {
+  it('reads the conversation every second once its stream breaks, less often while the session is warm, and stops when it ends', async () => {
     let id = '';
     const page = await open('/product', (server) => {
       id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
@@ -380,15 +393,50 @@ describe('Product on the mock backend', () => {
     await wait(page, CONVERSATION_POLL_MS * 3);
     expect(reads()).toBe(readsBefore + 4);
 
-    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30, 5_000);
     const turn = page.root.querySelector('article.turn')!;
     expect(text(turn)).toContain('Answered');
     const answered = reads();
-    await wait(page, CONVERSATION_POLL_MS * 5);
-    expect(reads()).toBe(answered);
+    await wait(page, WARM_POLL_MS * 2, 5_000);
+    expect(reads()).toBe(answered + 2);
+
+    await wait(page, MOCK_WARM_MS, WARM_POLL_MS);
+    expect(text(page.root.querySelector('aside.side'))).toContain(
+      'No session running'
+    );
+    const ended = reads();
+    await wait(page, WARM_POLL_MS * 4, WARM_POLL_MS);
+    expect(reads()).toBe(ended);
     expect(
       page.requests.filter((r) => r.path === `/conversations/${id}/stream`)
     ).toHaveLength(1);
+  });
+
+  it('stops following a conversation deleted while it is open, and says it is gone', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    type(composer(page.root)!.querySelector('textarea'), 'Is it ready?');
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    const reads = () =>
+      page.requests.filter(
+        (r) => r.method === 'GET' && r.path === `/conversations/${id}`
+      ).length;
+    const readsBefore = reads();
+
+    call(page.server, 'DELETE', `/conversations/${id}`, undefined, {
+      'x-ahoy-actor': ME,
+    });
+    await wait(page, CONVERSATION_POLL_MS * 2);
+    expect(reads()).toBe(readsBefore + 1);
+    await wait(page, CONVERSATION_POLL_MS * 10);
+    expect(reads()).toBe(readsBefore + 1);
+    expect(page.server.conversationDesk.dropStreams()).toBe(0);
   });
 
   it('cancels the question being answered', async () => {

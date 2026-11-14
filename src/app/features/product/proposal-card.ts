@@ -30,7 +30,7 @@ import { storySentence } from '@domain/story-drafts';
       font-weight: 700;
       color: var(--ink-soft);
     }
-    h4 {
+    h3 {
       margin: 0;
       font-size: 14px;
       overflow-wrap: anywhere;
@@ -74,7 +74,7 @@ import { storySentence } from '@domain/story-drafts';
         <span class="ah-tag">{{
           p.kind === 'story' ? 'Story' : 'Meeting topic'
         }}</span>
-        <h4>{{ p.story?.title ?? p.topic?.title }}</h4>
+        <h3>{{ p.story?.title ?? p.topic?.title }}</h3>
       </div>
       @if (p.story; as s) {
         <span class="text">{{ sentence(s) }}</span>

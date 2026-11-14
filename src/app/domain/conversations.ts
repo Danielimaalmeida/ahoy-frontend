@@ -50,6 +50,9 @@ export interface ConversationSummaryLike {
 /** How often an open conversation is read again while one of its questions waits or is being answered. */
 export const CONVERSATION_POLL_MS = 1_000;
 
+/** How often it is read again while its session is only warm, so the page sees the session end. */
+export const WARM_POLL_MS = 15_000;
+
 /** The longest title the API takes. */
 export const CONVERSATION_TITLE_MAX = 200;
 /** The longest question the API takes. */
@@ -225,9 +228,14 @@ export function openTurn<T extends TurnLike>(turns: readonly T[]): T | null {
   );
 }
 
-/** Whether the page should read the conversation again soon: a question is open, or a session is still stopping. */
-export function needsPolling(conversation: ConversationLike): boolean {
-  return openTurn(conversation.turns) !== null;
+/**
+ * How soon the page reads the conversation again when it cannot follow its stream: every second while a question is
+ * open, less often while its session is warm or stopping (so "warm" is never shown after the session ended), and never
+ * (null) once neither is true.
+ */
+export function pollDelay(conversation: ConversationLike): number | null {
+  if (openTurn(conversation.turns) !== null) return CONVERSATION_POLL_MS;
+  return conversation.session === null ? null : WARM_POLL_MS;
 }
 
 /** Why the person cannot ask now, or null when they can. */

@@ -2056,7 +2056,7 @@ export interface paths {
     readonly delete: operations['deleteConversation'];
     readonly options?: never;
     readonly head?: never;
-    /** Rename a conversation, or share it with the team (read-only to them). Its owner only. 0 AIU. */
+    /** Rename a conversation, or share it with the other admins (read-only to them). Its owner only. 0 AIU. */
     readonly patch: operations['updateConversation'];
     readonly trace?: never;
   };
@@ -5552,7 +5552,7 @@ export interface components {
     };
     readonly ConversationChange: {
       readonly title?: string;
-      /** @description True shares it with every member, read-only to them. */
+      /** @description True shares it with every other admin (the Product page is for admins only), read-only to them. */
       readonly shared?: boolean;
     };
     /** @enum {string} */

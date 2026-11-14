@@ -4362,7 +4362,7 @@
       "patch": {
         "operationId": "updateConversation",
         "tags": ["product"],
-        "summary": "Rename a conversation, or share it with the team (read-only to them). Its owner only. 0 AIU.",
+        "summary": "Rename a conversation, or share it with the other admins (read-only to them). Its owner only. 0 AIU.",
         "requestBody": {
           "required": true,
           "content": {
@@ -14544,7 +14544,7 @@
           },
           "shared": {
             "type": "boolean",
-            "description": "True shares it with every member, read-only to them."
+            "description": "True shares it with every other admin (the Product page is for admins only), read-only to them."
           }
         }
       },

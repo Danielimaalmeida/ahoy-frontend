@@ -118,7 +118,8 @@ import { ProductStore } from './product-store';
       padding: 4px 10px 8px;
       margin: 0;
     }
-    main {
+    /* Not a <main>: the app shell already has the page's one main landmark. */
+    .product-main {
       flex: 1;
       min-width: 0;
       display: flex;
@@ -224,7 +225,7 @@ import { ProductStore } from './product-store';
           </li>
         </ng-template>
       </aside>
-      <main>
+      <div class="product-main">
         @if (listFailure(); as problem) {
           <ah-banner
             [variant]="problem.variant"
@@ -238,7 +239,7 @@ import { ProductStore } from './product-store';
           </ah-banner>
         }
         <router-outlet />
-      </main>
+      </div>
     </div>
   `,
 })
