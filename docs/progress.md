@@ -40,7 +40,7 @@ What each feature still needs beyond the tests above. Its pull request has the d
 
 | Feature                                                                                                    | Not checked yet                                                                                            |
 | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| The Product page (`/product`, admins only): conversations with pinned context, proposal and question cards | A browser after this merge (screenshots on the mock were taken on 2026-11-09); an API; any live session    |
+| The Product page (`/product`, admins only): conversations with pinned context, proposal and question cards | A browser after this merge (mock screenshots of 2026-11-09); the answer's stream on an API; a live session |
 | Create in Confluence, Team settings › Confluence                                                           | A real Confluence; updating a page once it exists is not built                                             |
 | Each person on a side of a meeting (People, `MeStore`)                                                     | A browser                                                                                                  |
 | Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                        | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |

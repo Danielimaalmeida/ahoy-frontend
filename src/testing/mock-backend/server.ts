@@ -402,9 +402,12 @@ export class MockAhoyServer {
     this.world.hub.closeAll();
   }
 
-  /** Breaks every open event stream (the `dropStream` switch); clients reconnect with `Last-Event-ID`. */
+  /**
+   * Breaks every open stream (the `dropStream` switch): event streams reconnect with `Last-Event-ID`, the Product page
+   * reads its conversation again and polls.
+   */
   dropStreams(): number {
-    return this.world.hub.dropAll();
+    return this.world.hub.dropAll() + this.conversations.dropStreams();
   }
 
   /**
@@ -1158,6 +1161,20 @@ export class MockAhoyServer {
             call.body as ConversationTurnRequest // validated
           )
         );
+      case 'streamConversation':
+        return {
+          kind: 'stream',
+          status: 200,
+          headers: {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+          },
+          stream: this.conversations.stream(
+            call.actor,
+            call.path['conversationId'] ?? ''
+          ),
+        };
       case 'cancelConversationTurn':
         return jsonResponse(
           200,

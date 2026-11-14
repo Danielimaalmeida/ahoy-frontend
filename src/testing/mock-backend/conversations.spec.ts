@@ -1,11 +1,12 @@
 import type { Conversation, ConversationList } from '@core/api/types';
 import {
+  CONVERSATION_STREAM_POLL_MS,
   DEFAULT_SESSION_BUDGET,
   MOCK_START_MS,
   MOCK_STEP_MS,
   MOCK_WARM_MS,
 } from './conversations';
-import { call, testServer } from './spec-helpers';
+import { call, settle, testServer } from './spec-helpers';
 
 const ME = { 'x-ahoy-actor': 'dev@example.com' };
 const OTHER = { 'x-ahoy-actor': 'alex@example.com' };
@@ -164,5 +165,61 @@ describe('the mock Product conversations', () => {
       call(server, 'DELETE', `/conversations/${id}`, undefined, ME).status
     ).toBe(204);
     expect(get().status).toBe(404);
+  });
+
+  it('streams the conversation at once and on each change, answers 404 to others before it opens, and ends on delete', async () => {
+    const { server, clock, id } = started(null);
+    const refused = call(
+      server,
+      'GET',
+      `/conversations/${id}/stream`,
+      undefined,
+      OTHER
+    );
+    expect([refused.status, refused.response.kind]).toEqual([404, 'json']);
+
+    const opened = call(
+      server,
+      'GET',
+      `/conversations/${id}/stream`,
+      undefined,
+      ME
+    );
+    if (opened.response.kind !== 'stream') throw new Error('not a stream');
+    expect(opened.headers['Content-Type']).toBe(
+      'text/event-stream; charset=utf-8'
+    );
+    const reader = opened.response.stream.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let done = false;
+    void (async () => {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        text += decoder.decode(chunk.value);
+      }
+      done = true;
+    })();
+    const titles = () =>
+      [...text.matchAll(/^data: (.*)$/gm)].map(
+        (m) => (JSON.parse(m[1]!) as Conversation).title
+      );
+    await settle();
+    expect(text.startsWith('event: conversation\ndata: {')).toBe(true);
+    expect(titles()).toEqual(['Late fees']);
+
+    clock.advance(CONVERSATION_STREAM_POLL_MS * 2);
+    await settle();
+    expect(titles()).toEqual(['Late fees']);
+    call(server, 'PATCH', `/conversations/${id}`, { title: 'Fees' }, ME);
+    clock.advance(CONVERSATION_STREAM_POLL_MS);
+    await settle();
+    expect(titles()).toEqual(['Late fees', 'Fees']);
+
+    call(server, 'DELETE', `/conversations/${id}`, undefined, ME);
+    clock.advance(CONVERSATION_STREAM_POLL_MS);
+    await settle();
+    expect(done).toBe(true);
   });
 });

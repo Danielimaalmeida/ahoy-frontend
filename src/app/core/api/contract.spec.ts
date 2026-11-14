@@ -367,9 +367,8 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
 ];
 
 /**
- * In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...), the live streams (lane 2B; the Product page polls instead of
- * `streamConversation`) and a
- * run's input.
+ * Not in `ApiClient`: the rest of phase 7 (`resolveReview`...), a run's input, and the live streams, which `core/realtime`
+ * reads with `fetch` (`streamEvents` in `EventStreamClient`, `streamConversation` in `ConversationStream`).
  */
 const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'amendAnchors',

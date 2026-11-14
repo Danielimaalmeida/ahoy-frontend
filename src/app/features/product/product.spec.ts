@@ -279,7 +279,7 @@ describe('Product on the mock backend', () => {
     expect(chips()).toEqual(['Late fees for enterprise accounts']);
   });
 
-  it('asks, confirming the spend, streams the answer with what the agent reads, then shows its proposals and questions, and stops reading', async () => {
+  it('asks, confirming the spend, streams the answer with what the agent reads, then shows its proposals and questions, and stops following', async () => {
     let id = '';
     const page = await open('/product', (server) => {
       id = started(server, 'split-epic', [
@@ -309,6 +309,15 @@ describe('Product on the mock backend', () => {
       'Waiting for a session'
     );
     expect(buttonNamed(composer(page.root)!, 'Send').disabled).toBe(true);
+    // The answer comes on the conversation's stream: the page does not read the conversation again meanwhile.
+    expect(
+      page.requests.filter((r) => r.path === `/conversations/${id}/stream`)
+    ).toHaveLength(1);
+    const reads = () =>
+      page.requests.filter(
+        (r) => r.method === 'GET' && r.path === `/conversations/${id}`
+      ).length;
+    const readsBefore = reads();
 
     await wait(page, MOCK_START_MS + MOCK_STEP_MS * 7);
     const turn = () => page.root.querySelector('article.turn')!;
@@ -339,15 +348,47 @@ describe('Product on the mock backend', () => {
     );
     expect(text(page.root.querySelector('aside.side'))).toContain('Warm:');
 
-    const reads = page.requests.filter(
-      (r) => r.method === 'GET' && r.path === `/conversations/${id}`
-    ).length;
+    // Answered: the stream is closed, and nothing reads the conversation again.
+    expect(page.server.conversationDesk.dropStreams()).toBe(0);
     await wait(page, CONVERSATION_POLL_MS * 5);
+    expect(reads()).toBe(readsBefore);
     expect(
+      page.requests.filter((r) => r.path === `/conversations/${id}/stream`)
+    ).toHaveLength(1);
+  });
+
+  it('reads the conversation every second once its stream breaks, until the answer is in', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    type(composer(page.root)!.querySelector('textarea'), 'Is it ready?');
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    const reads = () =>
       page.requests.filter(
         (r) => r.method === 'GET' && r.path === `/conversations/${id}`
-      ).length
-    ).toBe(reads);
+      ).length;
+    const readsBefore = reads();
+
+    expect(page.server.dropStreams()).toBe(1);
+    await flush(page);
+    expect(reads()).toBe(readsBefore + 1);
+    await wait(page, CONVERSATION_POLL_MS * 3);
+    expect(reads()).toBe(readsBefore + 4);
+
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    const turn = page.root.querySelector('article.turn')!;
+    expect(text(turn)).toContain('Answered');
+    const answered = reads();
+    await wait(page, CONVERSATION_POLL_MS * 5);
+    expect(reads()).toBe(answered);
+    expect(
+      page.requests.filter((r) => r.path === `/conversations/${id}/stream`)
+    ).toHaveLength(1);
   });
 
   it('cancels the question being answered', async () => {

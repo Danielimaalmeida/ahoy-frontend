@@ -1,8 +1,8 @@
 /**
  * The mock's Product page conversations (`/conversations`): each person's own, and those shared with the team
  * (read-only to them). A question starts a pretend session (or goes to the warm one), which reads, streams its answer
- * in a few steps the page polls, hands in proposals as the recipe suggests, and stays warm until it is idle. Fictional
- * text, 0 AIU of anything real.
+ * in a few steps (sent on `GET /conversations/{id}/stream`), hands in proposals as the recipe suggests, and stays warm
+ * until it is idle. Fictional text, 0 AIU of anything real.
  */
 import type {
   Conversation,
@@ -17,8 +17,11 @@ import type {
   NewConversation,
 } from '@core/api/types';
 import { iso, type Cancel, type MockClock } from './clock';
-import { MockProblem } from './http';
+import { MockProblem, type MockStream } from './http';
 import type { Writable } from './voyage';
+
+/** How often an open conversation stream looks for a change, as `conversationStreamPollMs` in `ahoy-hosted`. */
+export const CONVERSATION_STREAM_POLL_MS = 750;
 
 const KNOWN_NAMES: ReadonlyMap<string, string> = new Map([
   ['alex@example.com', 'Alex Example'],
@@ -80,11 +83,20 @@ const refused = (path: string, message: string) =>
   });
 
 /** The conversations of a mock world. */
+/** An open `GET /conversations/{id}/stream`. */
+interface OpenStream {
+  /** Ends it normally. */
+  close(): void;
+  /** Ends it with an error, as a dropped connection would. */
+  fail(reason: unknown): void;
+}
+
 export class ConversationDesk {
   private readonly conversations = new Map<string, ConversationRecord>();
   private nextId = 1;
   private nextKey = 1;
   private nextSession = 1;
+  private readonly streams = new Set<OpenStream>();
 
   constructor(
     private readonly clock: MockClock,
@@ -301,9 +313,90 @@ export class ConversationDesk {
     return this.dto(c, actor);
   }
 
-  /** Cancels every timer (the server is closing or being reset). */
+  /**
+   * `GET /conversations/{id}/stream`, as the real API: `404` before it opens for a conversation the actor cannot read,
+   * then `event: conversation` with the conversation now and again each time it changes; it ends when the conversation
+   * is deleted.
+   */
+  stream(actor: string, id: string): MockStream {
+    let last = JSON.stringify(this.get(actor, id));
+    const encoder = new TextEncoder();
+    let timer: Cancel | null = null;
+    let open = true;
+    let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+    const end = (): void => {
+      open = false;
+      timer?.();
+      timer = null;
+      this.streams.delete(handle);
+    };
+    const write = (json: string): void => {
+      controller?.enqueue(
+        encoder.encode(`event: conversation\ndata: ${json}\n\n`)
+      );
+    };
+    const tick = (): void => {
+      timer = null;
+      if (!open) return;
+      let now: string;
+      try {
+        now = JSON.stringify(this.get(actor, id));
+      } catch {
+        end();
+        controller?.close();
+        return;
+      }
+      if (now !== last) {
+        last = now;
+        write(now);
+      }
+      timer = this.clock.schedule(CONVERSATION_STREAM_POLL_MS, tick);
+    };
+    const handle: OpenStream = {
+      close: () => {
+        if (!open) return;
+        end();
+        try {
+          controller?.close();
+        } catch {
+          // Already closed or errored by its reader.
+        }
+      },
+      fail: (reason: unknown) => {
+        if (!open) return;
+        end();
+        try {
+          controller?.error(reason);
+        } catch {
+          // Already closed.
+        }
+      },
+    };
+    const body = new ReadableStream<Uint8Array>({
+      start: (c) => {
+        controller = c;
+        this.streams.add(handle);
+        write(last);
+        timer = this.clock.schedule(CONVERSATION_STREAM_POLL_MS, tick);
+      },
+      cancel: end,
+    });
+    return { body, abort: (reason?: unknown) => handle.fail(reason) };
+  }
+
+  /** Breaks every open conversation stream, as a dropped connection would; returns how many there were. */
+  dropStreams(
+    reason: unknown = new TypeError('the mock dropped the conversation stream')
+  ): number {
+    const open = [...this.streams];
+    for (const s of open) s.fail(reason);
+    return open.length;
+  }
+
+  /** Cancels every timer and ends every open stream (the server is closing or being reset). */
   stopAll(): void {
     for (const c of this.conversations.values()) c.timer?.();
+    for (const s of [...this.streams]) s.close();
   }
 
   private insert(

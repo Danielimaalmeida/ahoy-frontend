@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { API_BASE, trimBase } from '@core/api/api-base';
 import { ApiClient } from '@core/api/api-client';
 import type { ApiError, ApiResult } from '@core/api/api-error';
 import type {
@@ -7,7 +8,10 @@ import type {
   ConversationRecipe,
   ConversationSummary,
 } from '@core/api/types';
+import { AUTH_STRATEGY } from '@core/auth/auth-strategy';
 import { CLOCK, type Timer } from '@core/realtime/clock';
+import { ConversationStream } from '@core/realtime/conversation-stream';
+import { FETCH } from '@core/realtime/fetch';
 import { CONVERSATION_POLL_MS, needsPolling } from '@domain/conversations';
 
 /** One item to pin, as the context request takes it. */
@@ -17,8 +21,9 @@ export interface PinRef {
 }
 
 /**
- * The Product page's conversations: the list on the left and the one open on the right, read again every second while
- * one of its questions waits or is being answered, so the answer shows as the agent writes it. Asking a question may
+ * The Product page's conversations: the list on the left and the one open on the right, followed while one of its
+ * questions waits or is being answered, so the answer shows as the agent writes it: from the conversation's event
+ * stream, or, when the stream cannot be opened or breaks, by reading it again every second. Asking a question may
  * start a session that spends AIU (the person confirms it on the page); everything else here is 0 AIU and calls
  * nothing outside Ahoy.
  */
@@ -26,9 +31,15 @@ export interface PinRef {
 export class ProductStore {
   private readonly api = inject(ApiClient);
   private readonly clock = inject(CLOCK);
+  private readonly fetchFn = inject(FETCH);
+  private readonly auth = inject(AUTH_STRATEGY);
+  private readonly base = trimBase(inject(API_BASE));
   /** Counts opens, so an answer for a conversation no longer open is dropped. */
   private generation = 0;
   private timer: Timer | null = null;
+  private stream: ConversationStream | null = null;
+  /** Set when the open conversation's stream failed: it is polled until the next question or conversation. */
+  private streamFailed = false;
 
   /** Every conversation the person may see: their own and those shared with the team. */
   readonly conversations = signal<readonly ConversationSummary[]>([]);
@@ -50,7 +61,7 @@ export class ProductStore {
   readonly commandError = signal<ApiError | null>(null);
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopPolling());
+    inject(DestroyRef).onDestroy(() => this.stopFollowing());
   }
 
   /** Reads the list. */
@@ -74,7 +85,8 @@ export class ProductStore {
       (this.conversation() !== null || this.timer !== null)
     )
       return;
-    this.stopPolling();
+    this.stopFollowing();
+    this.streamFailed = false;
     const generation = ++this.generation;
     this.openId.set(id);
     this.openError.set(null);
@@ -88,7 +100,7 @@ export class ProductStore {
   async refresh(): Promise<void> {
     const id = this.openId();
     if (id === null) return;
-    this.stopPolling();
+    this.stopFollowing();
     await this.fetch(this.generation, id);
   }
 
@@ -109,6 +121,8 @@ export class ProductStore {
     question: string,
     cap: number | null
   ): Promise<ApiResult<Conversation>> {
+    // A new question tries the stream again, even if it failed for the last one.
+    this.streamFailed = false;
     return this.change((id) =>
       this.api.askConversation(id, {
         question: question.trim(),
@@ -151,7 +165,7 @@ export class ProductStore {
       throw new Error('No conversation is open: the page offers no command.');
     const result = await this.command(() => this.api.deleteConversation(id));
     if (result.ok) {
-      this.stopPolling();
+      this.stopFollowing();
       this.generation++;
       this.conversations.set(this.conversations().filter((c) => c.id !== id));
       this.conversation.set(null);
@@ -173,10 +187,10 @@ export class ProductStore {
       throw new Error('No conversation is open: the page offers no command.');
     const result = await this.command(() => call(id));
     if (result.ok && this.openId() === id) {
-      this.stopPolling();
+      this.stopFollowing();
       this.remember(result.value);
       this.conversation.set(result.value);
-      this.poll();
+      this.follow();
     }
     return result;
   }
@@ -202,16 +216,26 @@ export class ProductStore {
       this.conversation.set(result.value);
       this.remember(result.value);
     }
-    this.poll();
+    this.follow();
   }
 
-  /** Reads again in a second while a question is open (and after a read that failed while one was). */
-  private poll(): void {
-    this.stopPolling();
+  /**
+   * While a question is open (or after a read that failed while one was): follows the conversation on its stream, or,
+   * once the stream has failed for this question, reads it again in a second. Stops following when no question is open.
+   */
+  private follow(): void {
     const open = this.conversation();
     const id = this.openId();
-    if (id === null || open === null || open.id !== id || !needsPolling(open))
+    if (id === null || open === null || open.id !== id || !needsPolling(open)) {
+      this.stopFollowing();
       return;
+    }
+    if (!this.streamFailed) {
+      this.stopPolling();
+      if (this.stream === null) this.stream = this.openStream(id);
+      return;
+    }
+    this.stopFollowing();
     const generation = this.generation;
     this.timer = this.clock.schedule(CONVERSATION_POLL_MS, () => {
       this.timer = null;
@@ -219,9 +243,43 @@ export class ProductStore {
     });
   }
 
+  private openStream(id: string): ConversationStream {
+    const generation = this.generation;
+    const stream = new ConversationStream(
+      {
+        fetch: this.fetchFn,
+        auth: this.auth,
+        base: this.base,
+        onConversation: (c) => {
+          if (generation !== this.generation || this.openId() !== c.id) return;
+          this.conversation.set(c);
+          this.remember(c);
+          if (!needsPolling(c)) this.stopFollowing();
+        },
+        onEnd: () => {
+          if (this.stream !== stream) return;
+          this.stream = null;
+          if (generation !== this.generation) return;
+          // Read it once now, then every second until the question ends.
+          this.streamFailed = true;
+          void this.fetch(generation, id);
+        },
+      },
+      id
+    );
+    stream.start();
+    return stream;
+  }
+
   private stopPolling(): void {
     this.timer?.cancel();
     this.timer = null;
+  }
+
+  private stopFollowing(): void {
+    this.stopPolling();
+    this.stream?.stop();
+    this.stream = null;
   }
 
   /** Puts a conversation's summary in the list, first when it is new. */
