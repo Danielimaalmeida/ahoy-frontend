@@ -33,29 +33,31 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   sign-in in a production environment", which tests the real library's refusal the stub lacks; format fails on
   `docs/architecture.md` alone, as on `main`.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` and the runner key of its PR #117
-  (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`); `schema.d.ts` and the test
-  mirror are generated from it. Merge and deploy that API and its migrations with or before this front end: an older
+  (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`), and on `feat/product-page` its
+  branch of the same name (PR #107, the conversations, migration 0052); `schema.d.ts` and the test mirror are generated
+  from it. Merge and deploy that API and its migrations with or before this front end: an older
   API sends no `runnerKey`, and the Figma page refuses its answer.
 
 ## Not checked yet
 
 What each feature still needs beyond the tests above. Its pull request has the detail.
 
-| Feature                                                                                                | Not checked yet                                                                                            |
-| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                        | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
-| Create in Confluence, Team settings › Confluence                                                       | A real Confluence; updating a page once it exists is not built                                             |
-| Each person on a side of a meeting (People, `MeStore`)                                                 | A browser                                                                                                  |
-| Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                    | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |
-| The 7 empty states (Voyages, Meetings, notes)                                                          | A browser, against the designs; the first-use copy for Voyages and Meetings is ours, not the designer's    |
-| The `local` configuration (`npm run start:local`, no WebEAM)                                           | A browser against a running API                                                                            |
-| Design system re-sync, `docs/accessibility.md`, the a11y fixes                                         | The `focus`, `line-strong` and dark `danger` overrides are not yet published to the design-system artifact |
-| Metrics › Trends                                                                                       | Seen on the in-browser mock before the review fixes, not after; not against an API                         |
-| Defects table, defect start as a named person                                                          | A browser or an API                                                                                        |
-| Plan panel and its models in Team settings › Phases                                                    | An API with a saved panel                                                                                  |
-| D23 steps 1 to 5: meeting side names, People, Setup, My Copilot token, MCP defaults                    | An API                                                                                                     |
-| Meeting notes UX (move a topic anywhere, one-off Jira target, search)                                  | Against a local API                                                                                        |
-| Cancel and Start again, Deploy and Release to TEST, Assess comments, running indicator, artifacts list | A browser or an API                                                                                        |
+| Feature                                                                                                    | Not checked yet                                                                                            |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| The Product page (`/product`, admins only): conversations with pinned context, proposal and question cards | A browser after this merge (mock screenshots of 2026-11-09); the answer's stream on an API; a live session |
+| Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                            | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
+| Create in Confluence, Team settings › Confluence                                                           | A real Confluence; updating a page once it exists is not built                                             |
+| Each person on a side of a meeting (People, `MeStore`)                                                     | A browser                                                                                                  |
+| Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                        | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |
+| The 7 empty states (Voyages, Meetings, notes)                                                              | A browser, against the designs; the first-use copy for Voyages and Meetings is ours, not the designer's    |
+| The `local` configuration (`npm run start:local`, no WebEAM)                                               | A browser against a running API                                                                            |
+| Design system re-sync, `docs/accessibility.md`, the a11y fixes                                             | The `focus`, `line-strong` and dark `danger` overrides are not yet published to the design-system artifact |
+| Metrics › Trends                                                                                           | Seen on the in-browser mock before the review fixes, not after; not against an API                         |
+| Defects table, defect start as a named person                                                              | A browser or an API                                                                                        |
+| Plan panel and its models in Team settings › Phases                                                        | An API with a saved panel                                                                                  |
+| D23 steps 1 to 5: meeting side names, People, Setup, My Copilot token, MCP defaults                        | An API                                                                                                     |
+| Meeting notes UX (move a topic anywhere, one-off Jira target, search)                                      | Against a local API                                                                                        |
+| Cancel and Start again, Deploy and Release to TEST, Assess comments, running indicator, artifacts list     | A browser or an API                                                                                        |
 
 ## Proof
 
@@ -80,20 +82,23 @@ What each feature still needs beyond the tests above. Its pull request has the d
    config files `main` had removed as unread (now removed again). Pull `main` into the company copy before the next
    sync, and delete there what `main` deletes: `.prettierrc.json`, `eslint.config.mjs`, `.tool-versions` and
    `proxy.conf.mjs`.
-1. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
+1. **The Product page** (`feat/product-page`, D24 step 1): review and merge it with `ahoy-hosted` PR #107 (the API
+   first or together). An admin turns Product conversations on in Team settings › Agents; the first live question needs
+   the user's approval and a low AIU cap. Step 2 (Create in Jira and Add to meeting on the cards) comes after.
+2. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
    `npm ci`, then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop
    `test:scripts`.
-2. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
-3. **Before the next TEST deploy** (with `ahoy-hosted`'s, see its `docs/progress.md`): mount a `/config.json` with
+3. Make CI run where the reusable workflows and the registry exist (the company GHES), and require it before merging.
+4. **Before the next TEST deploy** (with `ahoy-hosted`'s, see its `docs/progress.md`): mount a `/config.json` with
    FIO's `auth` (realm and client from `environment.test.ts`, and the three redirect URIs exactly as FIO's client
    registered them: today's build sends `<origin>/`, and `<origin>//ui/oauth/silent-refresh.html` for silent refresh)
    and `jiraBaseUrl` (`https://atc.acmegroup.net/jira`), then sign in once on TEST; after that, drop the values from
    `environment.test.ts` so the image carries no team's (audit #16).
-4. **After the deploy, on TEST:** an admin saves our team's two meeting side names in Team settings › Meetings (or the
+5. **After the deploy, on TEST:** an admin saves our team's two meeting side names in Team settings › Meetings (or the
    meeting pages and Confluence copies say "Us" and "Stakeholders"); each person saves and tests their Copilot token in
    My Copilot token; check the plan panel's section as an admin; check the 7 empty states against the designs (light,
    dark, 390px), agree the first-use copy with the designer, and move the 3 app icons into the design system.
-5. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, every migration applied): start a
+6. Run the app against a local `ahoy-hosted` (`npm run dev -- --simulate`, 0 AIU, every migration applied): start a
    voyage, approve the plan, follow it to `done`; then Unblock, Retry and Accept on a package, Refresh design and
    Meetings (an action ticked done, two browsers on one meeting in progress, a screenshot pasted into a note and opened
    large, a meeting cancelled and one marked done, a question answered after its meeting ended and reopened, a topic
@@ -105,9 +110,9 @@ What each feature still needs beyond the tests above. Its pull request has the d
    raise one with the confirmation, and save a catalogue; at the delivery gate, Assess comments with a note; set a
    defects query and priorities, wait for a pass, ignore a defect and undo it; add a repository's release workflow and
    deploy a package's branch with a fake `gh`).
-6. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click, then
+7. Meetings, next slices in `ahoy-hosted` `design.md` §5: a topic from a note and a story placeholder in one click, then
    updating a meeting's Confluence page once it exists.
-7. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
+8. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
    fixers' answers beside the delivery gate, the anchor amendment beside a `child_ready` rejection).
 
 Each step: the full check above on Node 24, then replace this page. Never contact TEST or a `--live` API without

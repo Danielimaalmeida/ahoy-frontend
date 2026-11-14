@@ -2035,6 +2035,155 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/conversations': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The person's Product page conversations and the shared ones, latest first.
+     * @description At most 200, without their turns. Read one with `getConversation`. 0 AIU.
+     */
+    readonly get: operations['listConversations'];
+    readonly put?: never;
+    /**
+     * Start a conversation on the Product page, empty, owned by the person. 0 AIU.
+     * @description A conversation is its owner's until they share it. `recipe` names a built-in recipe whose instructions every
+     *     turn of the conversation follows (`split-epic`, `story-ready`, `how-today`); without one it takes free questions.
+     */
+    readonly post: operations['createConversation'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/conversations/{conversationId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * One conversation, with its context, its turns and its session.
+     * @description The person's own conversation or a shared one; `404` for any other. A turn being answered (`handed`) carries
+     *     what the agent has said (`liveText`) and read (`activity`) so far; `streamConversation` sends it as it changes.
+     */
+    readonly get: operations['getConversation'];
+    readonly put?: never;
+    readonly post?: never;
+    /** Delete a conversation; its session in progress is stopped. Its owner only. */
+    readonly delete: operations['deleteConversation'];
+    readonly options?: never;
+    readonly head?: never;
+    /** Rename a conversation, or share it with the other admins (read-only to them). Its owner only. 0 AIU. */
+    readonly patch: operations['updateConversation'];
+    readonly trace?: never;
+  };
+  readonly '/conversations/{conversationId}/context': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Replace what the agent reads. Its owner only. 0 AIU.
+     * @description At most 12 items, 3 of them repositories and 3 Figma links, none twice: a Jira key, a meeting topic's id, a
+     *     defect of the defect watch (its Jira key), a Figma link, or a repository alias of the content repository's
+     *     routing. Pinning reads nothing; a session reads them when it starts. A warm session read the old context, so it
+     *     is stopped, and the next question starts a new one. `409 invalid_state` while a question waits or is answered.
+     */
+    readonly put: operations['setConversationContext'];
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/conversations/{conversationId}/turns': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask a question in a conversation. May spend AIU.
+     * @description The conversation's warm session answers it in seconds; without one, a session of the Product profile of Team
+     *     settings › Agents is queued (one worker run, labelled `CONV-<n>`), capped at `budgetNanoAiu`, else the server's
+     *     cap, and answers it once it starts. It reads what the conversation pins, read-only, and hands in its proposals
+     *     and questions with tools; it never writes to Jira, a meeting or a repository. `confirmSpend` must be true.
+     *     `409 invalid_state` while the last question waits or is answered, or after 40 questions; `403` for anyone but
+     *     the owner; `503 unavailable` when Product conversations are off.
+     */
+    readonly post: operations['askConversation'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/conversations/{conversationId}/cancel': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Cancel the question waiting or being answered; the session stops. Its owner only.
+     * @description A queued session spends nothing; a running one is stopped by the reconciler, which records what it spent. `409
+     *     invalid_state` when no question waits or is answered.
+     */
+    readonly post: operations['cancelConversationTurn'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/conversations/{conversationId}/stream': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The conversation as Server-Sent Events, each time it changes.
+     * @description Each message is `event: conversation` and one `data:` line holding the `Conversation` JSON, sent at once and
+     *     then whenever it changes (a turn's live text, an answer, the session). Comment lines (`: keepalive`) are sent
+     *     periodically. Clients that cannot use SSE may poll `getConversation` instead.
+     */
+    readonly get: operations['streamConversation'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/crew': {
     readonly parameters: {
       readonly query?: never;
@@ -5466,6 +5615,141 @@ export interface components {
       readonly uiAgents?: readonly string[];
       readonly selectorPrefix?: string;
     };
+    /**
+     * @description `split-epic`: split the pinned epic into stories. `story-ready`: whether the pinned story is ready for
+     *     refinement. `how-today`: what the product does today, from the pinned repositories.
+     * @enum {string}
+     */
+    readonly ConversationRecipe: 'split-epic' | 'story-ready' | 'how-today';
+    readonly NewConversation: {
+      readonly title: string;
+      readonly recipe?: components['schemas']['ConversationRecipe'] | null;
+    };
+    readonly ConversationChange: {
+      readonly title?: string;
+      /** @description True shares it with every other admin (the Product page is for admins only), read-only to them. */
+      readonly shared?: boolean;
+    };
+    /** @enum {string} */
+    readonly ConversationContextKind:
+      'jira' | 'meeting_topic' | 'defect' | 'figma' | 'repository';
+    readonly ConversationContextItem: {
+      readonly kind: components['schemas']['ConversationContextKind'];
+      readonly ref: string;
+      /** @description What the page shows for it (a topic's or a defect's title); null when the ref says it. */
+      readonly label: string | null;
+    };
+    readonly ConversationContextChange: {
+      readonly items: readonly {
+        readonly kind: components['schemas']['ConversationContextKind'];
+        readonly ref: string;
+      }[];
+    };
+    readonly ConversationTurnRequest: {
+      readonly question: string;
+      /** @constant */
+      readonly confirmSpend: true;
+      /** @description The cap of a session this question starts, at most 20 AIU; the server's cap when absent. */
+      readonly budgetNanoAiu?: number;
+    };
+    readonly ProposalFlag: {
+      readonly label: string;
+      readonly evidence: string;
+    };
+    /** @description A story (in the story drafts' template) or a topic for a meeting, as the agent handed it in. */
+    readonly ConversationProposal: {
+      /** Format: uuid */
+      readonly id: string;
+      readonly turn: number;
+      /** @enum {string} */
+      readonly kind: 'story' | 'topic';
+      readonly story?: components['schemas']['StoryTemplate'];
+      readonly topic?: {
+        readonly title: string;
+        readonly note: string;
+      };
+      readonly flags: readonly components['schemas']['ProposalFlag'][];
+    };
+    readonly ConversationTurn: {
+      readonly n: number;
+      readonly question: string;
+      readonly askedBy: string;
+      readonly askedByName: string | null;
+      /** Format: date-time */
+      readonly askedAt: string;
+      /**
+       * @description `queued`: waits for a session to start. `handed`: the session is answering it. `answered`, `failed` (see
+       *     `error`) or `cancelled`: done.
+       * @enum {string}
+       */
+      readonly status:
+        'queued' | 'handed' | 'answered' | 'failed' | 'cancelled';
+      /** @description What the agent has said so far, while `handed`; null otherwise. */
+      readonly liveText: string | null;
+      /** @description What the agent has read so far (the latest 20), while `handed`. */
+      readonly activity: readonly string[];
+      /** @description The agent's answer, in Markdown. */
+      readonly answer: string | null;
+      readonly proposals: readonly components['schemas']['ConversationProposal'][];
+      readonly questions: readonly components['schemas']['GrillQuestion'][];
+      readonly error: string | null;
+      /** Format: date-time */
+      readonly endedAt: string | null;
+    };
+    readonly ConversationSummary: {
+      /** Format: uuid */
+      readonly id: string;
+      /** @description The label its sessions' runs carry. */
+      readonly key: string;
+      readonly title: string;
+      readonly recipe: components['schemas']['ConversationRecipe'] | null;
+      readonly owner: string;
+      readonly ownerName: string | null;
+      readonly shared: boolean;
+      /** @description How many questions were asked in it. */
+      readonly turnCount: number;
+      readonly lastQuestion: string | null;
+      /** Format: date-time */
+      readonly createdAt: string;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly Conversation: {
+      /** Format: uuid */
+      readonly id: string;
+      /** @description The label its sessions' runs carry. */
+      readonly key: string;
+      readonly title: string;
+      readonly recipe: components['schemas']['ConversationRecipe'] | null;
+      readonly owner: string;
+      readonly ownerName: string | null;
+      readonly shared: boolean;
+      /** @description How many questions were asked in it. */
+      readonly turnCount: number;
+      readonly lastQuestion: string | null;
+      /** Format: date-time */
+      readonly createdAt: string;
+      /** Format: date-time */
+      readonly updatedAt: string;
+      /** @description Whether the person owns it, and so may ask and change it. */
+      readonly canAsk: boolean;
+      readonly context: readonly components['schemas']['ConversationContextItem'][];
+      readonly turns: readonly components['schemas']['ConversationTurn'][];
+      readonly session: null | {
+        readonly id: string;
+        /** @enum {string} */
+        readonly status: 'queued' | 'running';
+        /** @description Started and waiting for questions, or answering one. */
+        readonly warm: boolean;
+        readonly budgetNanoAiu: number;
+        readonly spentNanoAiu: number;
+        readonly cancelRequested: boolean;
+        /** Format: date-time */
+        readonly startedAt: string | null;
+      };
+      /** @description What every session of the conversation spent. */
+      readonly spentNanoAiu: number;
+    };
     readonly AgentSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
       readonly canEdit: boolean;
@@ -5491,6 +5775,7 @@ export interface components {
       | 'refinementAgent'
       | 'diagnosisAgent'
       | 'storyDraftAgent'
+      | 'productAgent'
       | 'knowledgeAgent';
     readonly AgentSettings: {
       /** @description Pre-refinement, when someone asks. */
@@ -5499,6 +5784,8 @@ export interface components {
       readonly diagnosisAgent: string;
       /** @description Story drafts from a meeting topic, when someone asks; null: off. */
       readonly storyDraftAgent: string | null;
+      /** @description The Product page's conversations, when someone asks; null: off. */
+      readonly productAgent: string | null;
       /** @description Business-rule review after every story that reaches done; null: off. */
       readonly knowledgeAgent: string | null;
       /** @description Where a business-rule review opens its pull request (`owner/name`); null: none is opened. */
@@ -5515,9 +5802,10 @@ export interface components {
       readonly refinementAgent?: string;
       readonly diagnosisAgent?: string;
       readonly storyDraftAgent?: string | null;
+      readonly productAgent?: string | null;
       readonly knowledgeAgent?: string | null;
       readonly knowledgeRepo?: string | null;
-      /** @description Must be true when the change turns on Story drafts or Business-rule review, which spend AIU. */
+      /** @description Must be true when the change turns on Story drafts, Product conversations or Business-rule review, which spend AIU. */
       readonly confirmSpend?: boolean;
     };
     readonly PrCommentSettingsPage: {
@@ -6038,6 +6326,7 @@ export interface components {
     readonly MeetingTopicId: string;
     readonly MeetingNoteId: string;
     readonly MeetingSeriesId: string;
+    readonly ConversationId: string;
     readonly MeetingStoryDraftId: string;
     readonly SonarServerId: string;
     readonly SonarRepositoryId: string;
@@ -8757,6 +9046,254 @@ export interface operations {
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
       readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly listConversations: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The conversations. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': {
+            readonly items: readonly components['schemas']['ConversationSummary'][];
+          };
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly createConversation: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['NewConversation'];
+      };
+    };
+    readonly responses: {
+      /** @description The conversation. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly getConversation: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The conversation. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly deleteConversation: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The conversation is deleted. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly updateConversation: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ConversationChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The conversation, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly setConversationContext: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ConversationContextChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The conversation, with its new context. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly askConversation: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ConversationTurnRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The conversation, with the question waiting. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly cancelConversationTurn: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The conversation. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly streamConversation: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly conversationId: components['parameters']['ConversationId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description An open event stream. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'text/event-stream': string;
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
     };
   };
   readonly getCrew: {

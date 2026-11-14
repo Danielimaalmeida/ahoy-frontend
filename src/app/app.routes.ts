@@ -1,4 +1,5 @@
 import type { Routes } from '@angular/router';
+import { adminOnly } from '@core/auth/admin-only';
 import { Placeholder } from '@ui/placeholder/placeholder';
 import { environment } from '../environments/environment';
 
@@ -48,6 +49,12 @@ export const routes: Routes = [
       import('@features/meetings/meetings.routes').then(
         (m) => m.MEETINGS_ROUTES
       ),
+  },
+  {
+    path: 'product',
+    canMatch: [adminOnly],
+    loadChildren: () =>
+      import('@features/product/product.routes').then((m) => m.PRODUCT_ROUTES),
   },
   {
     path: 'metrics',

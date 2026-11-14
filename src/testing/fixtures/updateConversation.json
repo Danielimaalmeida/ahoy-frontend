@@ -1,0 +1,169 @@
+{
+  "id": "5d2c8a1e-7b3f-4c6d-9e0a-1b2c3d4e5f61",
+  "key": "CONV-3",
+  "title": "Late fees on enterprise invoices",
+  "recipe": "split-epic",
+  "owner": "alex@example.com",
+  "ownerName": "Alex Example",
+  "shared": true,
+  "turnCount": 2,
+  "lastQuestion": "Which of them can ship first?",
+  "createdAt": "2026-11-03T09:00:00.000Z",
+  "updatedAt": "2026-11-03T09:20:00.000Z",
+  "canAsk": true,
+  "context": [
+    {
+      "kind": "jira",
+      "ref": "PROJ-120",
+      "label": null
+    },
+    {
+      "kind": "meeting_topic",
+      "ref": "2f6d8b1c-4a3e-4c5d-9e7f-0a1b2c3d4e5f",
+      "label": "Late fees for enterprise accounts"
+    },
+    {
+      "kind": "defect",
+      "ref": "PROJ-456",
+      "label": "Late fee shown twice on the PDF"
+    },
+    {
+      "kind": "figma",
+      "ref": "https://www.figma.com/design/AbC123/Billing-invoices?node-id=12-40",
+      "label": null
+    },
+    {
+      "kind": "repository",
+      "ref": "web",
+      "label": null
+    }
+  ],
+  "turns": [
+    {
+      "n": 1,
+      "question": "Split the pinned epic into stories, in the order they should be delivered.",
+      "askedBy": "alex@example.com",
+      "askedByName": "Alex Example",
+      "askedAt": "2026-11-03T09:01:00.000Z",
+      "status": "answered",
+      "liveText": null,
+      "activity": [],
+      "answer": "I read PROJ-120, the meeting topic and `web/src/billing/pdf.ts`. Two stories, in this order:\n\n1. **Charge the fee** first, since the PDF has nothing to show until then.\n2. **Show it on the PDF**.\n\nThe defect PROJ-456 looks like the same code path; I flagged it.",
+      "proposals": [
+        {
+          "id": "8e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a41",
+          "turn": 1,
+          "kind": "story",
+          "story": {
+            "title": "Charge late fees on overdue enterprise invoices",
+            "role": "a finance user",
+            "want": "overdue enterprise invoices to carry a late fee I approve",
+            "soThat": "customers pay on time and we stop chasing them by hand",
+            "context": null,
+            "implementedFeature": null,
+            "acceptanceCriteria": [
+              "Only enterprise accounts get a late fee.",
+              "The fee is 1.5% per month, capped at 10% of the invoice."
+            ],
+            "outOfScope": [],
+            "dependencies": [],
+            "testNotes": [],
+            "openQuestions": ["Who approves a waiver?"]
+          },
+          "flags": [
+            {
+              "label": "Needs a backend change",
+              "evidence": "web/src/billing/fees.ts has no rate per plan"
+            }
+          ]
+        },
+        {
+          "id": "8e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a42",
+          "turn": 1,
+          "kind": "story",
+          "story": {
+            "title": "Show the late fee on the invoice PDF",
+            "role": "a finance user",
+            "want": "the late fee as its own line on the invoice PDF",
+            "soThat": "customers see why they pay more",
+            "context": null,
+            "implementedFeature": null,
+            "acceptanceCriteria": [
+              "The PDF shows the fee as its own line, with the rate.",
+              "Invoices without a fee look as they do today."
+            ],
+            "outOfScope": ["Invoices already sent"],
+            "dependencies": [],
+            "testNotes": [],
+            "openQuestions": []
+          },
+          "flags": [
+            {
+              "label": "Touches the defect PROJ-456",
+              "evidence": "web/src/billing/pdf.ts:41 adds the fee line twice"
+            }
+          ]
+        },
+        {
+          "id": "8e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a43",
+          "turn": 1,
+          "kind": "topic",
+          "topic": {
+            "title": "Waivers for late fees",
+            "note": "Who may waive a fee, and up to how much? Decide before the first story ships."
+          },
+          "flags": []
+        }
+      ],
+      "questions": [
+        {
+          "id": "Q1",
+          "text": "Should the fee show on invoices already sent?",
+          "options": [
+            {
+              "label": "Only new ones",
+              "detail": "Sent PDFs stay as they were.",
+              "recommended": true
+            },
+            {
+              "label": "All of them",
+              "detail": "Sent PDFs are rendered again.",
+              "recommended": false
+            }
+          ]
+        }
+      ],
+      "error": null,
+      "endedAt": "2026-11-03T09:04:00.000Z"
+    },
+    {
+      "n": 2,
+      "question": "Which of them can ship first?",
+      "askedBy": "alex@example.com",
+      "askedByName": "Alex Example",
+      "askedAt": "2026-11-03T09:14:00.000Z",
+      "status": "handed",
+      "liveText": "The fee itself can ship first: the PDF story needs",
+      "activity": [
+        "view specs/CONV-3/conversation-request.md",
+        "grep late fee",
+        "view /repos/web/src/billing/fees.ts"
+      ],
+      "answer": null,
+      "proposals": [],
+      "questions": [],
+      "error": null,
+      "endedAt": null
+    }
+  ],
+  "session": {
+    "id": "r-conv-3-1",
+    "status": "running",
+    "warm": true,
+    "budgetNanoAiu": 5000000000,
+    "spentNanoAiu": 1400000000,
+    "cancelRequested": false,
+    "startedAt": "2026-11-03T09:01:10.000Z"
+  },
+  "spentNanoAiu": 1400000000
+}

@@ -443,6 +443,12 @@ export class MeetingDesk {
     };
   }
 
+  /** An open topic's title, or null when no open topic has this id (what a conversation pins). */
+  openTopicTitle(id: string): string | null {
+    const topic = this.topics.get(id);
+    return topic?.status === 'open' ? topic.title : null;
+  }
+
   update(actor: string, id: string, body: UpdateMeetingRequest): Meeting {
     const meeting = this.openMeeting(id);
     const startsAt = body.startsAt ?? meeting.startsAt;

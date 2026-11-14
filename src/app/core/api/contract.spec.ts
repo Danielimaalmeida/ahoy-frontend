@@ -10,6 +10,13 @@ import testFigmaToken from '@testing/fixtures/testFigmaToken.json';
 import generateRunnerKey from '@testing/fixtures/generateRunnerKey.json';
 import deleteRunnerKey from '@testing/fixtures/deleteRunnerKey.json';
 import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
+import listConversations from '@testing/fixtures/listConversations.json';
+import createConversation from '@testing/fixtures/createConversation.json';
+import getConversation from '@testing/fixtures/getConversation.json';
+import updateConversation from '@testing/fixtures/updateConversation.json';
+import setConversationContext from '@testing/fixtures/setConversationContext.json';
+import askConversation from '@testing/fixtures/askConversation.json';
+import cancelConversationTurn from '@testing/fixtures/cancelConversationTurn.json';
 import updateAgentSettings from '@testing/fixtures/updateAgentSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import updatePhaseSettings from '@testing/fixtures/updatePhaseSettings.json';
@@ -335,6 +342,13 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['ignoreDefect', ignoreDefect],
   ['unignoreDefect', unignoreDefect],
   ['startDefect', startDefect],
+  ['listConversations', listConversations],
+  ['createConversation', createConversation],
+  ['getConversation', getConversation],
+  ['updateConversation', updateConversation],
+  ['setConversationContext', setConversationContext],
+  ['askConversation', askConversation],
+  ['cancelConversationTurn', cancelConversationTurn],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -353,11 +367,12 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteConfluenceSettings',
   'deleteTeamsSettings',
   'deleteBranchReleaseRepository',
+  'deleteConversation',
 ];
 
 /**
- * In the contract, not in the client yet: the rest of phase 7 (`resolveReview`...), the live stream (lane 2B) and a
- * run's input.
+ * Not in `ApiClient`: the rest of phase 7 (`resolveReview`...), a run's input, and the live streams, which `core/realtime`
+ * reads with `fetch` (`streamEvents` in `EventStreamClient`, `streamConversation` in `ConversationStream`).
  */
 const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'amendAnchors',
@@ -367,6 +382,7 @@ const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'streamEvents',
   'getRunInput',
   'getRunInputContent',
+  'streamConversation',
 ];
 
 /** In the contract for the implementation workflow, with the runner key: no person's request, so never in the client. */
@@ -390,7 +406,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      153
+      161
     );
   });
 

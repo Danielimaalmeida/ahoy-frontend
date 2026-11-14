@@ -124,12 +124,14 @@ describe('the Agents section of Team settings', () => {
       'When someone asks Ahoy to refine a backlog item',
       'When a story halts and someone asks why',
       'When someone drafts a story from a meeting topic',
+      'When someone asks a question on the Product page',
       'After each story that reaches done',
     ]);
     expect(select('Pre-refinement').value).toBe('story-refiner');
     expect(options('Pre-refinement')).not.toContain('Off');
     expect(options('Halt diagnosis')).not.toContain('Off');
     expect(options('Story drafts')[0]).toBe('Off');
+    expect(select('Product conversations').value).toBe('');
     expect(select('Business-rule review').value).toBe('');
     expect(text(root)).toContain(
       'Profiles from the content repository at a1b2c3d.'
@@ -367,7 +369,13 @@ describe('the Agents section of Team settings', () => {
         '[aria-label="Agent jobs"] tbody td:first-of-type'
       ),
     ].map((c) => text(c));
-    expect(cells).toEqual(['story-refiner', 'halt-diagnoser', 'Off', 'Off']);
+    expect(cells).toEqual([
+      'story-refiner',
+      'halt-diagnoser',
+      'Off',
+      'Off',
+      'Off',
+    ]);
     expect(text(root)).toContain(
       'Knowledge repository: none (the proposals stay on the reviews)'
     );

@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "id": "5d2c8a1e-7b3f-4c6d-9e0a-1b2c3d4e5f61",
+      "key": "CONV-3",
+      "title": "Late fees on enterprise invoices",
+      "recipe": "split-epic",
+      "owner": "alex@example.com",
+      "ownerName": "Alex Example",
+      "shared": false,
+      "turnCount": 2,
+      "lastQuestion": "Which of them can ship first?",
+      "createdAt": "2026-11-03T09:00:00.000Z",
+      "updatedAt": "2026-11-03T09:14:00.000Z"
+    },
+    {
+      "id": "5d2c8a1e-7b3f-4c6d-9e0a-1b2c3d4e5f62",
+      "key": "CONV-4",
+      "title": "Is PROJ-131 ready?",
+      "recipe": "story-ready",
+      "owner": "alex@example.com",
+      "ownerName": "Alex Example",
+      "shared": false,
+      "turnCount": 0,
+      "lastQuestion": null,
+      "createdAt": "2026-11-04T10:00:00.000Z",
+      "updatedAt": "2026-11-04T10:00:00.000Z"
+    },
+    {
+      "id": "5d2c8a1e-7b3f-4c6d-9e0a-1b2c3d4e5f63",
+      "key": "CONV-2",
+      "title": "How does dunning work today?",
+      "recipe": "how-today",
+      "owner": "sam@example.com",
+      "ownerName": "Sam Example",
+      "shared": true,
+      "turnCount": 3,
+      "lastQuestion": "And for contract accounts?",
+      "createdAt": "2026-11-03T09:00:00.000Z",
+      "updatedAt": "2026-11-02T15:00:00.000Z"
+    }
+  ]
+}

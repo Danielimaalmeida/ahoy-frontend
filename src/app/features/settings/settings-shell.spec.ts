@@ -148,7 +148,7 @@ describe('the Team settings frame', () => {
       'Confluence On',
       'Teams On',
       'Figma On',
-      'Agents 2 of 4 on',
+      'Agents 2 of 5 on',
       'Phases 1 changed',
       'Pull request comments Replies off',
       'Defects Off',
@@ -267,7 +267,7 @@ describe('the state of the Confluence, Teams, Figma, Agents and Phases sections 
 
   it('counts the jobs on, and the paused ones first', () => {
     expect(agentsState(agents(getAgentSettings))).toEqual({
-      label: '2 of 4 on',
+      label: '2 of 5 on',
       off: false,
     });
     expect(

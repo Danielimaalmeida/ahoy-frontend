@@ -13,6 +13,10 @@
  * (`npm run mock:api`): never two mocks.
  */
 import type {
+  ConversationChange,
+  ConversationContextChange,
+  ConversationTurnRequest,
+  NewConversation,
   AddMeetingTopicRequest,
   AgentDiagnosisRequest,
   CancelRefinementRequest,
@@ -80,6 +84,7 @@ import {
   type MockRequest,
   type MockResponse,
 } from './http';
+import { ConversationDesk } from './conversations';
 import { KnowledgeDesk } from './knowledge';
 import { MeetingDesk } from './meetings';
 import { RefinementDesk } from './refinements';
@@ -103,6 +108,7 @@ import { World } from './world';
 import listModels from '@testing/fixtures/listModels.json';
 import getMetrics from '@testing/fixtures/getMetrics.json';
 import getMetricsTrends from '@testing/fixtures/getMetricsTrends.json';
+import getSetup from '@testing/fixtures/getSetup.json';
 
 const jiraBacklog: JiraBacklog = {
   items: [
@@ -256,6 +262,7 @@ export class MockAhoyServer {
   private agentDiagnoses: RefinementDesk;
   private knowledgeReviews: KnowledgeDesk;
   private meetings: MeetingDesk;
+  private conversations: ConversationDesk;
   /** Team settings › Meetings: the names of the two sides, as saved. */
   private meetingLabels = { usLabel: 'Us', themLabel: 'Stakeholders' };
   private meetingLabelsVersion: number | null = null;
@@ -289,6 +296,7 @@ export class MockAhoyServer {
       options.timing ?? LIVE_TIMING
     );
     this.meetings = new MeetingDesk(this.clock);
+    this.conversations = this.newConversations();
     this.load();
   }
 
@@ -315,6 +323,18 @@ export class MockAhoyServer {
   /** The meetings with stakeholders, for specs that look inside. */
   get meetingDesk(): MeetingDesk {
     return this.meetings;
+  }
+
+  /** The Product page's conversations, for specs that look inside. */
+  get conversationDesk(): ConversationDesk {
+    return this.conversations;
+  }
+
+  /** A desk for the conversations of this world, which pins the open topics of its meetings. */
+  private newConversations(): ConversationDesk {
+    return new ConversationDesk(this.clock, (id) =>
+      this.meetings.openTopicTitle(id)
+    );
   }
 
   /** The refinements of backlog items, for specs that look inside. */
@@ -361,7 +381,9 @@ export class MockAhoyServer {
       this.clock,
       this.options.timing ?? LIVE_TIMING
     );
+    this.conversations.stopAll();
     this.meetings = new MeetingDesk(this.clock);
+    this.conversations = this.newConversations();
     Object.assign(this.switches, {
       latencyMs: 0,
       failNext: null,
@@ -376,12 +398,16 @@ export class MockAhoyServer {
     this.refinements.stopAll();
     this.agentDiagnoses.stopAll();
     this.knowledgeReviews.stopAll();
+    this.conversations.stopAll();
     this.world.hub.closeAll();
   }
 
-  /** Breaks every open event stream (the `dropStream` switch); clients reconnect with `Last-Event-ID`. */
+  /**
+   * Breaks every open stream (the `dropStream` switch): event streams reconnect with `Last-Event-ID`, the Product page
+   * reads its conversation again and polls.
+   */
   dropStreams(): number {
-    return this.world.hub.dropAll();
+    return this.world.hub.dropAll() + this.conversations.dropStreams();
   }
 
   /**
@@ -417,6 +443,7 @@ export class MockAhoyServer {
       this.options.seedAt ?? this.clock.now()
     );
     this.meetings.seed(this.options.seedAt ?? this.clock.now());
+    this.conversations.seed(this.options.seedAt ?? this.clock.now());
   }
 
   private takeFailNext(request: MockRequest): MockResponse | null {
@@ -1080,6 +1107,81 @@ export class MockAhoyServer {
         return jsonResponse(
           200,
           this.meetings.createIssue(call.actor, call.path['draftId'] ?? '')
+        );
+      // Setup as the fixture has it: the person is an admin (`canEdit`), so the admin-only pages open on the mock.
+      case 'getSetup':
+        return jsonResponse(200, getSetup, { 'Cache-Control': 'no-store' });
+      case 'listConversations':
+        return jsonResponse(200, {
+          items: this.conversations.list(call.actor),
+        });
+      case 'createConversation':
+        return jsonResponse(
+          201,
+          this.conversations.create(
+            call.actor,
+            call.body as NewConversation // validated
+          )
+        );
+      case 'getConversation':
+        return jsonResponse(
+          200,
+          this.conversations.get(call.actor, call.path['conversationId'] ?? '')
+        );
+      case 'updateConversation':
+        return jsonResponse(
+          200,
+          this.conversations.update(
+            call.actor,
+            call.path['conversationId'] ?? '',
+            call.body as ConversationChange // validated
+          )
+        );
+      case 'deleteConversation':
+        this.conversations.remove(
+          call.actor,
+          call.path['conversationId'] ?? ''
+        );
+        return { kind: 'empty', status: 204, headers: {} };
+      case 'setConversationContext':
+        return jsonResponse(
+          200,
+          this.conversations.setContext(
+            call.actor,
+            call.path['conversationId'] ?? '',
+            call.body as ConversationContextChange // validated
+          )
+        );
+      case 'askConversation':
+        return jsonResponse(
+          202,
+          this.conversations.ask(
+            call.actor,
+            call.path['conversationId'] ?? '',
+            call.body as ConversationTurnRequest // validated
+          )
+        );
+      case 'streamConversation':
+        return {
+          kind: 'stream',
+          status: 200,
+          headers: {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+          },
+          stream: this.conversations.stream(
+            call.actor,
+            call.path['conversationId'] ?? ''
+          ),
+        };
+      case 'cancelConversationTurn':
+        return jsonResponse(
+          200,
+          this.conversations.cancel(
+            call.actor,
+            call.path['conversationId'] ?? ''
+          )
         );
       case 'getMetrics':
         return jsonResponse(200, this.metrics(call), {

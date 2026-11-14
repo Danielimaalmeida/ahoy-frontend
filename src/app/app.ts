@@ -156,6 +156,7 @@ function isVoyagesList(tree: UrlTree): boolean {
       </button>
       <ah-top-bar
         [needsYou]="needsYou()"
+        [product]="admin()"
         [live]="live()"
         [user]="user()"
         [query]="query()"
@@ -197,6 +198,10 @@ export class App {
     };
   });
   protected readonly needsYou = computed(() => this.stories.needsYou().length);
+  /** Whether the person is an admin, as Setup says: the Product page is theirs only, while it is new. */
+  protected readonly admin = computed(
+    () => this.setup.setup()?.canEdit === true
+  );
   protected readonly live = computed(() => liveStateOf(this.bus.status()));
   protected readonly user = computed((): TopBarUser | null => {
     const profile = this.auth.userProfile();
