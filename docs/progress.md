@@ -31,7 +31,7 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   The latest substitute run, `feature/R3DA-14787-confluence-pages` (2026-11-12, Node 26): build, typecheck, lint,
   `ng test` (224 files, 3,874 tests) and format passed.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` up to Create in Confluence
-  (migration 0050), and on `feat/product-page` its branch of the same name (PR #107, the conversations, migration 0051); `schema.d.ts` and the test mirror are generated from it. Deploy the API and its migrations with or
+  (migration 0050), and on `feat/product-page` its branch of the same name (PR #107, the conversations, migration 0052); `schema.d.ts` and the test mirror are generated from it. Deploy the API and its migrations with or
   before this front end.
 
 ## Not checked yet
