@@ -15,6 +15,8 @@ import type {
   ConversationTurnRequest,
   GrillQuestion,
   NewConversation,
+  ProposalIssueRequest,
+  ProposalTopicRequest,
 } from '@core/api/types';
 import { iso, type Cancel, type MockClock } from './clock';
 import { MockProblem, type MockStream } from './http';
@@ -63,6 +65,8 @@ interface ConversationRecord {
   createdAt: string;
   updatedAt: string;
   context: ConversationContextItem[];
+  /** Whether the person lets the agent look up Jira and Confluence beyond the pins. */
+  lookUp: { jira: boolean; confluence: boolean };
   turns: TurnRecord[];
   session: SessionRecord | null;
   /** What the sessions that ended spent. */
@@ -98,10 +102,21 @@ export class ConversationDesk {
   private nextSession = 1;
   private readonly streams = new Set<OpenStream>();
 
+  private nextIssue = 40;
+
   constructor(
     private readonly clock: MockClock,
     /** An open meeting topic's title, or null when there is none with this id. */
-    private readonly topicTitle: (id: string) => string | null
+    private readonly topicTitle: (id: string) => string | null,
+    /** Adds a topic with one note to a planned or running meeting; throws as the meetings do when it cannot. */
+    private readonly addMeetingTopic: (
+      actor: string,
+      meetingId: string,
+      title: string,
+      note: string
+    ) => { topicId: string; meetingTitle: string } = () => {
+      throw invalid('This mock has no meetings');
+    }
   ) {}
 
   private id(): string {
@@ -166,12 +181,25 @@ export class ConversationDesk {
 
   update(actor: string, id: string, body: ConversationChange): Conversation {
     const c = this.own(actor, id);
+    const lookUp = { ...c.lookUp, ...body.lookUp };
+    const lookUpChanged =
+      lookUp.jira !== c.lookUp.jira ||
+      lookUp.confluence !== c.lookUp.confluence;
+    if (lookUpChanged && this.openTurn(c) !== undefined)
+      throw invalid(
+        'A question is being answered: change what it looks up once it is answered'
+      );
     if (body.title !== undefined) {
       const title = body.title.trim().replaceAll(/\s+/g, ' ');
       if (title === '') throw refused('body/title', 'title is empty');
       c.title = title;
     }
     if (body.shared !== undefined) c.shared = body.shared;
+    if (lookUpChanged) {
+      c.lookUp = lookUp;
+      // A warm session was given the old look-ups: the next question starts a new one.
+      this.endSession(c);
+    }
     c.updatedAt = this.now();
     return this.dto(c, actor);
   }
@@ -415,6 +443,7 @@ export class ConversationDesk {
       createdAt: at,
       updatedAt: at,
       context: [],
+      lookUp: { jira: true, confluence: true },
       turns: [],
       session: null,
       spentBefore: 0,
@@ -422,6 +451,146 @@ export class ConversationDesk {
     };
     this.conversations.set(c.id, c);
     return c;
+  }
+
+  /** Creates a story proposal in the pretend Jira, once: `<project>-41`, `-42`… Its conversation's owner only. */
+  createIssue(
+    actor: string,
+    proposalId: string,
+    body: ProposalIssueRequest
+  ): Conversation {
+    const { c, turn, proposal } = this.ownProposal(actor, proposalId);
+    if (proposal.done === null) {
+      if (proposal.kind !== 'story')
+        throw invalid(
+          'Only a story proposal is created in Jira; add a topic to a meeting'
+        );
+      const key = `${body.projectKey.toUpperCase()}-${++this.nextIssue}`;
+      this.markDone(c, turn, proposal, actor, {
+        jiraKey: key,
+        jiraUrl: `https://jira.example.com/browse/${key}`,
+        meetingId: null,
+        meetingTitle: null,
+        topicId: null,
+        note: null,
+      });
+    }
+    return this.dto(c, actor);
+  }
+
+  /** Applies a Jira change proposal, once, as the server would through Jira's REST API. Its conversation's owner only. */
+  applyChange(actor: string, proposalId: string): Conversation {
+    const { c, turn, proposal } = this.ownProposal(actor, proposalId);
+    if (proposal.done === null) {
+      const change = proposal.change;
+      if (change === undefined)
+        throw invalid(
+          'Only a Jira change proposal is applied; create a story, add a topic'
+        );
+      let key: string;
+      let note: string;
+      switch (change.action) {
+        case 'create_epic':
+          key = `${change.projectKey}-${++this.nextIssue}`;
+          note = `Created epic ${key}${change.issueKeys.length ? ` with ${change.issueKeys.join(', ')}` : ''}.`;
+          break;
+        case 'move_to_epic':
+          key = change.epicKey;
+          note = `Moved ${change.issueKeys.join(', ')} into ${key}.`;
+          break;
+        case 'edit_issue':
+          key = change.issueKey;
+          note = `Changed ${key}.`;
+          break;
+      }
+      this.markDone(c, turn, proposal, actor, {
+        jiraKey: key,
+        jiraUrl: `https://jira.example.com/browse/${key}`,
+        meetingId: null,
+        meetingTitle: null,
+        topicId: null,
+        note,
+      });
+    }
+    return this.dto(c, actor);
+  }
+
+  /** Adds a proposal to a planned or running meeting, once, as a topic with a note. Its conversation's owner only. */
+  addToMeeting(
+    actor: string,
+    proposalId: string,
+    body: ProposalTopicRequest
+  ): Conversation {
+    const { c, turn, proposal } = this.ownProposal(actor, proposalId);
+    if (proposal.done === null) {
+      if (proposal.kind === 'jira_change')
+        throw invalid('A Jira change is applied, not added to a meeting');
+      const title = proposal.story?.title ?? proposal.topic?.title ?? '';
+      const note =
+        proposal.topic?.note ??
+        (proposal.story === undefined
+          ? ''
+          : [
+              `As ${proposal.story.role}, I want ${proposal.story.want} so that ${proposal.story.soThat}.`,
+              '',
+              'Acceptance criteria:',
+              ...proposal.story.acceptanceCriteria.map((a) => `- ${a}`),
+            ].join('\n'));
+      const added = this.addMeetingTopic(actor, body.meetingId, title, note);
+      this.markDone(c, turn, proposal, actor, {
+        jiraKey: null,
+        jiraUrl: null,
+        meetingId: body.meetingId,
+        meetingTitle: added.meetingTitle,
+        topicId: added.topicId,
+        note: null,
+      });
+    }
+    return this.dto(c, actor);
+  }
+
+  private ownProposal(actor: string, proposalId: string) {
+    for (const c of this.conversations.values())
+      for (const turn of c.turns) {
+        const proposal = turn.proposals.find((p) => p.id === proposalId);
+        if (proposal === undefined) continue;
+        if (c.owner !== actor)
+          throw new MockProblem(
+            c.shared ? 'forbidden' : 'not_found',
+            c.shared
+              ? "Only the conversation's owner may change it or ask in it"
+              : `Proposal ${proposalId} does not exist`
+          );
+        return { c, turn, proposal };
+      }
+    throw new MockProblem('not_found', `Proposal ${proposalId} does not exist`);
+  }
+
+  private markDone(
+    c: ConversationRecord,
+    turn: TurnRecord,
+    proposal: ConversationProposal,
+    actor: string,
+    into: Omit<
+      NonNullable<ConversationProposal['done']>,
+      'by' | 'byName' | 'at'
+    >
+  ): void {
+    const at = this.now();
+    turn.proposals = turn.proposals.map((p) =>
+      p.id === proposal.id
+        ? {
+            ...p,
+            done: {
+              by: actor,
+              byName: KNOWN_NAMES.get(actor) ?? null,
+              at,
+              ...into,
+            },
+          }
+        : p
+    );
+    c.updatedAt = at;
   }
 
   private visible(actor: string, id: string): ConversationRecord {
@@ -550,6 +719,7 @@ export class ConversationDesk {
             note: 'Who may waive a fee, and up to how much? Decide before the first story ships.',
           },
           flags: [],
+          done: null,
         },
       ];
       questions = [
@@ -588,6 +758,43 @@ export class ConversationDesk {
               recommended: false,
             },
           ],
+        },
+      ];
+    } else if (/\bepic\b/i.test(turn.question)) {
+      const issues = pinned.length > 0 ? pinned : ['PROJ-123'];
+      answer = `${issues.join(' and ')} belong together: I propose **a new epic** for late fees with them in it, and a label on ${issues[0]} so finance finds it.`;
+      proposals = [
+        {
+          id: this.id(),
+          turn: turn.n,
+          kind: 'jira_change',
+          change: {
+            action: 'create_epic',
+            projectKey: issues[0]!.split('-')[0]!,
+            summary: 'Late fees for enterprise accounts',
+            description:
+              'Charging late fees on overdue enterprise invoices, and showing them on the PDF.',
+            issueKeys: issues,
+          },
+          reason: 'The pinned work is one feature; an epic keeps it together.',
+          flags: [],
+          done: null,
+        },
+        {
+          id: this.id(),
+          turn: turn.n,
+          kind: 'jira_change',
+          change: {
+            action: 'edit_issue',
+            issueKey: issues[0]!,
+            summary: null,
+            description: null,
+            addLabels: ['late-fees'],
+            removeLabels: [],
+          },
+          reason: 'Finance filters its board by this label.',
+          flags: [],
+          done: null,
         },
       ];
     } else {
@@ -630,6 +837,7 @@ export class ConversationDesk {
         openQuestions: [],
       },
       flags,
+      done: null,
     };
   }
 
@@ -674,6 +882,11 @@ export class ConversationDesk {
               startedAt: s.startedAt,
             },
       spentNanoAiu: c.spentBefore + (s?.spentNanoAiu ?? 0),
+      // The mock's Product agent has Jira tools and no Confluence server.
+      lookUp: {
+        jira: { on: c.lookUp.jira, available: true },
+        confluence: { on: c.lookUp.confluence, available: false },
+      },
     };
   }
 }

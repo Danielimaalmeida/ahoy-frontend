@@ -344,7 +344,16 @@ describe('Product on the mock backend', () => {
     expect(text(turn().querySelector('ah-proposal-card'))).toContain(
       'Needs a backend change'
     );
-    expect(turn().querySelectorAll('ah-proposal-card button')).toHaveLength(0);
+    // The owner turns proposals into work: Create in Jira for a story, Add to a meeting for any.
+    expect(
+      [...turn().querySelectorAll('ah-proposal-card button')].map(text)
+    ).toEqual([
+      'Create in Jira',
+      'Add to a meeting',
+      'Create in Jira',
+      'Add to a meeting',
+      'Add to a meeting',
+    ]);
     expect(text(turn().querySelector('.ask'))).toContain(
       'Q1 · Should the fee show on invoices already sent?'
     );
@@ -353,6 +362,11 @@ describe('Product on the mock backend', () => {
     );
     expect(text(page.root.querySelector('aside.side'))).toContain('Warm:');
     expect(text(composer(page.root))).toContain('The session is warm');
+    // A warm session keeps the cap it started with: no cap is asked for, and what it spent of it is shown.
+    expect(composer(page.root)!.querySelector('input')).toBeNull();
+    expect(text(composer(page.root))).toMatch(
+      /within its cap \(\d+\.\d of 2\.0 AIU spent\)/
+    );
 
     // The stream stays open while the session is warm, so the page sees it end and stops saying "warm".
     await wait(page, MOCK_WARM_MS + WARM_POLL_MS, WARM_POLL_MS);
@@ -362,12 +376,115 @@ describe('Product on the mock backend', () => {
     expect(text(composer(page.root))).toContain(
       'Sending starts a session that spends AIU'
     );
+    expect(composer(page.root)!.querySelector('input')).not.toBeNull();
     expect(page.server.conversationDesk.dropStreams()).toBe(0);
     await wait(page, CONVERSATION_POLL_MS * 5);
     expect(reads()).toBe(readsBefore);
     expect(
       page.requests.filter((r) => r.path === `/conversations/${id}/stream`)
     ).toHaveLength(1);
+  });
+
+  it('turns proposals into work: a story into a Jira issue in the pinned issue’s project, a topic into a meeting topic, once each', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, 'split-epic', [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    const cards = () => [...page.root.querySelectorAll('ah-proposal-card')];
+    expect(cards()).toHaveLength(3);
+
+    buttonNamed(cards()[0]!, 'Create in Jira').click();
+    await flush(page);
+    const project = cards()[0]!.querySelector('input')!;
+    expect(project.value).toBe('PROJ');
+    type(project, 'pro j');
+    await flush(page);
+    expect(buttonNamed(cards()[0]!, 'Create story').disabled).toBe(true);
+    type(project, 'fin');
+    await flush(page);
+    buttonNamed(cards()[0]!, 'Create story').click();
+    await flush(page);
+    expect(
+      page.requests.find((r) => r.path.endsWith('/create-issue'))?.body
+    ).toEqual({ projectKey: 'FIN' });
+    expect(text(cards()[0])).toContain('Created in Jira as FIN-41 by');
+    expect(
+      cards()[0]!.querySelector<HTMLAnchorElement>('a')!.getAttribute('href')
+    ).toBe('https://jira.example.com/browse/FIN-41');
+    expect(cards()[0]!.querySelectorAll('button')).toHaveLength(0);
+
+    buttonNamed(cards()[2]!, 'Add to a meeting').click();
+    await flush(page);
+    const meeting = cards()[2]!.querySelector('select')!;
+    expect(meeting.options.length).toBeGreaterThan(0);
+    expect([...meeting.options].map(text).join(' | ')).toContain('running');
+    buttonNamed(cards()[2]!, 'Add topic').click();
+    await flush(page);
+    const added = page.requests.find((r) => r.path.endsWith('/meeting-topic'));
+    expect(added?.body).toEqual({ meetingId: meeting.options[0]!.value });
+    expect(text(cards()[2])).toContain('Added to the meeting');
+    const topics = page.server.meetingDesk
+      .get(meeting.options[0]!.value)
+      .topics.map((t) => t.title);
+    expect(topics).toContain('Waivers for late fees');
+  });
+
+  it('applies a Jira change the agent proposed after a confirmation, once, and says what was done', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    type(
+      composer(page.root)!.querySelector('textarea'),
+      'Should these go in an epic?'
+    );
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    const cards = () => [...page.root.querySelectorAll('ah-proposal-card')];
+    expect(cards().map((c) => text(c.querySelector('h3')))).toEqual([
+      'New epic in PROJ: Late fees for enterprise accounts',
+      'Change PROJ-120',
+    ]);
+    expect([...cards()[0]!.querySelectorAll('.keys li')].map(text)).toEqual([
+      'PROJ-120',
+    ]);
+    expect(text(cards()[1])).toContain('late-fees');
+    expect([...cards()[0]!.querySelectorAll('button')].map(text)).toEqual([
+      'Apply in Jira',
+    ]);
+
+    buttonNamed(cards()[0]!, 'Apply in Jira').click();
+    await flush(page);
+    expect(text(cards()[0])).toContain('Ahoy makes this change in Jira now');
+    buttonNamed(cards()[0]!, 'Cancel').click();
+    await flush(page);
+    expect(page.requests.some((r) => r.path.endsWith('/apply'))).toBe(false);
+
+    buttonNamed(cards()[0]!, 'Apply in Jira').click();
+    await flush(page);
+    buttonNamed(cards()[0]!, 'Apply change').click();
+    await flush(page);
+    expect(
+      page.requests.filter(
+        (r) => r.method === 'POST' && r.path.endsWith('/apply')
+      )
+    ).toHaveLength(1);
+    expect(text(cards()[0])).toMatch(
+      /^.*Applied in Jira: Created epic PROJ-\d+ with PROJ-120\. Open PROJ-\d+ by /
+    );
+    expect(cards()[0]!.querySelectorAll('button')).toHaveLength(0);
+    expect(
+      cards()[0]!.querySelector<HTMLAnchorElement>('a')!.getAttribute('href')
+    ).toMatch(/^https:\/\/jira\.example\.com\/browse\/PROJ-\d+$/);
   });
 
   it('reads the conversation every second once its stream breaks, less often while the session is warm, and stops when it ends', async () => {
@@ -459,6 +576,105 @@ describe('Product on the mock backend', () => {
     ).toBe(true);
     expect(text(page.root.querySelector('article.turn'))).toContain(
       `cancelled by ${ME}`
+    );
+  });
+
+  it('pins what is pasted in the quick box, Enter taking the first way offered, and says why it cannot', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const quick = () =>
+      page.root.querySelector<HTMLInputElement>(
+        'input[aria-label="Pin quickly"]'
+      )!;
+    const options = () =>
+      [...page.root.querySelectorAll('.quick-options button')].map(text);
+    const hint = () => text(page.root.querySelector('.quick [role=status]'));
+
+    type(quick(), 'proj-456');
+    await flush(page);
+    expect(options()).toEqual([
+      'Jira issue or epic · PROJ-456Enter',
+      'Defect · PROJ-456',
+      'Repository · proj-456',
+    ]);
+    quick().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush(page);
+    expect(
+      page.requests.find((r) => r.path.endsWith('/context'))?.body
+    ).toEqual({ items: [{ kind: 'jira', ref: 'PROJ-456' }] });
+    expect(quick().value).toBe('');
+
+    type(quick(), 'PROJ-456');
+    await flush(page);
+    quick().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush(page);
+    expect(hint()).toBe('It is pinned already.');
+    expect(
+      page.requests.filter((r) => r.path.endsWith('/context'))
+    ).toHaveLength(1);
+
+    type(quick(), 'not a ref!');
+    await flush(page);
+    expect(options()).toEqual([]);
+    expect(hint()).toContain('Not a Jira key, Figma link or repository name.');
+
+    type(quick(), 'https://www.figma.com/design/AbC123/Billing-Invoices');
+    await flush(page);
+    buttonNamed(page.root, /^Figma link · Billing Invoices/).click();
+    await flush(page);
+    expect(
+      [...page.root.querySelectorAll('.reads .pin .text')].map(text)
+    ).toEqual(['PROJ-456', 'Billing Invoices']);
+  });
+
+  it('turns the Jira look-up off for the conversation, ending the warm session, and offers no look-up that is not set up', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const row = () =>
+      page.root.querySelector<HTMLElement>(
+        '[aria-labelledby="look-up-label"]'
+      )!;
+    const chip = (name: string) => buttonNamed(row(), new RegExp(`${name}$`));
+    expect(chip('Jira').getAttribute('aria-pressed')).toBe('true');
+    expect(text(chip('Jira'))).toBe('✓ Jira');
+    expect(chip('Confluence').getAttribute('aria-pressed')).toBe('false');
+    expect(chip('Confluence').getAttribute('aria-disabled')).toBe('true');
+    expect(text(row())).toContain(
+      'The agent searches Jira beyond what is pinned. Turn it off to keep it to the pins. Confluence is not set up.'
+    );
+    chip('Confluence').click();
+    await flush(page);
+    expect(page.requests.some((r) => r.method === 'PATCH')).toBe(false);
+
+    type(composer(page.root)!.querySelector('textarea'), 'What links to it?');
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    // While a question is open the look-ups stay as they are.
+    expect(chip('Jira').getAttribute('aria-disabled')).toBe('true');
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    expect(text(composer(page.root))).toContain('The session is warm');
+    expect(text(row())).toContain('Changing it ends the warm session');
+
+    chip('Jira').click();
+    await flush(page);
+    expect(page.requests.find((r) => r.method === 'PATCH')?.body).toEqual({
+      lookUp: { jira: false },
+    });
+    expect(chip('Jira').getAttribute('aria-pressed')).toBe('false');
+    expect(text(row())).toContain(
+      'Jira is off for this conversation: the agent reads only the pinned items.'
+    );
+    expect(text(composer(page.root))).toContain(
+      'Sending starts a session that spends AIU'
     );
   });
 

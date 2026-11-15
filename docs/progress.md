@@ -1,6 +1,6 @@
 # Ahoy frontend · progress
 
-Updated 2026-11-14. The one status page: what is proven and how, what is not, and what comes next. Replace it after
+Updated 2026-11-15. The one status page: what is proven and how, what is not, and what comes next. Replace it after
 each item; never append to it. The detail of a change (its checks, test counts and screenshots) goes in its commit and
 pull request, and git history keeps every earlier version of this page (`git show cbb8f39:docs/progress.md` is the last
 long one, with an entry per branch since 2026-10-30). The review of both repositories, with its proposals (not yet
@@ -33,10 +33,11 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   sign-in in a production environment", which tests the real library's refusal the stub lacks; format fails on
   `docs/architecture.md` alone, as on `main`.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` and the runner key of its PR #117
-  (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`), and on `feat/product-page` its
-  branch of the same name (PR #107, the conversations, migration 0052); `schema.d.ts` and the test mirror are generated
-  from it. Merge and deploy that API and its migrations with or before this front end: an older
-  API sends no `runnerKey`, and the Figma page refuses its answer.
+  (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`), and on
+  `feat/product-conversations-2` its branch of the same name (migration 0053: Create in Jira and Add to a meeting on a
+  proposal, `Conversation.lookUp`, `applyJiraChange`); `schema.d.ts` and the test mirror are generated from it. Merge
+  and deploy that API and its migrations with or before this front end: an older API sends no `runnerKey` or
+  `lookUp`, and the pages refuse its answer.
 
 ## Not checked yet
 
@@ -44,8 +45,12 @@ What each feature still needs beyond the tests above. Its pull request has the d
 
 | Feature                                                                                                    | Not checked yet                                                                                            |
 | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+<<<<<<< HEAD
 | Needs you: phase in words with "Phase N of 8"; a "Defect" tag from `issueType`                             | A browser (mockup only); an API with ahoy-hosted's `issueType` (no tag until it is deployed)               |
 | The Product page (`/product`, admins only): conversations with pinned context, proposal and question cards | A browser after this merge (mock screenshots of 2026-11-09); the answer's stream on an API; a live session |
+=======
+| The Product page (`/product`, admins only): proposals to Jira or a meeting, look-ups, quick pins and Apply | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
+>>>>>>> origin/main
 | Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                            | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
 | Create in Confluence, Team settings › Confluence                                                           | A real Confluence; updating a page once it exists is not built                                             |
 | Each person on a side of a meeting (People, `MeStore`)                                                     | A browser                                                                                                  |
@@ -83,9 +88,9 @@ What each feature still needs beyond the tests above. Its pull request has the d
    config files `main` had removed as unread (now removed again). Pull `main` into the company copy before the next
    sync, and delete there what `main` deletes: `.prettierrc.json`, `eslint.config.mjs`, `.tool-versions` and
    `proxy.conf.mjs`.
-1. **The Product page** (`feat/product-page`, D24 step 1): review and merge it with `ahoy-hosted` PR #107 (the API
-   first or together). An admin turns Product conversations on in Team settings › Agents; the first live question needs
-   the user's approval and a low AIU cap. Step 2 (Create in Jira and Add to meeting on the cards) comes after.
+1. **The Product page's next phase** (`feat/product-conversations-2`, with `ahoy-hosted`'s branch of the same name):
+   the user tries it against `npm run dev -- --simulate` (a question naming an epic proposes one) and says whether the
+   per-conversation look-ups and the Jira changes stand; then review and merge, the API first or together.
 2. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
    `npm ci`, then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop
    `test:scripts`.

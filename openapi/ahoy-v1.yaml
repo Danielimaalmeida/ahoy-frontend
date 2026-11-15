@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 51442666cbe2e409ce78ddf0fd5065b4ed57a62f
+# Commit: fb9d6f60fdacd3ee831625d409f997e5060d5f31
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2569,7 +2569,7 @@ paths:
     patch:
       operationId: updateConversation
       tags: [product]
-      summary: Rename a conversation, or share it with the other admins (read-only to them). Its owner only. 0 AIU.
+      summary: Rename a conversation, share it with the other admins (read-only to them), or turn its Jira or Confluence look-ups on or off. Its owner only. 0 AIU.
       requestBody:
         required: true
         content:
@@ -2585,6 +2585,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
     delete:
       operationId: deleteConversation
       tags: [product]
@@ -2699,6 +2700,92 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+  /conversation-proposals/{proposalId}/create-issue:
+    parameters:
+      - $ref: '#/components/parameters/ProposalId'
+    post:
+      operationId: createProposalIssue
+      tags: [product]
+      summary: Create a story proposal in Jira. Writes to Jira. Its conversation's owner only.
+      description: |
+        The story drafts' path (D24, step 2): the server's Jira credentials (`POST /rest/api/2/issue`), the team's
+        summary prefix and fixed fields, the acceptance criteria in the checklist intake reads and the story-writer's
+        sections, labelled `ahoy-product` and `ahoy-conv-<n>`, naming the conversation. Once only: a proposal that
+        became an issue or a meeting topic answers the conversation as it is. `409 invalid_state` for a topic
+        proposal; `503 unavailable` when Jira is not configured or refuses (the proposal stays open). 0 AIU.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProposalIssueRequest' }
+      responses:
+        '200':
+          description: The conversation, with the issue the proposal became.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /conversation-proposals/{proposalId}/meeting-topic:
+    parameters:
+      - $ref: '#/components/parameters/ProposalId'
+    post:
+      operationId: addProposalToMeeting
+      tags: [product]
+      summary: Add a proposal to a planned or running meeting, as a topic with a note. Its conversation's owner only.
+      description: |
+        A topic proposal becomes a topic with its note; a story proposal a topic of its title, with the story, its
+        acceptance criteria, what is out of scope and its open questions as the note (D24, step 2). Planned before the
+        meeting starts, raised in it while it runs. Once only, like `createProposalIssue`. `409 invalid_state` when
+        the meeting has ended. 0 AIU.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProposalTopicRequest' }
+      responses:
+        '200':
+          description: The conversation, with the topic the proposal became.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+  /conversation-proposals/{proposalId}/apply:
+    parameters:
+      - $ref: '#/components/parameters/ProposalId'
+    post:
+      operationId: applyJiraChange
+      tags: [product]
+      summary: Apply a Jira change proposal. Writes to Jira. Its conversation's owner only.
+      description: |
+        Ahoy makes the change with the server's Jira credentials (D24, option A), never the agent: `create_epic`
+        creates an Epic (`POST /rest/api/2/issue`, with its summary as the Epic Name when Jira has that field,
+        labelled `ahoy-product` and `ahoy-conv-<n>`) and moves its `issueKeys` into it; `move_to_epic` moves issues
+        into an epic (`POST /rest/agile/1.0/epic/{key}/issue`); `edit_issue` changes an issue's summary, description
+        and labels (`PUT /rest/api/2/issue/{key}`). Text the agent wrote goes in as text, wiki markup escaped. Once
+        only: an applied proposal answers the conversation as it is. `409 invalid_state` for a story or topic
+        proposal; `503 unavailable` when Jira is not configured or refuses the first call (nothing is recorded, so it
+        may be tried again). An epic created whose issues could not be moved is recorded as applied, with what failed
+        in `done.note`. 0 AIU.
+      responses:
+        '200':
+          description: The conversation, with what applying the change did.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /crew:
     get:
       operationId: getCrew
@@ -4204,6 +4291,11 @@ components:
       schema: { type: string, format: uuid }
     ConversationId:
       name: conversationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProposalId:
+      name: proposalId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -8658,6 +8750,31 @@ components:
             type: boolean,
             description: 'True shares it with every other admin (the Product page is for admins only), read-only to them.',
           }
+        lookUp:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          description: >-
+            Turns what the agent may look up on or off. Not while a question is being answered (409); a warm session
+            is stopped, so the next question starts one with the new look-ups.
+          properties:
+            jira: { type: boolean }
+            confluence: { type: boolean }
+    ConversationLookUp:
+      type: object
+      additionalProperties: false
+      required: ['on', available]
+      properties:
+        'on':
+          {
+            type: boolean,
+            description: 'Whether the person lets the agent look it up in this conversation.',
+          }
+        available:
+          {
+            type: boolean,
+            description: "Whether the server is set up to give it at all: its MCP server is among the configuration's.",
+          }
     ConversationContextKind:
       type: string
       enum: [jira, meeting_topic, defect, figma, repository]
@@ -8705,15 +8822,142 @@ components:
       properties:
         label: { type: string, minLength: 1, maxLength: 80 }
         evidence: { type: string, minLength: 1, maxLength: 500 }
+    ProposalIssueRequest:
+      type: object
+      additionalProperties: false
+      required: [projectKey]
+      properties:
+        projectKey:
+          {
+            type: string,
+            pattern: '^[A-Za-z][A-Za-z0-9_]{0,49}$',
+            description: 'The Jira project, such as PAY.',
+          }
+        issueType:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 50,
+            description: 'Story when left out.',
+          }
+    ProposalTopicRequest:
+      type: object
+      additionalProperties: false
+      required: [meetingId]
+      properties:
+        meetingId: { type: string, format: uuid }
+    ProposalDone:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          by,
+          byName,
+          at,
+          jiraKey,
+          jiraUrl,
+          meetingId,
+          meetingTitle,
+          topicId,
+          note,
+        ]
+      description: What a proposal became, and who made it so. A meeting or topic deleted since leaves its ids null.
+      properties:
+        by: { type: string }
+        byName: { type: [string, 'null'] }
+        at: { type: string, format: date-time }
+        jiraKey:
+          {
+            type: [string, 'null'],
+            description: 'The Jira issue created from it, or the epic or issue a Jira change created or changed.',
+          }
+        jiraUrl:
+          {
+            type: [string, 'null'],
+            format: uri,
+            description: 'The issue in Jira, when Jira is configured.',
+          }
+        meetingId: { type: [string, 'null'], format: uuid }
+        meetingTitle: { type: [string, 'null'] }
+        topicId:
+          {
+            type: [string, 'null'],
+            format: uuid,
+            description: 'The meeting topic it became.',
+          }
+        note:
+          type: [string, 'null']
+          maxLength: 2000
+          description: What applying a Jira change did, or what failed after a part of it was done; null otherwise.
+    JiraChange:
+      description: A change to Jira, by its action.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [action, projectKey, summary, description, issueKeys]
+          properties:
+            action: { const: create_epic }
+            projectKey: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,19}$' }
+            summary: { type: string, minLength: 1, maxLength: 255 }
+            description: { type: string, minLength: 1, maxLength: 20000 }
+            issueKeys:
+              type: array
+              maxItems: 50
+              items: { $ref: '#/components/schemas/JiraIssueKey' }
+              description: The issues moved into the epic once it exists.
+        - type: object
+          additionalProperties: false
+          required: [action, epicKey, issueKeys]
+          properties:
+            action: { const: move_to_epic }
+            epicKey: { $ref: '#/components/schemas/JiraIssueKey' }
+            issueKeys:
+              type: array
+              minItems: 1
+              maxItems: 50
+              items: { $ref: '#/components/schemas/JiraIssueKey' }
+        - type: object
+          additionalProperties: false
+          required:
+            [action, issueKey, summary, description, addLabels, removeLabels]
+          properties:
+            action: { const: edit_issue }
+            issueKey: { $ref: '#/components/schemas/JiraIssueKey' }
+            summary:
+              {
+                type: [string, 'null'],
+                minLength: 1,
+                maxLength: 255,
+                description: 'The new summary; null keeps it.',
+              }
+            description:
+              type: [string, 'null']
+              minLength: 1
+              maxLength: 20000
+              description: The new description, replacing the old one whole; null keeps it.
+            addLabels:
+              {
+                type: array,
+                maxItems: 10,
+                items: { type: string, minLength: 1, maxLength: 100 },
+              }
+            removeLabels:
+              {
+                type: array,
+                maxItems: 10,
+                items: { type: string, minLength: 1, maxLength: 100 },
+              }
     ConversationProposal:
       type: object
       additionalProperties: false
-      required: [id, turn, kind, flags]
-      description: A story (in the story drafts' template) or a topic for a meeting, as the agent handed it in.
+      required: [id, turn, kind, flags, done]
+      description: |
+        A story (in the story drafts' template), a topic for a meeting, or a change to Jira with why, as the agent
+        handed it in.
       properties:
         id: { type: string, format: uuid }
         turn: { type: integer, minimum: 1 }
-        kind: { type: string, enum: [story, topic] }
+        kind: { type: string, enum: [story, topic, jira_change] }
         story: { $ref: '#/components/schemas/StoryTemplate' }
         topic:
           type: object
@@ -8722,10 +8966,22 @@ components:
           properties:
             title: { type: string, minLength: 1, maxLength: 255 }
             note: { type: string, minLength: 1, maxLength: 4000 }
+        change: { $ref: '#/components/schemas/JiraChange' }
+        reason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 1000,
+            description: 'Why the agent proposes the change.',
+          }
         flags:
           type: array
           maxItems: 5
           items: { $ref: '#/components/schemas/ProposalFlag' }
+        done:
+          oneOf:
+            - { type: 'null' }
+            - { $ref: '#/components/schemas/ProposalDone' }
     ConversationTurn:
       type: object
       additionalProperties: false
@@ -8840,6 +9096,7 @@ components:
           turns,
           session,
           spentNanoAiu,
+          lookUp,
         ]
       properties:
         id: { type: string, format: uuid }
@@ -8909,6 +9166,14 @@ components:
             type: integer,
             description: 'What every session of the conversation spent.',
           }
+        lookUp:
+          type: object
+          additionalProperties: false
+          required: [jira, confluence]
+          description: What the agent may look up besides what the conversation pins; a change applies from the next session.
+          properties:
+            jira: { $ref: '#/components/schemas/ConversationLookUp' }
+            confluence: { $ref: '#/components/schemas/ConversationLookUp' }
     AgentSettingsPage:
       type: object
       additionalProperties: false

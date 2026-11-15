@@ -75,7 +75,8 @@
               "label": "Needs a backend change",
               "evidence": "web/src/billing/fees.ts has no rate per plan"
             }
-          ]
+          ],
+          "done": null
         },
         {
           "id": "8e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a42",
@@ -102,7 +103,8 @@
               "label": "Touches the defect PROJ-456",
               "evidence": "web/src/billing/pdf.ts:41 adds the fee line twice"
             }
-          ]
+          ],
+          "done": null
         },
         {
           "id": "8e1f2a3b-4c5d-4e6f-8a7b-9c0d1e2f3a43",
@@ -112,7 +114,8 @@
             "title": "Waivers for late fees",
             "note": "Who may waive a fee, and up to how much? Decide before the first story ships."
           },
-          "flags": []
+          "flags": [],
+          "done": null
         }
       ],
       "questions": [
@@ -165,5 +168,15 @@
     "cancelRequested": false,
     "startedAt": "2026-11-03T09:01:10.000Z"
   },
-  "spentNanoAiu": 1400000000
+  "spentNanoAiu": 1400000000,
+  "lookUp": {
+    "jira": {
+      "on": true,
+      "available": true
+    },
+    "confluence": {
+      "on": true,
+      "available": false
+    }
+  }
 }
