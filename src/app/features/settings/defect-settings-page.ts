@@ -13,8 +13,12 @@ import {
   dailySpendText,
   spendsMore,
   MAX_DEFECT_BUDGET_NANO_AIU,
+  MAX_REPRODUCTIONS_PER_DAY,
   prioritiesOf,
   prioritiesText,
+  reproduceModeLabel,
+  reproductionCapOf,
+  reproductionSpendsMore,
   startCapOf,
 } from '@domain/defect-settings';
 import { qnumberOf } from '@domain/people-settings';
@@ -24,6 +28,7 @@ import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { Field, FieldControl } from '@ui/field/field';
 import { Icon } from '@ui/icon/icon';
+import { RouterLink } from '@angular/router';
 import { Panel, PanelBody, PanelFoot, PanelHead } from '@ui/panel/panel';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { ToastService } from '@ui/toast/toast';
@@ -44,7 +49,14 @@ interface FormValue {
   readonly cap: string;
   readonly perDay: string;
   readonly active: string;
-  /** The admin's yes to the spend, asked when the change turns automatic starts on. */
+  /** Whether the watch reproduces a defect before it starts it by itself. */
+  readonly reproduce: 'on' | 'off';
+  /** What the verdict decides. */
+  readonly mode: 'advisory' | 'required';
+  /** The id of the environment defects are reproduced in; '' for none. */
+  readonly environment: string;
+  readonly reproductionsPerDay: string;
+  /** The admin's yes to the spend, asked when the change lets Ahoy spend more by itself. */
   readonly confirm: boolean;
 }
 
@@ -62,6 +74,10 @@ function formValueOf(settings: DefectSettings): FormValue {
         : formatCap(settings.budgetNanoAiu, 9),
     perDay: String(settings.maxStartsPerDay),
     active: String(settings.maxActive),
+    reproduce: settings.reproduceOn ? 'on' : 'off',
+    mode: settings.reproduceMode,
+    environment: settings.reproduceEnvironmentId ?? '',
+    reproductionsPerDay: String(settings.maxReproductionsPerDay),
     confirm: false,
   };
 }
@@ -82,8 +98,10 @@ type PreviewState =
  * query and the priorities it tries, and whether it starts the defects Ahoy can try by itself. The watch only reads
  * Jira and judges each defect by fixed rules, at 0 AIU, so turning it on asks for no confirmation. Automatic starts
  * spend AIU without a person starting each voyage: turning them on needs an AIU cap per defect and the admin's yes
- * (`confirmSpend`). No repository is set here: the planner finds them from the content repository's routing and the
- * code.
+ * (`confirmSpend`). Reproduction (design §5 "Defect reproduction") has the watch try each defect in a browser on an
+ * environment of Team settings › Environments first; it spends AIU too, so turning it on or raising its daily cap
+ * asks for the same yes. No repository is set here: the planner finds them from the content repository's routing and
+ * the code.
  */
 @Component({
   selector: 'ah-defect-settings-page',
@@ -98,6 +116,7 @@ type PreviewState =
     PanelFoot,
     PanelHead,
     ReactiveFormsModule,
+    RouterLink,
     SettingsHistory,
     Skeleton,
   ],
@@ -148,6 +167,21 @@ type PreviewState =
       ul {
         margin: 0;
         padding-left: 18px;
+      }
+      fieldset {
+        max-width: none;
+        margin: 0;
+        padding: 14px 0 0;
+        border: 0;
+        border-top: 1px solid var(--line-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+      legend {
+        padding: 0 8px 0 0;
+        font-weight: 700;
       }
       .confirm {
         display: flex;
@@ -349,29 +383,95 @@ type PreviewState =
                       [formControl]="form.controls.active"
                     />
                   </ah-field>
-                  @if (confirmNeeded()) {
-                    <ah-banner
-                      variant="cost"
-                      [heading]="
-                        'Ahoy may spend up to ' +
-                        (dailySpend() ?? '…') +
-                        ' a day by itself'
-                      "
+                  <fieldset>
+                    <legend>Reproduction</legend>
+                    <ah-field
+                      label="Reproduce before starting"
+                      hint="On: after each check, Ahoy tries each defect it could fix in a browser on the environment below, the oldest first, and shows the verdict in the Backlog. Each try spends AIU, up to the Defect reproduction cap of Team settings › Phases."
                     >
-                      @if (alreadyOn() && startAsChanged()) {
-                        The voyages will run on another person's Copilot token.
-                      } @else if (alreadyOn()) {
-                        This raises what Ahoy may spend by itself.
+                      <select ahInput [formControl]="form.controls.reproduce">
+                        <option value="off">Off</option>
+                        <option value="on">On</option>
+                      </select>
+                    </ah-field>
+                    <ah-field
+                      label="Environment"
+                      [optional]="value().reproduce === 'off'"
+                      hint="Where defects are reproduced. Reproduce in the Backlog uses it too."
+                      [errorText]="environmentError() ?? ''"
+                    >
+                      <select ahInput [formControl]="form.controls.environment">
+                        <option value="">None</option>
+                        @for (e of environmentChoices(); track e.id) {
+                          <option [value]="e.id">{{ e.name }}</option>
+                        }
+                      </select>
+                    </ah-field>
+                    @if (noEnvironments()) {
+                      <span class="ah-hint"
+                        >No environment is listed yet. Add one in
+                        <a routerLink="/settings/environments"
+                          >Team settings › Environments</a
+                        >.</span
+                      >
+                    }
+                    <ah-field
+                      label="What the verdict decides"
+                      hint="Required: a defect that was not reproduced, or whose reproduction was inconclusive, is not started by Ahoy and waits for a person."
+                    >
+                      <select ahInput [formControl]="form.controls.mode">
+                        <option value="advisory">
+                          {{ modeLabel('advisory') }}
+                        </option>
+                        <option value="required">
+                          {{ modeLabel('required') }}
+                        </option>
+                      </select>
+                    </ah-field>
+                    <ah-field
+                      label="Reproductions per day"
+                      [hint]="
+                        'The most reproductions in any 24 hours, the ones asked for in the Backlog included. At most ' +
+                        maxReproductions +
+                        '.'
+                      "
+                      [errorText]="reproductionsError() ?? ''"
+                    >
+                      <input
+                        ahInput
+                        inputmode="numeric"
+                        autocomplete="off"
+                        [formControl]="form.controls.reproductionsPerDay"
+                      />
+                    </ah-field>
+                  </fieldset>
+                  @if (confirmNeeded()) {
+                    <ah-banner variant="cost" [heading]="confirmHeading()">
+                      @if (startsConfirm()) {
+                        @if (alreadyOn() && startAsChanged()) {
+                          The voyages will run on another person's Copilot
+                          token.
+                        } @else if (alreadyOn()) {
+                          This raises what Ahoy may spend by itself.
+                        }
+                        Each voyage it starts is capped at the AIU cap per
+                        defect, and it starts at most the starts per day.
                       }
-                      Each voyage it starts is capped at the AIU cap per defect,
-                      and it starts at most the starts per day.
+                      @if (reproductionConfirm()) {
+                        Each reproduction is capped at the Defect reproduction
+                        cap of Team settings › Phases, and Ahoy runs at most the
+                        reproductions per day.
+                      }
                       <label class="confirm">
                         <input
                           type="checkbox"
                           [formControl]="form.controls.confirm"
                         />
-                        Let Ahoy start voyages and spend AIU without a person
-                        starting each one.
+                        {{
+                          startsConfirm()
+                            ? 'Let Ahoy start voyages and spend AIU without a person starting each one.'
+                            : 'Let Ahoy reproduce defects and spend AIU without a person asking for each one.'
+                        }}
                       </label>
                     </ah-banner>
                   }
@@ -422,6 +522,16 @@ type PreviewState =
                       {{ aiu(page.defects.budgetNanoAiu) }} AIU
                     } @else {
                       <span class="ah-muted">Not set</span>
+                    }
+                  </dd>
+                  <dt>Reproduction</dt>
+                  <dd>
+                    @if (page.defects.reproduceOn) {
+                      On, in {{ savedEnvironmentName() ?? 'an environment' }}:
+                      at most {{ page.defects.maxReproductionsPerDay }} a day.
+                      {{ modeLabel(page.defects.reproduceMode) }}
+                    } @else {
+                      Off
                     }
                   </dd>
                 </dl>
@@ -488,6 +598,12 @@ export class DefectSettingsPage {
     cap: new FormControl('', { nonNullable: true }),
     perDay: new FormControl('2', { nonNullable: true }),
     active: new FormControl('3', { nonNullable: true }),
+    reproduce: new FormControl<'on' | 'off'>('off', { nonNullable: true }),
+    mode: new FormControl<'advisory' | 'required'>('advisory', {
+      nonNullable: true,
+    }),
+    environment: new FormControl('', { nonNullable: true }),
+    reproductionsPerDay: new FormControl('5', { nonNullable: true }),
     confirm: new FormControl(false, { nonNullable: true }),
   });
   /** The form's whole value, disabled controls too, as a signal. */
@@ -514,6 +630,31 @@ export class DefectSettingsPage {
   );
   private readonly perDayRead = computed(() => startCapOf(this.value().perDay));
   private readonly activeRead = computed(() => startCapOf(this.value().active));
+  private readonly reproductionsRead = computed(() =>
+    reproductionCapOf(this.value().reproductionsPerDay)
+  );
+  protected readonly maxReproductions = MAX_REPRODUCTIONS_PER_DAY;
+  /**
+   * The environments the select offers: the ones read, or, when they could not be, only the saved one, so the
+   * setting still shows.
+   */
+  protected readonly environmentChoices = computed(
+    (): readonly { readonly id: string; readonly name: string }[] => {
+      const read = this.store.environments();
+      if (read !== null) return read;
+      const saved = this.saved()?.reproduceEnvironmentId ?? null;
+      return saved === null ? [] : [{ id: saved, name: 'The saved one' }];
+    }
+  );
+  /** Whether the environments were read and there is none to choose. */
+  protected readonly noEnvironments = computed(
+    () => this.store.environments()?.length === 0
+  );
+  /** The name of the environment the saved settings reproduce in, once the environments are read. */
+  protected readonly savedEnvironmentName = computed(() => {
+    const id = this.saved()?.reproduceEnvironmentId ?? null;
+    return this.store.environments()?.find((e) => e.id === id)?.name ?? null;
+  });
   /** What the form would save, or null while a field is refused. */
   private readonly typed = computed(() => {
     const value = this.value();
@@ -522,7 +663,9 @@ export class DefectSettingsPage {
     const perDay = this.perDayRead();
     const active = this.activeRead();
     const startAs = this.startAsRead();
+    const reproductions = this.reproductionsRead();
     if (
+      'problem' in reproductions ||
       'problem' in priorities ||
       'problem' in startAs ||
       'error' in cap ||
@@ -540,6 +683,11 @@ export class DefectSettingsPage {
       budgetNanoAiu: cap.cap,
       maxStartsPerDay: perDay.value,
       maxActive: active.value,
+      reproduceOn: value.reproduce === 'on',
+      reproduceMode: value.mode,
+      reproduceEnvironmentId:
+        value.environment === '' ? null : value.environment,
+      maxReproductionsPerDay: reproductions.value,
     };
   });
   /** What saving would change, field by field, or null while a field is refused. */
@@ -570,6 +718,18 @@ export class DefectSettingsPage {
       ...(typed.maxActive !== saved.maxActive
         ? { maxActive: typed.maxActive }
         : {}),
+      ...(typed.reproduceOn !== saved.reproduceOn
+        ? { reproduceOn: typed.reproduceOn }
+        : {}),
+      ...(typed.reproduceMode !== saved.reproduceMode
+        ? { reproduceMode: typed.reproduceMode }
+        : {}),
+      ...(typed.reproduceEnvironmentId !== saved.reproduceEnvironmentId
+        ? { reproduceEnvironmentId: typed.reproduceEnvironmentId }
+        : {}),
+      ...(typed.maxReproductionsPerDay !== saved.maxReproductionsPerDay
+        ? { maxReproductionsPerDay: typed.maxReproductionsPerDay }
+        : {}),
     };
   });
   /**
@@ -577,7 +737,7 @@ export class DefectSettingsPage {
    * starts per day raised while they are on), which asks for the admin's yes to the spend. While a field is refused
    * it asks when the form turns them on, so the question does not come and go as the admin types.
    */
-  protected readonly confirmNeeded = computed(() => {
+  protected readonly startsConfirm = computed(() => {
     const saved = this.saved();
     if (saved === null) return false;
     const typed = this.typed();
@@ -589,6 +749,27 @@ export class DefectSettingsPage {
       !(saved.watchOn && saved.autoStart)
     );
   });
+  /**
+   * Whether saving would let reproduction spend more by itself: it is turned on, or its daily cap is raised while it
+   * is on. While a field is refused it asks when the form turns it on.
+   */
+  protected readonly reproductionConfirm = computed(() => {
+    const saved = this.saved();
+    if (saved === null) return false;
+    const typed = this.typed();
+    if (typed !== null) return reproductionSpendsMore(saved, typed);
+    return this.value().reproduce === 'on' && !saved.reproduceOn;
+  });
+  /** Whether the change needs the admin's yes to the spend: for automatic starts, for reproduction, or for both. */
+  protected readonly confirmNeeded = computed(
+    () => this.startsConfirm() || this.reproductionConfirm()
+  );
+  /** "Ahoy may spend up to 40 AIU a day by itself", or what reproduction spends when only it asks. */
+  protected readonly confirmHeading = computed(() =>
+    this.startsConfirm()
+      ? `Ahoy may spend up to ${this.dailySpend() ?? '…'} a day by itself`
+      : 'Ahoy will spend AIU reproducing defects by itself'
+  );
   /** Whether automatic starts are on in the saved settings, so the confirmation is about raising what they spend. */
   protected readonly alreadyOn = computed(() => {
     const saved = this.saved();
@@ -634,6 +815,15 @@ export class DefectSettingsPage {
     const read = this.activeRead();
     return 'problem' in read ? read.problem : null;
   });
+  protected readonly reproductionsError = computed(() => {
+    const read = this.reproductionsRead();
+    return 'problem' in read ? read.problem : null;
+  });
+  protected readonly environmentError = computed(() =>
+    this.value().reproduce === 'on' && this.value().environment === ''
+      ? 'Reproduction needs an environment to reproduce defects in.'
+      : null
+  );
   protected readonly confirmMissing = computed(
     () => this.confirmNeeded() && !this.value().confirm
   );
@@ -650,7 +840,8 @@ export class DefectSettingsPage {
       value.startAs.trim().toLowerCase() !== was.startAs ||
       value.cap.trim() !== was.cap ||
       value.perDay.trim() !== was.perDay ||
-      value.active.trim() !== was.active
+      value.active.trim() !== was.active ||
+      value.reproductionsPerDay.trim() !== was.reproductionsPerDay
     );
   });
   protected readonly jqlError = computed(() =>
@@ -668,6 +859,7 @@ export class DefectSettingsPage {
       this.jqlError() !== null ||
       this.capError() !== null ||
       this.startAsError() !== null ||
+      this.environmentError() !== null ||
       this.confirmMissing()
   );
   protected readonly saving = signal(false);
@@ -715,6 +907,11 @@ export class DefectSettingsPage {
   /** An AIU amount as the page shows it: "20" or "12.5". */
   protected aiu(nanoAiu: number): string {
     return formatCap(nanoAiu, 9);
+  }
+
+  /** What a mode does with the verdict, in a few words. */
+  protected modeLabel(mode: 'advisory' | 'required'): string {
+    return reproduceModeLabel(mode);
   }
 
   /** "12 issues match". */
@@ -780,9 +977,11 @@ export class DefectSettingsPage {
     this.toasts.show(
       typed.autoStart && !saved.autoStart
         ? 'Automatic starts on. Defect settings saved.'
-        : typed.watchOn && !saved.watchOn
-          ? 'Watch on. Defect settings saved.'
-          : 'Defect settings saved.'
+        : typed.reproduceOn && !saved.reproduceOn
+          ? 'Reproduction on. Defect settings saved.'
+          : typed.watchOn && !saved.watchOn
+            ? 'Watch on. Defect settings saved.'
+            : 'Defect settings saved.'
     );
   }
 }

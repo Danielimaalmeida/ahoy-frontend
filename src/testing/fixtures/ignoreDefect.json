@@ -16,5 +16,6 @@
   },
   "voyage": null,
   "started": null,
-  "startError": null
+  "startError": null,
+  "reproduction": null
 }

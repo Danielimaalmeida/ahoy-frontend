@@ -73,7 +73,7 @@ describe('the Setup section of Team settings', () => {
       /^6 of 8\s*required steps done$/
     );
     expect(summary).toContain(
-      '2 to fix here · 1 to check · 6 optional not set'
+      '2 to fix here · 1 to check · 7 optional not set'
     );
     expect(summary).toContain('Next: Agents.');
     expect(

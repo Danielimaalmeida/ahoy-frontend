@@ -6,7 +6,9 @@ import type {
   Defect,
   DefectList,
   DefectSettingsPage,
+  EnvironmentsPage,
   JiraSettingsPage,
+  PhaseSettingsPage,
   Refinement,
   Story,
 } from '@core/api/types';
@@ -18,7 +20,10 @@ import { FakeFetch } from '@core/realtime/testing/fake-fetch';
 import { provideFakes } from '@core/realtime/testing/providers';
 import { StoriesStore } from '@core/stores/stories-store';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
+import getEnvironments from '@testing/fixtures/getEnvironments.json';
+import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
 import listDefects from '@testing/fixtures/listDefects.json';
+import reproduceDefect from '@testing/fixtures/reproduceDefect.json';
 import startDefect from '@testing/fixtures/startDefect.json';
 import { CLOCK as UI_CLOCK } from '@ui/pipes/clock';
 import {
@@ -28,6 +33,7 @@ import {
   type BacklogPort,
   type BacklogQuery,
 } from './backlog-port';
+import { REPRODUCTION_FOLLOW_MS } from './backlog-defects';
 import { REFINEMENT_POLL_MS } from './backlog-refinements';
 import { Docks, priorityTrend } from './docks';
 import { StubBacklogAdapter } from './stub-backlog-adapter';
@@ -1744,7 +1750,9 @@ describe('Docks', () => {
         'Ignored by Sam Example'
       );
       expect(text(cell(rowOf(f, 'PROJ-190'), 7))).toBe('Undo');
-      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Try to fix Ignore');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe(
+        'Try to fix Reproduce Ignore'
+      );
       expect(text(cell(rowOf(f, 'PROJ-212'), 6))).toContain('Started by Ahoy');
     });
 
@@ -1765,13 +1773,15 @@ describe('Docks', () => {
       expect(api.calls.filter((c) => c.op === 'ignoreDefect')).toEqual([
         { op: 'ignoreDefect', args: ['PROJ-207', null] },
       ]);
-      expect(text(cell(rowOf(f, 'PROJ-207'), 5))).toBe(
+      expect(text(cell(rowOf(f, 'PROJ-207'), 5))).toContain(
         'Ignored by Alex Example'
       );
       api.on('unignoreDefect', () => Promise.resolve(ok(find('PROJ-207'))));
       ignoreButton(f, 'PROJ-207').click();
       await refresh(f);
-      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Try to fix Ignore');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe(
+        'Try to fix Reproduce Ignore'
+      );
     });
 
     it('says when ignoring fails, and keeps the row as it was', async () => {
@@ -1782,7 +1792,9 @@ describe('Docks', () => {
       ignoreButton(f, 'PROJ-207').click();
       await refresh(f);
       expect(text(root(f))).toContain('Could not ignore PROJ-207');
-      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Try to fix Ignore');
+      expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe(
+        'Try to fix Reproduce Ignore'
+      );
     });
 
     it("tries to fix a defect with the settings' cap, and opens its voyage", async () => {
@@ -1866,7 +1878,215 @@ describe('Docks', () => {
           d.key === 'PROJ-207' ? { ...d, key: 'PROJ_X-207' } : d
         ),
       });
-      expect(text(cell(rowOf(f, 'PROJ_X-207'), 7))).toBe('Ignore');
+      expect(text(cell(rowOf(f, 'PROJ_X-207'), 7))).toBe('Reproduce Ignore');
+    });
+
+    describe('reproduction', () => {
+      const ENVIRONMENTS = getEnvironments as EnvironmentsPage;
+      const TEST_ID = ENVIRONMENTS.environments[0]!.id;
+      const PHASES = getPhaseSettings as PhaseSettingsPage;
+      /** The phases with the reproduce phase, capped at 5 AIU a run. */
+      const withReproduce: PhaseSettingsPage = {
+        ...PHASES,
+        phases: [
+          ...PHASES.phases,
+          {
+            ...PHASES.phases[0]!,
+            phase: 'reproduce',
+            runsOn: {
+              ...PHASES.phases[0]!.runsOn,
+              budgetNanoAiu: 5_000_000_000,
+            },
+          },
+        ],
+      };
+      const QUEUED = reproduceDefect as Defect;
+      const reproduceButton = (
+        f: ComponentFixture<Docks>,
+        key: string
+      ): HTMLButtonElement =>
+        [...cell(rowOf(f, key), 7).querySelectorAll('button')].find(
+          (b) => b.textContent?.trim() === 'Reproduce'
+        )!;
+      const confirm = (dialog: Element): HTMLButtonElement =>
+        [...dialog.querySelectorAll('button')].find((b) =>
+          b.textContent?.trim().startsWith('Reproduce')
+        )!;
+
+      beforeEach(() => {
+        api.on('getEnvironments', () => Promise.resolve(ok(ENVIRONMENTS)));
+        api.on('getPhaseSettings', () => Promise.resolve(ok(withReproduce)));
+      });
+
+      it("shows a defect's latest verdict under its triage, with the environment and why", async () => {
+        const f = await openDefects();
+        const triage = text(cell(rowOf(f, 'PROJ-207'), 5));
+        expect(triage).toContain('Ahoy can try');
+        expect(triage).toContain('Reproduced On TEST: The exported file has');
+        expect(text(cell(rowOf(f, 'PROJ-201'), 5))).not.toContain('On TEST');
+      });
+
+      it('says a verdict is for an older version of the defect, and offers no Reproduce on a voyage or an ignored defect', async () => {
+        const f = await openDefects({
+          ...LIST,
+          defects: LIST.defects.map((d) =>
+            d.reproduction === null
+              ? d
+              : { ...d, reproduction: { ...d.reproduction, current: false } }
+          ),
+        });
+        expect(text(cell(rowOf(f, 'PROJ-207'), 5))).toContain(
+          'The defect changed in Jira since.'
+        );
+        expect(text(cell(rowOf(f, 'PROJ-212'), 7))).toBe('Open voyage');
+        expect(text(cell(rowOf(f, 'PROJ-190'), 7))).toBe('Undo');
+      });
+
+      it("confirms the spend with the phase's cap and the settings' environment, then shows the reproduction queued", async () => {
+        api.on('getDefectSettings', () =>
+          Promise.resolve(
+            ok({
+              ...(getDefectSettings as DefectSettingsPage),
+              defects: {
+                ...(getDefectSettings as DefectSettingsPage).defects,
+                reproduceEnvironmentId: TEST_ID,
+              },
+            })
+          )
+        );
+        const f = await openDefects();
+        api.on('reproduceDefect', () => Promise.resolve(ok(QUEUED)));
+        reproduceButton(f, 'PROJ-207').click();
+        await refresh(f);
+        const dialog = document.querySelector('ah-reproduce-dialog')!;
+        expect(dialog.textContent).toContain('Reproduce PROJ-207?');
+        expect(dialog.textContent).toContain('This may spend up to 5 AIU');
+        expect(dialog.textContent).toContain('your Copilot token');
+        expect(
+          (dialog.querySelector('select') as HTMLSelectElement).value
+        ).toBe(TEST_ID);
+        expect(confirm(dialog).textContent).toContain('up to 5 AIU');
+        confirm(dialog).click();
+        await refresh(f);
+        expect(api.callsOf('reproduceDefect')).toEqual([
+          { op: 'reproduceDefect', args: ['PROJ-207', TEST_ID] },
+        ]);
+        expect(text(cell(rowOf(f, 'PROJ-207'), 5))).toContain(
+          'Reproducing… On TEST, queued'
+        );
+        expect(text(cell(rowOf(f, 'PROJ-207'), 7))).toBe('Try to fix Ignore');
+      });
+
+      it('reads the list again while a reproduction is in progress, and stops once its verdict shows', async () => {
+        const f = await openDefects({
+          ...LIST,
+          defects: LIST.defects.map((d) => (d.key === 'PROJ-207' ? QUEUED : d)),
+        });
+        expect(text(cell(rowOf(f, 'PROJ-207'), 5))).toContain('Reproducing…');
+        const reads = api.callsOf('listDefects').length;
+        api.on('listDefects', () => Promise.resolve(ok(LIST)));
+        await clock.advance(REPRODUCTION_FOLLOW_MS);
+        await refresh(f);
+        expect(api.callsOf('listDefects')).toHaveLength(reads + 1);
+        expect(text(cell(rowOf(f, 'PROJ-207'), 5))).toContain('Reproduced');
+        await clock.advance(REPRODUCTION_FOLLOW_MS * 3);
+        expect(api.callsOf('listDefects')).toHaveLength(reads + 1);
+      });
+
+      it('says in the API’s words why a reproduction was refused, and reads the list again when the dialog closes', async () => {
+        const f = await openDefects();
+        api.on('reproduceDefect', () =>
+          Promise.resolve(
+            fail({
+              kind: 'problem' as const,
+              status: 409,
+              code: 'invalid_state',
+              title: 'Invalid state',
+              detail:
+                'The reproductions of the last 24 hours reached the cap of 5',
+            })
+          )
+        );
+        reproduceButton(f, 'PROJ-207').click();
+        await refresh(f);
+        const dialog = document.querySelector('ah-reproduce-dialog')!;
+        const select = dialog.querySelector('select') as HTMLSelectElement;
+        select.value = TEST_ID;
+        select.dispatchEvent(new Event('change'));
+        await refresh(f);
+        confirm(dialog).click();
+        await refresh(f);
+        expect(dialog.textContent).toContain(
+          "Ahoy can't reproduce PROJ-207 now"
+        );
+        expect(dialog.textContent).toContain('reached the cap of 5');
+        const reads = api.callsOf('listDefects').length;
+        [...dialog.querySelectorAll('button')]
+          .find((b) => b.textContent?.trim() === 'Cancel')!
+          .click();
+        await refresh(f);
+        expect(api.callsOf('listDefects')).toHaveLength(reads + 1);
+      });
+
+      it('asks which environment when the settings name none and several are listed, and takes the only one there is', async () => {
+        const f = await openDefects();
+        api.on('reproduceDefect', () => Promise.resolve(ok(QUEUED)));
+        reproduceButton(f, 'PROJ-207').click();
+        await refresh(f);
+        const dialog = document.querySelector('ah-reproduce-dialog')!;
+        const select = dialog.querySelector('select') as HTMLSelectElement;
+        expect(select.value).toBe('');
+        expect(
+          [...select.options].map((option) => option.textContent?.trim())
+        ).toEqual(['Choose an environment', 'TEST', 'Demo']);
+        expect(confirm(dialog).disabled).toBe(true);
+        select.value = ENVIRONMENTS.environments[1]!.id;
+        select.dispatchEvent(new Event('change'));
+        await refresh(f);
+        expect(confirm(dialog).disabled).toBe(false);
+        confirm(dialog).click();
+        await refresh(f);
+        expect(api.callsOf('reproduceDefect')).toEqual([
+          {
+            op: 'reproduceDefect',
+            args: ['PROJ-207', ENVIRONMENTS.environments[1]!.id],
+          },
+        ]);
+
+        api.on('getEnvironments', () =>
+          Promise.resolve(
+            ok({
+              ...ENVIRONMENTS,
+              environments: [ENVIRONMENTS.environments[0]!],
+            })
+          )
+        );
+        reproduceButton(f, 'PROJ-201').click();
+        await refresh(f);
+        const again = [...document.querySelectorAll('ah-reproduce-dialog')].at(
+          -1
+        )!;
+        expect((again.querySelector('select') as HTMLSelectElement).value).toBe(
+          TEST_ID
+        );
+        expect(confirm(again).disabled).toBe(false);
+      });
+
+      it('sends nothing without an environment, and points at Team settings', async () => {
+        api.on('getEnvironments', () =>
+          Promise.resolve(ok({ ...ENVIRONMENTS, environments: [] }))
+        );
+        const f = await openDefects();
+        reproduceButton(f, 'PROJ-207').click();
+        await refresh(f);
+        const dialog = document.querySelector('ah-reproduce-dialog')!;
+        expect(dialog.textContent).toContain('No environment yet');
+        expect(
+          dialog.querySelector('a[href="/settings/environments"]')
+        ).not.toBeNull();
+        expect(confirm(dialog).disabled).toBe(true);
+        expect(api.callsOf('reproduceDefect')).toEqual([]);
+      });
     });
 
     it('says why the watch could not start a defect', async () => {

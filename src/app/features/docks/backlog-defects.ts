@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiClient } from '@core/api/api-client';
 import { isInvalidState, isNotFound, type ApiError } from '@core/api/api-error';
@@ -9,11 +9,15 @@ import {
   type StoryStatus,
 } from '@core/api/types';
 import { techLine } from '@core/commands/command-error';
+import { CLOCK, type Timer } from '@core/realtime/clock';
 import {
+  canReproduce,
   canTryToFix,
   defectStartLine,
   defectTriageView,
   defectsLabel,
+  reproductionInProgress,
+  reproductionView,
 } from '@domain/defects';
 import { phaseName } from '@domain/phase-settings';
 import { Banner } from '@ui/banner/banner';
@@ -24,7 +28,13 @@ import { Skeleton } from '@ui/skeleton/skeleton';
 import { StatusBadge } from '@ui/status-badge/status-badge';
 import { CellSub, Key, Nowrap, Table } from '@ui/table/table';
 import { ToastService } from '@ui/toast/toast';
+import { ReproduceDialogs } from './reproduce-dialog';
 import { TryToFixDialogs } from './try-to-fix-dialog';
+
+/** How long between two reads of the list while a reproduction is queued or running. */
+export const REPRODUCTION_FOLLOW_MS = 15_000;
+/** How many such reads follow: ten minutes, about the longest a reproduction runs. */
+export const REPRODUCTION_FOLLOWS = 40;
 
 /** What the list holds: being read, read, or why it could not be. */
 type ListState =
@@ -36,7 +46,9 @@ type ListState =
  * Backlog › Defects (`ahoy-hosted` design §5 "Defect watch"): the open defects the watch read from Jira on its last
  * pass, each with its triage by fixed rules (0 AIU), its voyage if it has one and who started it (a person, or the
  * watch itself when Team settings › Defects turns automatic starts on). A person may Try to fix a defect, which starts
- * its voyage, or ignore it, which writes nothing to Jira, and undo that.
+ * its voyage, or ignore it, which writes nothing to Jira, and undo that. A defect's latest reproduction (design §5
+ * "Defect reproduction") shows under its triage: in progress, or its verdict with the environment and why; Reproduce
+ * asks for one, which spends AIU. While one is in progress the list is read again every few seconds.
  */
 @Component({
   selector: 'ah-backlog-defects',
@@ -84,6 +96,10 @@ type ListState =
     .defects__tag--fit {
       background: var(--status-done-bg);
       color: var(--status-done-fg);
+    }
+    .defects__reproduction {
+      display: block;
+      margin-top: 8px;
     }
     .defects__failed {
       color: var(--danger-text);
@@ -251,6 +267,21 @@ type ListState =
                         @if (view.detail) {
                           &ngsp;<span ahCellSub>{{ view.detail }}</span>
                         }
+                        @if (reproduction(defect); as repro) {
+                          <span class="defects__reproduction">
+                            <span
+                              [class]="
+                                repro.tone === 'reproduced'
+                                  ? 'ah-tag ah-tag--accent'
+                                  : repro.tone === 'not_reproduced'
+                                    ? 'ah-tag'
+                                    : 'ah-tag ah-tag--outline'
+                              "
+                              >{{ repro.label }}</span
+                            >
+                            &ngsp;<span ahCellSub>{{ repro.detail }}</span>
+                          </span>
+                        }
                       </td>
                       <td ahNowrap data-label="Ahoy">
                         @if (defect.voyage; as voyage) {
@@ -314,6 +345,18 @@ type ListState =
                               Try to fix
                             </button>
                           }
+                          @if (reproducible(defect)) {
+                            <button
+                              ahButton="ghost"
+                              size="sm"
+                              type="button"
+                              [disabled]="busy() !== null"
+                              [attr.aria-label]="'Reproduce ' + defect.key"
+                              (click)="reproduce(defect)"
+                            >
+                              Reproduce
+                            </button>
+                          }
                           <button
                             ahButton="ghost"
                             size="sm"
@@ -341,11 +384,21 @@ export class BacklogDefects {
   private readonly api = inject(ApiClient);
   private readonly toasts = inject(ToastService);
   private readonly tryDialogs = inject(TryToFixDialogs);
+  private readonly reproduceDialogs = inject(ReproduceDialogs);
   private readonly router = inject(Router);
-  /** Team settings › Defects as read with the list: the cap Try to fix starts at, and whether the watch starts any. */
+  private readonly clock = inject(CLOCK);
+  /** The next read of the list while a reproduction is in progress, if one is waiting. */
+  private follow: Timer | null = null;
+  /** The reads left while a reproduction stays in progress. */
+  private followsLeft = REPRODUCTION_FOLLOWS;
+  /**
+   * Team settings › Defects as read with the list: the cap Try to fix starts at, whether the watch starts any, and
+   * the environment Reproduce starts with.
+   */
   private readonly settings = signal<{
     readonly autoStart: boolean;
     readonly budgetNanoAiu: number | null;
+    readonly reproduceEnvironmentId: string | null;
   } | null>(null);
   /** Whether the watch starts defects by itself; null while the settings are unknown. */
   protected readonly autoStart = computed(
@@ -370,6 +423,7 @@ export class BacklogDefects {
   } | null>(null);
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.follow?.cancel());
     void this.load();
   }
 
@@ -386,6 +440,33 @@ export class BacklogDefects {
         ? { kind: 'ready', list: result.value }
         : { kind: 'failed', error: result.error }
     );
+    this.followReproductions();
+  }
+
+  /**
+   * Reads the list again after a while, as long as a reproduction is queued or running and reads are left, so its
+   * verdict shows without a refresh. A read that fails keeps what was shown and stops following.
+   */
+  private followReproductions(): void {
+    this.follow?.cancel();
+    this.follow = null;
+    const inProgress =
+      this.list()?.defects.some((d) =>
+        reproductionInProgress(d.reproduction)
+      ) === true;
+    if (!inProgress || this.followsLeft <= 0) return;
+    this.follow = this.clock.schedule(REPRODUCTION_FOLLOW_MS, () => {
+      this.follow = null;
+      this.followsLeft--;
+      void this.followRead();
+    });
+  }
+
+  private async followRead(): Promise<void> {
+    const result = await this.api.listDefects();
+    if (!result.ok) return;
+    this.state.set({ kind: 'ready', list: result.value });
+    this.followReproductions();
   }
 
   /** Without the settings the tab still works: Try to fix asks for a cap, and no banner says what the watch starts. */
@@ -396,6 +477,8 @@ export class BacklogDefects {
         ? {
             autoStart: settings.value.defects.autoStart,
             budgetNanoAiu: settings.value.defects.budgetNanoAiu,
+            reproduceEnvironmentId:
+              settings.value.defects.reproduceEnvironmentId,
           }
         : null
     );
@@ -403,6 +486,15 @@ export class BacklogDefects {
 
   protected triage(defect: Defect) {
     return defectTriageView(defect);
+  }
+
+  /** The defect's latest reproduction as a tag and a line, or null without one. */
+  protected reproduction(defect: Defect) {
+    return reproductionView(defect.reproduction);
+  }
+
+  protected reproducible(defect: Defect): boolean {
+    return canReproduce(defect);
   }
 
   protected countLabel(n: number): string {
@@ -450,6 +542,28 @@ export class BacklogDefects {
     });
   }
 
+  /**
+   * Reproduce: confirms the spend and the environment, then shows the defect with its reproduction queued. Closed
+   * without one, the list is read again: the dialog may have been refused because one is already in progress.
+   */
+  protected reproduce(defect: Defect): void {
+    if (this.busy() !== null) return;
+    const ref = this.reproduceDialogs.open({
+      key: defect.key,
+      summary: defect.summary,
+      defaultEnvironmentId: this.settings()?.reproduceEnvironmentId ?? null,
+    });
+    ref.closed.subscribe((updated) => {
+      if (updated === undefined) {
+        void this.load();
+        return;
+      }
+      this.followsLeft = REPRODUCTION_FOLLOWS;
+      this.replace(updated);
+      this.followReproductions();
+    });
+  }
+
   /** Marks the defect as one Ahoy never tries. */
   protected async ignore(defect: Defect): Promise<void> {
     await this.act(defect, `Could not ignore ${defect.key}`, () =>
@@ -482,21 +596,24 @@ export class BacklogDefects {
       return;
     }
     const updated = result.value;
-    const list = this.list();
-    if (list !== null)
-      this.state.set({
-        kind: 'ready',
-        list: {
-          ...list,
-          defects: list.defects.map((d) =>
-            d.key === updated.key ? updated : d
-          ),
-        },
-      });
+    this.replace(updated);
     this.toasts.show(
       updated.ignored === null
         ? `${updated.key} is no longer ignored.`
         : `${updated.key} ignored. Ahoy will not try it.`
     );
+  }
+
+  /** Shows a defect as a command answered it, in its place in the list. */
+  private replace(updated: Defect): void {
+    const list = this.list();
+    if (list === null) return;
+    this.state.set({
+      kind: 'ready',
+      list: {
+        ...list,
+        defects: list.defects.map((d) => (d.key === updated.key ? updated : d)),
+      },
+    });
   }
 }

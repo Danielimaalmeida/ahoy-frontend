@@ -85,6 +85,84 @@ export function canTryToFix(defect: DefectStartFacts): boolean {
   );
 }
 
+/** What the tab reads of a defect's latest reproduction. */
+export interface ReproductionFacts {
+  readonly status: string;
+  /** The environment's name when the run was queued. */
+  readonly environment: string;
+  /** Whether it tried the defect as Jira has it now. */
+  readonly current: boolean;
+  readonly result: {
+    readonly verdict: 'reproduced' | 'not_reproduced' | 'inconclusive';
+    readonly why: string;
+  } | null;
+}
+
+/** The tone of a reproduction's tag. */
+export type ReproductionTone =
+  'reproduced' | 'not_reproduced' | 'inconclusive' | 'busy';
+
+/** Whether a reproduction's run is queued or running: it has no verdict yet. */
+export function reproductionInProgress(
+  reproduction: { readonly status: string } | null
+): boolean {
+  return (
+    reproduction !== null &&
+    (reproduction.status === 'queued' || reproduction.status === 'running')
+  );
+}
+
+/**
+ * The reproduction tag and the line under it: "Reproducing…" while the run is queued or running, then "Reproduced",
+ * "Not reproduced" or "Inconclusive" with the environment and why. A verdict for an older version of the defect says
+ * so: the watch does not count it. Null without a reproduction.
+ */
+export function reproductionView(reproduction: ReproductionFacts | null): {
+  readonly label: string;
+  readonly tone: ReproductionTone;
+  readonly detail: string;
+} | null {
+  if (reproduction === null) return null;
+  const on = `On ${reproduction.environment}`;
+  if (reproduction.result === null)
+    return {
+      label: 'Reproducing…',
+      tone: 'busy',
+      detail: reproduction.status === 'queued' ? `${on}, queued` : on,
+    };
+  const { verdict, why } = reproduction.result;
+  const label =
+    verdict === 'reproduced'
+      ? 'Reproduced'
+      : verdict === 'not_reproduced'
+        ? 'Not reproduced'
+        : 'Inconclusive';
+  const reason = why.trim() === '' ? on : `${on}: ${why.trim()}`;
+  return {
+    label,
+    tone: verdict,
+    detail: reproduction.current
+      ? reason
+      : `${reason} · The defect changed in Jira since.`,
+  };
+}
+
+/**
+ * Whether a person may ask for a reproduction: the defect has no voyage, nobody ignored it and none is in progress.
+ * The API takes any listed defect; the tab offers it where a verdict still helps decide what to start.
+ */
+export function canReproduce(
+  defect: DefectStartFacts & {
+    readonly reproduction: { readonly status: string } | null;
+  }
+): boolean {
+  return (
+    defect.voyage === null &&
+    defect.ignored === null &&
+    !reproductionInProgress(defect.reproduction)
+  );
+}
+
 /** "4 defects" or "1 defect". */
 export function defectsLabel(n: number): string {
   return n === 1 ? '1 defect' : `${n} defects`;

@@ -45,6 +45,11 @@ import listDefects from '@testing/fixtures/listDefects.json';
 import ignoreDefect from '@testing/fixtures/ignoreDefect.json';
 import unignoreDefect from '@testing/fixtures/unignoreDefect.json';
 import startDefect from '@testing/fixtures/startDefect.json';
+import reproduceDefect from '@testing/fixtures/reproduceDefect.json';
+import getEnvironments from '@testing/fixtures/getEnvironments.json';
+import addEnvironment from '@testing/fixtures/addEnvironment.json';
+import updateEnvironment from '@testing/fixtures/updateEnvironment.json';
+import testEnvironment from '@testing/fixtures/testEnvironment.json';
 import addCrewMember from '@testing/fixtures/addCrewMember.json';
 import addCrewTimeOff from '@testing/fixtures/addCrewTimeOff.json';
 import addSonarRepository from '@testing/fixtures/addSonarRepository.json';
@@ -345,6 +350,11 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['ignoreDefect', ignoreDefect],
   ['unignoreDefect', unignoreDefect],
   ['startDefect', startDefect],
+  ['reproduceDefect', reproduceDefect],
+  ['getEnvironments', getEnvironments],
+  ['addEnvironment', addEnvironment],
+  ['updateEnvironment', updateEnvironment],
+  ['testEnvironment', testEnvironment],
   ['listConversations', listConversations],
   ['createConversation', createConversation],
   ['getConversation', getConversation],
@@ -373,6 +383,7 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteConfluenceSettings',
   'deleteTeamsSettings',
   'deleteBranchReleaseRepository',
+  'deleteEnvironment',
   'deleteConversation',
 ];
 
@@ -412,7 +423,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      164
+      170
     );
   });
 
@@ -531,6 +542,8 @@ describe('each fixture is a valid successful answer of its operation', () => {
       'assessComments',
       'requestBranchRelease',
       'requestAllBranchReleases',
+      'reproduceDefect',
+      'testEnvironment',
       'requestRefinement',
       'cancelRefinement',
       'requestAgentDiagnosis',

@@ -1,8 +1,11 @@
 import {
+  canReproduce,
   canTryToFix,
   defectStartLine,
   defectTriageView,
   defectsLabel,
+  reproductionInProgress,
+  reproductionView,
 } from './defects';
 
 describe('defectTriageView', () => {
@@ -128,5 +131,100 @@ describe('canTryToFix', () => {
     expect(canTryToFix({ ...base, key: 'A_B-12' })).toBe(false);
     expect(canTryToFix({ ...base, key: 'X-1' })).toBe(false);
     expect(canTryToFix({ ...base, key: `PROJ-${'1'.repeat(40)}` })).toBe(false);
+  });
+});
+
+describe('reproductionView', () => {
+  const ended = (
+    verdict: 'reproduced' | 'not_reproduced' | 'inconclusive',
+    why: string,
+    current = true
+  ) => ({
+    status: 'succeeded',
+    environment: 'TEST',
+    current,
+    result: { verdict, why },
+  });
+
+  it('says nothing of a defect that was never reproduced', () => {
+    expect(reproductionView(null)).toBeNull();
+  });
+
+  it('says Reproducing… while the run is queued or running, and where', () => {
+    const run = { environment: 'TEST', current: true, result: null };
+    expect(reproductionView({ ...run, status: 'queued' })).toEqual({
+      label: 'Reproducing…',
+      tone: 'busy',
+      detail: 'On TEST, queued',
+    });
+    expect(reproductionView({ ...run, status: 'running' })).toEqual({
+      label: 'Reproducing…',
+      tone: 'busy',
+      detail: 'On TEST',
+    });
+  });
+
+  it('says the verdict, where and why', () => {
+    expect(
+      reproductionView(ended('reproduced', ' The export has 2 rows of 3. '))
+    ).toEqual({
+      label: 'Reproduced',
+      tone: 'reproduced',
+      detail: 'On TEST: The export has 2 rows of 3.',
+    });
+    expect(
+      reproductionView(ended('not_reproduced', 'The export has all 3 rows.'))
+    ).toEqual({
+      label: 'Not reproduced',
+      tone: 'not_reproduced',
+      detail: 'On TEST: The export has all 3 rows.',
+    });
+    expect(reproductionView(ended('inconclusive', ''))).toEqual({
+      label: 'Inconclusive',
+      tone: 'inconclusive',
+      detail: 'On TEST',
+    });
+  });
+
+  it('says a verdict is for an older version of the defect', () => {
+    expect(
+      reproductionView(ended('reproduced', 'The export has 2 rows.', false))
+    ).toEqual({
+      label: 'Reproduced',
+      tone: 'reproduced',
+      detail:
+        'On TEST: The export has 2 rows. · The defect changed in Jira since.',
+    });
+  });
+});
+
+describe('canReproduce', () => {
+  const base = {
+    key: 'PROJ-212',
+    started: null,
+    startError: null,
+    voyage: null,
+    ignored: null,
+    reproduction: null,
+  };
+
+  it('lets a person reproduce a defect with no voyage that nobody ignored, again once a run ended', () => {
+    expect(canReproduce(base)).toBe(true);
+    expect(canReproduce({ ...base, reproduction: { status: 'failed' } })).toBe(
+      true
+    );
+    expect(canReproduce({ ...base, key: 'MY_APP-12' })).toBe(true);
+  });
+
+  it('does not offer it while a run is queued or running, on a voyage or once ignored', () => {
+    for (const status of ['queued', 'running']) {
+      expect(reproductionInProgress({ status }), status).toBe(true);
+      expect(canReproduce({ ...base, reproduction: { status } }), status).toBe(
+        false
+      );
+    }
+    expect(reproductionInProgress(null)).toBe(false);
+    expect(canReproduce({ ...base, voyage: { status: 'ready' } })).toBe(false);
+    expect(canReproduce({ ...base, ignored: { by: 'sam' } })).toBe(false);
   });
 });

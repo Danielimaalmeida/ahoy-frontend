@@ -12,6 +12,7 @@ import getAgentSettings from '@testing/fixtures/getAgentSettings.json';
 import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
 import getConfluenceSettings from '@testing/fixtures/getConfluenceSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
+import getEnvironments from '@testing/fixtures/getEnvironments.json';
 import getFigmaSettings from '@testing/fixtures/getFigmaSettings.json';
 import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
 import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
@@ -102,6 +103,8 @@ describe('the Team settings frame', () => {
       r.flush(getPrCommentSettings);
     for (const r of http.match(`${BASE}/settings/defects`))
       r.flush(getDefectSettings);
+    for (const r of http.match(`${BASE}/settings/environments`))
+      r.flush(getEnvironments);
     for (const r of http.match(`${BASE}/settings/branch-releases`))
       r.flush(getBranchReleaseSettings);
     for (const r of http.match(`${BASE}/settings/meetings`))
@@ -152,6 +155,7 @@ describe('the Team settings frame', () => {
       'Phases 1 changed',
       'Pull request comments Replies off',
       'Defects Off',
+      'Environments 2 environments',
       'Branch releases 1 repository',
       'Meetings Defaults',
       'People 3 people',
@@ -185,6 +189,7 @@ describe('the Team settings frame', () => {
       'phases',
       'pr-comments',
       'defects',
+      'environments',
       'branch-releases',
       'meetings',
       'people',
