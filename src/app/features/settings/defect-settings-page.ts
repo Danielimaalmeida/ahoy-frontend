@@ -132,6 +132,9 @@ type PreviewState =
       .fields > * {
         max-width: 560px;
       }
+      .fields > fieldset {
+        max-width: none;
+      }
       .preview {
         display: flex;
         flex-wrap: wrap;
@@ -169,7 +172,6 @@ type PreviewState =
         padding-left: 18px;
       }
       fieldset {
-        max-width: none;
         margin: 0;
         padding: 14px 0 0;
         border: 0;
