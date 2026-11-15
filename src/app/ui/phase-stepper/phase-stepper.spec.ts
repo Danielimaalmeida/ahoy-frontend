@@ -175,12 +175,20 @@ describe('ah-phase-stepper: every status in every phase', () => {
 });
 
 describe('ah-phase-stepper, full form', () => {
-  it('shows the eight API phase names in order, with a separator between each pair', () => {
+  it('shows the eight phases in plain words in order, the API name as each tooltip, with a separator between each pair', () => {
     const { root } = render('plan_review', 'awaiting_decision');
     const steps = Array.from(root.querySelectorAll('.ah-step'));
     expect(steps.map((s) => s.textContent!.replace(/^\S/, '').trim())).toEqual([
-      ...PHASES,
+      'Intake',
+      'Planning',
+      'Plan review',
+      'Design',
+      'Implementation',
+      'PR review',
+      'Delivery gate',
+      'Done',
     ]);
+    expect(steps.map((s) => s.getAttribute('title'))).toEqual([...PHASES]);
     expect(steps).toHaveLength(8);
     expect(root.querySelectorAll('.ah-step__sep').length).toBe(7);
     expect(
@@ -234,14 +242,14 @@ describe('ah-phase-stepper, full form', () => {
     expect(list.getAttribute('aria-label')).toBe('Phases');
     const items = Array.from(list.querySelectorAll("[role='listitem']"));
     expect(items.map((i) => i.getAttribute('aria-label'))).toEqual([
-      'intake, done',
-      'planning, stopped',
-      'plan_review, ahead',
-      'design, ahead',
-      'implementation, ahead',
-      'pr_review, ahead',
-      'delivery_gate, ahead',
-      'done, ahead',
+      'Intake, done',
+      'Planning, stopped',
+      'Plan review, ahead',
+      'Design, ahead',
+      'Implementation, ahead',
+      'PR review, ahead',
+      'Delivery gate, ahead',
+      'Done, ahead',
     ]);
     expect(
       list.querySelector('.ah-step__sep')!.getAttribute('aria-hidden')
@@ -254,7 +262,7 @@ describe('ah-phase-stepper, full form', () => {
   it('marks the current step with aria-current=step', () => {
     const { root } = render('implementation', 'running');
     expect(root.querySelector("[aria-current='step']")!.textContent).toContain(
-      'implementation'
+      'Implementation'
     );
   });
 
@@ -272,7 +280,7 @@ describe('ah-phase-stepper, full form', () => {
       'upcoming',
     ]);
     const current = root.querySelector("[aria-current='step']")!;
-    expect(current.getAttribute('aria-label')).toBe('design, current');
+    expect(current.getAttribute('aria-label')).toBe('Design, current');
     expect(current.querySelector('.ah-step__n')!.textContent).toBe('4');
   });
 

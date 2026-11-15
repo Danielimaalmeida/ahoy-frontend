@@ -1,39 +1,49 @@
-import { Component, computed, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ownerLabel, shortSha } from '@domain/identifiers';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { PhaseStepper } from '@ui/phase-stepper/phase-stepper';
 import { StatusBadge } from '@ui/status-badge/status-badge';
-import type { StoryPullRequest } from '@core/api/story-state';
+import { JiraLinks } from '@core/stores/jira-links';
 import { currentRunView } from '../context/crew';
 import { VoyageContext } from '../context/voyage-context';
 import { VoyageDialogs } from '../dialogs/voyage-dialogs';
 import { DeployAllButton } from './deploy-all-button';
+import { pullRequestLabel } from '../context/pull-requests';
 import {
   canRefreshDesign,
   canRefreshIntake,
   headerActions,
+  menuItems,
   primaryAction,
+  type MenuItemId,
 } from './primary-action';
 
-/** "billing-api #7": the repository alias and the pull request number, or the URL when the state names neither. */
-export function pullRequestLabel(pr: StoryPullRequest): string {
-  const name = pr.repo !== '' ? pr.repo : pr.url;
-  return pr.number !== undefined ? `${name} #${pr.number}` : name;
-}
-
 /**
- * The voyage header (wireframes `PlanReview` and `Halted`): key, status badge with the API words (`awaiting_decision ·
- * plan_accepted`, `halted · run_failed`), title, the primary action for the status with Budget, Models, Back to intake
- * (in planning and plan review), Refresh design (with a design read, halted in implementation or review or at the
- * delivery gate, or halted in design after a refresh), Release to TEST (while a repository has an open pull request
- * and a release workflow) and Stop, the phase stepper, and the meta line (owner, budget, current run, revision
- * round, the pull requests the harness opened, agent config). Shown once the story is read. While the voyage is
- * `running`, a bar sweeps along the panel's top edge, the badge's dot pulses and the current phase is ringed.
+ * The voyage header (wireframes `PlanReview` and `Halted`): the key (a link to the issue in Jira when a Jira is known),
+ * status badge with the API words (`awaiting_decision · plan_accepted`, `halted · run_failed`), title, and only two
+ * actions in view: the primary action for the status and Release to TEST (while a repository has an open pull request
+ * and a release workflow). The rest is under More: Budget, Models, Back to intake (in planning and plan review),
+ * Refresh design (with a design read, halted in implementation or review or at the delivery gate, or halted in design
+ * after a refresh), then Stop and Cancel voyage apart at the end (`menuItems`); when only one of them applies it is a
+ * button of its own. Then the phase stepper and the meta line (owner, budget, current run, revision round, the pull
+ * requests the harness opened, agent config). Shown once the story is read. While the voyage is `running`, a bar sweeps
+ * along the panel's top edge, the badge's dot pulses and the current phase is ringed.
  */
 @Component({
   selector: 'ah-voyage-header',
+  host: {
+    '(document:click)': 'closeOutside($event)',
+  },
   imports: [
     BudgetMeter,
     Button,
@@ -46,7 +56,7 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
   template: `
     @if (view(); as v) {
       <section
-        class="ah-panel"
+        class="ah-panel header__panel"
         [class.header--running]="v.story.status === 'running'"
         aria-labelledby="voyage-title"
       >
@@ -54,7 +64,28 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
           <div class="header__top">
             <div class="header__name">
               <div class="header__line">
-                <span class="ah-key">{{ v.story.key }}</span>
+                @if (v.jiraUrl; as url) {
+                  <a
+                    class="ah-key header__key"
+                    [href]="url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [title]="'Open ' + v.story.key + ' in Jira'"
+                    [attr.aria-label]="v.story.key + ', open in Jira (new tab)'"
+                    >{{ v.story.key }}
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"
+                      />
+                    </svg>
+                  </a>
+                } @else {
+                  <span class="ah-key">{{ v.story.key }}</span>
+                }
                 <ah-status-badge
                   [status]="v.story.status"
                   [phase]="v.story.phase"
@@ -84,6 +115,14 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
                     [routerLink]="['/voyages', v.story.key, primary.tab]"
                     >{{ primary.label }}</a
                   >
+                } @else if (primary.kind === 'decide') {
+                  <button
+                    type="button"
+                    ahButton="primary"
+                    (click)="goToDecision()"
+                  >
+                    {{ primary.label }}
+                  </button>
                 } @else if (primary.kind === 'restart') {
                   <button
                     type="button"
@@ -103,46 +142,64 @@ export function pullRequestLabel(pr: StoryPullRequest): string {
                 }
               }
               <ah-deploy-all-button />
-              @if (v.actions.budget) {
-                <button type="button" ahButton (click)="openBudget()">
-                  Budget
-                </button>
-              }
-              <button
-                type="button"
-                ahButton
-                [disabled]="!modelsReady()"
-                (click)="openModels()"
-              >
-                {{ v.story.status === 'halted' ? 'Change models' : 'Models' }}
-              </button>
-              @if (v.intake) {
-                <button type="button" ahButton (click)="openRefreshIntake()">
-                  Back to intake
-                </button>
-              }
-              @if (v.design) {
-                <button type="button" ahButton (click)="openRefreshDesign()">
-                  Refresh design
-                </button>
-              }
-              @if (v.actions.stop) {
-                <button
-                  type="button"
-                  ahButton="danger-outline"
-                  (click)="openStop()"
-                >
-                  Stop
-                </button>
-              }
-              @if (v.actions.cancel) {
-                <button
-                  type="button"
-                  ahButton="danger-outline"
-                  (click)="openCancel()"
-                >
-                  Cancel voyage
-                </button>
+              @if (v.menu.length === 1) {
+                @for (item of v.menu; track item.id) {
+                  <button
+                    type="button"
+                    [ahButton]="item.danger ? 'danger-outline' : 'default'"
+                    [disabled]="item.disabled"
+                    (click)="run(item.id)"
+                  >
+                    {{ item.label }}
+                  </button>
+                }
+              } @else if (v.menu.length > 1) {
+                <span class="header__more">
+                  <button
+                    type="button"
+                    ahButton
+                    aria-haspopup="menu"
+                    aria-controls="voyage-more"
+                    [attr.aria-expanded]="menuOpen()"
+                    (click)="toggleMenu()"
+                    (keydown.arrowdown)="openMenu($event)"
+                  >
+                    More
+                    <svg
+                      class="header__chevron"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                  @if (menuOpen()) {
+                    <div
+                      class="header__menu"
+                      role="menu"
+                      id="voyage-more"
+                      aria-label="More actions"
+                    >
+                      @for (item of v.menu; track item.id) {
+                        @if (item.separated) {
+                          <hr class="header__menu-rule" />
+                        }
+                        <button
+                          type="button"
+                          role="menuitem"
+                          ahButton="ghost"
+                          [class.header__menu-danger]="item.danger"
+                          [disabled]="item.disabled"
+                          (click)="choose(item.id)"
+                          (keydown)="menuKey($event)"
+                        >
+                          {{ item.label }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </span>
               }
             </div>
           </div>
@@ -240,6 +297,12 @@ export class VoyageHeader {
     () => this.context.models() !== null
   );
 
+  private readonly jira = inject(JiraLinks);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** Whether the More menu is open. */
+  protected readonly menuOpen = signal(false);
+
   protected readonly view = computed(() => {
     const story = this.context.story();
     if (story === null) return null;
@@ -250,16 +313,22 @@ export class VoyageHeader {
         : story.status === 'halted'
           ? (story.haltReason ?? '')
           : '';
+    const actions = headerActions(story.status);
     return {
       story,
       apiDetail,
+      jiraUrl: this.jira.issueUrl(story.key),
       primary: primaryAction(story.status, gateKey),
-      actions: headerActions(story.status),
-      intake: canRefreshIntake(
-        story,
-        this.context.counts().runs === null ? null : this.context.runs()
-      ),
-      design: canRefreshDesign(story, this.context.design()),
+      menu: menuItems({
+        ...actions,
+        halted: story.status === 'halted',
+        modelsReady: this.modelsReady(),
+        intake: canRefreshIntake(
+          story,
+          this.context.counts().runs === null ? null : this.context.runs()
+        ),
+        design: canRefreshDesign(story, this.context.design()),
+      }),
       run: currentRunView(story.currentRunId, this.context.runs()),
       round: this.roundText(),
       pullRequests: (this.context.state()?.pullRequests ?? []).map((pr) => ({
@@ -279,6 +348,118 @@ export class VoyageHeader {
     return this.context.gateKey() !== null || round > 1
       ? `${round} of ${ceiling}`
       : null;
+  }
+
+  constructor() {
+    void this.jira.load();
+  }
+
+  /** Runs the action of a menu item, or of the one button shown when the menu would hold only it. */
+  protected run(id: MenuItemId): void {
+    switch (id) {
+      case 'budget':
+        return this.openBudget();
+      case 'models':
+        return this.openModels();
+      case 'intake':
+        return this.openRefreshIntake();
+      case 'design':
+        return this.openRefreshDesign();
+      case 'stop':
+        return this.openStop();
+      case 'cancel':
+        return this.openCancel();
+    }
+  }
+
+  /** A menu item was picked: the menu closes, the focus goes back to More (the dialog returns it there) and it runs. */
+  protected choose(id: MenuItemId): void {
+    this.closeMenu(true);
+    this.run(id);
+  }
+
+  protected toggleMenu(): void {
+    if (this.menuOpen()) this.closeMenu(false);
+    else this.showMenu();
+  }
+
+  /** ArrowDown on More opens the menu on its first item. */
+  protected openMenu(event: Event): void {
+    event.preventDefault();
+    this.showMenu();
+  }
+
+  /** The menu's keys: arrows and Home/End move between items, Escape closes it back to More, Tab closes it. */
+  protected menuKey(event: KeyboardEvent): void {
+    const items = this.menuButtons();
+    const at = items.findIndex((item) => item === document.activeElement);
+    const move = (to: number): void => {
+      event.preventDefault();
+      items[(to + items.length) % items.length]?.focus();
+    };
+    switch (event.key) {
+      case 'ArrowDown':
+        return move(at + 1);
+      case 'ArrowUp':
+        return move(at - 1);
+      case 'Home':
+        return move(0);
+      case 'End':
+        return move(items.length - 1);
+      case 'Escape':
+        event.preventDefault();
+        return this.closeMenu(true);
+      case 'Tab':
+        return this.closeMenu(false);
+    }
+  }
+
+  /** Closes the menu on a click anywhere outside it. */
+  protected closeOutside(event: Event): void {
+    if (!this.menuOpen()) return;
+    const wrap = this.host.nativeElement.querySelector('.header__more');
+    if (
+      wrap !== null &&
+      event.target instanceof Node &&
+      wrap.contains(event.target)
+    )
+      return;
+    this.closeMenu(false);
+  }
+
+  /** Scrolls to the open gate's decision (above the tabs) and puts the focus on its first card. */
+  protected goToDecision(): void {
+    const host = document.getElementById('decide');
+    if (host === null) return;
+    // The panel's host adds no box of its own (display: contents), so the section inside it is what scrolls into view.
+    const panel = host.querySelector('.ah-panel') ?? host;
+    panel.scrollIntoView({ block: 'start' });
+    host.querySelector<HTMLInputElement>('input[type="radio"]')?.focus({
+      preventScroll: true,
+    });
+  }
+
+  private showMenu(): void {
+    this.menuOpen.set(true);
+    afterNextRender(() => this.menuButtons()[0]?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  private closeMenu(refocus: boolean): void {
+    this.menuOpen.set(false);
+    if (refocus)
+      this.host.nativeElement
+        .querySelector<HTMLButtonElement>('.header__more > button')
+        ?.focus();
+  }
+
+  private menuButtons(): HTMLButtonElement[] {
+    return [
+      ...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(
+        '.header__menu [role="menuitem"]:not(:disabled)'
+      ),
+    ];
   }
 
   protected openStop(): void {

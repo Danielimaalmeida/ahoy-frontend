@@ -18,8 +18,7 @@ import {
   readinessSummary,
   type FitPresentation,
 } from '@domain/harness-fit';
-import { ApiClient } from '@core/api/api-client';
-import { AppConfigStore } from '@core/config/app-config';
+import { JiraLinks } from '@core/stores/jira-links';
 import { StoriesStore } from '@core/stores/stories-store';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -1049,10 +1048,7 @@ export class Docks {
   protected readonly port = inject(BACKLOG_PORT);
   protected readonly store = inject(StoriesStore);
   protected readonly refinements = inject(BacklogRefinements);
-  private readonly config = inject(AppConfigStore);
-  private readonly api = inject(ApiClient);
-  /** The Jira base URL set in Settings → Jira, or null while it is unread, off or not an http(s) URL. */
-  private readonly settingsJiraBase = signal<string | null>(null);
+  private readonly jira = inject(JiraLinks);
   private readonly refinementDialogs = inject(RefinementDialogs);
 
   protected readonly scopeTabs = SCOPE_TABS;
@@ -1293,7 +1289,7 @@ export class Docks {
   constructor() {
     this.store.use(inject(DestroyRef));
     void this.refinements.load();
-    void this.readJiraBase();
+    void this.jira.load();
     effect(() => {
       const query = this.query();
       untracked(() => void this.start(query));
@@ -1350,10 +1346,7 @@ export class Docks {
    * null (no link).
    */
   protected jiraUrl(key: string): string | null {
-    const base = this.settingsJiraBase() ?? this.config.config().jiraBaseUrl;
-    return base === undefined
-      ? null
-      : `${base}/browse/${encodeURIComponent(key)}`;
+    return this.jira.issueUrl(key);
   }
 
   protected readonly activeRefinement = isActiveRefinement;
@@ -1431,22 +1424,6 @@ export class Docks {
     this.refinement.setValue('');
     this.readiness.setValue('');
     this.scopeId.set('all');
-  }
-
-  /** Reads the Jira connected in Settings, for the issue links; a failure leaves the `/config.json` fallback. */
-  private async readJiraBase(): Promise<void> {
-    const result = await this.api.getJiraSettings();
-    if (!result.ok || result.value.jira === null) return;
-    const base = result.value.jira.connection.baseUrl;
-    try {
-      const { protocol } = new URL(base);
-      if (protocol !== 'https:' && protocol !== 'http:') return;
-    } catch {
-      return;
-    }
-    let end = base.length;
-    while (end > 0 && base[end - 1] === '/') end--;
-    this.settingsJiraBase.set(base.slice(0, end));
   }
 
   /** Reads the list of voyages again after it failed. */

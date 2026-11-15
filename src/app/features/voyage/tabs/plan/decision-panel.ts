@@ -1,4 +1,11 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  booleanAttribute,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { EFFORT_SOURCE_LABELS, MODEL_SOURCE_LABELS } from '@domain/models';
@@ -8,6 +15,7 @@ import { ChoiceCardGroup } from '@ui/choice-card/choice-card';
 import { Field, FieldControl } from '@ui/field/field';
 import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
+import { pullRequestLabel } from '../../context/pull-requests';
 import { VoyageContext } from '../../context/voyage-context';
 import {
   choiceOptions,
@@ -22,8 +30,9 @@ import { PlanDialogs } from './plan-dialogs';
 /**
  * "Your decision" (wireframe `PlanReview`): Approve, Send back and Reject with what each does, the reason, the model the
  * revision runs on and what it may spend. Approve is sent from here; Send back and Reject open their dialog, once the
- * reason is written. When no decision is open the panel gives way to "No decision needed now" or to the result. A gate
- * other than the plan's gets the same three choices and a note that its summary is not here yet.
+ * reason is written. When no decision is open the panel gives way to "No decision needed now" or to the result. The
+ * delivery gate's panel ("Accept the delivery?") sits above the tabs, `wide`, with the pull requests to review and the
+ * delivery's words; any other gate gets the same three choices and a note that its summary is not here yet.
  */
 @Component({
   selector: 'ah-decision-panel',
@@ -44,13 +53,32 @@ import { PlanDialogs } from './plan-dialogs';
   template: `
     @if (gate(); as gateKey) {
       <ah-panel id="decide">
-        <ah-panel-head heading="Your decision"
+        <ah-panel-head [heading]="heading()"
           ><span class="ah-api" aria-label="Gate">{{
             gateKey
           }}</span></ah-panel-head
         >
         <ah-panel-body>
-          @if (!decision.isPlan()) {
+          @if (decision.kind() === 'delivery') {
+            @if (pullRequests().length > 0) {
+              <p class="decision__prs">
+                <span class="ah-muted">Review before deciding:</span>&ngsp;
+                @for (pr of pullRequests(); track pr.url) {
+                  <span
+                    ><a
+                      [href]="pr.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >{{ pr.label }}</a
+                    >
+                    @if (pr.state) {
+                      &ngsp;<span class="ah-muted">{{ pr.state }}</span>
+                    }
+                  </span>
+                }
+              </p>
+            }
+          } @else if (!decision.isPlan()) {
             <p class="ah-hint">
               The summary of this gate arrives in a later phase. You can still
               decide it here.
@@ -69,6 +97,7 @@ import { PlanDialogs } from './plan-dialogs';
             label="Your decision"
             [options]="options()"
             [formControl]="decision.choice"
+            [row]="wide()"
           />
           @if (needsReason()) {
             <ah-field
@@ -96,7 +125,7 @@ import { PlanDialogs } from './plan-dialogs';
                 @if (model(); as m) {
                   <b class="ah-mono">{{ m }}</b
                   >&ngsp;<span class="ah-hint"
-                    >for planning · {{ origin() }}</span
+                    >for {{ slot() }} · {{ origin() }}</span
                   >&ngsp;
                 } @else {
                   <span class="ah-hint"
@@ -105,7 +134,7 @@ import { PlanDialogs } from './plan-dialogs';
                 }
                 <a
                   [routerLink]="['/voyages', key(), 'models']"
-                  [queryParams]="{ change: 'planning' }"
+                  [queryParams]="{ change: slot() }"
                   >Change</a
                 >
               </span>
@@ -119,6 +148,7 @@ import { PlanDialogs } from './plan-dialogs';
             type="button"
             [ahButton]="choice() === 'reject' ? 'danger' : 'primary'"
             class="decision__submit"
+            [class.decision__submit--end]="wide()"
             [disabled]="choice() === null"
             [attr.aria-disabled]="decision.busy() ? 'true' : null"
             (click)="decide()"
@@ -148,6 +178,9 @@ import { PlanDialogs } from './plan-dialogs';
   `,
 })
 export class DecisionPanel {
+  /** The delivery's layout above the tabs: the cards side by side and the button at the end, not full width. */
+  readonly wide = input(false, { transform: booleanAttribute });
+
   private readonly context = inject(VoyageContext);
   private readonly dialogs = inject(PlanDialogs);
 
@@ -169,7 +202,8 @@ export class DecisionPanel {
     choiceOptions(
       this.decision.crew(),
       this.context.revisionRound(),
-      this.context.revisionCeiling()
+      this.context.revisionCeiling(),
+      this.decision.kind()
     )
   );
 
@@ -177,8 +211,29 @@ export class DecisionPanel {
     const choice = this.choice();
     return choice === null
       ? 'Choose a decision'
-      : confirmLabel(choice, this.decision.crew());
+      : confirmLabel(choice, this.decision.crew(), this.decision.kind());
   });
+
+  /** "Accept the delivery?" at the delivery gate, "Your decision" elsewhere. */
+  protected readonly heading = computed(() =>
+    this.decision.kind() === 'delivery'
+      ? 'Accept the delivery?'
+      : 'Your decision'
+  );
+
+  /** The slot a send-back runs on, for "for planning" and the Change link. */
+  protected readonly slot = computed(
+    () => this.decision.revisionSlot() ?? 'planning'
+  );
+
+  /** The pull requests the delivery is made of, to review before deciding. */
+  protected readonly pullRequests = computed(() =>
+    (this.context.state()?.pullRequests ?? []).map((pr) => ({
+      url: pr.url,
+      label: pullRequestLabel(pr),
+      state: pr.state?.toLowerCase() ?? null,
+    }))
+  );
 
   protected readonly model = this.decision.model;
 

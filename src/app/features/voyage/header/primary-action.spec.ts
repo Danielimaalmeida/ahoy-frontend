@@ -2,6 +2,7 @@ import {
   canRefreshDesign,
   canRefreshIntake,
   headerActions,
+  menuItems,
   primaryAction,
 } from './primary-action';
 
@@ -14,16 +15,15 @@ describe('primaryAction', () => {
     });
   });
 
-  it('asks to decide on the plan at the plan gate, and just to decide at another gate', () => {
+  it('asks to decide on the plan at the plan gate, and at another gate jumps to its decision above the tabs', () => {
     expect(primaryAction('awaiting_decision', 'plan_accepted')).toEqual({
       kind: 'tab',
       label: 'Decide on the plan',
       tab: 'plan',
     });
     expect(primaryAction('awaiting_decision', 'delivery_accepted')).toEqual({
-      kind: 'tab',
+      kind: 'decide',
       label: 'Decide',
-      tab: 'plan',
     });
     expect(primaryAction('awaiting_decision', null)).toEqual({
       kind: 'tab',
@@ -194,5 +194,70 @@ describe('canRefreshDesign', () => {
         READ
       )
     ).toBe(false);
+  });
+});
+
+describe('menuItems', () => {
+  const all = {
+    budget: true,
+    stop: true,
+    cancel: true,
+    halted: false,
+    modelsReady: true,
+    intake: true,
+    design: true,
+  };
+
+  it('lists Budget, Models, Back to intake and Refresh design, then Stop and Cancel voyage apart at the end', () => {
+    const items = menuItems(all);
+    expect(items.map((i) => i.label)).toEqual([
+      'Budget',
+      'Models',
+      'Back to intake',
+      'Refresh design',
+      'Stop',
+      'Cancel voyage',
+    ]);
+    expect(items.filter((i) => i.danger).map((i) => i.id)).toEqual([
+      'stop',
+      'cancel',
+    ]);
+    expect(items.filter((i) => i.separated).map((i) => i.id)).toEqual(['stop']);
+  });
+
+  it('lists only what applies: Change models and Cancel voyage for an anchored voyage', () => {
+    const items = menuItems({
+      ...all,
+      stop: false,
+      halted: true,
+      intake: false,
+      design: false,
+    });
+    expect(items.map((i) => i.label)).toEqual([
+      'Budget',
+      'Change models',
+      'Cancel voyage',
+    ]);
+  });
+
+  it('keeps Models, disabled until the models are read, as the only item of a voyage that is over', () => {
+    const items = menuItems({
+      budget: false,
+      stop: false,
+      cancel: false,
+      halted: false,
+      modelsReady: false,
+      intake: false,
+      design: false,
+    });
+    expect(items).toEqual([
+      {
+        id: 'models',
+        label: 'Models',
+        danger: false,
+        separated: false,
+        disabled: true,
+      },
+    ]);
   });
 });

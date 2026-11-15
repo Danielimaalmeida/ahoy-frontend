@@ -43,23 +43,24 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
 
 What each feature still needs beyond the tests above. Its pull request has the detail.
 
-| Feature                                                                                                    | Not checked yet                                                                                            |
-| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Needs you: phase in words with "Phase N of 8"; a "Defect" tag from `issueType`                             | A browser (mockup only); an API with ahoy-hosted's `issueType` (no tag until it is deployed)               |
-| The Product page (`/product`, admins only): proposals to Jira or a meeting, look-ups, quick pins and Apply | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
-| Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                            | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
-| Create in Confluence, Team settings › Confluence                                                           | A real Confluence; updating a page once it exists is not built                                             |
-| Each person on a side of a meeting (People, `MeStore`)                                                     | A browser                                                                                                  |
-| Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                        | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |
-| The 7 empty states (Voyages, Meetings, notes)                                                              | A browser, against the designs; the first-use copy for Voyages and Meetings is ours, not the designer's    |
-| The `local` configuration (`npm run start:local`, no WebEAM)                                               | A browser against a running API                                                                            |
-| Design system re-sync, `docs/accessibility.md`, the a11y fixes                                             | The `focus`, `line-strong` and dark `danger` overrides are not yet published to the design-system artifact |
-| Metrics › Trends                                                                                           | Seen on the in-browser mock before the review fixes, not after; not against an API                         |
-| Defects table, defect start as a named person                                                              | A browser or an API                                                                                        |
-| Plan panel and its models in Team settings › Phases                                                        | An API with a saved panel                                                                                  |
-| D23 steps 1 to 5: meeting side names, People, Setup, My Copilot token, MCP defaults                        | An API                                                                                                     |
-| Meeting notes UX (move a topic anywhere, one-off Jira target, search)                                      | Against a local API                                                                                        |
-| Cancel and Start again, Deploy and Release to TEST, Assess comments, running indicator, artifacts list     | A browser or an API                                                                                        |
+| Feature                                                                                                         | Not checked yet                                                                                            |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Needs you: phase in words with "Phase N of 8"; a "Defect" tag from `issueType`                                  | A browser (mockup only); an API with ahoy-hosted's `issueType` (no tag until it is deployed)               |
+| The Product page (`/product`, admins only): proposals to Jira or a meeting, look-ups, quick pins and Apply      | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
+| Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                                 | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
+| Create in Confluence, Team settings › Confluence                                                                | A real Confluence; updating a page once it exists is not built                                             |
+| Each person on a side of a meeting (People, `MeStore`)                                                          | A browser                                                                                                  |
+| Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                             | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |
+| The 7 empty states (Voyages, Meetings, notes)                                                                   | A browser, against the designs; the first-use copy for Voyages and Meetings is ours, not the designer's    |
+| The `local` configuration (`npm run start:local`, no WebEAM)                                                    | A browser against a running API                                                                            |
+| Design system re-sync, `docs/accessibility.md`, the a11y fixes                                                  | The `focus`, `line-strong` and dark `danger` overrides are not yet published to the design-system artifact |
+| Metrics › Trends                                                                                                | Seen on the in-browser mock before the review fixes, not after; not against an API                         |
+| Defects table, defect start as a named person                                                                   | A browser or an API                                                                                        |
+| Plan panel and its models in Team settings › Phases                                                             | An API with a saved panel                                                                                  |
+| D23 steps 1 to 5: meeting side names, People, Setup, My Copilot token, MCP defaults                             | An API                                                                                                     |
+| Meeting notes UX (move a topic anywhere, one-off Jira target, search)                                           | Against a local API                                                                                        |
+| Voyage page tidy-up: header More menu, Jira link on the key, phase names, PR comments folded, delivery decision | Against a local API and a real Jira link from Settings; a screen reader on the More menu                   |
+| Cancel and Start again, Deploy and Release to TEST, Assess comments, running indicator, artifacts list          | A browser or an API                                                                                        |
 
 ## Proof
 

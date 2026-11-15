@@ -131,6 +131,20 @@ describe('PrCommentsPanel', () => {
   const buttons = (root: Element): string[] =>
     [...root.querySelectorAll('button')].map((b) => text(b));
 
+  /** Renders the panel and opens it: it starts closed, as one line. */
+  async function renderOpen(): Promise<HTMLElement> {
+    const root = await render();
+    toggle(root).click();
+    await flush();
+    return root;
+  }
+
+  function toggle(root: Element): HTMLButtonElement {
+    const found = root.querySelector<HTMLButtonElement>('.comments__toggle');
+    if (found === null) throw new Error('No toggle');
+    return found;
+  }
+
   function dialog(): HTMLElement {
     const found = document.querySelector<HTMLElement>(
       '.cdk-overlay-container .ah-dialog'
@@ -148,7 +162,7 @@ describe('PrCommentsPanel', () => {
   }
 
   it('offers Assess comments at the delivery gate with the count of people’s comments waiting', async () => {
-    const root = await render();
+    const root = await renderOpen();
     expect(text(root)).toContain('Pull request comments');
     expect(text(root)).toContain('2 comments to assess');
     expect(text(root)).toContain('on 1 open pull request');
@@ -217,7 +231,7 @@ describe('PrCommentsPanel', () => {
       ],
     };
     expect(responseViolations('getStoryPrComments', comments)).toEqual([]);
-    const root = await render();
+    const root = await renderOpen();
     expect(buttons(root)).not.toContain('Assess comments');
     const rows = [...root.querySelectorAll('tbody tr')].map((r) => text(r));
     expect(rows).toHaveLength(3);
@@ -239,7 +253,7 @@ describe('PrCommentsPanel', () => {
     story = { ...story, phase: 'implementation', status: 'running' };
     comments = { ...comments, count: null };
     const root = await render();
-    expect(root.querySelector('ah-panel')).toBeNull();
+    expect(root.querySelector('.ah-panel')).toBeNull();
   });
 
   it('offers nothing on a done voyage whose pull requests are all closed, and says why', async () => {
@@ -248,7 +262,7 @@ describe('PrCommentsPanel', () => {
       ...comments,
       count: { ...comments.count!, waiting: 0, openPrs: 0 },
     };
-    const root = await render();
+    const root = await renderOpen();
     expect(buttons(root)).not.toContain('Assess comments');
     expect(text(root)).toContain('a change now is a new story');
   });
@@ -256,7 +270,7 @@ describe('PrCommentsPanel', () => {
   it('says a done voyage not counted yet waits for its first count, without the button', async () => {
     story = { ...story, phase: 'done', status: 'terminal' };
     comments = { ...comments, count: null };
-    const root = await render();
+    const root = await renderOpen();
     expect(buttons(root)).not.toContain('Assess comments');
     expect(text(root)).toContain('have not been counted yet');
     expect(text(root)).not.toContain('merged or closed');
@@ -267,7 +281,7 @@ describe('PrCommentsPanel', () => {
     api.on('getStoryPrComments', () =>
       Promise.resolve(failing ? fail({ kind: 'network' }) : ok(comments))
     );
-    const root = await render();
+    const root = await renderOpen();
     expect(text(root)).toContain('Could not read the pull request comments.');
     expect(buttons(root)).toContain('Assess comments');
     failing = false;
@@ -303,5 +317,51 @@ describe('PrCommentsPanel', () => {
       .click();
     await flush();
     expect(api.callsOf('getStoryPrComments').length).toBe(reads + 1);
+  });
+
+  it('starts closed as one line: how many wait and were ruled, Assess comments, and no table', async () => {
+    comments = { ...comments, rulings: [aRuling(), aRuling({ id: '2' })] };
+    const root = await render();
+    expect(toggle(root).getAttribute('aria-expanded')).toBe('false');
+    expect(
+      [...root.querySelectorAll('.comments__pill')].map((p) => text(p))
+    ).toEqual(['2 waiting', '2 ruled']);
+    expect(buttons(root)).toContain('Assess comments');
+    expect(root.querySelector('table')).toBeNull();
+    toggle(root).click();
+    await flush();
+    expect(toggle(root).getAttribute('aria-expanded')).toBe('true');
+    expect(root.querySelectorAll('tbody tr')).toHaveLength(2);
+    toggle(root).click();
+    await flush();
+    expect(root.querySelector('table')).toBeNull();
+  });
+
+  it('lists the newest four rulings first, and the rest on Show the other N', async () => {
+    comments = {
+      ...comments,
+      rulings: [1, 2, 3, 4, 5, 6].map((n) =>
+        aRuling({
+          id: String(n),
+          excerpt: `Comment ${n}`,
+          ruledAt: `2026-10-0${n}T10:00:00.000Z`,
+        })
+      ),
+    };
+    const root = await renderOpen();
+    const excerpts = () =>
+      [...root.querySelectorAll('.comments__excerpt')].map((e) => text(e));
+    expect(excerpts()).toEqual([
+      'Comment 6',
+      'Comment 5',
+      'Comment 4',
+      'Comment 3',
+    ]);
+    [...root.querySelectorAll('button')]
+      .find((b) => text(b) === 'Show the other 2 rulings')!
+      .click();
+    await flush();
+    expect(excerpts()).toHaveLength(6);
+    expect(buttons(root)).not.toContain('Show the other 2 rulings');
   });
 });

@@ -15,12 +15,24 @@ import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import { serverFieldError } from '../../dialogs/dialog-support';
 import {
   DECISION_REASON_MAX,
+  GATE_SUBJECT,
   PLAN_GATE,
+  gateKind,
+  type GateKind,
   decidedRecord,
   decisionBody,
   decisionToast,
   outcomeWord,
 } from './decision-view';
+
+/** The model slot whose crew member reworks what a gate of each kind sends back; another gate names none. */
+const REVISION_SLOT: Readonly<
+  Record<GateKind, 'planning' | 'implementation' | null>
+> = {
+  plan: 'planning',
+  delivery: 'implementation',
+  other: null,
+};
 
 /** Where a decision was started from, and so where its error shows: the panel (Approve) or a dialog. */
 export type DecisionSurface = 'panel' | 'dialog';
@@ -113,13 +125,23 @@ export class PlanDecision {
   /** Someone decided first, if the last command found so. */
   readonly conflict = this.conflictSignal.asReadonly();
 
+  /** Which words the open gate's decision takes: the plan's, the delivery's or the plain ones. */
+  readonly kind = computed(() => gateKind(this.context.gateKey()));
   /** Whether the open gate is the plan's; any other gate gets the generic panel (its summary arrives in phase 7). */
   readonly isPlan = computed(() => this.context.gateKey() === PLAN_GATE);
-  /** The crew member who revises what is sent back: the Cartographer for the plan, else "the crew". */
-  readonly crew = computed(() =>
-    this.isPlan() ? crewLabel('planning') : 'the crew'
-  );
-  /** The planning slot's model and effort, "claude-sonnet-5 · high"; null until the models are read. */
+  /** "plan", "delivery" or "work": what is sent back or rejected. */
+  readonly subject = computed(() => GATE_SUBJECT[this.kind()]);
+  /**
+   * The crew member who revises what is sent back: the Cartographer for the plan, the Implementer for the delivery, else
+   * "the crew".
+   */
+  readonly crew = computed(() => {
+    const slot = REVISION_SLOT[this.kind()];
+    return slot === null ? 'the crew' : crewLabel(slot);
+  });
+  /** The model slot a send-back runs on ("planning", "implementation"), for the Change link; null for another gate. */
+  readonly revisionSlot = computed(() => REVISION_SLOT[this.kind()]);
+  /** The revision slot's model and effort, "claude-sonnet-5 · high"; null until the models are read. */
   readonly model = computed(() => {
     const slot = this.planningSlot();
     return slot === null ? null : modelLabel(slot);
@@ -132,9 +154,13 @@ export class PlanDecision {
   readonly owner = computed(() => this.context.story()?.owner ?? '');
   /** The gate records of the voyage, oldest first; empty until read. */
   readonly records = computed(() => this.context.handle()?.gates.value() ?? []);
-  /** The planning slot: the model and effort a revision runs on, and where they come from. */
+  /** The slot a revision runs on (planning for the plan, implementation for the delivery), and where its model comes from. */
   readonly planningSlot = computed(
-    () => slotsForPhase(this.context.models(), 'planning')[0] ?? null
+    () =>
+      slotsForPhase(
+        this.context.models(),
+        this.revisionSlot() ?? 'planning'
+      )[0] ?? null
   );
 
   constructor() {
@@ -190,6 +216,7 @@ export class PlanDecision {
     const ceiling = this.context.revisionCeiling();
     const seen = this.humanRecordIds();
     const crew = this.crew();
+    const kind = this.kind();
     const text = this.reason.value.trim();
     const reason = this.reason.value;
     this.surfaceSignal.set(surface);
@@ -205,7 +232,7 @@ export class PlanDecision {
     if (outcome.kind === 'skipped') return outcome;
     this.last.set(outcome);
     if (outcome.kind === 'ok') {
-      this.toasts.show(decisionToast(decision, crew, round, ceiling));
+      this.toasts.show(decisionToast(decision, crew, round, ceiling, kind));
       this.reason.reset('');
       this.choice.reset(null);
       void this.context.handle()?.gates.refresh();

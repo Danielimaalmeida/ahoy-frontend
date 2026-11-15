@@ -6,7 +6,7 @@ import { Banner } from '@ui/banner/banner';
 import { DialogService, DialogShell } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import type { VoyageContext } from '../../context/voyage-context';
-import { sendBackLead } from './decision-view';
+import { confirmLabel, sendBackLead } from './decision-view';
 import type { PlanDecision } from './plan-decision';
 import { DECISION_REASON_MESSAGES } from './plan-decision';
 
@@ -70,7 +70,7 @@ abstract class PlanDecisionDialog {
       >
         @if (model(); as m) {
           The revision runs on <b class="ah-mono">{{ m }}</b
-          >&ngsp;for planning.
+          >&ngsp;for {{ decision.revisionSlot() ?? 'planning' }}.
         }
         Billed to {{ owner() }}.</ah-banner
       >
@@ -87,9 +87,7 @@ abstract class PlanDecisionDialog {
   `,
 })
 export class SendBackDialog extends PlanDecisionDialog {
-  protected readonly subject = computed(() =>
-    this.decision.isPlan() ? 'plan' : 'work'
-  );
+  protected readonly subject = this.decision.subject;
   protected readonly lead = computed(() =>
     sendBackLead(this.context.revisionRound(), this.context.revisionCeiling())
   );
@@ -109,10 +107,12 @@ export class SendBackDialog extends PlanDecisionDialog {
     <ah-dialog
       kind="danger"
       icon="anchor"
-      [heading]="decision.isPlan() ? 'Reject the plan?' : 'Reject this gate?'"
-      [confirmLabel]="
-        stale() ? 'Reject again' : decision.isPlan() ? 'Reject plan' : 'Reject'
+      [heading]="
+        decision.kind() === 'other'
+          ? 'Reject this gate?'
+          : 'Reject the ' + decision.subject() + '?'
       "
+      [confirmLabel]="stale() ? 'Reject again' : rejectLabel()"
       busyLabel="Rejecting…"
       [busy]="busy()"
       [error]="error()"
@@ -120,8 +120,7 @@ export class SendBackDialog extends PlanDecisionDialog {
     >
       <span ahDialogLead
         >The voyage becomes blocked. No agent works on it again. Use Send back
-        if the {{ decision.isPlan() ? 'plan' : 'work' }} only needs
-        changes.</span
+        if the {{ decision.subject() }} only needs changes.</span
       >
       <ah-field
         label="Reason"
@@ -135,7 +134,11 @@ export class SendBackDialog extends PlanDecisionDialog {
     </ah-dialog>
   `,
 })
-export class RejectDialog extends PlanDecisionDialog {}
+export class RejectDialog extends PlanDecisionDialog {
+  protected readonly rejectLabel = computed(() =>
+    confirmLabel('reject', this.decision.crew(), this.decision.kind())
+  );
+}
 
 /** Opens the Send back and Reject dialogs over the Plan tab; each closes with whether the decision went through. */
 @Injectable({ providedIn: 'root' })

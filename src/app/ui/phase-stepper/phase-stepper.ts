@@ -1,4 +1,5 @@
 import { Component, booleanAttribute, computed, input } from '@angular/core';
+import { phaseLabel } from '@domain/phases';
 import type { StoryStatus } from '@domain/types';
 import type { StepState } from './phase-steps';
 import { phaseProgress } from './phase-steps';
@@ -21,7 +22,7 @@ const STATE_WORDS: Readonly<Record<StepState, string>> = {
 
 /**
  * Where a voyage is in intake → planning → plan_review → design → implementation → pr_review → delivery_gate → done.
- * The full form shows all eight phases (passed with ✓, the current one numbered, the one it stopped in with "!");
+ * The full form shows all eight phases in plain words, with the API id as each step's tooltip (passed with ✓, the current one numbered, the one it stopped in with "!");
  * `compact` is the eight bars for tables. For a Blocked voyage the API phase is `blocked`, so pass `stoppedAt`, the phase it was
  * in (G12); without it the stepper shows the final state with no position.
  *
@@ -69,11 +70,12 @@ const STATE_WORDS: Readonly<Record<StepState, string>> = {
                 ? 'step'
                 : null
             "
-            [attr.aria-label]="step.phase + ', ' + stateWord(step.state)"
+            [attr.aria-label]="label(step.phase) + ', ' + stateWord(step.state)"
+            [title]="step.phase"
             ><b class="ah-step__n" aria-hidden="true">{{
               mark(step.state) ?? step.n
             }}</b
-            >{{ step.phase }}</span
+            >{{ label(step.phase) }}</span
           >
           @if (!$last) {
             <span class="ah-step__sep" aria-hidden="true"></span>
@@ -112,6 +114,10 @@ export class PhaseStepper {
   }
   protected mark(state: StepState): string | null {
     return MARKS[state];
+  }
+  /** The phase in plain words ("Delivery gate"); the API id is the step's tooltip. */
+  protected label(phase: string): string {
+    return phaseLabel(phase);
   }
   protected stateWord(state: StepState): string {
     return STATE_WORDS[state];

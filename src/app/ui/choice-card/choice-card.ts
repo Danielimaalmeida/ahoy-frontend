@@ -2,6 +2,7 @@ import type { ControlValueAccessor } from '@angular/forms';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   Component,
+  booleanAttribute,
   ElementRef,
   forwardRef,
   inject,
@@ -56,6 +57,11 @@ const ARROWS: Readonly<Record<string, 1 | -1>> = {
       flex-direction: column;
       gap: var(--space-2);
     }
+    .ah-choice-group--row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-2\\.5);
+    }
     .ah-choice:has(input:disabled) {
       cursor: default;
       color: var(--ink-disabled);
@@ -64,6 +70,7 @@ const ARROWS: Readonly<Record<string, 1 | -1>> = {
   template: `
     <div
       class="ah-choice-group"
+      [class.ah-choice-group--row]="row()"
       role="radiogroup"
       [attr.aria-label]="label() || null"
     >
@@ -90,6 +97,8 @@ const ARROWS: Readonly<Record<string, 1 | -1>> = {
 export class ChoiceCardGroup<T> implements ControlValueAccessor {
   /** The cards, in order. */
   readonly options = input.required<readonly ChoiceOption<T>[]>();
+  /** The cards side by side, as many to a row as fit at 220px or more (stacked on a phone). */
+  readonly row = input(false, { transform: booleanAttribute });
   /** The group's accessible name ("Your decision"). */
   readonly label = input('');
 

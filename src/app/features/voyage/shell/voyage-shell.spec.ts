@@ -87,6 +87,7 @@ async function open(url: string, options: OpenOptions = {}): Promise<Page> {
     root: harness.fixture.nativeElement as HTMLElement,
     requests,
   };
+  current = page;
   await flush(page);
   return page;
 }
@@ -139,10 +140,41 @@ function header(page: Page): HTMLElement {
   return element;
 }
 
-function buttonsIn(element: Element): string[] {
+/** The page opened last: the header helpers open its More menu and render it. */
+let current: Page | null = null;
+
+/** The header's More button, or null when every action is in view. */
+function moreButton(element: Element): HTMLButtonElement | null {
+  return element.querySelector<HTMLButtonElement>('.header__more > button');
+}
+
+/** Opens or closes the More menu of the page opened last, and renders it. */
+function clickMore(element: Element): void {
+  const more = moreButton(element);
+  if (more === null) return;
+  more.click();
+  current?.harness.fixture.detectChanges();
+}
+
+/** The buttons and links in view in the header, More included, without opening it. */
+function visibleButtons(element: Element): string[] {
   return [
-    ...element.querySelectorAll('.header__actions a, .header__actions button'),
+    ...element.querySelectorAll(
+      '.header__actions > a, .header__actions > button, .header__actions > ah-deploy-all-button button, .header__more > button'
+    ),
   ].map((b) => text(b));
+}
+
+/** The header's actions in order: those in view, then the More menu's items (More itself is left out). */
+function buttonsIn(element: Element): string[] {
+  const inView = visibleButtons(element).filter((label) => label !== 'More');
+  if (moreButton(element) === null) return inView;
+  clickMore(element);
+  const items = [
+    ...element.querySelectorAll('.header__menu [role="menuitem"]'),
+  ].map((b) => text(b));
+  clickMore(element);
+  return [...inView, ...items];
 }
 
 /** The open dialog (the CDK puts it in an overlay under `body`). */
@@ -163,13 +195,20 @@ function click(element: Element | null | undefined): void {
   element.click();
 }
 
+/** The button named `label` in `container`; in the header, one under More is reached by opening it. */
 function buttonNamed(
   container: Element,
   label: string | RegExp
 ): HTMLButtonElement {
-  const found = [...container.querySelectorAll('button')].find((b) =>
-    typeof label === 'string' ? text(b) === label : label.test(text(b))
-  );
+  const find = () =>
+    [...container.querySelectorAll('button')].find((b) =>
+      typeof label === 'string' ? text(b) === label : label.test(text(b))
+    );
+  let found = find();
+  if (found === undefined && moreButton(container) !== null) {
+    clickMore(container);
+    found = find();
+  }
   if (found === undefined) throw new Error(`no button ${String(label)}`);
   return found;
 }
@@ -343,7 +382,7 @@ describe('VoyageShell on the mock backend', () => {
       expect(h.querySelector('.header--running')).not.toBeNull();
       expect(h.querySelector('.ah-badge--pulse')).not.toBeNull();
       expect(h.querySelector('.ah-step--live')?.textContent).toContain(
-        'planning'
+        'Planning'
       );
       const runsTab = [...page.root.querySelectorAll('ah-section-tabs a')].find(
         (a) => text(a).startsWith('Runs')
@@ -548,7 +587,7 @@ describe('VoyageShell on the mock backend', () => {
       const h = header(page);
       expect(text(h.querySelector('ah-status-badge'))).toBe('Blocked terminal');
       expect(buttonsIn(h)).toEqual(['Unblock', 'Models']);
-      expect(text(h.querySelector('.ah-step--stopped'))).toBe('! plan_review');
+      expect(text(h.querySelector('.ah-step--stopped'))).toBe('! Plan review');
       expect(page.root.querySelector('ah-anchored-banner section')).toBeNull();
       buttonNamed(h, 'Unblock').click();
       await flush(page);

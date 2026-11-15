@@ -3,7 +3,7 @@ import { Banner } from '@ui/banner/banner';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
 import { ciWait } from '../context/ci-wait';
 import { VoyageContext } from '../context/voyage-context';
-import { pullRequestLabel } from './voyage-header';
+import { pullRequestLabel } from '../context/pull-requests';
 
 /**
  * "Waiting for CI": shown while Ahoy waits for a pull request's checks, never while an agent runs. The implementer has

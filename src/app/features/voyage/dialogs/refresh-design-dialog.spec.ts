@@ -106,14 +106,31 @@ describe('Refresh design from the voyage header', () => {
     return (root.textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 
+  /** Opens the header's More menu, where Refresh design is, when it is there and closed. */
+  function openMore(root: Element): void {
+    const more = root.querySelector<HTMLButtonElement>(
+      '.header__more > button'
+    );
+    if (more === null || more.getAttribute('aria-expanded') === 'true') return;
+    more.click();
+    fixture.detectChanges();
+  }
+
   function buttons(root: Element): string[] {
+    openMore(root);
     return [...root.querySelectorAll('button')].map((item) => text(item));
   }
 
   function button(root: Element, name: string): HTMLButtonElement {
-    const found = [...root.querySelectorAll('button')].find((item) =>
-      text(item).startsWith(name)
-    );
+    const find = () =>
+      [...root.querySelectorAll('button')].find((item) =>
+        text(item).startsWith(name)
+      );
+    let found = find();
+    if (found === undefined) {
+      openMore(root);
+      found = find();
+    }
     if (found === undefined) throw new Error(`No button ${name}`);
     return found;
   }

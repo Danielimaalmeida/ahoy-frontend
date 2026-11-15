@@ -6,6 +6,7 @@ import {
   decidedRecord,
   decisionBody,
   decisionToast,
+  gateKind,
   earlierSendBack,
   outcomeWord,
   roundText,
@@ -220,5 +221,50 @@ describe('earlierSendBack', () => {
     expect(
       earlierSendBack([record({ id: 'g1', outcome: 'approve' })], PLAN_GATE)
     ).toBeNull();
+  });
+});
+
+describe('the delivery gate’s words', () => {
+  it('says what approving, sending back and rejecting the delivery do', () => {
+    const [approve, sendBack, reject] = choiceOptions(
+      'Implementer',
+      1,
+      4,
+      'delivery'
+    );
+    expect(approve?.description).toBe(
+      'The voyage is done. Its pull requests stay open for you to merge.'
+    );
+    expect(sendBack?.description).toBe(
+      'Implementer reworks the pull requests, then the Lookout reviews them again. This would be round 2 of 4.'
+    );
+    expect(reject?.description).toBe(
+      "The voyage becomes blocked. This can't be undone here."
+    );
+  });
+
+  it('names the buttons and the toasts after the delivery', () => {
+    expect(confirmLabel('approve', 'Implementer', 'delivery')).toBe(
+      'Accept delivery'
+    );
+    expect(confirmLabel('send_back', 'Implementer', 'delivery')).toBe(
+      'Send back to Implementer'
+    );
+    expect(confirmLabel('reject', 'Implementer', 'delivery')).toBe(
+      'Reject delivery'
+    );
+    expect(decisionToast('approve', 'Implementer', 1, 4, 'delivery')).toBe(
+      'Delivery accepted. The voyage is done.'
+    );
+    expect(decisionToast('send_back', 'Implementer', 1, 4, 'delivery')).toBe(
+      'Delivery sent back to Implementer. Round 2 of 4 is running.'
+    );
+  });
+
+  it('tells the gates apart by key', () => {
+    expect(gateKind('plan_accepted')).toBe('plan');
+    expect(gateKind('delivery_accepted')).toBe('delivery');
+    expect(gateKind('something_else')).toBe('other');
+    expect(gateKind(null)).toBe('other');
   });
 });
