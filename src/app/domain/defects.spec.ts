@@ -7,6 +7,7 @@ import {
   evidenceSize,
   evidenceView,
   failedRequestLine,
+  reproductionEnded,
   reproductionInProgress,
   reproductionView,
 } from './defects';
@@ -253,8 +254,18 @@ describe('evidenceView', () => {
       'Screenshot 2 of 2',
     ]);
     expect(view?.recordings.map((r) => [r.label, r.size])).toEqual([
-      ['Recording 1 of 1', '4.2 MB'],
+      ['Recording 1 of 1', '4.0 MB'],
     ]);
+    expect(view?.what).toBe('the screenshots and the recording');
+  });
+
+  it('says what is kept in the plural when there are several recordings', () => {
+    expect(evidenceView([video(10), video(10)], now)?.what).toBe(
+      'the recordings'
+    );
+    expect(evidenceView([shot('2026-11-22T10:00:00Z')], now)?.what).toBe(
+      'the screenshots'
+    );
   });
 
   it('says the day Ahoy removes the first of them, with the year when it is another', () => {
@@ -277,9 +288,9 @@ describe('evidenceView', () => {
 describe('evidenceSize', () => {
   it('says kilobytes below a megabyte and megabytes with one decimal above', () => {
     expect(evidenceSize(300)).toBe('1 KB');
-    expect(evidenceSize(812_400)).toBe('812 KB');
-    expect(evidenceSize(1_000_000)).toBe('1.0 MB');
-    expect(evidenceSize(24 * 1024 * 1024)).toBe('25.2 MB');
+    expect(evidenceSize(831_488)).toBe('812 KB');
+    expect(evidenceSize(1024 * 1024)).toBe('1.0 MB');
+    expect(evidenceSize(24 * 1024 * 1024)).toBe('24.0 MB');
   });
 });
 
@@ -295,5 +306,15 @@ describe('failedRequestLine', () => {
     expect(
       failedRequestLine({ method: 'POST', url: '/api/x', status: null })
     ).toBe('POST /api/x · no answer');
+  });
+});
+
+describe('reproductionEnded', () => {
+  it('is true once a verdict is there, whatever it is, and false while the run is in progress or without one', () => {
+    expect(reproductionEnded({ result: { verdict: 'inconclusive' } })).toBe(
+      true
+    );
+    expect(reproductionEnded({ result: null })).toBe(false);
+    expect(reproductionEnded(null)).toBe(false);
   });
 });

@@ -77,6 +77,9 @@ type FileState =
     .reproduction__wide {
       flex-basis: 100%;
     }
+    .reproduction__note {
+      margin: -8px 0 0;
+    }
     .reproduction__section {
       display: flex;
       flex-direction: column;
@@ -188,13 +191,13 @@ type FileState =
           <dd>{{ text }}</dd>
         </div>
       }
-      @if (!reproduction().current) {
-        <div class="reproduction__wide">
-          <dt>The defect changed in Jira since</dt>
-          <dd>This is what Ahoy saw for the version before.</dd>
-        </div>
-      }
     </dl>
+    @if (!reproduction().current) {
+      <p class="ah-hint reproduction__note">
+        The defect changed in Jira since: this is what Ahoy saw for the version
+        before.
+      </p>
+    }
 
     @if (steps().length > 0) {
       <section
@@ -224,7 +227,7 @@ type FileState =
           "
         >
           <h3 class="reproduction__title">Screenshots</h3>
-          <ul class="reproduction__shots">
+          <ul class="reproduction__shots" [attr.aria-busy]="readingShots()">
             @for (shot of kept.screenshots; track shot.file.id) {
               <li>
                 <figure class="reproduction__shot">
@@ -244,11 +247,7 @@ type FileState =
                       }
                     }
                     @case ('reading') {
-                      <div
-                        class="reproduction__frame"
-                        role="status"
-                        [attr.aria-label]="'Reading ' + shot.label"
-                      >
+                      <div class="reproduction__frame">
                         <ah-skeleton width="60%" />
                       </div>
                     }
@@ -276,7 +275,10 @@ type FileState =
                       </div>
                     }
                   }
-                  <figcaption class="ah-hint">{{ shot.label }}</figcaption>
+                  <!-- The image is named by its alt; the caption is for the eye. -->
+                  <figcaption class="ah-hint" aria-hidden="true">
+                    {{ shot.label }}
+                  </figcaption>
                 </figure>
               </li>
             }
@@ -325,7 +327,7 @@ type FileState =
                   }
                   @default {
                     @if (techOf(recording.file.id); as tech) {
-                      <span class="ah-hint" role="alert"
+                      <span class="ah-hint" role="status"
                         >Could not be read ({{ tech }}).</span
                       >
                     }
@@ -347,15 +349,8 @@ type FileState =
         </section>
       }
       <span class="ah-hint"
-        >Ahoy keeps
-        {{
-          kept.recordings.length === 0
-            ? 'the screenshots'
-            : kept.screenshots.length === 0
-              ? 'the recording'
-              : 'the screenshots and the recording'
-        }}
-        until {{ kept.keptUntil }}, then removes them.</span
+        >Ahoy keeps {{ kept.what }} until {{ kept.keptUntil }}, then removes
+        them.</span
       >
     } @else if (reproduction().result !== null) {
       <span class="ah-hint"
@@ -381,8 +376,8 @@ type FileState =
         @if (failedRequests().length > 0) {
           <h3 class="reproduction__title">Requests that failed</h3>
           <ul class="reproduction__list">
-            @for (request of failedRequests(); track $index) {
-              <li>{{ requestLine(request) }}</li>
+            @for (line of failedRequests(); track $index) {
+              <li>{{ line }}</li>
             }
           </ul>
         }
@@ -431,12 +426,18 @@ export class ReproductionDetails {
   protected readonly consoleErrors = computed(
     () => this.reproduction().result?.consoleErrors ?? []
   );
-  protected readonly failedRequests = computed(
-    () => this.reproduction().result?.failedRequests ?? []
+  /** The requests the browser saw fail, one line each. */
+  protected readonly failedRequests = computed(() =>
+    (this.reproduction().result?.failedRequests ?? []).map(failedRequestLine)
   );
   /** The screenshots and recordings by name, with the day they go; null when none is kept. */
   protected readonly evidence = computed(() =>
     evidenceView(this.reproduction().evidence, this.clock())
+  );
+
+  /** Whether a screenshot is being read, so that the list says it is busy. */
+  protected readonly readingShots = computed(() =>
+    [...this.files().values()].some((f) => f.kind === 'reading')
   );
 
   constructor() {
@@ -470,12 +471,6 @@ export class ReproductionDetails {
   protected techOf(id: string): string | null {
     const state = this.files().get(id);
     return state?.kind === 'failed' ? state.tech : null;
-  }
-
-  protected requestLine(
-    request: NonNullable<DefectReproduction['result']>['failedRequests'][number]
-  ): string {
-    return failedRequestLine(request);
   }
 
   /** Reads a screenshot's or a recording's bytes, once at a time, and shows them through an object URL. */

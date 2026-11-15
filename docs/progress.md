@@ -30,11 +30,8 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   dispatcher (0 AIU, fictional data, the verdict written into the database by hand), at 1280px and 390px, light and
   dark, the dialogs opened with the keyboard and closed with Escape. No reproduction or Test sign-in has run.
 - **On `feat/reproduction-evidence`** (not merged, on top of the branch above): a verdict's tag in Backlog › Defects
-  opens a row with the steps, what the browser reported, the screenshots and, for a reproduced defect, the recording
-  (read when asked for); below 1280px each defect is a card, as in the backlog's own table. Besides its tests it was
-  opened in Chromium on 2026-11-15 against a local API of `ahoy-hosted`'s branch of the same name with no dispatcher
-  (0 AIU; fictional screenshots and a recording stored through the API's own service), at 1280px and 390px, light and
-  dark, opened and closed with the keyboard, the recording played. No run has produced the evidence.
+  opens the reproduction's steps, screenshots and recording under the defect. Seen in Chromium against a local API with
+  fictional evidence (0 AIU); no run has produced any.
 - **The required checks rarely ran.** They need Node 24 and the company's private registry (`@acme-fedev/*`), which a
   cloud session cannot reach: most branches since 2026-11-05 ran substitutes instead (Node 22 or 26, the auth library
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,

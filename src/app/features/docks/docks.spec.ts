@@ -2035,7 +2035,7 @@ describe('Docks', () => {
           const show = [...detail(f)!.querySelectorAll('button')].find((b) =>
             text(b).startsWith('Show recording 1 of 1')
           )!;
-          expect(text(show)).toBe('Show recording 1 of 1 · 4.2 MB');
+          expect(text(show)).toBe('Show recording 1 of 1 · 4.0 MB');
           show.click();
           await refresh(f);
           expect(api.callsOf('getDefectEvidence').at(-1)?.args).toEqual([
@@ -2090,6 +2090,87 @@ describe('Docks', () => {
           await refresh(f);
           expect(detail(f)).toBeNull();
           expect(revoked).toEqual(made);
+        });
+
+        it('opens a verdict that was not reproduced, with its screenshots and no recording', async () => {
+          api.on('getDefectEvidence', png);
+          const reproduction = find('PROJ-207').reproduction!;
+          const f = await openDefects({
+            ...LIST,
+            defects: LIST.defects.map((d) =>
+              d.key === 'PROJ-207'
+                ? {
+                    ...d,
+                    reproduction: {
+                      ...reproduction,
+                      result: {
+                        ...reproduction.result!,
+                        verdict: 'inconclusive',
+                        why: 'The run timed out on the export page.',
+                      },
+                      evidence: [SHOT_1!],
+                    },
+                  }
+                : d
+            ),
+          });
+          byLabel<HTMLButtonElement>(
+            f,
+            'Inconclusive, the reproduction of PROJ-207'
+          ).click();
+          await refresh(f);
+          expect(text(detail(f))).toContain(
+            'The run timed out on the export page.'
+          );
+          expect(
+            [...detail(f)!.querySelectorAll('img')].map((i) => i.alt)
+          ).toEqual(['Screenshot 1 of 1']);
+          expect(detail(f)!.querySelector('video, ul + button')).toBeNull();
+          expect(text(detail(f))).toContain('Ahoy keeps the screenshots until');
+        });
+
+        it('closes the row for a new reproduction and does not open it by itself when that one ends', async () => {
+          api.on('getDefectEvidence', png);
+          api.on('getDefectSettings', () =>
+            Promise.resolve(
+              ok({
+                ...(getDefectSettings as DefectSettingsPage),
+                defects: {
+                  ...(getDefectSettings as DefectSettingsPage).defects,
+                  reproduceEnvironmentId: TEST_ID,
+                },
+              })
+            )
+          );
+          const f = await openDefects();
+          toggle(f).click();
+          await refresh(f);
+          expect(detail(f)).not.toBeNull();
+          api.on('reproduceDefect', () => Promise.resolve(ok(QUEUED)));
+          reproduceButton(f, 'PROJ-207').click();
+          await refresh(f);
+          confirm(document.querySelector('ah-reproduce-dialog')!).click();
+          await refresh(f);
+          expect(detail(f)).toBeNull();
+          expect(revoked).toEqual(made);
+          const next = {
+            ...find('PROJ-207').reproduction!,
+            runId: 'reproduce-proj-207-02',
+          };
+          api.on('listDefects', () =>
+            Promise.resolve(
+              ok({
+                ...LIST,
+                defects: LIST.defects.map((d) =>
+                  d.key === 'PROJ-207' ? { ...d, reproduction: next } : d
+                ),
+              })
+            )
+          );
+          await clock.advance(REPRODUCTION_FOLLOW_MS);
+          await refresh(f);
+          expect(toggle(f).getAttribute('aria-expanded')).toBe('false');
+          expect(detail(f)).toBeNull();
         });
 
         it('says when a reproduction kept nothing', async () => {

@@ -17,6 +17,7 @@ import {
   defectStartLine,
   defectTriageView,
   defectsLabel,
+  reproductionEnded,
   reproductionInProgress,
   reproductionView,
 } from '@domain/defects';
@@ -110,6 +111,9 @@ type ListState =
     }
     .defects__toggle {
       gap: 5px;
+      height: auto;
+      min-height: 28px;
+      padding: 0 10px;
       cursor: pointer;
       font: inherit;
       font-size: 11px;
@@ -365,28 +369,26 @@ type ListState =
                         }
                         @if (reproduction(defect); as repro) {
                           <span class="defects__reproduction">
-                            @if (hasVerdict(defect)) {
+                            @if (ended(defect)) {
                               <button
                                 [class]="
                                   tagClass(repro.tone) + ' defects__toggle'
                                 "
                                 type="button"
-                                [attr.aria-expanded]="isOpen(defect.key)"
+                                [attr.aria-expanded]="isOpen(defect)"
                                 [attr.aria-controls]="
-                                  isOpen(defect.key)
-                                    ? detailId(defect.key)
-                                    : null
+                                  isOpen(defect) ? detailId(defect.key) : null
                                 "
                                 [attr.aria-label]="
                                   repro.label +
                                   ', the reproduction of ' +
                                   defect.key
                                 "
-                                (click)="toggle(defect.key)"
+                                (click)="toggle(defect)"
                               >
                                 {{ repro.label }}
                                 <span aria-hidden="true">{{
-                                  isOpen(defect.key) ? '▾' : '▸'
+                                  isOpen(defect) ? '▾' : '▸'
                                 }}</span>
                               </button>
                             } @else {
@@ -539,8 +541,10 @@ export class BacklogDefects {
     const s = this.state();
     return s.kind === 'failed' ? s.error : null;
   });
-  /** The keys of the defects whose reproduction is open under them. */
+  /** The runs of the reproductions the person opened under their defects. */
   private readonly open = signal<ReadonlySet<string>>(new Set());
+  /** The tag classes of a verdict's tone. */
+  protected readonly tagClass = reproductionTagClass;
   /** The key of the defect being ignored or brought back, if any: one at a time. */
   protected readonly busy = signal<string | null>(null);
   protected readonly actionError = signal<{
@@ -620,17 +624,18 @@ export class BacklogDefects {
     return reproductionView(defect.reproduction);
   }
 
-  protected tagClass(tone: Parameters<typeof reproductionTagClass>[0]): string {
-    return reproductionTagClass(tone);
-  }
-
   /** Whether the defect's reproduction ended, so that it has steps and perhaps screenshots to open. */
-  protected hasVerdict(defect: Defect): boolean {
-    return defect.reproduction !== null && defect.reproduction.result !== null;
+  protected ended(defect: Defect): boolean {
+    return reproductionEnded(defect.reproduction);
   }
 
-  protected isOpen(key: string): boolean {
-    return this.open().has(key);
+  /**
+   * Whether the person opened this reproduction. A row is opened for one run: another reproduction of the defect,
+   * asked for while it was open, does not open by itself when it ends.
+   */
+  protected isOpen(defect: Defect): boolean {
+    const run = defect.reproduction?.runId;
+    return run !== undefined && this.open().has(run);
   }
 
   /** The id of a defect's detail row, which its tag controls. */
@@ -639,15 +644,17 @@ export class BacklogDefects {
   }
 
   /** Opens the defect's reproduction under it, or closes it. */
-  protected toggle(key: string): void {
+  protected toggle(defect: Defect): void {
+    const run = defect.reproduction?.runId;
+    if (run === undefined) return;
     const open = new Set(this.open());
-    if (!open.delete(key)) open.add(key);
+    if (!open.delete(run)) open.add(run);
     this.open.set(open);
   }
 
   /** The reproduction to show under the defect: an ended one the person opened; null otherwise. */
   protected openReproduction(defect: Defect): DefectReproduction | null {
-    return this.isOpen(defect.key) && this.hasVerdict(defect)
+    return this.isOpen(defect) && this.ended(defect)
       ? defect.reproduction
       : null;
   }
