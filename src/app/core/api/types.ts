@@ -1213,6 +1213,16 @@ export const REPRODUCTION_VERDICTS = listOf<Reproduction['verdict']>()([
   'inconclusive',
 ]);
 
+/** One screenshot or recording a reproduction kept, without its bytes (`getDefectEvidence` reads them). */
+export type ReproductionEvidence = Schemas['ReproductionEvidence'];
+export const EVIDENCE_KINDS = listOf<ReproductionEvidence['kind']>()([
+  'screenshot',
+  'video',
+]);
+export const EVIDENCE_MEDIA_TYPES = listOf<ReproductionEvidence['mediaType']>()(
+  ['image/png', 'image/jpeg', 'video/webm']
+);
+
 /** Body of `reproduceDefect`: the spend confirmed, and the environment when it is not the settings' one. */
 export type ReproduceDefectRequest = Schemas['ReproduceDefectRequest'];
 

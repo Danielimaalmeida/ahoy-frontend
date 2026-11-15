@@ -201,6 +201,7 @@ import {
   GATE_RESULTS,
   GATE_SOURCES,
   HUMAN_DECISIONS,
+  EVIDENCE_MEDIA_TYPES,
   MEETING_NOTE_IMAGE_TYPES,
   MODEL_SLOTS,
   DIAGNOSIS_ACTORS,
@@ -418,12 +419,13 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
       'getArtifactContent',
       'exportMetrics',
       'getMeetingNoteImage',
+      'getDefectEvidence',
       ...NOT_IN_THE_CLIENT_YET,
       ...NEVER_IN_THE_CLIENT,
     ];
     expect(members(inTheContract)).toEqual(members(expected));
-    expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      170
+    expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 4).toBe(
+      171
     );
   });
 
@@ -465,6 +467,14 @@ describe('each fixture is a valid successful answer of its operation', () => {
     const op = operationNamed('getMeetingNoteImage');
     expect(members(op.successMediaTypes)).toEqual(
       members(MEETING_NOTE_IMAGE_TYPES)
+    );
+    expect(members(op.successStatuses)).toEqual(['200', '304']);
+  });
+
+  it('getDefectEvidence: the contract answers the bytes of a screenshot or a recording in one of the three formats, or 304', () => {
+    const op = operationNamed('getDefectEvidence');
+    expect(members(op.successMediaTypes)).toEqual(
+      members(EVIDENCE_MEDIA_TYPES)
     );
     expect(members(op.successStatuses)).toEqual(['200', '304']);
   });

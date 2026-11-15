@@ -40,6 +40,7 @@ export type FakeApiOps = Pick<
   | 'unignoreDefect'
   | 'startDefect'
   | 'reproduceDefect'
+  | 'getDefectEvidence'
   | 'getDefectSettings'
   | 'getEnvironments'
   | 'getPhaseSettings'
@@ -271,6 +272,11 @@ export class FakeApi implements FakeApiOps {
   reproduceDefect: FakeApiOps['reproduceDefect'] = (key, environmentId) => {
     this.calls.push({ op: 'reproduceDefect', args: [key, environmentId] });
     return this.handlers.reproduceDefect?.(key, environmentId) ?? unreachable();
+  };
+
+  getDefectEvidence: FakeApiOps['getDefectEvidence'] = (key, evidence) => {
+    this.calls.push({ op: 'getDefectEvidence', args: [key, evidence.id] });
+    return this.handlers.getDefectEvidence?.(key, evidence) ?? unreachable();
   };
 
   getEnvironments: FakeApiOps['getEnvironments'] = () => {

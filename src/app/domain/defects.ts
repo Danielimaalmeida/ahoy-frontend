@@ -4,6 +4,7 @@
  */
 
 import { isStoryKey } from './identifiers';
+import { absoluteDay } from './time';
 
 /** What the tab reads of one defect. */
 export interface DefectFacts {
@@ -145,6 +146,66 @@ export function reproductionView(reproduction: ReproductionFacts | null): {
       ? reason
       : `${reason} · The defect changed in Jira since.`,
   };
+}
+
+/** What the detail reads of one screenshot or recording a reproduction kept. */
+export interface EvidenceFacts {
+  readonly kind: 'screenshot' | 'video';
+  readonly sizeBytes: number;
+  /** When Ahoy removes it. */
+  readonly expiresAt: string;
+}
+
+/** A file's size in words: "812 KB", "4.2 MB". */
+export function evidenceSize(bytes: number): string {
+  return bytes < 1_000_000
+    ? `${Math.max(1, Math.round(bytes / 1000))} KB`
+    : `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+/**
+ * A reproduction's screenshots and recordings apart, each named by its place ("Screenshot 2 of 5", "Recording 1 of
+ * 1"), a recording with its size, and the day Ahoy removes the first of them ("Sun 22 Nov"); null without any.
+ */
+export function evidenceView<T extends EvidenceFacts>(
+  evidence: readonly T[],
+  now: Date
+): {
+  readonly screenshots: readonly { readonly file: T; readonly label: string }[];
+  readonly recordings: readonly {
+    readonly file: T;
+    readonly label: string;
+    readonly size: string;
+  }[];
+  readonly keptUntil: string;
+} | null {
+  if (evidence.length === 0) return null;
+  const shots = evidence.filter((e) => e.kind === 'screenshot');
+  const videos = evidence.filter((e) => e.kind === 'video');
+  const first = evidence.reduce((a, b) =>
+    Date.parse(b.expiresAt) < Date.parse(a.expiresAt) ? b : a
+  );
+  return {
+    screenshots: shots.map((file, i) => ({
+      file,
+      label: `Screenshot ${i + 1} of ${shots.length}`,
+    })),
+    recordings: videos.map((file, i) => ({
+      file,
+      label: `Recording ${i + 1} of ${videos.length}`,
+      size: evidenceSize(file.sizeBytes),
+    })),
+    keptUntil: absoluteDay(first.expiresAt, now),
+  };
+}
+
+/** A request the browser saw fail, in one line: "GET https://test.example.com/api/orders · 500", or "· no answer". */
+export function failedRequestLine(request: {
+  readonly method: string;
+  readonly url: string;
+  readonly status: number | null;
+}): string {
+  return `${request.method} ${request.url} · ${request.status ?? 'no answer'}`;
 }
 
 /**

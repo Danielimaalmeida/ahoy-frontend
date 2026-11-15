@@ -3294,6 +3294,32 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/defects/{key}/evidence/{evidenceId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+        readonly evidenceId: string;
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The bytes of a screenshot or a recording one of the defect's reproductions kept.
+     * @description Anyone allowed into Ahoy (design §5 "Defect reproduction", "Screenshots and video"). Served with the format
+     *     recognised from the bytes when the run ended, `X-Content-Type-Options: nosniff` and a `sandbox` content
+     *     security policy. Evidence never changes, so the answer may be cached until it expires; its ETag is the quoted
+     *     sha256 of the bytes. `404` for a defect without that evidence, and once it expired and was removed. 0 AIU.
+     */
+    readonly get: operations['getDefectEvidence'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/settings/environments': {
     readonly parameters: {
       readonly query?: never;
@@ -6480,6 +6506,29 @@ export interface components {
        *     `not_reproduced`.
        */
       readonly result: null | components['schemas']['Reproduction'];
+      /**
+       * @description What the run kept for a person to look at, in the order it was made: the screenshots the agent took (the
+       *     last 12) and, only when the defect was reproduced, a recording of each of the first 3 tabs. Empty while
+       *     the run is in progress, for a run that kept none, and once they expired.
+       */
+      readonly evidence: readonly components['schemas']['ReproductionEvidence'][];
+    };
+    readonly ReproductionEvidence: {
+      /**
+       * Format: uuid
+       * @description Read its bytes at `/defects/{key}/evidence/{id}`.
+       */
+      readonly id: string;
+      /** @enum {string} */
+      readonly kind: 'screenshot' | 'video';
+      /** @enum {string} */
+      readonly mediaType: 'image/png' | 'image/jpeg' | 'video/webm';
+      readonly sizeBytes: number;
+      /**
+       * Format: date-time
+       * @description When Ahoy removes it: `AHOY_REPRO_EVIDENCE_DAYS` after the run ended (7 days by default).
+       */
+      readonly expiresAt: string;
     };
     readonly Reproduction: {
       /** @enum {string} */
@@ -11422,6 +11471,47 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getDefectEvidence: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: {
+        /** @description An ETag from an earlier response; a match answers 304 without a body. */
+        readonly 'If-None-Match'?: string;
+      };
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+        readonly evidenceId: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The screenshot or the recording. */
+      readonly 200: {
+        headers: {
+          /** @description The quoted sha256 of the bytes. */
+          readonly ETag?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'image/png': string;
+          readonly 'image/jpeg': string;
+          readonly 'video/webm': string;
+        };
+      };
+      /** @description The evidence has not changed since the given ETag. */
+      readonly 304: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
     };
   };
   readonly getEnvironments: {

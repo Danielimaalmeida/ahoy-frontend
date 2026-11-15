@@ -4,6 +4,9 @@ import {
   defectStartLine,
   defectTriageView,
   defectsLabel,
+  evidenceSize,
+  evidenceView,
+  failedRequestLine,
   reproductionInProgress,
   reproductionView,
 } from './defects';
@@ -226,5 +229,71 @@ describe('canReproduce', () => {
     expect(reproductionInProgress(null)).toBe(false);
     expect(canReproduce({ ...base, voyage: { status: 'ready' } })).toBe(false);
     expect(canReproduce({ ...base, ignored: { by: 'sam' } })).toBe(false);
+  });
+});
+
+describe('evidenceView', () => {
+  const now = new Date('2026-11-15T10:00:00Z');
+  const shot = (expiresAt: string) =>
+    ({ kind: 'screenshot', sizeBytes: 120_000, expiresAt }) as const;
+  const video = (sizeBytes: number) =>
+    ({ kind: 'video', sizeBytes, expiresAt: '2026-11-22T10:00:00Z' }) as const;
+
+  it('names the screenshots and the recordings by their place, a recording with its size', () => {
+    const view = evidenceView(
+      [
+        shot('2026-11-22T10:00:00Z'),
+        shot('2026-11-22T10:00:00Z'),
+        video(4_200_000),
+      ],
+      now
+    );
+    expect(view?.screenshots.map((s) => s.label)).toEqual([
+      'Screenshot 1 of 2',
+      'Screenshot 2 of 2',
+    ]);
+    expect(view?.recordings.map((r) => [r.label, r.size])).toEqual([
+      ['Recording 1 of 1', '4.2 MB'],
+    ]);
+  });
+
+  it('says the day Ahoy removes the first of them, with the year when it is another', () => {
+    expect(
+      evidenceView(
+        [shot('2026-11-22T12:00:00Z'), shot('2026-11-20T12:00:00Z')],
+        now
+      )?.keptUntil
+    ).toBe('Fri 20 Nov');
+    expect(evidenceView([shot('2027-01-02T12:00:00Z')], now)?.keptUntil).toBe(
+      'Sat 2 Jan 2027'
+    );
+  });
+
+  it('is null for a reproduction that kept nothing', () => {
+    expect(evidenceView([], now)).toBeNull();
+  });
+});
+
+describe('evidenceSize', () => {
+  it('says kilobytes below a megabyte and megabytes with one decimal above', () => {
+    expect(evidenceSize(300)).toBe('1 KB');
+    expect(evidenceSize(812_400)).toBe('812 KB');
+    expect(evidenceSize(1_000_000)).toBe('1.0 MB');
+    expect(evidenceSize(24 * 1024 * 1024)).toBe('25.2 MB');
+  });
+});
+
+describe('failedRequestLine', () => {
+  it('says the method, the address and the status, or that nothing answered', () => {
+    expect(
+      failedRequestLine({
+        method: 'GET',
+        url: 'https://test.example.com/api/orders',
+        status: 500,
+      })
+    ).toBe('GET https://test.example.com/api/orders · 500');
+    expect(
+      failedRequestLine({ method: 'POST', url: '/api/x', status: null })
+    ).toBe('POST /api/x · no answer');
   });
 });

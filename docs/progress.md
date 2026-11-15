@@ -29,21 +29,29 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   opened in Chromium on 2026-11-15 against a local `ahoy-hosted` API of `feat/environment-sign-in-test` with no
   dispatcher (0 AIU, fictional data, the verdict written into the database by hand), at 1280px and 390px, light and
   dark, the dialogs opened with the keyboard and closed with Escape. No reproduction or Test sign-in has run.
+- **On `feat/reproduction-evidence`** (not merged, on top of the branch above): a verdict's tag in Backlog › Defects
+  opens a row with the steps, what the browser reported, the screenshots and, for a reproduced defect, the recording
+  (read when asked for); below 1280px each defect is a card, as in the backlog's own table. Besides its tests it was
+  opened in Chromium on 2026-11-15 against a local API of `ahoy-hosted`'s branch of the same name with no dispatcher
+  (0 AIU; fictional screenshots and a recording stored through the API's own service), at 1280px and 390px, light and
+  dark, opened and closed with the keyboard, the recording played. No run has produced the evidence.
 - **The required checks rarely ran.** They need Node 24 and the company's private registry (`@acme-fedev/*`), which a
   cloud session cannot reach: most branches since 2026-11-05 ran substitutes instead (Node 22 or 26, the auth library
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,
   Node 24.22.2 through `npx node@24`): format, build, typecheck, lint and `ng test` (220 files, 3,809 tests) passed.
-  The latest substitute run, `feat/defect-reproduction` (2026-11-15, Node 22.23.4, the auth library stubbed): build,
-  typecheck, lint and format passed; `ng test` ran 236 files and 4,067 tests with one failure, `app.config.spec.ts`'s
+  The latest substitute run, `feat/reproduction-evidence` (2026-11-15, Node 22.23.4, the auth library stubbed): build,
+  typecheck, lint and format passed; `ng test` ran 236 files and 4,084 tests with one failure, `app.config.spec.ts`'s
   "refuses the mock sign-in in a production environment", which tests the real library's refusal the stub lacks.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` and the runner key of its PR #117
   (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`), and on
   `feat/product-conversations-2` its branch of the same name (migration 0053: Create in Jira and Add to a meeting on a
   proposal, `Conversation.lookUp`, `applyJiraChange`), and on `feat/defect-reproduction` its
   `feat/environment-sign-in-test` (PRs #126 to #128, migrations 0055 to 0057: the environments, `Defect.reproduction`,
-  `reproduceDefect`, `testEnvironment`, the reproduction fields of `DefectSettings`); `schema.d.ts` and the test mirror
-  are generated from it. Merge and deploy that API and its migrations with or before this front end: an older API
-  sends no `runnerKey`, `lookUp`, `reproduction` or `reproduceOn`, and the pages refuse its answer.
+  `reproduceDefect`, `testEnvironment`, the reproduction fields of `DefectSettings`), and on
+  `feat/reproduction-evidence` its branch of the same name (PR #130, migration 0058: `Defect.reproduction.evidence`,
+  `getDefectEvidence`); `schema.d.ts` and the test mirror are generated from it. Merge and deploy that API and its
+  migrations with or before this front end: an older API sends no `runnerKey`, `lookUp`, `reproduction`, `reproduceOn`
+  or `evidence`, and the pages refuse its answer.
 
 ## Not checked yet
 
@@ -55,6 +63,7 @@ What each feature still needs beyond the tests above. Its pull request has the d
 | The Product page (`/product`, admins only): proposals to Jira or a meeting, look-ups, quick pins and Apply      | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
 | Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                                 | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
 | Environments, Defects › Reproduction, the verdict and Reproduce in Backlog › Defects                            | A Test sign-in and a reproduction that ran (a cluster Job); a screen reader; 200% zoom                     |
+| A reproduction's steps, screenshots and recording under its defect; the Defects cards below 1280px              | Evidence a real run kept, a 24 MiB recording, an expired file; a screen reader; 200% zoom                  |
 | Create in Confluence, Team settings › Confluence                                                                | A real Confluence; updating a page once it exists is not built                                             |
 | Each person on a side of a meeting (People, `MeStore`)                                                          | A browser                                                                                                  |
 | Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                             | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |
@@ -95,10 +104,10 @@ What each feature still needs beyond the tests above. Its pull request has the d
 1. **The Product page's next phase** (`feat/product-conversations-2`, with `ahoy-hosted`'s branch of the same name):
    the user tries it against `npm run dev -- --simulate` (a question naming an epic proposes one) and says whether the
    per-conversation look-ups and the Jira changes stand; then review and merge, the API first or together.
-2. **Defect reproduction** (`feat/defect-reproduction`, with `ahoy-hosted`'s PRs #126 to #128): merge the API first or
-   together. What a reproduction did step by step (its steps, console errors, failed requests and screenshots) has no
-   screen yet: the tab shows the verdict and why. On TEST, after the deploy: add the environment, Test sign-in, then
-   one Reproduce from the Backlog before turning Reproduce before starting on.
+2. **Defect reproduction** (`feat/defect-reproduction` and, on top of it, `feat/reproduction-evidence`, with
+   `ahoy-hosted`'s PRs #126 to #128 and #130): merge the API first or together. On TEST, after the deploy: add the
+   environment, Test sign-in, then one Reproduce from the Backlog, and open its verdict to see the screenshots and the
+   recording, before turning Reproduce before starting on.
 3. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
    `npm ci`, then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop
    `test:scripts`.
