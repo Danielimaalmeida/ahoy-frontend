@@ -15,6 +15,8 @@ import {
   type ContextItemLike,
   type ConversationLike,
   type ConversationSummaryLike,
+  defaultJiraProject,
+  isJiraProjectKey,
 } from './conversations';
 
 const CONTEXT: readonly ContextItemLike[] = [
@@ -195,5 +197,27 @@ describe('the list', () => {
     expect(conversationSub({ ...items[0]!, turnCount: 0 }, true)).toBe(
       'CONV-3 · no questions'
     );
+  });
+});
+
+describe('Jira projects for a story proposal', () => {
+  it('takes a project key in any case, and nothing with spaces or a dash', () => {
+    expect(isJiraProjectKey('PROJ')).toBe(true);
+    expect(isJiraProjectKey(' fin_2 ')).toBe(true);
+    expect(isJiraProjectKey('PROJ-1')).toBe(false);
+    expect(isJiraProjectKey('pro j')).toBe(false);
+    expect(isJiraProjectKey('')).toBe(false);
+  });
+
+  it('offers the project of the first pinned Jira issue, else of a defect, else nothing', () => {
+    expect(
+      defaultJiraProject([
+        { kind: 'figma', ref: 'https://www.figma.com/design/x' },
+        { kind: 'defect', ref: 'BUG-7' },
+        { kind: 'jira', ref: 'PROJ-120' },
+      ])
+    ).toBe('PROJ');
+    expect(defaultJiraProject([{ kind: 'defect', ref: 'BUG-7' }])).toBe('BUG');
+    expect(defaultJiraProject([{ kind: 'repository', ref: 'web' }])).toBe('');
   });
 });

@@ -231,6 +231,7 @@ import {
   type ConversationContextItem,
   type ConversationList,
   type ConversationProposal,
+  type ProposalDone,
   type ConversationSummary,
   type ConversationTurn,
   type ProposalFlag,
@@ -2396,6 +2397,21 @@ const proposalConsistency: Check = (value, at) => {
   return null;
 };
 
+/** A proposal became an issue or a meeting topic: one of the two is named, unless its meeting was deleted since. */
+const proposalDone: Check = (value, at) =>
+  shape<ProposalDone>({
+    by: actor,
+    byName: nullable(text),
+    at: timestamp,
+    jiraKey: nullable(
+      patterned('a Jira key like PROJ-123', /^[A-Z][A-Z0-9_]+-[0-9]+$/, 100)
+    ),
+    jiraUrl: nullable(patterned('an https URL', /^https:\/\/\S+$/, 2000)),
+    meetingId: nullable(uuid),
+    meetingTitle: nullable(text),
+    topicId: nullable(uuid),
+  })(value, at);
+
 const conversationProposal: Check = (value, at) =>
   shape<ConversationProposal>({
     id: uuid,
@@ -2409,6 +2425,7 @@ const conversationProposal: Check = (value, at) =>
       })
     ),
     flags: arrayOf(proposalFlag),
+    done: nullable(proposalDone),
   })(value, at) ?? proposalConsistency(value, at);
 
 /** Only a turn being answered has live text; a failed one says why. */

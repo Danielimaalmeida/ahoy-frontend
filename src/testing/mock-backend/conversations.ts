@@ -15,6 +15,8 @@ import type {
   ConversationTurnRequest,
   GrillQuestion,
   NewConversation,
+  ProposalIssueRequest,
+  ProposalTopicRequest,
 } from '@core/api/types';
 import { iso, type Cancel, type MockClock } from './clock';
 import { MockProblem, type MockStream } from './http';
@@ -98,10 +100,21 @@ export class ConversationDesk {
   private nextSession = 1;
   private readonly streams = new Set<OpenStream>();
 
+  private nextIssue = 40;
+
   constructor(
     private readonly clock: MockClock,
     /** An open meeting topic's title, or null when there is none with this id. */
-    private readonly topicTitle: (id: string) => string | null
+    private readonly topicTitle: (id: string) => string | null,
+    /** Adds a topic with one note to a planned or running meeting; throws as the meetings do when it cannot. */
+    private readonly addMeetingTopic: (
+      actor: string,
+      meetingId: string,
+      title: string,
+      note: string
+    ) => { topicId: string; meetingTitle: string } = () => {
+      throw invalid('This mock has no meetings');
+    }
   ) {}
 
   private id(): string {
@@ -424,6 +437,105 @@ export class ConversationDesk {
     return c;
   }
 
+  /** Creates a story proposal in the pretend Jira, once: `<project>-41`, `-42`… Its conversation's owner only. */
+  createIssue(
+    actor: string,
+    proposalId: string,
+    body: ProposalIssueRequest
+  ): Conversation {
+    const { c, turn, proposal } = this.ownProposal(actor, proposalId);
+    if (proposal.done === null) {
+      if (proposal.kind !== 'story')
+        throw invalid(
+          'Only a story proposal is created in Jira; add a topic to a meeting'
+        );
+      const key = `${body.projectKey.toUpperCase()}-${++this.nextIssue}`;
+      this.markDone(c, turn, proposal, actor, {
+        jiraKey: key,
+        jiraUrl: `https://jira.example.com/browse/${key}`,
+        meetingId: null,
+        meetingTitle: null,
+        topicId: null,
+      });
+    }
+    return this.dto(c, actor);
+  }
+
+  /** Adds a proposal to a planned or running meeting, once, as a topic with a note. Its conversation's owner only. */
+  addToMeeting(
+    actor: string,
+    proposalId: string,
+    body: ProposalTopicRequest
+  ): Conversation {
+    const { c, turn, proposal } = this.ownProposal(actor, proposalId);
+    if (proposal.done === null) {
+      const title = proposal.story?.title ?? proposal.topic?.title ?? '';
+      const note =
+        proposal.topic?.note ??
+        (proposal.story === undefined
+          ? ''
+          : [
+              `As ${proposal.story.role}, I want ${proposal.story.want} so that ${proposal.story.soThat}.`,
+              '',
+              'Acceptance criteria:',
+              ...proposal.story.acceptanceCriteria.map((a) => `- ${a}`),
+            ].join('\n'));
+      const added = this.addMeetingTopic(actor, body.meetingId, title, note);
+      this.markDone(c, turn, proposal, actor, {
+        jiraKey: null,
+        jiraUrl: null,
+        meetingId: body.meetingId,
+        meetingTitle: added.meetingTitle,
+        topicId: added.topicId,
+      });
+    }
+    return this.dto(c, actor);
+  }
+
+  private ownProposal(actor: string, proposalId: string) {
+    for (const c of this.conversations.values())
+      for (const turn of c.turns) {
+        const proposal = turn.proposals.find((p) => p.id === proposalId);
+        if (proposal === undefined) continue;
+        if (c.owner !== actor)
+          throw new MockProblem(
+            c.shared ? 'forbidden' : 'not_found',
+            c.shared
+              ? "Only the conversation's owner may change it or ask in it"
+              : `Proposal ${proposalId} does not exist`
+          );
+        return { c, turn, proposal };
+      }
+    throw new MockProblem('not_found', `Proposal ${proposalId} does not exist`);
+  }
+
+  private markDone(
+    c: ConversationRecord,
+    turn: TurnRecord,
+    proposal: ConversationProposal,
+    actor: string,
+    into: Omit<
+      NonNullable<ConversationProposal['done']>,
+      'by' | 'byName' | 'at'
+    >
+  ): void {
+    const at = this.now();
+    turn.proposals = turn.proposals.map((p) =>
+      p.id === proposal.id
+        ? {
+            ...p,
+            done: {
+              by: actor,
+              byName: KNOWN_NAMES.get(actor) ?? null,
+              at,
+              ...into,
+            },
+          }
+        : p
+    );
+    c.updatedAt = at;
+  }
+
   private visible(actor: string, id: string): ConversationRecord {
     const c = this.conversations.get(id);
     if (c === undefined || (c.owner !== actor && !c.shared)) throw notFound(id);
@@ -550,6 +662,7 @@ export class ConversationDesk {
             note: 'Who may waive a fee, and up to how much? Decide before the first story ships.',
           },
           flags: [],
+          done: null,
         },
       ];
       questions = [
@@ -630,6 +743,7 @@ export class ConversationDesk {
         openQuestions: [],
       },
       flags,
+      done: null,
     };
   }
 

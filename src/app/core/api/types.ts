@@ -1328,6 +1328,15 @@ export type ConversationContextItem = Schemas['ConversationContextItem'];
 /** A story or a meeting topic the agent proposed in a turn. */
 export type ConversationProposal = Schemas['ConversationProposal'];
 
+/** What a proposal became (a Jira issue, or a meeting topic), who made it so and when. */
+export type ProposalDone = Schemas['ProposalDone'];
+
+/** Body of `createProposalIssue`: the Jira project, and the issue type (Story when left out). */
+export type ProposalIssueRequest = Schemas['ProposalIssueRequest'];
+
+/** Body of `addProposalToMeeting`: the planned or running meeting. */
+export type ProposalTopicRequest = Schemas['ProposalTopicRequest'];
+
 /** Something the agent flagged about a proposal, with its evidence. */
 export type ProposalFlag = Schemas['ProposalFlag'];
 

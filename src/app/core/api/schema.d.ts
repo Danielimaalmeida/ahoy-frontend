@@ -2184,6 +2184,57 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/conversation-proposals/{proposalId}/create-issue': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly proposalId: components['parameters']['ProposalId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Create a story proposal in Jira. Writes to Jira. Its conversation's owner only.
+     * @description The story drafts' path (D24, step 2): the server's Jira credentials (`POST /rest/api/2/issue`), the team's
+     *     summary prefix and fixed fields, the acceptance criteria in the checklist intake reads and the story-writer's
+     *     sections, labelled `ahoy-product` and `ahoy-conv-<n>`, naming the conversation. Once only: a proposal that
+     *     became an issue or a meeting topic answers the conversation as it is. `409 invalid_state` for a topic
+     *     proposal; `503 unavailable` when Jira is not configured or refuses (the proposal stays open). 0 AIU.
+     */
+    readonly post: operations['createProposalIssue'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/conversation-proposals/{proposalId}/meeting-topic': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly proposalId: components['parameters']['ProposalId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Add a proposal to a planned or running meeting, as a topic with a note. Its conversation's owner only.
+     * @description A topic proposal becomes a topic with its note; a story proposal a topic of its title, with the story, its
+     *     acceptance criteria, what is out of scope and its open questions as the note (D24, step 2). Planned before the
+     *     meeting starts, raised in it while it runs. Once only, like `createProposalIssue`. `409 invalid_state` when
+     *     the meeting has ended. 0 AIU.
+     */
+    readonly post: operations['addProposalToMeeting'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/crew': {
     readonly parameters: {
       readonly query?: never;
@@ -5656,6 +5707,38 @@ export interface components {
       readonly label: string;
       readonly evidence: string;
     };
+    readonly ProposalIssueRequest: {
+      /** @description The Jira project, such as PAY. */
+      readonly projectKey: string;
+      /** @description Story when left out. */
+      readonly issueType?: string;
+    };
+    readonly ProposalTopicRequest: {
+      /** Format: uuid */
+      readonly meetingId: string;
+    };
+    /** @description What a proposal became, and who made it so. A meeting or topic deleted since leaves its ids null. */
+    readonly ProposalDone: {
+      readonly by: string;
+      readonly byName: string | null;
+      /** Format: date-time */
+      readonly at: string;
+      /** @description The Jira issue created from it. */
+      readonly jiraKey: string | null;
+      /**
+       * Format: uri
+       * @description The issue in Jira, when Jira is configured.
+       */
+      readonly jiraUrl: string | null;
+      /** Format: uuid */
+      readonly meetingId: string | null;
+      readonly meetingTitle: string | null;
+      /**
+       * Format: uuid
+       * @description The meeting topic it became.
+       */
+      readonly topicId: string | null;
+    };
     /** @description A story (in the story drafts' template) or a topic for a meeting, as the agent handed it in. */
     readonly ConversationProposal: {
       /** Format: uuid */
@@ -5669,6 +5752,7 @@ export interface components {
         readonly note: string;
       };
       readonly flags: readonly components['schemas']['ProposalFlag'][];
+      readonly done: null | components['schemas']['ProposalDone'];
     };
     readonly ConversationTurn: {
       readonly n: number;
@@ -5757,7 +5841,7 @@ export interface components {
       readonly profiles: {
         /** @description The content repository's HEAD the profiles are read at. */
         readonly commit: string | null;
-        /** @description The agent profiles at HEAD, by name. */
+        /** @description The profiles a job can take, by name: the content repository's at HEAD and Ahoy's base agents. */
         readonly names: readonly string[];
         /** @description Why the content repository could not be read. */
         readonly problem: string | null;
@@ -6327,6 +6411,7 @@ export interface components {
     readonly MeetingNoteId: string;
     readonly MeetingSeriesId: string;
     readonly ConversationId: string;
+    readonly ProposalId: string;
     readonly MeetingStoryDraftId: string;
     readonly SonarServerId: string;
     readonly SonarRepositoryId: string;
@@ -9294,6 +9379,69 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly createProposalIssue: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly proposalId: components['parameters']['ProposalId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ProposalIssueRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The conversation, with the issue the proposal became. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly addProposalToMeeting: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly proposalId: components['parameters']['ProposalId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ProposalTopicRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The conversation, with the topic the proposal became. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly getCrew: {

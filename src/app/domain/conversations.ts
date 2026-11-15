@@ -295,3 +295,22 @@ export function conversationGroups<C extends ConversationSummaryLike>(
     shared: latest.filter((c) => !isMine(c.owner)),
   };
 }
+
+/** Whether `text` is a Jira project key, such as PROJ (letters, digits and _, a letter first), in any case. */
+export function isJiraProjectKey(text: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9_]{0,49}$/.test(text.trim());
+}
+
+/** The Jira project offered first for a story proposal: the project of the first pinned Jira issue, else of a defect. */
+export function defaultJiraProject(
+  context: readonly { readonly kind: string; readonly ref: string }[]
+): string {
+  const projectOf = (kind: string) => {
+    for (const item of context) {
+      const match = /^([A-Z][A-Z0-9_]*)-\d+$/.exec(item.ref);
+      if (item.kind === kind && match?.[1] !== undefined) return match[1];
+    }
+    return '';
+  };
+  return projectOf('jira') || projectOf('defect');
+}

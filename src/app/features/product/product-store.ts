@@ -7,6 +7,7 @@ import type {
   ConversationContextKind,
   ConversationRecipe,
   ConversationSummary,
+  MeetingSummary,
 } from '@core/api/types';
 import { AUTH_STRATEGY } from '@core/auth/auth-strategy';
 import { CLOCK, type Timer } from '@core/realtime/clock';
@@ -143,6 +144,54 @@ export class ProductStore {
       this.api.setConversationContext(id, {
         items: items.map((i) => ({ kind: i.kind, ref: i.ref })),
       })
+    );
+  }
+
+  /** Creates a story proposal in Jira, in `projectKey`. Writes to Jira, 0 AIU; once only. */
+  createIssue(
+    proposalId: string,
+    projectKey: string
+  ): Promise<ApiResult<Conversation>> {
+    return this.change(() =>
+      this.api.createProposalIssue(proposalId, {
+        projectKey: projectKey.trim().toUpperCase(),
+      })
+    );
+  }
+
+  /** Adds a proposal to a planned or running meeting, as a topic with a note. 0 AIU; once only. */
+  addToMeeting(
+    proposalId: string,
+    meetingId: string
+  ): Promise<ApiResult<Conversation>> {
+    return this.change(() =>
+      this.api.addProposalToMeeting(proposalId, { meetingId })
+    );
+  }
+
+  /** The meetings a proposal can go to: planned and running ones, soonest first, read when first asked for. */
+  readonly meetings = signal<readonly MeetingSummary[] | null>(null);
+  /** Why the meetings could not be read. */
+  readonly meetingsError = signal<ApiError | null>(null);
+
+  /** Reads the planned and running meetings once; again only after it failed. */
+  async loadMeetings(): Promise<void> {
+    if (this.meetings() !== null) return;
+    const [planned, running] = await Promise.all([
+      this.api.listMeetings({ status: 'planned' }),
+      this.api.listMeetings({ status: 'in_progress' }),
+    ]);
+    if (!planned.ok || !running.ok) {
+      this.meetingsError.set(
+        planned.ok ? (running.ok ? null : running.error) : planned.error
+      );
+      return;
+    }
+    this.meetingsError.set(null);
+    this.meetings.set(
+      [...running.value.items, ...planned.value.items].sort((a, b) =>
+        a.startsAt.localeCompare(b.startsAt)
+      )
     );
   }
 

@@ -344,7 +344,16 @@ describe('Product on the mock backend', () => {
     expect(text(turn().querySelector('ah-proposal-card'))).toContain(
       'Needs a backend change'
     );
-    expect(turn().querySelectorAll('ah-proposal-card button')).toHaveLength(0);
+    // The owner turns proposals into work: Create in Jira for a story, Add to a meeting for any.
+    expect(
+      [...turn().querySelectorAll('ah-proposal-card button')].map(text)
+    ).toEqual([
+      'Create in Jira',
+      'Add to a meeting',
+      'Create in Jira',
+      'Add to a meeting',
+      'Add to a meeting',
+    ]);
     expect(text(turn().querySelector('.ask'))).toContain(
       'Q1 · Should the fee show on invoices already sent?'
     );
@@ -374,6 +383,55 @@ describe('Product on the mock backend', () => {
     expect(
       page.requests.filter((r) => r.path === `/conversations/${id}/stream`)
     ).toHaveLength(1);
+  });
+
+  it('turns proposals into work: a story into a Jira issue in the pinned issue’s project, a topic into a meeting topic, once each', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, 'split-epic', [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    const cards = () => [...page.root.querySelectorAll('ah-proposal-card')];
+    expect(cards()).toHaveLength(3);
+
+    buttonNamed(cards()[0]!, 'Create in Jira').click();
+    await flush(page);
+    const project = cards()[0]!.querySelector('input')!;
+    expect(project.value).toBe('PROJ');
+    type(project, 'pro j');
+    await flush(page);
+    expect(buttonNamed(cards()[0]!, 'Create story').disabled).toBe(true);
+    type(project, 'fin');
+    await flush(page);
+    buttonNamed(cards()[0]!, 'Create story').click();
+    await flush(page);
+    expect(
+      page.requests.find((r) => r.path.endsWith('/create-issue'))?.body
+    ).toEqual({ projectKey: 'FIN' });
+    expect(text(cards()[0])).toContain('Created in Jira as FIN-41 by');
+    expect(
+      cards()[0]!.querySelector<HTMLAnchorElement>('a')!.getAttribute('href')
+    ).toBe('https://jira.example.com/browse/FIN-41');
+    expect(cards()[0]!.querySelectorAll('button')).toHaveLength(0);
+
+    buttonNamed(cards()[2]!, 'Add to a meeting').click();
+    await flush(page);
+    const meeting = cards()[2]!.querySelector('select')!;
+    expect(meeting.options.length).toBeGreaterThan(0);
+    expect([...meeting.options].map(text).join(' | ')).toContain('running');
+    buttonNamed(cards()[2]!, 'Add topic').click();
+    await flush(page);
+    const added = page.requests.find((r) => r.path.endsWith('/meeting-topic'));
+    expect(added?.body).toEqual({ meetingId: meeting.options[0]!.value });
+    expect(text(cards()[2])).toContain('Added to the meeting');
+    const topics = page.server.meetingDesk
+      .get(meeting.options[0]!.value)
+      .topics.map((t) => t.title);
+    expect(topics).toContain('Waivers for late fees');
   });
 
   it('reads the conversation every second once its stream breaks, less often while the session is warm, and stops when it ends', async () => {

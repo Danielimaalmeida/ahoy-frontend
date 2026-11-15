@@ -17,6 +17,7 @@ import {
   CONVERSATION_BUDGET_MAX_NANO_AIU,
   CONVERSATION_QUESTION_MAX,
   CONVERSATION_TURNS_MAX,
+  defaultJiraProject,
   openTurn,
   RECIPE_WORDS,
   sessionLine,
@@ -465,13 +466,16 @@ const ACTIVITY_SHOWN = 6;
                         <ah-proposal-card
                           [proposal]="p"
                           [number]="$index + 1"
+                          [canAct]="c.canAsk"
+                          [busy]="store.busy()"
+                          [defaultProject]="jiraProject()"
+                          [meetings]="store.meetings()"
+                          (createIssue)="createIssue(p.id, $event)"
+                          (addToMeeting)="addToMeeting(p.id, $event)"
+                          (meetingsWanted)="store.loadMeetings()"
                         />
                       }
                     </div>
-                    <span class="ah-hint"
-                      >Creating them in Jira or adding them to a meeting comes
-                      in the next step.</span
-                    >
                   }
                   @if (t.questions.length > 0) {
                     <div class="asks">
@@ -603,7 +607,10 @@ const ACTIVITY_SHOWN = 6;
                 Proposes stories and meeting topics, with the risks it sees.
               </li>
               <li>Asks you what only you can settle.</li>
-              <li>Changes nothing in Jira, meetings or code.</li>
+              <li>
+                Changes nothing in Jira, meetings or code itself: you create a
+                proposal in Jira or add it to a meeting, with a click.
+              </li>
             </ul>
           </aside>
         </div>
@@ -734,6 +741,29 @@ export class ConversationView {
   /** The latest few lines of what the agent read. */
   protected latest(activity: readonly string[]): readonly string[] {
     return activity.slice(-ACTIVITY_SHOWN);
+  }
+
+  /** The Jira project a story proposal is offered in first: the first pinned issue's. */
+  protected readonly jiraProject = computed(() =>
+    defaultJiraProject(this.store.conversation()?.context ?? [])
+  );
+
+  /** Creates a story proposal in Jira; the card then shows the issue. */
+  protected async createIssue(
+    proposalId: string,
+    projectKey: string
+  ): Promise<void> {
+    if (this.store.busy()) return;
+    await this.store.createIssue(proposalId, projectKey);
+  }
+
+  /** Adds a proposal to a meeting; the card then links to it. */
+  protected async addToMeeting(
+    proposalId: string,
+    meetingId: string
+  ): Promise<void> {
+    if (this.store.busy()) return;
+    await this.store.addToMeeting(proposalId, meetingId);
   }
 
   /** Sends the question; the answer streams in as the page reads the conversation again. */

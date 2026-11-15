@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import addProposalToMeeting from '@testing/fixtures/addProposalToMeeting.json';
 import askConversation from '@testing/fixtures/askConversation.json';
 import cancelConversationTurn from '@testing/fixtures/cancelConversationTurn.json';
 import createConversation from '@testing/fixtures/createConversation.json';
+import createProposalIssue from '@testing/fixtures/createProposalIssue.json';
 import getConversation from '@testing/fixtures/getConversation.json';
 import listConversations from '@testing/fixtures/listConversations.json';
 import setConversationContext from '@testing/fixtures/setConversationContext.json';
@@ -19,6 +21,8 @@ describe('isConversation', () => {
       setConversationContext,
       askConversation,
       cancelConversationTurn,
+      createProposalIssue,
+      addProposalToMeeting,
     ])
       expect(isConversation.explain(fixture)).toBeNull();
   });
@@ -63,6 +67,27 @@ describe('isConversation', () => {
         ],
       })
     ).not.toBeNull();
+  });
+
+  it('refuses what a proposal became when its Jira key or link is not one', () => {
+    const [created] = createProposalIssue.turns;
+    const story = created!.proposals[0]!;
+    const withDone = (done: Record<string, unknown>) => ({
+      ...createProposalIssue,
+      turns: [
+        {
+          ...created,
+          proposals: [{ ...story, done: { ...story.done, ...done } }],
+        },
+      ],
+    });
+    expect(isConversation.explain(withDone({}))).toBeNull();
+    expect(isConversation.explain(withDone({ jiraKey: 'proj 141' }))).toContain(
+      'jiraKey'
+    );
+    expect(
+      isConversation.explain(withDone({ jiraUrl: 'http://jira/PROJ-141' }))
+    ).toContain('jiraUrl');
   });
 
   it('refuses a key that is not CONV-<n>, an unknown pinned kind and a negative spend', () => {
