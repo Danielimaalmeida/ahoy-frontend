@@ -1328,6 +1328,16 @@ export type ConversationContextItem = Schemas['ConversationContextItem'];
 /** A story or a meeting topic the agent proposed in a turn. */
 export type ConversationProposal = Schemas['ConversationProposal'];
 
+/** What a proposal became (a Jira issue, or a meeting topic), who made it so and when. */
+export type ProposalDone = Schemas['ProposalDone'];
+export type JiraChange = Schemas['JiraChange'];
+
+/** Body of `createProposalIssue`: the Jira project, and the issue type (Story when left out). */
+export type ProposalIssueRequest = Schemas['ProposalIssueRequest'];
+
+/** Body of `addProposalToMeeting`: the planned or running meeting. */
+export type ProposalTopicRequest = Schemas['ProposalTopicRequest'];
+
 /** Something the agent flagged about a proposal, with its evidence. */
 export type ProposalFlag = Schemas['ProposalFlag'];
 
@@ -1358,6 +1368,7 @@ export type NewConversation = Schemas['NewConversation'];
 
 /** Body of `updateConversation`: a new title, or sharing. */
 export type ConversationChange = Schemas['ConversationChange'];
+export type ConversationLookUp = Schemas['ConversationLookUp'];
 
 /** Body of `setConversationContext`: everything pinned, replacing what was. */
 export type ConversationContextChange = Schemas['ConversationContextChange'];

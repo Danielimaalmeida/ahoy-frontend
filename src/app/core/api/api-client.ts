@@ -270,6 +270,8 @@ import type {
   ConversationList,
   ConversationTurnRequest,
   NewConversation,
+  ProposalIssueRequest,
+  ProposalTopicRequest,
 } from './types';
 import { MEETING_NOTE_IMAGE_TYPES } from './types';
 
@@ -1508,7 +1510,7 @@ export class ApiClient {
     );
   }
 
-  /** Renames or shares a conversation; its owner only. */
+  /** Renames or shares a conversation, or turns a look-up on or off; its owner only. */
   updateConversation(
     id: string,
     body: ConversationChange
@@ -1564,6 +1566,42 @@ export class ApiClient {
       'cancelConversationTurn',
       `/conversations/${segment(id)}/cancel`,
       null,
+      isConversation
+    );
+  }
+
+  /** Creates a story proposal in Jira, once; its conversation's owner only. Writes to Jira, 0 AIU. */
+  createProposalIssue(
+    proposalId: string,
+    body: ProposalIssueRequest
+  ): Promise<ApiResult<Conversation>> {
+    return this.post(
+      'createProposalIssue',
+      `/conversation-proposals/${segment(proposalId)}/create-issue`,
+      body,
+      isConversation
+    );
+  }
+
+  /** Applies a Jira change proposal through the server's Jira, once; its owner only. Writes to Jira, 0 AIU. */
+  applyJiraChange(proposalId: string): Promise<ApiResult<Conversation>> {
+    return this.post(
+      'applyJiraChange',
+      `/conversation-proposals/${segment(proposalId)}/apply`,
+      null,
+      isConversation
+    );
+  }
+
+  /** Adds a proposal to a planned or running meeting as a topic with a note, once; its owner only. 0 AIU. */
+  addProposalToMeeting(
+    proposalId: string,
+    body: ProposalTopicRequest
+  ): Promise<ApiResult<Conversation>> {
+    return this.post(
+      'addProposalToMeeting',
+      `/conversation-proposals/${segment(proposalId)}/meeting-topic`,
+      body,
       isConversation
     );
   }

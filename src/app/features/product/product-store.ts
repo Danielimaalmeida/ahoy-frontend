@@ -7,12 +7,13 @@ import type {
   ConversationContextKind,
   ConversationRecipe,
   ConversationSummary,
+  MeetingSummary,
 } from '@core/api/types';
 import { AUTH_STRATEGY } from '@core/auth/auth-strategy';
 import { CLOCK, type Timer } from '@core/realtime/clock';
 import { ConversationStream } from '@core/realtime/conversation-stream';
 import { FETCH } from '@core/realtime/fetch';
-import { pollDelay } from '@domain/conversations';
+import { pollDelay, type LookUp } from '@domain/conversations';
 
 /** One item to pin, as the context request takes it. */
 export interface PinRef {
@@ -146,9 +147,71 @@ export class ProductStore {
     );
   }
 
+  /** Creates a story proposal in Jira, in `projectKey`. Writes to Jira, 0 AIU; once only. */
+  createIssue(
+    proposalId: string,
+    projectKey: string
+  ): Promise<ApiResult<Conversation>> {
+    return this.change(() =>
+      this.api.createProposalIssue(proposalId, {
+        projectKey: projectKey.trim().toUpperCase(),
+      })
+    );
+  }
+
+  /** Applies a Jira change proposal: Ahoy makes the change in Jira. 0 AIU; once only. */
+  applyChange(proposalId: string): Promise<ApiResult<Conversation>> {
+    return this.change(() => this.api.applyJiraChange(proposalId));
+  }
+
+  /** Adds a proposal to a planned or running meeting, as a topic with a note. 0 AIU; once only. */
+  addToMeeting(
+    proposalId: string,
+    meetingId: string
+  ): Promise<ApiResult<Conversation>> {
+    return this.change(() =>
+      this.api.addProposalToMeeting(proposalId, { meetingId })
+    );
+  }
+
+  /** The meetings a proposal can go to: planned and running ones, soonest first, read when first asked for. */
+  readonly meetings = signal<readonly MeetingSummary[] | null>(null);
+  /** Why the meetings could not be read. */
+  readonly meetingsError = signal<ApiError | null>(null);
+
+  /** Reads the planned and running meetings once; again only after it failed. */
+  async loadMeetings(): Promise<void> {
+    if (this.meetings() !== null) return;
+    const [planned, running] = await Promise.all([
+      this.api.listMeetings({ status: 'planned' }),
+      this.api.listMeetings({ status: 'in_progress' }),
+    ]);
+    if (!planned.ok || !running.ok) {
+      this.meetingsError.set(
+        planned.ok ? (running.ok ? null : running.error) : planned.error
+      );
+      return;
+    }
+    this.meetingsError.set(null);
+    this.meetings.set(
+      [...running.value.items, ...planned.value.items].sort((a, b) =>
+        a.startsAt.localeCompare(b.startsAt)
+      )
+    );
+  }
+
   /** Shares the open conversation with the team (read-only to them), or stops sharing it. */
   share(shared: boolean): Promise<ApiResult<Conversation>> {
     return this.change((id) => this.api.updateConversation(id, { shared }));
+  }
+
+  /** Lets the agent of the open conversation look up Jira or Confluence, or not; from its next session. */
+  setLookUp(lookUp: LookUp, on: boolean): Promise<ApiResult<Conversation>> {
+    return this.change((id) =>
+      this.api.updateConversation(id, {
+        lookUp: lookUp === 'jira' ? { jira: on } : { confluence: on },
+      })
+    );
   }
 
   /** Renames the open conversation. */

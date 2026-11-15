@@ -17,6 +17,8 @@ import type {
   ConversationContextChange,
   ConversationTurnRequest,
   NewConversation,
+  ProposalIssueRequest,
+  ProposalTopicRequest,
   AddMeetingTopicRequest,
   AgentDiagnosisRequest,
   CancelRefinementRequest,
@@ -332,8 +334,20 @@ export class MockAhoyServer {
 
   /** A desk for the conversations of this world, which pins the open topics of its meetings. */
   private newConversations(): ConversationDesk {
-    return new ConversationDesk(this.clock, (id) =>
-      this.meetings.openTopicTitle(id)
+    return new ConversationDesk(
+      this.clock,
+      (id) => this.meetings.openTopicTitle(id),
+      (actor, meetingId, title, note) => {
+        const topic = this.meetings.addTopic(actor, meetingId, {
+          title,
+          raisedBy: 'us',
+        });
+        this.meetings.addNote(actor, topic.id, { text: note });
+        return {
+          topicId: topic.id,
+          meetingTitle: this.meetings.get(meetingId).title,
+        };
+      }
     );
   }
 
@@ -1121,6 +1135,32 @@ export class MockAhoyServer {
           this.conversations.create(
             call.actor,
             call.body as NewConversation // validated
+          )
+        );
+      case 'applyJiraChange':
+        return jsonResponse(
+          200,
+          this.conversations.applyChange(
+            call.actor,
+            call.path['proposalId'] ?? ''
+          )
+        );
+      case 'createProposalIssue':
+        return jsonResponse(
+          200,
+          this.conversations.createIssue(
+            call.actor,
+            call.path['proposalId'] ?? '',
+            call.body as ProposalIssueRequest // validated
+          )
+        );
+      case 'addProposalToMeeting':
+        return jsonResponse(
+          200,
+          this.conversations.addToMeeting(
+            call.actor,
+            call.path['proposalId'] ?? '',
+            call.body as ProposalTopicRequest // validated
           )
         );
       case 'getConversation':

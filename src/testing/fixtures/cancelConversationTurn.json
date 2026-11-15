@@ -44,5 +44,15 @@
     "cancelRequested": true,
     "startedAt": null
   },
-  "spentNanoAiu": 0
+  "spentNanoAiu": 0,
+  "lookUp": {
+    "jira": {
+      "on": true,
+      "available": true
+    },
+    "confluence": {
+      "on": true,
+      "available": false
+    }
+  }
 }
