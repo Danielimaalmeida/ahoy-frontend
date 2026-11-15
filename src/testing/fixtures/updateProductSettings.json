@@ -1,0 +1,16 @@
+{
+  "canEdit": true,
+  "product": {
+    "jiraProject": "PROJ",
+    "confluenceSpaces": ["BILL", "PROD"],
+    "repositories": ["web"],
+    "version": 1,
+    "updatedBy": "alex@example.com",
+    "updatedByName": "Alex Doe",
+    "updatedAt": "2026-11-15T13:00:00.000Z"
+  },
+  "model": {
+    "model": "claude-sonnet-5",
+    "reasoningEffort": null
+  }
+}

@@ -24,5 +24,20 @@
       "on": true,
       "available": false
     }
+  },
+  "model": {
+    "model": null,
+    "reasoningEffort": null,
+    "team": {
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null
+    }
+  },
+  "jiraProject": null,
+  "confluenceSpaces": [],
+  "teamDefaults": {
+    "jiraProject": null,
+    "confluenceSpaces": [],
+    "repositories": []
   }
 }

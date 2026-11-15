@@ -17,6 +17,7 @@ import getJiraSettings from '@testing/fixtures/getJiraSettings.json';
 import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
 import getPeopleSettings from '@testing/fixtures/getPeopleSettings.json';
 import getPhaseSettings from '@testing/fixtures/getPhaseSettings.json';
+import getProductSettings from '@testing/fixtures/getProductSettings.json';
 import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
 import getSetup from '@testing/fixtures/getSetup.json';
 import getSonarSettings from '@testing/fixtures/getSonarSettings.json';
@@ -106,6 +107,8 @@ describe('the Team settings frame', () => {
       r.flush(getBranchReleaseSettings);
     for (const r of http.match(`${BASE}/settings/meetings`))
       r.flush(getMeetingSettings);
+    for (const r of http.match(`${BASE}/settings/product`))
+      r.flush(getProductSettings);
     for (const r of http.match(`${BASE}/settings/people`))
       r.flush(getPeopleSettings);
     for (const r of http.match((q) => q.url === `${BASE}/settings/events`))
@@ -154,6 +157,7 @@ describe('the Team settings frame', () => {
       'Defects Off',
       'Branch releases 1 repository',
       'Meetings Defaults',
+      'Product None',
       'People 3 people',
       'My Copilot token',
     ]);
@@ -187,6 +191,7 @@ describe('the Team settings frame', () => {
       'defects',
       'branch-releases',
       'meetings',
+      'product',
       'people',
     ])
       expect(http.match(`${BASE}/settings/${section}`), section).toHaveLength(
