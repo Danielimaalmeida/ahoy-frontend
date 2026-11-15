@@ -10,6 +10,7 @@ import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import { StoriesStore } from '@core/stores/stories-store';
 import { ownerLabel } from '@domain/identifiers';
+import { phaseLabel, phasePosition } from '@domain/phases';
 import { AGROUND, type BoardStatus } from '@domain/status';
 import type { Phase, StoryStatus } from '@domain/types';
 import { Banner } from '@ui/banner/banner';
@@ -258,6 +259,10 @@ function describeFailure(error: ApiError): Failure {
     .line--head {
       line-height: 20px;
     }
+    /* The phase in words; in "Needs you" its place among the eight goes under it. The API word is the title. */
+    .phase__label {
+      font-weight: 500;
+    }
     .line--two {
       display: -webkit-box;
       -webkit-box-orient: vertical;
@@ -418,7 +423,14 @@ function describeFailure(error: ApiError): Failure {
                           </div>
                         </div>
                       </td>
-                      <td class="ah-mono clip">{{ row.story.phase }}</td>
+                      <td class="phase" [title]="row.story.phase">
+                        <span class="line phase__label">{{
+                          phaseLabel(row.story.phase)
+                        }}</span>
+                        @if (phasePosition(row.story.phase); as position) {
+                          <small ahCellSub class="line">{{ position }}</small>
+                        }
+                      </td>
                       <td>
                         <div class="rows3">
                           <span
@@ -549,7 +561,9 @@ function describeFailure(error: ApiError): Failure {
                           >{{ row.story.title }}
                         </div>
                       </td>
-                      <td class="ah-mono clip">{{ row.story.phase }}</td>
+                      <td class="clip" [title]="row.story.phase">
+                        {{ phaseLabel(row.story.phase) }}
+                      </td>
                       <td class="clip" [title]="row.agentLine">
                         {{ row.sea.member }}
                         @if (row.sea.runtime; as runtime) {
@@ -589,6 +603,8 @@ export class AllHandsPage {
   protected readonly tiles = TILES;
   /** The owner's name, or the q-number while the name is not known; the q-number is the cell's tooltip. */
   protected readonly ownerLabel = ownerLabel;
+  protected readonly phaseLabel = phaseLabel;
+  protected readonly phasePosition = phasePosition;
   protected readonly placeholderRows = PLACEHOLDER_ROWS;
   protected readonly counts = this.store.boardCounts;
   /**

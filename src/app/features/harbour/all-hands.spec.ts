@@ -457,7 +457,7 @@ describe('All hands', () => {
       expect(halted).toEqual([
         'Halted',
         'PROJ-118 Rate-limit the public search endpoint',
-        'planning',
+        'Planning Phase 2 of 8',
         expect.stringContaining('run_failed'),
         'sam@example.com',
         '2 h 10 m',
@@ -478,11 +478,22 @@ describe('All hands', () => {
         orders?.[7],
       ]).toEqual([
         'Needs decision',
-        'plan_review',
+        'Plan review Phase 3 of 8',
         '22 m',
         '12.4 / 30',
         'Review plan',
       ]);
+    });
+
+    it('names the phase in words with its place among the eight, and keeps the API word as its tooltip', async () => {
+      const { root } = await render();
+      const cell = panel(root, 'Needs you').querySelector(
+        'tbody tr:first-child td:nth-child(3)'
+      );
+      expect(cell?.getAttribute('title')).toBe('planning');
+      expect(cell?.querySelector('.ah-cell-sub')?.textContent).toBe(
+        'Phase 2 of 8'
+      );
     });
 
     it('ends each row with the action of its status, which goes to the tab that does it', async () => {
@@ -607,7 +618,7 @@ describe('All hands', () => {
       expect(running).toEqual([
         'Running',
         'PROJ-140 Add audit trail to admin role changes',
-        'planning',
+        'Planning',
         'Cartographer · claude-sonnet-5 · high',
         'jordan@example.com',
         'just now',
@@ -616,7 +627,7 @@ describe('All hands', () => {
       expect(queued).toEqual([
         'Queued',
         'PROJ-109 Migrate email templates to the new sender',
-        'intake',
+        'Intake',
         'Navigator goes next',
         'alex@example.com',
         '1 m ago',
