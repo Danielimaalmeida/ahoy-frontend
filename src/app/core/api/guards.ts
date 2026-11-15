@@ -2141,24 +2141,33 @@ export const isMeetingSettingsPage = guard<MeetingSettingsPage>(
   })
 );
 
+/** A model and effort a conversation or the team chose; null leaves each to the default. */
+const conversationModelFields = {
+  model: nullable(modelId),
+  reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+};
+const conversationModel = shape<ConversationModel>(conversationModelFields);
+
+/** Where the team works, which every new Product conversation starts with. */
+const productDefaultsFields = {
+  jiraProject: nullable(jiraProjectKey),
+  confluenceSpaces: arrayOf(nonEmptyText),
+  repositories: arrayOf(nonEmptyText),
+};
+
 /** The Product settings page, as `getProductSettings` and `updateProductSettings` answer it. */
 export const isProductSettingsPage = guard<ProductSettingsPage>(
   'ProductSettingsPage',
   shape<ProductSettingsPage>({
     canEdit: flag,
     product: shape<ProductSettings>({
-      jiraProject: nullable(jiraProjectKey),
-      confluenceSpaces: arrayOf(nonEmptyText),
-      repositories: arrayOf(nonEmptyText),
+      ...productDefaultsFields,
       version: nullable(wholeNumber('a version', 1)),
       updatedBy: nullable(actor),
       updatedByName: nullable(text),
       updatedAt: nullable(timestamp),
     }),
-    model: shape<ProductSettingsPage['model']>({
-      model: nullable(modelId),
-      reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
-    }),
+    model: conversationModel,
   })
 );
 
@@ -2591,11 +2600,6 @@ const conversationLookUp = shape<ConversationLookUp>({
   available: flag,
 });
 
-const conversationModel = shape<ConversationModel>({
-  model: nullable(modelId),
-  reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
-});
-
 /** A conversation with its context, turns and session, as every conversation command answers it. */
 export const isConversation = guard<Conversation>(
   'Conversation',
@@ -2623,14 +2627,9 @@ export const isConversation = guard<Conversation>(
     }),
     jiraProject: nullable(jiraProjectKey),
     confluenceSpaces: arrayOf(nonEmptyText),
-    teamDefaults: shape<Conversation['teamDefaults']>({
-      jiraProject: nullable(jiraProjectKey),
-      confluenceSpaces: arrayOf(nonEmptyText),
-      repositories: arrayOf(nonEmptyText),
-    }),
+    teamDefaults: shape<Conversation['teamDefaults']>(productDefaultsFields),
     model: shape<Conversation['model']>({
-      model: nullable(modelId),
-      reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+      ...conversationModelFields,
       team: conversationModel,
     }),
   })

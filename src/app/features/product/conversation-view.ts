@@ -11,9 +11,6 @@ import type {
   ConversationContextItem,
   ConversationTurn,
 } from '@core/api/types';
-
-/** One thing a question named that Ahoy read with it. */
-type ConversationMention = ConversationTurn['mentions'][number];
 import { CLOCK } from '@core/realtime/clock';
 import { checkAiuLimit, formatAiu } from '@domain/aiu';
 import {
@@ -63,6 +60,9 @@ import { ProposalCard } from './proposal-card';
 
 /** How many of the latest things the agent read show under an answer being written. */
 const ACTIVITY_SHOWN = 6;
+
+/** One thing a question named that Ahoy read with it. */
+type ConversationMention = ConversationTurn['mentions'][number];
 
 /**
  * The conversation open on the Product page: what it is for, what the agent reads (pinned chips, added and removed by
@@ -668,22 +668,30 @@ const ACTIVITY_SHOWN = 6;
                   >
                     <span class="ah-hint">Read with this question:</span>
                     @for (m of t.mentions; track m.kind + m.ref) {
-                      <span class="pin" [title]="m.problem ?? m.ref">
+                      <span class="pin" [title]="m.ref">
                         <span class="kind">{{ kindWords[m.kind].label }}</span>
                         <span class="text">{{ mentionText(m) }}</span>
+                        @if (m.problem !== null) {
+                          <span class="from">not read: {{ m.problem }}</span>
+                        }
                       </span>
-                      @if (canPin() && !pinned(m)) {
+                      @if (m.problem === null && canPin() && !pinned(m)) {
                         <button
                           ahButton="ghost"
                           size="sm"
                           type="button"
                           [attr.aria-label]="'Pin ' + m.ref"
                           [attr.aria-disabled]="store.busy() ? 'true' : null"
-                          (click)="pinMention(m)"
+                          (click)="pinMention(t.n, m)"
                         >
                           Pin
                         </button>
                       }
+                    }
+                    @if (mentionProblem()?.n === t.n) {
+                      <span class="ah-hint" role="alert">{{
+                        mentionProblem()?.text
+                      }}</span>
                     }
                   </div>
                 }
@@ -973,6 +981,11 @@ export class ConversationView {
   readonly quick = signal('');
   /** Why the quick box could not pin what was picked, until the person types again. */
   private readonly quickProblem = signal<string | null>(null);
+  /** Why Pin under a question did nothing, shown beside that question. */
+  protected readonly mentionProblem = signal<{
+    readonly n: number;
+    readonly text: string;
+  } | null>(null);
 
   /** The ways to pin what is in the quick box, the likeliest first. */
   protected readonly quickOptions = computed(() => quickPins(this.quick()));
@@ -1266,15 +1279,13 @@ export class ConversationView {
   }
 
   /** Pins something a question named, for every later session; the warm session stops, like any pin. */
-  protected async pinMention(m: ConversationMention): Promise<void> {
+  protected async pinMention(n: number, m: ConversationMention): Promise<void> {
     const c = this.store.conversation();
     if (c === null || this.store.busy() || this.pinned(m)) return;
     const refusal = pinRefusal(c.context, m.kind, m.ref);
-    if (refusal !== null) {
-      this.quickProblem.set(refusal);
-      return;
-    }
-    await this.store.pin([...c.context, { kind: m.kind, ref: m.ref }]);
+    this.mentionProblem.set(refusal === null ? null : { n, text: refusal });
+    if (refusal === null)
+      await this.store.pin([...c.context, { kind: m.kind, ref: m.ref }]);
   }
 
   /** Takes the Jira project out of this conversation; the warm session stops. */

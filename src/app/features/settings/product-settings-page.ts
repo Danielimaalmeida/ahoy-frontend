@@ -9,6 +9,7 @@ import {
   confluenceSpacesOf,
   jiraProjectOf,
   PRODUCT_REPOSITORIES_MAX,
+  repositoriesOf,
 } from '@domain/product-settings';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -35,18 +36,6 @@ function formValueOf(settings: ProductSettings): FormValue {
     spaces: settings.confluenceSpaces.join(', '),
     repositories: settings.repositories.join(', '),
   };
-}
-
-/** Repository names as typed, separated by commas or spaces, each once. */
-function repositoriesOf(typed: string): readonly string[] {
-  return [
-    ...new Set(
-      typed
-        .split(/[\s,]+/)
-        .map((r) => r.trim())
-        .filter((r) => r !== '')
-    ),
-  ];
 }
 
 const sameList = (a: readonly string[], b: readonly string[]) =>
@@ -305,10 +294,11 @@ export class ProductSettingsPage {
     const value = this.value();
     const project = jiraProjectOf(value.jiraProject);
     const spaces = confluenceSpacesOf(value.spaces);
+    const repositories = repositoriesOf(value.repositories);
     return {
       jiraProject: 'value' in project ? project.value : undefined,
       spaces: 'value' in spaces ? spaces.value : undefined,
-      repositories: repositoriesOf(value.repositories),
+      repositories: 'value' in repositories ? repositories.value : undefined,
     };
   });
   protected readonly dirty = computed(() => {
@@ -319,6 +309,7 @@ export class ProductSettingsPage {
       typed.jiraProject !== saved.jiraProject ||
       typed.spaces === undefined ||
       !sameList(typed.spaces, saved.confluenceSpaces) ||
+      typed.repositories === undefined ||
       !sameList(typed.repositories, saved.repositories)
     );
   });
@@ -330,11 +321,10 @@ export class ProductSettingsPage {
     const read = confluenceSpacesOf(this.value().spaces);
     return 'problem' in read ? read.problem : null;
   });
-  protected readonly repositoriesError = computed(() =>
-    this.typed().repositories.length > PRODUCT_REPOSITORIES_MAX
-      ? `At most ${PRODUCT_REPOSITORIES_MAX} repositories.`
-      : null
-  );
+  protected readonly repositoriesError = computed(() => {
+    const read = repositoriesOf(this.value().repositories);
+    return 'problem' in read ? read.problem : null;
+  });
   protected readonly saving = signal(false);
   private readonly saveError = signal<ApiError | null>(null);
   protected readonly saveFailure = computed(() => {
@@ -384,7 +374,7 @@ export class ProductSettingsPage {
     if (
       typed.jiraProject === undefined ||
       typed.spaces === undefined ||
-      this.repositoriesError() !== null
+      typed.repositories === undefined
     )
       return;
     const body: ProductSettingsChange = {

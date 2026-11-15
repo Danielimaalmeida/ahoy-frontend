@@ -18,9 +18,9 @@ import { TeamsSettingsPage } from './teams-settings-page';
 
 /**
  * Team settings: Setup first (what is still needed before stories run), then SonarQube, Jira, Confluence, the crew's
- * Teams channel, Figma, the agents' jobs, the phases, pull request comments, the defect watch, branch releases, the names of a
- * meeting's two sides, the Product page's defaults and who may use Ahoy, kept in the database and changed by admins, one section per page; last, the
- * person's own Copilot token. Reading and changing them is 0 AIU.
+ * Teams channel, Figma, the agents' jobs, the phases, pull request comments, the defect watch, branch releases, the
+ * names of a meeting's two sides, the Product page's defaults and who may use Ahoy, kept in the database and changed by
+ * admins, one section per page; last, the person's own Copilot token. Reading and changing them is 0 AIU.
  */
 export const SETTINGS_ROUTES: Routes = [
   {

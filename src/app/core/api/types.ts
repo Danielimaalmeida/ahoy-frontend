@@ -1163,7 +1163,10 @@ export type MeetingSettings = Schemas['MeetingSettings'];
 /** Body of `updateMeetingSettings`: either name or both. */
 export type MeetingSettingsChange = Schemas['MeetingSettingsChange'];
 
-/** Answer of `getProductSettings`: the team's Product defaults, the Product conversations' model, and whether the person may change them. */
+/**
+ * Answer of `getProductSettings`: the team's Product defaults, the Product conversations' model, and whether the person
+ * may change them.
+ */
 export type ProductSettingsPage = Schemas['ProductSettingsPage'];
 
 /** The Jira project, Confluence spaces and repositories every Product conversation starts with. */

@@ -747,7 +747,7 @@ describe('Product on the mock backend', () => {
     expect(form().querySelector('.switch')).toBeNull();
   });
 
-  it('starts a conversation with the team defaults, reads the issues a question names, and pins one on request', async () => {
+  it('starts a conversation with the team defaults, reads the issues a question names, says which it could not read, and pins one on request', async () => {
     let id = '';
     const page = await open('/product', (server) => {
       server.conversationDesk.productDefaults = {
@@ -789,7 +789,7 @@ describe('Product on the mock backend', () => {
 
     type(
       composer(page.root)!.querySelector('textarea'),
-      'Split #120 into stories'
+      'Split #120 and #404 into stories'
     );
     await flush(page);
     buttonNamed(composer(page.root)!, 'Send').click();
@@ -800,7 +800,10 @@ describe('Product on the mock backend', () => {
     )!;
     expect([...read.querySelectorAll('.pin')].map(parts)).toEqual([
       'Jira issue or epic PROJ-120 · Simulated PROJ-120',
+      'Jira issue or epic PROJ-404 not read: Jira has no such issue',
     ]);
+    // What could not be read is said in words, and is not offered to pin.
+    expect(read.querySelectorAll('button').length).toBe(1);
     buttonNamed(read, 'Pin').click();
     await flush(page);
     expect(page.requests.find((r) => r.method === 'PUT')?.body).toEqual({

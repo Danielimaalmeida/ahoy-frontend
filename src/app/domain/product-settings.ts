@@ -23,11 +23,9 @@ export function jiraProjectOf(
     : { problem: 'A Jira project key, such as PROJ: letters and digits.' };
 }
 
-/** Confluence space keys as typed, separated by commas or spaces (each once), or why they are refused. */
-export function confluenceSpacesOf(
-  typed: string
-): { readonly value: readonly string[] } | { readonly problem: string } {
-  const keys = [
+/** Names as typed, separated by commas or spaces, each once, in order. */
+function namesOf(typed: string): string[] {
+  return [
     ...new Set(
       typed
         .split(/[\s,]+/)
@@ -35,12 +33,29 @@ export function confluenceSpacesOf(
         .filter((k) => k !== '')
     ),
   ];
+}
+
+/** Confluence space keys as typed, separated by commas or spaces (each once), or why they are refused. */
+export function confluenceSpacesOf(
+  typed: string
+): { readonly value: readonly string[] } | { readonly problem: string } {
+  const keys = namesOf(typed);
   const bad = keys.find((k) => !SPACE_KEY.test(k));
   if (bad !== undefined)
     return { problem: `${bad} is not a Confluence space key, such as BILL.` };
   if (keys.length > PRODUCT_SPACES_MAX)
     return { problem: `At most ${PRODUCT_SPACES_MAX} spaces.` };
   return { value: keys };
+}
+
+/** Repository names as typed, separated by commas or spaces (each once), or why they are refused. */
+export function repositoriesOf(
+  typed: string
+): { readonly value: readonly string[] } | { readonly problem: string } {
+  const names = namesOf(typed);
+  return names.length > PRODUCT_REPOSITORIES_MAX
+    ? { problem: `At most ${PRODUCT_REPOSITORIES_MAX} repositories.` }
+    : { value: names };
 }
 
 const FIELD_NAMES: Readonly<Record<string, string>> = {

@@ -3,6 +3,7 @@ import {
   confluenceSpacesOf,
   describeProductEvent,
   jiraProjectOf,
+  repositoriesOf,
 } from './product-settings';
 
 describe('Team settings › Product in words', () => {
@@ -27,6 +28,14 @@ describe('Team settings › Product in words', () => {
         Array.from({ length: 11 }, (_, i) => `S${i}`).join(',')
       )
     ).toEqual({ problem: 'At most 10 spaces.' });
+  });
+
+  it('reads repository names separated by commas or spaces, each once, at most 3', () => {
+    expect(repositoriesOf('web, api web')).toEqual({ value: ['web', 'api'] });
+    expect(repositoriesOf('')).toEqual({ value: [] });
+    expect(repositoriesOf('web api docs app')).toEqual({
+      problem: 'At most 3 repositories.',
+    });
   });
 
   it('says what a change did, and nothing for another section', () => {

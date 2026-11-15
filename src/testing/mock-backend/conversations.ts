@@ -65,12 +65,22 @@ function mentionsOf(
   return [...new Set(keys)]
     .filter((key) => !c.context.some((p) => p.kind === 'jira' && p.ref === key))
     .slice(0, 10)
-    .map((ref) => ({
-      kind: 'jira' as const,
-      ref,
-      label: `Simulated ${ref}`,
-      problem: null,
-    }));
+    .map((ref) =>
+      // An issue numbered 404 is one Jira does not have, so the page's "not read" can be tried.
+      ref.endsWith('-404')
+        ? {
+            kind: 'jira' as const,
+            ref,
+            label: null,
+            problem: 'Jira has no such issue',
+          }
+        : {
+            kind: 'jira' as const,
+            ref,
+            label: `Simulated ${ref}`,
+            problem: null,
+          }
+    );
 }
 const FIGMA_LINK =
   /^https?:\/\/(?:www\.)?figma\.com\/(?:design|file|proto)\/[A-Za-z0-9]+(?:\/\S*)?$/;
