@@ -1510,7 +1510,7 @@ export class ApiClient {
     );
   }
 
-  /** Renames or shares a conversation; its owner only. */
+  /** Renames or shares a conversation, or turns a look-up on or off; its owner only. */
   updateConversation(
     id: string,
     body: ConversationChange

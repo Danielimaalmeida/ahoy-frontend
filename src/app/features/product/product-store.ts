@@ -13,7 +13,7 @@ import { AUTH_STRATEGY } from '@core/auth/auth-strategy';
 import { CLOCK, type Timer } from '@core/realtime/clock';
 import { ConversationStream } from '@core/realtime/conversation-stream';
 import { FETCH } from '@core/realtime/fetch';
-import { pollDelay } from '@domain/conversations';
+import { pollDelay, type LookUp } from '@domain/conversations';
 
 /** One item to pin, as the context request takes it. */
 export interface PinRef {
@@ -198,6 +198,15 @@ export class ProductStore {
   /** Shares the open conversation with the team (read-only to them), or stops sharing it. */
   share(shared: boolean): Promise<ApiResult<Conversation>> {
     return this.change((id) => this.api.updateConversation(id, { shared }));
+  }
+
+  /** Lets the agent of the open conversation look up Jira or Confluence, or not; from its next session. */
+  setLookUp(lookUp: LookUp, on: boolean): Promise<ApiResult<Conversation>> {
+    return this.change((id) =>
+      this.api.updateConversation(id, {
+        lookUp: lookUp === 'jira' ? { jira: on } : { confluence: on },
+      })
+    );
   }
 
   /** Renames the open conversation. */

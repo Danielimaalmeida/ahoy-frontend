@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 563caa322e97ebe10a031db3c5a0e51beedad562
+# Commit: 54f2d191ef685122b7c875501c5ae4bd538cd2ec
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2569,7 +2569,7 @@ paths:
     patch:
       operationId: updateConversation
       tags: [product]
-      summary: Rename a conversation, or share it with the other admins (read-only to them). Its owner only. 0 AIU.
+      summary: Rename a conversation, share it with the other admins (read-only to them), or turn its Jira or Confluence look-ups on or off. Its owner only. 0 AIU.
       requestBody:
         required: true
         content:
@@ -2585,6 +2585,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
     delete:
       operationId: deleteConversation
       tags: [product]
@@ -8713,6 +8714,31 @@ components:
             type: boolean,
             description: 'True shares it with every other admin (the Product page is for admins only), read-only to them.',
           }
+        lookUp:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          description: >-
+            Turns what the agent may look up on or off. Not while a question is being answered (409); a warm session
+            is stopped, so the next question starts one with the new look-ups.
+          properties:
+            jira: { type: boolean }
+            confluence: { type: boolean }
+    ConversationLookUp:
+      type: object
+      additionalProperties: false
+      required: ['on', available]
+      properties:
+        'on':
+          {
+            type: boolean,
+            description: 'Whether the person lets the agent look it up in this conversation.',
+          }
+        available:
+          {
+            type: boolean,
+            description: "Whether the server is set up to give it at all: its MCP server is among the configuration's.",
+          }
     ConversationContextKind:
       type: string
       enum: [jira, meeting_topic, defect, figma, repository]
@@ -8952,6 +8978,7 @@ components:
           turns,
           session,
           spentNanoAiu,
+          lookUp,
         ]
       properties:
         id: { type: string, format: uuid }
@@ -9021,6 +9048,14 @@ components:
             type: integer,
             description: 'What every session of the conversation spent.',
           }
+        lookUp:
+          type: object
+          additionalProperties: false
+          required: [jira, confluence]
+          description: What the agent may look up besides what the conversation pins; a change applies from the next session.
+          properties:
+            jira: { $ref: '#/components/schemas/ConversationLookUp' }
+            confluence: { $ref: '#/components/schemas/ConversationLookUp' }
     AgentSettingsPage:
       type: object
       additionalProperties: false

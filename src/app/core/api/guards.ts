@@ -232,6 +232,7 @@ import {
   type ConversationList,
   type ConversationProposal,
   type ProposalDone,
+  type ConversationLookUp,
   type ConversationSummary,
   type ConversationTurn,
   type ProposalFlag,
@@ -2483,6 +2484,11 @@ export const isConversationList = guard<ConversationList>(
   shape<ConversationList>({ items: arrayOf(conversationSummary) })
 );
 
+const conversationLookUp = shape<ConversationLookUp>({
+  on: flag,
+  available: flag,
+});
+
 /** A conversation with its context, turns and session, as every conversation command answers it. */
 export const isConversation = guard<Conversation>(
   'Conversation',
@@ -2503,5 +2509,9 @@ export const isConversation = guard<Conversation>(
       })
     ),
     spentNanoAiu: nanoAiu,
+    lookUp: shape<Conversation['lookUp']>({
+      jira: conversationLookUp,
+      confluence: conversationLookUp,
+    }),
   })
 );

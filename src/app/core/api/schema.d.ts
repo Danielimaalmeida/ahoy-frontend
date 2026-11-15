@@ -2081,7 +2081,7 @@ export interface paths {
     readonly delete: operations['deleteConversation'];
     readonly options?: never;
     readonly head?: never;
-    /** Rename a conversation, or share it with the other admins (read-only to them). Its owner only. 0 AIU. */
+    /** Rename a conversation, share it with the other admins (read-only to them), or turn its Jira or Confluence look-ups on or off. Its owner only. 0 AIU. */
     readonly patch: operations['updateConversation'];
     readonly trace?: never;
   };
@@ -5680,6 +5680,17 @@ export interface components {
       readonly title?: string;
       /** @description True shares it with every other admin (the Product page is for admins only), read-only to them. */
       readonly shared?: boolean;
+      /** @description Turns what the agent may look up on or off. Not while a question is being answered (409); a warm session is stopped, so the next question starts one with the new look-ups. */
+      readonly lookUp?: {
+        readonly jira?: boolean;
+        readonly confluence?: boolean;
+      };
+    };
+    readonly ConversationLookUp: {
+      /** @description Whether the person lets the agent look it up in this conversation. */
+      readonly on: boolean;
+      /** @description Whether the server is set up to give it at all: its MCP server is among the configuration's. */
+      readonly available: boolean;
     };
     /** @enum {string} */
     readonly ConversationContextKind:
@@ -5833,6 +5844,11 @@ export interface components {
       };
       /** @description What every session of the conversation spent. */
       readonly spentNanoAiu: number;
+      /** @description What the agent may look up besides what the conversation pins; a change applies from the next session. */
+      readonly lookUp: {
+        readonly jira: components['schemas']['ConversationLookUp'];
+        readonly confluence: components['schemas']['ConversationLookUp'];
+      };
     };
     readonly AgentSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
@@ -9262,6 +9278,7 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly setConversationContext: {

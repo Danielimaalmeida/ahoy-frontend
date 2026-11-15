@@ -18,7 +18,14 @@ import {
   CONVERSATION_QUESTION_MAX,
   CONVERSATION_TURNS_MAX,
   defaultJiraProject,
+  LOOK_UP_WORDS,
+  LOOK_UPS,
+  lookUpNote,
+  type LookUp,
   openTurn,
+  pinRefusal,
+  quickPins,
+  type QuickPin,
   RECIPE_WORDS,
   sessionLine,
   TURN_STATUS_WORDS,
@@ -28,6 +35,7 @@ import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { DialogService } from '@ui/dialog/dialog';
 import { EmptyState } from '@ui/empty-state/empty-state';
+import { FieldControl } from '@ui/field/field';
 import { Markdown } from '@ui/markdown/markdown';
 import { Skeleton } from '@ui/skeleton/skeleton';
 import { Router } from '@angular/router';
@@ -45,14 +53,23 @@ const ACTIVITY_SHOWN = 6;
 
 /**
  * The conversation open on the Product page: what it is for, what the agent reads (pinned chips, added and removed by
- * its owner), the questions with their answers (streamed while the agent writes, with what it is reading), the stories
+ * its owner, from the dialog or pasted in the quick box), what it may look up beyond them (Jira and Confluence, each
+ * turned on or off for the conversation), the questions with their answers (streamed while the agent writes, with what it is reading), the stories
  * and topics it proposed and the questions it asks back, and the line to ask the next question. The right column says
  * what was spent, the session's state (warm for ten minutes after an answer), and cancels the question being answered.
- * Proposals have no buttons yet. Asking may spend AIU; the rest is 0 AIU.
+ * A proposal is created in Jira or added to a meeting from its card. Asking may spend AIU; the rest is 0 AIU.
  */
 @Component({
   selector: 'ah-conversation-view',
-  imports: [Banner, Button, EmptyState, Markdown, ProposalCard, Skeleton],
+  imports: [
+    Banner,
+    Button,
+    EmptyState,
+    FieldControl,
+    Markdown,
+    ProposalCard,
+    Skeleton,
+  ],
   styles: `
     :host {
       display: block;
@@ -136,6 +153,54 @@ const ACTIVITY_SHOWN = 6;
     }
     .pin button:hover {
       color: var(--danger-text);
+    }
+    .quick {
+      display: inline-flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      flex: 1 1 240px;
+      max-width: 340px;
+      min-width: 0;
+    }
+    .quick input {
+      height: 30px;
+      font-size: 12px;
+      width: 100%;
+    }
+    .quick-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+    .quick-options .ref {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .quick-options kbd {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--ink-muted);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+      padding: 0 4px;
+    }
+    .look-up {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 12px;
+      gap: 6px;
+    }
+    .look-up[aria-disabled='true'] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .look-up[aria-disabled='true']:hover {
+      border-color: var(--line);
+    }
+    .look-up-note {
+      font-size: 12px;
     }
     .turn {
       display: flex;
@@ -382,6 +447,50 @@ const ACTIVITY_SHOWN = 6;
                   >
                 }
                 @if (canPin()) {
+                  <span class="quick">
+                    <input
+                      ahInput
+                      type="text"
+                      autocomplete="off"
+                      maxlength="2000"
+                      aria-label="Pin quickly"
+                      placeholder="Paste a Jira key, Figma link or repository…"
+                      [value]="quick()"
+                      (input)="typeQuick(text($event))"
+                      (keydown.enter)="
+                        $event.preventDefault(); pinQuick(quickOptions()[0])
+                      "
+                      (keydown.escape)="typeQuick('')"
+                    />
+                    @if (quickOptions().length > 0) {
+                      <span
+                        class="quick-options"
+                        role="group"
+                        aria-label="Pin as"
+                      >
+                        @for (
+                          o of quickOptions();
+                          track o.kind;
+                          let first = $first
+                        ) {
+                          <button
+                            ahButton="ghost"
+                            size="sm"
+                            type="button"
+                            [attr.aria-disabled]="store.busy() ? 'true' : null"
+                            (click)="pinQuick(o)"
+                          >
+                            {{ kindWords[o.kind].label }} ·
+                            <span class="ref">{{ quickChip(o) }}</span>
+                            @if (first) {
+                              <kbd aria-hidden="true">Enter</kbd>
+                            }
+                          </button>
+                        }
+                      </span>
+                    }
+                    <span class="ah-hint" role="status">{{ quickHint() }}</span>
+                  </span>
                   <button
                     ahButton="ghost"
                     size="sm"
@@ -392,6 +501,34 @@ const ACTIVITY_SHOWN = 6;
                     + Add context
                   </button>
                 }
+              </div>
+              <div
+                class="reads"
+                role="group"
+                aria-labelledby="look-up-label"
+                aria-describedby="look-up-note"
+              >
+                <span class="label" id="look-up-label">Can look up</span>
+                @for (l of lookUps; track l) {
+                  @let state = c.lookUp[l];
+                  <button
+                    class="ah-chip look-up"
+                    type="button"
+                    [attr.aria-pressed]="state.available && state.on"
+                    [attr.aria-disabled]="
+                      lookUpLocked(state.available) ? 'true' : null
+                    "
+                    (click)="toggleLookUp(l)"
+                  >
+                    @if (state.available && state.on) {
+                      <span aria-hidden="true">✓</span>
+                    }
+                    {{ lookUpWords[l] }}
+                  </button>
+                }
+                <span class="ah-hint look-up-note" id="look-up-note">{{
+                  lookUpText()
+                }}</span>
               </div>
             </section>
 
@@ -639,12 +776,35 @@ export class ConversationView {
   protected readonly questionMax = CONVERSATION_QUESTION_MAX;
   protected readonly turnsMax = CONVERSATION_TURNS_MAX;
   protected readonly chip = contextChipText;
+  protected readonly quickChip = (pin: QuickPin) =>
+    contextChipText({ ...pin, label: null });
+  protected readonly lookUps = LOOK_UPS;
+  protected readonly lookUpWords = LOOK_UP_WORDS;
   protected readonly aiu = (n: number) => formatAiu(n);
 
   /** The question being typed. */
   readonly draft = signal('');
   /** The cap typed for a session this question starts, in AIU; empty is the server's. */
   readonly cap = signal('');
+  /** What was pasted in the quick pin box. */
+  readonly quick = signal('');
+  /** Why the quick box could not pin what was picked, until the person types again. */
+  private readonly quickProblem = signal<string | null>(null);
+
+  /** The ways to pin what is in the quick box, the likeliest first. */
+  protected readonly quickOptions = computed(() => quickPins(this.quick()));
+  /** What the quick box says under it: why it cannot pin, or nothing. */
+  protected readonly quickHint = computed(() => {
+    const problem = this.quickProblem();
+    if (problem !== null) return problem;
+    if (this.quick().trim() === '' || this.quickOptions().length > 0) return '';
+    return 'Not a Jira key, Figma link or repository name. Add context pins a meeting topic.';
+  });
+  /** What the "Can look up" row says under its chips. */
+  protected readonly lookUpText = computed(() => {
+    const c = this.store.conversation();
+    return c === null ? '' : lookUpNote(c.lookUp, this.goesOn());
+  });
 
   protected readonly open = computed(() => {
     const c = this.store.conversation();
@@ -777,6 +937,37 @@ export class ConversationView {
     if ('error' in typed) return;
     const result = await this.store.ask(question, typed.cap);
     if (result.ok) this.draft.set('');
+  }
+
+  /** Takes what is typed in the quick box. */
+  protected typeQuick(value: string): void {
+    this.quick.set(value);
+    this.quickProblem.set(null);
+  }
+
+  /** Pins what was pasted in the quick box, as `pin` says; the box empties once it is pinned. */
+  protected async pinQuick(pin: QuickPin | undefined): Promise<void> {
+    const c = this.store.conversation();
+    if (pin === undefined || c === null || this.store.busy()) return;
+    const refusal = pinRefusal(c.context, pin.kind, pin.ref);
+    if (refusal !== null) {
+      this.quickProblem.set(refusal);
+      return;
+    }
+    const result = await this.store.pin([...c.context, pin]);
+    if (result.ok) this.typeQuick('');
+  }
+
+  /** Whether a look-up chip does nothing: not set up, not the owner's, or a question is open. */
+  protected lookUpLocked(available: boolean): boolean {
+    return !available || !this.canPin() || this.store.busy();
+  }
+
+  /** Turns a look-up on or off for this conversation; a warm session is stopped, so the next question starts one. */
+  protected async toggleLookUp(lookUp: LookUp): Promise<void> {
+    const c = this.store.conversation();
+    if (c === null || this.lookUpLocked(c.lookUp[lookUp].available)) return;
+    await this.store.setLookUp(lookUp, !c.lookUp[lookUp].on);
   }
 
   /** Unpins one item. */

@@ -65,6 +65,8 @@ interface ConversationRecord {
   createdAt: string;
   updatedAt: string;
   context: ConversationContextItem[];
+  /** Whether the person lets the agent look up Jira and Confluence beyond the pins. */
+  lookUp: { jira: boolean; confluence: boolean };
   turns: TurnRecord[];
   session: SessionRecord | null;
   /** What the sessions that ended spent. */
@@ -179,12 +181,25 @@ export class ConversationDesk {
 
   update(actor: string, id: string, body: ConversationChange): Conversation {
     const c = this.own(actor, id);
+    const lookUp = { ...c.lookUp, ...body.lookUp };
+    const lookUpChanged =
+      lookUp.jira !== c.lookUp.jira ||
+      lookUp.confluence !== c.lookUp.confluence;
+    if (lookUpChanged && this.openTurn(c) !== undefined)
+      throw invalid(
+        'A question is being answered: change what it looks up once it is answered'
+      );
     if (body.title !== undefined) {
       const title = body.title.trim().replaceAll(/\s+/g, ' ');
       if (title === '') throw refused('body/title', 'title is empty');
       c.title = title;
     }
     if (body.shared !== undefined) c.shared = body.shared;
+    if (lookUpChanged) {
+      c.lookUp = lookUp;
+      // A warm session was given the old look-ups: the next question starts a new one.
+      this.endSession(c);
+    }
     c.updatedAt = this.now();
     return this.dto(c, actor);
   }
@@ -428,6 +443,7 @@ export class ConversationDesk {
       createdAt: at,
       updatedAt: at,
       context: [],
+      lookUp: { jira: true, confluence: true },
       turns: [],
       session: null,
       spentBefore: 0,
@@ -788,6 +804,11 @@ export class ConversationDesk {
               startedAt: s.startedAt,
             },
       spentNanoAiu: c.spentBefore + (s?.spentNanoAiu ?? 0),
+      // The mock's Product agent has Jira tools and no Confluence server.
+      lookUp: {
+        jira: { on: c.lookUp.jira, available: true },
+        confluence: { on: c.lookUp.confluence, available: false },
+      },
     };
   }
 }

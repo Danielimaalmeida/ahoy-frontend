@@ -177,5 +177,15 @@
     "cancelRequested": false,
     "startedAt": "2026-11-03T09:01:10.000Z"
   },
-  "spentNanoAiu": 1400000000
+  "spentNanoAiu": 1400000000,
+  "lookUp": {
+    "jira": {
+      "on": true,
+      "available": true
+    },
+    "confluence": {
+      "on": true,
+      "available": false
+    }
+  }
 }

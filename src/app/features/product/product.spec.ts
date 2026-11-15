@@ -526,6 +526,105 @@ describe('Product on the mock backend', () => {
     );
   });
 
+  it('pins what is pasted in the quick box, Enter taking the first way offered, and says why it cannot', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const quick = () =>
+      page.root.querySelector<HTMLInputElement>(
+        'input[aria-label="Pin quickly"]'
+      )!;
+    const options = () =>
+      [...page.root.querySelectorAll('.quick-options button')].map(text);
+    const hint = () => text(page.root.querySelector('.quick [role=status]'));
+
+    type(quick(), 'proj-456');
+    await flush(page);
+    expect(options()).toEqual([
+      'Jira issue or epic · PROJ-456Enter',
+      'Defect · PROJ-456',
+      'Repository · proj-456',
+    ]);
+    quick().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush(page);
+    expect(
+      page.requests.find((r) => r.path.endsWith('/context'))?.body
+    ).toEqual({ items: [{ kind: 'jira', ref: 'PROJ-456' }] });
+    expect(quick().value).toBe('');
+
+    type(quick(), 'PROJ-456');
+    await flush(page);
+    quick().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush(page);
+    expect(hint()).toBe('It is pinned already.');
+    expect(
+      page.requests.filter((r) => r.path.endsWith('/context'))
+    ).toHaveLength(1);
+
+    type(quick(), 'not a ref!');
+    await flush(page);
+    expect(options()).toEqual([]);
+    expect(hint()).toContain('Not a Jira key, Figma link or repository name.');
+
+    type(quick(), 'https://www.figma.com/design/AbC123/Billing-Invoices');
+    await flush(page);
+    buttonNamed(page.root, /^Figma link · Billing Invoices/).click();
+    await flush(page);
+    expect(
+      [...page.root.querySelectorAll('.reads .pin .text')].map(text)
+    ).toEqual(['PROJ-456', 'Billing Invoices']);
+  });
+
+  it('turns the Jira look-up off for the conversation, ending the warm session, and offers no look-up that is not set up', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const row = () =>
+      page.root.querySelector<HTMLElement>(
+        '[aria-labelledby="look-up-label"]'
+      )!;
+    const chip = (name: string) => buttonNamed(row(), new RegExp(`${name}$`));
+    expect(chip('Jira').getAttribute('aria-pressed')).toBe('true');
+    expect(text(chip('Jira'))).toBe('✓ Jira');
+    expect(chip('Confluence').getAttribute('aria-pressed')).toBe('false');
+    expect(chip('Confluence').getAttribute('aria-disabled')).toBe('true');
+    expect(text(row())).toContain(
+      'The agent searches Jira beyond what is pinned. Turn it off to keep it to the pins. Confluence is not set up.'
+    );
+    chip('Confluence').click();
+    await flush(page);
+    expect(page.requests.some((r) => r.method === 'PATCH')).toBe(false);
+
+    type(composer(page.root)!.querySelector('textarea'), 'What links to it?');
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    // While a question is open the look-ups stay as they are.
+    expect(chip('Jira').getAttribute('aria-disabled')).toBe('true');
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    expect(text(composer(page.root))).toContain('The session is warm');
+    expect(text(row())).toContain('Changing it ends the warm session');
+
+    chip('Jira').click();
+    await flush(page);
+    expect(page.requests.find((r) => r.method === 'PATCH')?.body).toEqual({
+      lookUp: { jira: false },
+    });
+    expect(chip('Jira').getAttribute('aria-pressed')).toBe('false');
+    expect(text(row())).toContain(
+      'Jira is off for this conversation: the agent reads only the pinned items.'
+    );
+    expect(text(composer(page.root))).toContain(
+      'Sending starts a session that spends AIU'
+    );
+  });
+
   it('shows a conversation shared by someone else read-only: no pinning, no question, no cancel', async () => {
     const page = await open('/product');
     page.root.querySelector<HTMLAnchorElement>('a.line')!.click();

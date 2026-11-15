@@ -1367,6 +1367,7 @@ export type NewConversation = Schemas['NewConversation'];
 
 /** Body of `updateConversation`: a new title, or sharing. */
 export type ConversationChange = Schemas['ConversationChange'];
+export type ConversationLookUp = Schemas['ConversationLookUp'];
 
 /** Body of `setConversationContext`: everything pinned, replacing what was. */
 export type ConversationContextChange = Schemas['ConversationContextChange'];

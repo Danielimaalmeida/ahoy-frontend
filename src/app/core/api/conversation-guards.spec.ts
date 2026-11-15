@@ -102,6 +102,19 @@ describe('isConversation', () => {
       false
     );
   });
+  it('refuses a conversation without its look-ups, or with one that is not on and available', () => {
+    const { lookUp, ...without } = getConversation;
+    expect(isConversation(without)).toBe(false);
+    expect(
+      isConversation({
+        ...getConversation,
+        lookUp: { ...lookUp, confluence: { on: 'yes', available: false } },
+      })
+    ).toBe(false);
+    expect(
+      isConversation({ ...getConversation, lookUp: { jira: lookUp.jira } })
+    ).toBe(false);
+  });
 });
 
 describe('isConversationList', () => {

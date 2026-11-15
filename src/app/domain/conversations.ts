@@ -180,6 +180,36 @@ export function pinInput(
   }
 }
 
+/** One way to pin what was typed in the quick box: as a kind, under a ref the API takes. */
+export interface QuickPin {
+  readonly kind: ConversationContextKind;
+  readonly ref: string;
+}
+
+/**
+ * The ways to pin what was pasted in the quick box, the likeliest first (Enter takes it): a Jira key as an issue or
+ * a defect, a Figma link, or a repository alias. A lower-case key such as `web-2` may be either a key or a repository.
+ * Nothing when it is none of them; a meeting topic is picked from the search of the full dialog.
+ */
+export function quickPins(text: string): readonly QuickPin[] {
+  const value = text.trim();
+  if (value === '') return [];
+  if (value.length <= 2000 && FIGMA_LINK.test(value))
+    return [{ kind: 'figma', ref: value }];
+  const key = value.toUpperCase();
+  const asKey: readonly QuickPin[] = JIRA_KEY.test(key)
+    ? [
+        { kind: 'jira', ref: key },
+        { kind: 'defect', ref: key },
+      ]
+    : [];
+  const asRepository: readonly QuickPin[] =
+    REPOSITORY_ALIAS.test(value) && (asKey.length === 0 || value !== key)
+      ? [{ kind: 'repository', ref: value }]
+      : [];
+  return [...asKey, ...asRepository];
+}
+
 /** Why one more item of `kind` cannot be pinned next to `pinned`, or null when it can. */
 export function pinRefusal(
   pinned: readonly ContextItemLike[],
@@ -313,4 +343,55 @@ export function defaultJiraProject(
     return '';
   };
   return projectOf('jira') || projectOf('defect');
+}
+
+/** What the agent may look up beyond the pins, by its MCP server: each turned on or off per conversation. */
+export const LOOK_UPS = ['jira', 'confluence'] as const;
+export type LookUp = (typeof LOOK_UPS)[number];
+
+/** How the page names each look-up. */
+export const LOOK_UP_WORDS: Readonly<Record<LookUp, string>> = {
+  jira: 'Jira',
+  confluence: 'Confluence',
+};
+
+/** A look-up as a conversation has it: turned on by the person, and set up on the server at all. */
+export interface LookUpState {
+  readonly on: boolean;
+  readonly available: boolean;
+}
+
+/** The words of a list: "Jira", "Jira and Confluence". */
+function and(words: readonly string[]): string {
+  return words.length <= 1
+    ? (words[0] ?? '')
+    : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`;
+}
+
+/**
+ * What the "Can look up" row says under its chips: whether anything is set up, what is off and what the agent reads
+ * then, and that a change starts a new session (a warm one is stopped).
+ */
+export function lookUpNote(
+  lookUp: Readonly<Record<LookUp, LookUpState>>,
+  warm: boolean
+): string {
+  const available = LOOK_UPS.filter((l) => lookUp[l].available);
+  if (available.length === 0)
+    return 'Not set up: an admin gives the Product agent the Jira and Confluence tools (Team settings and the content repository). Until then it reads only what is pinned.';
+  const missing = LOOK_UPS.filter((l) => !lookUp[l].available).map(
+    (l) => LOOK_UP_WORDS[l]
+  );
+  const notSetUp =
+    missing.length === 0 ? '' : ` ${and(missing)} is not set up.`;
+  const off = available.filter((l) => !lookUp[l].on);
+  const on = available.filter((l) => lookUp[l].on).map((l) => LOOK_UP_WORDS[l]);
+  const change = warm
+    ? ' Changing it ends the warm session: the next question starts a new one.'
+    : ' It applies from the next question.';
+  if (off.length === 0)
+    return `The agent searches ${and(on)} beyond what is pinned. Turn ${on.length > 1 ? 'one' : 'it'} off to keep it to the pins.${warm ? change : ''}${notSetUp}`;
+  const reads =
+    on.length === 0 ? 'the pinned items' : `the pinned items and ${and(on)}`;
+  return `${and(off.map((l) => LOOK_UP_WORDS[l]))} ${off.length > 1 ? 'are' : 'is'} off for this conversation: the agent reads only ${reads}.${change}${notSetUp}`;
 }

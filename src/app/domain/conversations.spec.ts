@@ -17,6 +17,8 @@ import {
   type ConversationSummaryLike,
   defaultJiraProject,
   isJiraProjectKey,
+  lookUpNote,
+  quickPins,
 } from './conversations';
 
 const CONTEXT: readonly ContextItemLike[] = [
@@ -219,5 +221,58 @@ describe('Jira projects for a story proposal', () => {
     ).toBe('PROJ');
     expect(defaultJiraProject([{ kind: 'defect', ref: 'BUG-7' }])).toBe('BUG');
     expect(defaultJiraProject([{ kind: 'repository', ref: 'web' }])).toBe('');
+  });
+});
+
+describe('the quick pin box', () => {
+  it('offers a Jira key as an issue or a defect, and a lower-case one as a repository too', () => {
+    expect(quickPins(' PROJ-456 ')).toEqual([
+      { kind: 'jira', ref: 'PROJ-456' },
+      { kind: 'defect', ref: 'PROJ-456' },
+    ]);
+    expect(quickPins('web-2').map((p) => [p.kind, p.ref])).toEqual([
+      ['jira', 'WEB-2'],
+      ['defect', 'WEB-2'],
+      ['repository', 'web-2'],
+    ]);
+  });
+
+  it('offers a Figma link as one, a repository name as one, and nothing for anything else', () => {
+    const link = 'https://www.figma.com/design/AbC123/Billing';
+    expect(quickPins(link)).toEqual([{ kind: 'figma', ref: link }]);
+    expect(quickPins('web')).toEqual([{ kind: 'repository', ref: 'web' }]);
+    expect(quickPins('')).toEqual([]);
+    expect(quickPins('not a ref!')).toEqual([]);
+    expect(quickPins('https://example.com/design/x')).toEqual([]);
+  });
+});
+
+describe('what the agent may look up', () => {
+  const on = { on: true, available: true };
+  const off = { on: false, available: true };
+  const missing = { on: true, available: false };
+
+  it('says nothing is set up when neither server is', () => {
+    expect(lookUpNote({ jira: missing, confluence: missing }, false)).toMatch(
+      /^Not set up: an admin gives the Product agent/
+    );
+  });
+
+  it('names what it searches, and what is not set up', () => {
+    expect(lookUpNote({ jira: on, confluence: on }, false)).toBe(
+      'The agent searches Jira and Confluence beyond what is pinned. Turn one off to keep it to the pins.'
+    );
+    expect(lookUpNote({ jira: on, confluence: missing }, false)).toBe(
+      'The agent searches Jira beyond what is pinned. Turn it off to keep it to the pins. Confluence is not set up.'
+    );
+  });
+
+  it('says what is off and when a change applies: the next question, or once the warm session ends', () => {
+    expect(lookUpNote({ jira: on, confluence: off }, false)).toBe(
+      'Confluence is off for this conversation: the agent reads only the pinned items and Jira. It applies from the next question.'
+    );
+    expect(lookUpNote({ jira: off, confluence: off }, true)).toBe(
+      'Jira and Confluence are off for this conversation: the agent reads only the pinned items. Changing it ends the warm session: the next question starts a new one.'
+    );
   });
 });
