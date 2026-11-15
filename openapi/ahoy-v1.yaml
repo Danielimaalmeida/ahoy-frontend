@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: a3e5304f71201e6811e5931c5d0f39c908de0041
+# Commit: 51442666cbe2e409ce78ddf0fd5065b4ed57a62f
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -4515,6 +4515,14 @@ components:
           description: >-
             How the story is planned. Always sent by this server; a server older than the plan panel sends none, which
             is `standard`.
+        issueType:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 100
+          description: >-
+            What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read
+            it. A list tells a defect from a user story by it. Always sent by this server; a server older than it sends
+            none.
         version: { $ref: '#/components/schemas/Version' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }
@@ -8926,7 +8934,7 @@ components:
               {
                 type: array,
                 items: { type: string },
-                description: 'The agent profiles at HEAD, by name.',
+                description: "The profiles a job can take, by name: the content repository's at HEAD and Ahoy's base agents.",
               }
             problem:
               {

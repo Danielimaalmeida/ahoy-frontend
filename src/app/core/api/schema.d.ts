@@ -3499,6 +3499,8 @@ export interface components {
       readonly currentRunId: components['schemas']['RunId'] | null;
       /** @description How the story is planned. Always sent by this server; a server older than the plan panel sends none, which is `standard`. */
       readonly planningMode?: components['schemas']['PlanningMode'];
+      /** @description What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read it. A list tells a defect from a user story by it. Always sent by this server; a server older than it sends none. */
+      readonly issueType?: string | null;
       readonly version: components['schemas']['Version'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedAt: components['schemas']['Timestamp'];
@@ -5757,7 +5759,7 @@ export interface components {
       readonly profiles: {
         /** @description The content repository's HEAD the profiles are read at. */
         readonly commit: string | null;
-        /** @description The agent profiles at HEAD, by name. */
+        /** @description The profiles a job can take, by name: the content repository's at HEAD and Ahoy's base agents. */
         readonly names: readonly string[];
         /** @description Why the content repository could not be read. */
         readonly problem: string | null;

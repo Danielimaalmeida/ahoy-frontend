@@ -52,6 +52,7 @@ const EIGHT: readonly Story[] = [
     owner: 'alex@example.com',
     phase: 'plan_review',
     status: 'awaiting_decision',
+    issueType: 'Story',
     budgetNanoAiu: aiu('30'),
     spentNanoAiu: aiu('12.4'),
     updatedAt: '2026-10-06T09:48:00.000Z',
@@ -71,6 +72,7 @@ const EIGHT: readonly Story[] = [
     phase: 'planning',
     status: 'halted',
     haltReason: 'run_failed',
+    issueType: 'Bug',
     budgetNanoAiu: aiu('20'),
     spentNanoAiu: aiu('9.8'),
     updatedAt: '2026-10-06T08:00:00.000Z',
@@ -264,6 +266,10 @@ function cellText(td: Element): string {
     .join(' ');
 }
 
+/** The voyage's key in a row's cells: the first word of the voyage cell after the defect tag, if it has one. */
+const keyOf = (cells: string[]): string | undefined =>
+  cells[1]?.replace(/^Defect /, '').split(' ')[0];
+
 /** The text of every cell of every body row of a panel. */
 function rowsOf(section: HTMLElement): string[][] {
   return Array.from(section.querySelectorAll('tbody tr')).map((tr) =>
@@ -351,7 +357,7 @@ describe('All hands', () => {
         Array.from(root.querySelectorAll('a.tile b')).map((b) => text(b))
       ).toEqual(['1', '1', '2', '2']);
       const needs = panel(root, 'Needs you');
-      const keys = rowsOf(needs).map((cells) => cells[1]?.split(' ')[0]);
+      const keys = rowsOf(needs).map(keyOf);
       expect(keys).toContain('PROJ-150');
       expect(keys).not.toContain('PROJ-151');
       const first = rowsOf(needs)[0]!;
@@ -384,9 +390,7 @@ describe('All hands', () => {
 
     it('lists the voyages that wait on a person, the longest wait first', async () => {
       const { root } = await render();
-      const keys = rowsOf(panel(root, 'Needs you')).map(
-        (cells) => cells[1]?.split(' ')[0]
-      );
+      const keys = rowsOf(panel(root, 'Needs you')).map(keyOf);
       expect(keys).toEqual(['PROJ-118', 'PROJ-131', 'PROJ-123', 'PROJ-126']);
     });
 
@@ -456,7 +460,7 @@ describe('All hands', () => {
       const [halted, asks, orders] = rowsOf(panel(root, 'Needs you'));
       expect(halted).toEqual([
         'Halted',
-        'PROJ-118 Rate-limit the public search endpoint',
+        'Defect PROJ-118 Rate-limit the public search endpoint',
         'Planning Phase 2 of 8',
         expect.stringContaining('run_failed'),
         'sam@example.com',
@@ -494,6 +498,15 @@ describe('All hands', () => {
       expect(cell?.querySelector('.ah-cell-sub')?.textContent).toBe(
         'Phase 2 of 8'
       );
+    });
+
+    it('tags a voyage that fixes a defect, in words, and leaves user stories and unknown types untagged', async () => {
+      const { root } = await render();
+      const tags = Array.from(
+        panel(root, 'Needs you').querySelectorAll('tbody tr')
+      ).map((tr) => text(tr.querySelector('td:nth-child(2) .ah-tag')));
+      // PROJ-118 is a Bug; PROJ-131 and PROJ-126 have no type yet; PROJ-123 is a Story.
+      expect(tags).toEqual(['Defect', '', '', '']);
     });
 
     it('ends each row with the action of its status, which goes to the tab that does it', async () => {
@@ -589,10 +602,7 @@ describe('All hands', () => {
         'All voyages',
         '/voyages',
       ]);
-      expect(rowsOf(sea).map((cells) => cells[1]?.split(' ')[0])).toEqual([
-        'PROJ-140',
-        'PROJ-109',
-      ]);
+      expect(rowsOf(sea).map(keyOf)).toEqual(['PROJ-140', 'PROJ-109']);
     });
 
     it("shows the owner's name when the API knows it, with the q-number as the cell's tooltip", async () => {
@@ -748,9 +758,7 @@ describe('All hands', () => {
       expect(needs.querySelector('table')?.hasAttribute('aria-busy')).toBe(
         false
       );
-      expect(rowsOf(needs).map((cells) => cells[1]?.split(' ')[0])).toContain(
-        'PROJ-150'
-      );
+      expect(rowsOf(needs).map(keyOf)).toContain('PROJ-150');
     });
   });
 
@@ -853,9 +861,7 @@ describe('All hands', () => {
   describe('live', () => {
     it('moves a voyage from Needs you to In progress when the stream says it was answered, with no reload', async () => {
       const { root, api, stream, clock, flush } = await render();
-      expect(
-        rowsOf(panel(root, 'Needs you')).map((cells) => cells[1]?.split(' ')[0])
-      ).toContain('PROJ-131');
+      expect(rowsOf(panel(root, 'Needs you')).map(keyOf)).toContain('PROJ-131');
       api.on('getStory', () =>
         Promise.resolve(
           ok(
@@ -876,14 +882,16 @@ describe('All hands', () => {
       await settle();
       await clock.advance(300);
       await flush();
-      expect(
-        rowsOf(panel(root, 'Needs you')).map((cells) => cells[1]?.split(' ')[0])
-      ).toEqual(['PROJ-118', 'PROJ-123', 'PROJ-126']);
-      expect(
-        rowsOf(panel(root, 'In progress')).map(
-          (cells) => cells[1]?.split(' ')[0]
-        )
-      ).toEqual(['PROJ-131', 'PROJ-140', 'PROJ-109']);
+      expect(rowsOf(panel(root, 'Needs you')).map(keyOf)).toEqual([
+        'PROJ-118',
+        'PROJ-123',
+        'PROJ-126',
+      ]);
+      expect(rowsOf(panel(root, 'In progress')).map(keyOf)).toEqual([
+        'PROJ-131',
+        'PROJ-140',
+        'PROJ-109',
+      ]);
       expect(
         Array.from(root.querySelectorAll('a.tile b')).map((b) => text(b))
       ).toEqual(['0', '1', '2', '0']);

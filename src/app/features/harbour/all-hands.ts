@@ -10,6 +10,7 @@ import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import { StoriesStore } from '@core/stores/stories-store';
 import { ownerLabel } from '@domain/identifiers';
+import { isDefectType } from '@domain/issue-types';
 import { phaseLabel, phasePosition } from '@domain/phases';
 import { AGROUND, type BoardStatus } from '@domain/status';
 import type { Phase, StoryStatus } from '@domain/types';
@@ -17,6 +18,7 @@ import { Banner } from '@ui/banner/banner';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
+import { Icon } from '@ui/icon/icon';
 import { Panel, PanelHead } from '@ui/panel/panel';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
 import { Skeleton } from '@ui/skeleton/skeleton';
@@ -121,6 +123,7 @@ function describeFailure(error: ApiError): Failure {
   imports: [
     Banner,
     BudgetMeter,
+    Icon,
     Button,
     CellSub,
     EmptyState,
@@ -249,6 +252,17 @@ function describeFailure(error: ApiError): Failure {
     }
     .voyage a {
       white-space: nowrap;
+    }
+    /* A voyage that fixes a defect says so before its key; user stories, most of the list, carry no tag. The colours
+       are the send-back pair, so it reads apart from Halted's red. */
+    .defect {
+      gap: 3px;
+      height: 18px;
+      padding: 0 7px;
+      margin-right: 6px;
+      vertical-align: 1px;
+      background: var(--status-sendback-bg);
+      color: var(--status-sendback-fg);
     }
     .line {
       display: block;
@@ -415,6 +429,11 @@ function describeFailure(error: ApiError): Failure {
                       <td class="voyage">
                         <div class="rows3">
                           <div class="title" [title]="row.story.title">
+                            @if (isDefect(row.story.issueType)) {
+                              <span class="ah-tag defect"
+                                ><ah-icon name="bug" [size]="12" />Defect</span
+                              >
+                            }
                             <a
                               ahKey
                               [routerLink]="['/voyages', row.story.key]"
@@ -604,6 +623,8 @@ export class AllHandsPage {
   /** The owner's name, or the q-number while the name is not known; the q-number is the cell's tooltip. */
   protected readonly ownerLabel = ownerLabel;
   protected readonly phaseLabel = phaseLabel;
+  /** Whether the voyage fixes a defect, by its Jira issue type; a user story carries no tag. */
+  protected readonly isDefect = isDefectType;
   protected readonly phasePosition = phasePosition;
   protected readonly placeholderRows = PLACEHOLDER_ROWS;
   protected readonly counts = this.store.boardCounts;

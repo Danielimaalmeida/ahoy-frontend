@@ -19,10 +19,15 @@ export const DESIGN_SYSTEM_ICON_NAMES = [
 ] as const;
 
 /**
- * Icons the app draws for its empty states that the design system does not have yet (a known difference in
- * `docs/design-system.md`); they move into it, then here, when it adds them.
+ * Icons the app draws that the design system does not have yet, for its empty states and the defect tag (a known
+ * difference in `docs/design-system.md`); they move into it, then here, when it adds them.
  */
-export const APP_ICON_NAMES = ['calendar-plus', 'document', 'waves'] as const;
+export const APP_ICON_NAMES = [
+  'calendar-plus',
+  'document',
+  'waves',
+  'bug',
+] as const;
 
 /** Every icon the app draws: the design system's, then the app's own. */
 export const ICON_NAMES = [
@@ -114,6 +119,13 @@ export const ICONS: Readonly<Record<IconName, readonly IconShape[]>> = {
   waves: [
     path('M2 9c2 0 3-2 5-2s3 2 5 2 3-2 5-2 3 2 5 2'),
     path('M2 15c2 0 3-2 5-2s3 2 5 2 3-2 5-2 3 2 5 2'),
+  ],
+  bug: [
+    path('M9 7.5a3 3 0 0 1 6 0'),
+    { kind: 'rect', x: 7.5, y: 7.5, width: 9, height: 12.5, rx: 4.5 },
+    path(
+      'M12 11v9M3.5 13.5h4M16.5 13.5h4M4.5 19l3-1.5M19.5 19l-3-1.5M4.5 8l3 1.5M19.5 8l-3 1.5'
+    ),
   ],
 };
 
