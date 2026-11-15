@@ -2,7 +2,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import type { EnvironmentRow } from '@core/api/types';
-import { signInLabel, signInTestView } from '@domain/environments';
+import {
+  environmentUseProgress,
+  signInLabel,
+  signInTestView,
+} from '@domain/environments';
 import { absoluteDayTime } from '@domain/time';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -64,6 +68,45 @@ import { SettingsHistory } from './settings-history';
       .said {
         min-width: 6rem;
       }
+      .steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .step {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .mark {
+        flex: 0 0 auto;
+        display: inline-grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--line-soft);
+        color: var(--ink-muted);
+      }
+      .mark--done {
+        background: var(--status-done-bg);
+        color: var(--status-done-fg);
+      }
+      .what {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .title {
+        font-weight: 600;
+      }
       .actions {
         white-space: nowrap;
         text-align: right;
@@ -77,10 +120,12 @@ import { SettingsHistory } from './settings-history';
     <div class="head">
       <h2>Environments</h2>
       <span class="ah-muted"
-        >Where Ahoy may open your app with a browser to reproduce a defect
-        before starting it, and how the browser signs in. Which one defects are
-        reproduced in is chosen in
-        <a routerLink="/settings/defects">Defects</a>.</span
+        >An environment is a deployed copy of your app, such as your TEST, that
+        Ahoy may open in a browser. Ahoy uses it to reproduce a defect before
+        trying to fix it: it signs in, follows the steps written in the Jira
+        defect and says whether it saw the problem, so no voyage is spent on
+        something that is not a defect. Optional: without one, defects are
+        listed and started as before.</span
       >
     </div>
 
@@ -144,6 +189,81 @@ import { SettingsHistory } from './settings-history';
 
       <div class="layout">
         <div class="main">
+          @if (steps(); as progress) {
+            <ah-panel>
+              <ah-panel-head
+                heading="Before Ahoy can reproduce a defect"
+                subtitle="Three steps, the first two here."
+              />
+              <ah-panel-body>
+                <ol class="steps" aria-label="Steps to reproduce defects">
+                  <li class="step" data-step="add">
+                    <span
+                      class="mark"
+                      [class.mark--done]="progress.added"
+                      role="img"
+                      [attr.aria-label]="
+                        progress.added ? 'Done' : 'Step 1, to do'
+                      "
+                      >{{ progress.added ? '✓' : '1' }}</span
+                    >
+                    <div class="what">
+                      <span class="title">Add the environment</span>
+                      <span class="ah-muted"
+                        >Where the app opens and, if it has a login, an account
+                        made for Ahoy with its password. The browser opens only
+                        the origins listed for the environment.</span
+                      >
+                    </div>
+                  </li>
+                  <li class="step" data-step="test">
+                    <span
+                      class="mark"
+                      [class.mark--done]="progress.signsIn"
+                      role="img"
+                      [attr.aria-label]="
+                        progress.signsIn ? 'Done' : 'Step 2, to do'
+                      "
+                      >{{ progress.signsIn ? '✓' : '2' }}</span
+                    >
+                    <div class="what">
+                      <span class="title">Test the sign-in</span>
+                      <span class="ah-muted"
+                        >Ahoy opens the login page in a browser and checks that
+                        the account gets in. It spends no AIU, and an
+                        environment without a sign-in needs no test.</span
+                      >
+                    </div>
+                  </li>
+                  <li class="step" data-step="choose">
+                    <span
+                      class="mark"
+                      [class.mark--done]="progress.chosen"
+                      role="img"
+                      [attr.aria-label]="
+                        progress.chosen ? 'Done' : 'Step 3, to do'
+                      "
+                      >{{ progress.chosen ? '✓' : '3' }}</span
+                    >
+                    <div class="what">
+                      <span class="title"
+                        >Choose where defects are reproduced</span
+                      >
+                      <span class="ah-muted"
+                        >In
+                        <a routerLink="/settings/defects"
+                          >Team settings › Defects</a
+                        >, under Reproduction: Ahoy then tries each defect it
+                        could fix before starting it by itself. Reproduce on a
+                        defect in the <a routerLink="/docks">Backlog</a> tries
+                        one when you ask.</span
+                      >
+                    </div>
+                  </li>
+                </ol>
+              </ah-panel-body>
+            </ah-panel>
+          }
           <ah-panel>
             <ah-panel-head heading="Environments" [subtitle]="hostsLine(page)">
               @if (store.canEdit() && page.allowedHosts.length > 0) {
@@ -309,6 +429,19 @@ export class EnvironmentsSettingsPage {
   protected readonly testFailure = computed(() => {
     const error = this.testError();
     return error === null ? null : settingsErrorView(error);
+  });
+
+  /**
+   * How far the team is from reproducing a defect, for the three steps the page explains; null once all three are
+   * done, when the steps have nothing left to say.
+   */
+  protected readonly steps = computed(() => {
+    const page = this.store.page();
+    if (page === null) return null;
+    const progress = environmentUseProgress(page.environments);
+    return progress.added && progress.signsIn && progress.chosen
+      ? null
+      : progress;
   });
 
   constructor() {

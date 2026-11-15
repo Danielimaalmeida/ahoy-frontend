@@ -156,6 +156,34 @@ export function signInTestView(
   }
 }
 
+/** What the page reads of an environment to say how far the team is from reproducing a defect in one. */
+export interface EnvironmentUseFacts {
+  readonly signIn: { readonly kind: string };
+  readonly lastTest: { readonly result: string } | null;
+  /** Whether Team settings › Defects reproduces defects in it. */
+  readonly inUse: boolean;
+}
+
+/**
+ * How far the team is from reproducing a defect: an environment is listed; a browser can get into one (its last Test
+ * sign-in signed in, or it has no sign-in to test); and one is chosen in Team settings › Defects.
+ */
+export function environmentUseProgress(
+  environments: readonly EnvironmentUseFacts[]
+): {
+  readonly added: boolean;
+  readonly signsIn: boolean;
+  readonly chosen: boolean;
+} {
+  return {
+    added: environments.length > 0,
+    signsIn: environments.some(
+      (e) => e.signIn.kind === 'none' || e.lastTest?.result === 'signed_in'
+    ),
+    chosen: environments.some((e) => e.inUse),
+  };
+}
+
 /** The side navigation's word for the section: "2 environments", or "None". */
 export function environmentsStateLabel(count: number): {
   readonly label: string;

@@ -72,6 +72,12 @@ describe('the Environments section of Team settings', () => {
 
   const row = (name: string) =>
     root.querySelector(`tr[data-environment="${name}"]`);
+  /** The steps the page explains, each as its mark's name and its title. */
+  const steps = () =>
+    [...root.querySelectorAll('li.step')].map(
+      (li) =>
+        `${li.querySelector('.mark')?.getAttribute('aria-label')}: ${text(li.querySelector('.title'))}`
+    );
   const toasts = () =>
     TestBed.inject(ToastService)
       .toasts()
@@ -154,6 +160,61 @@ describe('the Environments section of Team settings', () => {
     ]);
     expect(bannerHeadings(root)).toEqual([]);
     expect(clock.pending).toBe(0);
+  });
+
+  it('says what an environment is for, and the three steps to a first reproduction when none is listed', async () => {
+    await answer({ ...getEnvironments, environments: [] });
+    expect(text(root.querySelector('.head'))).toContain(
+      'Ahoy uses it to reproduce a defect before trying to fix it'
+    );
+    expect(text(root.querySelector('.head'))).toContain(
+      'Optional: without one, defects are listed and started as before.'
+    );
+    expect(steps()).toEqual([
+      'Step 1, to do: Add the environment',
+      'Step 2, to do: Test the sign-in',
+      'Step 3, to do: Choose where defects are reproduced',
+    ]);
+    const list = root.querySelector(
+      '[aria-label="Steps to reproduce defects"]'
+    );
+    expect(
+      [...(list?.querySelectorAll('a') ?? [])].map(
+        (a) => `${text(a)} ${a.getAttribute('href')}`
+      )
+    ).toEqual(['Team settings › Defects /settings/defects', 'Backlog /docks']);
+  });
+
+  it('ticks the step of an environment that is listed but whose sign-in was never tested', async () => {
+    await answer({
+      ...getEnvironments,
+      environments: [{ ...TEST, lastTest: null, inUse: false }],
+    });
+    expect(steps()).toEqual([
+      'Done: Add the environment',
+      'Step 2, to do: Test the sign-in',
+      'Step 3, to do: Choose where defects are reproduced',
+    ]);
+  });
+
+  it('leaves only choosing it in Defects once a browser gets into an environment', async () => {
+    await answer({
+      ...getEnvironments,
+      environments: [{ ...TEST, inUse: false }, DEMO],
+    });
+    expect(steps()).toEqual([
+      'Done: Add the environment',
+      'Done: Test the sign-in',
+      'Step 3, to do: Choose where defects are reproduced',
+    ]);
+  });
+
+  it('drops the steps once defects are reproduced in an environment, and still says what one is for', async () => {
+    await answer();
+    expect(steps()).toEqual([]);
+    expect(text(root.querySelector('.head'))).toContain(
+      'Ahoy uses it to reproduce a defect before trying to fix it'
+    );
   });
 
   it('adds an environment that signs in with a form, the URLs as the API keeps them', async () => {

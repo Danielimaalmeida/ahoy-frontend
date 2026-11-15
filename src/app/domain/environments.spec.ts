@@ -1,6 +1,7 @@
 import {
   describeEnvironmentEvent,
   environmentUrlOf,
+  environmentUseProgress,
   environmentsStateLabel,
   originAllowed,
   originOfUrl,
@@ -188,6 +189,44 @@ describe('an environment in words', () => {
       label: '3 environments',
       off: false,
     });
+  });
+});
+
+describe('environmentUseProgress', () => {
+  const form = { signIn: { kind: 'form' }, lastTest: null, inUse: false };
+
+  it('says nothing is done before an environment is listed', () => {
+    expect(environmentUseProgress([])).toEqual({
+      added: false,
+      signsIn: false,
+      chosen: false,
+    });
+  });
+
+  it('counts a sign-in only once a test signed in, and an environment without one at once', () => {
+    expect(environmentUseProgress([form])).toEqual({
+      added: true,
+      signsIn: false,
+      chosen: false,
+    });
+    expect(
+      environmentUseProgress([{ ...form, lastTest: { result: 'refused' } }])
+        .signsIn
+    ).toBe(false);
+    expect(
+      environmentUseProgress([{ ...form, lastTest: { result: 'signed_in' } }])
+        .signsIn
+    ).toBe(true);
+    expect(
+      environmentUseProgress([form, { ...form, signIn: { kind: 'none' } }])
+        .signsIn
+    ).toBe(true);
+  });
+
+  it('says one is chosen when Team settings › Defects reproduces in it', () => {
+    expect(
+      environmentUseProgress([form, { ...form, inUse: true }]).chosen
+    ).toBe(true);
   });
 });
 

@@ -34,7 +34,7 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,
   Node 24.22.2 through `npx node@24`): format, build, typecheck, lint and `ng test` (220 files, 3,809 tests) passed.
   The latest substitute run, `feat/defect-reproduction` (2026-11-15, Node 22.23.4, the auth library stubbed): build,
-  typecheck, lint and format passed; `ng test` ran 236 files and 4,060 tests with one failure, `app.config.spec.ts`'s
+  typecheck, lint and format passed; `ng test` ran 236 files and 4,067 tests with one failure, `app.config.spec.ts`'s
   "refuses the mock sign-in in a production environment", which tests the real library's refusal the stub lacks.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` and the runner key of its PR #117
   (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`), and on
