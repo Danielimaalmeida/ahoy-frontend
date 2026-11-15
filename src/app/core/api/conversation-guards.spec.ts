@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import addProposalToMeeting from '@testing/fixtures/addProposalToMeeting.json';
+import applyJiraChange from '@testing/fixtures/applyJiraChange.json';
 import askConversation from '@testing/fixtures/askConversation.json';
 import cancelConversationTurn from '@testing/fixtures/cancelConversationTurn.json';
 import createConversation from '@testing/fixtures/createConversation.json';
@@ -23,6 +24,7 @@ describe('isConversation', () => {
       cancelConversationTurn,
       createProposalIssue,
       addProposalToMeeting,
+      applyJiraChange,
     ])
       expect(isConversation.explain(fixture)).toBeNull();
   });
@@ -102,6 +104,36 @@ describe('isConversation', () => {
       false
     );
   });
+  it('refuses a Jira change without its reason, or with an action it does not know', () => {
+    const turn = applyJiraChange.turns[0]!;
+    const change = turn.proposals[3]!;
+    const withProposal = (proposal: unknown) => ({
+      ...applyJiraChange,
+      turns: [{ ...turn, proposals: [proposal] }],
+    });
+    expect(isConversation(withProposal(change))).toBe(true);
+    const noReason: Record<string, unknown> = { ...change };
+    delete noReason['reason'];
+    expect(isConversation(withProposal(noReason))).toBe(false);
+    expect(
+      isConversation(
+        withProposal({ ...change, change: { action: 'delete_issue' } })
+      )
+    ).toBe(false);
+    expect(
+      isConversation(
+        withProposal({
+          ...change,
+          change: {
+            action: 'move_to_epic',
+            epicKey: 'PROJ-1',
+            issueKeys: [],
+          },
+        })
+      )
+    ).toBe(false);
+  });
+
   it('refuses a conversation without its look-ups, or with one that is not on and available', () => {
     const { lookUp, ...without } = getConversation;
     expect(isConversation(without)).toBe(false);

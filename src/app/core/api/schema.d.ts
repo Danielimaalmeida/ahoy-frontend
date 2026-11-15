@@ -2235,6 +2235,36 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/conversation-proposals/{proposalId}/apply': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly proposalId: components['parameters']['ProposalId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Apply a Jira change proposal. Writes to Jira. Its conversation's owner only.
+     * @description Ahoy makes the change with the server's Jira credentials (D24, option A), never the agent: `create_epic`
+     *     creates an Epic (`POST /rest/api/2/issue`, with its summary as the Epic Name when Jira has that field,
+     *     labelled `ahoy-product` and `ahoy-conv-<n>`) and moves its `issueKeys` into it; `move_to_epic` moves issues
+     *     into an epic (`POST /rest/agile/1.0/epic/{key}/issue`); `edit_issue` changes an issue's summary, description
+     *     and labels (`PUT /rest/api/2/issue/{key}`). Text the agent wrote goes in as text, wiki markup escaped. Once
+     *     only: an applied proposal answers the conversation as it is. `409 invalid_state` for a story or topic
+     *     proposal; `503 unavailable` when Jira is not configured or refuses the first call (nothing is recorded, so it
+     *     may be tried again). An epic created whose issues could not be moved is recorded as applied, with what failed
+     *     in `done.note`. 0 AIU.
+     */
+    readonly post: operations['applyJiraChange'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/crew': {
     readonly parameters: {
       readonly query?: never;
@@ -5734,7 +5764,7 @@ export interface components {
       readonly byName: string | null;
       /** Format: date-time */
       readonly at: string;
-      /** @description The Jira issue created from it. */
+      /** @description The Jira issue created from it, or the epic or issue a Jira change created or changed. */
       readonly jiraKey: string | null;
       /**
        * Format: uri
@@ -5749,19 +5779,55 @@ export interface components {
        * @description The meeting topic it became.
        */
       readonly topicId: string | null;
+      /** @description What applying a Jira change did, or what failed after a part of it was done; null otherwise. */
+      readonly note: string | null;
     };
-    /** @description A story (in the story drafts' template) or a topic for a meeting, as the agent handed it in. */
+    /** @description A change to Jira, by its action. */
+    readonly JiraChange:
+      | {
+          /** @constant */
+          readonly action: 'create_epic';
+          readonly projectKey: string;
+          readonly summary: string;
+          readonly description: string;
+          /** @description The issues moved into the epic once it exists. */
+          readonly issueKeys: readonly components['schemas']['JiraIssueKey'][];
+        }
+      | {
+          /** @constant */
+          readonly action: 'move_to_epic';
+          readonly epicKey: components['schemas']['JiraIssueKey'];
+          readonly issueKeys: readonly components['schemas']['JiraIssueKey'][];
+        }
+      | {
+          /** @constant */
+          readonly action: 'edit_issue';
+          readonly issueKey: components['schemas']['JiraIssueKey'];
+          /** @description The new summary; null keeps it. */
+          readonly summary: string | null;
+          /** @description The new description, replacing the old one whole; null keeps it. */
+          readonly description: string | null;
+          readonly addLabels: readonly string[];
+          readonly removeLabels: readonly string[];
+        };
+    /**
+     * @description A story (in the story drafts' template), a topic for a meeting, or a change to Jira with why, as the agent
+     *     handed it in.
+     */
     readonly ConversationProposal: {
       /** Format: uuid */
       readonly id: string;
       readonly turn: number;
       /** @enum {string} */
-      readonly kind: 'story' | 'topic';
+      readonly kind: 'story' | 'topic' | 'jira_change';
       readonly story?: components['schemas']['StoryTemplate'];
       readonly topic?: {
         readonly title: string;
         readonly note: string;
       };
+      readonly change?: components['schemas']['JiraChange'];
+      /** @description Why the agent proposes the change. */
+      readonly reason?: string;
       readonly flags: readonly components['schemas']['ProposalFlag'][];
       readonly done: null | components['schemas']['ProposalDone'];
     };
@@ -9459,6 +9525,33 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly applyJiraChange: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly proposalId: components['parameters']['ProposalId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The conversation, with what applying the change did. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Conversation'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
     };
   };
   readonly getCrew: {

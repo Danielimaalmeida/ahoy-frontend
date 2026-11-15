@@ -395,3 +395,31 @@ export function lookUpNote(
     on.length === 0 ? 'the pinned items' : `the pinned items and ${and(on)}`;
   return `${and(off.map((l) => LOOK_UP_WORDS[l]))} ${off.length > 1 ? 'are' : 'is'} off for this conversation: the agent reads only ${reads}.${change}${notSetUp}`;
 }
+
+/** A change to Jira the agent proposed, as far as its title reads it. */
+export type JiraChangeLike =
+  | {
+      readonly action: 'create_epic';
+      readonly projectKey: string;
+      readonly summary: string;
+    }
+  | {
+      readonly action: 'move_to_epic';
+      readonly epicKey: string;
+      readonly issueKeys: readonly string[];
+    }
+  | { readonly action: 'edit_issue'; readonly issueKey: string };
+
+/** A Jira change proposal's title: what applying it does, in a few words. */
+export function jiraChangeTitle(change: JiraChangeLike): string {
+  switch (change.action) {
+    case 'create_epic':
+      return `New epic in ${change.projectKey}: ${change.summary}`;
+    case 'move_to_epic': {
+      const n = change.issueKeys.length;
+      return `Move ${n} ${n === 1 ? 'issue' : 'issues'} into ${change.epicKey}`;
+    }
+    case 'edit_issue':
+      return `Change ${change.issueKey}`;
+  }
+}

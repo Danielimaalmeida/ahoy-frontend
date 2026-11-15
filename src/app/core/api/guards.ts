@@ -232,6 +232,7 @@ import {
   type ConversationList,
   type ConversationProposal,
   type ProposalDone,
+  type JiraChange,
   type ConversationLookUp,
   type ConversationSummary,
   type ConversationTurn,
@@ -2388,14 +2389,76 @@ const proposalFlag = shape<ProposalFlag>({
   evidence: boundedText('evidence of 1 to 500 characters', 1, 500),
 });
 
-/** A proposal carries the story or the topic its kind names. */
+/** A proposal carries the story, the topic or the change (with why) its kind names. */
 const proposalConsistency: Check = (value, at) => {
   if (!isRecord(value)) return null;
   if (value['kind'] === 'story' && value['story'] === undefined)
     return `${at}.story must be set for a story proposal`;
   if (value['kind'] === 'topic' && value['topic'] === undefined)
     return `${at}.topic must be set for a topic proposal`;
+  if (
+    value['kind'] === 'jira_change' &&
+    (value['change'] === undefined || value['reason'] === undefined)
+  )
+    return `${at}.change and ${at}.reason must be set for a Jira change`;
   return null;
+};
+
+const jiraSummary = boundedText('a summary of 1 to 255 characters', 1, 255);
+const jiraDescription = boundedText(
+  'a description of 1 to 20000 characters',
+  1,
+  20_000
+);
+const jiraKeys = (min: number): Check => {
+  const each = arrayOf(jiraIssueKey);
+  return (value, at) =>
+    each(value, at) ??
+    (Array.isArray(value) && (value.length < min || value.length > 50)
+      ? `${at} must hold ${min} to 50 Jira keys`
+      : null);
+};
+const jiraLabels: Check = (value, at) =>
+  arrayOf(boundedText('a label of 1 to 100 characters', 1, 100))(value, at) ??
+  (Array.isArray(value) && value.length > 10
+    ? `${at} must hold at most 10 labels`
+    : null);
+
+type JiraChangeOf<A extends JiraChange['action']> = Extract<
+  JiraChange,
+  { action: A }
+>;
+
+/** A change to Jira, checked by its action. */
+const jiraChange: Check = (value, at) => {
+  if (!isRecord(value)) return `${at} must be an object`;
+  switch (value['action']) {
+    case 'create_epic':
+      return shape<JiraChangeOf<'create_epic'>>({
+        action: oneOf(['create_epic'] as const),
+        projectKey: jiraProjectKey,
+        summary: jiraSummary,
+        description: jiraDescription,
+        issueKeys: jiraKeys(0),
+      })(value, at);
+    case 'move_to_epic':
+      return shape<JiraChangeOf<'move_to_epic'>>({
+        action: oneOf(['move_to_epic'] as const),
+        epicKey: jiraIssueKey,
+        issueKeys: jiraKeys(1),
+      })(value, at);
+    case 'edit_issue':
+      return shape<JiraChangeOf<'edit_issue'>>({
+        action: oneOf(['edit_issue'] as const),
+        issueKey: jiraIssueKey,
+        summary: nullable(jiraSummary),
+        description: nullable(jiraDescription),
+        addLabels: jiraLabels,
+        removeLabels: jiraLabels,
+      })(value, at);
+    default:
+      return `${at}.action must be create_epic, move_to_epic or edit_issue`;
+  }
 };
 
 /** A proposal became an issue or a meeting topic: one of the two is named, unless its meeting was deleted since. */
@@ -2411,13 +2474,14 @@ const proposalDone: Check = (value, at) =>
     meetingId: nullable(uuid),
     meetingTitle: nullable(text),
     topicId: nullable(uuid),
+    note: nullable(boundedText('a note of 1 to 2000 characters', 1, 2000)),
   })(value, at);
 
 const conversationProposal: Check = (value, at) =>
   shape<ConversationProposal>({
     id: uuid,
     turn: positive,
-    kind: oneOf(['story', 'topic'] as const),
+    kind: oneOf(['story', 'topic', 'jira_change'] as const),
     story: optional(storyTemplate),
     topic: optional(
       shape<NonNullable<ConversationProposal['topic']>>({
@@ -2425,6 +2489,8 @@ const conversationProposal: Check = (value, at) =>
         note: boundedText('a note of 1 to 4000 characters', 1, 4000),
       })
     ),
+    change: optional(jiraChange),
+    reason: optional(boundedText('a reason of 1 to 1000 characters', 1, 1000)),
     flags: arrayOf(proposalFlag),
     done: nullable(proposalDone),
   })(value, at) ?? proposalConsistency(value, at);

@@ -1583,6 +1583,16 @@ export class ApiClient {
     );
   }
 
+  /** Applies a Jira change proposal through the server's Jira, once; its owner only. Writes to Jira, 0 AIU. */
+  applyJiraChange(proposalId: string): Promise<ApiResult<Conversation>> {
+    return this.post(
+      'applyJiraChange',
+      `/conversation-proposals/${segment(proposalId)}/apply`,
+      null,
+      isConversation
+    );
+  }
+
   /** Adds a proposal to a planned or running meeting as a topic with a note, once; its owner only. 0 AIU. */
   addProposalToMeeting(
     proposalId: string,

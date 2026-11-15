@@ -472,6 +472,44 @@ export class ConversationDesk {
         meetingId: null,
         meetingTitle: null,
         topicId: null,
+        note: null,
+      });
+    }
+    return this.dto(c, actor);
+  }
+
+  /** Applies a Jira change proposal, once, as the server would through Jira's REST API. Its conversation's owner only. */
+  applyChange(actor: string, proposalId: string): Conversation {
+    const { c, turn, proposal } = this.ownProposal(actor, proposalId);
+    if (proposal.done === null) {
+      const change = proposal.change;
+      if (change === undefined)
+        throw invalid(
+          'Only a Jira change proposal is applied; create a story, add a topic'
+        );
+      let key: string;
+      let note: string;
+      switch (change.action) {
+        case 'create_epic':
+          key = `${change.projectKey}-${++this.nextIssue}`;
+          note = `Created epic ${key}${change.issueKeys.length ? ` with ${change.issueKeys.join(', ')}` : ''}.`;
+          break;
+        case 'move_to_epic':
+          key = change.epicKey;
+          note = `Moved ${change.issueKeys.join(', ')} into ${key}.`;
+          break;
+        case 'edit_issue':
+          key = change.issueKey;
+          note = `Changed ${key}.`;
+          break;
+      }
+      this.markDone(c, turn, proposal, actor, {
+        jiraKey: key,
+        jiraUrl: `https://jira.example.com/browse/${key}`,
+        meetingId: null,
+        meetingTitle: null,
+        topicId: null,
+        note,
       });
     }
     return this.dto(c, actor);
@@ -485,6 +523,8 @@ export class ConversationDesk {
   ): Conversation {
     const { c, turn, proposal } = this.ownProposal(actor, proposalId);
     if (proposal.done === null) {
+      if (proposal.kind === 'jira_change')
+        throw invalid('A Jira change is applied, not added to a meeting');
       const title = proposal.story?.title ?? proposal.topic?.title ?? '';
       const note =
         proposal.topic?.note ??
@@ -503,6 +543,7 @@ export class ConversationDesk {
         meetingId: body.meetingId,
         meetingTitle: added.meetingTitle,
         topicId: added.topicId,
+        note: null,
       });
     }
     return this.dto(c, actor);
@@ -717,6 +758,43 @@ export class ConversationDesk {
               recommended: false,
             },
           ],
+        },
+      ];
+    } else if (/\bepic\b/i.test(turn.question)) {
+      const issues = pinned.length > 0 ? pinned : ['PROJ-123'];
+      answer = `${issues.join(' and ')} belong together: I propose **a new epic** for late fees with them in it, and a label on ${issues[0]} so finance finds it.`;
+      proposals = [
+        {
+          id: this.id(),
+          turn: turn.n,
+          kind: 'jira_change',
+          change: {
+            action: 'create_epic',
+            projectKey: issues[0]!.split('-')[0]!,
+            summary: 'Late fees for enterprise accounts',
+            description:
+              'Charging late fees on overdue enterprise invoices, and showing them on the PDF.',
+            issueKeys: issues,
+          },
+          reason: 'The pinned work is one feature; an epic keeps it together.',
+          flags: [],
+          done: null,
+        },
+        {
+          id: this.id(),
+          turn: turn.n,
+          kind: 'jira_change',
+          change: {
+            action: 'edit_issue',
+            issueKey: issues[0]!,
+            summary: null,
+            description: null,
+            addLabels: ['late-fees'],
+            removeLabels: [],
+          },
+          reason: 'Finance filters its board by this label.',
+          flags: [],
+          done: null,
         },
       ];
     } else {

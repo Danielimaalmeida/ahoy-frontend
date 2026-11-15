@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 54f2d191ef685122b7c875501c5ae4bd538cd2ec
+# Commit: 9b858018416f1caa698de592203df166ec3bca0d
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2758,6 +2758,34 @@ paths:
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /conversation-proposals/{proposalId}/apply:
+    parameters:
+      - $ref: '#/components/parameters/ProposalId'
+    post:
+      operationId: applyJiraChange
+      tags: [product]
+      summary: Apply a Jira change proposal. Writes to Jira. Its conversation's owner only.
+      description: |
+        Ahoy makes the change with the server's Jira credentials (D24, option A), never the agent: `create_epic`
+        creates an Epic (`POST /rest/api/2/issue`, with its summary as the Epic Name when Jira has that field,
+        labelled `ahoy-product` and `ahoy-conv-<n>`) and moves its `issueKeys` into it; `move_to_epic` moves issues
+        into an epic (`POST /rest/agile/1.0/epic/{key}/issue`); `edit_issue` changes an issue's summary, description
+        and labels (`PUT /rest/api/2/issue/{key}`). Text the agent wrote goes in as text, wiki markup escaped. Once
+        only: an applied proposal answers the conversation as it is. `409 invalid_state` for a story or topic
+        proposal; `503 unavailable` when Jira is not configured or refuses the first call (nothing is recorded, so it
+        may be tried again). An epic created whose issues could not be moved is recorded as applied, with what failed
+        in `done.note`. 0 AIU.
+      responses:
+        '200':
+          description: The conversation, with what applying the change did.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /crew:
     get:
       operationId: getCrew
@@ -8814,7 +8842,17 @@ components:
       type: object
       additionalProperties: false
       required:
-        [by, byName, at, jiraKey, jiraUrl, meetingId, meetingTitle, topicId]
+        [
+          by,
+          byName,
+          at,
+          jiraKey,
+          jiraUrl,
+          meetingId,
+          meetingTitle,
+          topicId,
+          note,
+        ]
       description: What a proposal became, and who made it so. A meeting or topic deleted since leaves its ids null.
       properties:
         by: { type: string }
@@ -8823,7 +8861,7 @@ components:
         jiraKey:
           {
             type: [string, 'null'],
-            description: 'The Jira issue created from it.',
+            description: 'The Jira issue created from it, or the epic or issue a Jira change created or changed.',
           }
         jiraUrl:
           {
@@ -8839,15 +8877,79 @@ components:
             format: uuid,
             description: 'The meeting topic it became.',
           }
+        note:
+          type: [string, 'null']
+          maxLength: 2000
+          description: What applying a Jira change did, or what failed after a part of it was done; null otherwise.
+    JiraChange:
+      description: A change to Jira, by its action.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [action, projectKey, summary, description, issueKeys]
+          properties:
+            action: { const: create_epic }
+            projectKey: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,19}$' }
+            summary: { type: string, minLength: 1, maxLength: 255 }
+            description: { type: string, minLength: 1, maxLength: 20000 }
+            issueKeys:
+              type: array
+              maxItems: 50
+              items: { $ref: '#/components/schemas/JiraIssueKey' }
+              description: The issues moved into the epic once it exists.
+        - type: object
+          additionalProperties: false
+          required: [action, epicKey, issueKeys]
+          properties:
+            action: { const: move_to_epic }
+            epicKey: { $ref: '#/components/schemas/JiraIssueKey' }
+            issueKeys:
+              type: array
+              minItems: 1
+              maxItems: 50
+              items: { $ref: '#/components/schemas/JiraIssueKey' }
+        - type: object
+          additionalProperties: false
+          required:
+            [action, issueKey, summary, description, addLabels, removeLabels]
+          properties:
+            action: { const: edit_issue }
+            issueKey: { $ref: '#/components/schemas/JiraIssueKey' }
+            summary:
+              {
+                type: [string, 'null'],
+                minLength: 1,
+                maxLength: 255,
+                description: 'The new summary; null keeps it.',
+              }
+            description:
+              type: [string, 'null']
+              minLength: 1
+              maxLength: 20000
+              description: The new description, replacing the old one whole; null keeps it.
+            addLabels:
+              {
+                type: array,
+                maxItems: 10,
+                items: { type: string, minLength: 1, maxLength: 100 },
+              }
+            removeLabels:
+              {
+                type: array,
+                maxItems: 10,
+                items: { type: string, minLength: 1, maxLength: 100 },
+              }
     ConversationProposal:
       type: object
       additionalProperties: false
       required: [id, turn, kind, flags, done]
-      description: A story (in the story drafts' template) or a topic for a meeting, as the agent handed it in.
+      description: |
+        A story (in the story drafts' template), a topic for a meeting, or a change to Jira with why, as the agent
+        handed it in.
       properties:
         id: { type: string, format: uuid }
         turn: { type: integer, minimum: 1 }
-        kind: { type: string, enum: [story, topic] }
+        kind: { type: string, enum: [story, topic, jira_change] }
         story: { $ref: '#/components/schemas/StoryTemplate' }
         topic:
           type: object
@@ -8856,6 +8958,14 @@ components:
           properties:
             title: { type: string, minLength: 1, maxLength: 255 }
             note: { type: string, minLength: 1, maxLength: 4000 }
+        change: { $ref: '#/components/schemas/JiraChange' }
+        reason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 1000,
+            description: 'Why the agent proposes the change.',
+          }
         flags:
           type: array
           maxItems: 5

@@ -17,6 +17,7 @@ import {
   type ConversationSummaryLike,
   defaultJiraProject,
   isJiraProjectKey,
+  jiraChangeTitle,
   lookUpNote,
   quickPins,
 } from './conversations';
@@ -273,6 +274,35 @@ describe('what the agent may look up', () => {
     );
     expect(lookUpNote({ jira: off, confluence: off }, true)).toBe(
       'Jira and Confluence are off for this conversation: the agent reads only the pinned items. Changing it ends the warm session: the next question starts a new one.'
+    );
+  });
+});
+
+describe('a Jira change proposal', () => {
+  it('is titled by what applying it does', () => {
+    expect(
+      jiraChangeTitle({
+        action: 'create_epic',
+        projectKey: 'PROJ',
+        summary: 'Late fees',
+      })
+    ).toBe('New epic in PROJ: Late fees');
+    expect(
+      jiraChangeTitle({
+        action: 'move_to_epic',
+        epicKey: 'PROJ-1',
+        issueKeys: ['PROJ-2'],
+      })
+    ).toBe('Move 1 issue into PROJ-1');
+    expect(
+      jiraChangeTitle({
+        action: 'move_to_epic',
+        epicKey: 'PROJ-1',
+        issueKeys: ['PROJ-2', 'PROJ-3'],
+      })
+    ).toBe('Move 2 issues into PROJ-1');
+    expect(jiraChangeTitle({ action: 'edit_issue', issueKey: 'PROJ-9' })).toBe(
+      'Change PROJ-9'
     );
   });
 });

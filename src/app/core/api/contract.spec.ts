@@ -77,6 +77,7 @@ import answerMeetingStoryQuestions from '@testing/fixtures/answerMeetingStoryQue
 import createMeetingStoryIssue from '@testing/fixtures/createMeetingStoryIssue.json';
 import createProposalIssue from '@testing/fixtures/createProposalIssue.json';
 import addProposalToMeeting from '@testing/fixtures/addProposalToMeeting.json';
+import applyJiraChange from '@testing/fixtures/applyJiraChange.json';
 import editMeetingStory from '@testing/fixtures/editMeetingStory.json';
 import getMeetingStoryDraft from '@testing/fixtures/getMeetingStoryDraft.json';
 import listMeetingStoryDrafts from '@testing/fixtures/listMeetingStoryDrafts.json';
@@ -353,6 +354,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['cancelConversationTurn', cancelConversationTurn],
   ['createProposalIssue', createProposalIssue],
   ['addProposalToMeeting', addProposalToMeeting],
+  ['applyJiraChange', applyJiraChange],
 ];
 
 /** The operations `ApiClient` implements whose successful answer has no body (`204 No Content`). */
@@ -410,7 +412,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      163
+      164
     );
   });
 

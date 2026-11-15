@@ -159,6 +159,11 @@ export class ProductStore {
     );
   }
 
+  /** Applies a Jira change proposal: Ahoy makes the change in Jira. 0 AIU; once only. */
+  applyChange(proposalId: string): Promise<ApiResult<Conversation>> {
+    return this.change(() => this.api.applyJiraChange(proposalId));
+  }
+
   /** Adds a proposal to a planned or running meeting, as a topic with a note. 0 AIU; once only. */
   addToMeeting(
     proposalId: string,

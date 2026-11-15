@@ -434,6 +434,59 @@ describe('Product on the mock backend', () => {
     expect(topics).toContain('Waivers for late fees');
   });
 
+  it('applies a Jira change the agent proposed after a confirmation, once, and says what was done', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    type(
+      composer(page.root)!.querySelector('textarea'),
+      'Should these go in an epic?'
+    );
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    const cards = () => [...page.root.querySelectorAll('ah-proposal-card')];
+    expect(cards().map((c) => text(c.querySelector('h3')))).toEqual([
+      'New epic in PROJ: Late fees for enterprise accounts',
+      'Change PROJ-120',
+    ]);
+    expect([...cards()[0]!.querySelectorAll('.keys li')].map(text)).toEqual([
+      'PROJ-120',
+    ]);
+    expect(text(cards()[1])).toContain('late-fees');
+    expect([...cards()[0]!.querySelectorAll('button')].map(text)).toEqual([
+      'Apply in Jira',
+    ]);
+
+    buttonNamed(cards()[0]!, 'Apply in Jira').click();
+    await flush(page);
+    expect(text(cards()[0])).toContain('Ahoy makes this change in Jira now');
+    buttonNamed(cards()[0]!, 'Cancel').click();
+    await flush(page);
+    expect(page.requests.some((r) => r.path.endsWith('/apply'))).toBe(false);
+
+    buttonNamed(cards()[0]!, 'Apply in Jira').click();
+    await flush(page);
+    buttonNamed(cards()[0]!, 'Apply change').click();
+    await flush(page);
+    expect(
+      page.requests.filter(
+        (r) => r.method === 'POST' && r.path.endsWith('/apply')
+      )
+    ).toHaveLength(1);
+    expect(text(cards()[0])).toMatch(
+      /^.*Applied in Jira: Created epic PROJ-\d+ with PROJ-120\. Open PROJ-\d+ by /
+    );
+    expect(cards()[0]!.querySelectorAll('button')).toHaveLength(0);
+    expect(
+      cards()[0]!.querySelector<HTMLAnchorElement>('a')!.getAttribute('href')
+    ).toMatch(/^https:\/\/jira\.example\.com\/browse\/PROJ-\d+$/);
+  });
+
   it('reads the conversation every second once its stream breaks, less often while the session is warm, and stops when it ends', async () => {
     let id = '';
     const page = await open('/product', (server) => {

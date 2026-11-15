@@ -1,19 +1,20 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ConversationProposal, MeetingSummary } from '@core/api/types';
-import { isJiraProjectKey } from '@domain/conversations';
+import { isJiraProjectKey, jiraChangeTitle } from '@domain/conversations';
 import { meetingDay, meetingTime } from '@domain/meetings';
 import { storySentence } from '@domain/story-drafts';
 import { Button } from '@ui/button/button';
 import { FieldControl } from '@ui/field/field';
 
 /** What the card's actions show: the buttons, or the short form of one of them. */
-type Acting = 'none' | 'jira' | 'meeting';
+type Acting = 'none' | 'jira' | 'meeting' | 'apply';
 
 /**
- * One story or meeting topic the agent proposed, numbered in its answer, with what it flagged and the evidence. Its
- * conversation's owner turns it into work with a click (D24, step 2): Create in Jira for a story, in a project they
- * name, or Add to a meeting that is planned or running. Once done, the card says what it became, with its link.
+ * One story, meeting topic or change to Jira the agent proposed, numbered in its answer, with what it flagged and the
+ * evidence. Its conversation's owner turns it into work with a click (D24, step 2): Create in Jira for a story, in a
+ * project they name, or Add to a meeting that is planned or running; a change is applied in Jira after a confirmation.
+ * Once done, the card says what it became, with its link.
  */
 @Component({
   selector: 'ah-proposal-card',
@@ -100,17 +101,67 @@ type Acting = 'none' | 'jira' | 'meeting';
       margin: 0;
       overflow-wrap: anywhere;
     }
+    .keys {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      list-style: none;
+      padding: 0;
+    }
   `,
   template: `
     @let p = proposal();
     <article [attr.aria-label]="'Proposal ' + number()">
       <div class="head">
         <span class="n">{{ number() }}</span>
-        <span class="ah-tag">{{
-          p.kind === 'story' ? 'Story' : 'Meeting topic'
-        }}</span>
-        <h3>{{ p.story?.title ?? p.topic?.title }}</h3>
+        <span class="ah-tag">{{ kindLabel() }}</span>
+        <h3>{{ title() }}</h3>
       </div>
+      @if (p.change; as change) {
+        @if (p.reason) {
+          <span class="text">{{ p.reason }}</span>
+        }
+        @switch (change.action) {
+          @case ('create_epic') {
+            <span class="label">Description</span>
+            <span class="text">{{ change.description }}</span>
+            @if (change.issueKeys.length > 0) {
+              <span class="label">Moves into it</span>
+              <ul class="keys">
+                @for (k of change.issueKeys; track k) {
+                  <li class="ah-tag ah-tag--outline">{{ k }}</li>
+                }
+              </ul>
+            }
+          }
+          @case ('move_to_epic') {
+            <span class="label">Issues</span>
+            <ul class="keys">
+              @for (k of change.issueKeys; track k) {
+                <li class="ah-tag ah-tag--outline">{{ k }}</li>
+              }
+            </ul>
+          }
+          @case ('edit_issue') {
+            @if (change.summary !== null) {
+              <span class="label">New summary</span>
+              <span class="text">{{ change.summary }}</span>
+            }
+            @if (change.description !== null) {
+              <span class="label">New description</span>
+              <span class="text">{{ change.description }}</span>
+            }
+            @if (change.addLabels.length > 0) {
+              <span class="label">Adds labels</span>
+              <span class="text">{{ change.addLabels.join(', ') }}</span>
+            }
+            @if (change.removeLabels.length > 0) {
+              <span class="label">Removes labels</span>
+              <span class="text">{{ change.removeLabels.join(', ') }}</span>
+            }
+          }
+        }
+      }
       @if (p.story; as s) {
         <span class="text">{{ sentence(s) }}</span>
         <span class="label">Acceptance criteria</span>
@@ -151,7 +202,14 @@ type Acting = 'none' | 'jira' | 'meeting';
       }
       @if (p.done; as d) {
         <p class="done ah-hint">
-          @if (d.jiraKey !== null) {
+          @if (p.kind === 'jira_change') {
+            Applied in Jira: {{ d.note ?? 'done' }}
+            @if (d.jiraKey !== null && d.jiraUrl !== null) {
+              <a [href]="d.jiraUrl" target="_blank" rel="noopener noreferrer"
+                >Open {{ d.jiraKey }}</a
+              >
+            }
+          } @else if (d.jiraKey !== null) {
             Created in Jira as
             @if (d.jiraUrl !== null) {
               <a [href]="d.jiraUrl" target="_blank" rel="noopener noreferrer">{{
@@ -174,13 +232,59 @@ type Acting = 'none' | 'jira' | 'meeting';
         @switch (acting()) {
           @case ('none') {
             <div class="actions">
-              @if (p.kind === 'story') {
-                <button ahButton size="sm" type="button" (click)="startJira()">
-                  Create in Jira
+              @if (p.kind === 'jira_change') {
+                <button
+                  ahButton
+                  size="sm"
+                  type="button"
+                  (click)="acting.set('apply')"
+                >
+                  Apply in Jira
+                </button>
+              } @else {
+                @if (p.kind === 'story') {
+                  <button
+                    ahButton
+                    size="sm"
+                    type="button"
+                    (click)="startJira()"
+                  >
+                    Create in Jira
+                  </button>
+                }
+                <button
+                  ahButton
+                  size="sm"
+                  type="button"
+                  (click)="startMeeting()"
+                >
+                  Add to a meeting
                 </button>
               }
-              <button ahButton size="sm" type="button" (click)="startMeeting()">
-                Add to a meeting
+            </div>
+          }
+          @case ('apply') {
+            <span class="ah-hint"
+              >Ahoy makes this change in Jira now, with the server’s Jira
+              account. Undo it in Jira if you change your mind.</span
+            >
+            <div class="actions">
+              <button
+                ahButton="primary"
+                size="sm"
+                type="button"
+                [attr.aria-disabled]="busy() ? 'true' : null"
+                (click)="applyNow()"
+              >
+                Apply change
+              </button>
+              <button
+                ahButton="ghost"
+                size="sm"
+                type="button"
+                (click)="acting.set('none')"
+              >
+                Cancel
               </button>
             </div>
           }
@@ -300,6 +404,23 @@ export class ProposalCard {
   readonly addToMeeting = output<string>();
   /** Asks for the meetings to be read, when the person first wants to add to one. */
   readonly meetingsWanted = output();
+  /** Asks for the Jira change to be applied, once the person confirmed it. */
+  readonly apply = output();
+
+  protected readonly kindLabel = computed(() => {
+    const kind = this.proposal().kind;
+    return kind === 'story'
+      ? 'Story'
+      : kind === 'topic'
+        ? 'Meeting topic'
+        : 'Jira change';
+  });
+  protected readonly title = computed(() => {
+    const p = this.proposal();
+    return p.change !== undefined
+      ? jiraChangeTitle(p.change)
+      : (p.story?.title ?? p.topic?.title ?? '');
+  });
 
   protected readonly acting = signal<Acting>('none');
   protected readonly project = signal('');
@@ -333,6 +454,10 @@ export class ProposalCard {
   protected create(): void {
     if (!this.projectOk() || this.busy()) return;
     this.createIssue.emit(this.project().trim().toUpperCase());
+  }
+
+  protected applyNow(): void {
+    if (!this.busy()) this.apply.emit();
   }
 
   protected add(): void {

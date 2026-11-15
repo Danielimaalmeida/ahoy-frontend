@@ -123,7 +123,8 @@
             "jiraUrl": null,
             "meetingId": "5b0c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4",
             "meetingTitle": "Finance refinement",
-            "topicId": "6c1d3e2f-4a5b-4c6d-8e7f-8091a2b3c4d5"
+            "topicId": "6c1d3e2f-4a5b-4c6d-8e7f-8091a2b3c4d5",
+            "note": null
           }
         }
       ],

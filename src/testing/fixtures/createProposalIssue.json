@@ -84,7 +84,8 @@
             "jiraUrl": "https://jira.example.com/browse/PROJ-141",
             "meetingId": null,
             "meetingTitle": null,
-            "topicId": null
+            "topicId": null,
+            "note": null
           }
         },
         {

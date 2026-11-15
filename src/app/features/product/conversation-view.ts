@@ -610,6 +610,7 @@ const ACTIVITY_SHOWN = 6;
                           (createIssue)="createIssue(p.id, $event)"
                           (addToMeeting)="addToMeeting(p.id, $event)"
                           (meetingsWanted)="store.loadMeetings()"
+                          (apply)="applyChange(p.id)"
                         />
                       }
                     </div>
@@ -741,12 +742,15 @@ const ACTIVITY_SHOWN = 6;
                 pins, read-only.
               </li>
               <li>
-                Proposes stories and meeting topics, with the risks it sees.
+                Proposes stories, meeting topics and changes to Jira (an epic,
+                issues moved into an epic, an issue’s fields), with the risks it
+                sees.
               </li>
               <li>Asks you what only you can settle.</li>
               <li>
                 Changes nothing in Jira, meetings or code itself: you create a
-                proposal in Jira or add it to a meeting, with a click.
+                proposal in Jira, add it to a meeting or apply a change, with a
+                click.
               </li>
             </ul>
           </aside>
@@ -915,6 +919,12 @@ export class ConversationView {
   ): Promise<void> {
     if (this.store.busy()) return;
     await this.store.createIssue(proposalId, projectKey);
+  }
+
+  /** Applies a Jira change proposal; the card then says what was done. */
+  protected async applyChange(proposalId: string): Promise<void> {
+    if (this.store.busy()) return;
+    await this.store.applyChange(proposalId);
   }
 
   /** Adds a proposal to a meeting; the card then links to it. */

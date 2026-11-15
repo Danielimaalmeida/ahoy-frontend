@@ -1137,6 +1137,14 @@ export class MockAhoyServer {
             call.body as NewConversation // validated
           )
         );
+      case 'applyJiraChange':
+        return jsonResponse(
+          200,
+          this.conversations.applyChange(
+            call.actor,
+            call.path['proposalId'] ?? ''
+          )
+        );
       case 'createProposalIssue':
         return jsonResponse(
           200,

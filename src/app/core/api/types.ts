@@ -1330,6 +1330,7 @@ export type ConversationProposal = Schemas['ConversationProposal'];
 
 /** What a proposal became (a Jira issue, or a meeting topic), who made it so and when. */
 export type ProposalDone = Schemas['ProposalDone'];
+export type JiraChange = Schemas['JiraChange'];
 
 /** Body of `createProposalIssue`: the Jira project, and the issue type (Story when left out). */
 export type ProposalIssueRequest = Schemas['ProposalIssueRequest'];
