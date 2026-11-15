@@ -118,7 +118,13 @@ folders, spec titles). They are identifiers, not UI text; rename them only toget
   plain words ("Delivery gate", `PHASE_LABELS` in `domain/phases.ts`) with the API name as each step's tooltip, asked
   for on 2026-11-15. The design system's README should follow.
 - **Theme switch.** The app has no theme button yet (F16); only `/_kit` switches theme.
-- **Icons.** `calendar-plus`, `document` and `waves` (`APP_ICON_NAMES` in `ui/icon/icons.ts`) are drawn in the app,
-  in the design system's line style, for the empty states; they should move into the design system's icon set.
+- **Icons.** `calendar-plus`, `document`, `waves` and `bug` (`APP_ICON_NAMES` in `ui/icon/icons.ts`) are drawn in the
+  app, in the design system's line style, for the empty states and the defect tag; they should move into the design
+  system's icon set.
+- **Defect tag.** "Needs you" marks a voyage that fixes a defect with an `ah-tag` in the send-back colours and the
+  `bug` icon (`features/harbour/all-hands.ts`); stories carry no tag. It should become a tag variant of the design
+  system.
+- **Vocabulary.** "Defect", the phases in words (`PHASE_LABELS` in `domain/phases.ts`: "Plan review", "Delivery gate"…)
+  and "Phase N of 8" are not in `vocabulary.md` yet; they should be added there, then re-synced.
 - **Tokens.** Four colour tokens differ from the design system for contrast (`_ahoy-a11y.scss`); they should move into
   it, then the overrides go.

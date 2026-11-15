@@ -10,12 +10,14 @@ import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import { StoriesStore } from '@core/stores/stories-store';
 import { ownerLabel } from '@domain/identifiers';
+import { phaseLabel, phasePosition } from '@domain/phases';
 import { AGROUND, type BoardStatus } from '@domain/status';
 import type { Phase, StoryStatus } from '@domain/types';
 import { Banner } from '@ui/banner/banner';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
 import { EmptyState } from '@ui/empty-state/empty-state';
+import { Icon } from '@ui/icon/icon';
 import { Panel, PanelHead } from '@ui/panel/panel';
 import { RelativePipe } from '@ui/pipes/relative.pipe';
 import { Skeleton } from '@ui/skeleton/skeleton';
@@ -120,6 +122,7 @@ function describeFailure(error: ApiError): Failure {
   imports: [
     Banner,
     BudgetMeter,
+    Icon,
     Button,
     CellSub,
     EmptyState,
@@ -249,6 +252,14 @@ function describeFailure(error: ApiError): Failure {
     .voyage a {
       white-space: nowrap;
     }
+    /* A voyage that fixes a defect says so before its key; user stories, most of the list, carry no tag. The colours
+       are the send-back pair, so it reads apart from Halted's red. */
+    .defect {
+      gap: var(--space-1);
+      margin-right: var(--space-1\\.5);
+      background: var(--status-sendback-bg);
+      color: var(--status-sendback-fg);
+    }
     .line {
       display: block;
       overflow: hidden;
@@ -257,6 +268,10 @@ function describeFailure(error: ApiError): Failure {
     }
     .line--head {
       line-height: 20px;
+    }
+    /* The phase in words; in "Needs you" its place among the eight goes under it. The API word is the title. */
+    .phase__label {
+      font-weight: 500;
     }
     .line--two {
       display: -webkit-box;
@@ -410,6 +425,11 @@ function describeFailure(error: ApiError): Failure {
                       <td class="voyage">
                         <div class="rows3">
                           <div class="title" [title]="row.story.title">
+                            @if (row.story.isDefect === true) {
+                              <span class="ah-tag defect"
+                                ><ah-icon name="bug" [size]="12" />Defect</span
+                              >
+                            }
                             <a
                               ahKey
                               [routerLink]="['/voyages', row.story.key]"
@@ -418,7 +438,14 @@ function describeFailure(error: ApiError): Failure {
                           </div>
                         </div>
                       </td>
-                      <td class="ah-mono clip">{{ row.story.phase }}</td>
+                      <td class="phase" [title]="row.story.phase">
+                        <span class="line phase__label">{{
+                          phaseLabel(row.story.phase)
+                        }}</span>
+                        @if (phasePosition(row.story.phase); as position) {
+                          <small ahCellSub class="line">{{ position }}</small>
+                        }
+                      </td>
                       <td>
                         <div class="rows3">
                           <span
@@ -549,7 +576,9 @@ function describeFailure(error: ApiError): Failure {
                           >{{ row.story.title }}
                         </div>
                       </td>
-                      <td class="ah-mono clip">{{ row.story.phase }}</td>
+                      <td class="clip" [title]="row.story.phase">
+                        {{ phaseLabel(row.story.phase) }}
+                      </td>
                       <td class="clip" [title]="row.agentLine">
                         {{ row.sea.member }}
                         @if (row.sea.runtime; as runtime) {
@@ -589,6 +618,10 @@ export class AllHandsPage {
   protected readonly tiles = TILES;
   /** The owner's name, or the q-number while the name is not known; the q-number is the cell's tooltip. */
   protected readonly ownerLabel = ownerLabel;
+  /** The phase in words ("Delivery gate"); the API word is the cell's tooltip. */
+  protected readonly phaseLabel = phaseLabel;
+  /** "Phase 7 of 8" under the phase in Needs you, or null for blocked and unknown phases. */
+  protected readonly phasePosition = phasePosition;
   protected readonly placeholderRows = PLACEHOLDER_ROWS;
   protected readonly counts = this.store.boardCounts;
   /**

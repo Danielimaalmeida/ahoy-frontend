@@ -154,6 +154,10 @@ export interface Story {
   readonly currentRunId: string | null;
   /** How the story is planned. Absent from a server older than the plan panel, which plans by one planner. */
   readonly planningMode?: PlanningMode;
+  /** What Jira calls the story's issue ("Story", "Bug"); null before intake reads it, absent from an older server. */
+  readonly issueType?: string | null;
+  /** Whether `issueType` names a defect (Bug, Defect, Defeito), as the server reads it; absent from an older server. */
+  readonly isDefect?: boolean;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;

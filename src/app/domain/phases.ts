@@ -25,8 +25,8 @@ export function phaseIndex(phase: string): number | null {
   return index === -1 ? null : index + 1;
 }
 
-/** Each phase in plain words, for people ("Delivery gate"); the API id stays beside it where the API word matters. */
-export const PHASE_LABELS: Readonly<Record<(typeof PHASES)[number], string>> = {
+/** Each phase in words, for lists where the API word would be hard to scan ("Delivery gate" for `delivery_gate`). */
+export const PHASE_LABELS = {
   intake: 'Intake',
   planning: 'Planning',
   plan_review: 'Plan review',
@@ -35,10 +35,20 @@ export const PHASE_LABELS: Readonly<Record<(typeof PHASES)[number], string>> = {
   pr_review: 'PR review',
   delivery_gate: 'Delivery gate',
   done: 'Done',
-};
+  blocked: 'Blocked',
+} as const satisfies Record<(typeof PHASES)[number] | 'blocked', string>;
 
-/** A phase in plain words, or the API id itself for a phase this app does not know. */
+function isLabelled(phase: string): phase is keyof typeof PHASE_LABELS {
+  return Object.hasOwn(PHASE_LABELS, phase);
+}
+
+/** A phase in words; a phase this list does not know is shown as the API sent it, never guessed. */
 export function phaseLabel(phase: string): string {
-  const labels: Readonly<Record<string, string>> = PHASE_LABELS;
-  return Object.hasOwn(labels, phase) ? (labels[phase] ?? phase) : phase;
+  return isLabelled(phase) ? PHASE_LABELS[phase] : phase;
+}
+
+/** "Phase 7 of 8" for a delivery phase, or `null` for `blocked` and unknown phases, which have no position. */
+export function phasePosition(phase: string): string | null {
+  const index = phaseIndex(phase);
+  return index === null ? null : `Phase ${index} of ${PHASES.length}`;
 }
