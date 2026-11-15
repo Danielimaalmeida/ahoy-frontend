@@ -353,6 +353,11 @@ describe('Product on the mock backend', () => {
     );
     expect(text(page.root.querySelector('aside.side'))).toContain('Warm:');
     expect(text(composer(page.root))).toContain('The session is warm');
+    // A warm session keeps the cap it started with: no cap is asked for, and what it spent of it is shown.
+    expect(composer(page.root)!.querySelector('input')).toBeNull();
+    expect(text(composer(page.root))).toMatch(
+      /within its cap \(\d+\.\d of 2\.0 AIU spent\)/
+    );
 
     // The stream stays open while the session is warm, so the page sees it end and stops saying "warm".
     await wait(page, MOCK_WARM_MS + WARM_POLL_MS, WARM_POLL_MS);
@@ -362,6 +367,7 @@ describe('Product on the mock backend', () => {
     expect(text(composer(page.root))).toContain(
       'Sending starts a session that spends AIU'
     );
+    expect(composer(page.root)!.querySelector('input')).not.toBeNull();
     expect(page.server.conversationDesk.dropStreams()).toBe(0);
     await wait(page, CONVERSATION_POLL_MS * 5);
     expect(reads()).toBe(readsBefore);

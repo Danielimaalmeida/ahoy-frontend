@@ -523,23 +523,25 @@ const ACTIVITY_SHOWN = 6;
                 ></textarea>
                 <div class="send-row">
                   <span class="ah-hint">{{ spendNote() }}</span>
-                  <label class="cap"
-                    >Cap
-                    <input
-                      class="ah-input"
-                      inputmode="decimal"
-                      [attr.aria-invalid]="
-                        capProblem() !== null ? 'true' : null
-                      "
-                      [attr.aria-describedby]="
-                        capProblem() !== null ? 'cap-problem' : null
-                      "
-                      placeholder="default"
-                      [value]="cap()"
-                      (input)="cap.set(text($event))"
-                    />
-                    AIU</label
-                  >
+                  @if (!goesOn()) {
+                    <label class="cap"
+                      >Cap
+                      <input
+                        class="ah-input"
+                        inputmode="decimal"
+                        [attr.aria-invalid]="
+                          capProblem() !== null ? 'true' : null
+                        "
+                        [attr.aria-describedby]="
+                          capProblem() !== null ? 'cap-problem' : null
+                        "
+                        placeholder="default"
+                        [value]="cap()"
+                        (input)="cap.set(text($event))"
+                      />
+                      AIU</label
+                    >
+                  }
                   <button
                     class="push"
                     ahButton="primary"
@@ -661,11 +663,19 @@ export class ConversationView {
       ? 'Ask anything about the pinned items…'
       : RECIPE_WORDS[c.recipe].question;
   });
-  /** What sending costs: a warm session goes on; otherwise a new one starts, capped. */
+  /**
+   * Whether the next question goes to the warm session: its cap was set when it started, so no cap is asked for, and
+   * what it has spent of it is shown instead.
+   */
+  protected readonly goesOn = computed(() => {
+    const s = this.store.conversation()?.session;
+    return s?.warm === true && !s.cancelRequested;
+  });
+  /** What sending costs: a warm session goes on, within its cap; otherwise a new one starts, capped. */
   protected readonly spendNote = computed(() => {
-    const c = this.store.conversation();
-    if (c?.session?.warm === true && !c.session.cancelRequested)
-      return 'The session is warm: it goes on from what it has read.';
+    const s = this.store.conversation()?.session;
+    if (this.goesOn() && s)
+      return `The session is warm: it goes on from what it has read, within its cap (${formatAiu(s.spentNanoAiu)} of ${formatAiu(s.budgetNanoAiu)} AIU spent).`;
     const typed = checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
     const cap =
       'cap' in typed && typed.cap !== null
@@ -674,6 +684,7 @@ export class ConversationView {
     return `Sending starts a session that spends AIU, at most ${cap}.`;
   });
   protected readonly capProblem = computed(() => {
+    if (this.goesOn()) return null;
     const typed = checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
     if (!('error' in typed)) return null;
     return typed.error === 'maximum'
@@ -729,7 +740,10 @@ export class ConversationView {
   async ask(): Promise<void> {
     const question = this.draft().trim();
     if (question === '' || this.refusal() !== null || this.store.busy()) return;
-    const typed = checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
+    // A warm session keeps the cap it started with, so a typed one is not sent.
+    const typed = this.goesOn()
+      ? { cap: null }
+      : checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
     if ('error' in typed) return;
     const result = await this.store.ask(question, typed.cap);
     if (result.ok) this.draft.set('');
