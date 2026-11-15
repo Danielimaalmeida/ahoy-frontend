@@ -2,16 +2,20 @@ import type { Run, Story, StoryStatus } from '@core/api/types';
 import { isOver } from '@domain/status';
 import type { VoyageTab } from '../context/default-tab';
 
-/** The header's primary action: a link to a tab, the Resume dialog, or the Start again dialog. */
+/**
+ * The header's primary action: a link to a tab, a jump to the open gate's decision above the tabs, the Resume dialog, or
+ * the Start again dialog.
+ */
 export type PrimaryAction =
   | { readonly kind: 'tab'; readonly label: string; readonly tab: VoyageTab }
+  | { readonly kind: 'decide'; readonly label: string }
   | { readonly kind: 'resume'; readonly label: string }
   | { readonly kind: 'restart'; readonly label: string };
 
 /**
  * The one primary action of the voyage header, by status (plan, lane 4A, deliverable 4): Answer questions, Decide on the
- * plan (or Decide, for a gate other than the plan's), Resume…, Start again… once cancelled, or none while it sails,
- * waits in the queue or is done.
+ * plan (the Plan tab), Decide (for a gate other than the plan's, whose decision sits above the tabs), Resume…, Start
+ * again… once cancelled, or none while it sails, waits in the queue or is done.
  */
 export function primaryAction(
   status: StoryStatus,
@@ -21,11 +25,12 @@ export function primaryAction(
     case 'awaiting_input':
       return { kind: 'tab', label: 'Answer questions', tab: 'questions' };
     case 'awaiting_decision':
-      return {
-        kind: 'tab',
-        label: gateKey === 'plan_accepted' ? 'Decide on the plan' : 'Decide',
-        tab: 'plan',
-      };
+      if (gateKey === 'plan_accepted')
+        return { kind: 'tab', label: 'Decide on the plan', tab: 'plan' };
+      // Until the gate is known, the Plan tab; the decision of another gate sits above the tabs.
+      return gateKey === null
+        ? { kind: 'tab', label: 'Decide', tab: 'plan' }
+        : { kind: 'decide', label: 'Decide' };
     case 'halted':
       return { kind: 'resume', label: 'Resume…' };
     case 'cancelled':
@@ -101,4 +106,59 @@ export function canRefreshDesign(
   return story.status === 'halted'
     ? DESIGN_REFRESH_HALTS.includes(story.phase)
     : story.status === 'awaiting_decision' && story.phase === 'delivery_gate';
+}
+
+/** An action of the header's More menu. */
+export type MenuItemId =
+  'budget' | 'models' | 'intake' | 'design' | 'stop' | 'cancel';
+
+/** One item of the More menu. */
+export interface MenuItem {
+  readonly id: MenuItemId;
+  readonly label: string;
+  /** Stop and Cancel voyage: red, at the end. */
+  readonly danger: boolean;
+  /** The first danger item after others: a rule above it keeps it apart. */
+  readonly separated: boolean;
+  readonly disabled: boolean;
+}
+
+/** What {@link menuItems} needs: which actions apply now. */
+export interface MenuInput extends HeaderActions {
+  readonly halted: boolean;
+  /** Models is disabled until the voyage's models are read. */
+  readonly modelsReady: boolean;
+  readonly intake: boolean;
+  readonly design: boolean;
+}
+
+/**
+ * The More menu of the voyage header, in order: Budget, Models ("Change models" when anchored), Back to intake, Refresh
+ * design, then Stop and Cancel voyage apart at the end. Only those that apply now are listed.
+ */
+export function menuItems(input: MenuInput): readonly MenuItem[] {
+  const items: Omit<MenuItem, 'separated'>[] = [];
+  const add = (
+    id: MenuItemId,
+    label: string,
+    danger = false,
+    disabled = false
+  ): void => {
+    items.push({ id, label, danger, disabled });
+  };
+  if (input.budget) add('budget', 'Budget');
+  add(
+    'models',
+    input.halted ? 'Change models' : 'Models',
+    false,
+    !input.modelsReady
+  );
+  if (input.intake) add('intake', 'Back to intake');
+  if (input.design) add('design', 'Refresh design');
+  if (input.stop) add('stop', 'Stop', true);
+  if (input.cancel) add('cancel', 'Cancel voyage', true);
+  return items.map((item, i) => ({
+    ...item,
+    separated: item.danger && i > 0 && items[i - 1]?.danger === false,
+  }));
 }

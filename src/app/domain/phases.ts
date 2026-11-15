@@ -24,3 +24,21 @@ export function phaseIndex(phase: string): number | null {
   const index = PHASES.findIndex((candidate) => candidate === phase);
   return index === -1 ? null : index + 1;
 }
+
+/** Each phase in plain words, for people ("Delivery gate"); the API id stays beside it where the API word matters. */
+export const PHASE_LABELS: Readonly<Record<(typeof PHASES)[number], string>> = {
+  intake: 'Intake',
+  planning: 'Planning',
+  plan_review: 'Plan review',
+  design: 'Design',
+  implementation: 'Implementation',
+  pr_review: 'PR review',
+  delivery_gate: 'Delivery gate',
+  done: 'Done',
+};
+
+/** A phase in plain words, or the API id itself for a phase this app does not know. */
+export function phaseLabel(phase: string): string {
+  const labels: Readonly<Record<string, string>> = PHASE_LABELS;
+  return Object.hasOwn(labels, phase) ? (labels[phase] ?? phase) : phase;
+}

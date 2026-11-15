@@ -114,6 +114,9 @@ folders, spec titles). They are identifiers, not UI text; rename them only toget
   app (`domain/models.ts`), so the app shows no row for it.
 - **Raw colours.** The Christmas decorations (`ui/top-bar/top-bar.scss`) use literal colours; the Teams settings preview
   card and the Meetings topic menu use literal shadows.
+- **PhaseStepper labels.** The design system labels the full stepper with the API phase names; the app shows them in
+  plain words ("Delivery gate", `PHASE_LABELS` in `domain/phases.ts`) with the API name as each step's tooltip, asked
+  for on 2026-11-15. The design system's README should follow.
 - **Theme switch.** The app has no theme button yet (F16); only `/_kit` switches theme.
 - **Icons.** `calendar-plus`, `document` and `waves` (`APP_ICON_NAMES` in `ui/icon/icons.ts`) are drawn in the app,
   in the design system's line style, for the empty states; they should move into the design system's icon set.

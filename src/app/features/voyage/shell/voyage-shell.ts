@@ -35,6 +35,7 @@ import { PrCommentsPanel } from '../header/pr-comments-panel';
 import { UnderWayStrip } from '../header/under-way-strip';
 import { VoyageHeader } from '../header/voyage-header';
 import { BranchReleases } from '../context/branch-releases';
+import { DeliveryDecision } from '../tabs/plan/delivery-decision';
 
 /** What {@link runningTitle} puts before the page's title. */
 const RUNNING_PREFIX = /^● Running · [^·]+?(?: · |$)/;
@@ -53,18 +54,19 @@ export function runningTitle(title: string, runningKey: string | null): string {
 
 /**
  * The voyage page at `/voyages/:key` (plan, lane 4A): breadcrumb, header, the CI wait banner while Ahoy waits for a
- * pull request's checks, the Anchored banner when halted, the Knowledge panel when done or halted, the Pull request
- * comments panel at the delivery gate or done, the section tabs (one URL each, with the counts) and the outlet the tabs
- * render in. While the voyage runs, the Under way strip follows the header, the Runs tab has a live dot and the
- * browser tab's title starts with "● Running". It provides the page's {@link VoyageContext}, which every tab injects.
- * Until the story is read it shows the header's skeleton; a 404 shows "This voyage doesn't exist" and any other failure "Can't reach Ahoy" with Try
- * again.
+ * pull request's checks, the Anchored banner when halted, the delivery decision while the delivery gate is open, the
+ * Knowledge panel when done or halted, the Pull request comments panel at the delivery gate or done, the section tabs
+ * (one URL each, with the counts) and the outlet the tabs render in. While the voyage runs, the Under way strip follows
+ * the header, the Runs tab has a live dot and the browser tab's title starts with "● Running". It provides the page's
+ * {@link VoyageContext}, which every tab injects. Until the story is read it shows the header's skeleton; a 404 shows
+ * "This voyage doesn't exist" and any other failure "Can't reach Ahoy" with Try again.
  */
 @Component({
   selector: 'ah-voyage-shell',
   imports: [
     AnchoredBanner,
     CiWaitBanner,
+    DeliveryDecision,
     KnowledgePanel,
     PrCommentsPanel,
     Banner,
@@ -92,6 +94,7 @@ export function runningTitle(title: string, runningKey: string | null): string {
           <ah-under-way-strip />
           <ah-ci-wait-banner />
           <ah-anchored-banner />
+          <ah-delivery-decision />
           <ah-knowledge-panel />
           <ah-pr-comments-panel />
           <ah-section-tabs label="Voyage sections" [items]="tabs()" />

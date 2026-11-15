@@ -42,6 +42,7 @@ export type FakeApiOps = Pick<
   | 'getDefectSettings'
   | 'getSetup'
   | 'keepPhaseDefaults'
+  | 'decideHumanGate'
 >;
 
 /** A call the fake saw. */
@@ -277,5 +278,10 @@ export class FakeApi implements FakeApiOps {
   keepPhaseDefaults: FakeApiOps['keepPhaseDefaults'] = () => {
     this.calls.push({ op: 'keepPhaseDefaults', args: [] });
     return this.handlers.keepPhaseDefaults?.() ?? unreachable();
+  };
+
+  decideHumanGate: FakeApiOps['decideHumanGate'] = (key, body) => {
+    this.calls.push({ op: 'decideHumanGate', args: [key, body] });
+    return this.handlers.decideHumanGate?.(key, body) ?? unreachable();
   };
 }

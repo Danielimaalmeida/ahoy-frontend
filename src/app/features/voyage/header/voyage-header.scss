@@ -44,6 +44,79 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  align-items: center;
+}
+
+// The More menu drops out of the panel, so the panel does not clip it; the running bar is rounded to the corners instead.
+.header__panel {
+  overflow: visible;
+}
+
+// The key links to the issue in Jira, with the "opens elsewhere" arrow.
+.header__key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.header__more {
+  position: relative;
+}
+
+.header__chevron {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+// A small popover, as the Meetings topic menu: the design system raises only dialogs, toasts and the selected segment.
+.header__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-toast);
+
+  button {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+
+.header__menu-rule {
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  margin: var(--space-1) 2px;
+}
+
+.ah-btn.header__menu-danger {
+  color: var(--danger-text);
 }
 
 .header__meta {
@@ -95,7 +168,7 @@
 }
 
 // While the voyage is running: a bar sweeps along the panel's top edge (asked for on 2026-11-05, so that a running voyage
-// is plain at a glance). Still under reduced motion. The panel's own `overflow: hidden` clips it to the corners.
+// is plain at a glance). Still under reduced motion. Rounded to the panel's corners, since the panel does not clip.
 .header--running {
   position: relative;
 
@@ -104,6 +177,7 @@
     position: absolute;
     inset: 0 0 auto;
     height: 3px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: linear-gradient(90deg, transparent, var(--live), transparent)
       no-repeat;
     background-size: 40% 100%;

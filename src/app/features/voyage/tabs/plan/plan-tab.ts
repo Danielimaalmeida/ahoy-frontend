@@ -23,7 +23,7 @@ import { PlanPanelSection } from './plan-panel-section';
 
 /**
  * The Plan tab (plan, lane 4B; wireframe `PlanReview`): the plan the Cartographer wrote, with the blocks that changed
- * since the last revision marked; the acceptance criteria; "Your decision"; and the earlier round. It reads only: the
+ * since the last revision marked; the acceptance criteria; "Your decision" (the plan's; another gate's sits above the tabs); and the earlier round. It reads only: the
  * decision goes through the `CommandRunner` of the voyage's context, one command at a time.
  */
 @Component({
@@ -131,8 +131,10 @@ import { PlanPanelSection } from './plan-panel-section';
       </article>
 
       <aside class="plan__side" aria-label="Decision and criteria">
-        <ah-decision-conflict />
-        <ah-decision-panel />
+        @if (decidesHere()) {
+          <ah-decision-conflict />
+          <ah-decision-panel />
+        }
         <ah-plan-fit />
 
         <ah-panel>
@@ -208,6 +210,12 @@ export class PlanTab {
   protected readonly author = computed(() => {
     const run = runById(this.context.runs(), this.artifact()?.runId ?? null);
     return run === undefined ? crewLabel('planning') : runCrew(run);
+  });
+
+  /** The plan's decision is taken here; another open gate's (the delivery's) above the tabs. */
+  protected readonly decidesHere = computed(() => {
+    const gate = this.context.gateKey();
+    return gate === null || gate === PLAN_GATE;
   });
 
   protected readonly planError = computed(() => {

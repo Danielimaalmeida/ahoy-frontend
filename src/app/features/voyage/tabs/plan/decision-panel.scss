@@ -30,3 +30,22 @@
 .decision__submit {
   align-self: stretch;
 }
+
+// At the delivery gate the panel spans the page: the button sits at the end instead of filling the width.
+.decision__submit--end {
+  align-self: flex-end;
+}
+
+.decision__prs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3\.5);
+  margin: 0;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .decision__submit--end {
+    align-self: stretch;
+  }
+}

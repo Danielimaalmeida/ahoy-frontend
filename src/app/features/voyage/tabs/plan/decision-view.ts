@@ -8,8 +8,40 @@ import type { ChoiceOption } from '@ui/choice-card/choice-card';
 /** The human gate of the plan (`plan_accepted`, phase `plan_review`): the one this tab decides. */
 export const PLAN_GATE = 'plan_accepted';
 
+/** The human gate of the delivery (`delivery_accepted`, phase `delivery_gate`): decided above the tabs. */
+export const DELIVERY_GATE = 'delivery_accepted';
+
+/** Which words a human gate's decision takes: the plan's, the delivery's, or the plain ones of any other gate. */
+export type GateKind = 'plan' | 'delivery' | 'other';
+
+/** The kind of `gate`, for its words. */
+export function gateKind(gate: string | null): GateKind {
+  if (gate === PLAN_GATE) return 'plan';
+  if (gate === DELIVERY_GATE) return 'delivery';
+  return 'other';
+}
+
+/** What is decided at a gate of each kind, in "Send the {subject} back", "Reject the {subject}?". */
+export const GATE_SUBJECT: Readonly<Record<GateKind, string>> = {
+  plan: 'plan',
+  delivery: 'delivery',
+  other: 'work',
+};
+
 /** The most characters of a reason (`maxLength: 5000` in the plan's brief; the API trims nothing). */
 export const DECISION_REASON_MAX = 5000;
+
+/** What a send-back starts at a gate of each kind, before the round count. */
+function revisesText(crew: string, kind: GateKind): string {
+  switch (kind) {
+    case 'plan':
+      return `${crew} revises the plan.`;
+    case 'delivery':
+      return `${crew} reworks the pull requests, then the Lookout reviews them again.`;
+    case 'other':
+      return `${crew} revises the work.`;
+  }
+}
 
 /**
  * What a send-back would start, in words: "Cartographer revises the plan. This would be round 3 of 4." `round` is the
@@ -19,14 +51,15 @@ export const DECISION_REASON_MAX = 5000;
 export function roundText(
   crew: string,
   round: number | null,
-  ceiling: number | null
+  ceiling: number | null,
+  kind: GateKind = 'plan'
 ): string {
-  const revises = `${crew} revises the plan.`;
+  const revises = revisesText(crew, kind);
   if (round === null || ceiling === null) return revises;
   const next = round + 1;
   if (next <= ceiling)
     return `${revises} This would be round ${next} of ${ceiling}.`;
-  return `${revises} This would be round ${next}, past the ${ceiling} rounds a plan gets: Ahoy may refuse it, and then the voyage anchors and needs a person to decide.`;
+  return `${revises} This would be round ${next}, past the ${ceiling} rounds a ${GATE_SUBJECT[kind]} gets: Ahoy may refuse it, and then the voyage anchors and needs a person to decide.`;
 }
 
 /**
@@ -46,22 +79,30 @@ export function sendBackLead(
   return `This would be revision round ${next}, past the ${ceiling} rounds a plan gets. Ahoy may refuse it, and then the voyage anchors and needs a person to decide.`;
 }
 
-/** The three cards of "Your decision", each with its consequence (wireframe `PlanReview`). */
+/** What approving a gate of each kind does. */
+const APPROVE_TEXT: Readonly<Record<GateKind, string>> = {
+  plan: 'The voyage moves on to implementation.',
+  delivery: 'The voyage is done. Its pull requests stay open for you to merge.',
+  other: 'The voyage moves on to its next phase.',
+};
+
+/** The three cards of "Your decision", each with its consequence (wireframe `PlanReview`), in the words of the gate. */
 export function choiceOptions(
   crew: string,
   round: number | null,
-  ceiling: number | null
+  ceiling: number | null,
+  kind: GateKind = 'plan'
 ): readonly ChoiceOption<HumanDecision>[] {
   return [
     {
       value: 'approve',
       title: 'Approve',
-      description: 'The voyage moves on to implementation.',
+      description: APPROVE_TEXT[kind],
     },
     {
       value: 'send_back',
       title: 'Send back',
-      description: roundText(crew, round, ceiling),
+      description: roundText(crew, round, ceiling, kind),
     },
     {
       value: 'reject',
@@ -71,15 +112,23 @@ export function choiceOptions(
   ];
 }
 
-/** The label of the decision button for the card that is picked. */
-export function confirmLabel(choice: HumanDecision, crew: string): string {
+/** The label of the decision button for the card that is picked: "Approve plan", "Accept delivery", "Reject". */
+export function confirmLabel(
+  choice: HumanDecision,
+  crew: string,
+  kind: GateKind = 'plan'
+): string {
   switch (choice) {
     case 'approve':
-      return 'Approve plan';
+      return kind === 'plan'
+        ? 'Approve plan'
+        : kind === 'delivery'
+          ? 'Accept delivery'
+          : 'Approve';
     case 'send_back':
       return `Send back to ${crew}`;
     case 'reject':
-      return 'Reject plan';
+      return kind === 'other' ? 'Reject' : `Reject ${GATE_SUBJECT[kind]}`;
   }
 }
 
@@ -107,15 +156,22 @@ export function decisionToast(
   decision: HumanDecision,
   crew: string,
   round: number | null,
-  ceiling: number | null
+  ceiling: number | null,
+  kind: GateKind = 'plan'
 ): string {
+  const subject =
+    kind === 'plan' ? 'Plan' : kind === 'delivery' ? 'Delivery' : 'Gate';
   switch (decision) {
     case 'approve':
-      return 'Plan approved. The voyage moves on to implementation.';
+      return kind === 'plan'
+        ? 'Plan approved. The voyage moves on to implementation.'
+        : kind === 'delivery'
+          ? 'Delivery accepted. The voyage is done.'
+          : 'Gate approved. The voyage moves on.';
     case 'reject':
-      return 'Plan rejected. The voyage became blocked.';
+      return `${subject} rejected. The voyage became blocked.`;
     case 'send_back': {
-      const sent = `Plan sent back to ${crew}.`;
+      const sent = `${subject} sent back to ${crew}.`;
       if (round === null) return sent;
       const next = round + 1;
       return ceiling !== null && next <= ceiling
