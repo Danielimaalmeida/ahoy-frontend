@@ -121,5 +121,7 @@ folders, spec titles). They are identifiers, not UI text; rename them only toget
 - **Defect tag.** "Needs you" marks a voyage that fixes a defect with an `ah-tag` in the send-back colours and the
   `bug` icon (`features/harbour/all-hands.ts`); stories carry no tag. It should become a tag variant of the design
   system.
+- **Vocabulary.** "Defect", the phases in words (`PHASE_LABELS` in `domain/phases.ts`: "Plan review", "Delivery gate"…)
+  and "Phase N of 8" are not in `vocabulary.md` yet; they should be added there, then re-synced.
 - **Tokens.** Four colour tokens differ from the design system for contrast (`_ahoy-a11y.scss`); they should move into
   it, then the overrides go.

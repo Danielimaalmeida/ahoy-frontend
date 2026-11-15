@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: fb9d6f60fdacd3ee831625d409f997e5060d5f31
+# Commit: ec0fedfb0982f2352624c202251da3f9cbe832e3
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -4613,8 +4613,14 @@ components:
           maxLength: 100
           description: >-
             What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read
-            it. A list tells a defect from a user story by it. Always sent by this server; a server older than it sends
-            none.
+            it (a story the defect watch knew before this field existed is `Defect`). Always sent by this server; a
+            server older than it sends none.
+        isDefect:
+          type: boolean
+          description: >-
+            Whether `issueType` names a defect (Bug, Defect, Defeito), so a list tells a defect from a user story without
+            repeating the rule; false while the type is unknown. Always sent by this server; a server older than it
+            sends none.
         version: { $ref: '#/components/schemas/Version' }
         createdAt: { $ref: '#/components/schemas/Timestamp' }
         updatedAt: { $ref: '#/components/schemas/Timestamp' }

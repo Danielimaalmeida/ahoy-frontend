@@ -7942,7 +7942,11 @@
             "type": ["string", "null"],
             "minLength": 1,
             "maxLength": 100,
-            "description": "What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read it. A list tells a defect from a user story by it. Always sent by this server; a server older than it sends none."
+            "description": "What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read it (a story the defect watch knew before this field existed is `Defect`). Always sent by this server; a server older than it sends none."
+          },
+          "isDefect": {
+            "type": "boolean",
+            "description": "Whether `issueType` names a defect (Bug, Defect, Defeito), so a list tells a defect from a user story without repeating the rule; false while the type is unknown. Always sent by this server; a server older than it sends none."
           },
           "version": {
             "$ref": "#/components/schemas/Version"

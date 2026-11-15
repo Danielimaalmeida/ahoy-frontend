@@ -3580,8 +3580,10 @@ export interface components {
       readonly currentRunId: components['schemas']['RunId'] | null;
       /** @description How the story is planned. Always sent by this server; a server older than the plan panel sends none, which is `standard`. */
       readonly planningMode?: components['schemas']['PlanningMode'];
-      /** @description What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read it. A list tells a defect from a user story by it. Always sent by this server; a server older than it sends none. */
+      /** @description What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read it (a story the defect watch knew before this field existed is `Defect`). Always sent by this server; a server older than it sends none. */
       readonly issueType?: string | null;
+      /** @description Whether `issueType` names a defect (Bug, Defect, Defeito), so a list tells a defect from a user story without repeating the rule; false while the type is unknown. Always sent by this server; a server older than it sends none. */
+      readonly isDefect?: boolean;
       readonly version: components['schemas']['Version'];
       readonly createdAt: components['schemas']['Timestamp'];
       readonly updatedAt: components['schemas']['Timestamp'];

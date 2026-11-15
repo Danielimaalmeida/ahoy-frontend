@@ -311,6 +311,7 @@ const story = shape<Story>({
   issueType: optional(
     nullable(boundedText('an issue type of 1 to 100 characters', 1, 100))
   ),
+  isDefect: optional(flag),
   version: positive,
   createdAt: timestamp,
   updatedAt: timestamp,

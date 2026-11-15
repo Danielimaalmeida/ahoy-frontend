@@ -45,12 +45,8 @@ What each feature still needs beyond the tests above. Its pull request has the d
 
 | Feature                                                                                                    | Not checked yet                                                                                            |
 | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-<<<<<<< HEAD
 | Needs you: phase in words with "Phase N of 8"; a "Defect" tag from `issueType`                             | A browser (mockup only); an API with ahoy-hosted's `issueType` (no tag until it is deployed)               |
-| The Product page (`/product`, admins only): conversations with pinned context, proposal and question cards | A browser after this merge (mock screenshots of 2026-11-09); the answer's stream on an API; a live session |
-=======
 | The Product page (`/product`, admins only): proposals to Jira or a meeting, look-ups, quick pins and Apply | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
->>>>>>> origin/main
 | Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                            | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
 | Create in Confluence, Team settings › Confluence                                                           | A real Confluence; updating a page once it exists is not built                                             |
 | Each person on a side of a meeting (People, `MeStore`)                                                     | A browser                                                                                                  |

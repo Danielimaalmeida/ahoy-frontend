@@ -10,7 +10,6 @@ import { RouterLink } from '@angular/router';
 import type { ApiError } from '@core/api/api-error';
 import { StoriesStore } from '@core/stores/stories-store';
 import { ownerLabel } from '@domain/identifiers';
-import { isDefectType } from '@domain/issue-types';
 import { phaseLabel, phasePosition } from '@domain/phases';
 import { AGROUND, type BoardStatus } from '@domain/status';
 import type { Phase, StoryStatus } from '@domain/types';
@@ -256,11 +255,8 @@ function describeFailure(error: ApiError): Failure {
     /* A voyage that fixes a defect says so before its key; user stories, most of the list, carry no tag. The colours
        are the send-back pair, so it reads apart from Halted's red. */
     .defect {
-      gap: 3px;
-      height: 18px;
-      padding: 0 7px;
-      margin-right: 6px;
-      vertical-align: 1px;
+      gap: var(--space-1);
+      margin-right: var(--space-1\\.5);
       background: var(--status-sendback-bg);
       color: var(--status-sendback-fg);
     }
@@ -429,7 +425,7 @@ function describeFailure(error: ApiError): Failure {
                       <td class="voyage">
                         <div class="rows3">
                           <div class="title" [title]="row.story.title">
-                            @if (isDefect(row.story.issueType)) {
+                            @if (row.story.isDefect === true) {
                               <span class="ah-tag defect"
                                 ><ah-icon name="bug" [size]="12" />Defect</span
                               >
@@ -622,9 +618,9 @@ export class AllHandsPage {
   protected readonly tiles = TILES;
   /** The owner's name, or the q-number while the name is not known; the q-number is the cell's tooltip. */
   protected readonly ownerLabel = ownerLabel;
+  /** The phase in words ("Delivery gate"); the API word is the cell's tooltip. */
   protected readonly phaseLabel = phaseLabel;
-  /** Whether the voyage fixes a defect, by its Jira issue type; a user story carries no tag. */
-  protected readonly isDefect = isDefectType;
+  /** "Phase 7 of 8" under the phase in Needs you, or null for blocked and unknown phases. */
   protected readonly phasePosition = phasePosition;
   protected readonly placeholderRows = PLACEHOLDER_ROWS;
   protected readonly counts = this.store.boardCounts;
