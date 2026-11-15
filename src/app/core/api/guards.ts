@@ -308,6 +308,10 @@ const story = shape<Story>({
   controlSha: sha1,
   currentRunId: nullable(runId),
   planningMode: optional(oneOf(PLANNING_MODES)),
+  issueType: optional(
+    nullable(boundedText('an issue type of 1 to 100 characters', 1, 100))
+  ),
+  isDefect: optional(flag),
   version: positive,
   createdAt: timestamp,
   updatedAt: timestamp,

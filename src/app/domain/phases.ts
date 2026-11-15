@@ -24,3 +24,31 @@ export function phaseIndex(phase: string): number | null {
   const index = PHASES.findIndex((candidate) => candidate === phase);
   return index === -1 ? null : index + 1;
 }
+
+/** Each phase in words, for lists where the API word would be hard to scan ("Delivery gate" for `delivery_gate`). */
+export const PHASE_LABELS = {
+  intake: 'Intake',
+  planning: 'Planning',
+  plan_review: 'Plan review',
+  design: 'Design',
+  implementation: 'Implementation',
+  pr_review: 'PR review',
+  delivery_gate: 'Delivery gate',
+  done: 'Done',
+  blocked: 'Blocked',
+} as const satisfies Record<(typeof PHASES)[number] | 'blocked', string>;
+
+function isLabelled(phase: string): phase is keyof typeof PHASE_LABELS {
+  return Object.hasOwn(PHASE_LABELS, phase);
+}
+
+/** A phase in words; a phase this list does not know is shown as the API sent it, never guessed. */
+export function phaseLabel(phase: string): string {
+  return isLabelled(phase) ? PHASE_LABELS[phase] : phase;
+}
+
+/** "Phase 7 of 8" for a delivery phase, or `null` for `blocked` and unknown phases, which have no position. */
+export function phasePosition(phase: string): string | null {
+  const index = phaseIndex(phase);
+  return index === null ? null : `Phase ${index} of ${PHASES.length}`;
+}

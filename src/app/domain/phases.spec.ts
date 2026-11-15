@@ -1,4 +1,10 @@
-import { GATE_FOR_PHASE, PHASES, phaseIndex } from './phases';
+import {
+  GATE_FOR_PHASE,
+  PHASES,
+  phaseIndex,
+  phaseLabel,
+  phasePosition,
+} from './phases';
 
 describe('PHASES', () => {
   it('lists the eight delivery phases in order', () => {
@@ -48,5 +54,44 @@ describe('GATE_FOR_PHASE', () => {
       plan_review: 'plan_accepted',
       delivery_gate: 'delivery_accepted',
     });
+  });
+});
+
+describe('phaseLabel', () => {
+  it('names every delivery phase in words', () => {
+    expect(PHASES.map(phaseLabel)).toEqual([
+      'Intake',
+      'Planning',
+      'Plan review',
+      'Design',
+      'Implementation',
+      'PR review',
+      'Delivery gate',
+      'Done',
+    ]);
+  });
+
+  it('names blocked', () => {
+    expect(phaseLabel('blocked')).toBe('Blocked');
+  });
+
+  it('shows an unknown phase as the API sent it', () => {
+    expect(phaseLabel('sea_trials')).toBe('sea_trials');
+  });
+
+  it('does not read a phase from the object prototype', () => {
+    expect(phaseLabel('toString')).toBe('toString');
+  });
+});
+
+describe('phasePosition', () => {
+  it('says where a delivery phase is among the eight', () => {
+    expect(phasePosition('delivery_gate')).toBe('Phase 7 of 8');
+    expect(phasePosition('intake')).toBe('Phase 1 of 8');
+  });
+
+  it('has no position for blocked or an unknown phase', () => {
+    expect(phasePosition('blocked')).toBeNull();
+    expect(phasePosition('sea_trials')).toBeNull();
   });
 });

@@ -37,6 +37,7 @@ const APP_TABLE = {
   'calendar-plus': 'No meetings yet',
   document: 'No topics or no notes in a meeting',
   waves: 'Calm seas: a filter with no voyages',
+  bug: 'A voyage that fixes a defect',
 };
 
 /** `satisfies` fails to compile if a name is missing or extra. */
