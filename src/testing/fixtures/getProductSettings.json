@@ -1,0 +1,16 @@
+{
+  "canEdit": true,
+  "product": {
+    "jiraProject": null,
+    "confluenceSpaces": [],
+    "repositories": [],
+    "version": null,
+    "updatedBy": null,
+    "updatedByName": null,
+    "updatedAt": null
+  },
+  "model": {
+    "model": "claude-sonnet-5",
+    "reasoningEffort": null
+  }
+}

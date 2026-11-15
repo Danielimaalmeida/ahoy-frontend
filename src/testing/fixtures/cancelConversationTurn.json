@@ -32,13 +32,15 @@
       "proposals": [],
       "questions": [],
       "error": "cancelled by alex@example.com",
-      "endedAt": "2026-11-04T10:03:00.000Z"
+      "endedAt": "2026-11-04T10:03:00.000Z",
+      "mentions": []
     }
   ],
   "session": {
     "id": "r-conv-4-1",
     "status": "queued",
     "warm": false,
+    "model": null,
     "budgetNanoAiu": 3000000000,
     "spentNanoAiu": 0,
     "cancelRequested": true,
@@ -54,5 +56,20 @@
       "on": true,
       "available": false
     }
+  },
+  "model": {
+    "model": null,
+    "reasoningEffort": null,
+    "team": {
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null
+    }
+  },
+  "jiraProject": null,
+  "confluenceSpaces": [],
+  "teamDefaults": {
+    "jiraProject": null,
+    "confluenceSpaces": [],
+    "repositories": []
   }
 }

@@ -4,6 +4,8 @@
  * contract's `Conversation` these rules read (`domain/` may not import `core/`); a real value always fits them.
  */
 
+import type { ReasoningEffort } from './types';
+
 /** What a conversation is for (`ConversationRecipe`). */
 export type ConversationRecipe = 'split-epic' | 'story-ready' | 'how-today';
 
@@ -422,4 +424,101 @@ export function jiraChangeTitle(change: JiraChangeLike): string {
     case 'edit_issue':
       return `Change ${change.issueKey}`;
   }
+}
+
+/** A model of the catalogue, as the model picker reads it (`ModelCatalog.models`). */
+export interface CatalogModelLike {
+  readonly id: string;
+  readonly label: string;
+  /** The efforts it takes; null when the catalogue does not say. */
+  readonly reasoningEfforts: readonly ReasoningEffort[] | null;
+}
+
+/** A model and effort; null is the next default (`ConversationModel`). */
+export interface ModelChoiceLike {
+  readonly model: string | null;
+  readonly reasoningEffort: ReasoningEffort | null;
+}
+
+/** The efforts a run may ask for, in order (`REASONING_EFFORTS` of the contract). */
+export const CONVERSATION_EFFORTS: readonly ReasoningEffort[] = [
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+];
+
+/** A model's name for the page: its catalogue label, else its id. */
+export function modelName(
+  catalog: readonly CatalogModelLike[],
+  id: string
+): string {
+  return catalog.find((m) => m.id === id)?.label ?? id;
+}
+
+/** The model picker's first option, the team's: "Claude Sonnet 5 (team default)", or the profile's when none is set. */
+export function teamModelLabel(
+  catalog: readonly CatalogModelLike[],
+  team: ModelChoiceLike
+): string {
+  return team.model === null
+    ? "Agent profile's (team default)"
+    : `${modelName(catalog, team.model)} (team default)`;
+}
+
+/**
+ * The efforts the picker offers for `model` (null: the team's): those the catalogue lists for it, every one when it
+ * does not say, none when it takes none.
+ */
+export function effortChoices(
+  catalog: readonly CatalogModelLike[],
+  model: string | null
+): readonly ReasoningEffort[] {
+  if (model === null) return CONVERSATION_EFFORTS;
+  return (
+    catalog.find((m) => m.id === model)?.reasoningEfforts ??
+    CONVERSATION_EFFORTS
+  );
+}
+
+/**
+ * What the effort picker's "Default" stands for: the team's effort under the team's model, otherwise the model's own
+ * default (a model of the person's own runs without the team's effort, which it may not take).
+ */
+export function defaultEffortLabel(
+  chosenModel: string | null,
+  team: ModelChoiceLike
+): string {
+  return chosenModel === null && team.reasoningEffort !== null
+    ? `Default (${team.reasoningEffort})`
+    : 'Default';
+}
+
+/** Whether two choices differ, so sending must first change the conversation's model. */
+export function modelChoiceChanged(
+  a: ModelChoiceLike,
+  b: ModelChoiceLike
+): boolean {
+  return a.model !== b.model || a.reasoningEffort !== b.reasoningEffort;
+}
+
+/**
+ * What the composer says when the picked model is not the conversation's while a session is warm: sending starts a new
+ * session on it, carrying the conversation so far.
+ */
+export function modelSwitchNote(
+  catalog: readonly CatalogModelLike[],
+  sessionModel: string | null,
+  picked: ModelChoiceLike,
+  team: ModelChoiceLike
+): string {
+  const next = picked.model ?? team.model;
+  const running =
+    sessionModel === null ? 'its model' : modelName(catalog, sessionModel);
+  const name =
+    next === null ? "the agent profile's model" : modelName(catalog, next);
+  return `The open session runs ${running}. Sending starts a new session with ${name}${
+    picked.reasoningEffort !== null ? ` (${picked.reasoningEffort})` : ''
+  }, carrying the conversation so far.`;
 }

@@ -9,6 +9,7 @@ import type {
   ConversationChange,
   ConversationContextChange,
   ConversationContextItem,
+  ConversationModel,
   ConversationProposal,
   ConversationSummary,
   ConversationTurn,
@@ -42,7 +43,35 @@ export const MOCK_WARM_MS = 600_000;
 /** What each streamed step spends. */
 const STEP_NANO_AIU = 150_000_000;
 
+/** The mock team's model for Product conversations (Team settings › Phases). */
+const TEAM_MODEL: ConversationModel = {
+  model: 'claude-sonnet-5',
+  reasoningEffort: null,
+};
+
 const JIRA_KEY = /^[A-Z][A-Z0-9_]+-\d+$/;
+const ISSUE_KEYS = /\b[A-Z][A-Z0-9_]{0,49}-[1-9]\d{0,9}\b/g;
+const PROJECT_NUMBERS = /(?:^|[^\w#&])#([1-9]\d{0,9})\b/g;
+
+/** What a question names that the mock "reads" with it: issue keys and `#n` of the conversation's project, not pinned. */
+function mentionsOf(
+  question: string,
+  c: { context: readonly ConversationContextItem[]; jiraProject: string | null }
+): ConversationTurn['mentions'] {
+  const keys = [...question.matchAll(ISSUE_KEYS)].map((m) => m[0]);
+  if (c.jiraProject !== null)
+    for (const m of question.matchAll(PROJECT_NUMBERS))
+      keys.push(`${c.jiraProject}-${m[1] ?? ''}`);
+  return [...new Set(keys)]
+    .filter((key) => !c.context.some((p) => p.kind === 'jira' && p.ref === key))
+    .slice(0, 10)
+    .map((ref) => ({
+      kind: 'jira' as const,
+      ref,
+      label: `Simulated ${ref}`,
+      problem: null,
+    }));
+}
 const FIGMA_LINK =
   /^https?:\/\/(?:www\.)?figma\.com\/(?:design|file|proto)\/[A-Za-z0-9]+(?:\/\S*)?$/;
 
@@ -54,6 +83,8 @@ interface SessionRecord {
   spentNanoAiu: number;
   cancelRequested: boolean;
   startedAt: string | null;
+  /** The model it runs on, from when it starts. */
+  model: string | null;
 }
 interface ConversationRecord {
   id: string;
@@ -67,6 +98,11 @@ interface ConversationRecord {
   context: ConversationContextItem[];
   /** Whether the person lets the agent look up Jira and Confluence beyond the pins. */
   lookUp: { jira: boolean; confluence: boolean };
+  /** The model and effort its owner chose; null is the team's. */
+  model: ConversationModel;
+  /** Where the agent looks first, copied from the team's defaults when it was started. */
+  jiraProject: string | null;
+  confluenceSpaces: string[];
   turns: TurnRecord[];
   session: SessionRecord | null;
   /** What the sessions that ended spent. */
@@ -103,6 +139,13 @@ export class ConversationDesk {
   private readonly streams = new Set<OpenStream>();
 
   private nextIssue = 40;
+
+  /** Team settings › Product: what every conversation started from now on begins with. */
+  productDefaults: Conversation['teamDefaults'] = {
+    jiraProject: null,
+    confluenceSpaces: [],
+    repositories: [],
+  };
 
   constructor(
     private readonly clock: MockClock,
@@ -147,6 +190,7 @@ export class ConversationDesk {
       status: 'answered',
       liveText: null,
       activity: [],
+      mentions: [],
       answer:
         'Today `api/src/billing/dunning.ts` sends **three reminders**, 7, 14 and 30 days after the due date, and stops when the invoice is paid. Nothing is charged for being late.',
       proposals: [],
@@ -185,9 +229,30 @@ export class ConversationDesk {
     const lookUpChanged =
       lookUp.jira !== c.lookUp.jira ||
       lookUp.confluence !== c.lookUp.confluence;
-    if (lookUpChanged && this.openTurn(c) !== undefined)
+    const model: ConversationModel = {
+      model: body.model !== undefined ? body.model : c.model.model,
+      reasoningEffort:
+        body.reasoningEffort !== undefined
+          ? body.reasoningEffort
+          : c.model.reasoningEffort,
+    };
+    const modelChanged =
+      model.model !== c.model.model ||
+      model.reasoningEffort !== c.model.reasoningEffort;
+    const jiraProject =
+      body.jiraProject !== undefined
+        ? (body.jiraProject?.trim().toUpperCase() ?? null)
+        : c.jiraProject;
+    const confluenceSpaces = body.confluenceSpaces ?? c.confluenceSpaces;
+    const whereChanged =
+      jiraProject !== c.jiraProject ||
+      confluenceSpaces.join() !== c.confluenceSpaces.join();
+    if (
+      (lookUpChanged || modelChanged || whereChanged) &&
+      this.openTurn(c) !== undefined
+    )
       throw invalid(
-        'A question is being answered: change what it looks up once it is answered'
+        `A question is being answered: change ${lookUpChanged ? 'what it looks up' : modelChanged ? 'its model' : 'where it looks'} once it is answered`
       );
     if (body.title !== undefined) {
       const title = body.title.trim().replaceAll(/\s+/g, ' ');
@@ -195,9 +260,12 @@ export class ConversationDesk {
       c.title = title;
     }
     if (body.shared !== undefined) c.shared = body.shared;
-    if (lookUpChanged) {
+    if (lookUpChanged || modelChanged || whereChanged) {
       c.lookUp = lookUp;
-      // A warm session was given the old look-ups: the next question starts a new one.
+      c.model = model;
+      c.jiraProject = jiraProject;
+      c.confluenceSpaces = [...confluenceSpaces];
+      // A warm session was given the old look-ups or model: the next question starts a new one.
       this.endSession(c);
     }
     c.updatedAt = this.now();
@@ -302,6 +370,7 @@ export class ConversationDesk {
       questions: [],
       error: null,
       endedAt: null,
+      mentions: mentionsOf(body.question, c),
     });
     c.updatedAt = this.now();
     if (c.session === null) {
@@ -312,11 +381,13 @@ export class ConversationDesk {
         spentNanoAiu: 0,
         cancelRequested: false,
         startedAt: null,
+        model: null,
       };
       this.after(c, MOCK_START_MS, () => {
         if (c.session === null) return;
         c.session.status = 'running';
         c.session.startedAt = this.now();
+        c.session.model = c.model.model ?? TEAM_MODEL.model;
         this.hand(c, n);
       });
     } else {
@@ -442,8 +513,15 @@ export class ConversationDesk {
       shared: false,
       createdAt: at,
       updatedAt: at,
-      context: [],
+      context: this.productDefaults.repositories.map((ref) => ({
+        kind: 'repository' as const,
+        ref,
+        label: null,
+      })),
       lookUp: { jira: true, confluence: true },
+      model: { model: null, reasoningEffort: null },
+      jiraProject: this.productDefaults.jiraProject,
+      confluenceSpaces: [...this.productDefaults.confluenceSpaces],
       turns: [],
       session: null,
       spentBefore: 0,
@@ -876,6 +954,7 @@ export class ConversationDesk {
               id: s.id,
               status: s.status,
               warm: s.status === 'running',
+              model: s.model,
               budgetNanoAiu: s.budgetNanoAiu,
               spentNanoAiu: s.spentNanoAiu,
               cancelRequested: s.cancelRequested,
@@ -886,6 +965,14 @@ export class ConversationDesk {
       lookUp: {
         jira: { on: c.lookUp.jira, available: true },
         confluence: { on: c.lookUp.confluence, available: false },
+      },
+      model: { ...c.model, team: { ...TEAM_MODEL } },
+      jiraProject: c.jiraProject,
+      confluenceSpaces: [...c.confluenceSpaces],
+      teamDefaults: {
+        jiraProject: this.productDefaults.jiraProject,
+        confluenceSpaces: [...this.productDefaults.confluenceSpaces],
+        repositories: [...this.productDefaults.repositories],
       },
     };
   }

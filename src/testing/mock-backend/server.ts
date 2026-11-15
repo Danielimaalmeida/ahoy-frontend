@@ -268,6 +268,8 @@ export class MockAhoyServer {
   /** Team settings › Meetings: the names of the two sides, as saved. */
   private meetingLabels = { usLabel: 'Us', themLabel: 'Stakeholders' };
   private meetingLabelsVersion: number | null = null;
+  /** The Product settings' version; null until saved. */
+  private productVersion: number | null = null;
   /** The signed-in person's name, and the side of a meeting they are on (Team settings › People). */
   private me: { readonly name: string | null; readonly side: MemberSide } = {
     name: null,
@@ -398,6 +400,7 @@ export class MockAhoyServer {
     this.conversations.stopAll();
     this.meetings = new MeetingDesk(this.clock);
     this.conversations = this.newConversations();
+    this.productVersion = null;
     Object.assign(this.switches, {
       latencyMs: 0,
       failNext: null,
@@ -876,6 +879,28 @@ export class MockAhoyServer {
           { actor: call.actor, admin: true, ...this.me },
           { 'Cache-Control': 'no-store' }
         );
+      case 'getProductSettings':
+        return jsonResponse(200, this.productSettingsPage(), {
+          'Cache-Control': 'no-store',
+        });
+      case 'updateProductSettings': {
+        const body = call.body as {
+          jiraProject?: string | null;
+          confluenceSpaces?: string[];
+          repositories?: string[];
+        }; // validated
+        const was = this.conversations.productDefaults;
+        this.conversations.productDefaults = {
+          jiraProject:
+            body.jiraProject !== undefined
+              ? (body.jiraProject?.trim().toUpperCase() ?? null)
+              : was.jiraProject,
+          confluenceSpaces: body.confluenceSpaces ?? was.confluenceSpaces,
+          repositories: body.repositories ?? was.repositories,
+        };
+        this.productVersion = (this.productVersion ?? 0) + 1;
+        return jsonResponse(200, this.productSettingsPage());
+      }
       case 'getMeetingSettings':
         return jsonResponse(200, this.meetingSettingsPage(), {
           'Cache-Control': 'no-store',
@@ -1254,6 +1279,25 @@ export class MockAhoyServer {
   setMeetingLabels(usLabel: string, themLabel: string): void {
     this.meetingLabels = { usLabel, themLabel };
     this.meetingLabelsVersion = (this.meetingLabelsVersion ?? 0) + 1;
+  }
+
+  /** Team settings › Product, as `getProductSettings` answers it: everyone may change it in the mock. */
+  private productSettingsPage() {
+    const saved = this.productVersion !== null;
+    const d = this.conversations.productDefaults;
+    return {
+      canEdit: true,
+      product: {
+        jiraProject: d.jiraProject,
+        confluenceSpaces: [...d.confluenceSpaces],
+        repositories: [...d.repositories],
+        version: this.productVersion,
+        updatedBy: saved ? 'alex@example.com' : null,
+        updatedByName: saved ? 'Alex Doe' : null,
+        updatedAt: saved ? new Date(this.clock.now()).toISOString() : null,
+      },
+      model: { model: 'claude-sonnet-5', reasoningEffort: null },
+    };
   }
 
   /** Team settings › Meetings, as `getMeetingSettings` answers it: everyone may change it in the mock. */

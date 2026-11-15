@@ -23,6 +23,7 @@ import updatePhaseSettings from '@testing/fixtures/updatePhaseSettings.json';
 import getPrCommentSettings from '@testing/fixtures/getPrCommentSettings.json';
 import updatePrCommentSettings from '@testing/fixtures/updatePrCommentSettings.json';
 import getMeetingSettings from '@testing/fixtures/getMeetingSettings.json';
+import getProductSettings from '@testing/fixtures/getProductSettings.json';
 import getPeopleSettings from '@testing/fixtures/getPeopleSettings.json';
 import putPerson from '@testing/fixtures/putPerson.json';
 import removePerson from '@testing/fixtures/removePerson.json';
@@ -33,6 +34,7 @@ import putMyCopilotToken from '@testing/fixtures/putMyCopilotToken.json';
 import deleteMyCopilotToken from '@testing/fixtures/deleteMyCopilotToken.json';
 import testMyCopilotToken from '@testing/fixtures/testMyCopilotToken.json';
 import updateMeetingSettings from '@testing/fixtures/updateMeetingSettings.json';
+import updateProductSettings from '@testing/fixtures/updateProductSettings.json';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
 import getBranchReleaseSettings from '@testing/fixtures/getBranchReleaseSettings.json';
 import addBranchReleaseRepository from '@testing/fixtures/addBranchReleaseRepository.json';
@@ -324,6 +326,8 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['updatePrCommentSettings', updatePrCommentSettings],
   ['getMeetingSettings', getMeetingSettings],
   ['updateMeetingSettings', updateMeetingSettings],
+  ['getProductSettings', getProductSettings],
+  ['updateProductSettings', updateProductSettings],
   ['getPeopleSettings', getPeopleSettings],
   ['putPerson', putPerson],
   ['removePerson', removePerson],
@@ -412,7 +416,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 3).toBe(
-      164
+      166
     );
   });
 

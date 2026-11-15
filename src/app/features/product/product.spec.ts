@@ -678,6 +678,140 @@ describe('Product on the mock backend', () => {
     );
   });
 
+  it('picks a model and effort for the conversation, applied with the next question in a new session', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, null, [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const form = () => composer(page.root)!;
+    const select = (name: string) =>
+      [...form().querySelectorAll('label.pick')]
+        .find((l) => text(l).startsWith(name))!
+        .querySelector('select')!;
+    const pick = async (name: string, value: string) => {
+      const field = select(name);
+      field.value = value;
+      field.dispatchEvent(new Event('change'));
+      await flush(page);
+    };
+    expect(select('Model').selectedOptions[0]?.textContent?.trim()).toBe(
+      'Claude Sonnet 5 (team default)'
+    );
+    expect(
+      [...select('Model').options].map((o) => o.textContent?.trim())
+    ).toEqual([
+      'Claude Sonnet 5 (team default)',
+      'Claude Haiku 4.5',
+      'Claude Sonnet 5',
+      'GPT-5.6 Terra',
+    ]);
+
+    type(form().querySelector('textarea'), 'What links to it?');
+    await flush(page);
+    buttonNamed(form(), 'Send').click();
+    await flush(page);
+    expect(select('Model').disabled).toBe(true);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    expect(text(form())).toContain('The session is warm');
+
+    await pick('Model', 'gpt-5.6-terra');
+    await pick('Effort', 'high');
+    expect(page.requests.some((r) => r.method === 'PATCH')).toBe(false);
+    expect(text(form().querySelector('.switch'))).toBe(
+      'The open session runs Claude Sonnet 5. Sending starts a new session with GPT-5.6 Terra (high), carrying the conversation so far.'
+    );
+    expect(text(form())).toContain('Sending starts a session that spends AIU');
+
+    // A model that takes no effort leaves only the default.
+    await pick('Model', 'claude-haiku-4.5');
+    expect(select('Effort').disabled).toBe(true);
+    expect(select('Effort').value).toBe('');
+    await pick('Model', 'gpt-5.6-terra');
+    await pick('Effort', 'high');
+
+    type(form().querySelector('textarea'), 'And which ship first?');
+    await flush(page);
+    buttonNamed(form(), 'Send').click();
+    await flush(page);
+    expect(page.requests.find((r) => r.method === 'PATCH')?.body).toEqual({
+      model: 'gpt-5.6-terra',
+      reasoningEffort: 'high',
+    });
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    expect(page.server.conversationDesk.get(ME, id).session?.model).toBe(
+      'gpt-5.6-terra'
+    );
+    expect(select('Model').value).toBe('gpt-5.6-terra');
+    expect(form().querySelector('.switch')).toBeNull();
+  });
+
+  it('starts a conversation with the team defaults, reads the issues a question names, and pins one on request', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      server.conversationDesk.productDefaults = {
+        jiraProject: 'PROJ',
+        confluenceSpaces: ['BILL'],
+        repositories: ['web'],
+      };
+      id = started(server, null);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const reads = () =>
+      page.root.querySelector<HTMLElement>(
+        '[aria-label="What the agent reads"]'
+      )!;
+    const parts = (p: Element) =>
+      [...p.querySelectorAll('.kind, .text, .from')].map(text).join(' ');
+    expect([...reads().querySelectorAll('.pin.default')].map(parts)).toEqual([
+      'Jira project PROJ team default',
+      'Confluence space BILL team default',
+      'Repository web team default',
+    ]);
+    expect(
+      composer(page.root)!
+        .querySelector('textarea')!
+        .getAttribute('placeholder')
+    ).toBe('Ask anything. Name issues as PROJ-120, or just #120…');
+
+    reads()
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="Remove Confluence space BILL from this conversation"]'
+      )!
+      .click();
+    await flush(page);
+    expect(page.requests.find((r) => r.method === 'PATCH')?.body).toEqual({
+      confluenceSpaces: [],
+    });
+    expect(text(reads())).not.toContain('Confluence space');
+
+    type(
+      composer(page.root)!.querySelector('textarea'),
+      'Split #120 into stories'
+    );
+    await flush(page);
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 30);
+    const read = page.root.querySelector<HTMLElement>(
+      '[aria-label="Read with question 1"]'
+    )!;
+    expect([...read.querySelectorAll('.pin')].map(parts)).toEqual([
+      'Jira issue or epic PROJ-120 · Simulated PROJ-120',
+    ]);
+    buttonNamed(read, 'Pin').click();
+    await flush(page);
+    expect(page.requests.find((r) => r.method === 'PUT')?.body).toEqual({
+      items: [
+        { kind: 'repository', ref: 'web' },
+        { kind: 'jira', ref: 'PROJ-120' },
+      ],
+    });
+    expect(text(read)).not.toContain('Pin');
+  });
+
   it('shows a conversation shared by someone else read-only: no pinning, no question, no cancel', async () => {
     const page = await open('/product');
     page.root.querySelector<HTMLAnchorElement>('a.line')!.click();

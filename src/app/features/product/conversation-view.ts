@@ -7,7 +7,13 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import type { ConversationContextItem } from '@core/api/types';
+import type {
+  ConversationContextItem,
+  ConversationTurn,
+} from '@core/api/types';
+
+/** One thing a question named that Ahoy read with it. */
+type ConversationMention = ConversationTurn['mentions'][number];
 import { CLOCK } from '@core/realtime/clock';
 import { checkAiuLimit, formatAiu } from '@domain/aiu';
 import {
@@ -17,19 +23,26 @@ import {
   CONVERSATION_BUDGET_MAX_NANO_AIU,
   CONVERSATION_QUESTION_MAX,
   CONVERSATION_TURNS_MAX,
+  defaultEffortLabel,
   defaultJiraProject,
+  effortChoices,
   LOOK_UP_WORDS,
   LOOK_UPS,
   lookUpNote,
   type LookUp,
+  modelChoiceChanged,
+  type ModelChoiceLike,
+  modelSwitchNote,
   openTurn,
   pinRefusal,
   quickPins,
   type QuickPin,
   RECIPE_WORDS,
   sessionLine,
+  teamModelLabel,
   TURN_STATUS_WORDS,
 } from '@domain/conversations';
+import type { ReasoningEffort } from '@domain/types';
 import { relativeTime } from '@domain/time';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
@@ -135,6 +148,23 @@ const ACTIVITY_SHOWN = 6;
     .pin .kind {
       color: var(--ink-muted);
       font-weight: 500;
+    }
+    .pin.default {
+      background: var(--surface-sunken);
+    }
+    .pin .from {
+      color: var(--ink-muted);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .read-with {
+      align-self: flex-end;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-end;
+      max-width: 85%;
     }
     .pin .text {
       overflow: hidden;
@@ -313,6 +343,20 @@ const ACTIVITY_SHOWN = 6;
     .send-row .cap input {
       width: 72px;
     }
+    .send-row .pick {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+    .send-row .pick select {
+      width: auto;
+      max-width: 220px;
+    }
+    .switch {
+      margin: 0;
+    }
     .send-row .push {
       margin-left: auto;
     }
@@ -425,10 +469,73 @@ const ACTIVITY_SHOWN = 6;
               </div>
               <div class="reads" aria-label="What the agent reads">
                 <span class="label">Reads</span>
+                @if (c.jiraProject !== null) {
+                  <span
+                    class="pin"
+                    [class.default]="
+                      c.jiraProject === c.teamDefaults.jiraProject
+                    "
+                  >
+                    <span class="kind">Jira project</span>
+                    <span class="text">{{ c.jiraProject }}</span>
+                    @if (c.jiraProject === c.teamDefaults.jiraProject) {
+                      <span class="from">team default</span>
+                    }
+                    @if (canPin()) {
+                      <button
+                        type="button"
+                        [attr.aria-label]="
+                          'Remove Jira project ' +
+                          c.jiraProject +
+                          ' from this conversation'
+                        "
+                        [attr.aria-disabled]="store.busy() ? 'true' : null"
+                        (click)="removeProject()"
+                      >
+                        ×
+                      </button>
+                    }
+                  </span>
+                }
+                @for (space of c.confluenceSpaces; track space) {
+                  <span
+                    class="pin"
+                    [class.default]="
+                      c.teamDefaults.confluenceSpaces.includes(space)
+                    "
+                  >
+                    <span class="kind">Confluence space</span>
+                    <span class="text">{{ space }}</span>
+                    @if (c.teamDefaults.confluenceSpaces.includes(space)) {
+                      <span class="from">team default</span>
+                    }
+                    @if (canPin()) {
+                      <button
+                        type="button"
+                        [attr.aria-label]="
+                          'Remove Confluence space ' +
+                          space +
+                          ' from this conversation'
+                        "
+                        [attr.aria-disabled]="store.busy() ? 'true' : null"
+                        (click)="removeSpace(space)"
+                      >
+                        ×
+                      </button>
+                    }
+                  </span>
+                }
                 @for (item of c.context; track item.kind + item.ref) {
-                  <span class="pin" [title]="item.ref">
+                  <span
+                    class="pin"
+                    [class.default]="teamRepository(item)"
+                    [title]="item.ref"
+                  >
                     <span class="kind">{{ kindWords[item.kind].label }}</span>
                     <span class="text">{{ chip(item) }}</span>
+                    @if (teamRepository(item)) {
+                      <span class="from">team default</span>
+                    }
                     @if (canPin()) {
                       <button
                         type="button"
@@ -441,10 +548,14 @@ const ACTIVITY_SHOWN = 6;
                     }
                   </span>
                 } @empty {
-                  <span class="ah-hint"
-                    >Nothing pinned: the agent answers from the content
-                    repository’s knowledge.</span
-                  >
+                  @if (
+                    c.jiraProject === null && c.confluenceSpaces.length === 0
+                  ) {
+                    <span class="ah-hint"
+                      >Nothing pinned: the agent answers from the content
+                      repository’s knowledge.</span
+                    >
+                  }
                 }
                 @if (canPin()) {
                   <span class="quick">
@@ -549,6 +660,33 @@ const ACTIVITY_SHOWN = 6;
                     {{ ago(t.askedAt) }}</span
                   >{{ t.question }}
                 </div>
+                @if (t.mentions.length > 0) {
+                  <div
+                    class="read-with"
+                    role="group"
+                    [attr.aria-label]="'Read with question ' + t.n"
+                  >
+                    <span class="ah-hint">Read with this question:</span>
+                    @for (m of t.mentions; track m.kind + m.ref) {
+                      <span class="pin" [title]="m.problem ?? m.ref">
+                        <span class="kind">{{ kindWords[m.kind].label }}</span>
+                        <span class="text">{{ mentionText(m) }}</span>
+                      </span>
+                      @if (canPin() && !pinned(m)) {
+                        <button
+                          ahButton="ghost"
+                          size="sm"
+                          type="button"
+                          [attr.aria-label]="'Pin ' + m.ref"
+                          [attr.aria-disabled]="store.busy() ? 'true' : null"
+                          (click)="pinMention(m)"
+                        >
+                          Pin
+                        </button>
+                      }
+                    }
+                  </div>
+                }
                 <div class="ah-panel answer">
                   <div class="meta">
                     <b>Product analyst</b>
@@ -663,8 +801,49 @@ const ACTIVITY_SHOWN = 6;
                   (keydown.control.enter)="ask()"
                   (keydown.meta.enter)="ask()"
                 ></textarea>
+                @if (switchNote(); as note) {
+                  <p class="ah-hint switch" role="status">{{ note }}</p>
+                }
+                <span class="ah-hint">{{ spendNote() }}</span>
                 <div class="send-row">
-                  <span class="ah-hint">{{ spendNote() }}</span>
+                  <label class="pick"
+                    >Model
+                    <select
+                      ahInput
+                      [disabled]="!canPin()"
+                      [value]="choice().model ?? ''"
+                      (change)="pickModel(text($event))"
+                    >
+                      <option value="">{{ teamLabel() }}</option>
+                      @for (m of catalog(); track m.id) {
+                        <option
+                          [value]="m.id"
+                          [selected]="m.id === choice().model"
+                        >
+                          {{ m.label }}
+                        </option>
+                      }
+                    </select></label
+                  >
+                  <label class="pick"
+                    >Effort
+                    <select
+                      ahInput
+                      [disabled]="!canPin() || efforts().length === 0"
+                      [value]="choice().reasoningEffort ?? ''"
+                      (change)="pickEffort(text($event))"
+                    >
+                      <option value="">{{ defaultEffort() }}</option>
+                      @for (e of efforts(); track e) {
+                        <option
+                          [value]="e"
+                          [selected]="e === choice().reasoningEffort"
+                        >
+                          {{ e }}
+                        </option>
+                      }
+                    </select></label
+                  >
                   @if (!goesOn()) {
                     <label class="cap"
                       >Cap
@@ -830,9 +1009,10 @@ export class ConversationView {
   protected readonly placeholder = computed(() => {
     const c = this.store.conversation();
     if (c === null || c.turns.length > 0) return 'Ask a follow-up…';
-    return c.recipe === null
+    if (c.recipe !== null) return RECIPE_WORDS[c.recipe].question;
+    return c.jiraProject === null
       ? 'Ask anything about the pinned items…'
-      : RECIPE_WORDS[c.recipe].question;
+      : `Ask anything. Name issues as ${c.jiraProject}-120, or just #120…`;
   });
   /**
    * Whether the next question goes to the warm session: its cap was set when it started, so no cap is asked for, and
@@ -840,8 +1020,53 @@ export class ConversationView {
    */
   protected readonly goesOn = computed(() => {
     const s = this.store.conversation()?.session;
-    return s?.warm === true && !s.cancelRequested;
+    return s?.warm === true && !s.cancelRequested && !this.modelPending();
   });
+
+  /** The model and effort picked in the composer but not sent yet; null while they are the conversation's. */
+  private readonly picked = signal<ModelChoiceLike | null>(null);
+  /** The catalogue the picker offers, empty until it is read. */
+  protected readonly catalog = computed(
+    () => this.store.models()?.models ?? []
+  );
+  /** What the pickers show: what was picked, else the conversation's choice. */
+  protected readonly choice = computed((): ModelChoiceLike => {
+    const picked = this.picked();
+    if (picked !== null) return picked;
+    const m = this.store.conversation()?.model;
+    return m === undefined
+      ? { model: null, reasoningEffort: null }
+      : { model: m.model, reasoningEffort: m.reasoningEffort };
+  });
+  /** Whether sending first changes the conversation's model, which starts a new session. */
+  protected readonly modelPending = computed(() => {
+    const m = this.store.conversation()?.model;
+    const picked = this.picked();
+    return m !== undefined && picked !== null && modelChoiceChanged(picked, m);
+  });
+  protected readonly teamLabel = computed(() =>
+    teamModelLabel(this.catalog(), this.team())
+  );
+  protected readonly efforts = computed(() =>
+    effortChoices(this.catalog(), this.choice().model ?? this.team().model)
+  );
+  protected readonly defaultEffort = computed(() =>
+    defaultEffortLabel(this.choice().model, this.team())
+  );
+  /** Said over the composer when a picked model will replace the warm session's. */
+  protected readonly switchNote = computed(() => {
+    const s = this.store.conversation()?.session;
+    if (!this.modelPending() || s?.warm !== true || s.cancelRequested)
+      return null;
+    return modelSwitchNote(this.catalog(), s.model, this.choice(), this.team());
+  });
+  private readonly team = computed(
+    (): ModelChoiceLike =>
+      this.store.conversation()?.model.team ?? {
+        model: null,
+        reasoningEffort: null,
+      }
+  );
   /** What sending costs: a warm session goes on, within its cap; otherwise a new one starts, capped. */
   protected readonly spendNote = computed(() => {
     const s = this.store.conversation()?.session;
@@ -872,10 +1097,12 @@ export class ConversationView {
   });
 
   constructor() {
+    void this.store.loadModels();
     effect(() => {
       const id = this.id() ?? null;
       untracked(() => {
         this.draft.set('');
+        this.picked.set(null);
         void this.store.open(id);
       });
     });
@@ -893,7 +1120,8 @@ export class ConversationView {
   protected text(event: Event): string {
     const target = event.target;
     return target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLInputElement
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLSelectElement
       ? target.value
       : '';
   }
@@ -908,9 +1136,10 @@ export class ConversationView {
   }
 
   /** The Jira project a story proposal is offered in first: the first pinned issue's. */
-  protected readonly jiraProject = computed(() =>
-    defaultJiraProject(this.store.conversation()?.context ?? [])
-  );
+  protected readonly jiraProject = computed(() => {
+    const c = this.store.conversation();
+    return c?.jiraProject ?? defaultJiraProject(c?.context ?? []);
+  });
 
   /** Creates a story proposal in Jira; the card then shows the issue. */
   protected async createIssue(
@@ -945,8 +1174,41 @@ export class ConversationView {
       ? { cap: null }
       : checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
     if ('error' in typed) return;
+    // A model picked since the last question becomes the conversation's first: its warm session stops.
+    const picked = this.picked();
+    if (picked !== null && this.modelPending()) {
+      const changed = await this.store.setModel(
+        picked.model,
+        picked.reasoningEffort
+      );
+      if (!changed.ok) return;
+    }
+    this.picked.set(null);
     const result = await this.store.ask(question, typed.cap);
     if (result.ok) this.draft.set('');
+  }
+
+  /** Picks a model (`""`: the team's); an effort the new model does not take goes back to its default. */
+  protected pickModel(value: string): void {
+    const model = value === '' ? null : value;
+    const effort = this.choice().reasoningEffort;
+    const takes = effortChoices(this.catalog(), model ?? this.team().model);
+    this.picked.set({
+      model,
+      reasoningEffort:
+        effort !== null && takes.includes(effort) ? effort : null,
+    });
+  }
+
+  /** Picks an effort (`""`: the default). */
+  protected pickEffort(value: string): void {
+    const effort = this.efforts().find(
+      (e): e is ReasoningEffort => e === value
+    );
+    this.picked.set({
+      model: this.choice().model,
+      reasoningEffort: effort ?? null,
+    });
   }
 
   /** Takes what is typed in the quick box. */
@@ -978,6 +1240,55 @@ export class ConversationView {
     const c = this.store.conversation();
     if (c === null || this.lookUpLocked(c.lookUp[lookUp].available)) return;
     await this.store.setLookUp(lookUp, !c.lookUp[lookUp].on);
+  }
+
+  /** Whether a pinned repository is one of the team's defaults. */
+  protected teamRepository(item: ConversationContextItem): boolean {
+    const c = this.store.conversation();
+    return (
+      item.kind === 'repository' &&
+      c !== null &&
+      c.teamDefaults.repositories.includes(item.ref)
+    );
+  }
+
+  /** What a chip of "Read with this question" says: the issue and its summary, or the link. */
+  protected mentionText(m: ConversationMention): string {
+    return m.label === null ? m.ref : `${m.ref} · ${m.label}`;
+  }
+
+  /** Whether something a question named is pinned since. */
+  protected pinned(m: ConversationMention): boolean {
+    const c = this.store.conversation();
+    return (
+      c !== null && c.context.some((p) => p.kind === m.kind && p.ref === m.ref)
+    );
+  }
+
+  /** Pins something a question named, for every later session; the warm session stops, like any pin. */
+  protected async pinMention(m: ConversationMention): Promise<void> {
+    const c = this.store.conversation();
+    if (c === null || this.store.busy() || this.pinned(m)) return;
+    const refusal = pinRefusal(c.context, m.kind, m.ref);
+    if (refusal !== null) {
+      this.quickProblem.set(refusal);
+      return;
+    }
+    await this.store.pin([...c.context, { kind: m.kind, ref: m.ref }]);
+  }
+
+  /** Takes the Jira project out of this conversation; the warm session stops. */
+  protected removeProject(): void {
+    if (!this.store.busy()) void this.store.setWhere({ jiraProject: null });
+  }
+
+  /** Takes one Confluence space out of this conversation; the warm session stops. */
+  protected removeSpace(space: string): void {
+    const c = this.store.conversation();
+    if (c === null || this.store.busy()) return;
+    void this.store.setWhere({
+      confluenceSpaces: c.confluenceSpaces.filter((s) => s !== space),
+    });
   }
 
   /** Unpins one item. */
