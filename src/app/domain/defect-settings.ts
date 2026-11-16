@@ -86,6 +86,56 @@ export function reproductionCapOf(
     : { problem };
 }
 
+/** The most hosts the API keeps. */
+export const MAX_ALLOWED_HOSTS = 20;
+
+const HOST =
+  /^(\*\.)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
+/**
+ * The hosts a reproduction may reach as typed, separated by commas, spaces or lines: each lowercase and once, a host
+ * name (`test.example.com`) or `*.domain` for its subdomains; or why not. Mirrors `ahoy-hosted`'s `allowedHostsOf`.
+ */
+export function allowedHostsOf(
+  typed: string
+): { readonly value: readonly string[] } | { readonly problem: string } {
+  const hosts = [
+    ...new Set(
+      typed
+        .split(/[\s,]+/)
+        .map((h) => h.trim().toLowerCase())
+        .filter((h) => h !== '')
+    ),
+  ];
+  if (hosts.length > MAX_ALLOWED_HOSTS)
+    return { problem: `Name at most ${MAX_ALLOWED_HOSTS} hosts.` };
+  const bad = hosts.find((h) => h.length > 253 || !HOST.test(h));
+  return bad === undefined
+    ? { value: hosts }
+    : {
+        problem: `${bad} is not a host name or a *.domain wildcard, such as test.example.com or *.example.com.`,
+      };
+}
+
+/** The hosts as the form shows them: one per line. */
+export function allowedHostsText(hosts: readonly string[]): string {
+  return hosts.join('\n');
+}
+
+/** The most days the API keeps a reproduction's screenshots and recordings. */
+export const MAX_EVIDENCE_DAYS = 30;
+
+/** The days as typed: a whole number from 0 to {@link MAX_EVIDENCE_DAYS}, or why not. */
+export function evidenceDaysOf(
+  typed: string
+): { readonly value: number } | { readonly problem: string } {
+  const problem = `Type a whole number from 0 to ${MAX_EVIDENCE_DAYS}.`;
+  const text = typed.trim();
+  if (!/^\d{1,2}$/.test(text)) return { problem };
+  const value = Number(text);
+  return value <= MAX_EVIDENCE_DAYS ? { value } : { problem };
+}
+
 /** What the spend confirmation weighs of the reproduction settings. */
 export interface ReproductionSpend {
   readonly reproduceOn: boolean;
@@ -164,6 +214,8 @@ const FIELD_NAMES: Readonly<Record<string, string>> = {
   reproduceMode: 'Reproduction mode',
   reproduceEnvironmentId: 'Reproduction environment',
   maxReproductionsPerDay: 'Reproductions per day',
+  reproduceAllowedHosts: 'Allowed hosts',
+  evidenceDays: 'Days screenshots and recordings are kept',
   // Kept so the history still names a change the component map once made.
   components: 'Components',
 };
@@ -178,10 +230,15 @@ function toWords(field: string, value: unknown): string {
     return typeof value === 'string' ? 'changed' : 'none';
   if (field === 'budgetNanoAiu')
     return typeof value === 'number' ? aiuLabel(value) : 'none';
+  if (field === 'reproduceAllowedHosts')
+    return Array.isArray(value) && value.length > 0
+      ? value.filter((h) => typeof h === 'string').join(', ')
+      : 'none';
   if (
     field === 'maxStartsPerDay' ||
     field === 'maxActive' ||
-    field === 'maxReproductionsPerDay'
+    field === 'maxReproductionsPerDay' ||
+    field === 'evidenceDays'
   )
     return typeof value === 'number' ? String(value) : '?';
   if (field === 'startAs') return typeof value === 'string' ? value : 'nobody';

@@ -25,7 +25,7 @@ import { ToastService } from '@ui/toast/toast';
 import { DialogSend } from './dialog-send';
 import type { EnvironmentsSettingsStore } from './environments-settings-store';
 
-/** What the dialog is opened with: the page's store, the hosts the deployment allows, and the row to edit or null. */
+/** What the dialog is opened with: the page's store, the hosts Team settings › Defects allows, and the row to edit or null. */
 export interface EnvironmentDialogData {
   readonly store: EnvironmentsSettingsStore;
   readonly allowedHosts: readonly string[];
@@ -42,7 +42,7 @@ function formSignInOf(environment: EnvironmentRow | null): FormSignIn | null {
 /**
  * Adds an environment a defect may be reproduced in, or changes or removes one: where its app opens, the other
  * origins its browser may load, how the browser signs in and whether its account may change data. Every origin must
- * be on the hosts the deployment allows, and the login page and the version URL on an allowed origin; the API checks
+ * be on the hosts Team settings › Defects allows, and the login page and the version URL on an allowed origin; the API checks
  * all of it again. A password is typed, never shown: left empty on an edit, the saved one is kept. Closes with true
  * once something was saved.
  */
@@ -367,7 +367,7 @@ export class EnvironmentDialog {
   protected readonly originsHint =
     this.data.allowedHosts.length === 0
       ? 'One per line: other origins the app loads, such as its API.'
-      : `One per line: other origins the app loads, such as its API. This deployment allows: ${this.data.allowedHosts.join(', ')}.`;
+      : `One per line: other origins the app loads, such as its API. Team settings › Defects allows: ${this.data.allowedHosts.join(', ')}.`;
 
   protected readonly form = new FormGroup({
     name: text(this.environment?.name ?? ''),
@@ -518,12 +518,12 @@ export class EnvironmentDialog {
     return control.touched || control.dirty;
   }
 
-  /** "Not on the hosts this deployment allows: https://other.example.org." for origins outside them, else ''. */
+  /** "Not on the hosts Team settings › Defects allows: https://other.example.org." for origins outside them, else ''. */
   private outsideText(origins: readonly string[]): string {
     const outside = originsOutside(origins, this.data.allowedHosts);
     return outside.length === 0
       ? ''
-      : `Not on the hosts this deployment allows: ${outside.join(', ')}.`;
+      : `Not on the hosts Team settings › Defects allows: ${outside.join(', ')}.`;
   }
 
   /** Why `url` cannot be used: it is not a URL, or its origin is not one of the environment's. */

@@ -233,6 +233,8 @@ describe('the Defects section of Team settings', () => {
       'Sam Example (q123456)',
       '20 AIU',
       'Off',
+      '*.example.com',
+      '7 days',
     ]);
   });
 
@@ -247,9 +249,66 @@ describe('the Defects section of Team settings', () => {
         reproduceEnvironmentId: TEST_ID,
       },
     });
-    expect(text(root.querySelector('dd:last-of-type'))).toBe(
+    const dd = (term: string) =>
+      text(
+        [...root.querySelectorAll('dt')].find((dt) => text(dt) === term)
+          ?.nextElementSibling ?? null
+      );
+    expect(dd('Reproduction')).toBe(
       'On, in TEST: at most 5 a day. Required: Ahoy starts only what it reproduced'
     );
+    expect([
+      dd('Allowed hosts'),
+      dd('Screenshots and recordings kept'),
+    ]).toEqual(['*.example.com', '7 days']);
+  });
+
+  it('saves the allowed hosts and the days evidence is kept, one per line and without a yes to any spend', async () => {
+    await answer(updateDefectSettings);
+    const hosts = field<HTMLTextAreaElement>(root, 'Allowed hosts');
+    expect(hosts.value).toBe('*.example.com');
+    type(hosts, '*.example.com\n Test.Example.org, *.example.com');
+    type(field(root, 'Days screenshots and recordings are kept'), '0');
+    await settle();
+    expect(text(root)).not.toContain('Ahoy will spend AIU');
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 1,
+      reproduceAllowedHosts: ['*.example.com', 'test.example.org'],
+      evidenceDays: 0,
+    });
+    expect(
+      requestViolations('updateDefectSettings', patch?.request.body)
+    ).toEqual([]);
+    const saved = {
+      ...updateDefectSettings,
+      defects: {
+        ...updateDefectSettings.defects,
+        reproduceAllowedHosts: ['*.example.com', 'test.example.org'],
+        evidenceDays: 0,
+        version: 2,
+      },
+    };
+    await respond(patch!, saved);
+    await answer(saved);
+    expect(toasts()).toContain('Defect settings saved.');
+  });
+
+  it('refuses a host it cannot keep and days outside 0 to 30 before sending anything', async () => {
+    await answer(updateDefectSettings);
+    type(field(root, 'Allowed hosts'), 'https://test.example.com');
+    await settle();
+    expect(text(root)).toContain(
+      'https://test.example.com is not a host name or a *.domain wildcard'
+    );
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    type(field(root, 'Allowed hosts'), '*.example.com');
+    type(field(root, 'Days screenshots and recordings are kept'), '31');
+    await settle();
+    expect(text(root)).toContain('Type a whole number from 0 to 30.');
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
   });
 
   it('turns automatic starts on only with an AIU cap, a person to start as and a yes to the spend, sending confirmSpend', async () => {

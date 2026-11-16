@@ -10,7 +10,12 @@ import type {
 } from '@core/api/types';
 import { checkAiuLimit } from '@domain/aiu';
 import {
+  allowedHostsOf,
+  allowedHostsText,
   dailySpendText,
+  evidenceDaysOf,
+  MAX_ALLOWED_HOSTS,
+  MAX_EVIDENCE_DAYS,
   spendsMore,
   MAX_DEFECT_BUDGET_NANO_AIU,
   MAX_REPRODUCTIONS_PER_DAY,
@@ -56,6 +61,10 @@ interface FormValue {
   /** The id of the environment defects are reproduced in; '' for none. */
   readonly environment: string;
   readonly reproductionsPerDay: string;
+  /** The hosts an environment's origins may be on, one per line. */
+  readonly hosts: string;
+  /** Days a reproduction's screenshots and recordings are kept. */
+  readonly evidenceDays: string;
   /** The admin's yes to the spend, asked when the change lets Ahoy spend more by itself. */
   readonly confirm: boolean;
 }
@@ -78,6 +87,8 @@ function formValueOf(settings: DefectSettings): FormValue {
     mode: settings.reproduceMode,
     environment: settings.reproduceEnvironmentId ?? '',
     reproductionsPerDay: String(settings.maxReproductionsPerDay),
+    hosts: allowedHostsText(settings.reproduceAllowedHosts),
+    evidenceDays: String(settings.evidenceDays),
     confirm: false,
   };
 }
@@ -446,6 +457,40 @@ type PreviewState =
                         [formControl]="form.controls.reproductionsPerDay"
                       />
                     </ah-field>
+                    <ah-field
+                      label="Allowed hosts"
+                      [hint]="
+                        'One per line: the hosts an environment may open, such as test.example.com, or *.example.com for its subdomains. At most ' +
+                        maxHosts +
+                        '. The cluster must let reproductions reach them too.'
+                      "
+                      [errorText]="hostsError() ?? ''"
+                    >
+                      <textarea
+                        ahInput
+                        mono
+                        rows="3"
+                        spellcheck="false"
+                        autocomplete="off"
+                        [formControl]="form.controls.hosts"
+                      ></textarea>
+                    </ah-field>
+                    <ah-field
+                      label="Days screenshots and recordings are kept"
+                      [hint]="
+                        'They show the environment as its account saw it, to anyone allowed into Ahoy. 0 keeps none; at most ' +
+                        maxEvidenceDays +
+                        '. A change applies to reproductions that end after it.'
+                      "
+                      [errorText]="evidenceDaysError() ?? ''"
+                    >
+                      <input
+                        ahInput
+                        inputmode="numeric"
+                        autocomplete="off"
+                        [formControl]="form.controls.evidenceDays"
+                      />
+                    </ah-field>
                   </fieldset>
                   @if (confirmNeeded()) {
                     <ah-banner variant="cost" [heading]="confirmHeading()">
@@ -536,6 +581,24 @@ type PreviewState =
                       Off
                     }
                   </dd>
+                  <dt>Allowed hosts</dt>
+                  <dd>
+                    @if (page.defects.reproduceAllowedHosts.length > 0) {
+                      {{ page.defects.reproduceAllowedHosts.join(', ') }}
+                    } @else {
+                      <span class="ah-muted">None</span>
+                    }
+                  </dd>
+                  <dt>Screenshots and recordings kept</dt>
+                  <dd>
+                    {{
+                      page.defects.evidenceDays === 0
+                        ? 'Not kept'
+                        : page.defects.evidenceDays === 1
+                          ? '1 day'
+                          : page.defects.evidenceDays + ' days'
+                    }}
+                  </dd>
                 </dl>
               }
               @if (saveFailure(); as problem) {
@@ -606,6 +669,8 @@ export class DefectSettingsPage {
     }),
     environment: new FormControl('', { nonNullable: true }),
     reproductionsPerDay: new FormControl('5', { nonNullable: true }),
+    hosts: new FormControl('', { nonNullable: true }),
+    evidenceDays: new FormControl('7', { nonNullable: true }),
     confirm: new FormControl(false, { nonNullable: true }),
   });
   /** The form's whole value, disabled controls too, as a signal. */
@@ -636,6 +701,14 @@ export class DefectSettingsPage {
     reproductionCapOf(this.value().reproductionsPerDay)
   );
   protected readonly maxReproductions = MAX_REPRODUCTIONS_PER_DAY;
+  private readonly hostsRead = computed(() =>
+    allowedHostsOf(this.value().hosts)
+  );
+  private readonly evidenceDaysRead = computed(() =>
+    evidenceDaysOf(this.value().evidenceDays)
+  );
+  protected readonly maxHosts = MAX_ALLOWED_HOSTS;
+  protected readonly maxEvidenceDays = MAX_EVIDENCE_DAYS;
   /**
    * The environments the select offers: the ones read, or, when they could not be, only the saved one, so the
    * setting still shows.
@@ -666,8 +739,12 @@ export class DefectSettingsPage {
     const active = this.activeRead();
     const startAs = this.startAsRead();
     const reproductions = this.reproductionsRead();
+    const hosts = this.hostsRead();
+    const evidenceDays = this.evidenceDaysRead();
     if (
       'problem' in reproductions ||
+      'problem' in hosts ||
+      'problem' in evidenceDays ||
       'problem' in priorities ||
       'problem' in startAs ||
       'error' in cap ||
@@ -690,6 +767,8 @@ export class DefectSettingsPage {
       reproduceEnvironmentId:
         value.environment === '' ? null : value.environment,
       maxReproductionsPerDay: reproductions.value,
+      reproduceAllowedHosts: hosts.value,
+      evidenceDays: evidenceDays.value,
     };
   });
   /** What saving would change, field by field, or null while a field is refused. */
@@ -731,6 +810,12 @@ export class DefectSettingsPage {
         : {}),
       ...(typed.maxReproductionsPerDay !== saved.maxReproductionsPerDay
         ? { maxReproductionsPerDay: typed.maxReproductionsPerDay }
+        : {}),
+      ...(!same(typed.reproduceAllowedHosts, saved.reproduceAllowedHosts)
+        ? { reproduceAllowedHosts: [...typed.reproduceAllowedHosts] }
+        : {}),
+      ...(typed.evidenceDays !== saved.evidenceDays
+        ? { evidenceDays: typed.evidenceDays }
         : {}),
     };
   });
@@ -821,6 +906,14 @@ export class DefectSettingsPage {
     const read = this.reproductionsRead();
     return 'problem' in read ? read.problem : null;
   });
+  protected readonly hostsError = computed(() => {
+    const read = this.hostsRead();
+    return 'problem' in read ? read.problem : null;
+  });
+  protected readonly evidenceDaysError = computed(() => {
+    const read = this.evidenceDaysRead();
+    return 'problem' in read ? read.problem : null;
+  });
   protected readonly environmentError = computed(() =>
     this.value().reproduce === 'on' && this.value().environment === ''
       ? 'Reproduction needs an environment to reproduce defects in.'
@@ -843,7 +936,9 @@ export class DefectSettingsPage {
       value.cap.trim() !== was.cap ||
       value.perDay.trim() !== was.perDay ||
       value.active.trim() !== was.active ||
-      value.reproductionsPerDay.trim() !== was.reproductionsPerDay
+      value.reproductionsPerDay.trim() !== was.reproductionsPerDay ||
+      value.hosts.trim() !== was.hosts ||
+      value.evidenceDays.trim() !== was.evidenceDays
     );
   });
   protected readonly jqlError = computed(() =>

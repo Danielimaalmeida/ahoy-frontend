@@ -1,4 +1,7 @@
 import {
+  allowedHostsOf,
+  allowedHostsText,
+  evidenceDaysOf,
   dailySpendText,
   defectsStateLabel,
   startCapOf,
@@ -180,7 +183,58 @@ describe('prioritiesOf', () => {
   });
 });
 
+describe('the hosts a reproduction may reach', () => {
+  it('reads hosts and *.domain wildcards from lines, commas or spaces, lowercase and once each', () => {
+    expect(
+      allowedHostsOf(' *.Example.com\ntest.example.org, *.example.com  ')
+    ).toEqual({ value: ['*.example.com', 'test.example.org'] });
+    expect(allowedHostsOf('   ')).toEqual({ value: [] });
+    expect(allowedHostsText(['*.example.com', 'test.example.org'])).toBe(
+      '*.example.com\ntest.example.org'
+    );
+  });
+
+  it('refuses a URL, a port, a bare wildcard or more than 20 hosts', () => {
+    for (const bad of [
+      'https://test.example.com',
+      'test.example.com:443',
+      '*',
+      '*example.com',
+      'localhost',
+    ])
+      expect('problem' in allowedHostsOf(bad)).toBe(true);
+    const many = Array.from({ length: 21 }, (_, i) => `h${i}.example.com`);
+    expect(allowedHostsOf(many.join('\n'))).toEqual({
+      problem: 'Name at most 20 hosts.',
+    });
+  });
+});
+
+describe('evidenceDaysOf', () => {
+  it('reads a whole number of days from 0 to 30', () => {
+    expect(evidenceDaysOf(' 0 ')).toEqual({ value: 0 });
+    expect(evidenceDaysOf('30')).toEqual({ value: 30 });
+    for (const bad of ['31', '-1', '1.5', 'a week', ''])
+      expect(evidenceDaysOf(bad)).toEqual({
+        problem: 'Type a whole number from 0 to 30.',
+      });
+  });
+});
+
 describe('describeDefectEvent', () => {
+  it('names the allowed hosts and the days kept', () => {
+    expect(
+      describeDefectEvent('defect_settings.updated', {
+        changes: {
+          reproduceAllowedHosts: { from: [], to: ['*.example.com'] },
+          evidenceDays: { from: 7, to: 3 },
+        },
+      })
+    ).toBe(
+      'Allowed hosts: *.example.com; Days screenshots and recordings are kept: 3'
+    );
+  });
+
   it('names what a save changed, and is part of the settings history', () => {
     const payload = {
       changes: {

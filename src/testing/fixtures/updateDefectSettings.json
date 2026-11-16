@@ -14,6 +14,8 @@
     "reproduceMode": "advisory",
     "reproduceEnvironmentId": null,
     "maxReproductionsPerDay": 5,
+    "reproduceAllowedHosts": ["*.example.com"],
+    "evidenceDays": 7,
     "version": 1,
     "updatedBy": "alex@example.com",
     "updatedByName": "Alex Example",

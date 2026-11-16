@@ -2203,6 +2203,8 @@ export const isDefectSettingsPage = guard<DefectSettingsPage>(
       reproduceMode: oneOf(REPRODUCE_MODES),
       reproduceEnvironmentId: nullable(uuid),
       maxReproductionsPerDay: wholeNumber('a count of reproductions', 1, 50),
+      reproduceAllowedHosts: arrayOf(nonEmptyText),
+      evidenceDays: wholeNumber('a number of days', 0, 30),
       version: nullable(wholeNumber('a version', 1)),
       updatedBy: nullable(actor),
       updatedByName: nullable(text),

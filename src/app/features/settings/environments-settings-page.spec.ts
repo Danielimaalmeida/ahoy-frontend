@@ -148,7 +148,7 @@ describe('the Environments section of Team settings', () => {
     expect(demo).toContain('Not tested');
     expect(demo).not.toContain('Defects are reproduced here');
     expect(text(root)).toContain(
-      'This deployment allows: test.example.com, *.test.example.com, demo.example.com.'
+      'Team settings › Defects allows: test.example.com, *.test.example.com, demo.example.com.'
     );
     expect(
       [
@@ -291,7 +291,7 @@ describe('the Environments section of Team settings', () => {
     await answer();
   });
 
-  it('refuses a base URL that is not https or not on the hosts the deployment allows, before sending anything', async () => {
+  it('refuses a base URL that is not https or not on the hosts Team settings › Defects allows, before sending anything', async () => {
     await answer();
     buttonNamed(root, 'Add environment').click();
     await settle();
@@ -305,7 +305,7 @@ describe('the Environments section of Team settings', () => {
     type(field(dialog(), 'Base URL'), 'https://other.example.org/app');
     await settle();
     expect(text(dialog())).toContain(
-      'Not on the hosts this deployment allows: https://other.example.org.'
+      'Not on the hosts Team settings › Defects allows: https://other.example.org.'
     );
     expect(buttonNamed(dialog(), 'Add environment').disabled).toBe(true);
     type(field(dialog(), 'Base URL'), 'https://test.example.com/app');
@@ -315,7 +315,7 @@ describe('the Environments section of Team settings', () => {
     );
     await settle();
     expect(text(dialog())).toContain(
-      'Not on the hosts this deployment allows: https://cdn.example.net.'
+      'Not on the hosts Team settings › Defects allows: https://cdn.example.net.'
     );
     type(
       field<HTMLTextAreaElement>(dialog(), 'Other allowed origins'),
@@ -552,10 +552,10 @@ describe('the Environments section of Team settings', () => {
     expect(text(row('TEST'))).toContain('Form, as ahoy-reader');
   });
 
-  it('says so when the deployment allows no host, and offers no environment to add', async () => {
+  it('says so when no host is allowed, and offers no environment to add', async () => {
     await answer({ ...getEnvironments, allowedHosts: [], environments: [] });
     expect(bannerHeadings(root)).toEqual([
-      'This deployment allows no host for reproductions',
+      'No host is allowed for reproductions',
     ]);
     expect(buttonsNamed(root, 'Add environment')).toEqual([]);
     expect(text(root)).toContain('No environment yet');

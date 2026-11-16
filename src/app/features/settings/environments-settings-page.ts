@@ -29,7 +29,7 @@ import { SettingsHistory } from './settings-history';
 /**
  * Team settings › Environments (`ahoy-hosted` design §5 "Defect reproduction"): the deployed environments a browser
  * may open to reproduce a defect, the origins it may load in each, how it signs in and whether its account may change
- * data. Every origin must be on the hosts the deployment allows. "Test sign-in" starts a run in the cluster that
+ * data. Every origin must be on the hosts Team settings › Defects allows. "Test sign-in" starts a run in the cluster that
  * signs in and stops, at 0 AIU, and the row then says what it found. Which environment defects are reproduced in is
  * chosen in Team settings › Defects. Reading and changing these is 0 AIU.
  */
@@ -161,11 +161,11 @@ import { SettingsHistory } from './settings-history';
       @if (page.allowedHosts.length === 0) {
         <ah-banner
           variant="notice"
-          heading="This deployment allows no host for reproductions"
-          tech="AHOY_REPRO_ALLOWED_HOSTS is not set"
+          heading="No host is allowed for reproductions"
         >
-          No environment can be saved until whoever runs the deployment names
-          the hosts a reproduction may reach.
+          No environment can be saved until an admin names the hosts a
+          reproduction may reach in
+          <a routerLink="/settings/defects">Team settings › Defects</a>.
         </ah-banner>
       } @else if (!page.secretsConfigured) {
         <ah-banner
@@ -448,14 +448,14 @@ export class EnvironmentsSettingsPage {
     void this.store.load();
   }
 
-  /** "A browser opens only an environment's own origins. This deployment allows: test.example.com." */
+  /** "A browser opens only an environment's own origins. Team settings › Defects allows: test.example.com." */
   protected hostsLine(page: {
     readonly allowedHosts: readonly string[];
   }): string {
     const own = "A browser opens only an environment's own origins.";
     return page.allowedHosts.length === 0
       ? own
-      : `${own} This deployment allows: ${page.allowedHosts.join(', ')}.`;
+      : `${own} Team settings › Defects allows: ${page.allowedHosts.join(', ')}.`;
   }
 
   /** "No sign-in", or "Form, as ahoy-reader". */
