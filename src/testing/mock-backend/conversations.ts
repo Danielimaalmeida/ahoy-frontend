@@ -151,6 +151,8 @@ export class ConversationDesk {
   private nextIssue = 40;
 
   /** Team settings › Product: what every conversation started from now on begins with. */
+  /** The most a question may cap its session at, as the API's `AHOY_MAX_PHASE_BUDGET_AIU` sets it (20 AIU unset). */
+  budgetCapNanoAiu = 20_000_000_000;
   productDefaults: Conversation['teamDefaults'] = {
     jiraProject: null,
     confluenceSpaces: [],
@@ -984,6 +986,7 @@ export class ConversationDesk {
         confluenceSpaces: [...this.productDefaults.confluenceSpaces],
         repositories: [...this.productDefaults.repositories],
       },
+      budgetCapNanoAiu: this.budgetCapNanoAiu,
     };
   }
 }

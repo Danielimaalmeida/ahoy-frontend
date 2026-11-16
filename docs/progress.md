@@ -33,10 +33,9 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   auth library stubbed): build, typecheck, lint and format passed; `ng test` ran 235 files and 4,004 tests with three
   failures, all in `app.config.spec.ts`, which needs the real library's `MockAuthService` the stub lacks.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main`, and on
-  `feat/product-conversation-model` its branch of the same name (migration 0055: `/settings/product`, a conversation's
-  `model`, `jiraProject`, `confluenceSpaces` and `teamDefaults`, a turn's `mentions`); `schema.d.ts` and the test
-  mirror are generated from it. Merge and deploy that API and its migrations with or before this front end: an older
-  API sends none of them, and the Product page refuses its answer.
+  `feat/conversation-cap-ceiling` its branch of the same name (a conversation's `budgetCapNanoAiu`); `schema.d.ts` and
+  the test mirror are generated from it. Merge and deploy that API with or before this front end: an older API sends
+  no `budgetCapNanoAiu`, and the Product page refuses its answer.
 
 ## Not checked yet
 
@@ -84,10 +83,10 @@ What each feature still needs beyond the tests above. Its pull request has the d
    config files `main` had removed as unread (now removed again). Pull `main` into the company copy before the next
    sync, and delete there what `main` deletes: `.prettierrc.json`, `eslint.config.mjs`, `.tool-versions` and
    `proxy.conf.mjs`.
-1. **The Product page's model and team defaults** (`feat/product-conversation-model`, with `ahoy-hosted`'s branch of
-   the same name): the user tries it against `npm run dev -- --simulate` (Team settings › Product, a new conversation,
-   a question naming `#<n>` or a Figma link, a change of model) and says whether the per-conversation look-ups stand;
-   then review and merge, the API first or together.
+1. **The Product page's session cap** (`feat/conversation-cap-ceiling`, with `ahoy-hosted`'s branch of the same name):
+   the Cap field takes up to the conversation's `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`); review and merge,
+   the API first or together. Then the user tries the page against `npm run dev -- --simulate` and says whether the
+   per-conversation look-ups stand.
 2. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
    `npm ci`, then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop
    `test:scripts`.

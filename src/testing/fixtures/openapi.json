@@ -6934,6 +6934,59 @@
         }
       }
     },
+    "/defects/{key}/reproduce": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/JiraIssueKey"
+        }
+      ],
+      "post": {
+        "operationId": "reproduceDefect",
+        "tags": ["jira"],
+        "summary": "Reproduce a defect on a deployed environment now.",
+        "description": "Anyone allowed into Ahoy (design §5 \"Defect reproduction\"). Queues one run of the `reproduce` phase that tries\nthe defect on `environmentId`, else Team settings › Defects' environment (`400` when neither is set), whatever\nits triage, the mode or the switch, run with the person's own Copilot token and capped at the `reproduce`\nphase's AIU cap. It spends AIU, so it needs `confirmSpend: true`. `404` for a defect the watch does not list or\nan environment that does not exist; `409` while the defect has a reproduction in progress, or once the\nreproductions of the last 24 hours reach Team settings › Defects' daily cap. The verdict shows on the defect\nonce the run ends. Writes nothing to Jira.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReproduceDefectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The defect, with its reproduction queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Defect"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/defects/{key}/unignore": {
       "parameters": [
         {
@@ -6966,6 +7019,276 @@
             "$ref": "#/components/responses/Problem"
           },
           "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/defects/{key}/evidence/{evidenceId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/JiraIssueKey"
+        },
+        {
+          "name": "evidenceId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getDefectEvidence",
+        "tags": ["jira"],
+        "summary": "The bytes of a screenshot or a recording one of the defect's reproductions kept.",
+        "description": "Anyone allowed into Ahoy (design §5 \"Defect reproduction\", \"Screenshots and video\"). Served with the format\nrecognised from the bytes when the run ended, `X-Content-Type-Options: nosniff` and a `sandbox` content\nsecurity policy. Evidence never changes, so the answer may be cached until it expires; its ETag is the quoted\nsha256 of the bytes. `404` for a defect without that evidence, and once it expired and was removed. 0 AIU.\n",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "An ETag from an earlier response; a match answers 304 without a body.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The screenshot or the recording.",
+            "headers": {
+              "ETag": {
+                "description": "The quoted sha256 of the bytes.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/webm": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The evidence has not changed since the given ETag."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/environments": {
+      "get": {
+        "operationId": "getEnvironments",
+        "tags": ["settings"],
+        "summary": "The deployed environments Ahoy may reproduce a defect in, and how a browser signs in to each.",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A password is never returned, not\neven in part. `allowedHosts` is the deployment's `AHOY_REPRO_ALLOWED_HOSTS`: every allowed origin must be on it.\n`passwordReadable` is false when the stored password does not open with this server's key and must be typed\nagain. Design §5 \"Defect reproduction\". 0 AIU.\n",
+        "responses": {
+          "200": {
+            "description": "The environments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvironmentsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "operationId": "addEnvironment",
+        "tags": ["settings"],
+        "summary": "Add an environment. Admins only.",
+        "description": "The base URL's origin is always allowed; every allowed origin must be on `AHOY_REPRO_ALLOWED_HOSTS`, and the\nlogin page and the version URL on an allowed origin (`400`). Form sign-in needs the password, which is sealed\n(AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored (`503 unavailable` without the key). Names are unique,\ncase ignored. Every change is in `settings_events` (`environment.created`).\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The environment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Environment"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/environments/{environmentId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EnvironmentId"
+        }
+      ],
+      "put": {
+        "operationId": "updateEnvironment",
+        "tags": ["settings"],
+        "summary": "Change an environment, every field sent again. Admins only.",
+        "description": "A password left out is kept, but turning form sign-in on, or moving the login page to another origin, needs it\nagain (`400`), so a stored password never goes to a new host. A change of where or how it signs in clears the\nlast Test sign-in. `409 stale_version` when `version` is not the environment's.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvironmentChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The environment, changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Environment"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteEnvironment",
+        "tags": ["settings"],
+        "summary": "Remove an environment defects are not reproduced in. Admins only.",
+        "description": "`409 invalid_state` while Team settings › Defects reproduces in it.",
+        "responses": {
+          "204": {
+            "description": "The environment and its password are gone."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/settings/environments/{environmentId}/test": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EnvironmentId"
+        }
+      ],
+      "post": {
+        "operationId": "testEnvironment",
+        "tags": ["settings"],
+        "summary": "Test sign-in - start a run that signs in to the environment and stops. Admins only. 0 AIU.",
+        "description": "Queues a cluster Job whose init container signs in with a browser, as a reproduction's does, and stops: no\nagent starts and nothing is spent. `testing` is true on `GET /settings/environments` while it is queued or\nrunning; its outcome is then the environment's `lastTest` (`signed_in`, `refused`, `unreachable`, or `failed`\nwith why, also when the run itself could not start or finish). One at a time for an environment (`409\ninvalid_state`), which is also the answer when its origins are no longer on `AHOY_REPRO_ALLOWED_HOSTS` or its\npassword does not open with this server's key. A change of how the environment signs in drops a test in\nprogress. `503 unavailable` when reproduction is not configured, the control repo cannot be read or\n`AHOY_SECRETS_KEY` is not set. Design §5 \"Defect reproduction\".\n",
+        "responses": {
+          "202": {
+            "description": "The environment; the test is queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Environment"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
             "$ref": "#/components/responses/Problem"
           }
         }
@@ -7287,6 +7610,7 @@
                 "phases",
                 "pr_comments",
                 "defects",
+                "environments",
                 "branch_releases",
                 "meetings",
                 "product",
@@ -7496,6 +7820,15 @@
       },
       "MeetingStoryDraftId": {
         "name": "draftId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "EnvironmentId": {
+        "name": "environmentId",
         "in": "path",
         "required": true,
         "schema": {
@@ -15131,8 +15464,8 @@
           "budgetNanoAiu": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 20000000000,
-            "description": "The cap of a session this question starts, at most 20 AIU; the server's cap when absent."
+            "maximum": 1000000000000,
+            "description": "The cap of a session this question starts, at most the conversation's `budgetCapNanoAiu`; the server's cap when absent."
           }
         }
       },
@@ -15609,7 +15942,8 @@
           "model",
           "jiraProject",
           "confluenceSpaces",
-          "teamDefaults"
+          "teamDefaults",
+          "budgetCapNanoAiu"
         ],
         "properties": {
           "id": {
@@ -15801,6 +16135,11 @@
                 }
               }
             }
+          },
+          "budgetCapNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The most a question may cap the session it starts at: `AHOY_MAX_PHASE_BUDGET_AIU` (unset: 20 AIU), or the deployment's own cap for Product conversations where that is higher."
           }
         }
       },
@@ -16183,6 +16522,7 @@
               "sonar",
               "figma",
               "defects",
+              "environments",
               "branch_releases",
               "copilot"
             ]
@@ -16470,6 +16810,364 @@
           }
         }
       },
+      "EnvironmentsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "canEdit",
+          "secretsConfigured",
+          "allowedHosts",
+          "environments"
+        ],
+        "properties": {
+          "canEdit": {
+            "type": "boolean"
+          },
+          "secretsConfigured": {
+            "type": "boolean",
+            "description": "Whether the deployment sets AHOY_SECRETS_KEY."
+          },
+          "allowedHosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "AHOY_REPRO_ALLOWED_HOSTS: host names and *.domain wildcards every allowed origin must be on."
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Environment"
+                },
+                {
+                  "type": "object",
+                  "required": ["passwordReadable", "inUse", "testing"],
+                  "properties": {
+                    "passwordReadable": {
+                      "type": "boolean"
+                    },
+                    "inUse": {
+                      "type": "boolean",
+                      "description": "Whether Team settings › Defects reproduces in it."
+                    },
+                    "testing": {
+                      "type": "boolean",
+                      "description": "Whether a Test sign-in of it is queued or running."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Environment": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "baseUrl",
+          "allowedOrigins",
+          "signIn",
+          "writes",
+          "versionUrl",
+          "lastTest",
+          "version",
+          "updatedBy",
+          "updatedByName",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "baseUrl": {
+            "type": "string"
+          },
+          "allowedOrigins": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string"
+            },
+            "description": "The origins its browser may open, the base URL's first."
+          },
+          "signIn": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind"],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "none"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "loginUrl",
+                  "username",
+                  "passwordSetBy",
+                  "passwordSetByName",
+                  "passwordSetAt",
+                  "userSelector",
+                  "passwordSelector",
+                  "submitSelector",
+                  "signedInUrlPattern",
+                  "signedInSelector"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "form"
+                  },
+                  "loginUrl": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "passwordSetBy": {
+                    "type": ["string", "null"]
+                  },
+                  "passwordSetByName": {
+                    "type": ["string", "null"]
+                  },
+                  "passwordSetAt": {
+                    "type": ["string", "null"],
+                    "format": "date-time"
+                  },
+                  "userSelector": {
+                    "type": ["string", "null"],
+                    "description": "Null: the default selector."
+                  },
+                  "passwordSelector": {
+                    "type": ["string", "null"]
+                  },
+                  "submitSelector": {
+                    "type": ["string", "null"]
+                  },
+                  "signedInUrlPattern": {
+                    "type": ["string", "null"]
+                  },
+                  "signedInSelector": {
+                    "type": ["string", "null"]
+                  }
+                }
+              }
+            ]
+          },
+          "writes": {
+            "type": "boolean",
+            "description": "Whether its account may change data; false: read-only."
+          },
+          "versionUrl": {
+            "type": ["string", "null"]
+          },
+          "lastTest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["result", "detail", "at", "by", "byName"],
+                "properties": {
+                  "result": {
+                    "type": "string",
+                    "enum": ["signed_in", "refused", "unreachable", "failed"]
+                  },
+                  "detail": {
+                    "type": ["string", "null"]
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "by": {
+                    "type": ["string", "null"]
+                  },
+                  "byName": {
+                    "type": ["string", "null"]
+                  }
+                }
+              }
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "updatedByName": {
+            "type": ["string", "null"]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EnvironmentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "baseUrl", "signIn"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "\\S"
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "allowedOrigins": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "description": "Other origins the app loads; the base URL's is always allowed."
+          },
+          "signIn": {
+            "$ref": "#/components/schemas/SignInRequest"
+          },
+          "writes": {
+            "type": "boolean",
+            "description": "Whether the account may change data (default false)."
+          },
+          "versionUrl": {
+            "type": ["string", "null"],
+            "maxLength": 500
+          }
+        }
+      },
+      "EnvironmentChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "name", "baseUrl", "signIn"],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "\\S"
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "allowedOrigins": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          },
+          "signIn": {
+            "$ref": "#/components/schemas/SignInRequest"
+          },
+          "writes": {
+            "type": "boolean"
+          },
+          "versionUrl": {
+            "type": ["string", "null"],
+            "maxLength": 500
+          }
+        }
+      },
+      "SignInRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "none"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "loginUrl", "username"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "form"
+              },
+              "loginUrl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "username": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "password": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500,
+                "writeOnly": true,
+                "description": "Required to turn form sign-in on and to move the login page to another origin."
+              },
+              "userSelector": {
+                "type": ["string", "null"],
+                "maxLength": 300
+              },
+              "passwordSelector": {
+                "type": ["string", "null"],
+                "maxLength": 300
+              },
+              "submitSelector": {
+                "type": ["string", "null"],
+                "maxLength": 300
+              },
+              "signedInUrlPattern": {
+                "type": ["string", "null"],
+                "maxLength": 300,
+                "description": "The URL of a signed-in page, `*` for any characters; this or signedInSelector is required."
+              },
+              "signedInSelector": {
+                "type": ["string", "null"],
+                "maxLength": 300
+              }
+            }
+          }
+        ]
+      },
       "DefectSettingsPage": {
         "type": "object",
         "additionalProperties": false,
@@ -16497,6 +17195,10 @@
           "maxActive",
           "startAs",
           "startAsName",
+          "reproduceOn",
+          "reproduceMode",
+          "reproduceEnvironmentId",
+          "maxReproductionsPerDay",
           "version",
           "updatedBy",
           "updatedByName",
@@ -16551,6 +17253,26 @@
           "startAsName": {
             "type": ["string", "null"],
             "description": "The name Ahoy knows for `startAs`, if any."
+          },
+          "reproduceOn": {
+            "type": "boolean",
+            "description": "Whether the watch reproduces a defect on a deployed environment before it starts it by itself (default false). Design §5 \"Defect reproduction\"."
+          },
+          "reproduceMode": {
+            "type": "string",
+            "enum": ["advisory", "required"],
+            "description": "advisory: the verdict is shown and automatic starts go on as before; required: the watch starts by itself only a defect reproduced for Jira's current version of it."
+          },
+          "reproduceEnvironmentId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The environment (Team settings › Environments); required while reproduceOn."
+          },
+          "maxReproductionsPerDay": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "The most reproductions in any 24 hours (default 5)."
           },
           "version": {
             "type": ["integer", "null"],
@@ -16619,9 +17341,25 @@
             "maxLength": 63,
             "description": "A qnumber (case and surrounding spaces ignored); required while automatic starts are on."
           },
+          "reproduceOn": {
+            "type": "boolean"
+          },
+          "reproduceMode": {
+            "type": "string",
+            "enum": ["advisory", "required"]
+          },
+          "reproduceEnvironmentId": {
+            "type": ["string", "null"],
+            "format": "uuid"
+          },
+          "maxReproductionsPerDay": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
           "confirmSpend": {
             "type": "boolean",
-            "description": "Must be true when the change turns automatic starts on, or raises the cap per defect or the starts per day while they are on: each lets Ahoy spend more AIU by itself."
+            "description": "Must be true when the change turns automatic starts or reproduction on, or raises the cap per defect, the starts per day or the reproductions per day while they are on: each lets Ahoy spend more AIU by itself."
           }
         }
       },
@@ -16683,7 +17421,8 @@
           "ignored",
           "voyage",
           "started",
-          "startError"
+          "startError",
+          "reproduction"
         ],
         "properties": {
           "key": {
@@ -16799,6 +17538,205 @@
           "startError": {
             "type": ["string", "null"],
             "description": "Why the watch could not start the defect's story; it tries that defect again a day later."
+          },
+          "reproduction": {
+            "description": "The defect's latest reproduction (design §5 \"Defect reproduction\"); null without one.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DefectReproduction"
+              }
+            ]
+          }
+        }
+      },
+      "DefectReproduction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "runId",
+          "environment",
+          "status",
+          "current",
+          "startedBy",
+          "startedByName",
+          "startedAt",
+          "endedAt",
+          "nanoAiu",
+          "result",
+          "evidence"
+        ],
+        "properties": {
+          "runId": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string",
+            "description": "The environment's name when the run was queued."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "budget_exceeded",
+              "timed_out",
+              "cancelled",
+              "output_violation",
+              "auth_failed",
+              "lost"
+            ]
+          },
+          "current": {
+            "type": "boolean",
+            "description": "Whether it tried the defect as Jira has it now (Jira's `updated` is the one the watch read last)."
+          },
+          "startedBy": {
+            "type": "string",
+            "description": "A person's qnumber, or ahoy-defect-watch."
+          },
+          "startedByName": {
+            "type": ["string", "null"]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "nanoAiu": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "result": {
+            "description": "The verdict once the run ended; null while it is queued or running. A run that ended without a verdict it\nhanded in (it failed, timed out, was cancelled, could not sign in) is `inconclusive`, never\n`not_reproduced`.\n",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Reproduction"
+              }
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 15,
+            "description": "What the run kept for a person to look at, in the order it was made: the screenshots the agent took (the\nlast 12) and, only when the defect was reproduced, a recording of each of the first 3 tabs. Empty while\nthe run is in progress, for a run that kept none, and once they expired.\n",
+            "items": {
+              "$ref": "#/components/schemas/ReproductionEvidence"
+            }
+          }
+        }
+      },
+      "ReproductionEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "mediaType", "sizeBytes", "expiresAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Read its bytes at `/defects/{key}/evidence/{id}`."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["screenshot", "video"]
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": ["image/png", "image/jpeg", "video/webm"]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When Ahoy removes it: `AHOY_REPRO_EVIDENCE_DAYS` after the run ended (7 days by default)."
+          }
+        }
+      },
+      "Reproduction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "verdict",
+          "why",
+          "steps",
+          "consoleErrors",
+          "failedRequests"
+        ],
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": ["reproduced", "not_reproduced", "inconclusive"]
+          },
+          "why": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["action", "saw"],
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "saw": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "consoleErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failedRequests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["method", "url", "status"],
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": ["integer", "null"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "ReproduceDefectRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["confirmSpend"],
+        "properties": {
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          },
+          "environmentId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

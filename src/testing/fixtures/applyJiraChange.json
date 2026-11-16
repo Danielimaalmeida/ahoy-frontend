@@ -247,5 +247,6 @@
     "jiraProject": null,
     "confluenceSpaces": [],
     "repositories": []
-  }
+  },
+  "budgetCapNanoAiu": 20000000000
 }

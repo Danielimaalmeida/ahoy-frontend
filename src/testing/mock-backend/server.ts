@@ -1275,6 +1275,11 @@ export class MockAhoyServer {
     this.me = { name, side };
   }
 
+  /** The most a question may cap a conversation session at, as the API's `AHOY_MAX_PHASE_BUDGET_AIU` sets it. */
+  setConversationBudgetCap(nanoAiu: number): void {
+    this.conversations.budgetCapNanoAiu = nanoAiu;
+  }
+
   /** Names the two sides of a meeting, as an admin would in Team settings › Meetings. */
   setMeetingLabels(usLabel: string, themLabel: string): void {
     this.meetingLabels = { usLabel, themLabel };
