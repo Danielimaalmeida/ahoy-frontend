@@ -7024,6 +7024,88 @@
         }
       }
     },
+    "/defects/{key}/evidence/{evidenceId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/JiraIssueKey"
+        },
+        {
+          "name": "evidenceId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getDefectEvidence",
+        "tags": ["jira"],
+        "summary": "The bytes of a screenshot or a recording one of the defect's reproductions kept.",
+        "description": "Anyone allowed into Ahoy (design §5 \"Defect reproduction\", \"Screenshots and video\"). Served with the format\nrecognised from the bytes when the run ended, `X-Content-Type-Options: nosniff` and a `sandbox` content\nsecurity policy. Evidence never changes, so the answer may be cached until it expires; its ETag is the quoted\nsha256 of the bytes. `404` for a defect without that evidence, and once it expired and was removed. 0 AIU.\n",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "An ETag from an earlier response; a match answers 304 without a body.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The screenshot or the recording.",
+            "headers": {
+              "ETag": {
+                "description": "The quoted sha256 of the bytes.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "video/webm": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The evidence has not changed since the given ETag."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/settings/environments": {
       "get": {
         "operationId": "getEnvironments",
@@ -17477,7 +17559,8 @@
           "startedAt",
           "endedAt",
           "nanoAiu",
-          "result"
+          "result",
+          "evidence"
         ],
         "properties": {
           "runId": {
@@ -17535,6 +17618,43 @@
                 "$ref": "#/components/schemas/Reproduction"
               }
             ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 15,
+            "description": "What the run kept for a person to look at, in the order it was made: the screenshots the agent took (the\nlast 12) and, only when the defect was reproduced, a recording of each of the first 3 tabs. Empty while\nthe run is in progress, for a run that kept none, and once they expired.\n",
+            "items": {
+              "$ref": "#/components/schemas/ReproductionEvidence"
+            }
+          }
+        }
+      },
+      "ReproductionEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "mediaType", "sizeBytes", "expiresAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Read its bytes at `/defects/{key}/evidence/{id}`."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["screenshot", "video"]
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": ["image/png", "image/jpeg", "video/webm"]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When Ahoy removes it: `AHOY_REPRO_EVIDENCE_DAYS` after the run ended (7 days by default)."
           }
         }
       },

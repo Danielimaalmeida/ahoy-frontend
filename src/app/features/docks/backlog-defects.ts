@@ -6,6 +6,7 @@ import {
   STORY_STATUSES,
   type Defect,
   type DefectList,
+  type DefectReproduction,
   type StoryStatus,
 } from '@core/api/types';
 import { techLine } from '@core/commands/command-error';
@@ -16,6 +17,7 @@ import {
   defectStartLine,
   defectTriageView,
   defectsLabel,
+  reproductionEnded,
   reproductionInProgress,
   reproductionView,
 } from '@domain/defects';
@@ -29,6 +31,10 @@ import { StatusBadge } from '@ui/status-badge/status-badge';
 import { CellSub, Key, Nowrap, Table } from '@ui/table/table';
 import { ToastService } from '@ui/toast/toast';
 import { ReproduceDialogs } from './reproduce-dialog';
+import {
+  ReproductionDetails,
+  reproductionTagClass,
+} from './reproduction-details';
 import { TryToFixDialogs } from './try-to-fix-dialog';
 
 /** How long between two reads of the list while a reproduction is queued or running. */
@@ -48,7 +54,8 @@ type ListState =
  * watch itself when Team settings › Defects turns automatic starts on). A person may Try to fix a defect, which starts
  * its voyage, or ignore it, which writes nothing to Jira, and undo that. A defect's latest reproduction (design §5
  * "Defect reproduction") shows under its triage: in progress, or its verdict with the environment and why; Reproduce
- * asks for one, which spends AIU. While one is in progress the list is read again every few seconds.
+ * asks for one, which spends AIU. While one is in progress the list is read again every few seconds. A verdict's tag
+ * opens a row under the defect with the steps, the screenshots and the recording (`ah-reproduction-details`).
  */
 @Component({
   selector: 'ah-backlog-defects',
@@ -58,6 +65,7 @@ type ListState =
     Button,
     EmptyState,
     RelativePipe,
+    ReproductionDetails,
     Skeleton,
     StatusBadge,
     Table,
@@ -101,6 +109,28 @@ type ListState =
       display: block;
       margin-top: 8px;
     }
+    .defects__toggle {
+      gap: 5px;
+      height: auto;
+      min-height: 28px;
+      padding: 0 10px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .defects__toggle:not(.ah-tag--outline) {
+      border: 0;
+    }
+    .defects__toggle:hover {
+      text-decoration: underline;
+    }
+    .defects__table .defects__detail > td {
+      padding: 16px;
+    }
+    .defects__table .defects__detail:hover > td {
+      background: transparent;
+    }
     .defects__failed {
       color: var(--danger-text);
       white-space: normal;
@@ -110,6 +140,76 @@ type ListState =
     }
     .defects__actions > * + * {
       margin-left: 6px;
+    }
+    /* Below the width the eight columns need, each defect is a card, as the backlog's own table is. */
+    @media (max-width: 1279px) {
+      .defects__table,
+      .defects__table tbody {
+        display: block;
+      }
+      .defects__table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .defects__table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px 20px;
+        padding: 16px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .defects__table tbody tr:last-child {
+        border-bottom: 0;
+      }
+      .defects__table tbody tr.defects__detail {
+        display: block;
+      }
+      .defects__table td,
+      .defects__table .defects__detail > td {
+        display: block;
+        min-width: 0;
+        height: auto;
+        padding: 0;
+        border: 0;
+        white-space: normal;
+      }
+      .defects__table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink-muted);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .defects__table td:nth-child(1),
+      .defects__table td:nth-child(2),
+      .defects__table td:nth-child(6),
+      .defects__table td:nth-child(8) {
+        grid-column: 1 / -1;
+      }
+      .defects__table td:nth-child(2) {
+        font-weight: 600;
+      }
+      .defects__table .defects__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .defects__actions > *,
+      .defects__actions > * + * {
+        min-height: 44px;
+        margin: 0;
+      }
+    }
+    @media (max-width: 600px) {
+      .defects__table tbody tr {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
   `,
   template: `
@@ -269,17 +369,34 @@ type ListState =
                         }
                         @if (reproduction(defect); as repro) {
                           <span class="defects__reproduction">
-                            <span
-                              [class]="
-                                repro.tone === 'reproduced'
-                                  ? 'ah-tag ah-tag--accent'
-                                  : repro.tone === 'not_reproduced'
-                                    ? 'ah-tag'
-                                    : 'ah-tag ah-tag--outline'
-                              "
-                              >{{ repro.label }}</span
-                            >
-                            &ngsp;<span ahCellSub>{{ repro.detail }}</span>
+                            @if (ended(defect)) {
+                              <button
+                                [class]="
+                                  tagClass(repro.tone) + ' defects__toggle'
+                                "
+                                type="button"
+                                [attr.aria-expanded]="isOpen(defect)"
+                                [attr.aria-controls]="
+                                  isOpen(defect) ? detailId(defect.key) : null
+                                "
+                                [attr.aria-label]="
+                                  repro.label +
+                                  ', the reproduction of ' +
+                                  defect.key
+                                "
+                                (click)="toggle(defect)"
+                              >
+                                {{ repro.label }}
+                                <span aria-hidden="true">{{
+                                  isOpen(defect) ? '▾' : '▸'
+                                }}</span>
+                              </button>
+                            } @else {
+                              <span [class]="tagClass(repro.tone)">{{
+                                repro.label
+                              }}</span>
+                            }
+                            <span ahCellSub>&ngsp;{{ repro.detail }}</span>
                           </span>
                         }
                       </td>
@@ -370,6 +487,16 @@ type ListState =
                         }
                       </td>
                     </tr>
+                    @if (openReproduction(defect); as reproduction) {
+                      <tr class="defects__detail" [id]="detailId(defect.key)">
+                        <td colspan="8">
+                          <ah-reproduction-details
+                            [defectKey]="defect.key"
+                            [reproduction]="reproduction"
+                          />
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
@@ -414,6 +541,10 @@ export class BacklogDefects {
     const s = this.state();
     return s.kind === 'failed' ? s.error : null;
   });
+  /** The runs of the reproductions the person opened under their defects. */
+  private readonly open = signal<ReadonlySet<string>>(new Set());
+  /** The tag classes of a verdict's tone. */
+  protected readonly tagClass = reproductionTagClass;
   /** The key of the defect being ignored or brought back, if any: one at a time. */
   protected readonly busy = signal<string | null>(null);
   protected readonly actionError = signal<{
@@ -491,6 +622,41 @@ export class BacklogDefects {
   /** The defect's latest reproduction as a tag and a line, or null without one. */
   protected reproduction(defect: Defect) {
     return reproductionView(defect.reproduction);
+  }
+
+  /** Whether the defect's reproduction ended, so that it has steps and perhaps screenshots to open. */
+  protected ended(defect: Defect): boolean {
+    return reproductionEnded(defect.reproduction);
+  }
+
+  /**
+   * Whether the person opened this reproduction. A row is opened for one run: another reproduction of the defect,
+   * asked for while it was open, does not open by itself when it ends.
+   */
+  protected isOpen(defect: Defect): boolean {
+    const run = defect.reproduction?.runId;
+    return run !== undefined && this.open().has(run);
+  }
+
+  /** The id of a defect's detail row, which its tag controls. */
+  protected detailId(key: string): string {
+    return `reproduction-${key}`;
+  }
+
+  /** Opens the defect's reproduction under it, or closes it. */
+  protected toggle(defect: Defect): void {
+    const run = defect.reproduction?.runId;
+    if (run === undefined) return;
+    const open = new Set(this.open());
+    if (!open.delete(run)) open.add(run);
+    this.open.set(open);
+  }
+
+  /** The reproduction to show under the defect: an ended one the person opened; null otherwise. */
+  protected openReproduction(defect: Defect): DefectReproduction | null {
+    return this.isOpen(defect) && this.ended(defect)
+      ? defect.reproduction
+      : null;
   }
 
   protected reproducible(defect: Defect): boolean {

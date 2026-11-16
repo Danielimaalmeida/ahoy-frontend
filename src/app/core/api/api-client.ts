@@ -281,6 +281,7 @@ import type {
   NewConversation,
   ProposalIssueRequest,
   ProposalTopicRequest,
+  ReproductionEvidence,
 } from './types';
 import { MEETING_NOTE_IMAGE_TYPES } from './types';
 
@@ -289,6 +290,9 @@ export const REQUEST_TIMEOUT_MS = 30_000;
 
 /** How long an image upload or download may take: up to 5 MiB over a slow line. */
 export const IMAGE_TIMEOUT_MS = 120_000;
+
+/** How long reading a reproduction's screenshot or recording may take: a recording is up to 24 MiB. */
+export const EVIDENCE_TIMEOUT_MS = 300_000;
 
 /** What a gateway answers with when the API behind it is down. Without problem details, these mean "no usable answer". */
 const GATEWAY_STATUSES: readonly number[] = [502, 503, 504];
@@ -2325,6 +2329,43 @@ export class ApiClient {
       },
       isDefect
     );
+  }
+
+  /**
+   * The bytes of a screenshot or a recording a reproduction kept, to show through an object URL: an `<img>` or a
+   * `<video>` cannot send the token, so the page reads them here. Anything but the format the defect listed for it is
+   * an invalid response; one Ahoy no longer keeps is `not_found`.
+   */
+  async getDefectEvidence(
+    key: string,
+    evidence: Pick<ReproductionEvidence, 'id' | 'mediaType'>
+  ): Promise<ApiResult<Blob>> {
+    const op = 'getDefectEvidence';
+    try {
+      const response = await firstValueFrom(
+        this.http.get(
+          this.url(`/defects/${segment(key)}/evidence/${segment(evidence.id)}`),
+          {
+            observe: 'response',
+            responseType: 'blob',
+            timeout: EVIDENCE_TIMEOUT_MS,
+          }
+        )
+      );
+      const [type = ''] = (response.headers.get('Content-Type') ?? '').split(
+        ';'
+      );
+      if (response.body === null || type.trim() !== evidence.mediaType)
+        return fail(
+          invalidResponse(
+            op,
+            `the answer is not ${evidence.mediaType} (${type.trim() || 'no type'})`
+          )
+        );
+      return ok(new Blob([response.body], { type: evidence.mediaType }));
+    } catch (thrown: unknown) {
+      return fail(toApiError(op, await withTextError(thrown)));
+    }
   }
 
   /** The environments a defect may be reproduced in, how a browser signs in to each, and the hosts allowed. 0 AIU. */

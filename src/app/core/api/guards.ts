@@ -33,6 +33,8 @@ import {
 import {
   DEFECT_TRIAGES,
   ENVIRONMENT_TEST_RESULTS,
+  EVIDENCE_KINDS,
+  EVIDENCE_MEDIA_TYPES,
   REPRODUCE_MODES,
   REPRODUCTION_STATUSES,
   REPRODUCTION_VERDICTS,
@@ -133,6 +135,7 @@ import {
   type EnvironmentsPage,
   type EnvironmentTest,
   type Reproduction,
+  type ReproductionEvidence,
   type FigmaSettings,
   type FigmaSettingsPage,
   type FigmaTest,
@@ -2225,6 +2228,24 @@ const reproductionResult = shape<Reproduction>({
 });
 
 /**
+ * A screenshot or a recording a reproduction kept. A recording is WebM and a screenshot is not: one that says
+ * otherwise is refused, so a page never puts a video's bytes in an image.
+ */
+const reproductionEvidence: Check = (value, at) => {
+  const why = shape<ReproductionEvidence>({
+    id: uuid,
+    kind: oneOf(EVIDENCE_KINDS),
+    mediaType: oneOf(EVIDENCE_MEDIA_TYPES),
+    sizeBytes: positive,
+    expiresAt: timestamp,
+  })(value, at);
+  if (why !== null || !isRecord(value)) return why;
+  return (value['kind'] === 'video') === (value['mediaType'] === 'video/webm')
+    ? null
+    : `${at}.mediaType must be video/webm exactly for a video`;
+};
+
+/**
  * A defect's latest reproduction. The contract says the verdict is set once the run ended and never before; one that
  * breaks that is refused, so the tab never shows a verdict for a run in progress or none for one that ended.
  */
@@ -2240,6 +2261,7 @@ const defectReproduction: Check = (value, at) => {
     endedAt: nullable(timestamp),
     nanoAiu,
     result: nullable(reproductionResult),
+    evidence: arrayOf(reproductionEvidence),
   })(value, at);
   if (why !== null || !isRecord(value)) return why;
   const inProgress =

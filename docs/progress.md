@@ -30,19 +30,23 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   opened in Chromium on 2026-11-15 against a local `ahoy-hosted` API of `feat/environment-sign-in-test` with no
   dispatcher (0 AIU, fictional data, the verdict written into the database by hand), at 1280px and 390px, light and
   dark, the dialogs opened with the keyboard and closed with Escape. No reproduction or Test sign-in has run.
+- **On `feat/reproduction-evidence`** (not merged, on top of the branch above): a verdict's tag in Backlog › Defects
+  opens the reproduction's steps, screenshots and recording under the defect. Seen in Chromium against a local API with
+  fictional evidence (0 AIU); no run has produced any.
 - **The required checks rarely ran.** They need Node 24 and the company's private registry (`@acme-fedev/*`), which a
   cloud session cannot reach: most branches since 2026-11-05 ran substitutes instead (Node 22 or 26, the auth library
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,
   Node 24.22.2 through `npx node@24`): format, build, typecheck, lint and `ng test` (220 files, 3,809 tests) passed.
-  The latest substitute run, `feat/defect-reproduction` (2026-11-15, Node 22.23.4, the auth library stubbed): build,
-  typecheck, lint and format passed; `ng test` ran 236 files and 4,067 tests with one failure, `app.config.spec.ts`'s
+  The latest substitute run, `feat/reproduction-evidence` (2026-11-15, Node 22.23.4, the auth library stubbed): build,
+  typecheck, lint and format passed; `ng test` ran 236 files and 4,084 tests with one failure, `app.config.spec.ts`'s
   "refuses the mock sign-in in a production environment", which tests the real library's refusal the stub lacks.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main`, with the Product page's model and
   team defaults (migration 0055: `/settings/product`, a conversation's `model`, `jiraProject`, `confluenceSpaces` and
-  `teamDefaults`, a turn's `mentions`) and defect reproduction (PRs #126 to #128, migrations 0056 to 0058: the
-  environments, `Defect.reproduction`, `reproduceDefect`, `testEnvironment`, the reproduction fields of
-  `DefectSettings`); `schema.d.ts` and the test mirror are generated from it. Deploy that API and its migrations with
-  or before this front end: an older API sends none of them, and the pages refuse its answer.
+  `teamDefaults`, a turn's `mentions`) and defect reproduction (PRs #126 to #128 and #130, migrations 0056 to 0059: the
+  environments, `Defect.reproduction` and its `evidence`, `reproduceDefect`, `testEnvironment`, `getDefectEvidence`,
+  the reproduction fields of `DefectSettings`); `schema.d.ts` and the test mirror are generated from it. Deploy that
+  API and its migrations with or before this front end: an older API sends none of them, and the pages refuse its
+  answer.
 
 ## Not checked yet
 
@@ -54,6 +58,7 @@ What each feature still needs beyond the tests above. Its pull request has the d
 | The Product page (`/product`, admins only): proposals, look-ups, Apply, a model each, team defaults, read keys  | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
 | Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                                 | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
 | Environments, Defects › Reproduction, the verdict and Reproduce in Backlog › Defects                            | A Test sign-in and a reproduction that ran (a cluster Job); a screen reader; 200% zoom                     |
+| A reproduction's steps, screenshots and recording under its defect; the Defects cards below 1280px              | Evidence a real run kept, a 24 MiB recording, an expired file; a screen reader; 200% zoom                  |
 | Create in Confluence, Team settings › Confluence                                                                | A real Confluence; updating a page once it exists is not built                                             |
 | Each person on a side of a meeting (People, `MeStore`)                                                          | A browser                                                                                                  |
 | Backlog layouts; still pages on load (Voyages, Meetings, All hands)                                             | All hands: a browser. A voyage with a long history now delays All hands' first paint (a trade-off)         |
@@ -95,9 +100,9 @@ What each feature still needs beyond the tests above. Its pull request has the d
    the same name): the user tries it against `npm run dev -- --simulate` (Team settings › Product, a new conversation,
    a question naming `#<n>` or a Figma link, a change of model) and says whether the per-conversation look-ups stand;
    then review and merge, the API first or together.
-2. **Defect reproduction** (`ahoy-hosted`'s PRs #126 to #128 are merged). What a reproduction did step by step (its steps, console errors, failed requests and screenshots) has no
-   screen yet: the tab shows the verdict and why. On TEST, after the deploy: add the environment, Test sign-in, then
-   one Reproduce from the Backlog before turning Reproduce before starting on.
+2. **Defect reproduction** (`ahoy-hosted`'s PRs #126 to #128 and #130 are merged). On TEST, after the deploy: add the
+   environment, Test sign-in, then one Reproduce from the Backlog, and open its verdict to see the screenshots and the
+   recording, before turning Reproduce before starting on.
 3. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
    `npm ci`, then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop
    `test:scripts`.

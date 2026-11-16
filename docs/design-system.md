@@ -121,6 +121,9 @@ folders, spec titles). They are identifiers, not UI text; rename them only toget
 - **Icons.** `calendar-plus`, `document`, `waves` and `bug` (`APP_ICON_NAMES` in `ui/icon/icons.ts`) are drawn in the
   app, in the design system's line style, for the empty states and the defect tag; they should move into the design
   system's icon set.
+- **A tag that opens a row.** The backlog's refinement tag and a defect's verdict tag in Backlog › Defects are buttons
+  that open a row under them (`docks__refinement-toggle`, `defects__toggle`, 28px high in a row). It should become a
+  toggle variant of `ah-tag` in the design system.
 - **Defect tag.** "Needs you" marks a voyage that fixes a defect with an `ah-tag` in the send-back colours and the
   `bug` icon (`features/harbour/all-hands.ts`); stories carry no tag. It should become a tag variant of the design
   system.

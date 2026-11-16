@@ -257,6 +257,52 @@ describe('ApiClient over the real fetch backend', () => {
         );
     });
 
+    it("gives the bytes of a reproduction's screenshot or recording in the format the defect listed", async () => {
+      const id = '7c0c8f0a-52f0-4b3b-9d49-0f6f5a8d1c01';
+      answerWith(() =>
+        Promise.resolve(
+          new Response(PNG, {
+            status: 200,
+            headers: { 'Content-Type': 'image/png', ETag: '"abc"' },
+          })
+        )
+      );
+      const api = TestBed.inject(ApiClient);
+      const result = await api.getDefectEvidence('PROJ-207', {
+        id,
+        mediaType: 'image/png',
+      });
+      expect(seen[0]?.url).toBe(`/api/v1/defects/PROJ-207/evidence/${id}`);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.type).toBe('image/png');
+        expect(result.value.size).toBe(PNG.length);
+      }
+      // The same bytes asked for as a recording are refused: a video never shows what is not one.
+      const wrong = await api.getDefectEvidence('PROJ-207', {
+        id,
+        mediaType: 'video/webm',
+      });
+      expect(wrong.ok).toBe(false);
+      if (!wrong.ok) expect(wrong.error.kind).toBe('invalid_response');
+    });
+
+    it('says not_found for evidence Ahoy no longer keeps', async () => {
+      const notFound = problems.find((p) => p.code === 'not_found')!;
+      answerWith(() =>
+        json(notFound, notFound.status, 'application/problem+json')
+      );
+      const result = await TestBed.inject(ApiClient).getDefectEvidence(
+        'PROJ-207',
+        { id: '7c0c8f0a-52f0-4b3b-9d49-0f6f5a8d1c01', mediaType: 'image/png' }
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok)
+        expect(result.error).toEqual(
+          expect.objectContaining({ kind: 'problem', code: 'not_found' })
+        );
+    });
+
     it('removes an image with a 204 and no body', async () => {
       answerWith(() => Promise.resolve(new Response(null, { status: 204 })));
       expect(
