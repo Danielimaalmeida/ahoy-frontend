@@ -1164,6 +1164,18 @@ export type MeetingSettings = Schemas['MeetingSettings'];
 /** Body of `updateMeetingSettings`: either name or both. */
 export type MeetingSettingsChange = Schemas['MeetingSettingsChange'];
 
+/**
+ * Answer of `getProductSettings`: the team's Product defaults, the Product conversations' model, and whether the person
+ * may change them.
+ */
+export type ProductSettingsPage = Schemas['ProductSettingsPage'];
+
+/** The Jira project, Confluence spaces and repositories every Product conversation starts with. */
+export type ProductSettings = Schemas['ProductSettings'];
+
+/** Body of `updateProductSettings`: any of the defaults. */
+export type ProductSettingsChange = Schemas['ProductSettingsChange'];
+
 /** Answer of `getDefectSettings`: the defect watch's settings and whether the person may change them. */
 export type DefectSettingsPage = Schemas['DefectSettingsPage'];
 
@@ -1443,6 +1455,8 @@ export type NewConversation = Schemas['NewConversation'];
 /** Body of `updateConversation`: a new title, or sharing. */
 export type ConversationChange = Schemas['ConversationChange'];
 export type ConversationLookUp = Schemas['ConversationLookUp'];
+/** A model and effort a conversation runs on; null is the next default. */
+export type ConversationModel = Schemas['ConversationModel'];
 
 /** Body of `setConversationContext`: everything pinned, replacing what was. */
 export type ConversationContextChange = Schemas['ConversationContextChange'];

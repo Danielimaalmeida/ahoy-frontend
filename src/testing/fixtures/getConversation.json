@@ -137,7 +137,8 @@
         }
       ],
       "error": null,
-      "endedAt": "2026-11-03T09:04:00.000Z"
+      "endedAt": "2026-11-03T09:04:00.000Z",
+      "mentions": []
     },
     {
       "n": 2,
@@ -156,13 +157,15 @@
       "proposals": [],
       "questions": [],
       "error": null,
-      "endedAt": null
+      "endedAt": null,
+      "mentions": []
     }
   ],
   "session": {
     "id": "r-conv-3-1",
     "status": "running",
     "warm": true,
+    "model": "claude-sonnet-5",
     "budgetNanoAiu": 5000000000,
     "spentNanoAiu": 1400000000,
     "cancelRequested": false,
@@ -178,5 +181,20 @@
       "on": true,
       "available": false
     }
+  },
+  "model": {
+    "model": null,
+    "reasoningEffort": null,
+    "team": {
+      "model": "claude-sonnet-5",
+      "reasoningEffort": null
+    }
+  },
+  "jiraProject": null,
+  "confluenceSpaces": [],
+  "teamDefaults": {
+    "jiraProject": null,
+    "confluenceSpaces": [],
+    "repositories": []
   }
 }

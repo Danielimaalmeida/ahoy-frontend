@@ -8,12 +8,14 @@ import type {
   ConversationRecipe,
   ConversationSummary,
   MeetingSummary,
+  ModelCatalog,
 } from '@core/api/types';
 import { AUTH_STRATEGY } from '@core/auth/auth-strategy';
 import { CLOCK, type Timer } from '@core/realtime/clock';
 import { ConversationStream } from '@core/realtime/conversation-stream';
 import { FETCH } from '@core/realtime/fetch';
 import { pollDelay, type LookUp } from '@domain/conversations';
+import type { ReasoningEffort } from '@domain/types';
 
 /** One item to pin, as the context request takes it. */
 export interface PinRef {
@@ -61,8 +63,18 @@ export class ProductStore {
   /** Why the last command did not go through; cleared by the next one. */
   readonly commandError = signal<ApiError | null>(null);
 
+  /** The models people may choose (`GET /models`), once read; the model picker offers only the team's while null. */
+  readonly models = signal<ModelCatalog | null>(null);
+
   constructor() {
     inject(DestroyRef).onDestroy(() => this.stopFollowing());
+  }
+
+  /** Reads the model catalogue once; a failure leaves the picker with the team's model only. 0 AIU. */
+  async loadModels(): Promise<void> {
+    if (this.models() !== null) return;
+    const result = await this.api.listModels();
+    if (result.ok) this.models.set(result.value);
   }
 
   /** Reads the list. */
@@ -210,6 +222,36 @@ export class ProductStore {
     return this.change((id) =>
       this.api.updateConversation(id, {
         lookUp: lookUp === 'jira' ? { jira: on } : { confluence: on },
+      })
+    );
+  }
+
+  /**
+   * Chooses the model and effort the open conversation's sessions run on (null: the team's). 0 AIU; a warm session
+   * stops, so the next question starts one on the new model.
+   */
+  setModel(
+    model: string | null,
+    reasoningEffort: ReasoningEffort | null
+  ): Promise<ApiResult<Conversation>> {
+    return this.change((id) =>
+      this.api.updateConversation(id, { model, reasoningEffort })
+    );
+  }
+
+  /** Changes where the agent looks first in the open conversation (its Jira project, its Confluence spaces). */
+  setWhere(change: {
+    readonly jiraProject?: string | null;
+    readonly confluenceSpaces?: readonly string[];
+  }): Promise<ApiResult<Conversation>> {
+    return this.change((id) =>
+      this.api.updateConversation(id, {
+        ...(change.jiraProject !== undefined
+          ? { jiraProject: change.jiraProject }
+          : {}),
+        ...(change.confluenceSpaces !== undefined
+          ? { confluenceSpaces: [...change.confluenceSpaces] }
+          : {}),
       })
     );
   }

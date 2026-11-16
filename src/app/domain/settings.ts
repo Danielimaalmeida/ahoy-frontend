@@ -12,6 +12,7 @@ import { describeJiraEvent } from './jira-settings';
 import { describePhaseEvent } from './phase-settings';
 import { describePrCommentEvent } from './pr-comment-settings';
 import { describeMeetingEvent } from './meeting-settings';
+import { describeProductEvent } from './product-settings';
 import { describePeopleEvent } from './people-settings';
 import { describeDefectEvent } from './defect-settings';
 import { describeEnvironmentEvent } from './environments';
@@ -130,6 +131,7 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
         describeEnvironmentEvent(type, payload) ??
         describeBranchReleaseEvent(type, payload) ??
         describeMeetingEvent(type, payload) ??
+        describeProductEvent(type, payload) ??
         describePeopleEvent(type, payload) ??
         describeCopilotTokenEvent(type) ??
         type

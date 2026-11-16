@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "id": 82,
+      "type": "product_settings.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Doe",
+      "subject": "product_settings:1",
+      "payload": {
+        "changes": {
+          "jiraProject": {
+            "from": null,
+            "to": "PROJ"
+          },
+          "confluenceSpaces": {
+            "from": [],
+            "to": ["BILL", "PROD"]
+          },
+          "repositories": {
+            "from": [],
+            "to": ["web"]
+          }
+        }
+      },
+      "createdAt": "2026-11-15T13:00:00.000Z"
+    }
+  ]
+}

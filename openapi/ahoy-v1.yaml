@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 0e86e1e203be6883d3a5011889fc63aa7248d391
+# Commit: 7ea9a5d1babd1e31a54d6ff7cd5d3b4fa59a2657
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -3778,6 +3778,48 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
+  /settings/product:
+    get:
+      operationId: getProductSettings
+      tags: [settings]
+      summary: The team's Product defaults, which every Product conversation starts with.
+      description: |
+        Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A conversation started after a
+        save begins with the Jira project, the Confluence spaces and the repositories pinned; one already started keeps
+        what it has. `model` is the Product conversations phase's model and effort (Team settings › Phases), shown here
+        and changed there. 0 AIU.
+      responses:
+        '200':
+          description: The Product settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductSettingsPage' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateProductSettings
+      tags: [settings]
+      summary: Change the team's Product defaults.
+      description: |
+        Admins only. The Jira project is a project key (upper-cased; null clears it), the Confluence spaces at most 10
+        space keys, and the repositories at most 3 the content repository maps now (`400`; `503` when it cannot be
+        read). `version` is required once the settings are saved, and absent before (`409 stale_version`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductSettingsChange' }
+      responses:
+        '200':
+          description: The settings, changed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductSettingsPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /setup:
     get:
       operationId: getSetup
@@ -4369,6 +4411,7 @@ paths:
                   environments,
                   branch_releases,
                   meetings,
+                  product,
                   people,
                 ],
             }
@@ -8957,6 +9000,43 @@ components:
           properties:
             jira: { type: boolean }
             confluence: { type: boolean }
+        model:
+          description: >-
+            The model its sessions run on, one of the catalogue's (`GET /models`); null goes back to the team's
+            (Team settings › Phases › Product conversations). Not while a question is being answered (409); a warm
+            session is stopped, so the next question starts one on the new model.
+          oneOf:
+            - { $ref: '#/components/schemas/ModelId' }
+            - { type: 'null' }
+        reasoningEffort:
+          description: >-
+            The reasoning effort, one the model takes; null goes back to the team's, or, under a model of its own, the
+            model's default.
+          oneOf:
+            - { $ref: '#/components/schemas/ReasoningEffort' }
+            - { type: 'null' }
+        jiraProject:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 50
+          description: >-
+            Where the agent searches Jira first (upper-cased); null removes it. Not while a question is being answered
+            (409); a warm session is stopped.
+        confluenceSpaces:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 255 }
+          description: The Confluence spaces it searches, at most 10; empty, every space. Stops a warm session.
+    ConversationModel:
+      type: object
+      additionalProperties: false
+      required: [model, reasoningEffort]
+      properties:
+        model: { type: [string, 'null'] }
+        reasoningEffort:
+          oneOf:
+            - { $ref: '#/components/schemas/ReasoningEffort' }
+            - { type: 'null' }
     ConversationLookUp:
       type: object
       additionalProperties: false
@@ -9197,6 +9277,7 @@ components:
           questions,
           error,
           endedAt,
+          mentions,
         ]
       properties:
         n: { type: integer, minimum: 1, maximum: 40 }
@@ -9230,6 +9311,20 @@ components:
           items: { $ref: '#/components/schemas/GrillQuestion' }
         error: { type: [string, 'null'] }
         endedAt: { type: [string, 'null'], format: date-time }
+        mentions:
+          type: array
+          description: >-
+            What the question names that Ahoy read into it (Jira issue keys, `#120` for the conversation's project,
+            Figma links), not pinned: `label` is an issue's summary once read, `problem` why it could not be read.
+          items:
+            type: object
+            additionalProperties: false
+            required: [kind, ref, label, problem]
+            properties:
+              kind: { type: string, enum: [jira, figma] }
+              ref: { type: string }
+              label: { type: [string, 'null'] }
+              problem: { type: [string, 'null'] }
     ConversationSummary:
       type: object
       additionalProperties: false
@@ -9294,6 +9389,10 @@ components:
           session,
           spentNanoAiu,
           lookUp,
+          model,
+          jiraProject,
+          confluenceSpaces,
+          teamDefaults,
         ]
       properties:
         id: { type: string, format: uuid }
@@ -9341,6 +9440,7 @@ components:
                   id,
                   status,
                   warm,
+                  model,
                   budgetNanoAiu,
                   spentNanoAiu,
                   cancelRequested,
@@ -9353,6 +9453,11 @@ components:
                   {
                     type: boolean,
                     description: 'Started and waiting for questions, or answering one.',
+                  }
+                model:
+                  {
+                    type: [string, 'null'],
+                    description: "The model it runs on; null until the reconciler starts it, or when the agent profile's.",
                   }
                 budgetNanoAiu: { type: integer }
                 spentNanoAiu: { type: integer }
@@ -9371,6 +9476,39 @@ components:
           properties:
             jira: { $ref: '#/components/schemas/ConversationLookUp' }
             confluence: { $ref: '#/components/schemas/ConversationLookUp' }
+        model:
+          type: object
+          additionalProperties: false
+          required: [model, reasoningEffort, team]
+          description: >-
+            What its sessions run on: the owner's choice (null: the team's), and the team's (`team`, the Product
+            conversations phase's; null: the agent profile's, or the model's default effort). A change applies from the
+            next session.
+          properties:
+            model: { type: [string, 'null'] }
+            reasoningEffort:
+              oneOf:
+                - { $ref: '#/components/schemas/ReasoningEffort' }
+                - { type: 'null' }
+            team: { $ref: '#/components/schemas/ConversationModel' }
+        jiraProject:
+          type: [string, 'null']
+          description: >-
+            Where the agent searches Jira first: a bare issue number in a question is one of this project's issues,
+            and new epics are proposed in it. Copied from the team's defaults when the conversation was started.
+        confluenceSpaces:
+          type: array
+          items: { type: string }
+          description: The Confluence spaces the agent searches; empty, every space.
+        teamDefaults:
+          type: object
+          additionalProperties: false
+          required: [jiraProject, confluenceSpaces, repositories]
+          description: The team's Product defaults now (Team settings › Product), so the page can mark what came from them.
+          properties:
+            jiraProject: { type: [string, 'null'] }
+            confluenceSpaces: { type: array, items: { type: string } }
+            repositories: { type: array, items: { type: string } }
     AgentSettingsPage:
       type: object
       additionalProperties: false
@@ -9723,6 +9861,76 @@ components:
         side:
           $ref: '#/components/schemas/MemberSide'
           description: 'Left out, a member keeps their side and a new one is on ours (`us`).'
+    ProductSettingsPage:
+      type: object
+      additionalProperties: false
+      required: [canEdit, product, model]
+      properties:
+        canEdit:
+          {
+            type: boolean,
+            description: 'Whether the person is an admin, who may change them.',
+          }
+        product: { $ref: '#/components/schemas/ProductSettings' }
+        model:
+          allOf: [{ $ref: '#/components/schemas/ConversationModel' }]
+          description: The Product conversations phase's model and effort now (Team settings › Phases); null is the profile's.
+    ProductSettings:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          jiraProject,
+          confluenceSpaces,
+          repositories,
+          version,
+          updatedBy,
+          updatedByName,
+          updatedAt,
+        ]
+      properties:
+        jiraProject:
+          type: [string, 'null']
+          pattern: '^[A-Z][A-Z0-9_]{0,49}$'
+          description: Where the agent searches Jira first and proposes new epics; a bare issue number is one of its issues.
+        confluenceSpaces:
+          type: array
+          maxItems: 10
+          items: { type: string }
+          description: The Confluence spaces the agent searches; none, every space the token can see.
+        repositories:
+          type: array
+          maxItems: 3
+          items: { type: string }
+          description: The content repository's aliases every conversation starts with pinned.
+        version:
+          {
+            type: [integer, 'null'],
+            minimum: 1,
+            description: 'Null until an admin saves anything.',
+          }
+        updatedBy: { type: [string, 'null'] }
+        updatedByName: { type: [string, 'null'] }
+        updatedAt: { type: [string, 'null'], format: date-time }
+    ProductSettingsChange:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        version: { type: integer, minimum: 1 }
+        jiraProject: { type: [string, 'null'], minLength: 1, maxLength: 50 }
+        confluenceSpaces:
+          {
+            type: array,
+            maxItems: 20,
+            items: { type: string, minLength: 1, maxLength: 255 },
+          }
+        repositories:
+          {
+            type: array,
+            maxItems: 10,
+            items: { type: string, minLength: 1, maxLength: 100 },
+          }
     MeetingSettingsChange:
       type: object
       additionalProperties: false

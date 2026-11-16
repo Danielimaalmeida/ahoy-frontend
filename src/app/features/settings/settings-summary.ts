@@ -9,6 +9,7 @@ import type {
   PhaseSettingsPage,
   PrCommentSettingsPage,
   MeetingSettingsPage,
+  ProductSettingsPage,
   PeoplePage,
   DefectSettingsPage,
   EnvironmentsPage,
@@ -115,6 +116,18 @@ export function meetingsState(page: MeetingSettingsPage): SectionState {
     : { label: 'Named', off: false };
 }
 
+/** "None" until an admin sets a default, then the Jira project or "Set". */
+export function productState(page: ProductSettingsPage): SectionState {
+  const p = page.product;
+  if (
+    p.jiraProject === null &&
+    p.confluenceSpaces.length === 0 &&
+    p.repositories.length === 0
+  )
+    return { label: 'None', off: true };
+  return { label: p.jiraProject ?? 'Set', off: false };
+}
+
 /** "N people": everyone who may use Ahoy, the deployment's and the members; "Everyone" when the deployment lets all in. */
 export function peopleState(page: PeoplePage): SectionState {
   if (page.everyoneAllowed) return { label: 'Everyone', off: false };
@@ -136,6 +149,7 @@ export type SettingsSectionKey =
   | 'environments'
   | 'branch_releases'
   | 'meetings'
+  | 'product'
   | 'people';
 
 /**
@@ -173,6 +187,8 @@ export class SettingsSummary {
   readonly branchReleases = signal<SectionState | null>(null);
   /** The meeting names' state, once read. */
   readonly meetings = signal<SectionState | null>(null);
+  /** The Product defaults' state, once read. */
+  readonly product = signal<SectionState | null>(null);
   /** Who may use Ahoy's state, once read. */
   readonly people = signal<SectionState | null>(null);
 
@@ -199,6 +215,7 @@ export class SettingsSummary {
       environments,
       releases,
       meetings,
+      product,
       people,
     ] = await Promise.all([
       this.claimed.has('sonar') ? null : this.api.getSonarSettings(),
@@ -215,6 +232,7 @@ export class SettingsSummary {
         ? null
         : this.api.getBranchReleaseSettings(),
       this.claimed.has('meetings') ? null : this.api.getMeetingSettings(),
+      this.claimed.has('product') ? null : this.api.getProductSettings(),
       this.claimed.has('people') ? null : this.api.getPeopleSettings(),
     ]);
     if (sonar?.ok && this.sonar() === null) this.sonarRead(sonar.value);
@@ -234,6 +252,7 @@ export class SettingsSummary {
       this.branchReleasesRead(releases.value);
     if (meetings?.ok && this.meetings() === null)
       this.meetingsRead(meetings.value);
+    if (product?.ok && this.product() === null) this.productRead(product.value);
     if (people?.ok && this.people() === null) this.peopleRead(people.value);
   }
 
@@ -307,6 +326,12 @@ export class SettingsSummary {
   meetingsRead(page: MeetingSettingsPage): void {
     this.admin.set(page.canEdit);
     this.meetings.set(meetingsState(page));
+  }
+
+  /** What the Product section read. */
+  productRead(page: ProductSettingsPage): void {
+    this.admin.set(page.canEdit);
+    this.product.set(productState(page));
   }
 
   /** What the People section read. */

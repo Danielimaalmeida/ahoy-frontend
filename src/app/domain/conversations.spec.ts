@@ -20,6 +20,11 @@ import {
   jiraChangeTitle,
   lookUpNote,
   quickPins,
+  defaultEffortLabel,
+  effortChoices,
+  modelChoiceChanged,
+  modelSwitchNote,
+  teamModelLabel,
 } from './conversations';
 
 const CONTEXT: readonly ContextItemLike[] = [
@@ -303,6 +308,63 @@ describe('a Jira change proposal', () => {
     ).toBe('Move 2 issues into PROJ-1');
     expect(jiraChangeTitle({ action: 'edit_issue', issueKey: 'PROJ-9' })).toBe(
       'Change PROJ-9'
+    );
+  });
+});
+
+describe('the conversation model picker', () => {
+  const catalog = [
+    { id: 'claude-sonnet-5', label: 'Claude Sonnet 5', reasoningEfforts: null },
+    { id: 'claude-haiku-4.5', label: 'Claude Haiku 4.5', reasoningEfforts: [] },
+    {
+      id: 'claude-opus-5.5',
+      label: 'Claude Opus 5.5',
+      reasoningEfforts: ['medium' as const, 'high' as const],
+    },
+  ];
+  const team = {
+    model: 'claude-sonnet-5',
+    reasoningEffort: 'medium' as const,
+  };
+
+  it("names the team's model as the default, or the agent profile's when the team set none", () => {
+    expect(teamModelLabel(catalog, team)).toBe(
+      'Claude Sonnet 5 (team default)'
+    );
+    expect(
+      teamModelLabel(catalog, { model: null, reasoningEffort: null })
+    ).toBe("Agent profile's (team default)");
+  });
+
+  it('offers the efforts the catalogue lists for a model, every one when it does not say', () => {
+    expect(effortChoices(catalog, 'claude-opus-5.5')).toEqual([
+      'medium',
+      'high',
+    ]);
+    expect(effortChoices(catalog, 'claude-haiku-4.5')).toEqual([]);
+    expect(effortChoices(catalog, 'unknown-model')).toHaveLength(5);
+  });
+
+  it("says the team's effort is the default only under the team's model", () => {
+    expect(defaultEffortLabel(null, team)).toBe('Default (medium)');
+    expect(defaultEffortLabel('claude-opus-5.5', team)).toBe('Default');
+  });
+
+  it('tells a change apart, and says what sending does to the warm session', () => {
+    const none = { model: null, reasoningEffort: null };
+    expect(modelChoiceChanged(none, none)).toBe(false);
+    expect(
+      modelChoiceChanged(none, { model: null, reasoningEffort: 'high' })
+    ).toBe(true);
+    expect(
+      modelSwitchNote(
+        catalog,
+        'claude-sonnet-5',
+        { model: 'claude-opus-5.5', reasoningEffort: 'high' },
+        team
+      )
+    ).toBe(
+      'The open session runs Claude Sonnet 5. Sending starts a new session with Claude Opus 5.5 (high), carrying the conversation so far.'
     );
   });
 });
