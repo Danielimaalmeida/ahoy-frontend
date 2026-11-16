@@ -1238,7 +1238,7 @@ export const EVIDENCE_MEDIA_TYPES = listOf<ReproductionEvidence['mediaType']>()(
 /** Body of `reproduceDefect`: the spend confirmed, and the environment when it is not the settings' one. */
 export type ReproduceDefectRequest = Schemas['ReproduceDefectRequest'];
 
-/** Answer of `getEnvironments`: the environments a defect may be reproduced in, and what the deployment allows. */
+/** Answer of `getEnvironments`: the environments a defect may be reproduced in, and the hosts Team settings › Defects allows. */
 export type EnvironmentsPage = Schemas['EnvironmentsPage'];
 
 /** One environment, as adding, changing or testing it answers it. A password is never part of it. */

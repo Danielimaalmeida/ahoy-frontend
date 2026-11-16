@@ -3359,7 +3359,8 @@ export interface paths {
     /**
      * The deployed environments Ahoy may reproduce a defect in, and how a browser signs in to each.
      * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A password is never returned, not
-     *     even in part. `allowedHosts` is the deployment's `AHOY_REPRO_ALLOWED_HOSTS`: every allowed origin must be on it.
+     *     even in part. `allowedHosts` is Team settings › Defects › Reproduction's `reproduceAllowedHosts`: every allowed
+     *     origin must be on it.
      *     `passwordReadable` is false when the stored password does not open with this server's key and must be typed
      *     again. Design §5 "Defect reproduction". 0 AIU.
      */
@@ -3367,7 +3368,7 @@ export interface paths {
     readonly put?: never;
     /**
      * Add an environment. Admins only.
-     * @description The base URL's origin is always allowed; every allowed origin must be on `AHOY_REPRO_ALLOWED_HOSTS`, and the
+     * @description The base URL's origin is always allowed; every allowed origin must be on `reproduceAllowedHosts`, and the
      *     login page and the version URL on an allowed origin (`400`). Form sign-in needs the password, which is sealed
      *     (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored (`503 unavailable` without the key). Names are unique,
      *     case ignored. Every change is in `settings_events` (`environment.created`).
@@ -3424,7 +3425,7 @@ export interface paths {
      *     agent starts and nothing is spent. `testing` is true on `GET /settings/environments` while it is queued or
      *     running; its outcome is then the environment's `lastTest` (`signed_in`, `refused`, `unreachable`, or `failed`
      *     with why, also when the run itself could not start or finish). One at a time for an environment (`409
-     *     invalid_state`), which is also the answer when its origins are no longer on `AHOY_REPRO_ALLOWED_HOSTS` or its
+     *     invalid_state`), which is also the answer when its origins are no longer on `reproduceAllowedHosts` or its
      *     password does not open with this server's key. A change of how the environment signs in drops a test in
      *     progress. `503 unavailable` when reproduction is not configured, the control repo cannot be read or
      *     `AHOY_SECRETS_KEY` is not set. Design §5 "Defect reproduction".
@@ -6363,7 +6364,7 @@ export interface components {
       readonly canEdit: boolean;
       /** @description Whether the deployment sets AHOY_SECRETS_KEY. */
       readonly secretsConfigured: boolean;
-      /** @description AHOY_REPRO_ALLOWED_HOSTS: host names and *.domain wildcards every allowed origin must be on. */
+      /** @description reproduceAllowedHosts of Team settings › Defects: host names and *.domain wildcards every allowed origin must be on. */
       readonly allowedHosts: readonly string[];
       readonly environments: readonly (components['schemas']['Environment'] & {
         readonly passwordReadable: boolean;
@@ -6494,6 +6495,10 @@ export interface components {
       readonly reproduceEnvironmentId: string | null;
       /** @description The most reproductions in any 24 hours (default 5). */
       readonly maxReproductionsPerDay: number;
+      /** @description The hosts an environment's origins may be on: host names and `*.domain` wildcards (which match subdomains, not the domain itself), lowercase. Default `*.acmegroup.net` and `*.azure.cloud.acme`; empty, no environment can be saved. The cluster's egress rules must let a reproduction reach the same hosts. */
+      readonly reproduceAllowedHosts: readonly string[];
+      /** @description Days a reproduction's screenshots and recordings are kept (default 7); 0 keeps none. */
+      readonly evidenceDays: number;
       /** @description Null until an admin saves anything. */
       readonly version: number | null;
       readonly updatedBy: string | null;
@@ -6518,6 +6523,9 @@ export interface components {
       /** Format: uuid */
       readonly reproduceEnvironmentId?: string | null;
       readonly maxReproductionsPerDay?: number;
+      /** @description Host names and *.domain wildcards; trimmed, lowercased and kept once each. Refused while reproduction is on if its environment's origins would be off them. */
+      readonly reproduceAllowedHosts?: readonly string[];
+      readonly evidenceDays?: number;
       /** @description Must be true when the change turns automatic starts or reproduction on, or raises the cap per defect, the starts per day or the reproductions per day while they are on: each lets Ahoy spend more AIU by itself. */
       readonly confirmSpend?: boolean;
     };
@@ -6624,7 +6632,7 @@ export interface components {
       readonly sizeBytes: number;
       /**
        * Format: date-time
-       * @description When Ahoy removes it: `AHOY_REPRO_EVIDENCE_DAYS` after the run ended (7 days by default).
+       * @description When Ahoy removes it: `evidenceDays` of Team settings › Defects after the run ended (7 days by default).
        */
       readonly expiresAt: string;
     };

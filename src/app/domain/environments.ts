@@ -40,7 +40,7 @@ export function originOfUrl(url: string): string {
   return new URL(url).origin;
 }
 
-/** Whether an origin's host is one the deployment allows: a host name, or `*.domain` for its subdomains only. */
+/** Whether an origin's host is one Team settings › Defects allows: a host name, or `*.domain` for its subdomains only. */
 export function originAllowed(
   origin: string,
   allowedHosts: readonly string[]

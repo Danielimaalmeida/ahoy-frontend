@@ -7111,7 +7111,7 @@
         "operationId": "getEnvironments",
         "tags": ["settings"],
         "summary": "The deployed environments Ahoy may reproduce a defect in, and how a browser signs in to each.",
-        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A password is never returned, not\neven in part. `allowedHosts` is the deployment's `AHOY_REPRO_ALLOWED_HOSTS`: every allowed origin must be on it.\n`passwordReadable` is false when the stored password does not open with this server's key and must be typed\nagain. Design §5 \"Defect reproduction\". 0 AIU.\n",
+        "description": "Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A password is never returned, not\neven in part. `allowedHosts` is Team settings › Defects › Reproduction's `reproduceAllowedHosts`: every allowed\norigin must be on it.\n`passwordReadable` is false when the stored password does not open with this server's key and must be typed\nagain. Design §5 \"Defect reproduction\". 0 AIU.\n",
         "responses": {
           "200": {
             "description": "The environments.",
@@ -7135,7 +7135,7 @@
         "operationId": "addEnvironment",
         "tags": ["settings"],
         "summary": "Add an environment. Admins only.",
-        "description": "The base URL's origin is always allowed; every allowed origin must be on `AHOY_REPRO_ALLOWED_HOSTS`, and the\nlogin page and the version URL on an allowed origin (`400`). Form sign-in needs the password, which is sealed\n(AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored (`503 unavailable` without the key). Names are unique,\ncase ignored. Every change is in `settings_events` (`environment.created`).\n",
+        "description": "The base URL's origin is always allowed; every allowed origin must be on `reproduceAllowedHosts`, and the\nlogin page and the version URL on an allowed origin (`400`). Form sign-in needs the password, which is sealed\n(AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored (`503 unavailable` without the key). Names are unique,\ncase ignored. Every change is in `settings_events` (`environment.created`).\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -7261,7 +7261,7 @@
         "operationId": "testEnvironment",
         "tags": ["settings"],
         "summary": "Test sign-in - start a run that signs in to the environment and stops. Admins only. 0 AIU.",
-        "description": "Queues a cluster Job whose init container signs in with a browser, as a reproduction's does, and stops: no\nagent starts and nothing is spent. `testing` is true on `GET /settings/environments` while it is queued or\nrunning; its outcome is then the environment's `lastTest` (`signed_in`, `refused`, `unreachable`, or `failed`\nwith why, also when the run itself could not start or finish). One at a time for an environment (`409\ninvalid_state`), which is also the answer when its origins are no longer on `AHOY_REPRO_ALLOWED_HOSTS` or its\npassword does not open with this server's key. A change of how the environment signs in drops a test in\nprogress. `503 unavailable` when reproduction is not configured, the control repo cannot be read or\n`AHOY_SECRETS_KEY` is not set. Design §5 \"Defect reproduction\".\n",
+        "description": "Queues a cluster Job whose init container signs in with a browser, as a reproduction's does, and stops: no\nagent starts and nothing is spent. `testing` is true on `GET /settings/environments` while it is queued or\nrunning; its outcome is then the environment's `lastTest` (`signed_in`, `refused`, `unreachable`, or `failed`\nwith why, also when the run itself could not start or finish). One at a time for an environment (`409\ninvalid_state`), which is also the answer when its origins are no longer on `reproduceAllowedHosts` or its\npassword does not open with this server's key. A change of how the environment signs in drops a test in\nprogress. `503 unavailable` when reproduction is not configured, the control repo cannot be read or\n`AHOY_SECRETS_KEY` is not set. Design §5 \"Defect reproduction\".\n",
         "responses": {
           "202": {
             "description": "The environment; the test is queued.",
@@ -16832,7 +16832,7 @@
             "items": {
               "type": "string"
             },
-            "description": "AHOY_REPRO_ALLOWED_HOSTS: host names and *.domain wildcards every allowed origin must be on."
+            "description": "reproduceAllowedHosts of Team settings › Defects: host names and *.domain wildcards every allowed origin must be on."
           },
           "environments": {
             "type": "array",
@@ -17199,6 +17199,8 @@
           "reproduceMode",
           "reproduceEnvironmentId",
           "maxReproductionsPerDay",
+          "reproduceAllowedHosts",
+          "evidenceDays",
           "version",
           "updatedBy",
           "updatedByName",
@@ -17273,6 +17275,21 @@
             "minimum": 1,
             "maximum": 50,
             "description": "The most reproductions in any 24 hours (default 5)."
+          },
+          "reproduceAllowedHosts": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "maxLength": 253
+            },
+            "description": "The hosts an environment's origins may be on: host names and `*.domain` wildcards (which match subdomains, not the domain itself), lowercase. Default `*.acmegroup.net` and `*.azure.cloud.acme`; empty, no environment can be saved. The cluster's egress rules must let a reproduction reach the same hosts."
+          },
+          "evidenceDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30,
+            "description": "Days a reproduction's screenshots and recordings are kept (default 7); 0 keeps none."
           },
           "version": {
             "type": ["integer", "null"],
@@ -17356,6 +17373,20 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 50
+          },
+          "reproduceAllowedHosts": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "maxLength": 253
+            },
+            "description": "Host names and *.domain wildcards; trimmed, lowercased and kept once each. Refused while reproduction is on if its environment's origins would be off them."
+          },
+          "evidenceDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30
           },
           "confirmSpend": {
             "type": "boolean",
@@ -17660,7 +17691,7 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time",
-            "description": "When Ahoy removes it: `AHOY_REPRO_EVIDENCE_DAYS` after the run ended (7 days by default)."
+            "description": "When Ahoy removes it: `evidenceDays` of Team settings › Defects after the run ended (7 days by default)."
           }
         }
       },

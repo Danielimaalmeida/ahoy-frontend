@@ -44,10 +44,10 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   team defaults (migration 0055: `/settings/product`, a conversation's `model`, `jiraProject`, `confluenceSpaces` and
   `teamDefaults`, a turn's `mentions`) and defect reproduction (PRs #126 to #128 and #130, migrations 0056 to 0059: the
   environments, `Defect.reproduction` and its `evidence`, `reproduceDefect`, `testEnvironment`, `getDefectEvidence`,
-  the reproduction fields of `DefectSettings`); `schema.d.ts` and the test mirror are generated from it. Deploy that
-  API and its migrations with or before this front end: an older API sends none of them, and the pages refuse its
-  answer. On `feat/conversation-cap-ceiling` it follows `ahoy-hosted`'s branch of the same name (a conversation's
-  `budgetCapNanoAiu`), which an older API does not send either.
+  the reproduction fields of `DefectSettings`) and a conversation's `budgetCapNanoAiu`, and on
+  `feat/reproduction-settings-ui` its branch of the same name (PR #132, migration 0060: `reproduceAllowedHosts` and
+  `evidenceDays` of `DefectSettings`); `schema.d.ts` and the test mirror are generated from it. Deploy that API and its
+  migrations with or before this front end: an older API sends none of them, and the pages refuse its answer.
 
 ## Not checked yet
 
@@ -101,9 +101,10 @@ What each feature still needs beyond the tests above. Its pull request has the d
    the Cap field takes up to the conversation's `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`); review and merge,
    the API first or together. Then the user tries the page against `npm run dev -- --simulate` and says whether the
    per-conversation look-ups stand.
-2. **Defect reproduction** (`ahoy-hosted`'s PRs #126 to #128 and #130 are merged). On TEST, after the deploy: add the
-   environment, Test sign-in, then one Reproduce from the Backlog, and open its verdict to see the screenshots and the
-   recording, before turning Reproduce before starting on.
+2. **Defect reproduction** (`ahoy-hosted`'s PRs #126 to #128 and #130 are merged; the allowed hosts and evidence days
+   in Team settings › Defects are `feat/reproduction-settings-ui`, with PR #132, to merge together). On TEST, after the
+   deploy: check the allowed hosts, add the environment, Test sign-in, then one Reproduce from the Backlog, and open
+   its verdict to see the screenshots and the recording, before turning Reproduce before starting on.
 3. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:
    `npm ci`, then `npm run build && npm run typecheck && npm run lint && npm test && npm run format`. Fix or drop
    `test:scripts`.
