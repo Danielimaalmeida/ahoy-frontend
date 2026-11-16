@@ -45,6 +45,7 @@ import {
   isAgentSettingsPage,
   isPrCommentSettingsPage,
   isMeetingSettingsPage,
+  isProductSettingsPage,
   isPeoplePage,
   isSetup,
   isMyCopilotToken,
@@ -148,6 +149,8 @@ import type {
   PrCommentSettingsPage,
   MeetingSettingsChange,
   MeetingSettingsPage,
+  ProductSettingsChange,
+  ProductSettingsPage,
   PeoplePage,
   Setup,
   MyCopilotToken,
@@ -2096,6 +2099,29 @@ export class ApiClient {
       'updatePrCommentSettings',
       isPrCommentSettingsPage,
       this.http.patch<unknown>(this.url('/settings/pr-comments'), body, {
+        observe: 'response',
+        timeout: REQUEST_TIMEOUT_MS,
+      })
+    );
+  }
+
+  /** The team's Product defaults, which every Product conversation starts with. */
+  getProductSettings(): Promise<ApiResult<ProductSettingsPage>> {
+    return this.get(
+      'getProductSettings',
+      '/settings/product',
+      isProductSettingsPage
+    );
+  }
+
+  /** Changes the team's Product defaults (admins only). */
+  updateProductSettings(
+    body: ProductSettingsChange
+  ): Promise<ApiResult<ProductSettingsPage>> {
+    return this.send(
+      'updateProductSettings',
+      isProductSettingsPage,
+      this.http.patch<unknown>(this.url('/settings/product'), body, {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })

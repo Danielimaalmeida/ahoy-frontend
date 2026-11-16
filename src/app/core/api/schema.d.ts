@@ -3067,6 +3067,35 @@ export interface paths {
     readonly patch: operations['updateMeetingSettings'];
     readonly trace?: never;
   };
+  readonly '/settings/product': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The team's Product defaults, which every Product conversation starts with.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A conversation started after a
+     *     save begins with the Jira project, the Confluence spaces and the repositories pinned; one already started keeps
+     *     what it has. `model` is the Product conversations phase's model and effort (Team settings › Phases), shown here
+     *     and changed there. 0 AIU.
+     */
+    readonly get: operations['getProductSettings'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    /**
+     * Change the team's Product defaults.
+     * @description Admins only. The Jira project is a project key (upper-cased; null clears it), the Confluence spaces at most 10
+     *     space keys, and the repositories at most 3 the content repository maps now (`400`; `503` when it cannot be
+     *     read). `version` is required once the settings are saved, and absent before (`409 stale_version`).
+     */
+    readonly patch: operations['updateProductSettings'];
+    readonly trace?: never;
+  };
   readonly '/setup': {
     readonly parameters: {
       readonly query?: never;
@@ -5834,6 +5863,19 @@ export interface components {
         readonly jira?: boolean;
         readonly confluence?: boolean;
       };
+      /** @description The model its sessions run on, one of the catalogue's (`GET /models`); null goes back to the team's (Team settings › Phases › Product conversations). Not while a question is being answered (409); a warm session is stopped, so the next question starts one on the new model. */
+      readonly model?: components['schemas']['ModelId'] | null;
+      /** @description The reasoning effort, one the model takes; null goes back to the team's, or, under a model of its own, the model's default. */
+      readonly reasoningEffort?:
+        components['schemas']['ReasoningEffort'] | null;
+      /** @description Where the agent searches Jira first (upper-cased); null removes it. Not while a question is being answered (409); a warm session is stopped. */
+      readonly jiraProject?: string | null;
+      /** @description The Confluence spaces it searches, at most 10; empty, every space. Stops a warm session. */
+      readonly confluenceSpaces?: readonly string[];
+    };
+    readonly ConversationModel: {
+      readonly model: string | null;
+      readonly reasoningEffort: components['schemas']['ReasoningEffort'] | null;
     };
     readonly ConversationLookUp: {
       /** @description Whether the person lets the agent look it up in this conversation. */
@@ -5975,6 +6017,14 @@ export interface components {
       readonly error: string | null;
       /** Format: date-time */
       readonly endedAt: string | null;
+      /** @description What the question names that Ahoy read into it (Jira issue keys, `#120` for the conversation's project, Figma links), not pinned: `label` is an issue's summary once read, `problem` why it could not be read. */
+      readonly mentions: readonly {
+        /** @enum {string} */
+        readonly kind: 'jira' | 'figma';
+        readonly ref: string;
+        readonly label: string | null;
+        readonly problem: string | null;
+      }[];
     };
     readonly ConversationSummary: {
       /** Format: uuid */
@@ -6021,6 +6071,8 @@ export interface components {
         readonly status: 'queued' | 'running';
         /** @description Started and waiting for questions, or answering one. */
         readonly warm: boolean;
+        /** @description The model it runs on; null until the reconciler starts it, or when the agent profile's. */
+        readonly model: string | null;
         readonly budgetNanoAiu: number;
         readonly spentNanoAiu: number;
         readonly cancelRequested: boolean;
@@ -6033,6 +6085,23 @@ export interface components {
       readonly lookUp: {
         readonly jira: components['schemas']['ConversationLookUp'];
         readonly confluence: components['schemas']['ConversationLookUp'];
+      };
+      /** @description What its sessions run on: the owner's choice (null: the team's), and the team's (`team`, the Product conversations phase's; null: the agent profile's, or the model's default effort). A change applies from the next session. */
+      readonly model: {
+        readonly model: string | null;
+        readonly reasoningEffort:
+          components['schemas']['ReasoningEffort'] | null;
+        readonly team: components['schemas']['ConversationModel'];
+      };
+      /** @description Where the agent searches Jira first: a bare issue number in a question is one of this project's issues, and new epics are proposed in it. Copied from the team's defaults when the conversation was started. */
+      readonly jiraProject: string | null;
+      /** @description The Confluence spaces the agent searches; empty, every space. */
+      readonly confluenceSpaces: readonly string[];
+      /** @description The team's Product defaults now (Team settings › Product), so the page can mark what came from them. */
+      readonly teamDefaults: {
+        readonly jiraProject: string | null;
+        readonly confluenceSpaces: readonly string[];
+        readonly repositories: readonly string[];
       };
     };
     readonly AgentSettingsPage: {
@@ -6229,6 +6298,33 @@ export interface components {
       readonly role: components['schemas']['MemberRole'];
       /** @description Left out, a member keeps their side and a new one is on ours (`us`). */
       readonly side?: components['schemas']['MemberSide'];
+    };
+    readonly ProductSettingsPage: {
+      /** @description Whether the person is an admin, who may change them. */
+      readonly canEdit: boolean;
+      readonly product: components['schemas']['ProductSettings'];
+      /** @description The Product conversations phase's model and effort now (Team settings › Phases); null is the profile's. */
+      readonly model: components['schemas']['ConversationModel'];
+    };
+    readonly ProductSettings: {
+      /** @description Where the agent searches Jira first and proposes new epics; a bare issue number is one of its issues. */
+      readonly jiraProject: string | null;
+      /** @description The Confluence spaces the agent searches; none, every space the token can see. */
+      readonly confluenceSpaces: readonly string[];
+      /** @description The content repository's aliases every conversation starts with pinned. */
+      readonly repositories: readonly string[];
+      /** @description Null until an admin saves anything. */
+      readonly version: number | null;
+      readonly updatedBy: string | null;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string | null;
+    };
+    readonly ProductSettingsChange: {
+      readonly version?: number;
+      readonly jiraProject?: string | null;
+      readonly confluenceSpaces?: readonly string[];
+      readonly repositories?: readonly string[];
     };
     readonly MeetingSettingsChange: {
       readonly version?: number;
@@ -11157,6 +11253,57 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly getProductSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The Product settings. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['ProductSettingsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly updateProductSettings: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ProductSettingsChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The settings, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['ProductSettingsPage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
   readonly getSetup: {
     readonly parameters: {
       readonly query?: never;
@@ -11783,6 +11930,7 @@ export interface operations {
           | 'environments'
           | 'branch_releases'
           | 'meetings'
+          | 'product'
           | 'people';
       };
       readonly header?: never;

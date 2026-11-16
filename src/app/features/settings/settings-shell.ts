@@ -240,6 +240,11 @@ export class SettingsShell {
       state: () => this.summary.meetings(),
     },
     {
+      path: 'product',
+      label: 'Product',
+      state: () => this.summary.product(),
+    },
+    {
       path: 'people',
       label: 'People',
       state: () => this.summary.people(),

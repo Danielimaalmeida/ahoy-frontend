@@ -101,6 +101,8 @@ import {
   type PrCommentSettingsPage,
   type MeetingSettings,
   type MeetingSettingsPage,
+  type ProductSettings,
+  type ProductSettingsPage,
   type Member,
   type PeoplePage,
   type Setup,
@@ -244,6 +246,7 @@ import {
   type ProposalDone,
   type JiraChange,
   type ConversationLookUp,
+  type ConversationModel,
   type ConversationSummary,
   type ConversationTurn,
   type ProposalFlag,
@@ -2148,6 +2151,36 @@ export const isMeetingSettingsPage = guard<MeetingSettingsPage>(
   })
 );
 
+/** A model and effort a conversation or the team chose; null leaves each to the default. */
+const conversationModelFields = {
+  model: nullable(modelId),
+  reasoningEffort: nullable(oneOf(REASONING_EFFORTS)),
+};
+const conversationModel = shape<ConversationModel>(conversationModelFields);
+
+/** Where the team works, which every new Product conversation starts with. */
+const productDefaultsFields = {
+  jiraProject: nullable(jiraProjectKey),
+  confluenceSpaces: arrayOf(nonEmptyText),
+  repositories: arrayOf(nonEmptyText),
+};
+
+/** The Product settings page, as `getProductSettings` and `updateProductSettings` answer it. */
+export const isProductSettingsPage = guard<ProductSettingsPage>(
+  'ProductSettingsPage',
+  shape<ProductSettingsPage>({
+    canEdit: flag,
+    product: shape<ProductSettings>({
+      ...productDefaultsFields,
+      version: nullable(wholeNumber('a version', 1)),
+      updatedBy: nullable(actor),
+      updatedByName: nullable(text),
+      updatedAt: nullable(timestamp),
+    }),
+    model: conversationModel,
+  })
+);
+
 /** The defect watch's settings page, as `getDefectSettings` and `updateDefectSettings` answer it. */
 export const isDefectSettingsPage = guard<DefectSettingsPage>(
   'DefectSettingsPage',
@@ -2649,6 +2682,14 @@ const conversationTurn: Check = (value, at) =>
     questions: arrayOf(grillQuestion),
     error: nullable(text),
     endedAt: nullable(timestamp),
+    mentions: arrayOf(
+      shape<ConversationTurn['mentions'][number]>({
+        kind: oneOf(['jira', 'figma'] as const),
+        ref: nonEmptyText,
+        label: nullable(text),
+        problem: nullable(text),
+      })
+    ),
   })(value, at) ?? turnConsistency(value, at);
 
 const conversationContextItem = shape<ConversationContextItem>({
@@ -2699,6 +2740,7 @@ export const isConversation = guard<Conversation>(
         id: nonEmptyText,
         status: oneOf(['queued', 'running'] as const),
         warm: flag,
+        model: nullable(modelId),
         budgetNanoAiu: positive,
         spentNanoAiu: nanoAiu,
         cancelRequested: flag,
@@ -2709,6 +2751,13 @@ export const isConversation = guard<Conversation>(
     lookUp: shape<Conversation['lookUp']>({
       jira: conversationLookUp,
       confluence: conversationLookUp,
+    }),
+    jiraProject: nullable(jiraProjectKey),
+    confluenceSpaces: arrayOf(nonEmptyText),
+    teamDefaults: shape<Conversation['teamDefaults']>(productDefaultsFields),
+    model: shape<Conversation['model']>({
+      ...conversationModelFields,
+      team: conversationModel,
     }),
   })
 );

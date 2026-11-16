@@ -17,7 +17,8 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   knowledge-review lessons; WebEAM sign-in; Meetings (topics, notes, decisions, actions, questions, images, search,
   drafted stories edited in place, Create in Jira and Create in Confluence); the Crew page; Team settings (SonarQube,
   Jira, Teams, Figma with the runner key, Agents, Phases with the plan panel, Defects, Branch releases, Pull request
-  comments, Meetings, People with each person's side, Confluence, My Copilot token) and the Setup page.
+  comments, Meetings, People with each person's side, Confluence, My Copilot token) and the Setup page; the Product
+  page (admins only) with proposals to Jira or a meeting, look-ups and Apply.
 - **How it is proven.** Every screen is proven by unit and component tests on the mock backend (Crew and Team settings
   over `HttpTestingController`). On 2026-11-07 every page was opened in Chromium on `ng serve` against a local
   `ahoy-hosted` with fictional data, for layout only; the inline story edit was seen in Chromium against a local API at
@@ -36,14 +37,12 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   The latest substitute run, `feat/defect-reproduction` (2026-11-15, Node 22.23.4, the auth library stubbed): build,
   typecheck, lint and format passed; `ng test` ran 236 files and 4,067 tests with one failure, `app.config.spec.ts`'s
   "refuses the mock sign-in in a production environment", which tests the real library's refusal the stub lacks.
-- **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main` and the runner key of its PR #117
-  (migration 0051, `generateRunnerKey`, `deleteRunnerKey`, `FigmaSettings.runnerKey`), and on
-  `feat/product-conversations-2` its branch of the same name (migration 0053: Create in Jira and Add to a meeting on a
-  proposal, `Conversation.lookUp`, `applyJiraChange`), and on `feat/defect-reproduction` its
-  `feat/environment-sign-in-test` (PRs #126 to #128, migrations 0055 to 0057: the environments, `Defect.reproduction`,
-  `reproduceDefect`, `testEnvironment`, the reproduction fields of `DefectSettings`); `schema.d.ts` and the test mirror
-  are generated from it. Merge and deploy that API and its migrations with or before this front end: an older API
-  sends no `runnerKey`, `lookUp`, `reproduction` or `reproduceOn`, and the pages refuse its answer.
+- **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main`, with the Product page's model and
+  team defaults (migration 0055: `/settings/product`, a conversation's `model`, `jiraProject`, `confluenceSpaces` and
+  `teamDefaults`, a turn's `mentions`) and defect reproduction (PRs #126 to #128, migrations 0056 to 0058: the
+  environments, `Defect.reproduction`, `reproduceDefect`, `testEnvironment`, the reproduction fields of
+  `DefectSettings`); `schema.d.ts` and the test mirror are generated from it. Deploy that API and its migrations with
+  or before this front end: an older API sends none of them, and the pages refuse its answer.
 
 ## Not checked yet
 
@@ -52,7 +51,7 @@ What each feature still needs beyond the tests above. Its pull request has the d
 | Feature                                                                                                         | Not checked yet                                                                                            |
 | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Needs you: phase in words with "Phase N of 8"; a "Defect" tag from `issueType`                                  | A browser (mockup only); an API with ahoy-hosted's `issueType` (no tag until it is deployed)               |
-| The Product page (`/product`, admins only): proposals to Jira or a meeting, look-ups, quick pins and Apply      | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
+| The Product page (`/product`, admins only): proposals, look-ups, Apply, a model each, team defaults, read keys  | A browser after this branch; the stream on an API; a live session; Apply on a real Jira                    |
 | Team settings › Figma › Runner key (generate, show once, copy, replace, remove)                                 | A browser and an API; a run fetching node trees with the key saved in GitHub                               |
 | Environments, Defects › Reproduction, the verdict and Reproduce in Backlog › Defects                            | A Test sign-in and a reproduction that ran (a cluster Job); a screen reader; 200% zoom                     |
 | Create in Confluence, Team settings › Confluence                                                                | A real Confluence; updating a page once it exists is not built                                             |
@@ -92,11 +91,11 @@ What each feature still needs beyond the tests above. Its pull request has the d
    config files `main` had removed as unread (now removed again). Pull `main` into the company copy before the next
    sync, and delete there what `main` deletes: `.prettierrc.json`, `eslint.config.mjs`, `.tool-versions` and
    `proxy.conf.mjs`.
-1. **The Product page's next phase** (`feat/product-conversations-2`, with `ahoy-hosted`'s branch of the same name):
-   the user tries it against `npm run dev -- --simulate` (a question naming an epic proposes one) and says whether the
-   per-conversation look-ups and the Jira changes stand; then review and merge, the API first or together.
-2. **Defect reproduction** (`feat/defect-reproduction`, with `ahoy-hosted`'s PRs #126 to #128): merge the API first or
-   together. What a reproduction did step by step (its steps, console errors, failed requests and screenshots) has no
+1. **The Product page's model and team defaults** (`feat/product-conversation-model`, with `ahoy-hosted`'s branch of
+   the same name): the user tries it against `npm run dev -- --simulate` (Team settings › Product, a new conversation,
+   a question naming `#<n>` or a Figma link, a change of model) and says whether the per-conversation look-ups stand;
+   then review and merge, the API first or together.
+2. **Defect reproduction** (`ahoy-hosted`'s PRs #126 to #128 are merged). What a reproduction did step by step (its steps, console errors, failed requests and screenshots) has no
    screen yet: the tab shows the verdict and why. On TEST, after the deploy: add the environment, Test sign-in, then
    one Reproduce from the Backlog before turning Reproduce before starting on.
 3. On a machine with the private registry and Node 24, repeat the full check with the real `@acme-fedev/auth`:

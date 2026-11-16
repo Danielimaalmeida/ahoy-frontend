@@ -8,6 +8,7 @@ import { EnvironmentsSettingsPage } from './environments-settings-page';
 import { FigmaSettingsPage } from './figma-settings-page';
 import { JiraSettingsPage } from './jira-settings-page';
 import { MeetingSettingsPage } from './meeting-settings-page';
+import { ProductSettingsPage } from './product-settings-page';
 import { PeopleSettingsPage } from './people-settings-page';
 import { PhaseSettingsPage } from './phase-settings-page';
 import { PrCommentSettingsPage } from './pr-comment-settings-page';
@@ -19,8 +20,9 @@ import { TeamsSettingsPage } from './teams-settings-page';
 /**
  * Team settings: Setup first (what is still needed before stories run), then SonarQube, Jira, Confluence, the crew's
  * Teams channel, Figma, the agents' jobs, the phases, pull request comments, the defect watch, the environments a defect
- * is reproduced in, branch releases, the names of a meeting's two sides and who may use Ahoy, kept in the database and changed by admins, one section per page; last, the
- * person's own Copilot token. Reading and changing them is 0 AIU.
+ * is reproduced in, branch releases, the names of a meeting's two sides, the Product page's defaults and who may use
+ * Ahoy, kept in the database and changed by admins, one section per page; last, the person's own Copilot token.
+ * Reading and changing them is 0 AIU.
  */
 export const SETTINGS_ROUTES: Routes = [
   {
@@ -92,6 +94,11 @@ export const SETTINGS_ROUTES: Routes = [
         path: 'meetings',
         title: 'Meetings · Team settings · Ahoy',
         component: MeetingSettingsPage,
+      },
+      {
+        path: 'product',
+        title: 'Product · Team settings · Ahoy',
+        component: ProductSettingsPage,
       },
       {
         path: 'people',
