@@ -460,9 +460,9 @@ type PreviewState =
                     <ah-field
                       label="Allowed hosts"
                       [hint]="
-                        'One per line: the hosts an environment may open, such as test.example.com, or *.example.com for its subdomains. At most ' +
+                        'One per line: the hosts an environment may open, such as test.example.com, or *.example.com for every subdomain (not example.com itself). At most ' +
                         maxHosts +
-                        '. The cluster must let reproductions reach them too.'
+                        '. With none, no environment can be saved or tested, and while reproduction is on its environment must stay on them. The cluster must let reproductions reach them too.'
                       "
                       [errorText]="hostsError() ?? ''"
                     >

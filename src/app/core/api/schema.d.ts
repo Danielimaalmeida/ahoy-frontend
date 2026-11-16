@@ -6521,7 +6521,7 @@ export interface components {
       /** Format: uuid */
       readonly reproduceEnvironmentId?: string | null;
       readonly maxReproductionsPerDay?: number;
-      /** @description Host names and *.domain wildcards; trimmed, lowercased and kept once each. */
+      /** @description Host names and *.domain wildcards; trimmed, lowercased and kept once each. Refused while reproduction is on if its environment's origins would be off them. */
       readonly reproduceAllowedHosts?: readonly string[];
       readonly evidenceDays?: number;
       /** @description Must be true when the change turns automatic starts or reproduction on, or raises the cap per defect, the starts per day or the reproductions per day while they are on: each lets Ahoy spend more AIU by itself. */

@@ -17375,7 +17375,7 @@
               "type": "string",
               "maxLength": 253
             },
-            "description": "Host names and *.domain wildcards; trimmed, lowercased and kept once each."
+            "description": "Host names and *.domain wildcards; trimmed, lowercased and kept once each. Refused while reproduction is on if its environment's origins would be off them."
           },
           "evidenceDays": {
             "type": "integer",

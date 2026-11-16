@@ -19,17 +19,24 @@ export const MAX_DEFECT_BUDGET_NANO_AIU = 200 * NANO_AIU_PER_AIU;
 /** The highest cap on starts per day and on open voyages the API takes. */
 export const MAX_DEFECT_STARTS = 20;
 
+/** A whole number as typed, from `min` to `max`, or why it is refused. */
+function wholeNumberOf(
+  typed: string,
+  min: number,
+  max: number
+): { readonly value: number } | { readonly problem: string } {
+  const text = typed.trim();
+  const value = /^\d{1,3}$/.test(text) ? Number(text) : Number.NaN;
+  return value >= min && value <= max
+    ? { value }
+    : { problem: `Type a whole number from ${min} to ${max}.` };
+}
+
 /** A cap on starts as typed: a whole number from 1 to {@link MAX_DEFECT_STARTS}, or why it is refused. */
 export function startCapOf(
   typed: string
 ): { readonly value: number } | { readonly problem: string } {
-  const text = typed.trim();
-  if (!/^\d{1,3}$/.test(text))
-    return { problem: `Type a whole number from 1 to ${MAX_DEFECT_STARTS}.` };
-  const value = Number(text);
-  return value >= 1 && value <= MAX_DEFECT_STARTS
-    ? { value }
-    : { problem: `Type a whole number from 1 to ${MAX_DEFECT_STARTS}.` };
+  return wholeNumberOf(typed, 1, MAX_DEFECT_STARTS);
 }
 
 /**
@@ -77,13 +84,7 @@ export const MAX_REPRODUCTIONS_PER_DAY = 50;
 export function reproductionCapOf(
   typed: string
 ): { readonly value: number } | { readonly problem: string } {
-  const problem = `Type a whole number from 1 to ${MAX_REPRODUCTIONS_PER_DAY}.`;
-  const text = typed.trim();
-  if (!/^\d{1,3}$/.test(text)) return { problem };
-  const value = Number(text);
-  return value >= 1 && value <= MAX_REPRODUCTIONS_PER_DAY
-    ? { value }
-    : { problem };
+  return wholeNumberOf(typed, 1, MAX_REPRODUCTIONS_PER_DAY);
 }
 
 /** The most hosts the API keeps. */
@@ -129,11 +130,7 @@ export const MAX_EVIDENCE_DAYS = 30;
 export function evidenceDaysOf(
   typed: string
 ): { readonly value: number } | { readonly problem: string } {
-  const problem = `Type a whole number from 0 to ${MAX_EVIDENCE_DAYS}.`;
-  const text = typed.trim();
-  if (!/^\d{1,2}$/.test(text)) return { problem };
-  const value = Number(text);
-  return value <= MAX_EVIDENCE_DAYS ? { value } : { problem };
+  return wholeNumberOf(typed, 0, MAX_EVIDENCE_DAYS);
 }
 
 /** What the spend confirmation weighs of the reproduction settings. */

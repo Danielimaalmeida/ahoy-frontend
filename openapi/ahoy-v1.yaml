@@ -1,6 +1,3 @@
-# Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
-# Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 20e2038286bf7c20c694a081760bdc6602a2f8c2
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -10283,7 +10280,7 @@ components:
           type: array
           maxItems: 20
           items: { type: string, maxLength: 253 }
-          description: 'Host names and *.domain wildcards; trimmed, lowercased and kept once each.'
+          description: "Host names and *.domain wildcards; trimmed, lowercased and kept once each. Refused while reproduction is on if its environment's origins would be off them."
         evidenceDays: { type: integer, minimum: 0, maximum: 30 }
         confirmSpend:
           type: boolean
