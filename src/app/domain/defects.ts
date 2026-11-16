@@ -4,6 +4,7 @@
  */
 
 import { isStoryKey } from './identifiers';
+import { absoluteDay } from './time';
 
 /** What the tab reads of one defect. */
 export interface DefectFacts {
@@ -82,6 +83,164 @@ export function defectStartLine(defect: DefectStartFacts): {
 export function canTryToFix(defect: DefectStartFacts): boolean {
   return (
     defect.voyage === null && defect.ignored === null && isStoryKey(defect.key)
+  );
+}
+
+/** What the tab reads of a defect's latest reproduction. */
+export interface ReproductionFacts {
+  readonly status: string;
+  /** The environment's name when the run was queued. */
+  readonly environment: string;
+  /** Whether it tried the defect as Jira has it now. */
+  readonly current: boolean;
+  readonly result: {
+    readonly verdict: 'reproduced' | 'not_reproduced' | 'inconclusive';
+    readonly why: string;
+  } | null;
+}
+
+/** The tone of a reproduction's tag. */
+export type ReproductionTone =
+  'reproduced' | 'not_reproduced' | 'inconclusive' | 'busy';
+
+/** Whether a reproduction's run is queued or running: it has no verdict yet. */
+export function reproductionInProgress(
+  reproduction: { readonly status: string } | null
+): boolean {
+  return (
+    reproduction !== null &&
+    (reproduction.status === 'queued' || reproduction.status === 'running')
+  );
+}
+
+/**
+ * The reproduction tag and the line under it: "Reproducing…" while the run is queued or running, then "Reproduced",
+ * "Not reproduced" or "Inconclusive" with the environment and why. A verdict for an older version of the defect says
+ * so: the watch does not count it. Null without a reproduction.
+ */
+export function reproductionView(reproduction: ReproductionFacts | null): {
+  readonly label: string;
+  readonly tone: ReproductionTone;
+  readonly detail: string;
+} | null {
+  if (reproduction === null) return null;
+  const on = `On ${reproduction.environment}`;
+  if (reproduction.result === null)
+    return {
+      label: 'Reproducing…',
+      tone: 'busy',
+      detail: reproduction.status === 'queued' ? `${on}, queued` : on,
+    };
+  const { verdict, why } = reproduction.result;
+  const label =
+    verdict === 'reproduced'
+      ? 'Reproduced'
+      : verdict === 'not_reproduced'
+        ? 'Not reproduced'
+        : 'Inconclusive';
+  const reason = why.trim() === '' ? on : `${on}: ${why.trim()}`;
+  return {
+    label,
+    tone: verdict,
+    detail: reproduction.current
+      ? reason
+      : `${reason} · The defect changed in Jira since.`,
+  };
+}
+
+/** What the detail reads of one screenshot or recording a reproduction kept. */
+export interface EvidenceFacts {
+  readonly kind: 'screenshot' | 'video';
+  readonly sizeBytes: number;
+  /** When Ahoy removes it. */
+  readonly expiresAt: string;
+}
+
+const KIB = 1024;
+const MIB = 1024 * KIB;
+
+/** A file's size in words, counted as the limits are (1 MB = 1,048,576 bytes): "812 KB", "4.2 MB". */
+export function evidenceSize(bytes: number): string {
+  return bytes < MIB
+    ? `${Math.max(1, Math.round(bytes / KIB))} KB`
+    : `${(bytes / MIB).toFixed(1)} MB`;
+}
+
+/** What a reproduction kept, for "Ahoy keeps … until": "the screenshots", "the recordings", or both. */
+function keptWhat(screenshots: number, recordings: number): string {
+  const videos = recordings === 1 ? 'the recording' : 'the recordings';
+  if (recordings === 0) return 'the screenshots';
+  return screenshots === 0 ? videos : `the screenshots and ${videos}`;
+}
+
+/**
+ * A reproduction's screenshots and recordings apart, each named by its place ("Screenshot 2 of 5", "Recording 1 of
+ * 1"), a recording with its size, and the day Ahoy removes the first of them ("Sun 22 Nov"); null without any.
+ */
+export function evidenceView<T extends EvidenceFacts>(
+  evidence: readonly T[],
+  now: Date
+): {
+  readonly screenshots: readonly { readonly file: T; readonly label: string }[];
+  readonly recordings: readonly {
+    readonly file: T;
+    readonly label: string;
+    readonly size: string;
+  }[];
+  readonly keptUntil: string;
+  /** "the screenshots", "the recording", "the screenshots and the recordings"… */
+  readonly what: string;
+} | null {
+  if (evidence.length === 0) return null;
+  const shots = evidence.filter((e) => e.kind === 'screenshot');
+  const videos = evidence.filter((e) => e.kind === 'video');
+  const first = evidence.reduce((a, b) =>
+    Date.parse(b.expiresAt) < Date.parse(a.expiresAt) ? b : a
+  );
+  return {
+    screenshots: shots.map((file, i) => ({
+      file,
+      label: `Screenshot ${i + 1} of ${shots.length}`,
+    })),
+    recordings: videos.map((file, i) => ({
+      file,
+      label: `Recording ${i + 1} of ${videos.length}`,
+      size: evidenceSize(file.sizeBytes),
+    })),
+    keptUntil: absoluteDay(first.expiresAt, now),
+    what: keptWhat(shots.length, videos.length),
+  };
+}
+
+/** Whether a reproduction's run ended, so that its verdict, steps and what it kept can be opened. */
+export function reproductionEnded(
+  reproduction: { readonly result: unknown } | null
+): boolean {
+  return reproduction !== null && reproduction.result !== null;
+}
+
+/** A request the browser saw fail, in one line: "GET https://test.example.com/api/orders · 500", or "· no answer". */
+export function failedRequestLine(request: {
+  readonly method: string;
+  readonly url: string;
+  readonly status: number | null;
+}): string {
+  return `${request.method} ${request.url} · ${request.status ?? 'no answer'}`;
+}
+
+/**
+ * Whether a person may ask for a reproduction: the defect has no voyage, nobody ignored it and none is in progress.
+ * The API takes any listed defect; the tab offers it where a verdict still helps decide what to start.
+ */
+export function canReproduce(
+  defect: DefectStartFacts & {
+    readonly reproduction: { readonly status: string } | null;
+  }
+): boolean {
+  return (
+    defect.voyage === null &&
+    defect.ignored === null &&
+    !reproductionInProgress(defect.reproduction)
   );
 }
 

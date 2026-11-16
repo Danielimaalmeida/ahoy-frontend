@@ -24,6 +24,7 @@ const PHASE_NAMES: Readonly<Record<string, string>> = {
   diagnosis: 'Halt diagnosis',
   knowledge: 'Business-rule review',
   meeting_story: 'Story drafts',
+  reproduce: 'Defect reproduction',
 };
 
 /** The fields as a sentence of the history names them. */

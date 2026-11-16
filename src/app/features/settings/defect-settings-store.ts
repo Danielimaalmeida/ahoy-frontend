@@ -1,17 +1,37 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import type { ApiResult } from '@core/api/api-error';
 import type {
   DefectSettingsChange,
   DefectSettingsPage,
+  EnvironmentRow,
   JiraBacklogPreview,
 } from '@core/api/types';
 import { SectionStore } from './section-store';
-import type { SettingsSummary } from './settings-summary';
+import { SettingsSummary } from './settings-summary';
 
-/** The state of the Defects section: the watch, its query, the priorities, and the history. */
+/**
+ * The state of the Defects section: the watch, its query, the priorities, reproduction and the history; and, for
+ * choosing where defects are reproduced, the environments of Team settings › Environments.
+ */
 @Injectable()
 export class DefectSettingsStore extends SectionStore<DefectSettingsPage> {
   protected readonly section = 'defects' as const;
+  private readonly frame = inject(SettingsSummary, { optional: true });
+
+  /** The environments a defect may be reproduced in; null until read, or when they could not be. */
+  readonly environments = signal<readonly EnvironmentRow[] | null>(null);
+
+  /** Reads the settings and, beside them, the environments: the page shows without them if they cannot be read. */
+  override async load(): Promise<void> {
+    this.frame?.claim('environments');
+    const [, environments] = await Promise.all([
+      super.load(),
+      this.api.getEnvironments(),
+    ]);
+    if (!environments.ok) return;
+    this.environments.set(environments.value.environments);
+    this.frame?.environmentsRead(environments.value);
+  }
 
   protected read(): Promise<ApiResult<DefectSettingsPage>> {
     return this.api.getDefectSettings();

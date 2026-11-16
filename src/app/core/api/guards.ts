@@ -13,6 +13,7 @@ import {
   arrayOf,
   boundedNumber,
   boundedText,
+  describe,
   flag,
   guard,
   isRecord,
@@ -31,6 +32,12 @@ import {
 } from './guard-kit';
 import {
   DEFECT_TRIAGES,
+  ENVIRONMENT_TEST_RESULTS,
+  EVIDENCE_KINDS,
+  EVIDENCE_MEDIA_TYPES,
+  REPRODUCE_MODES,
+  REPRODUCTION_STATUSES,
+  REPRODUCTION_VERDICTS,
   CREW_RECORDED_MODES,
   CREW_ROLES,
   CREW_SPRINT_STATES,
@@ -123,6 +130,12 @@ import {
   type DefectList,
   type DefectSettings,
   type DefectSettingsPage,
+  type DefectReproduction,
+  type Environment,
+  type EnvironmentsPage,
+  type EnvironmentTest,
+  type Reproduction,
+  type ReproductionEvidence,
   type FigmaSettings,
   type FigmaSettingsPage,
   type FigmaTest,
@@ -2186,6 +2199,10 @@ export const isDefectSettingsPage = guard<DefectSettingsPage>(
       maxActive: wholeNumber('a count of voyages', 1),
       startAs: nullable(actor),
       startAsName: nullable(text),
+      reproduceOn: flag,
+      reproduceMode: oneOf(REPRODUCE_MODES),
+      reproduceEnvironmentId: nullable(uuid),
+      maxReproductionsPerDay: wholeNumber('a count of reproductions', 1, 50),
       version: nullable(wholeNumber('a version', 1)),
       updatedBy: nullable(actor),
       updatedByName: nullable(text),
@@ -2193,6 +2210,66 @@ export const isDefectSettingsPage = guard<DefectSettingsPage>(
     }),
   })
 );
+
+const reproductionResult = shape<Reproduction>({
+  verdict: oneOf(REPRODUCTION_VERDICTS),
+  why: text,
+  steps: arrayOf(
+    shape<Reproduction['steps'][number]>({ action: text, saw: text })
+  ),
+  consoleErrors: arrayOf(text),
+  failedRequests: arrayOf(
+    shape<Reproduction['failedRequests'][number]>({
+      method: text,
+      url: text,
+      status: nullable(wholeNumber('an HTTP status', 0, 999)),
+    })
+  ),
+});
+
+/**
+ * A screenshot or a recording a reproduction kept. A recording is WebM and a screenshot is not: one that says
+ * otherwise is refused, so a page never puts a video's bytes in an image.
+ */
+const reproductionEvidence: Check = (value, at) => {
+  const why = shape<ReproductionEvidence>({
+    id: uuid,
+    kind: oneOf(EVIDENCE_KINDS),
+    mediaType: oneOf(EVIDENCE_MEDIA_TYPES),
+    sizeBytes: positive,
+    expiresAt: timestamp,
+  })(value, at);
+  if (why !== null || !isRecord(value)) return why;
+  return (value['kind'] === 'video') === (value['mediaType'] === 'video/webm')
+    ? null
+    : `${at}.mediaType must be video/webm exactly for a video`;
+};
+
+/**
+ * A defect's latest reproduction. The contract says the verdict is set once the run ended and never before; one that
+ * breaks that is refused, so the tab never shows a verdict for a run in progress or none for one that ended.
+ */
+const defectReproduction: Check = (value, at) => {
+  const why = shape<DefectReproduction>({
+    runId,
+    environment: text,
+    status: oneOf(REPRODUCTION_STATUSES),
+    current: flag,
+    startedBy: actor,
+    startedByName: nullable(text),
+    startedAt: timestamp,
+    endedAt: nullable(timestamp),
+    nanoAiu,
+    result: nullable(reproductionResult),
+    evidence: arrayOf(reproductionEvidence),
+  })(value, at);
+  if (why !== null || !isRecord(value)) return why;
+  const inProgress =
+    value['status'] === 'queued' || value['status'] === 'running';
+  return inProgress === (value['result'] === null)
+    ? null
+    : `${at}.result must be set exactly when the run has ended`;
+};
 
 const defect = shape<Defect>({
   key: jiraIssueKey,
@@ -2226,9 +2303,10 @@ const defect = shape<Defect>({
     })
   ),
   startError: nullable(text),
+  reproduction: nullable(defectReproduction),
 });
 
-/** One defect, as `ignoreDefect` and `unignoreDefect` answer it. */
+/** One defect, as `ignoreDefect`, `unignoreDefect` and `reproduceDefect` answer it. */
 export const isDefect = guard<Defect>('Defect', defect);
 
 /** The open defects, as `listDefects` answers them. */
@@ -2244,6 +2322,77 @@ export const isDefectList = guard<DefectList>(
       })
     ),
     defects: arrayOf(defect),
+  })
+);
+
+type FormSignIn = Extract<Environment['signIn'], { readonly kind: 'form' }>;
+
+/** How an environment signs in: `none`, or a form with where it is and how a signed-in page is told. */
+const environmentSignIn: Check = (value, at) => {
+  if (!isRecord(value))
+    return `${at} must be an object (got ${describe(value)})`;
+  if (value['kind'] === 'none') return null;
+  if (value['kind'] !== 'form')
+    return `${at}.kind must be one of none, form (got ${describe(value['kind'])})`;
+  return shape<FormSignIn>({
+    kind: text,
+    loginUrl: nonEmptyText,
+    username: nonEmptyText,
+    passwordSetBy: nullable(actor),
+    passwordSetByName: nullable(text),
+    passwordSetAt: nullable(timestamp),
+    userSelector: nullable(text),
+    passwordSelector: nullable(text),
+    submitSelector: nullable(text),
+    signedInUrlPattern: nullable(text),
+    signedInSelector: nullable(text),
+  })(value, at);
+};
+
+const environmentFields = {
+  id: uuid,
+  name: nonEmptyText,
+  baseUrl: nonEmptyText,
+  allowedOrigins: arrayOf(nonEmptyText),
+  signIn: environmentSignIn,
+  writes: flag,
+  versionUrl: nullable(text),
+  lastTest: nullable(
+    shape<EnvironmentTest>({
+      result: oneOf(ENVIRONMENT_TEST_RESULTS),
+      detail: nullable(text),
+      at: timestamp,
+      by: nullable(actor),
+      byName: nullable(text),
+    })
+  ),
+  version: wholeNumber('a version', 1),
+  updatedBy: actor,
+  updatedByName: nullable(text),
+  updatedAt: timestamp,
+} as const;
+
+/** An environment, as adding, changing or testing one answers it. */
+export const isEnvironment = guard<Environment>(
+  'Environment',
+  shape<Environment>(environmentFields)
+);
+
+/** The Environments page, as `getEnvironments` answers it. */
+export const isEnvironmentsPage = guard<EnvironmentsPage>(
+  'EnvironmentsPage',
+  shape<EnvironmentsPage>({
+    canEdit: flag,
+    secretsConfigured: flag,
+    allowedHosts: arrayOf(nonEmptyText),
+    environments: arrayOf(
+      shape<EnvironmentsPage['environments'][number]>({
+        ...environmentFields,
+        passwordReadable: flag,
+        inUse: flag,
+        testing: flag,
+      })
+    ),
   })
 );
 

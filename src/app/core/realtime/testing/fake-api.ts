@@ -39,7 +39,11 @@ export type FakeApiOps = Pick<
   | 'ignoreDefect'
   | 'unignoreDefect'
   | 'startDefect'
+  | 'reproduceDefect'
+  | 'getDefectEvidence'
   | 'getDefectSettings'
+  | 'getEnvironments'
+  | 'getPhaseSettings'
   | 'getSetup'
   | 'keepPhaseDefaults'
   | 'decideHumanGate'
@@ -263,6 +267,26 @@ export class FakeApi implements FakeApiOps {
   startDefect: FakeApiOps['startDefect'] = (key, budgetNanoAiu) => {
     this.calls.push({ op: 'startDefect', args: [key, budgetNanoAiu] });
     return this.handlers.startDefect?.(key, budgetNanoAiu) ?? unreachable();
+  };
+
+  reproduceDefect: FakeApiOps['reproduceDefect'] = (key, environmentId) => {
+    this.calls.push({ op: 'reproduceDefect', args: [key, environmentId] });
+    return this.handlers.reproduceDefect?.(key, environmentId) ?? unreachable();
+  };
+
+  getDefectEvidence: FakeApiOps['getDefectEvidence'] = (key, evidence) => {
+    this.calls.push({ op: 'getDefectEvidence', args: [key, evidence.id] });
+    return this.handlers.getDefectEvidence?.(key, evidence) ?? unreachable();
+  };
+
+  getEnvironments: FakeApiOps['getEnvironments'] = () => {
+    this.calls.push({ op: 'getEnvironments', args: [] });
+    return this.handlers.getEnvironments?.() ?? unreachable();
+  };
+
+  getPhaseSettings: FakeApiOps['getPhaseSettings'] = () => {
+    this.calls.push({ op: 'getPhaseSettings', args: [] });
+    return this.handlers.getPhaseSettings?.() ?? unreachable();
   };
 
   getDefectSettings: FakeApiOps['getDefectSettings'] = () => {

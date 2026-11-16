@@ -1,0 +1,29 @@
+{
+  "id": "5f0c1d6e-2b7a-4c39-9a51-0d3e8f4b6a21",
+  "name": "TEST",
+  "baseUrl": "https://test.example.com/app",
+  "allowedOrigins": [
+    "https://test.example.com",
+    "https://api.test.example.com"
+  ],
+  "signIn": {
+    "kind": "form",
+    "loginUrl": "https://test.example.com/login",
+    "username": "ahoy-reader",
+    "passwordSetBy": "alex",
+    "passwordSetByName": "Alex Example",
+    "passwordSetAt": "2026-11-03T09:00:00.000Z",
+    "userSelector": null,
+    "passwordSelector": null,
+    "submitSelector": null,
+    "signedInUrlPattern": "https://test.example.com/app/*",
+    "signedInSelector": null
+  },
+  "writes": true,
+  "versionUrl": null,
+  "lastTest": null,
+  "version": 3,
+  "updatedBy": "alex",
+  "updatedByName": "Alex Example",
+  "updatedAt": "2026-11-03T09:00:00.000Z"
+}

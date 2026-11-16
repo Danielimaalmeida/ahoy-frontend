@@ -70,6 +70,50 @@ export function spendsMore(was: DefectSpend, now: DefectSpend): boolean {
   );
 }
 
+/** The most reproductions in any 24 hours the API takes. */
+export const MAX_REPRODUCTIONS_PER_DAY = 50;
+
+/** The reproductions per day as typed: a whole number from 1 to {@link MAX_REPRODUCTIONS_PER_DAY}, or why not. */
+export function reproductionCapOf(
+  typed: string
+): { readonly value: number } | { readonly problem: string } {
+  const problem = `Type a whole number from 1 to ${MAX_REPRODUCTIONS_PER_DAY}.`;
+  const text = typed.trim();
+  if (!/^\d{1,3}$/.test(text)) return { problem };
+  const value = Number(text);
+  return value >= 1 && value <= MAX_REPRODUCTIONS_PER_DAY
+    ? { value }
+    : { problem };
+}
+
+/** What the spend confirmation weighs of the reproduction settings. */
+export interface ReproductionSpend {
+  readonly reproduceOn: boolean;
+  readonly maxReproductionsPerDay: number;
+}
+
+/**
+ * Whether going from `was` to `now` lets reproduction spend more by itself, which needs the admin's yes
+ * (`confirmSpend`): turning it on, or raising the reproductions per day while it is on. Mirrors `ahoy-hosted`'s
+ * `reproductionSpendsMore`.
+ */
+export function reproductionSpendsMore(
+  was: ReproductionSpend,
+  now: ReproductionSpend
+): boolean {
+  if (!now.reproduceOn) return false;
+  return (
+    !was.reproduceOn || now.maxReproductionsPerDay > was.maxReproductionsPerDay
+  );
+}
+
+/** What a mode does with the verdict, in a few words: for the select and the read-only list. */
+export function reproduceModeLabel(mode: 'advisory' | 'required'): string {
+  return mode === 'required'
+    ? 'Required: Ahoy starts only what it reproduced'
+    : 'Advisory: the verdict is shown, starts go on as before';
+}
+
 /** The most priorities the settings keep, as the contract says. */
 export const MAX_PRIORITIES = 20;
 
@@ -116,17 +160,29 @@ const FIELD_NAMES: Readonly<Record<string, string>> = {
   maxStartsPerDay: 'Starts per day',
   maxActive: 'Open voyages',
   startAs: 'Start as',
+  reproduceOn: 'Reproduction',
+  reproduceMode: 'Reproduction mode',
+  reproduceEnvironmentId: 'Reproduction environment',
+  maxReproductionsPerDay: 'Reproductions per day',
   // Kept so the history still names a change the component map once made.
   components: 'Components',
 };
 
 /** A field's new value in words, for the history. */
 function toWords(field: string, value: unknown): string {
-  if (field === 'watchOn' || field === 'autoStart')
+  if (field === 'watchOn' || field === 'autoStart' || field === 'reproduceOn')
     return value === true ? 'on' : 'off';
+  if (field === 'reproduceMode')
+    return value === 'required' ? 'required' : 'advisory';
+  if (field === 'reproduceEnvironmentId')
+    return typeof value === 'string' ? 'changed' : 'none';
   if (field === 'budgetNanoAiu')
     return typeof value === 'number' ? aiuLabel(value) : 'none';
-  if (field === 'maxStartsPerDay' || field === 'maxActive')
+  if (
+    field === 'maxStartsPerDay' ||
+    field === 'maxActive' ||
+    field === 'maxReproductionsPerDay'
+  )
     return typeof value === 'number' ? String(value) : '?';
   if (field === 'startAs') return typeof value === 'string' ? value : 'nobody';
   if (field === 'defectsJql')

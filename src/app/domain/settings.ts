@@ -15,6 +15,7 @@ import { describeMeetingEvent } from './meeting-settings';
 import { describeProductEvent } from './product-settings';
 import { describePeopleEvent } from './people-settings';
 import { describeDefectEvent } from './defect-settings';
+import { describeEnvironmentEvent } from './environments';
 import { describeBranchReleaseEvent } from './branch-releases';
 import { describeTeamsEvent } from './teams-settings';
 
@@ -127,6 +128,7 @@ export function describeSettingsEvent(type: string, payload: unknown): string {
         describePhaseEvent(type, payload) ??
         describePrCommentEvent(type, payload) ??
         describeDefectEvent(type, payload) ??
+        describeEnvironmentEvent(type, payload) ??
         describeBranchReleaseEvent(type, payload) ??
         describeMeetingEvent(type, payload) ??
         describeProductEvent(type, payload) ??

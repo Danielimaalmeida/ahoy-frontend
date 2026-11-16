@@ -62,6 +62,50 @@ describe("the defect watch's guards", () => {
   });
 });
 
+describe("a reproduction's screenshots and recordings", () => {
+  const reproduced = listDefects.defects.find((d) => d.reproduction !== null)!;
+  const withEvidence = (evidence: unknown) => ({
+    ...reproduced,
+    reproduction: { ...reproduced.reproduction, evidence },
+  });
+  const shot = reproduced.reproduction!.evidence[0]!;
+
+  it('are listed with the reproduction, or as an empty list', () => {
+    expect(isDefect(reproduced)).toBe(true);
+    expect(isDefect(withEvidence([]))).toBe(true);
+    expect(isDefect(withEvidence([{ ...shot, mediaType: 'image/jpeg' }]))).toBe(
+      true
+    );
+  });
+
+  it('refuse a reproduction without the list, an unknown format, an id that is no UUID and an empty file', () => {
+    const bare = Object.fromEntries(
+      Object.entries(reproduced.reproduction!).filter(
+        ([field]) => field !== 'evidence'
+      )
+    );
+    expect(isDefect({ ...reproduced, reproduction: bare })).toBe(false);
+    for (const change of [
+      { mediaType: 'image/svg+xml' },
+      { kind: 'trace' },
+      { id: '../settings' },
+      { sizeBytes: 0 },
+      { expiresAt: 'next week' },
+    ])
+      expect(
+        isDefect(withEvidence([{ ...shot, ...change }])),
+        JSON.stringify(change)
+      ).toBe(false);
+  });
+
+  it('refuse a recording that is not WebM and a screenshot that is', () => {
+    expect(isDefect(withEvidence([{ ...shot, kind: 'video' }]))).toBe(false);
+    expect(isDefect(withEvidence([{ ...shot, mediaType: 'video/webm' }]))).toBe(
+      false
+    );
+  });
+});
+
 describe("ApiClient's defect watch", () => {
   let http: HttpTestingController;
   let api: ApiClient;

@@ -5,10 +5,12 @@ import {
   type TestRequest,
 } from '@angular/common/http/testing';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { API_BASE } from '@core/api/api-base';
 import { buttonNamed, choose, field, problem, text, type } from '@testing/dom';
 import { requestViolations } from '@testing/fixtures/contract';
 import getDefectSettings from '@testing/fixtures/getDefectSettings.json';
+import getEnvironments from '@testing/fixtures/getEnvironments.json';
 import listDefectSettingsEvents from '@testing/fixtures/listDefectSettingsEvents.json';
 import previewJiraBacklog from '@testing/fixtures/previewJiraBacklog.json';
 import updateDefectSettings from '@testing/fixtures/updateDefectSettings.json';
@@ -17,6 +19,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DefectSettingsPage } from './defect-settings-page';
 
 const BASE = '/api/v1';
+/** The id of the fixture's TEST environment. */
+const TEST_ID = '5f0c1d6e-2b7a-4c39-9a51-0d3e8f4b6a21';
 
 describe('the Defects section of Team settings', () => {
   let fixture: ComponentFixture<DefectSettingsPage>;
@@ -38,12 +42,20 @@ describe('the Defects section of Team settings', () => {
       (r) => r.method === 'GET' && r.url === `${BASE}/settings/events`
     );
 
+  /** Answers the read of the environments the section makes beside its own. */
+  const environmentsRead = (page: object = getEnvironments) =>
+    http
+      .expectOne({ method: 'GET', url: `${BASE}/settings/environments` })
+      .flush(page);
+
   async function answer(
     page: object = getDefectSettings,
-    history: object = listDefectSettingsEvents
+    history: object = listDefectSettingsEvents,
+    environments: object = getEnvironments
   ): Promise<void> {
     settingsRead().flush(page);
     historyRead().flush(history);
+    environmentsRead(environments);
     await settle();
   }
 
@@ -65,6 +77,9 @@ describe('the Defects section of Team settings', () => {
   const watch = () => field<HTMLSelectElement>(root, 'Watch');
   const jql = () => field<HTMLTextAreaElement>(root, 'Defects query (JQL)');
   const priorities = () => field(root, 'Priorities tried');
+  const reproduce = () =>
+    field<HTMLSelectElement>(root, 'Reproduce before starting');
+  const environment = () => field<HTMLSelectElement>(root, 'Environment');
   const toasts = () =>
     TestBed.inject(ToastService)
       .toasts()
@@ -77,6 +92,7 @@ describe('the Defects section of Team settings', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: API_BASE, useValue: BASE },
       ],
     });
@@ -94,6 +110,7 @@ describe('the Defects section of Team settings', () => {
     expect(history.request.params.get('section')).toBe('defects');
     settingsRead().flush(getDefectSettings);
     history.flush(listDefectSettingsEvents);
+    environmentsRead();
     await settle();
     expect(watch().value).toBe('off');
     expect(jql().value).toBe('');
@@ -215,7 +232,24 @@ describe('the Defects section of Team settings', () => {
       'Off',
       'Sam Example (q123456)',
       '20 AIU',
+      'Off',
     ]);
+  });
+
+  it('says where and how often a defect is reproduced to someone who is not an admin', async () => {
+    await answer({
+      ...updateDefectSettings,
+      canEdit: false,
+      defects: {
+        ...updateDefectSettings.defects,
+        reproduceOn: true,
+        reproduceMode: 'required',
+        reproduceEnvironmentId: TEST_ID,
+      },
+    });
+    expect(text(root.querySelector('dd:last-of-type'))).toBe(
+      'On, in TEST: at most 5 a day. Required: Ahoy starts only what it reproduced'
+    );
   });
 
   it('turns automatic starts on only with an AIU cap, a person to start as and a yes to the spend, sending confirmSpend', async () => {
@@ -368,6 +402,151 @@ describe('the Defects section of Team settings', () => {
     await respond(patch!, moved);
     await answer(moved);
     expect(toasts()).toContain('Defect settings saved.');
+  });
+
+  it('turns reproduction on only with an environment and a yes to the spend, sending confirmSpend', async () => {
+    await answer(updateDefectSettings);
+    choose(reproduce(), 'on');
+    await settle();
+    expect(text(root)).toContain(
+      'Reproduction needs an environment to reproduce defects in.'
+    );
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    expect([...environment().options].map((option) => text(option))).toEqual([
+      'None',
+      'TEST',
+      'Demo',
+    ]);
+    choose(environment(), TEST_ID);
+    await settle();
+    expect(text(root)).toContain(
+      'Ahoy will spend AIU reproducing defects by itself'
+    );
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    root.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await settle();
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 1,
+      reproduceOn: true,
+      reproduceEnvironmentId: TEST_ID,
+      confirmSpend: true,
+    });
+    expect(
+      requestViolations('updateDefectSettings', patch?.request.body)
+    ).toEqual([]);
+    const on = {
+      ...updateDefectSettings,
+      defects: {
+        ...updateDefectSettings.defects,
+        reproduceOn: true,
+        reproduceEnvironmentId: TEST_ID,
+        version: 2,
+      },
+    };
+    await respond(patch!, on);
+    await answer(on);
+    expect(toasts()).toContain('Reproduction on. Defect settings saved.');
+    expect(environment().value).toBe(TEST_ID);
+  });
+
+  it('asks again for a yes when raising the reproductions per day, not when the verdict starts to decide', async () => {
+    const on = {
+      ...updateDefectSettings,
+      defects: {
+        ...updateDefectSettings.defects,
+        reproduceOn: true,
+        reproduceEnvironmentId: TEST_ID,
+      },
+    };
+    await answer(on);
+    choose(
+      field<HTMLSelectElement>(root, 'What the verdict decides'),
+      'required'
+    );
+    type(field(root, 'Reproductions per day'), '3');
+    await settle();
+    expect(text(root)).not.toContain('reproducing defects by itself');
+    expect(buttonNamed(root, 'Save').disabled).toBe(false);
+    type(field(root, 'Reproductions per day'), '8');
+    await settle();
+    expect(text(root)).toContain(
+      'Ahoy will spend AIU reproducing defects by itself'
+    );
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+    root.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    await settle();
+    buttonNamed(root, 'Save').click();
+    await settle();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({
+      version: 1,
+      reproduceMode: 'required',
+      maxReproductionsPerDay: 8,
+      confirmSpend: true,
+    });
+    expect(
+      requestViolations('updateDefectSettings', patch?.request.body)
+    ).toEqual([]);
+    const raised = {
+      ...on,
+      defects: {
+        ...on.defects,
+        reproduceMode: 'required',
+        maxReproductionsPerDay: 8,
+        version: 2,
+      },
+    };
+    await respond(patch!, raised);
+    await answer(raised);
+    expect(toasts()).toContain('Defect settings saved.');
+  });
+
+  it('points at Team settings › Environments when no environment is listed', async () => {
+    await answer(updateDefectSettings, listDefectSettingsEvents, {
+      ...getEnvironments,
+      environments: [],
+    });
+    expect(text(root)).toContain('No environment is listed yet.');
+    expect(
+      root
+        .querySelector('a[href="/settings/environments"]')
+        ?.textContent?.trim()
+    ).toBe('Team settings › Environments');
+  });
+
+  it('keeps the saved environment in the list when the environments cannot be read', async () => {
+    const on = {
+      ...updateDefectSettings,
+      defects: {
+        ...updateDefectSettings.defects,
+        reproduceOn: true,
+        reproduceEnvironmentId: TEST_ID,
+      },
+    };
+    settingsRead().flush(on);
+    historyRead().flush(listDefectSettingsEvents);
+    http
+      .expectOne({ method: 'GET', url: `${BASE}/settings/environments` })
+      .flush(problem('unavailable'), {
+        status: 503,
+        statusText: 'Refused',
+        headers: { 'content-type': 'application/problem+json' },
+      });
+    await settle();
+    expect(environment().value).toBe(TEST_ID);
+    expect(text(root)).not.toContain('No environment is listed yet.');
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
+  });
+
+  it('refuses a number of reproductions per day it cannot keep', async () => {
+    await answer(updateDefectSettings);
+    type(field(root, 'Reproductions per day'), '51');
+    await settle();
+    expect(text(root)).toContain('Type a whole number from 1 to 50.');
+    expect(buttonNamed(root, 'Save').disabled).toBe(true);
   });
 
   it('refuses caps on starts it cannot keep', async () => {

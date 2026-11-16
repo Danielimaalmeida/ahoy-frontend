@@ -26,7 +26,8 @@
         "byName": null,
         "at": "2026-11-04T10:46:00.000Z"
       },
-      "startError": null
+      "startError": null,
+      "reproduction": null
     },
     {
       "key": "PROJ-207",
@@ -41,7 +42,65 @@
       "ignored": null,
       "voyage": null,
       "started": null,
-      "startError": null
+      "startError": null,
+      "reproduction": {
+        "runId": "reproduce-proj-207-01",
+        "environment": "TEST",
+        "status": "succeeded",
+        "current": true,
+        "startedBy": "ahoy-defect-watch",
+        "startedByName": null,
+        "startedAt": "2026-11-04T10:47:00.000Z",
+        "endedAt": "2026-11-04T10:52:00.000Z",
+        "nanoAiu": 1200000000,
+        "result": {
+          "verdict": "reproduced",
+          "why": "The exported file has 2 rows; the list shows 3. The row for O'Brien is missing.",
+          "steps": [
+            {
+              "action": "Opened Customers and exported the list to CSV",
+              "saw": "A file with 2 rows"
+            },
+            {
+              "action": "Compared it with the list on screen",
+              "saw": "3 customers, one named O'Brien"
+            }
+          ],
+          "consoleErrors": [
+            "TypeError: Cannot read properties of undefined (reading 'split')"
+          ],
+          "failedRequests": [
+            {
+              "method": "GET",
+              "url": "https://test.example.com/api/customers/export?format=csv",
+              "status": 500
+            }
+          ]
+        },
+        "evidence": [
+          {
+            "id": "7c0c8f0a-52f0-4b3b-9d49-0f6f5a8d1c01",
+            "kind": "screenshot",
+            "mediaType": "image/png",
+            "sizeBytes": 182340,
+            "expiresAt": "2026-11-11T10:52:00.000Z"
+          },
+          {
+            "id": "7c0c8f0a-52f0-4b3b-9d49-0f6f5a8d1c02",
+            "kind": "screenshot",
+            "mediaType": "image/png",
+            "sizeBytes": 201877,
+            "expiresAt": "2026-11-11T10:52:00.000Z"
+          },
+          {
+            "id": "7c0c8f0a-52f0-4b3b-9d49-0f6f5a8d1c03",
+            "kind": "video",
+            "mediaType": "video/webm",
+            "sizeBytes": 4200000,
+            "expiresAt": "2026-11-11T10:52:00.000Z"
+          }
+        ]
+      }
     },
     {
       "key": "PROJ-201",
@@ -56,7 +115,8 @@
       "ignored": null,
       "voyage": null,
       "started": null,
-      "startError": null
+      "startError": null,
+      "reproduction": null
     },
     {
       "key": "PROJ-190",
@@ -76,7 +136,8 @@
       },
       "voyage": null,
       "started": null,
-      "startError": null
+      "startError": null,
+      "reproduction": null
     }
   ]
 }
