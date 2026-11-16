@@ -65,8 +65,11 @@ export const CONVERSATION_TURNS_MAX = 40;
 export const CONTEXT_ITEMS_MAX = 12;
 export const CONTEXT_REPOSITORIES_MAX = 3;
 export const CONTEXT_FIGMA_MAX = 3;
-/** The highest cap one question's session may have (20 AIU), in nano-AIU. */
-export const CONVERSATION_BUDGET_MAX_NANO_AIU = 20_000_000_000;
+/**
+ * The highest cap one question's session may have before a conversation is read (20 AIU, the API's own when
+ * `AHOY_MAX_PHASE_BUDGET_AIU` is unset), in nano-AIU; the conversation's `budgetCapNanoAiu` says the real one.
+ */
+export const DEFAULT_CONVERSATION_BUDGET_CAP_NANO_AIU = 20_000_000_000;
 /** How long a session stays warm for the next question, in minutes (the server's idle time). */
 export const WARM_MINUTES = 10;
 

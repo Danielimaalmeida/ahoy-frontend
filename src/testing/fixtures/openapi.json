@@ -15464,8 +15464,8 @@
           "budgetNanoAiu": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 20000000000,
-            "description": "The cap of a session this question starts, at most 20 AIU; the server's cap when absent."
+            "maximum": 1000000000000,
+            "description": "The cap of a session this question starts, at most the conversation's `budgetCapNanoAiu`; the server's cap when absent."
           }
         }
       },
@@ -15942,7 +15942,8 @@
           "model",
           "jiraProject",
           "confluenceSpaces",
-          "teamDefaults"
+          "teamDefaults",
+          "budgetCapNanoAiu"
         ],
         "properties": {
           "id": {
@@ -16134,6 +16135,11 @@
                 }
               }
             }
+          },
+          "budgetCapNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The most a question may cap the session it starts at: `AHOY_MAX_PHASE_BUDGET_AIU` (unset: 20 AIU), or the deployment's own cap for Product conversations where that is higher."
           }
         }
       },

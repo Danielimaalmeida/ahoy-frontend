@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 7ea9a5d1babd1e31a54d6ff7cd5d3b4fa59a2657
+# Commit: fa8bc5f7bcc5ce629182c17bcfc75509a7ce1003
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -9090,8 +9090,10 @@ components:
         budgetNanoAiu:
           type: integer
           minimum: 1
-          maximum: 20000000000
-          description: The cap of a session this question starts, at most 20 AIU; the server's cap when absent.
+          maximum: 1000000000000
+          description: >-
+            The cap of a session this question starts, at most the conversation's `budgetCapNanoAiu`; the server's cap
+            when absent.
     ProposalFlag:
       type: object
       additionalProperties: false
@@ -9393,6 +9395,7 @@ components:
           jiraProject,
           confluenceSpaces,
           teamDefaults,
+          budgetCapNanoAiu,
         ]
       properties:
         id: { type: string, format: uuid }
@@ -9509,6 +9512,12 @@ components:
             jiraProject: { type: [string, 'null'] }
             confluenceSpaces: { type: array, items: { type: string } }
             repositories: { type: array, items: { type: string } }
+        budgetCapNanoAiu:
+          type: integer
+          minimum: 1
+          description: >-
+            The most a question may cap the session it starts at: `AHOY_MAX_PHASE_BUDGET_AIU` (unset: 20 AIU), or the
+            deployment's own cap for Product conversations where that is higher.
     AgentSettingsPage:
       type: object
       additionalProperties: false

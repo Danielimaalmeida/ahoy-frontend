@@ -37,16 +37,17 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   cloud session cannot reach: most branches since 2026-11-05 ran substitutes instead (Node 22 or 26, the auth library
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,
   Node 24.22.2 through `npx node@24`): format, build, typecheck, lint and `ng test` (220 files, 3,809 tests) passed.
-  The latest substitute run, `feat/reproduction-evidence` (2026-11-15, Node 22.23.4, the auth library stubbed): build,
-  typecheck, lint and format passed; `ng test` ran 236 files and 4,084 tests with one failure, `app.config.spec.ts`'s
-  "refuses the mock sign-in in a production environment", which tests the real library's refusal the stub lacks.
+  The latest substitute run, `feat/conversation-cap-ceiling` (2026-11-16, Node 24.22.3 through `npx node@24`, the
+  auth library stubbed): build, typecheck, lint and format passed; `ng test` ran 238 files and 4,103 tests with three
+  failures, all in `app.config.spec.ts`, which needs the real library's `MockAuthService` the stub lacks.
 - **Contract:** the vendored `openapi/ahoy-v1.yaml` follows `ahoy-hosted`'s `main`, with the Product page's model and
   team defaults (migration 0055: `/settings/product`, a conversation's `model`, `jiraProject`, `confluenceSpaces` and
   `teamDefaults`, a turn's `mentions`) and defect reproduction (PRs #126 to #128 and #130, migrations 0056 to 0059: the
   environments, `Defect.reproduction` and its `evidence`, `reproduceDefect`, `testEnvironment`, `getDefectEvidence`,
   the reproduction fields of `DefectSettings`); `schema.d.ts` and the test mirror are generated from it. Deploy that
   API and its migrations with or before this front end: an older API sends none of them, and the pages refuse its
-  answer.
+  answer. On `feat/conversation-cap-ceiling` it follows `ahoy-hosted`'s branch of the same name (a conversation's
+  `budgetCapNanoAiu`), which an older API does not send either.
 
 ## Not checked yet
 
@@ -96,10 +97,10 @@ What each feature still needs beyond the tests above. Its pull request has the d
    config files `main` had removed as unread (now removed again). Pull `main` into the company copy before the next
    sync, and delete there what `main` deletes: `.prettierrc.json`, `eslint.config.mjs`, `.tool-versions` and
    `proxy.conf.mjs`.
-1. **The Product page's model and team defaults** (`feat/product-conversation-model`, with `ahoy-hosted`'s branch of
-   the same name): the user tries it against `npm run dev -- --simulate` (Team settings › Product, a new conversation,
-   a question naming `#<n>` or a Figma link, a change of model) and says whether the per-conversation look-ups stand;
-   then review and merge, the API first or together.
+1. **The Product page's session cap** (`feat/conversation-cap-ceiling`, with `ahoy-hosted`'s branch of the same name):
+   the Cap field takes up to the conversation's `budgetCapNanoAiu` (`AHOY_MAX_PHASE_BUDGET_AIU`); review and merge,
+   the API first or together. Then the user tries the page against `npm run dev -- --simulate` and says whether the
+   per-conversation look-ups stand.
 2. **Defect reproduction** (`ahoy-hosted`'s PRs #126 to #128 and #130 are merged). On TEST, after the deploy: add the
    environment, Test sign-in, then one Reproduce from the Backlog, and open its verdict to see the screenshots and the
    recording, before turning Reproduce before starting on.
