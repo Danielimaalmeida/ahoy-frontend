@@ -5,6 +5,9 @@ import {
   describeDefectEvent,
   prioritiesOf,
   prioritiesText,
+  reproduceModeLabel,
+  reproductionCapOf,
+  reproductionSpendsMore,
   spendsMore,
 } from './defect-settings';
 import { describeSettingsEvent } from './settings';
@@ -84,6 +87,69 @@ describe('automatic starts in words', () => {
     ).toBe(false);
     expect(spendsMore(on, off)).toBe(false);
     expect(spendsMore(off, { ...on, watchOn: false })).toBe(false);
+  });
+});
+
+describe('reproduction in words', () => {
+  it('reads the reproductions per day from 1 to 50', () => {
+    expect(reproductionCapOf(' 5 ')).toEqual({ value: 5 });
+    expect(reproductionCapOf('50')).toEqual({ value: 50 });
+    for (const typed of ['0', '51', '2.5', '-1', 'five', ''])
+      expect(reproductionCapOf(typed), typed).toEqual({
+        problem: 'Type a whole number from 1 to 50.',
+      });
+  });
+
+  it('asks for a yes when reproduction is turned on or may run more often, as the API does', () => {
+    const off = { reproduceOn: false, maxReproductionsPerDay: 5 };
+    const on = { reproduceOn: true, maxReproductionsPerDay: 5 };
+    expect(reproductionSpendsMore(off, on)).toBe(true);
+    expect(
+      reproductionSpendsMore(on, { ...on, maxReproductionsPerDay: 6 })
+    ).toBe(true);
+    expect(reproductionSpendsMore(on, on)).toBe(false);
+    expect(
+      reproductionSpendsMore(on, { ...on, maxReproductionsPerDay: 4 })
+    ).toBe(false);
+    expect(reproductionSpendsMore(on, off)).toBe(false);
+    expect(
+      reproductionSpendsMore(off, { ...off, maxReproductionsPerDay: 50 })
+    ).toBe(false);
+  });
+
+  it('says what each mode does with the verdict', () => {
+    expect(reproduceModeLabel('advisory')).toBe(
+      'Advisory: the verdict is shown, starts go on as before'
+    );
+    expect(reproduceModeLabel('required')).toBe(
+      'Required: Ahoy starts only what it reproduced'
+    );
+  });
+
+  it('names reproduction in the history, without the id of the environment', () => {
+    expect(
+      describeDefectEvent('defect_settings.updated', {
+        changes: {
+          reproduceOn: { from: false, to: true },
+          reproduceMode: { from: 'advisory', to: 'required' },
+          reproduceEnvironmentId: {
+            from: null,
+            to: '5f0c1d6e-2b7a-4c39-9a51-0d3e8f4b6a21',
+          },
+          maxReproductionsPerDay: { from: 5, to: 8 },
+        },
+      })
+    ).toBe(
+      'Reproduction: on; Reproduction mode: required; Reproduction environment: changed; Reproductions per day: 8'
+    );
+    expect(
+      describeDefectEvent('defect_settings.updated', {
+        changes: {
+          reproduceOn: { from: true, to: false },
+          reproduceEnvironmentId: { from: 'x', to: null },
+        },
+      })
+    ).toBe('Reproduction: off; Reproduction environment: none');
   });
 });
 

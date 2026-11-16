@@ -1133,6 +1133,7 @@ export const SETUP_STEP_KEYS = listOf<SetupStep['key']>()([
   'sonar',
   'figma',
   'defects',
+  'environments',
   'branch_releases',
   'copilot',
 ]);
@@ -1193,6 +1194,69 @@ export type Defect = Schemas['Defect'];
 /** What fixed rules say of a defect: whether Ahoy could try to fix it. */
 export type DefectTriage = Defect['triage'];
 export const DEFECT_TRIAGES = listOf<DefectTriage>()(['can_try', 'out']);
+
+/** Whether a reproduction's verdict only shows (`advisory`) or decides what the watch starts by itself (`required`). */
+export type ReproduceMode = DefectSettings['reproduceMode'];
+export const REPRODUCE_MODES = listOf<ReproduceMode>()([
+  'advisory',
+  'required',
+]);
+
+/** A defect's latest reproduction: the run that tried it on an environment, and its verdict once it ended. */
+export type DefectReproduction = Schemas['DefectReproduction'];
+export const REPRODUCTION_STATUSES = listOf<DefectReproduction['status']>()([
+  'queued',
+  'running',
+  'succeeded',
+  'failed',
+  'budget_exceeded',
+  'timed_out',
+  'cancelled',
+  'output_violation',
+  'auth_failed',
+  'lost',
+]);
+
+/** What a reproduction found: the verdict, why, the steps it took and what the browser reported. */
+export type Reproduction = Schemas['Reproduction'];
+export const REPRODUCTION_VERDICTS = listOf<Reproduction['verdict']>()([
+  'reproduced',
+  'not_reproduced',
+  'inconclusive',
+]);
+
+/** Body of `reproduceDefect`: the spend confirmed, and the environment when it is not the settings' one. */
+export type ReproduceDefectRequest = Schemas['ReproduceDefectRequest'];
+
+/** Answer of `getEnvironments`: the environments a defect may be reproduced in, and what the deployment allows. */
+export type EnvironmentsPage = Schemas['EnvironmentsPage'];
+
+/** One environment, as adding, changing or testing it answers it. A password is never part of it. */
+export type Environment = Schemas['Environment'];
+
+/** One environment of the page: with whether its password opens, whether defects use it and whether a test runs. */
+export type EnvironmentRow = EnvironmentsPage['environments'][number];
+
+/** How a browser signs in to an environment: not at all, or by filling one form. */
+export type EnvironmentSignIn = Environment['signIn'];
+
+/** What the last Test sign-in of an environment found. */
+export type EnvironmentTest = NonNullable<Environment['lastTest']>;
+export const ENVIRONMENT_TEST_RESULTS = listOf<EnvironmentTest['result']>()([
+  'signed_in',
+  'refused',
+  'unreachable',
+  'failed',
+]);
+
+/** Body of `addEnvironment`. */
+export type EnvironmentRequest = Schemas['EnvironmentRequest'];
+
+/** Body of `updateEnvironment`: every field again, with the version read. */
+export type EnvironmentChange = Schemas['EnvironmentChange'];
+
+/** How an environment signs in, as a request names it; the password only when it is set or replaced. */
+export type SignInRequest = Schemas['SignInRequest'];
 
 /**
  * Answer of `getBranchReleaseSettings`: each repository's branch release workflow and its inputs, and whether this

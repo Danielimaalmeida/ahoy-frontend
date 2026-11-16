@@ -56,6 +56,8 @@ import {
   isBranchReleaseSettingsPage,
   isStoryBranchReleases,
   isDefect,
+  isEnvironment,
+  isEnvironmentsPage,
   isDefectList,
   isDefectSettingsPage,
   isPhaseSettingsPage,
@@ -165,6 +167,10 @@ import type {
   BranchReleaseSettingsPage,
   StoryBranchReleases,
   Defect,
+  Environment,
+  EnvironmentChange,
+  EnvironmentRequest,
+  EnvironmentsPage,
   DefectList,
   DefectSettingsChange,
   DefectSettingsPage,
@@ -2295,6 +2301,85 @@ export class ApiClient {
       isDefect,
       this.http.post<unknown>(
         this.url(`/defects/${encodeURIComponent(key)}/unignore`),
+        null,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /**
+   * Reproduce: queues one run that tries the defect with a browser on `environmentId`, else Team settings › Defects'
+   * environment, on the person's own Copilot token. It spends AIU, up to the `reproduce` phase's cap, so the spend is
+   * confirmed here. The answer (202) is the defect with its reproduction queued.
+   */
+  reproduceDefect(
+    key: string,
+    environmentId?: string
+  ): Promise<ApiResult<Defect>> {
+    return this.post(
+      'reproduceDefect',
+      `/defects/${segment(key)}/reproduce`,
+      {
+        confirmSpend: true,
+        ...(environmentId !== undefined ? { environmentId } : {}),
+      },
+      isDefect
+    );
+  }
+
+  /** The environments a defect may be reproduced in, how a browser signs in to each, and the hosts allowed. 0 AIU. */
+  getEnvironments(): Promise<ApiResult<EnvironmentsPage>> {
+    return this.get(
+      'getEnvironments',
+      '/settings/environments',
+      isEnvironmentsPage
+    );
+  }
+
+  /** Adds an environment (admins only). The answer (201) is the environment, never its password. */
+  addEnvironment(body: EnvironmentRequest): Promise<ApiResult<Environment>> {
+    return this.post(
+      'addEnvironment',
+      '/settings/environments',
+      body,
+      isEnvironment
+    );
+  }
+
+  /** Changes an environment, every field sent again (admins only); a password left out is kept. */
+  updateEnvironment(
+    environmentId: string,
+    body: EnvironmentChange
+  ): Promise<ApiResult<Environment>> {
+    return this.send(
+      'updateEnvironment',
+      isEnvironment,
+      this.http.put<unknown>(
+        this.url(`/settings/environments/${segment(environmentId)}`),
+        body,
+        { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
+      )
+    );
+  }
+
+  /** Removes an environment defects are not reproduced in (admins only). The answer (204) has no body. */
+  deleteEnvironment(environmentId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteEnvironment',
+      `/settings/environments/${segment(environmentId)}`
+    );
+  }
+
+  /**
+   * Test sign-in: queues a run that signs in to the environment with a browser and stops (admins only, 0 AIU). The
+   * answer (202) is the environment; its outcome shows as `lastTest` once `testing` is false again.
+   */
+  testEnvironment(environmentId: string): Promise<ApiResult<Environment>> {
+    return this.send(
+      'testEnvironment',
+      isEnvironment,
+      this.http.post<unknown>(
+        this.url(`/settings/environments/${segment(environmentId)}/test`),
         null,
         { observe: 'response', timeout: REQUEST_TIMEOUT_MS }
       )

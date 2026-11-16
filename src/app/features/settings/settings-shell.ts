@@ -225,6 +225,11 @@ export class SettingsShell {
       state: () => this.summary.defects(),
     },
     {
+      path: 'environments',
+      label: 'Environments',
+      state: () => this.summary.environments(),
+    },
+    {
       path: 'branch-releases',
       label: 'Branch releases',
       state: () => this.summary.branchReleases(),

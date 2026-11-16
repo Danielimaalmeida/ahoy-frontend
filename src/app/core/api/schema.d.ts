@@ -3273,6 +3273,34 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/defects/{key}/reproduce': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Reproduce a defect on a deployed environment now.
+     * @description Anyone allowed into Ahoy (design §5 "Defect reproduction"). Queues one run of the `reproduce` phase that tries
+     *     the defect on `environmentId`, else Team settings › Defects' environment (`400` when neither is set), whatever
+     *     its triage, the mode or the switch, run with the person's own Copilot token and capped at the `reproduce`
+     *     phase's AIU cap. It spends AIU, so it needs `confirmSpend: true`. `404` for a defect the watch does not list or
+     *     an environment that does not exist; `409` while the defect has a reproduction in progress, or once the
+     *     reproductions of the last 24 hours reach Team settings › Defects' daily cap. The verdict shows on the defect
+     *     once the run ends. Writes nothing to Jira.
+     */
+    readonly post: operations['reproduceDefect'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/defects/{key}/unignore': {
     readonly parameters: {
       readonly query?: never;
@@ -3289,6 +3317,93 @@ export interface paths {
      * @description Anyone allowed into Ahoy. `404` for a defect the watch has not seen, `409` when it is not ignored.
      */
     readonly post: operations['unignoreDefect'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/environments': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    /**
+     * The deployed environments Ahoy may reproduce a defect in, and how a browser signs in to each.
+     * @description Anyone allowed into Ahoy reads them; only an admin changes them (`canEdit`). A password is never returned, not
+     *     even in part. `allowedHosts` is the deployment's `AHOY_REPRO_ALLOWED_HOSTS`: every allowed origin must be on it.
+     *     `passwordReadable` is false when the stored password does not open with this server's key and must be typed
+     *     again. Design §5 "Defect reproduction". 0 AIU.
+     */
+    readonly get: operations['getEnvironments'];
+    readonly put?: never;
+    /**
+     * Add an environment. Admins only.
+     * @description The base URL's origin is always allowed; every allowed origin must be on `AHOY_REPRO_ALLOWED_HOSTS`, and the
+     *     login page and the version URL on an allowed origin (`400`). Form sign-in needs the password, which is sealed
+     *     (AES-256-GCM, `AHOY_SECRETS_KEY`) before it is stored (`503 unavailable` without the key). Names are unique,
+     *     case ignored. Every change is in `settings_events` (`environment.created`).
+     */
+    readonly post: operations['addEnvironment'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/environments/{environmentId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly environmentId: components['parameters']['EnvironmentId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    /**
+     * Change an environment, every field sent again. Admins only.
+     * @description A password left out is kept, but turning form sign-in on, or moving the login page to another origin, needs it
+     *     again (`400`), so a stored password never goes to a new host. A change of where or how it signs in clears the
+     *     last Test sign-in. `409 stale_version` when `version` is not the environment's.
+     */
+    readonly put: operations['updateEnvironment'];
+    readonly post?: never;
+    /**
+     * Remove an environment defects are not reproduced in. Admins only.
+     * @description `409 invalid_state` while Team settings › Defects reproduces in it.
+     */
+    readonly delete: operations['deleteEnvironment'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/settings/environments/{environmentId}/test': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly environmentId: components['parameters']['EnvironmentId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Test sign-in - start a run that signs in to the environment and stops. Admins only. 0 AIU.
+     * @description Queues a cluster Job whose init container signs in with a browser, as a reproduction's does, and stops: no
+     *     agent starts and nothing is spent. `testing` is true on `GET /settings/environments` while it is queued or
+     *     running; its outcome is then the environment's `lastTest` (`signed_in`, `refused`, `unreachable`, or `failed`
+     *     with why, also when the run itself could not start or finish). One at a time for an environment (`409
+     *     invalid_state`), which is also the answer when its origins are no longer on `AHOY_REPRO_ALLOWED_HOSTS` or its
+     *     password does not open with this server's key. A change of how the environment signs in drops a test in
+     *     progress. `503 unavailable` when reproduction is not configured, the control repo cannot be read or
+     *     `AHOY_SECRETS_KEY` is not set. Design §5 "Defect reproduction".
+     */
+    readonly post: operations['testEnvironment'];
     readonly delete?: never;
     readonly options?: never;
     readonly head?: never;
@@ -6119,6 +6234,7 @@ export interface components {
         | 'sonar'
         | 'figma'
         | 'defects'
+        | 'environments'
         | 'branch_releases'
         | 'copilot';
       /**
@@ -6215,6 +6331,104 @@ export interface components {
       readonly usLabel?: string;
       readonly themLabel?: string;
     };
+    readonly EnvironmentsPage: {
+      readonly canEdit: boolean;
+      /** @description Whether the deployment sets AHOY_SECRETS_KEY. */
+      readonly secretsConfigured: boolean;
+      /** @description AHOY_REPRO_ALLOWED_HOSTS: host names and *.domain wildcards every allowed origin must be on. */
+      readonly allowedHosts: readonly string[];
+      readonly environments: readonly (components['schemas']['Environment'] & {
+        readonly passwordReadable: boolean;
+        /** @description Whether Team settings › Defects reproduces in it. */
+        readonly inUse: boolean;
+        /** @description Whether a Test sign-in of it is queued or running. */
+        readonly testing: boolean;
+      })[];
+    };
+    readonly Environment: {
+      /** Format: uuid */
+      readonly id: string;
+      readonly name: string;
+      readonly baseUrl: string;
+      /** @description The origins its browser may open, the base URL's first. */
+      readonly allowedOrigins: readonly string[];
+      readonly signIn:
+        | {
+            /** @constant */
+            readonly kind: 'none';
+          }
+        | {
+            /** @constant */
+            readonly kind: 'form';
+            readonly loginUrl: string;
+            readonly username: string;
+            readonly passwordSetBy: string | null;
+            readonly passwordSetByName: string | null;
+            /** Format: date-time */
+            readonly passwordSetAt: string | null;
+            /** @description Null: the default selector. */
+            readonly userSelector: string | null;
+            readonly passwordSelector: string | null;
+            readonly submitSelector: string | null;
+            readonly signedInUrlPattern: string | null;
+            readonly signedInSelector: string | null;
+          };
+      /** @description Whether its account may change data; false: read-only. */
+      readonly writes: boolean;
+      readonly versionUrl: string | null;
+      readonly lastTest: null | {
+        /** @enum {string} */
+        readonly result: 'signed_in' | 'refused' | 'unreachable' | 'failed';
+        readonly detail: string | null;
+        /** Format: date-time */
+        readonly at: string;
+        readonly by: string | null;
+        readonly byName: string | null;
+      };
+      readonly version: number;
+      readonly updatedBy: string;
+      readonly updatedByName: string | null;
+      /** Format: date-time */
+      readonly updatedAt: string;
+    };
+    readonly EnvironmentRequest: {
+      readonly name: string;
+      readonly baseUrl: string;
+      /** @description Other origins the app loads; the base URL's is always allowed. */
+      readonly allowedOrigins?: readonly string[];
+      readonly signIn: components['schemas']['SignInRequest'];
+      /** @description Whether the account may change data (default false). */
+      readonly writes?: boolean;
+      readonly versionUrl?: string | null;
+    };
+    readonly EnvironmentChange: {
+      readonly version: number;
+      readonly name: string;
+      readonly baseUrl: string;
+      readonly allowedOrigins?: readonly string[];
+      readonly signIn: components['schemas']['SignInRequest'];
+      readonly writes?: boolean;
+      readonly versionUrl?: string | null;
+    };
+    readonly SignInRequest:
+      | {
+          /** @constant */
+          readonly kind: 'none';
+        }
+      | {
+          /** @constant */
+          readonly kind: 'form';
+          readonly loginUrl: string;
+          readonly username: string;
+          /** @description Required to turn form sign-in on and to move the login page to another origin. */
+          readonly password?: string;
+          readonly userSelector?: string | null;
+          readonly passwordSelector?: string | null;
+          readonly submitSelector?: string | null;
+          /** @description The URL of a signed-in page, `*` for any characters; this or signedInSelector is required. */
+          readonly signedInUrlPattern?: string | null;
+          readonly signedInSelector?: string | null;
+        };
     readonly DefectSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
       readonly canEdit: boolean;
@@ -6238,6 +6452,20 @@ export interface components {
       readonly startAs: string | null;
       /** @description The name Ahoy knows for `startAs`, if any. */
       readonly startAsName: string | null;
+      /** @description Whether the watch reproduces a defect on a deployed environment before it starts it by itself (default false). Design §5 "Defect reproduction". */
+      readonly reproduceOn: boolean;
+      /**
+       * @description advisory: the verdict is shown and automatic starts go on as before; required: the watch starts by itself only a defect reproduced for Jira's current version of it.
+       * @enum {string}
+       */
+      readonly reproduceMode: 'advisory' | 'required';
+      /**
+       * Format: uuid
+       * @description The environment (Team settings › Environments); required while reproduceOn.
+       */
+      readonly reproduceEnvironmentId: string | null;
+      /** @description The most reproductions in any 24 hours (default 5). */
+      readonly maxReproductionsPerDay: number;
       /** @description Null until an admin saves anything. */
       readonly version: number | null;
       readonly updatedBy: string | null;
@@ -6256,7 +6484,13 @@ export interface components {
       readonly maxActive?: number;
       /** @description A qnumber (case and surrounding spaces ignored); required while automatic starts are on. */
       readonly startAs?: string | null;
-      /** @description Must be true when the change turns automatic starts on, or raises the cap per defect or the starts per day while they are on: each lets Ahoy spend more AIU by itself. */
+      readonly reproduceOn?: boolean;
+      /** @enum {string} */
+      readonly reproduceMode?: 'advisory' | 'required';
+      /** Format: uuid */
+      readonly reproduceEnvironmentId?: string | null;
+      readonly maxReproductionsPerDay?: number;
+      /** @description Must be true when the change turns automatic starts or reproduction on, or raises the cap per defect, the starts per day or the reproductions per day while they are on: each lets Ahoy spend more AIU by itself. */
       readonly confirmSpend?: boolean;
     };
     readonly DefectList: {
@@ -6307,6 +6541,62 @@ export interface components {
       };
       /** @description Why the watch could not start the defect's story; it tries that defect again a day later. */
       readonly startError: string | null;
+      /** @description The defect's latest reproduction (design §5 "Defect reproduction"); null without one. */
+      readonly reproduction: null | components['schemas']['DefectReproduction'];
+    };
+    readonly DefectReproduction: {
+      readonly runId: string;
+      /** @description The environment's name when the run was queued. */
+      readonly environment: string;
+      /** @enum {string} */
+      readonly status:
+        | 'queued'
+        | 'running'
+        | 'succeeded'
+        | 'failed'
+        | 'budget_exceeded'
+        | 'timed_out'
+        | 'cancelled'
+        | 'output_violation'
+        | 'auth_failed'
+        | 'lost';
+      /** @description Whether it tried the defect as Jira has it now (Jira's `updated` is the one the watch read last). */
+      readonly current: boolean;
+      /** @description A person's qnumber, or ahoy-defect-watch. */
+      readonly startedBy: string;
+      readonly startedByName: string | null;
+      /** Format: date-time */
+      readonly startedAt: string;
+      /** Format: date-time */
+      readonly endedAt: string | null;
+      readonly nanoAiu: number;
+      /**
+       * @description The verdict once the run ended; null while it is queued or running. A run that ended without a verdict it
+       *     handed in (it failed, timed out, was cancelled, could not sign in) is `inconclusive`, never
+       *     `not_reproduced`.
+       */
+      readonly result: null | components['schemas']['Reproduction'];
+    };
+    readonly Reproduction: {
+      /** @enum {string} */
+      readonly verdict: 'reproduced' | 'not_reproduced' | 'inconclusive';
+      readonly why: string;
+      readonly steps: readonly {
+        readonly action: string;
+        readonly saw: string;
+      }[];
+      readonly consoleErrors: readonly string[];
+      readonly failedRequests: readonly {
+        readonly method: string;
+        readonly url: string;
+        readonly status: number | null;
+      }[];
+    };
+    readonly ReproduceDefectRequest: {
+      /** @constant */
+      readonly confirmSpend: true;
+      /** Format: uuid */
+      readonly environmentId?: string;
     };
     readonly StartDefectRequest: {
       readonly budgetNanoAiu?: number;
@@ -6595,6 +6885,7 @@ export interface components {
     readonly ConversationId: string;
     readonly ProposalId: string;
     readonly MeetingStoryDraftId: string;
+    readonly EnvironmentId: string;
     readonly SonarServerId: string;
     readonly SonarRepositoryId: string;
     readonly BranchReleaseRepositoryId: string;
@@ -11222,6 +11513,38 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly reproduceDefect: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['JiraIssueKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['ReproduceDefectRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The defect, with its reproduction queued. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Defect'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
   readonly unignoreDefect: {
     readonly parameters: {
       readonly query?: never;
@@ -11246,6 +11569,141 @@ export interface operations {
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
       readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getEnvironments: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The environments. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['EnvironmentsPage'];
+        };
+      };
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+    };
+  };
+  readonly addEnvironment: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path?: never;
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['EnvironmentRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The environment. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Environment'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly updateEnvironment: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly environmentId: components['parameters']['EnvironmentId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['EnvironmentChange'];
+      };
+    };
+    readonly responses: {
+      /** @description The environment, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Environment'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly deleteEnvironment: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly environmentId: components['parameters']['EnvironmentId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The environment and its password are gone. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly testEnvironment: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly environmentId: components['parameters']['EnvironmentId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The environment; the test is queued. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Environment'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
     };
   };
   readonly getDefectSettings: {
@@ -11469,6 +11927,7 @@ export interface operations {
           | 'phases'
           | 'pr_comments'
           | 'defects'
+          | 'environments'
           | 'branch_releases'
           | 'meetings'
           | 'product'

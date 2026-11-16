@@ -1,0 +1,35 @@
+{
+  "items": [
+    {
+      "id": 83,
+      "type": "environment.updated",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "environment:5f0c1d6e-2b7a-4c39-9a51-0d3e8f4b6a21",
+      "payload": {
+        "name": "TEST",
+        "changes": {
+          "allowedOrigins": {
+            "from": ["https://test.example.com"],
+            "to": ["https://test.example.com", "https://api.test.example.com"]
+          }
+        }
+      },
+      "createdAt": "2026-11-03T09:00:00.000Z"
+    },
+    {
+      "id": 82,
+      "type": "environment.created",
+      "actor": "alex@example.com",
+      "actorName": "Alex Example",
+      "subject": "environment:5f0c1d6e-2b7a-4c39-9a51-0d3e8f4b6a21",
+      "payload": {
+        "name": "TEST",
+        "baseUrl": "https://test.example.com/app",
+        "signIn": "form",
+        "passwordSet": true
+      },
+      "createdAt": "2026-11-02T16:30:00.000Z"
+    }
+  ]
+}

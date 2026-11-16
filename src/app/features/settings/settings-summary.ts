@@ -12,6 +12,7 @@ import type {
   ProductSettingsPage,
   PeoplePage,
   DefectSettingsPage,
+  EnvironmentsPage,
   SonarSettings,
   TeamsSettingsPage,
 } from '@core/api/types';
@@ -19,6 +20,7 @@ import { jobsOnLabel } from '@domain/agent-settings';
 import { prCommentsStateLabel } from '@domain/pr-comment-settings';
 import { defectsStateLabel } from '@domain/defect-settings';
 import { branchReleasesStateLabel } from '@domain/branch-releases';
+import { environmentsStateLabel } from '@domain/environments';
 
 /** One section in the settings' side navigation: its state in a word, and whether it is off. */
 export interface SectionState {
@@ -95,6 +97,11 @@ export function defectsState(page: DefectSettingsPage): SectionState {
   return defectsStateLabel(page.defects);
 }
 
+/** "2 environments", or "None". */
+export function environmentsState(page: EnvironmentsPage): SectionState {
+  return environmentsStateLabel(page.environments.length);
+}
+
 /** "2 repositories", "None", or "Cannot start" where the deployment's reconciler cannot start workflows. */
 export function branchReleasesState(
   page: BranchReleaseSettingsPage
@@ -139,6 +146,7 @@ export type SettingsSectionKey =
   | 'phases'
   | 'pr_comments'
   | 'defects'
+  | 'environments'
   | 'branch_releases'
   | 'meetings'
   | 'product'
@@ -173,6 +181,8 @@ export class SettingsSummary {
   readonly prComments = signal<SectionState | null>(null);
   /** The defect watch's state, once read. */
   readonly defects = signal<SectionState | null>(null);
+  /** The environments' state, once read. */
+  readonly environments = signal<SectionState | null>(null);
   /** The branch releases' state, once read. */
   readonly branchReleases = signal<SectionState | null>(null);
   /** The meeting names' state, once read. */
@@ -202,6 +212,7 @@ export class SettingsSummary {
       phases,
       prComments,
       defects,
+      environments,
       releases,
       meetings,
       product,
@@ -216,6 +227,7 @@ export class SettingsSummary {
       this.claimed.has('phases') ? null : this.api.getPhaseSettings(),
       this.claimed.has('pr_comments') ? null : this.api.getPrCommentSettings(),
       this.claimed.has('defects') ? null : this.api.getDefectSettings(),
+      this.claimed.has('environments') ? null : this.api.getEnvironments(),
       this.claimed.has('branch_releases')
         ? null
         : this.api.getBranchReleaseSettings(),
@@ -234,6 +246,8 @@ export class SettingsSummary {
     if (prComments?.ok && this.prComments() === null)
       this.prCommentsRead(prComments.value);
     if (defects?.ok && this.defects() === null) this.defectsRead(defects.value);
+    if (environments?.ok && this.environments() === null)
+      this.environmentsRead(environments.value);
     if (releases?.ok && this.branchReleases() === null)
       this.branchReleasesRead(releases.value);
     if (meetings?.ok && this.meetings() === null)
@@ -294,6 +308,12 @@ export class SettingsSummary {
   defectsRead(page: DefectSettingsPage): void {
     this.admin.set(page.canEdit);
     this.defects.set(defectsState(page));
+  }
+
+  /** What the Environments section read. */
+  environmentsRead(page: EnvironmentsPage): void {
+    this.admin.set(page.canEdit);
+    this.environments.set(environmentsState(page));
   }
 
   /** What the Branch releases section read. */

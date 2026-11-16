@@ -1,0 +1,27 @@
+{
+  "key": "PROJ-207",
+  "summary": "Export to CSV drops rows with an apostrophe in the name",
+  "priority": "Medium",
+  "jiraStatus": "Open",
+  "components": ["web-portal"],
+  "triage": "can_try",
+  "reasons": ["steps to reproduce"],
+  "firstSeenAt": "2026-11-04T08:00:00.000Z",
+  "lastSeenAt": "2026-11-04T10:58:00.000Z",
+  "ignored": null,
+  "voyage": null,
+  "started": null,
+  "startError": null,
+  "reproduction": {
+    "runId": "reproduce-proj-207-02",
+    "environment": "TEST",
+    "status": "queued",
+    "current": true,
+    "startedBy": "alex",
+    "startedByName": "Alex Example",
+    "startedAt": "2026-11-04T11:00:00.000Z",
+    "endedAt": null,
+    "nanoAiu": 0,
+    "result": null
+  }
+}
