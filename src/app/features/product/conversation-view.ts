@@ -17,9 +17,9 @@ import {
   askRefusal,
   CONTEXT_KIND_WORDS,
   contextChipText,
-  CONVERSATION_BUDGET_MAX_NANO_AIU,
   CONVERSATION_QUESTION_MAX,
   CONVERSATION_TURNS_MAX,
+  DEFAULT_CONVERSATION_BUDGET_CAP_NANO_AIU,
   defaultEffortLabel,
   defaultJiraProject,
   effortChoices,
@@ -1080,12 +1080,18 @@ export class ConversationView {
         reasoningEffort: null,
       }
   );
+  /** The most a question may cap its session at, as the API says (`AHOY_MAX_PHASE_BUDGET_AIU`). */
+  private readonly capMost = computed(
+    () =>
+      this.store.conversation()?.budgetCapNanoAiu ??
+      DEFAULT_CONVERSATION_BUDGET_CAP_NANO_AIU
+  );
   /** What sending costs: a warm session goes on, within its cap; otherwise a new one starts, capped. */
   protected readonly spendNote = computed(() => {
     const s = this.store.conversation()?.session;
     if (this.goesOn() && s)
       return `The session is warm: it goes on from what it has read, within its cap (${formatAiu(s.spentNanoAiu)} of ${formatAiu(s.budgetNanoAiu)} AIU spent).`;
-    const typed = checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
+    const typed = checkAiuLimit(this.cap(), this.capMost());
     const cap =
       'cap' in typed && typed.cap !== null
         ? `${formatAiu(typed.cap)} AIU`
@@ -1094,10 +1100,10 @@ export class ConversationView {
   });
   protected readonly capProblem = computed(() => {
     if (this.goesOn()) return null;
-    const typed = checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
+    const typed = checkAiuLimit(this.cap(), this.capMost());
     if (!('error' in typed)) return null;
     return typed.error === 'maximum'
-      ? `The cap is at most ${formatAiu(CONVERSATION_BUDGET_MAX_NANO_AIU, 0)} AIU.`
+      ? `The cap is at most ${formatAiu(this.capMost(), 0)} AIU.`
       : 'The cap is an amount of AIU above zero, such as 2 or 0.5.';
   });
   protected readonly openFailure = computed(() => {
@@ -1185,7 +1191,7 @@ export class ConversationView {
     // A warm session keeps the cap it started with, so a typed one is not sent.
     const typed = this.goesOn()
       ? { cap: null }
-      : checkAiuLimit(this.cap(), CONVERSATION_BUDGET_MAX_NANO_AIU);
+      : checkAiuLimit(this.cap(), this.capMost());
     if ('error' in typed) return;
     // A model picked since the last question becomes the conversation's first: its warm session stops.
     const picked = this.picked();

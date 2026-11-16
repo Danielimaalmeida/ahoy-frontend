@@ -678,6 +678,29 @@ describe('Product on the mock backend', () => {
     );
   });
 
+  it('lets a question cap its session up to the most the API allows, and says that most when the cap is above it', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      server.setConversationBudgetCap(50_000_000_000);
+      id = started(server, null);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const cap = () =>
+      [...composer(page.root)!.querySelectorAll('label.cap')]
+        .map((l) => l.querySelector('input'))
+        .find((i) => i !== null)!;
+    type(cap(), '60');
+    await flush(page);
+    expect(text(composer(page.root))).toContain('The cap is at most 50 AIU.');
+    type(cap(), '50');
+    await flush(page);
+    expect(text(composer(page.root))).not.toContain('The cap is at most');
+    expect(text(composer(page.root))).toContain(
+      'Sending starts a session that spends AIU, at most 50.0 AIU.'
+    );
+  });
+
   it('picks a model and effort for the conversation, applied with the next question in a new session', async () => {
     let id = '';
     const page = await open('/product', (server) => {

@@ -2779,6 +2779,7 @@ export const isConversation = guard<Conversation>(
     jiraProject: nullable(jiraProjectKey),
     confluenceSpaces: arrayOf(nonEmptyText),
     teamDefaults: shape<Conversation['teamDefaults']>(productDefaultsFields),
+    budgetCapNanoAiu: positive,
     model: shape<Conversation['model']>({
       ...conversationModelFields,
       team: conversationModel,

@@ -5929,7 +5929,7 @@ export interface components {
       readonly question: string;
       /** @constant */
       readonly confirmSpend: true;
-      /** @description The cap of a session this question starts, at most 20 AIU; the server's cap when absent. */
+      /** @description The cap of a session this question starts, at most the conversation's `budgetCapNanoAiu`; the server's cap when absent. */
       readonly budgetNanoAiu?: number;
     };
     readonly ProposalFlag: {
@@ -6130,6 +6130,8 @@ export interface components {
         readonly confluenceSpaces: readonly string[];
         readonly repositories: readonly string[];
       };
+      /** @description The most a question may cap the session it starts at: `AHOY_MAX_PHASE_BUDGET_AIU` (unset: 20 AIU), or the deployment's own cap for Product conversations where that is higher. */
+      readonly budgetCapNanoAiu: number;
     };
     readonly AgentSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
