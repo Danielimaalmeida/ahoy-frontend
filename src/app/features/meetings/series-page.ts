@@ -16,6 +16,7 @@ import { EmptyState } from '@ui/empty-state/empty-state';
 import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
 import { Table } from '@ui/table/table';
 import { openEditMeeting } from './edit-meeting-dialog';
+import { openEditSeries } from './edit-series-dialog';
 import { MeetingsStore } from './meetings-store';
 import { openNewMeeting } from './new-meeting-dialog';
 
@@ -147,12 +148,7 @@ function topics(n: number): string {
           <button
             ahButton="primary"
             type="button"
-            [disabled]="store.busy() || editable() === null"
-            [attr.title]="
-              editable() === null
-                ? 'Plan a session first: a series changes from a planned session on.'
-                : null
-            "
+            [disabled]="store.busy()"
             (click)="editSeries()"
           >
             Edit series
@@ -239,24 +235,31 @@ function topics(n: number): string {
       <ah-panel>
         <ah-panel-head
           heading="Open actions of the series"
-          [subtitle]="actions().length === 0 ? '' : '' + actions().length"
+          [subtitle]="actionCount()"
         />
         <ah-panel-body>
-          @if (actions().length === 0) {
-            <p class="ah-muted">No open actions.</p>
+          @if (actions(); as list) {
+            @if (list.length === 0) {
+              <p class="ah-muted">No open actions.</p>
+            } @else {
+              <ul class="actions-list">
+                @for (a of list; track a.note.id) {
+                  <li>
+                    <span class="ah-tag">Action</span>
+                    {{ a.note.text }}
+                    <span class="ah-hint"
+                      >· {{ a.note.owner ?? 'no owner' }} · from
+                      {{ day(a.meetingStartsAt) }}</span
+                    >
+                  </li>
+                }
+              </ul>
+            }
           } @else {
-            <ul class="actions-list">
-              @for (a of actions(); track a.note.id) {
-                <li>
-                  <span class="ah-tag">Action</span>
-                  {{ a.note.text }}
-                  <span class="ah-hint"
-                    >· {{ a.note.owner ?? 'no owner' }} · from
-                    {{ day(a.meetingStartsAt) }}</span
-                  >
-                </li>
-              }
-            </ul>
+            <p class="ah-muted" role="alert">
+              The open actions could not be loaded. Reload the page to try
+              again.
+            </p>
           }
         </ah-panel-body>
       </ah-panel>
@@ -283,9 +286,14 @@ export class SeriesPage {
   protected readonly page = SESSIONS_PAGE;
   /** How many sessions show; Show older adds a page. */
   readonly shown = signal(SESSIONS_PAGE);
-  /** The series' open actions. */
-  readonly actions = signal<readonly MeetingNoteInContext[]>([]);
+  /** The series' open actions; null when they could not be read. */
+  readonly actions = signal<readonly MeetingNoteInContext[] | null>([]);
 
+  /** The number of open actions for the panel's subtitle; none while they load or when they could not be read. */
+  protected readonly actionCount = computed(() => {
+    const list = this.actions();
+    return list === null || list.length === 0 ? '' : String(list.length);
+  });
   protected readonly overview = computed(() => {
     const id = this.seriesId();
     const series = this.store.series().find((s) => s.id === id);
@@ -332,10 +340,15 @@ export class SeriesPage {
     openNewMeeting(this.dialogs, this.router, this.store, o.series.id);
   }
 
-  /** Opens the Edit dialog on the next planned session, where a change goes to it and the following ones. */
+  /** Opens the Edit dialog on the next planned session, where a change goes to it and the following ones; with none planned, on the series. */
   protected editSeries(): void {
     const session = this.editable();
-    if (session === null) return;
-    openEditMeeting(this.dialogs, this.store, session);
+    if (session !== null) {
+      openEditMeeting(this.dialogs, this.store, session);
+      return;
+    }
+    // Nothing planned: only the series itself can change.
+    const o = this.overview();
+    if (o !== null) openEditSeries(this.dialogs, this.store, o.series);
   }
 }

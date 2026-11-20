@@ -15,8 +15,6 @@ import {
   endsAtFrom,
   meetingDay,
   parseStakeholders,
-  REPEAT_CHOICES,
-  REPEAT_LABELS,
   rhythmLabel,
   sessionStarts,
   startsAtFrom,
@@ -28,12 +26,12 @@ import {
   normaliseProjectKey,
   PROJECT_KEY_MAX,
 } from '@domain/story-drafts';
-import { Button } from '@ui/button/button';
 import { DialogShell, type DialogService } from '@ui/dialog/dialog';
 import { Field, FieldControl } from '@ui/field/field';
 import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import { meetingErrorView } from './meeting-errors';
 import type { MeetingsStore } from './meetings-store';
+import { RepeatPicker } from './repeat-picker';
 
 /**
  * What the New meeting dialog is opened with: the page's store, which holds the series and plans the meeting, and
@@ -66,7 +64,13 @@ export function browserTimeZone(): string | null {
  */
 @Component({
   selector: 'ah-new-meeting-dialog',
-  imports: [Button, DialogShell, Field, FieldControl, ReactiveFormsModule],
+  imports: [
+    DialogShell,
+    Field,
+    FieldControl,
+    ReactiveFormsModule,
+    RepeatPicker,
+  ],
   styles: `
     form {
       display: flex;
@@ -88,26 +92,6 @@ export function browserTimeZone(): string | null {
       .row {
         grid-template-columns: minmax(0, 1fr);
       }
-    }
-    fieldset {
-      border: 0;
-      margin: 0;
-      padding: 0;
-      min-width: 0;
-    }
-    legend {
-      font-weight: 600;
-      font-size: 12.5px;
-      padding: 0;
-      margin-bottom: var(--space-1);
-    }
-    .repeats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-1);
-    }
-    .repeats button[aria-pressed='true'] {
-      background: var(--accent-soft);
     }
     .summary {
       border: 1px solid var(--line);
@@ -164,29 +148,14 @@ export function browserTimeZone(): string | null {
           </ah-field>
         </div>
         @if (!adding()) {
-          <fieldset>
-            <legend>Repeats</legend>
-            <div class="repeats" role="group" aria-label="Repeats">
-              @for (choice of repeatChoices; track choice) {
-                <button
-                  ahButton="ghost"
-                  size="sm"
-                  type="button"
-                  [attr.aria-pressed]="repeat() === choice"
-                  (click)="repeat.set(choice)"
-                >
-                  {{ repeatLabels[choice] }}
-                </button>
-              }
-            </div>
-          </fieldset>
+          <ah-repeat-picker [(value)]="repeat" />
           @if (repeat() === 'other') {
             <ah-field label="Repeats every" unit="days" required>
               <input ahInput formControlName="cadence" inputmode="numeric" />
             </ah-field>
           }
           @if (preview(); as p) {
-            <div class="summary" aria-live="polite">
+            <div class="summary">
               <b>↻ {{ p.rhythm }}</b>
               <ul class="dates" aria-label="Next sessions">
                 @for (d of p.dates; track d) {
@@ -239,8 +208,6 @@ export class NewMeetingDialog {
   private readonly ref = inject<DialogRef<string>>(DialogRef);
   private readonly clock = inject(CLOCK);
 
-  protected readonly repeatChoices = REPEAT_CHOICES;
-  protected readonly repeatLabels = REPEAT_LABELS;
   protected readonly messages: Readonly<Record<string, string>> = {
     required: 'A title is required.',
     maxlength: `At most ${NAME_MAX} characters.`,
@@ -273,6 +240,9 @@ export class NewMeetingDialog {
   private readonly lastTarget = [...this.store.meetings()]
     .filter((m) => m.seriesId === null && m.jiraProjectKey !== null)
     .sort((a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt))[0];
+
+  /** The series this dialog started, once it exists. */
+  private startedSeries: string | null = null;
 
   /** How the meeting repeats; every week when the dialog was opened for a new series. */
   readonly repeat = signal<RepeatChoice>(
@@ -414,19 +384,23 @@ export class NewMeetingDialog {
       );
       return;
     }
-    const created = await this.store.createSeries({
-      name: value.name,
-      stakeholders,
-      cadenceDays: days,
-      timeZone: browserTimeZone(),
-      ...(jira !== undefined ? { jira } : {}),
-    });
-    if (created === null) {
-      this.failed.set('api');
-      return;
+    // A retry after the first session failed reuses the series it already started, so none is left empty.
+    if (this.startedSeries === null) {
+      const created = await this.store.createSeries({
+        name: value.name,
+        stakeholders,
+        cadenceDays: days,
+        timeZone: browserTimeZone(),
+        ...(jira !== undefined ? { jira } : {}),
+      });
+      if (created === null) {
+        this.failed.set('api');
+        return;
+      }
+      this.startedSeries = created.id;
     }
     await this.finish(
-      this.store.create({ seriesId: created.id, title: '', ...when })
+      this.store.create({ seriesId: this.startedSeries, title: '', ...when })
     );
   }
 

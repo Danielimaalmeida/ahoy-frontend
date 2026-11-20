@@ -512,16 +512,16 @@ export class MeetingsStore {
     return true;
   }
 
-  /** The open actions of a series, latest meeting first, for its page; an empty list when they cannot be read. */
+  /** The open actions of a series, latest meeting first, for its page; null when they cannot be read. */
   async seriesActions(
     seriesId: string
-  ): Promise<readonly MeetingNoteInContext[]> {
+  ): Promise<readonly MeetingNoteInContext[] | null> {
     const result = await this.api.listMeetingNotes({
       kind: 'action',
       status: 'open',
       seriesId,
     });
-    return result.ok ? result.value.items : [];
+    return result.ok ? result.value.items : null;
   }
 
   /**

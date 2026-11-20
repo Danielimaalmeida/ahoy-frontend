@@ -1010,7 +1010,15 @@ export class MeetingDesk {
           `Meeting ${from.title} is ${from.status}; a series changes from a planned session on`
         );
       const startsAt = body.startsAt ?? from.startsAt;
-      const endsAt = body.endsAt === undefined ? from.endsAt : body.endsAt;
+      // Moving only the start keeps the session's length.
+      const kept =
+        from.endsAt === null
+          ? null
+          : iso(
+              Date.parse(startsAt) +
+                (Date.parse(from.endsAt) - Date.parse(from.startsAt))
+            );
+      const endsAt = body.endsAt === undefined ? kept : body.endsAt;
       this.checkTimes(startsAt, endsAt);
       const moved = body.startsAt !== undefined || body.endsAt !== undefined;
       const shift = Date.parse(startsAt) - Date.parse(from.startsAt);
@@ -1029,8 +1037,15 @@ export class MeetingDesk {
         }
         this.touch(m, actor);
       }
-      series.startsAt = startsAt;
-      series.endsAt = endsAt;
+      // The rhythm counts from this session once it moved or the cadence changed, not for a new name or people.
+      if (
+        moved ||
+        (body.cadenceDays !== undefined &&
+          body.cadenceDays !== series.cadenceDays)
+      ) {
+        series.startsAt = startsAt;
+        series.endsAt = endsAt;
+      }
     }
     if (name !== undefined) series.name = name;
     if (stakeholders !== undefined) series.stakeholders = stakeholders;

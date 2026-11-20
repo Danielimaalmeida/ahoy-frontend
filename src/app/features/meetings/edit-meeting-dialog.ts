@@ -1,5 +1,14 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { Component, computed, inject, signal } from '@angular/core';
+import type { ElementRef } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -14,8 +23,6 @@ import {
   meetingDay,
   meetingTime,
   parseStakeholders,
-  REPEAT_CHOICES,
-  REPEAT_LABELS,
   repeatChoiceOf,
   rhythmLabel,
   startsAtFrom,
@@ -34,6 +41,7 @@ import { maxTrimmed, requiredText } from '@ui/field/text-validators';
 import { meetingErrorView } from './meeting-errors';
 import type { MeetingsStore } from './meetings-store';
 import { browserTimeZone } from './new-meeting-dialog';
+import { RepeatPicker } from './repeat-picker';
 
 /** The session being edited: what the dialog starts from. */
 export interface EditableSession {
@@ -72,6 +80,7 @@ const NAME_MAX = 200;
     Field,
     FieldControl,
     ReactiveFormsModule,
+    RepeatPicker,
   ],
   styles: `
     form {
@@ -88,26 +97,6 @@ const NAME_MAX = 200;
       .when {
         grid-template-columns: minmax(0, 1fr);
       }
-    }
-    fieldset {
-      border: 0;
-      margin: 0;
-      padding: 0;
-      min-width: 0;
-    }
-    legend {
-      font-weight: 600;
-      font-size: 12.5px;
-      padding: 0;
-      margin-bottom: var(--space-1);
-    }
-    .repeats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-1);
-    }
-    .repeats button[aria-pressed='true'] {
-      background: var(--accent-soft);
     }
     .stop {
       display: flex;
@@ -145,24 +134,10 @@ const NAME_MAX = 200;
           </ah-field>
         </div>
         @if (canChangeSeries()) {
-          <fieldset>
-            <legend>Repeats</legend>
-            <div class="repeats" role="group" aria-label="Repeats">
-              @for (choice of repeatChoices; track choice) {
-                @if (choice !== 'none') {
-                  <button
-                    ahButton="ghost"
-                    size="sm"
-                    type="button"
-                    [attr.aria-pressed]="repeat() === choice"
-                    (click)="chooseRepeat(choice)"
-                  >
-                    {{ repeatLabels[choice] }}
-                  </button>
-                }
-              }
-            </div>
-          </fieldset>
+          <ah-repeat-picker
+            [(value)]="repeat"
+            [showNone]="series()?.cadenceDays === null"
+          />
           @if (repeat() === 'other') {
             <ah-field label="Repeats every" unit="days" required>
               <input ahInput formControlName="cadence" inputmode="numeric" />
@@ -184,22 +159,26 @@ const NAME_MAX = 200;
           />
           @if (series()?.cadenceDays !== null) {
             <div class="stop">
+              <span role="status">
+                @if (stopping()) {
+                  No new session is planned after the ones already planned. Past
+                  and planned sessions stay.
+                }
+              </span>
               @if (!stopping()) {
                 <button
+                  #stopButton
                   ahButton="ghost"
                   size="sm"
                   type="button"
                   [disabled]="busy()"
-                  (click)="stopping.set(true)"
+                  (click)="ask(true)"
                 >
                   Stop repeating…
                 </button>
               } @else {
-                <span role="status"
-                  >No new session is planned after the ones already planned.
-                  Past and planned sessions stay.</span
-                >
                 <button
+                  #confirmButton
                   ahButton="danger"
                   size="sm"
                   type="button"
@@ -212,7 +191,7 @@ const NAME_MAX = 200;
                   ahButton="ghost"
                   size="sm"
                   type="button"
-                  (click)="stopping.set(false)"
+                  (click)="ask(false)"
                 >
                   Keep it
                 </button>
@@ -230,8 +209,6 @@ export class EditMeetingDialog {
   private readonly ref = inject<DialogRef<boolean>>(DialogRef);
   protected readonly session = this.data.meeting;
 
-  protected readonly repeatChoices = REPEAT_CHOICES;
-  protected readonly repeatLabels = REPEAT_LABELS;
   protected readonly busy = this.store.busy;
   protected readonly messages: Readonly<Record<string, string>> = {
     required: 'A title is required.',
@@ -285,11 +262,9 @@ export class EditMeetingDialog {
     }),
   });
 
-  /** How the series repeats; its cadence to begin with (weekly for a series without one). */
+  /** How the series repeats; its cadence to begin with. */
   readonly repeat = signal<RepeatChoice>(
-    repeatChoiceOf(this.series()?.cadenceDays ?? 7) === 'none'
-      ? 'week'
-      : repeatChoiceOf(this.series()?.cadenceDays ?? 7)
+    repeatChoiceOf(this.series()?.cadenceDays ?? null)
   );
   /** Whether the person changed how the series repeats, which only the series can take. */
   private readonly repeatChanged = computed(() => {
@@ -318,6 +293,11 @@ export class EditMeetingDialog {
       },
     ]
   );
+  private readonly injector = inject(Injector);
+  private readonly stopButton =
+    viewChild<ElementRef<HTMLButtonElement>>('stopButton');
+  private readonly confirmButton =
+    viewChild<ElementRef<HTMLButtonElement>>('confirmButton');
   /** Whether the person asked to stop the series repeating and is confirming it. */
   protected readonly stopping = signal(false);
 
@@ -396,7 +376,7 @@ export class EditMeetingDialog {
       }
       const ok = await this.store.updateSeries(series.id, {
         fromMeetingId: this.session.id,
-        ...(renamed || title !== series.name ? { name: title } : {}),
+        ...(renamed && title !== series.name ? { name: title } : {}),
         ...(regrouped ? { stakeholders } : {}),
         ...(days !== series.cadenceDays ? { cadenceDays: days } : {}),
         ...(series.timeZone === null ? { timeZone: browserTimeZone() } : {}),
@@ -415,6 +395,19 @@ export class EditMeetingDialog {
       ...(regrouped ? { stakeholders } : {}),
     });
     this.done(ok);
+  }
+
+  /** Asks for, or withdraws, the confirmation to stop repeating; the focus goes to the button that takes its place. */
+  protected ask(stopping: boolean): void {
+    this.stopping.set(stopping);
+    afterNextRender(
+      () =>
+        (stopping
+          ? this.confirmButton()
+          : this.stopButton()
+        )?.nativeElement.focus(),
+      { injector: this.injector }
+    );
   }
 
   /** Stops the series repeating: no new session is planned after the ones already planned. */

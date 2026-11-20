@@ -2084,7 +2084,10 @@ describe('Meetings empty states', () => {
 
     expect(series.name).toBe('Ops review');
     const repeats = () =>
-      text(dialog().querySelector('.repeats [aria-pressed="true"]'));
+      text(dialog().querySelector('.choices [aria-pressed="true"]')).replace(
+        /^✓\s*/,
+        ''
+      );
 
     buttonNamed(empty, 'New meeting').click();
     await flush(page);
@@ -2364,7 +2367,7 @@ describe('Meeting series', () => {
     type(field('date'), '2026-10-20');
     type(field('time'), '14:00');
     type(field('endTime'), '15:00');
-    buttonNamed(dialog().querySelector('.repeats')!, 'Every 2 weeks').click();
+    buttonNamed(dialog().querySelector('.choices')!, 'Every 2 weeks').click();
     await flush(page);
     expect(text(dialog().querySelector('.summary'))).toContain(
       '↻ Every 2 weeks, Tue 14:00–15:00, from Tue 20 Oct'
@@ -2473,7 +2476,7 @@ describe('Meeting series', () => {
       ),
       'priya@example.com, Ana@Example.com'
     );
-    buttonNamed(dialog().querySelector('.repeats')!, 'Every 2 weeks').click();
+    buttonNamed(dialog().querySelector('.choices')!, 'Every 2 weeks').click();
     await flush(page);
     expect(choice('Only this session').disabled).toBe(true);
     expect(text(dialog())).toContain(
@@ -2557,6 +2560,116 @@ describe('Meeting series', () => {
     const patch = page.requests.find((r) => r.method === 'PATCH')!;
     expect(patch.body).toEqual({ cadenceDays: null });
     expect(page.server.meetingDesk.listSeries()[0]!.cadenceDays).toBeNull();
+  });
+
+  it('edits a series that does not repeat without making it weekly, and renames it only when the title changed', async () => {
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      const { planned } = seeded(server);
+      plannedId = planned.id;
+      server.meetingDesk.updateSeries(planned.seriesId!, { cadenceDays: null });
+      server.meetingDesk.update('alex@example.com', planned.id, {
+        title: 'Finance sync (extra)',
+      });
+    });
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    buttonNamed(page.root.querySelector('.header .actions')!, 'Edit').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.choices [aria-pressed="true"]'))).toBe(
+      '✓ Does not repeat'
+    );
+    expect(choice('Only this session').disabled).toBe(false);
+    type(
+      dialog().querySelector<HTMLInputElement>(
+        '[formcontrolname="stakeholders"]'
+      ),
+      'maria@example.com'
+    );
+    choice('This and the following sessions').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.body).toMatchObject({
+      fromMeetingId: plannedId,
+      stakeholders: ['maria@example.com'],
+    });
+    expect(patch.body).not.toHaveProperty('cadenceDays');
+    expect(patch.body).not.toHaveProperty('name');
+  });
+
+  it('edits a series with nothing planned from its page', async () => {
+    let seriesId = '';
+    const page = await open('/meetings', (server) => {
+      seriesId = server.meetingDesk.createSeries('alex@example.com', {
+        name: 'Vendor check-in',
+      }).id;
+    });
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    buttonNamed(
+      page.root.querySelector('ah-series-page')!,
+      'Edit series'
+    ).click();
+    await flush(page);
+    expect(text(dialog().querySelector('h2'))).toBe('Edit Vendor check-in');
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="name"]'),
+      'Vendor review'
+    );
+    buttonNamed(dialog().querySelector('.choices')!, 'Every week').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.body).toMatchObject({ name: 'Vendor review', cadenceDays: 7 });
+    expect(patch.body).not.toHaveProperty('fromMeetingId');
+    expect(text(page.root.querySelector('ah-series-page h1'))).toBe(
+      'Vendor review'
+    );
+  });
+
+  it('starts one series and plans its first session in it when a repeating meeting is planned', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const field = (name: string) =>
+      dialog().querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
+    type(field('name'), 'Pricing council');
+    type(field('date'), '2026-10-20');
+    buttonNamed(dialog().querySelector('.choices')!, 'Every week').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+    expect(
+      page.requests.filter(
+        (r) => r.method === 'POST' && r.path.endsWith('/meeting-series')
+      )
+    ).toHaveLength(1);
+  });
+
+  it('says the open actions of a series could not be loaded, rather than that there are none', async () => {
+    let seriesId = '';
+    const page = await open('/meetings', (server) => {
+      seriesId = server.meetingDesk.listSeries()[0]!.id;
+    });
+    page.server.switches.failNext = 503;
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    const panel = text(page.root.querySelector('ah-series-page'));
+    expect(panel).toContain('The open actions could not be loaded');
+    expect(panel).not.toContain('No open actions.');
+  });
+
+  it('tags a series session in Past with its rhythm, not with a count', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside .views')!, 'Past').click();
+    await flush(page);
+    const tags = [...page.root.querySelectorAll('aside a.line')].map((a) =>
+      text(a)
+    );
+    expect(tags.some((t) => /↻ every (0|2) /.test(t))).toBe(false);
   });
 
   it('adds an extra session to a series from its page', async () => {

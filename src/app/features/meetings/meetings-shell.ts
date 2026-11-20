@@ -571,7 +571,7 @@ export class MeetingsShell {
             {
               key: s.key,
               label: s.label,
-              lines: shown.map(meetingLine),
+              lines: shown.map((m) => this.lineOf(m)),
               hidden: 0,
             },
           ];
@@ -587,7 +587,7 @@ export class MeetingsShell {
             return {
               key: s.key,
               label: s.label,
-              lines: shown.map(meetingLine),
+              lines: shown.map((m) => meetingLine(m)),
               hidden: s.meetings.length - shown.length,
             };
           }
