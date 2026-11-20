@@ -888,7 +888,10 @@ describe('the Set sail page', () => {
         expect(scrolled).toHaveLength(1);
         expect(scrolled[0]?.classList.contains('ah-banner')).toBe(true);
       } finally {
-        Element.prototype.scrollIntoView = original;
+        // jsdom has no scrollIntoView: leave none behind rather than an undefined one other files would see.
+        if (original === undefined)
+          delete (Element.prototype as Partial<Element>).scrollIntoView;
+        else Element.prototype.scrollIntoView = original;
       }
     });
 

@@ -33,6 +33,7 @@ import {
 import {
   DEFECT_TRIAGES,
   ENVIRONMENT_TEST_RESULTS,
+  SIGN_IN_STEP_ACTIONS,
   EVIDENCE_KINDS,
   EVIDENCE_MEDIA_TYPES,
   REPRODUCE_MODES,
@@ -61,6 +62,7 @@ import {
   MEMBER_SIDES,
   MEETING_STATUSES,
   GRILL_CHOICES,
+  FOLLOW_UP_GRILL_STATUSES,
   MEETING_STORY_DRAFT_STATUSES,
   MEETING_STORY_MODES,
   MODEL_SLOTS,
@@ -77,6 +79,17 @@ import {
   RUN_STATUSES,
   RUNTIME_STATES,
   type RuntimeStatus,
+  FOLLOW_UP_ISSUE_TYPES,
+  FOLLOW_UP_ROUTES,
+  FOLLOW_UP_SOURCES,
+  type FollowUpGrill,
+  type FollowUpImage,
+  type FollowUpPreview,
+  type LinkedDefect,
+  type RevisionCeilingRaised,
+  type RevisionRounds,
+  type StoryFollowUp,
+  type StoryLineage,
   STORY_STATUSES,
   TOPIC_ORIGINS,
   TOPIC_STATUSES,
@@ -133,6 +146,7 @@ import {
   type DefectReproduction,
   type Environment,
   type EnvironmentsPage,
+  type SignInStep,
   type EnvironmentTest,
   type Reproduction,
   type ReproductionEvidence,
@@ -256,8 +270,8 @@ import {
 } from './types';
 
 const storyKey = patterned(
-  'a story key like PROJ-123',
-  /^[A-Z][A-Z0-9]+-[0-9]+$/,
+  'a story key like PROJ-123 or PROJ-123-FU1',
+  /^[A-Z][A-Z0-9]+-[0-9]+(?:-FU[1-9][0-9]*)?$/,
   40
 );
 /** A Jira issue key as Jira writes it (`JiraIssueKey`): wider than a story key, with `_` and one-letter projects. */
@@ -311,6 +325,13 @@ const runtimeStatus = shape<RuntimeStatus>({
   observedAt: timestamp,
 });
 
+const storyFollowUp = shape<StoryFollowUp>({
+  rootKey: storyKey,
+  number: positive,
+  source: oneOf(FOLLOW_UP_SOURCES),
+  route: oneOf(FOLLOW_UP_ROUTES),
+});
+
 const story = shape<Story>({
   key: storyKey,
   title: nullable(text),
@@ -324,6 +345,7 @@ const story = shape<Story>({
   controlSha: sha1,
   currentRunId: nullable(runId),
   planningMode: optional(oneOf(PLANNING_MODES)),
+  followUp: optional(nullable(storyFollowUp)),
   issueType: optional(
     nullable(boundedText('an issue type of 1 to 100 characters', 1, 100))
   ),
@@ -583,6 +605,73 @@ export const isStoryPlanFit = guard<StoryPlanFit>(
     phase: nonEmptyText,
     fit: nullable(planFit),
   })
+);
+
+const revisionRounds = shape<RevisionRounds>({
+  used: count,
+  ceiling: positive,
+});
+
+/** What a follow-up may start from, and Ahoy's suggested route. */
+export const isFollowUpPreview = guard<FollowUpPreview>(
+  'FollowUpPreview',
+  shape<FollowUpPreview>({
+    key: storyKey,
+    rootKey: storyKey,
+    nextKey: nonEmptyText,
+    canCreateInJira: flag,
+    issueTypes: arrayOf(oneOf(FOLLOW_UP_ISSUE_TYPES)),
+    linkedDefects: arrayOf(
+      shape<LinkedDefect>({
+        key: storyKey,
+        summary: text,
+        issueType: nonEmptyText,
+        status: nonEmptyText,
+        priority: nullable(text),
+      })
+    ),
+    canStart: flag,
+    blockedReason: optional(text),
+    revisions: revisionRounds,
+    repos: arrayOf(
+      shape<FollowUpPreview['repos'][number]>({
+        alias: nonEmptyText,
+        slug: nonEmptyText,
+        inEarlierPlan: flag,
+      })
+    ),
+    suggestion: shape<FollowUpPreview['suggestion']>({
+      route: oneOf(FOLLOW_UP_ROUTES),
+      reasons: arrayOf(text),
+    }),
+  })
+);
+
+/** A voyage with its follow-ups. */
+export const isStoryLineage = guard<StoryLineage>(
+  'StoryLineage',
+  shape<StoryLineage>({
+    rootKey: storyKey,
+    items: arrayOf(
+      shape<StoryLineage['items'][number]>({
+        key: storyKey,
+        title: nullable(text),
+        phase: nonEmptyText,
+        status: oneOf(STORY_STATUSES),
+        number: nullable(positive),
+        source: nullable(oneOf(FOLLOW_UP_SOURCES)),
+        route: nullable(oneOf(FOLLOW_UP_ROUTES)),
+        spentNanoAiu: nanoAiu,
+      })
+    ),
+    revisions: revisionRounds,
+  })
+);
+
+/** The answer to a raised revision ceiling. */
+export const isRevisionCeilingRaised = guard<RevisionCeilingRaised>(
+  'RevisionCeilingRaised',
+  shape<RevisionCeilingRaised>({ story, ceiling: positive })
 );
 
 /** What a refinement and its summary share: everything but the content. */
@@ -1001,6 +1090,26 @@ export const isMetricsReport = guard<MetricsReport>(
         stories: count,
       })
     ),
+    followUps: shape<MetricsReport['followUps']>({
+      started: count,
+      fastPath: count,
+      lineages: count,
+      ceilingRaises: count,
+      perLineage: arrayOf(
+        shape<Item<MetricsReport['followUps']['perLineage']>>({
+          followUps: count,
+          lineages: count,
+        })
+      ),
+      top: arrayOf(
+        shape<Item<MetricsReport['followUps']['top']>>({
+          rootKey: nonEmptyText,
+          followUps: count,
+          nanoAiu,
+          ceilingRaises: count,
+        })
+      ),
+    }),
     runKinds: arrayOf(
       shape<Item<MetricsReport['runKinds']>>({
         phase: nonEmptyText,
@@ -1254,6 +1363,17 @@ const meetingNote: Check = (value, at) => {
 
 /** A note, as `addMeetingNote`, `updateMeetingNote` and `setMeetingNoteDone` answer it. */
 export const isMeetingNote = guard<MeetingNote>('MeetingNote', meetingNote);
+
+/** A screenshot staged for a follow-up's brief. */
+export const isFollowUpImage = guard<FollowUpImage>(
+  'FollowUpImage',
+  shape<FollowUpImage>({
+    id: uuid,
+    mediaType: oneOf(MEETING_NOTE_IMAGE_TYPES),
+    sizeBytes: wholeNumber('a size from 1 to 2097152 bytes', 1, 2_097_152),
+    createdAt: timestamp,
+  })
+);
 
 const meetingNoteInContext = shape<MeetingNoteInContext>({
   note: meetingNote,
@@ -1564,6 +1684,26 @@ const meetingStoryDraft: Check = (value, at) =>
     createdBy: actor,
     createdAt: timestamp,
   })(value, at) ?? draftConsistency(value, at);
+
+/** A follow-up's grill, as `requestFollowUpGrill` and `getFollowUpGrill` answer it. */
+export const isFollowUpGrill = guard<FollowUpGrill>(
+  'FollowUpGrill',
+  (value, at) =>
+    shape<FollowUpGrill>({
+      id: uuid,
+      storyKey: nonEmptyText,
+      status: oneOf(FOLLOW_UP_GRILL_STATUSES),
+      questions: nullable(grillQuestions),
+      failure: nullable(text),
+      spentNanoAiu: nanoAiu,
+      createdBy: actor,
+      createdAt: timestamp,
+    })(value, at) ??
+    (isRecord(value) &&
+    (value['status'] === 'ready') !== (value['questions'] !== null)
+      ? `${at}.questions must be set exactly when the grill is ready`
+      : null)
+);
 
 /**
  * A story draft, as `requestMeetingStoryDraft`, `getMeetingStoryDraft`, `answerMeetingStoryQuestions`,
@@ -2329,6 +2469,13 @@ export const isDefectList = guard<DefectList>(
 
 type FormSignIn = Extract<Environment['signIn'], { readonly kind: 'form' }>;
 
+/** One step of a login over several pages. */
+const signInStep = shape<SignInStep>({
+  action: oneOf(SIGN_IN_STEP_ACTIONS),
+  selector: nonEmptyText,
+  value: optional(nonEmptyText),
+});
+
 /** How an environment signs in: `none`, or a form with where it is and how a signed-in page is told. */
 const environmentSignIn: Check = (value, at) => {
   if (!isRecord(value))
@@ -2346,6 +2493,8 @@ const environmentSignIn: Check = (value, at) => {
     userSelector: nullable(text),
     passwordSelector: nullable(text),
     submitSelector: nullable(text),
+    // Optional: an API from before sign-in steps leaves it out.
+    steps: optional(nullable(arrayOf(signInStep))),
     signedInUrlPattern: nullable(text),
     signedInSelector: nullable(text),
   })(value, at);

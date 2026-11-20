@@ -227,6 +227,105 @@ function exercise(server: MockAhoyServer, advance: (ms: number) => void): void {
   get('/stories/DEMO-3/questions');
   get('/stories/DEMO-3/events?limit=500');
 
+  // A follow-up of a done voyage: previewed, started (in Jira or only in Ahoy), refused while one is open or at the ceiling.
+  get('/stories/PROJ-097/follow-up-preview');
+  get(
+    '/stories/PROJ-097/follow-up-preview?criteria=2&briefChars=300&repos=api'
+  );
+  get('/stories/PROJ-097/lineage');
+  const brief = { text: 'The VAT number is missing', criteria: ['VAT shows'] };
+  const shot = new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+  ]);
+  const staged = call(
+    server,
+    'POST',
+    '/stories/PROJ-097/follow-up-images',
+    shot,
+    { 'Content-Type': 'image/png' }
+  ).body as { id: string };
+  get(`/follow-up-images/${staged.id}`);
+  call(server, 'GET', `/follow-up-images/${staged.id}`, undefined, {
+    'If-None-Match': `"${staged.id}"`,
+  });
+  call(server, 'POST', '/stories/PROJ-097/follow-up-images', shot, {
+    'Content-Type': 'image/svg+xml',
+  });
+  const spare = call(
+    server,
+    'POST',
+    '/stories/PROJ-097/follow-up-images',
+    shot,
+    { 'Content-Type': 'image/png' }
+  ).body as { id: string };
+  call(server, 'DELETE', `/follow-up-images/${spare.id}`);
+  // Staged screenshots may add up to 6 MiB: the third big one is refused.
+  const big = new Uint8Array(2 * 1024 * 1024);
+  big.set(shot);
+  const bigIds = [1, 2, 3].map(
+    () =>
+      call(server, 'POST', '/stories/PROJ-097/follow-up-images', big, {
+        'Content-Type': 'image/png',
+      }).body as { id?: string }
+  );
+  expect(bigIds.map(({ id }) => id !== undefined)).toEqual([true, true, false]);
+  for (const { id } of bigIds)
+    if (id !== undefined) call(server, 'DELETE', `/follow-up-images/${id}`);
+  // Grill me: asked, read while it works and when it is ready, dropped; refused on a voyage that is not done.
+  const grill = call(server, 'POST', '/stories/PROJ-097/follow-up-grills', {
+    confirmSpend: true,
+    brief,
+  }).body as { id: string };
+  get(`/follow-up-grills/${grill.id}`);
+  advance(2_000);
+  get(`/follow-up-grills/${grill.id}`);
+  call(server, 'DELETE', `/follow-up-grills/${grill.id}`);
+  get(`/follow-up-grills/${grill.id}`);
+  post('/stories/PROJ-118/follow-up-grills', { confirmSpend: true, brief });
+  post('/stories/PROJ-097/follow-ups', {
+    expectedVersion: version('PROJ-097'),
+    source: { ahoyOnly: true },
+    brief,
+    imageIds: [staged.id],
+    route: 'fast_path',
+    repos: ['api'],
+    budgetNanoAiu: 10 * AIU,
+    confirmSpend: true,
+  });
+  post('/stories/PROJ-097/follow-ups', {
+    expectedVersion: version('PROJ-097'),
+    source: { ahoyOnly: true },
+    brief,
+    route: 'planning',
+    budgetNanoAiu: 10 * AIU,
+    confirmSpend: true,
+  });
+  post('/stories/PROJ-097/follow-ups', {
+    expectedVersion: version('PROJ-097'),
+    source: { createInJira: { issueType: 'Bug' } },
+    title: 'Export drops a row',
+    brief,
+    route: 'planning',
+    budgetNanoAiu: 10 * AIU,
+    confirmSpend: true,
+  });
+  get('/stories/PROJ-097-FU1');
+  get('/stories/PROJ-097/lineage');
+  post('/stories/PROJ-097/revision-ceiling', {
+    expectedVersion: version('PROJ-097'),
+    rounds: 2,
+    reason: 'QA found more cases',
+    confirmSpend: true,
+  });
+  post('/stories/PROJ-140/follow-ups', {
+    expectedVersion: version('PROJ-140'),
+    source: { ahoyOnly: true },
+    brief,
+    route: 'planning',
+    budgetNanoAiu: 10 * AIU,
+    confirmSpend: true,
+  });
+
   // A backlog item's refinement: queued, run, read; then one cancelled.
   post('/refinements/PROJ-145', {
     confirmSpend: true,
@@ -531,6 +630,16 @@ describe('the mock against openapi/ahoy-v1.yaml', () => {
       'getStoryDiagnosis',
       'getStoryPlanFit',
       'refreshIntake',
+      'previewFollowUp',
+      'startFollowUp',
+      'addFollowUpImage',
+      'getFollowUpImage',
+      'deleteFollowUpImage',
+      'requestFollowUpGrill',
+      'getFollowUpGrill',
+      'discardFollowUpGrill',
+      'getStoryLineage',
+      'raiseRevisionCeiling',
       'listRefinements',
       'getRefinements',
       'requestRefinement',

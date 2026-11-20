@@ -371,6 +371,216 @@ export interface paths {
     readonly patch?: never;
     readonly trace?: never;
   };
+  readonly '/stories/{key}/follow-up-preview': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * What starting a follow-up voyage of a done story would do, and the route Ahoy suggests.
+     * @description Reads only. Says whether a follow-up can be started now (the story is done, no follow-up of its lineage is
+     *     open, and the lineage's revision ceiling allows one more round), the key an Ahoy-only follow-up would get, the
+     *     revision rounds the lineage has used, the repositories the plan may change, and the route Ahoy suggests for the
+     *     brief the person is writing (`criteria`, `briefChars` and `repos` describe it). The person chooses the route.
+     */
+    readonly get: operations['previewFollowUp'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/follow-ups': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Start a follow-up voyage of a done story, for what QA found after the pull requests merged.
+     * @description The follow-up is a new story linked to the done one: an existing Jira issue (`source.jiraKey`) or, when there is
+     *     none, one that exists only in Ahoy and is keyed `<ROOT>-FU<n>` (`source.ahoyOnly`), or one Ahoy creates in Jira
+     *     from the brief, of the type chosen, and links to the root's issue (`source.createInJira`; it needs a `title` and
+     *     at least one criterion, and `503 unavailable` when Jira writes are not configured; the issue is created only
+     *     after the other checks pass, and if the start is then refused the error names the issue so it can be started from
+     *     as an existing one). The actor becomes its owner.
+     *     It starts at intake, with a delivery record and the earlier plans as read-only history and the `brief` as what is
+     *     new or missing. `route` is `planning` (a planner plans only the delta; the plan is reviewed) or `fast_path`
+     *     (the brief is the plan, for one repository the earlier plan worked in; no planner and no plan review).
+     *     The start counts as one `delivery_accepted` revision round of the root, which stays done: `409
+     *     revision_ceiling_reached` when the lineage is at its ceiling (`raiseRevisionCeiling`). Only one follow-up of a
+     *     lineage is open at a time. `confirmSpend` must be true: the runs that follow spend AIU, within `budgetNanoAiu`.
+     */
+    readonly post: operations['startFollowUp'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/follow-up-images': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Attach a screenshot to the brief of a follow-up voyage of a done story.
+     * @description The body is the image itself: a PNG, JPEG, WebP or GIF of at most 2 MiB (2 097 152 bytes); a person can stage at
+     *     most 5 images and 6 MiB in all per story. Its format is read from its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`. The image
+     *     is staged for the actor and this story; `POST /stories/{key}/follow-ups` claims it with `imageIds`, copies it into
+     *     the follow-up's artifacts as `follow-up/screenshots/<n>.<ext>` and tells the agents to look at it. `409
+     *     invalid_state` when the story is not done or the actor has 5 staged images, or 6 MiB of them, for it already. 0 AIU, no external
+     *     call.
+     */
+    readonly post: operations['addFollowUpImage'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/follow-up-images/{imageId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly imageId: string;
+      };
+      readonly cookie?: never;
+    };
+    /**
+     * The bytes of a follow-up's screenshot.
+     * @description Served with the format recognised at upload, `X-Content-Type-Options: nosniff` and a `sandbox` content security
+     *     policy. An image never changes, so the answer may be cached; its ETag is the quoted sha256 of the bytes.
+     */
+    readonly get: operations['getFollowUpImage'];
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Remove a screenshot that no follow-up has used yet.
+     * @description Only the person who attached it (`403 forbidden` for anyone else), and only while no follow-up has claimed it
+     *     (`409 invalid_state` after).
+     */
+    readonly delete: operations['deleteFollowUpImage'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/follow-up-grills': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Ask an agent to question a follow-up's brief before it starts ("Grill me"). May spend AIU.
+     * @description Queues one worker run of the story draft agent of Team settings › Agents, labelled `FUG-<n>`. It reads what the done
+     *     story delivered (its delivery record and plan) and the brief as written now, and replies with 1–6 questions, each
+     *     with 2–4 answer options and one recommended. It has no MCP server, writes no file and changes nothing: the
+     *     person puts the answers into the brief, and `startFollowUp` is the same call as without a grill. `confirmSpend`
+     *     must be true; the run is capped at `budgetNanoAiu`, else the server's story draft cap. Poll `getFollowUpGrill`
+     *     until it is not `working`. A person has one open grill per story: asking again discards the earlier one.
+     *
+     *     `409 invalid_state` when the story is not done; `503 unavailable` when story drafts are off or the control repo
+     *     cannot be read.
+     */
+    readonly post: operations['requestFollowUpGrill'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/follow-up-grills/{grillId}': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly grillId: string;
+      };
+      readonly cookie?: never;
+    };
+    /** One follow-up grill, with its questions once the agent has asked them. */
+    readonly get: operations['getFollowUpGrill'];
+    readonly put?: never;
+    readonly post?: never;
+    /**
+     * Discard a grill, stopping its run when the agent is still asking.
+     * @description A queued run spends nothing; a running one is cancelled. `404` when it was already discarded.
+     */
+    readonly delete: operations['discardFollowUpGrill'];
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/lineage': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    /** The root story, its follow-up voyages and the revision rounds they share. */
+    readonly get: operations['getStoryLineage'];
+    readonly put?: never;
+    readonly post?: never;
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
+  readonly '/stories/{key}/revision-ceiling': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Raise the revision ceiling of the story's lineage, which guards against a loop that spends without end.
+     * @description Adds `rounds` (1 to 4, to at most 20) to the ceiling of the lineage's root, whichever story of it is named. The
+     *     ceiling limits how many times a delivery can be sent back or continued by a follow-up, so raising it lets the
+     *     lineage spend more: `confirmSpend` must be true and `reason` is kept in the decision log. Anyone Ahoy lets in may
+     *     do it.
+     */
+    readonly post: operations['raiseRevisionCeiling'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/stories/{key}/budget': {
     readonly parameters: {
       readonly query?: never;
@@ -3751,6 +3961,8 @@ export interface components {
       readonly currentRunId: components['schemas']['RunId'] | null;
       /** @description How the story is planned. Always sent by this server; a server older than the plan panel sends none, which is `standard`. */
       readonly planningMode?: components['schemas']['PlanningMode'];
+      /** @description Set when the story is a follow-up voyage of a done story; null for any other. Absent from an older server. */
+      readonly followUp?: components['schemas']['StoryFollowUp'] | null;
       /** @description What Jira calls the story's issue (Story, Bug, Defect…), as intake last read it; null until intake has read it (a story the defect watch knew before this field existed is `Defect`). Always sent by this server; a server older than it sends none. */
       readonly issueType?: string | null;
       /** @description Whether `issueType` names a defect (Bug, Defect, Defeito), so a list tells a defect from a user story without repeating the rule; false while the type is unknown. Always sent by this server; a server older than it sends none. */
@@ -3926,6 +4138,166 @@ export interface components {
       readonly reason: string;
       /** @constant */
       readonly confirmSpend: true;
+    };
+    readonly FollowUpBrief: {
+      /** @description What is new or missing, in the person's words; links to screenshots may be pasted. */
+      readonly text: string;
+      /** @description Acceptance criteria this follow-up adds; an Ahoy-only follow-up, or one created in Jira, needs at least one. */
+      readonly criteria: readonly string[];
+    };
+    readonly StartFollowUpRequest: {
+      readonly expectedVersion: components['schemas']['Version'];
+      readonly source:
+        | {
+            readonly jiraKey: components['schemas']['StoryKey'];
+          }
+        | {
+            /** @constant */
+            readonly ahoyOnly: true;
+          }
+        | {
+            readonly createInJira: {
+              readonly issueType: components['schemas']['FollowUpIssueType'];
+            };
+          };
+      /** @description The summary of the issue Ahoy creates in Jira, which needs it. */
+      readonly title?: string;
+      readonly brief: components['schemas']['FollowUpBrief'];
+      readonly route: components['schemas']['FollowUpRoute'];
+      /** @description Plan aliases of the repositories to change; the fast path takes exactly one. */
+      readonly repos?: readonly string[];
+      /** @description Hard AIU cap for every run of the follow-up together. */
+      readonly budgetNanoAiu: number;
+      readonly models?: components['schemas']['ModelPlanRequest'];
+      readonly planningMode?: components['schemas']['PlanningMode'];
+      /** @description Screenshots the actor attached to this story with `POST /stories/{key}/follow-up-images`, in the order they are shown. Each must be the actor's own, for this story and not used yet, else `400 validation_failed`. */
+      readonly imageIds?: readonly string[];
+      /** @constant */
+      readonly confirmSpend: true;
+    };
+    readonly FollowUpImage: {
+      /** Format: uuid */
+      readonly id: string;
+      /** @enum {string} */
+      readonly mediaType:
+        'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+      readonly sizeBytes: number;
+      readonly createdAt: components['schemas']['Timestamp'];
+    };
+    readonly FollowUpGrillRequest: {
+      /** @constant */
+      readonly confirmSpend: true;
+      readonly brief: components['schemas']['FollowUpBrief'];
+      /** @description The run's AIU cap, at most 50 AIU; the server's story draft cap when absent. */
+      readonly budgetNanoAiu?: number;
+    };
+    /**
+     * @description `working`: the agent is asking. `ready`: its questions are in. `failed`: the run ended without usable questions.
+     * @enum {string}
+     */
+    readonly FollowUpGrillStatus: 'working' | 'ready' | 'failed';
+    readonly FollowUpGrill: {
+      /** Format: uuid */
+      readonly id: string;
+      /** @description The done story the follow-up would continue. */
+      readonly storyKey: string;
+      readonly status: components['schemas']['FollowUpGrillStatus'];
+      /** @description The agent's questions while `ready`; null otherwise. */
+      readonly questions:
+        readonly components['schemas']['GrillQuestion'][] | null;
+      /** @description Why the run failed */
+      readonly failure: string | null;
+      readonly spentNanoAiu: number;
+      readonly createdBy: string;
+      readonly createdAt: components['schemas']['Timestamp'];
+    };
+    /** @enum {string} */
+    readonly FollowUpRoute: 'planning' | 'fast_path';
+    /**
+     * @description The issue types a follow-up's Jira issue can be created as.
+     * @enum {string}
+     */
+    readonly FollowUpIssueType: 'Bug' | 'Defect' | 'Task' | 'Story';
+    /**
+     * @description `jira`: an existing Jira issue is the follow-up. `ahoy`: it exists only in Ahoy (key `<ROOT>-FU<n>`).
+     * @enum {string}
+     */
+    readonly FollowUpSource: 'jira' | 'ahoy';
+    readonly StoryFollowUp: {
+      readonly rootKey: components['schemas']['StoryKey'];
+      readonly number: number;
+      readonly source: components['schemas']['FollowUpSource'];
+      readonly route: components['schemas']['FollowUpRoute'];
+    };
+    readonly RevisionRounds: {
+      /** @description Rounds the root and its follow-ups have used together. */
+      readonly used: number;
+      /** @description The most rounds the lineage may use, set on the root. */
+      readonly ceiling: number;
+    };
+    readonly LinkedDefect: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly summary: string;
+      /** @description Bug or Defect. */
+      readonly issueType: string;
+      readonly status: string;
+      readonly priority: string | null;
+    };
+    readonly FollowUpPreview: {
+      readonly key: components['schemas']['StoryKey'];
+      readonly rootKey: components['schemas']['StoryKey'];
+      /** @description The key an Ahoy-only follow-up would get. */
+      readonly nextKey: string;
+      /** @description Whether Jira writes are configured, so Ahoy can create the issue. */
+      readonly canCreateInJira: boolean;
+      /** @description The types to offer, the usual one first. */
+      readonly issueTypes: readonly components['schemas']['FollowUpIssueType'][];
+      /**
+       * @description The open Bugs and Defects linked in Jira to the issues of the lineage, without the ones that already have a
+       *     story, to pick as the follow-up's issue. Empty when Jira is not configured or does not answer.
+       */
+      readonly linkedDefects: readonly components['schemas']['LinkedDefect'][];
+      readonly canStart: boolean;
+      /** @description Why a follow-up cannot be started now. */
+      readonly blockedReason?: string;
+      readonly revisions: components['schemas']['RevisionRounds'];
+      readonly repos: readonly {
+        readonly alias: string;
+        readonly slug: string;
+        /** @description The earlier plan worked in it, so the fast path can use it. */
+        readonly inEarlierPlan: boolean;
+      }[];
+      readonly suggestion: {
+        readonly route: components['schemas']['FollowUpRoute'];
+        readonly reasons: readonly string[];
+      };
+    };
+    readonly StoryLineage: {
+      readonly rootKey: components['schemas']['StoryKey'];
+      /** @description The root first, then its follow-ups by number. */
+      readonly items: readonly {
+        readonly key: components['schemas']['StoryKey'];
+        readonly title: string | null;
+        readonly phase: components['schemas']['Phase'];
+        readonly status: components['schemas']['StoryStatus'];
+        /** @description Null for the root. */
+        readonly number: number | null;
+        readonly source: components['schemas']['FollowUpSource'] | null;
+        readonly route: components['schemas']['FollowUpRoute'] | null;
+        readonly spentNanoAiu: components['schemas']['NanoAiu'];
+      }[];
+      readonly revisions: components['schemas']['RevisionRounds'];
+    };
+    readonly RaiseRevisionCeilingRequest: {
+      readonly expectedVersion: components['schemas']['Version'];
+      readonly rounds: number;
+      readonly reason: string;
+      /** @constant */
+      readonly confirmSpend: true;
+    };
+    readonly RevisionCeilingRaised: {
+      readonly story: components['schemas']['Story'];
+      readonly ceiling: number;
     };
     readonly ResumeStoryRequest: {
       readonly expectedVersion: components['schemas']['Version'];
@@ -4462,7 +4834,10 @@ export interface components {
       /** @description Gate name (`intake`, `plan`) or human gate key (`plan_accepted`). */
       readonly gate: string;
       readonly phase: components['schemas']['Phase'];
-      /** @enum {string} */
+      /**
+       * @description `reopen`: a follow-up voyage was started from this done story (a `delivery_accepted` round, by the actor).
+       * @enum {string}
+       */
       readonly outcome:
         | 'pass'
         | 'fail'
@@ -4471,7 +4846,8 @@ export interface components {
         | 'halt'
         | 'reject'
         | 'approve'
-        | 'send_back';
+        | 'send_back'
+        | 'reopen';
       /** @description A child_ready `fail` while work packages are `awaiting_ci` is a wait, not a stuck package: one line per deferred check says what it waits on, e.g. "WP1 awaits 'facility-pages / playwright' at commit 8b30531 (not reported yet); WP2 depends on WP1". Repeated polls with the same verdict are recorded once. */
       readonly message: string | null;
       readonly actor: components['schemas']['Actor'];
@@ -4806,6 +5182,28 @@ export interface components {
         readonly rounds: components['schemas']['MetricsCount'];
         readonly stories: components['schemas']['MetricsCount'];
       }[];
+      /** @description Follow-up voyages started in the period and the lineages they belong to. Spend is each story's own total, a lineage's root and its follow-ups together. */
+      readonly followUps: {
+        readonly started: components['schemas']['MetricsCount'];
+        /** @description How many of them skipped planning. */
+        readonly fastPath: components['schemas']['MetricsCount'];
+        /** @description How many lineages those follow-ups belong to. */
+        readonly lineages: components['schemas']['MetricsCount'];
+        /** @description Rounds people added to a lineage's revision ceiling in the period. */
+        readonly ceilingRaises: components['schemas']['MetricsCount'];
+        /** @description How many of those lineages have how many follow-ups so far. */
+        readonly perLineage: readonly {
+          readonly followUps: components['schemas']['MetricsCount'];
+          readonly lineages: components['schemas']['MetricsCount'];
+        }[];
+        /** @description The dearest lineages by total spend, at most 10. */
+        readonly top: readonly {
+          readonly rootKey: string;
+          readonly followUps: components['schemas']['MetricsCount'];
+          readonly nanoAiu: components['schemas']['MetricsCount'];
+          readonly ceilingRaises: components['schemas']['MetricsCount'];
+        }[];
+      };
       /** @description The period's runs by phase and kind (why each ran), with their spend. */
       readonly runKinds: readonly {
         readonly phase: components['schemas']['Phase'];
@@ -6399,6 +6797,9 @@ export interface components {
             readonly userSelector: string | null;
             readonly passwordSelector: string | null;
             readonly submitSelector: string | null;
+            /** @description The steps of a login over several pages; null: the one-page form of the selectors. */
+            readonly steps:
+              readonly components['schemas']['SignInStep'][] | null;
             readonly signedInUrlPattern: string | null;
             readonly signedInSelector: string | null;
           };
@@ -6454,10 +6855,24 @@ export interface components {
           readonly userSelector?: string | null;
           readonly passwordSelector?: string | null;
           readonly submitSelector?: string | null;
+          /** @description The steps of a login over several pages, run in order, such as a single sign-on that asks for the user name, then the method, then the password: exactly one fill_password, at most one fill_user. Null or empty: the one-page form of userSelector, passwordSelector and submitSelector. */
+          readonly steps?:
+            readonly components['schemas']['SignInStep'][] | null;
           /** @description The URL of a signed-in page, `*` for any characters; this or signedInSelector is required. */
           readonly signedInUrlPattern?: string | null;
           readonly signedInSelector?: string | null;
         };
+    readonly SignInStep: {
+      /**
+       * @description Types the user name or the password, picks an option of a select, or clicks.
+       * @enum {string}
+       */
+      readonly action: 'fill_user' | 'fill_password' | 'select' | 'click';
+      /** @description The CSS selector the step waits for. */
+      readonly selector: string;
+      /** @description The option's value, for select only. */
+      readonly value?: string;
+    };
     readonly DefectSettingsPage: {
       /** @description Whether the person is an admin, who may change them. */
       readonly canEdit: boolean;
@@ -7380,6 +7795,309 @@ export interface operations {
         };
         content: {
           readonly 'application/json': components['schemas']['Story'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly previewFollowUp: {
+    readonly parameters: {
+      readonly query?: {
+        readonly criteria?: number;
+        readonly briefChars?: number;
+        /** @description Comma-separated plan aliases of the repositories the change affects. */
+        readonly repos?: string;
+      };
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The preview. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FollowUpPreview'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly startFollowUp: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['StartFollowUpRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The follow-up was created in phase `intake`. */
+      readonly 201: {
+        headers: {
+          readonly Location?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Story'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 422: components['responses']['Problem'];
+    };
+  };
+  readonly addFollowUpImage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'image/png': string;
+        readonly 'image/jpeg': string;
+        readonly 'image/webp': string;
+        readonly 'image/gif': string;
+      };
+    };
+    readonly responses: {
+      /** @description The staged image. */
+      readonly 201: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FollowUpImage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly getFollowUpImage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: {
+        /** @description An ETag from an earlier response; a match answers 304 without a body. */
+        readonly 'If-None-Match'?: string;
+      };
+      readonly path: {
+        readonly imageId: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The image. */
+      readonly 200: {
+        headers: {
+          /** @description The quoted sha256 of the image. */
+          readonly ETag?: string;
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'image/png': string;
+          readonly 'image/jpeg': string;
+          readonly 'image/webp': string;
+          readonly 'image/gif': string;
+        };
+      };
+      /** @description The image has not changed since the given ETag. */
+      readonly 304: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly deleteFollowUpImage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly imageId: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description Removed. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly requestFollowUpGrill: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['FollowUpGrillRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The grill, with the agent working. */
+      readonly 202: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FollowUpGrill'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+      readonly 503: components['responses']['Problem'];
+    };
+  };
+  readonly getFollowUpGrill: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly grillId: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The grill. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['FollowUpGrill'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly discardFollowUpGrill: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly grillId: string;
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The grill is discarded. */
+      readonly 204: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content?: never;
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly getStoryLineage: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody?: never;
+    readonly responses: {
+      /** @description The lineage of the story; a story with no follow-ups is its own root. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['StoryLineage'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+    };
+  };
+  readonly raiseRevisionCeiling: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly key: components['parameters']['StoryKey'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['RaiseRevisionCeilingRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The ceiling was raised. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['RevisionCeilingRaised'];
         };
       };
       readonly 400: components['responses']['Problem'];

@@ -1,11 +1,16 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterRenderEffect,
   Component,
   computed,
+  DestroyRef,
   effect,
+  ElementRef,
   inject,
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import type {
   ConversationContextItem,
@@ -61,6 +66,23 @@ import { ProposalCard } from './proposal-card';
 /** How many of the latest things the agent read show under an answer being written. */
 const ACTIVITY_SHOWN = 6;
 
+/** How close to the end of the messages, in px, still counts as following them. */
+const FOLLOW_SLACK = 80;
+
+/** How many pins show on the "Reads" line; the rest are under "+N more". */
+const PINS_SHOWN = 3;
+
+/** One pin on the "Reads" line: what the agent reads, and how to take it out. */
+interface PinView {
+  readonly key: string;
+  readonly kind: string;
+  readonly text: string;
+  readonly title: string | null;
+  readonly teamDefault: boolean;
+  readonly removeLabel: string;
+  readonly remove: () => void;
+}
+
 /** One thing a question named that Ahoy read with it. */
 type ConversationMention = ConversationTurn['mentions'][number];
 
@@ -80,30 +102,42 @@ type ConversationMention = ConversationTurn['mentions'][number];
     EmptyState,
     FieldControl,
     Markdown,
+    NgTemplateOutlet,
     ProposalCard,
     Skeleton,
   ],
   styles: `
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
     }
     .layout {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 260px;
+      grid-template-rows: minmax(0, 1fr);
       gap: 16px;
-      align-items: start;
+      align-items: stretch;
+      flex: 1;
+      min-height: 0;
     }
+    /* One panel, three zones: the header and the question box stay put, the messages scroll between them. */
     .talk {
       display: flex;
       flex-direction: column;
-      gap: 14px;
       min-width: 0;
+      min-height: 0;
     }
     .head {
       padding: 14px 16px;
       display: flex;
       flex-direction: column;
       gap: 10px;
+    }
+    .talk > .head {
+      border-bottom: 1px solid var(--line-soft);
     }
     .title-row {
       display: flex;
@@ -132,6 +166,45 @@ type ConversationMention = ConversationTurn['mentions'][number];
       font-weight: 600;
       color: var(--ink-soft);
       margin-right: 2px;
+    }
+    /* Reads: one line; what does not fit is cut with an ellipsis, the rest is under "+N more". */
+    .reads.line {
+      flex-wrap: nowrap;
+    }
+    .reads.line > .pin {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+    .reads.line > :is(.label, button, .ah-hint) {
+      flex: none;
+    }
+    .reads.line .pin {
+      position: relative;
+    }
+    .reads.line .pin .text {
+      min-width: 4ch;
+      max-width: 200px;
+    }
+    .reads.line .pin .kind,
+    .reads.line .pin button {
+      flex: none;
+    }
+    /* On the line the team default is the pin's tooltip and its tinted background; the words stay for screen readers. */
+    .reads.line .pin .from {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .more {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .more[hidden] {
+      display: none;
     }
     .pin {
       display: inline-flex;
@@ -316,55 +389,127 @@ type ConversationMention = ConversationTurn['mentions'][number];
     .text {
       overflow-wrap: anywhere;
     }
-    .composer {
-      padding: 12px 16px;
+    .log {
+      position: relative;
+      flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
+    }
+    .msgs {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scroll-behavior: smooth;
+      scroll-padding: 16px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .msgs {
+        scroll-behavior: auto;
+      }
+    }
+    .latest {
+      position: absolute;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      z-index: 1;
+      gap: 6px;
+      background: var(--surface);
+      border-color: var(--line-strong);
+      box-shadow: var(--shadow-toast);
+      border-radius: var(--radius-pill);
+    }
+    .latest .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .composer {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-top: 1px solid var(--line);
+    }
+    .ask-row {
+      display: flex;
       gap: 8px;
+      align-items: flex-end;
     }
     .composer textarea {
-      width: 100%;
-      min-height: 72px;
-      resize: vertical;
+      flex: 1;
+      min-width: 0;
+      min-height: 36px;
+      max-height: 180px;
+      resize: none;
     }
     .send-row {
       display: flex;
-      gap: 10px;
+      gap: 6px 12px;
       align-items: center;
       flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+    .send-row .spend {
+      flex: 1 1 120px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* One slim line: the controls are as tall as the text around them. */
+    .send-row select,
+    .send-row input {
+      min-height: 0;
+      height: 26px;
+      padding-block: 0;
+      font-size: 12px;
+    }
+    .send-row .keys {
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    kbd {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+      padding: 0 4px;
     }
     .send-row .cap {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
-      color: var(--ink-soft);
     }
     .send-row .cap input {
-      width: 72px;
+      width: 64px;
     }
     .send-row .pick {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
-      color: var(--ink-soft);
     }
     .send-row .pick select {
       width: auto;
-      max-width: 220px;
+      max-width: 180px;
     }
     .switch {
       margin: 0;
-    }
-    .send-row .push {
-      margin-left: auto;
     }
     .side {
       padding: 14px 16px;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      min-height: 0;
+      overflow-y: auto;
     }
     .side h3 {
       margin: 0;
@@ -394,9 +539,53 @@ type ConversationMention = ConversationTurn['mentions'][number];
       flex-direction: column;
       gap: 3px;
     }
+    .questions-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .questions {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 12.5px;
+    }
+    .questions li + li {
+      margin-top: 2px;
+    }
+    .questions button {
+      display: block;
+      width: 100%;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: none;
+      padding: 3px 6px;
+      font: inherit;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .questions button:hover,
+    .questions button[aria-current='true'] {
+      background: var(--surface-hover);
+    }
+    .questions button[aria-current='true'] {
+      font-weight: 700;
+    }
     @media (max-width: 1100px) {
       .layout {
         grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+      .questions-section {
+        display: none;
+      }
+    }
+    @media (min-width: 761px) and (max-width: 1100px) {
+      .side {
+        max-height: 11rem;
       }
     }
   `,
@@ -425,8 +614,8 @@ type ConversationMention = ConversationTurn['mentions'][number];
       }
       @if (store.conversation(); as c) {
         <div class="layout">
-          <div class="talk">
-            <section class="ah-panel head" aria-labelledby="conversation-title">
+          <div class="ah-panel talk">
+            <section class="head" aria-labelledby="conversation-title">
               <div class="title-row">
                 <h2 id="conversation-title">{{ c.title }}</h2>
                 <span class="ah-tag">{{ c.key }}</span>
@@ -467,141 +656,30 @@ type ConversationMention = ConversationTurn['mentions'][number];
                   >
                 }
               </div>
-              <div class="reads" aria-label="What the agent reads">
+              <div class="reads line" aria-label="What the agent reads">
                 <span class="label">Reads</span>
-                @if (c.jiraProject !== null) {
-                  <span
-                    class="pin"
-                    [class.default]="
-                      c.jiraProject === c.teamDefaults.jiraProject
-                    "
-                  >
-                    <span class="kind">Jira project</span>
-                    <span class="text">{{ c.jiraProject }}</span>
-                    @if (c.jiraProject === c.teamDefaults.jiraProject) {
-                      <span class="from">team default</span>
-                    }
-                    @if (canPin()) {
-                      <button
-                        type="button"
-                        [attr.aria-label]="
-                          'Remove Jira project ' +
-                          c.jiraProject +
-                          ' from this conversation'
-                        "
-                        [attr.aria-disabled]="store.busy() ? 'true' : null"
-                        (click)="removeProject()"
-                      >
-                        ×
-                      </button>
-                    }
-                  </span>
+                @for (p of pins().slice(0, pinsShown); track p.key) {
+                  <ng-container
+                    *ngTemplateOutlet="pinTpl; context: { $implicit: p }"
+                  />
                 }
-                @for (space of c.confluenceSpaces; track space) {
-                  <span
-                    class="pin"
-                    [class.default]="
-                      c.teamDefaults.confluenceSpaces.includes(space)
-                    "
+                @if (pins().length === 0) {
+                  <span class="ah-hint"
+                    >Nothing pinned: the agent answers from the content
+                    repository’s knowledge.</span
                   >
-                    <span class="kind">Confluence space</span>
-                    <span class="text">{{ space }}</span>
-                    @if (c.teamDefaults.confluenceSpaces.includes(space)) {
-                      <span class="from">team default</span>
-                    }
-                    @if (canPin()) {
-                      <button
-                        type="button"
-                        [attr.aria-label]="
-                          'Remove Confluence space ' +
-                          space +
-                          ' from this conversation'
-                        "
-                        [attr.aria-disabled]="store.busy() ? 'true' : null"
-                        (click)="removeSpace(space)"
-                      >
-                        ×
-                      </button>
-                    }
-                  </span>
                 }
-                @for (item of c.context; track item.kind + item.ref) {
-                  <span
-                    class="pin"
-                    [class.default]="teamRepository(item)"
-                    [title]="item.ref"
-                  >
-                    <span class="kind">{{ kindWords[item.kind].label }}</span>
-                    <span class="text">{{ chip(item) }}</span>
-                    @if (teamRepository(item)) {
-                      <span class="from">team default</span>
-                    }
-                    @if (canPin()) {
-                      <button
-                        type="button"
-                        [attr.aria-label]="'Unpin ' + chip(item)"
-                        [attr.aria-disabled]="store.busy() ? 'true' : null"
-                        (click)="unpin(item)"
-                      >
-                        ×
-                      </button>
-                    }
-                  </span>
-                } @empty {
-                  @if (
-                    c.jiraProject === null && c.confluenceSpaces.length === 0
-                  ) {
-                    <span class="ah-hint"
-                      >Nothing pinned: the agent answers from the content
-                      repository’s knowledge.</span
-                    >
-                  }
-                }
+                <button
+                  ahButton="ghost"
+                  size="sm"
+                  type="button"
+                  aria-controls="reads-more"
+                  [attr.aria-expanded]="moreOpen()"
+                  (click)="moreOpen.set(!moreOpen())"
+                >
+                  {{ moreLabel() }}
+                </button>
                 @if (canPin()) {
-                  <span class="quick">
-                    <input
-                      ahInput
-                      type="text"
-                      autocomplete="off"
-                      maxlength="2000"
-                      aria-label="Pin quickly"
-                      placeholder="Paste a Jira key, Figma link or repository…"
-                      [value]="quick()"
-                      (input)="typeQuick(text($event))"
-                      (keydown.enter)="
-                        $event.preventDefault(); pinQuick(quickOptions()[0])
-                      "
-                      (keydown.escape)="typeQuick('')"
-                    />
-                    @if (quickOptions().length > 0) {
-                      <span
-                        class="quick-options"
-                        role="group"
-                        aria-label="Pin as"
-                      >
-                        @for (
-                          o of quickOptions();
-                          track o.kind;
-                          let first = $first
-                        ) {
-                          <button
-                            ahButton="ghost"
-                            size="sm"
-                            type="button"
-                            [attr.aria-disabled]="store.busy() ? 'true' : null"
-                            (click)="pinQuick(o)"
-                          >
-                            {{ kindWords[o.kind].label }} ·
-                            <span class="ref">{{ quickChip(o) }}</span>
-                            @if (first) {
-                              <kbd aria-hidden="true">Enter</kbd>
-                            }
-                          </button>
-                        }
-                      </span>
-                    }
-                    <span class="ah-hint" role="status">{{ quickHint() }}</span>
-                  </span>
                   <button
                     ahButton="ghost"
                     size="sm"
@@ -613,206 +691,336 @@ type ConversationMention = ConversationTurn['mentions'][number];
                   </button>
                 }
               </div>
-              <div
-                class="reads"
-                role="group"
-                aria-labelledby="look-up-label"
-                aria-describedby="look-up-note"
-              >
-                <span class="label" id="look-up-label">Can look up</span>
-                @for (l of lookUps; track l) {
-                  @let state = c.lookUp[l];
-                  <button
-                    class="ah-chip look-up"
-                    type="button"
-                    [attr.aria-pressed]="state.available && state.on"
-                    [attr.aria-disabled]="
-                      lookUpLocked(state.available) ? 'true' : null
-                    "
-                    (click)="toggleLookUp(l)"
-                  >
-                    @if (state.available && state.on) {
-                      <span aria-hidden="true">✓</span>
+              <div class="more" id="reads-more" [hidden]="!moreOpen()">
+                @if (pins().length > pinsShown) {
+                  <div class="reads" aria-label="More that the agent reads">
+                    @for (p of pins().slice(pinsShown); track p.key) {
+                      <ng-container
+                        *ngTemplateOutlet="pinTpl; context: { $implicit: p }"
+                      />
                     }
-                    {{ lookUpWords[l] }}
-                  </button>
+                  </div>
                 }
-                <span class="ah-hint look-up-note" id="look-up-note">{{
-                  lookUpText()
-                }}</span>
+                @if (canPin()) {
+                  <div class="reads">
+                    <span class="quick">
+                      <input
+                        ahInput
+                        type="text"
+                        autocomplete="off"
+                        maxlength="2000"
+                        aria-label="Pin quickly"
+                        placeholder="Paste a Jira key, Figma link or repository…"
+                        [value]="quick()"
+                        (input)="typeQuick(text($event))"
+                        (keydown.enter)="
+                          $event.preventDefault(); pinQuick(quickOptions()[0])
+                        "
+                        (keydown.escape)="typeQuick('')"
+                      />
+                      @if (quickOptions().length > 0) {
+                        <span
+                          class="quick-options"
+                          role="group"
+                          aria-label="Pin as"
+                        >
+                          @for (
+                            o of quickOptions();
+                            track o.kind;
+                            let first = $first
+                          ) {
+                            <button
+                              ahButton="ghost"
+                              size="sm"
+                              type="button"
+                              [attr.aria-disabled]="
+                                store.busy() ? 'true' : null
+                              "
+                              (click)="pinQuick(o)"
+                            >
+                              {{ kindWords[o.kind].label }} ·
+                              <span class="ref">{{ quickChip(o) }}</span>
+                              @if (first) {
+                                <kbd aria-hidden="true">Enter</kbd>
+                              }
+                            </button>
+                          }
+                        </span>
+                      }
+                      <span class="ah-hint" role="status">{{
+                        quickHint()
+                      }}</span>
+                    </span>
+                  </div>
+                }
+                <div
+                  class="reads"
+                  role="group"
+                  aria-labelledby="look-up-label"
+                  aria-describedby="look-up-note"
+                >
+                  <span class="label" id="look-up-label">Can look up</span>
+                  @for (l of lookUps; track l) {
+                    @let state = c.lookUp[l];
+                    <button
+                      class="ah-chip look-up"
+                      type="button"
+                      [attr.aria-pressed]="state.available && state.on"
+                      [attr.aria-disabled]="
+                        lookUpLocked(state.available) ? 'true' : null
+                      "
+                      (click)="toggleLookUp(l)"
+                    >
+                      @if (state.available && state.on) {
+                        <span aria-hidden="true">✓</span>
+                      }
+                      {{ lookUpWords[l] }}
+                    </button>
+                  }
+                  <span class="ah-hint look-up-note" id="look-up-note">{{
+                    lookUpText()
+                  }}</span>
+                </div>
               </div>
+              <ng-template #pinTpl let-p>
+                <span
+                  class="pin"
+                  [class.default]="p.teamDefault"
+                  [title]="p.title ?? (p.teamDefault ? 'Team default' : null)"
+                >
+                  <span class="kind">{{ p.kind }}</span>
+                  <span class="text">{{ p.text }}</span>
+                  @if (p.teamDefault) {
+                    <span class="from">team default</span>
+                  }
+                  @if (canPin()) {
+                    <button
+                      type="button"
+                      [attr.aria-label]="p.removeLabel"
+                      [attr.aria-disabled]="store.busy() ? 'true' : null"
+                      (click)="p.remove()"
+                    >
+                      ×
+                    </button>
+                  }
+                </span>
+              </ng-template>
             </section>
 
-            @if (commandFailure(); as problem) {
-              <ah-banner
-                [variant]="problem.variant"
-                [heading]="problem.heading"
-                [tech]="problem.tech ?? ''"
-                >{{ problem.text }}</ah-banner
+            <div class="log">
+              <div
+                #msgs
+                class="msgs"
+                role="log"
+                aria-label="Messages"
+                aria-live="off"
+                tabindex="0"
+                (scroll)="onScroll()"
               >
-            }
-
-            @for (t of c.turns; track t.n) {
-              <article class="turn" [attr.aria-label]="'Question ' + t.n">
-                <div class="question">
-                  <span class="who"
-                    >{{ t.askedByName ?? t.askedBy }} ·
-                    {{ ago(t.askedAt) }}</span
-                  >{{ t.question }}
-                </div>
-                @if (t.mentions.length > 0) {
-                  <div
-                    class="read-with"
-                    role="group"
-                    [attr.aria-label]="'Read with question ' + t.n"
+                @if (commandFailure(); as problem) {
+                  <ah-banner
+                    [variant]="problem.variant"
+                    [heading]="problem.heading"
+                    [tech]="problem.tech ?? ''"
+                    >{{ problem.text }}</ah-banner
                   >
-                    <span class="ah-hint">Read with this question:</span>
-                    @for (m of t.mentions; track m.kind + m.ref) {
-                      <span class="pin" [title]="m.ref">
-                        <span class="kind">{{ kindWords[m.kind].label }}</span>
-                        <span class="text">{{ mentionText(m) }}</span>
-                        @if (m.problem !== null) {
-                          <span class="from">not read: {{ m.problem }}</span>
-                        }
-                      </span>
-                      @if (m.problem === null && canPin() && !pinned(m)) {
-                        <button
-                          ahButton="ghost"
-                          size="sm"
-                          type="button"
-                          [attr.aria-label]="'Pin ' + m.ref"
-                          [attr.aria-disabled]="store.busy() ? 'true' : null"
-                          (click)="pinMention(t.n, m)"
-                        >
-                          Pin
-                        </button>
-                      }
-                    }
-                    @if (mentionProblem()?.n === t.n) {
-                      <span class="ah-hint" role="alert">{{
-                        mentionProblem()?.text
-                      }}</span>
-                    }
-                  </div>
                 }
-                <div class="ah-panel answer">
-                  <div class="meta">
-                    <b>Product analyst</b>
-                    <span>{{ statusWords[t.status] }}</span>
-                    @if (t.endedAt !== null) {
-                      <span>· {{ ago(t.endedAt) }}</span>
-                    }
-                  </div>
-                  @switch (t.status) {
-                    @case ('queued') {
-                      <span class="ah-hint" role="status"
-                        >Waiting for a session. A new one reads what is pinned
-                        first, which takes a minute or two.</span
-                      >
-                    }
-                    @case ('handed') {
-                      @if (t.liveText) {
-                        <ah-markdown [source]="t.liveText" />
-                      } @else {
-                        <span class="ah-hint" role="status">Reading…</span>
-                      }
-                      @if (t.activity.length > 0) {
-                        <ul
-                          class="activity"
-                          aria-label="What the agent is reading"
-                        >
-                          @for (a of latest(t.activity); track $index) {
-                            <li>{{ a }}</li>
-                          }
-                        </ul>
-                      }
-                    }
-                    @case ('failed') {
-                      <ah-banner
-                        variant="error"
-                        heading="The agent could not answer"
-                        >{{ t.error ?? 'The session failed.' }}</ah-banner
-                      >
-                    }
-                    @case ('cancelled') {
-                      <span class="ah-hint">{{
-                        t.error ?? 'Cancelled before it was answered.'
-                      }}</span>
-                    }
-                  }
-                  @if (t.answer) {
-                    <ah-markdown [source]="t.answer" />
-                  }
-                  @if (t.proposals.length > 0) {
-                    <div class="proposals">
-                      @for (p of t.proposals; track p.id) {
-                        <ah-proposal-card
-                          [proposal]="p"
-                          [number]="$index + 1"
-                          [canAct]="c.canAsk"
-                          [busy]="store.busy()"
-                          [defaultProject]="jiraProject()"
-                          [meetings]="store.meetings()"
-                          (createIssue)="createIssue(p.id, $event)"
-                          (addToMeeting)="addToMeeting(p.id, $event)"
-                          (meetingsWanted)="store.loadMeetings()"
-                          (apply)="applyChange(p.id)"
-                        />
-                      }
+
+                @for (t of c.turns; track t.n) {
+                  <article
+                    class="turn"
+                    tabindex="-1"
+                    [id]="'turn-' + t.n"
+                    [attr.data-turn]="t.n"
+                    [attr.aria-label]="'Question ' + t.n"
+                  >
+                    <div class="question">
+                      <span class="who"
+                        >{{ t.askedByName ?? t.askedBy }} ·
+                        {{ ago(t.askedAt) }}</span
+                      >{{ t.question }}
                     </div>
-                  }
-                  @if (t.questions.length > 0) {
-                    <div class="asks">
-                      @for (q of t.questions; track q.id) {
-                        <div
-                          class="ask"
-                          [attr.aria-label]="'Agent question ' + q.id"
-                        >
-                          <b class="text">{{ q.id }} · {{ q.text }}</b>
-                          <ul>
-                            @for (o of q.options; track $index) {
-                              <li class="text">
-                                <b>{{ o.label }}</b>
-                                @if (o.recommended) {
-                                  <span class="ah-tag ah-tag--accent"
-                                    >Recommended</span
-                                  >
-                                }
-                                — {{ o.detail }}
-                              </li>
+                    @if (t.mentions.length > 0) {
+                      <div
+                        class="read-with"
+                        role="group"
+                        [attr.aria-label]="'Read with question ' + t.n"
+                      >
+                        <span class="ah-hint">Read with this question:</span>
+                        @for (m of t.mentions; track m.kind + m.ref) {
+                          <span class="pin" [title]="m.ref">
+                            <span class="kind">{{
+                              kindWords[m.kind].label
+                            }}</span>
+                            <span class="text">{{ mentionText(m) }}</span>
+                            @if (m.problem !== null) {
+                              <span class="from"
+                                >not read: {{ m.problem }}</span
+                              >
                             }
-                          </ul>
+                          </span>
+                          @if (m.problem === null && canPin() && !pinned(m)) {
+                            <button
+                              ahButton="ghost"
+                              size="sm"
+                              type="button"
+                              [attr.aria-label]="'Pin ' + m.ref"
+                              [attr.aria-disabled]="
+                                store.busy() ? 'true' : null
+                              "
+                              (click)="pinMention(t.n, m)"
+                            >
+                              Pin
+                            </button>
+                          }
+                        }
+                        @if (mentionProblem()?.n === t.n) {
+                          <span class="ah-hint" role="alert">{{
+                            mentionProblem()?.text
+                          }}</span>
+                        }
+                      </div>
+                    }
+                    <div class="ah-panel answer">
+                      <div class="meta">
+                        <b>Product analyst</b>
+                        <span>{{ statusWords[t.status] }}</span>
+                        @if (t.endedAt !== null) {
+                          <span>· {{ ago(t.endedAt) }}</span>
+                        }
+                      </div>
+                      @switch (t.status) {
+                        @case ('queued') {
+                          <span class="ah-hint" role="status"
+                            >Waiting for a session. A new one reads what is
+                            pinned first, which takes a minute or two.</span
+                          >
+                        }
+                        @case ('handed') {
+                          @if (t.liveText) {
+                            <ah-markdown [source]="t.liveText" />
+                          } @else {
+                            <span class="ah-hint" role="status">Reading…</span>
+                          }
+                          @if (t.activity.length > 0) {
+                            <ul
+                              class="activity"
+                              aria-label="What the agent is reading"
+                            >
+                              @for (a of latest(t.activity); track $index) {
+                                <li>{{ a }}</li>
+                              }
+                            </ul>
+                          }
+                        }
+                        @case ('failed') {
+                          <ah-banner
+                            variant="error"
+                            heading="The agent could not answer"
+                            >{{ t.error ?? 'The session failed.' }}</ah-banner
+                          >
+                        }
+                        @case ('cancelled') {
+                          <span class="ah-hint">{{
+                            t.error ?? 'Cancelled before it was answered.'
+                          }}</span>
+                        }
+                      }
+                      @if (t.answer) {
+                        <ah-markdown [source]="t.answer" />
+                      }
+                      @if (t.proposals.length > 0) {
+                        <div class="proposals">
+                          @for (p of t.proposals; track p.id) {
+                            <ah-proposal-card
+                              [proposal]="p"
+                              [number]="$index + 1"
+                              [canAct]="c.canAsk"
+                              [busy]="store.busy()"
+                              [defaultProject]="jiraProject()"
+                              [meetings]="store.meetings()"
+                              (createIssue)="createIssue(p.id, $event)"
+                              (addToMeeting)="addToMeeting(p.id, $event)"
+                              (meetingsWanted)="store.loadMeetings()"
+                              (apply)="applyChange(p.id)"
+                            />
+                          }
                         </div>
                       }
-                      <span class="ah-hint">Answer in your next question.</span>
+                      @if (t.questions.length > 0) {
+                        <div class="asks">
+                          @for (q of t.questions; track q.id) {
+                            <div
+                              class="ask"
+                              [attr.aria-label]="'Agent question ' + q.id"
+                            >
+                              <b class="text">{{ q.id }} · {{ q.text }}</b>
+                              <ul>
+                                @for (o of q.options; track $index) {
+                                  <li class="text">
+                                    <b>{{ o.label }}</b>
+                                    @if (o.recommended) {
+                                      <span class="ah-tag ah-tag--accent"
+                                        >Recommended</span
+                                      >
+                                    }
+                                    — {{ o.detail }}
+                                  </li>
+                                }
+                              </ul>
+                            </div>
+                          }
+                          <span class="ah-hint"
+                            >Answer in your next question.</span
+                          >
+                        </div>
+                      }
                     </div>
+                  </article>
+                }
+              </div>
+              @if (!atEnd()) {
+                <button
+                  class="latest"
+                  ahButton
+                  type="button"
+                  (click)="goToLatest()"
+                >
+                  @if (unseen()) {
+                    <span class="dot" aria-hidden="true"></span>New answer ·
                   }
-                </div>
-              </article>
-            }
+                  Go to latest <span aria-hidden="true">↓</span>
+                </button>
+              }
+            </div>
 
             @if (c.canAsk) {
-              <form
-                class="ah-panel composer"
-                (submit)="$event.preventDefault(); ask()"
-              >
+              <form class="composer" (submit)="$event.preventDefault(); ask()">
                 <label class="ah-sr" for="conversation-question"
                   >Your question</label
                 >
-                <textarea
-                  id="conversation-question"
-                  class="ah-input"
-                  [attr.maxlength]="questionMax"
-                  [placeholder]="placeholder()"
-                  [value]="draft()"
-                  (input)="draft.set(text($event))"
-                  (keydown.control.enter)="ask()"
-                  (keydown.meta.enter)="ask()"
-                ></textarea>
-                @if (switchNote(); as note) {
-                  <p class="ah-hint switch" role="status">{{ note }}</p>
-                }
-                <span class="ah-hint">{{ spendNote() }}</span>
+                <div class="ask-row">
+                  <textarea
+                    #question
+                    id="conversation-question"
+                    class="ah-input"
+                    rows="1"
+                    [attr.maxlength]="questionMax"
+                    [placeholder]="placeholder()"
+                    [value]="draft()"
+                    (input)="draft.set(text($event))"
+                    (keydown.control.enter)="ask()"
+                    (keydown.meta.enter)="ask()"
+                  ></textarea>
+                  <button
+                    ahButton="primary"
+                    type="submit"
+                    [disabled]="refusal() !== null || draft().trim() === ''"
+                    [attr.aria-disabled]="store.busy() ? 'true' : null"
+                  >
+                    Send
+                  </button>
+                </div>
                 <div class="send-row">
                   <label class="pick"
                     >Model
@@ -871,16 +1079,16 @@ type ConversationMention = ConversationTurn['mentions'][number];
                       AIU</label
                     >
                   }
-                  <button
-                    class="push"
-                    ahButton="primary"
-                    type="submit"
-                    [disabled]="refusal() !== null || draft().trim() === ''"
-                    [attr.aria-disabled]="store.busy() ? 'true' : null"
+                  <span class="ah-hint spend" [title]="spendNote()">{{
+                    spendNote()
+                  }}</span>
+                  <span class="keys" aria-hidden="true"
+                    ><kbd>Ctrl</kbd> + <kbd>Enter</kbd> sends</span
                   >
-                    Send
-                  </button>
                 </div>
+                @if (switchNote(); as note) {
+                  <p class="ah-hint switch" role="status">{{ note }}</p>
+                }
                 @if (capProblem(); as problem) {
                   <span class="ah-hint" id="cap-problem" role="alert">{{
                     problem
@@ -919,6 +1127,30 @@ type ConversationMention = ConversationTurn['mentions'][number];
                 Cancel question
               </button>
             }
+            <section
+              class="questions-section"
+              aria-labelledby="questions-heading"
+            >
+              <h3 id="questions-heading">Questions</h3>
+              @if (c.turns.length === 0) {
+                <span class="ah-hint">None asked yet.</span>
+              } @else {
+                <ol class="questions">
+                  @for (t of c.turns; track t.n) {
+                    <li>
+                      <button
+                        type="button"
+                        [title]="t.question"
+                        [attr.aria-current]="current() === t.n ? 'true' : null"
+                        (click)="goToTurn(t.n)"
+                      >
+                        {{ t.question }}
+                      </button>
+                    </li>
+                  }
+                </ol>
+              }
+            </section>
             <h3>What it can do</h3>
             <ul class="can">
               <li>
@@ -1115,6 +1347,75 @@ export class ConversationView {
     return error === null ? null : conversationErrorView(error);
   });
 
+  protected readonly pinsShown = PINS_SHOWN;
+  /** Whether what is under "+N more" shows: the other pins, the quick box and the look-ups. */
+  protected readonly moreOpen = signal(false);
+  /** Everything the agent reads, in the order the line shows it. */
+  protected readonly pins = computed((): readonly PinView[] => {
+    const c = this.store.conversation();
+    if (c === null) return [];
+    const pins: PinView[] = [];
+    if (c.jiraProject !== null) {
+      const project = c.jiraProject;
+      pins.push({
+        key: `jira-project:${project}`,
+        kind: 'Jira project',
+        text: project,
+        title: null,
+        teamDefault: project === c.teamDefaults.jiraProject,
+        removeLabel: `Remove Jira project ${project} from this conversation`,
+        remove: () => this.removeProject(),
+      });
+    }
+    for (const space of c.confluenceSpaces)
+      pins.push({
+        key: `confluence-space:${space}`,
+        kind: 'Confluence space',
+        text: space,
+        title: null,
+        teamDefault: c.teamDefaults.confluenceSpaces.includes(space),
+        removeLabel: `Remove Confluence space ${space} from this conversation`,
+        remove: () => this.removeSpace(space),
+      });
+    for (const item of c.context)
+      pins.push({
+        key: `${item.kind}:${item.ref}`,
+        kind: CONTEXT_KIND_WORDS[item.kind].label,
+        text: contextChipText(item),
+        title: item.ref,
+        teamDefault: this.teamRepository(item),
+        removeLabel: `Unpin ${contextChipText(item)}`,
+        remove: () => void this.unpin(item),
+      });
+    return pins;
+  });
+  protected readonly moreLabel = computed(() => {
+    if (this.moreOpen()) return 'Show less';
+    const more = this.pins().length - PINS_SHOWN;
+    return more > 0 ? `+${more} more` : 'More';
+  });
+
+  /** Whether the messages are scrolled to their end (within `FOLLOW_SLACK`), which is when new text keeps them there. */
+  protected readonly atEnd = signal(true);
+  /** Whether an answer came in, or went on, while the reader was above the end. */
+  protected readonly unseen = signal(false);
+  /** The question the reader is at, for the side list. */
+  protected readonly current = computed(() => {
+    const turns = this.store.conversation()?.turns ?? [];
+    return this.atEnd() ? (turns.at(-1)?.n ?? null) : this.inView();
+  });
+  private readonly inView = signal<number | null>(null);
+  private readonly msgs = viewChild<ElementRef<HTMLElement>>('msgs');
+  private readonly questionBox =
+    viewChild<ElementRef<HTMLTextAreaElement>>('question');
+  /** What the messages last showed, to tell an arrival from a poll that changed nothing. */
+  private shown = { id: '', turns: 0, stamp: '' };
+  /** A question was just sent: the messages go to the end when its turn appears. */
+  private sent = false;
+  private observer: IntersectionObserver | null = null;
+  private observed = { root: null as Element | null, turns: 0 };
+  private readonly visible = new Set<number>();
+
   constructor() {
     void this.store.loadModels();
     effect(() => {
@@ -1125,6 +1426,9 @@ export class ConversationView {
         void this.store.open(id);
       });
     });
+    this.followLatest();
+    this.growQuestionBox();
+    this.watchQuestions();
     // A recipe's first question is offered as the text to send, once the conversation is read.
     effect(() => {
       const c = this.store.conversation();
@@ -1133,6 +1437,134 @@ export class ConversationView {
       untracked(() => {
         if (this.draft() === '') this.draft.set(RECIPE_WORDS[recipe].question);
       });
+    });
+  }
+
+  /**
+   * Keeps the messages at their latest: opening a conversation or sending a question goes to the end, and an answer
+   * being written stays at the end while the reader is there. A reader who scrolled up is left alone, and told by the
+   * "Go to latest" button when something came in.
+   */
+  private followLatest(): void {
+    afterRenderEffect({
+      write: () => {
+        const el = this.msgs()?.nativeElement;
+        const c = this.store.conversation();
+        if (el === undefined || c === null) return;
+        const last = c.turns.at(-1);
+        const stamp = [
+          last?.n,
+          last?.status,
+          last?.liveText?.length,
+          last?.answer?.length,
+          last?.proposals.length,
+        ].join('|');
+        const before = this.shown;
+        this.shown = { id: c.id, turns: c.turns.length, stamp };
+        untracked(() => {
+          if (before.id !== c.id) {
+            this.sent = false;
+            this.scrollEnd(el, 'instant');
+            this.unseen.set(false);
+            return;
+          }
+          const sent = this.sent && c.turns.length > before.turns;
+          if (sent) this.sent = false;
+          if (sent || (stamp !== before.stamp && this.atEnd()))
+            this.scrollEnd(el, 'instant');
+          else if (stamp !== before.stamp) this.unseen.set(true);
+        });
+      },
+    });
+  }
+
+  private scrollEnd(el: HTMLElement, behavior: ScrollBehavior): void {
+    const scrollable: Partial<Pick<HTMLElement, 'scrollTo'>> = el;
+    if (scrollable.scrollTo !== undefined)
+      el.scrollTo({ top: el.scrollHeight, behavior });
+    else el.scrollTop = el.scrollHeight;
+  }
+
+  protected onScroll(): void {
+    const el = this.msgs()?.nativeElement;
+    if (el === undefined) return;
+    const end =
+      el.scrollHeight - el.scrollTop - el.clientHeight <= FOLLOW_SLACK;
+    this.atEnd.set(end);
+    if (end) this.unseen.set(false);
+  }
+
+  /** Takes the reader to the latest message and back to the question box. */
+  protected goToLatest(): void {
+    const el = this.msgs()?.nativeElement;
+    if (el === undefined) return;
+    this.scrollEnd(el, 'auto');
+    (this.questionBox()?.nativeElement ?? el).focus({ preventScroll: true });
+  }
+
+  /** Scrolls to a question and moves focus there. */
+  protected goToTurn(n: number): void {
+    const turn = this.msgs()?.nativeElement.querySelector(`[data-turn="${n}"]`);
+    if (!(turn instanceof HTMLElement)) return;
+    if (typeof turn.scrollIntoView === 'function')
+      turn.scrollIntoView({ block: 'start' });
+    turn.focus({ preventScroll: true });
+    this.inView.set(n);
+  }
+
+  /** The question box is one line, growing with what is typed up to `COMPOSER_MAX` px, then it scrolls. */
+  private growQuestionBox(): void {
+    afterRenderEffect({
+      write: () => {
+        void this.draft();
+        const box = this.questionBox()?.nativeElement;
+        if (box === undefined) return;
+        box.style.height = 'auto';
+        if (box.scrollHeight > 0)
+          box.style.height = `${box.scrollHeight + box.offsetHeight - box.clientHeight}px`;
+      },
+    });
+  }
+
+  /** Marks the question the reader is at: the latest one that has begun in the top third of the messages. */
+  private watchQuestions(): void {
+    const view =
+      inject<ElementRef<HTMLElement>>(ElementRef).nativeElement.ownerDocument
+        .defaultView;
+    inject(DestroyRef).onDestroy(() => this.observer?.disconnect());
+    if (view === null || !('IntersectionObserver' in view)) return;
+    afterRenderEffect({
+      write: () => {
+        const root = this.msgs()?.nativeElement ?? null;
+        const turns = this.store.conversation()?.turns.length ?? 0;
+        if (root === null) {
+          this.observer?.disconnect();
+          this.observer = null;
+          this.observed = { root: null, turns: 0 };
+          return;
+        }
+        if (this.observed.root === root && this.observed.turns === turns)
+          return;
+        this.observer?.disconnect();
+        this.visible.clear();
+        const observer = new view.IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              const n = Number(entry.target.getAttribute('data-turn'));
+              if (entry.isIntersecting) this.visible.add(n);
+              else this.visible.delete(n);
+            }
+            this.inView.set(
+              this.visible.size === 0 ? null : Math.max(...this.visible)
+            );
+          },
+          { root, rootMargin: '0px 0px -66% 0px' }
+        );
+        for (const turn of root.querySelectorAll('[data-turn]'))
+          observer.observe(turn);
+        this.observer = observer;
+        this.observed = { root, turns };
+      },
     });
   }
 
@@ -1203,8 +1635,10 @@ export class ConversationView {
       if (!changed.ok) return;
     }
     this.picked.set(null);
+    this.sent = true;
     const result = await this.store.ask(question, typed.cap);
     if (result.ok) this.draft.set('');
+    else this.sent = false;
   }
 
   /** Picks a model (`""`: the team's); an effort the new model does not take goes back to its default. */

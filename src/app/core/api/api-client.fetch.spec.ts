@@ -1,5 +1,8 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import addFollowUpImage from '@testing/fixtures/addFollowUpImage.json';
+import getFollowUpGrill from '@testing/fixtures/getFollowUpGrill.json';
+import requestFollowUpGrill from '@testing/fixtures/requestFollowUpGrill.json';
 import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import getArtifactContent from '@testing/fixtures/getArtifactContent.json';
 import getHealth from '@testing/fixtures/getHealth.json';
@@ -308,6 +311,69 @@ describe('ApiClient over the real fetch backend', () => {
       expect(
         await TestBed.inject(ApiClient).deleteMeetingNoteImage('i1')
       ).toEqual({ ok: true, value: null });
+      expect(seen[0]?.init.method).toBe('DELETE');
+    });
+  });
+
+  describe('follow-up grills', () => {
+    it('asks with confirmSpend, reads the grill and discards it with a 204', async () => {
+      const client = TestBed.inject(ApiClient);
+      answerWith(() => json(requestFollowUpGrill, 202));
+      const body = {
+        confirmSpend: true as const,
+        brief: { text: 'Totals are rounded down.', criteria: [] },
+      };
+      expect(await client.requestFollowUpGrill('PROJ-97', body)).toEqual({
+        ok: true,
+        value: requestFollowUpGrill,
+      });
+      expect(seen[0]?.url).toBe('/api/v1/stories/PROJ-97/follow-up-grills');
+      expect(seen[0]?.init.method).toBe('POST');
+      expect(JSON.parse(String(seen[0]?.init.body))).toEqual(body);
+
+      answerWith(() => json(getFollowUpGrill));
+      expect(await client.getFollowUpGrill('g1')).toEqual({
+        ok: true,
+        value: getFollowUpGrill,
+      });
+      expect(seen[1]?.url).toBe('/api/v1/follow-up-grills/g1');
+
+      answerWith(() => Promise.resolve(new Response(null, { status: 204 })));
+      expect(await client.discardFollowUpGrill('g1')).toEqual({
+        ok: true,
+        value: null,
+      });
+      expect(seen[2]?.init.method).toBe('DELETE');
+    });
+  });
+
+  describe('follow-up screenshots', () => {
+    const PNG = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+    ]);
+
+    it('sends a screenshot as its raw bytes with its own Content-Type, and gives the staged image back', async () => {
+      answerWith(() => json(addFollowUpImage, 201));
+      const image = new Blob([PNG], { type: 'image/png' });
+      const result = await TestBed.inject(ApiClient).addFollowUpImage(
+        'PROJ-97',
+        image
+      );
+      expect(result).toEqual({ ok: true, value: addFollowUpImage });
+      expect(seen[0]?.url).toBe('/api/v1/stories/PROJ-97/follow-up-images');
+      expect(seen[0]?.init.method).toBe('POST');
+      expect(seen[0]?.init.body).toBe(image);
+      expect(
+        (seen[0]?.init.headers as Record<string, string>)['Content-Type']
+      ).toBe('image/png');
+    });
+
+    it('removes a screenshot with a 204 and no body', async () => {
+      answerWith(() => Promise.resolve(new Response(null, { status: 204 })));
+      expect(await TestBed.inject(ApiClient).deleteFollowUpImage('i1')).toEqual(
+        { ok: true, value: null }
+      );
+      expect(seen[0]?.url).toBe('/api/v1/follow-up-images/i1');
       expect(seen[0]?.init.method).toBe('DELETE');
     });
   });

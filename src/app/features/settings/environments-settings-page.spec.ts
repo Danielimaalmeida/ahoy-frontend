@@ -349,6 +349,77 @@ describe('the Environments section of Team settings', () => {
     expect(buttonNamed(dialog(), 'Add environment').disabled).toBe(true);
   });
 
+  it('adds a login over several pages as steps, an option only for a select, in the order arranged', async () => {
+    await answer();
+    buttonNamed(root, 'Add environment').click();
+    await settle();
+    typeNewEnvironment();
+    await settle();
+    type(field(dialog(), 'Login page'), 'https://api.test.example.com/login');
+    type(field(dialog(), 'User'), 'ahoy-reader');
+    type(field(dialog(), 'Password'), 'not a real password');
+    type(field(dialog(), 'Signed-in element'), '#account-menu');
+    for (let i = 0; i < 4; i++) buttonNamed(dialog(), 'Add step').click();
+    await settle();
+    choose(field<HTMLSelectElement>(dialog(), 'Step 1'), 'fill_password');
+    type(field(dialog(), 'Step 1 element'), 'input[type=password]');
+    choose(field<HTMLSelectElement>(dialog(), 'Step 2'), 'select');
+    await settle();
+    type(field(dialog(), 'Step 2 element'), '#callback_1');
+    type(field(dialog(), 'Step 2 option'), '0');
+    choose(field<HTMLSelectElement>(dialog(), 'Step 3'), 'fill_user');
+    type(field(dialog(), 'Step 3 element'), "input[placeholder='User Name']");
+    type(field(dialog(), 'Step 4 element'), "input[value='Submit']");
+    await settle();
+    buttonNamed(dialog(), 'Move step 3 up').click();
+    await settle();
+    buttonNamed(dialog(), 'Move step 2 up').click();
+    await settle();
+    buttonNamed(dialog(), 'Add environment').click();
+    await settle();
+    const post = http.expectOne({
+      method: 'POST',
+      url: `${BASE}/settings/environments`,
+    });
+    expect(post.request.body.signIn.steps).toEqual([
+      { action: 'fill_user', selector: "input[placeholder='User Name']" },
+      { action: 'fill_password', selector: 'input[type=password]' },
+      { action: 'select', selector: '#callback_1', value: '0' },
+      { action: 'click', selector: "input[value='Submit']" },
+    ]);
+    expect(requestViolations('addEnvironment', post.request.body)).toEqual([]);
+    post.flush(addEnvironment, { status: 201, statusText: 'OK' });
+    await settle();
+    await answer();
+  });
+
+  it('refuses steps that never type the password, and sends none once they are removed', async () => {
+    await answer();
+    buttonNamed(root, 'Edit TEST').click();
+    await settle();
+    buttonNamed(dialog(), 'Add step').click();
+    await settle();
+    type(field(dialog(), 'Step 1 element'), '#next');
+    await settle();
+    expect(text(dialog())).toContain(
+      'The steps type the password exactly once.'
+    );
+    expect(buttonNamed(dialog(), 'Save').disabled).toBe(true);
+    buttonNamed(dialog(), 'Remove step 1').click();
+    await settle();
+    expect(buttonNamed(dialog(), 'Save').disabled).toBe(false);
+    buttonNamed(dialog(), 'Save').click();
+    await settle();
+    const put = http.expectOne({
+      method: 'PUT',
+      url: `${BASE}/settings/environments/${TEST.id}`,
+    });
+    expect(put.request.body.signIn).not.toHaveProperty('steps');
+    put.flush(updateEnvironment);
+    await settle();
+    await answer();
+  });
+
   it('saves an edit with every field again and keeps the password left empty', async () => {
     await answer();
     buttonNamed(root, 'Edit TEST').click();

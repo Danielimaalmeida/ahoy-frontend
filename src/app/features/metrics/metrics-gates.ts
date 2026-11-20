@@ -9,6 +9,7 @@ import {
 import { EmptyState } from '@ui/empty-state/empty-state';
 import { Panel, PanelBody, PanelHead } from '@ui/panel/panel';
 import { Api, Table } from '@ui/table/table';
+import { formatAiu } from '@domain/aiu';
 import { MetricsStore } from './metrics-store';
 
 /** The parts of a gate's outcome bar, in the legend's order. */
@@ -204,6 +205,59 @@ const OUTCOME_PARTS = [
 
         <ah-panel>
           <ah-panel-head
+            heading="Follow-up voyages"
+            subtitle="Delivered work that was continued after QA, and what each lineage has spent"
+          />
+          @if (r.followUps.started === 0) {
+            <ah-panel-body
+              ><ah-empty-state
+                heading="No follow-up voyage started in this period"
+            /></ah-panel-body>
+          } @else {
+            <ah-panel-body>
+              <p class="followups-summary" data-testid="followups-summary">
+                {{ r.followUps.started }}
+                {{ r.followUps.started === 1 ? 'follow-up' : 'follow-ups' }}
+                in {{ r.followUps.lineages }}
+                {{ r.followUps.lineages === 1 ? 'lineage' : 'lineages' }},
+                {{ r.followUps.fastPath }} on the fast path;
+                {{ r.followUps.ceilingRaises }}
+                {{
+                  r.followUps.ceilingRaises === 1
+                    ? 'ceiling raise'
+                    : 'ceiling raises'
+                }}.
+              </p>
+            </ah-panel-body>
+            <div class="scroll">
+              <table ahTable>
+                <thead>
+                  <tr>
+                    <th scope="col">Lineage</th>
+                    <th scope="col" class="num">Follow-ups</th>
+                    <th scope="col" class="num">AIU</th>
+                    <th scope="col" class="num">Ceiling raises</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (l of r.followUps.top; track l.rootKey) {
+                    <tr>
+                      <th scope="row">
+                        <span ahApi>{{ l.rootKey }}</span>
+                      </th>
+                      <td class="num">{{ l.followUps }}</td>
+                      <td class="num">{{ aiu(l.nanoAiu) }}</td>
+                      <td class="num">{{ l.ceilingRaises }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </ah-panel>
+
+        <ah-panel>
+          <ah-panel-head
             heading="Human gates and waiting time"
             subtitle="From the moment a voyage needs a person until someone acts"
           />
@@ -255,6 +309,7 @@ export class MetricsGates {
   protected readonly store = inject(MetricsStore);
   protected readonly percent = formatPercent;
   protected readonly seconds = formatSeconds;
+  protected readonly aiu = formatAiu;
   protected readonly barWidth = barWidth;
   protected readonly wait = waitLabel;
   protected readonly outcomes = outcomesLine;

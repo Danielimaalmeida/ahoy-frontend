@@ -7,12 +7,13 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   tag:
     if: startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')
     name: 'Create tag and bump package.json version'
-    uses: sflp/r3da_the_guardians_workflows/.github/workflows/semver-increment-version-and-create-tag-reusable.yml@main
+    uses: fio/fio-reusable-workflows/.github/workflows/semver-increment-version-and-create-tag-reusable.yml@main
     with:
       package-file: package.json
       bump-file: package.json
@@ -22,10 +23,10 @@ jobs:
     if: startsWith(github.event.head_commit.message, 'feat') || startsWith(github.event.head_commit.message, 'fix')
     needs: tag
     name: 'Build docker image and publish to TEST ACR'
-    uses: sflp/r3da_the_guardians_workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
+    uses: fio/fio-reusable-workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
     with:
-      runner: "['atc-ubuntu-latest']"
-      node-version: ${{ vars.FIO_NODE_VERSION }}
+      runner: "['acme-ubuntu-24.04-medium']"
+      node-version: ${{ vars.NODE_VERSION }}
       registry-url: ${{ vars.FIO_ACR_URL_TEST }}
       registry-username: ${{ vars.FIO_ACR_USERNAME_TEST }}
       environment: 'test'

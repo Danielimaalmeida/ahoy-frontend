@@ -1,0 +1,37 @@
+{
+  "key": "PROJ-123",
+  "rootKey": "PROJ-123",
+  "nextKey": "PROJ-123-FU1",
+  "canCreateInJira": true,
+  "issueTypes": ["Bug", "Defect", "Task", "Story"],
+  "linkedDefects": [
+    {
+      "key": "QA-410",
+      "summary": "VAT number missing on the invoice export",
+      "issueType": "Bug",
+      "status": "Open",
+      "priority": "High"
+    }
+  ],
+  "canStart": true,
+  "revisions": {
+    "used": 0,
+    "ceiling": 4
+  },
+  "repos": [
+    {
+      "alias": "api",
+      "slug": "acme/api",
+      "inEarlierPlan": true
+    },
+    {
+      "alias": "web",
+      "slug": "acme/web",
+      "inEarlierPlan": true
+    }
+  ],
+  "suggestion": {
+    "route": "planning",
+    "reasons": ["The change touches more than one repository, or none yet"]
+  }
+}

@@ -5,8 +5,8 @@ on: [pull_request]
 jobs:
   unit-tests:
     name: unit tests
-    uses: ATC-GitHub/reusable-workflows/.github/workflows/vitest-coverage-reusable.yml@v1.3
+    uses: fio/fio-reusable-workflows/.github/workflows/vitest-coverage-reusable-atc.yml@main
     with:
-      runner: "['atc-ubuntu-latest']"
+      runner: "['acme-ubuntu-24.04-medium']"
       node-version: '24'
     secrets: inherit

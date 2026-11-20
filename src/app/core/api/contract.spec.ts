@@ -75,6 +75,9 @@ import updateSonarRepository from '@testing/fixtures/updateSonarRepository.json'
 import updateSonarServer from '@testing/fixtures/updateSonarServer.json';
 import addMeetingNote from '@testing/fixtures/addMeetingNote.json';
 import addMeetingNoteAnswer from '@testing/fixtures/addMeetingNoteAnswer.json';
+import addFollowUpImage from '@testing/fixtures/addFollowUpImage.json';
+import getFollowUpGrill from '@testing/fixtures/getFollowUpGrill.json';
+import requestFollowUpGrill from '@testing/fixtures/requestFollowUpGrill.json';
 import addMeetingNoteImage from '@testing/fixtures/addMeetingNoteImage.json';
 import addMeetingTopic from '@testing/fixtures/addMeetingTopic.json';
 import cancelMeeting from '@testing/fixtures/cancelMeeting.json';
@@ -138,6 +141,10 @@ import refreshDesign from '@testing/fixtures/refreshDesign.json';
 import getStoryPrComments from '@testing/fixtures/getStoryPrComments.json';
 import assessComments from '@testing/fixtures/assessComments.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import previewFollowUp from '@testing/fixtures/previewFollowUp.json';
+import startFollowUp from '@testing/fixtures/startFollowUp.json';
+import getStoryLineage from '@testing/fixtures/getStoryLineage.json';
+import raiseRevisionCeiling from '@testing/fixtures/raiseRevisionCeiling.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
@@ -231,6 +238,10 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['resumeStory', resumeStory],
   ['setStoryBudget', setStoryBudget],
   ['refreshIntake', refreshIntake],
+  ['previewFollowUp', previewFollowUp],
+  ['startFollowUp', startFollowUp],
+  ['getStoryLineage', getStoryLineage],
+  ['raiseRevisionCeiling', raiseRevisionCeiling],
   ['refreshDesign', refreshDesign],
   ['getStoryPrComments', getStoryPrComments],
   ['assessComments', assessComments],
@@ -280,6 +291,9 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['setMeetingNoteDone', setMeetingNoteDone],
   ['addMeetingNoteAnswer', addMeetingNoteAnswer],
   ['addMeetingNoteImage', addMeetingNoteImage],
+  ['addFollowUpImage', addFollowUpImage],
+  ['requestFollowUpGrill', requestFollowUpGrill],
+  ['getFollowUpGrill', getFollowUpGrill],
   ['listMeetingNotes', listMeetingNotes],
   ['listMeetingSeries', listMeetingSeries],
   ['createMeetingSeries', createMeetingSeries],
@@ -377,6 +391,8 @@ const NO_CONTENT_OPERATIONS: readonly string[] = [
   'deleteMeetingTopic',
   'deleteMeetingNote',
   'deleteMeetingNoteImage',
+  'deleteFollowUpImage',
+  'discardFollowUpGrill',
   'discardMeetingStoryDraft',
   'deleteCrewMember',
   'deleteCrewTimeOff',
@@ -402,6 +418,7 @@ const NOT_IN_THE_CLIENT_YET: readonly string[] = [
   'reopenWork',
   'unblockStory',
   'streamEvents',
+  'getFollowUpImage',
   'getRunInput',
   'getRunInputContent',
   'streamConversation',
@@ -429,7 +446,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 4).toBe(
-      173
+      182
     );
   });
 
@@ -491,6 +508,15 @@ describe('each fixture is a valid successful answer of its operation', () => {
     expect(op.requestSchema).toBeNull();
   });
 
+  it('addFollowUpImage: the contract takes the raw bytes in one of the four formats, not JSON', () => {
+    const op = operationNamed('addFollowUpImage');
+    expect(members(op.requestMediaTypes)).toEqual(
+      members(MEETING_NOTE_IMAGE_TYPES)
+    );
+    expect(op.requestSchema).toBeNull();
+    expect(op.successStatuses).toEqual(['201']);
+  });
+
   it('the commands with no answer body (meetings and crew): the contract answers 204 with no body', () => {
     for (const id of NO_CONTENT_OPERATIONS) {
       const op = operationNamed(id);
@@ -540,6 +566,8 @@ describe('each fixture is a valid successful answer of its operation', () => {
     const statusOf = (id: string) =>
       operationNamed(id).successStatuses.filter((s) => s !== '304');
     expect(statusOf('startStory')).toEqual(['201']);
+    expect(statusOf('startFollowUp')).toEqual(['201']);
+    expect(statusOf('raiseRevisionCeiling')).toEqual(['200']);
     for (const id of [
       'stopStory',
       'cancelStory',

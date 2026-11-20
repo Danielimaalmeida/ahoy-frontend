@@ -9,6 +9,7 @@ import {
   otherOriginsOf,
   selectorOf,
   signInLabel,
+  signInStepsOf,
   signInTestView,
 } from './environments';
 import { describeSettingsEvent } from './settings';
@@ -127,6 +128,62 @@ describe('selectorOf', () => {
     expect(selectorOf('a'.repeat(301))).toEqual({
       problem: 'At most 300 characters.',
     });
+  });
+});
+
+describe('signInStepsOf', () => {
+  const step = (
+    action: 'fill_user' | 'fill_password' | 'select' | 'click',
+    selector: string,
+    value = ''
+  ) => ({ action, selector, value });
+
+  it('reads no steps as none, and trims the rest, keeping an option for a select only', () => {
+    expect(signInStepsOf([])).toEqual({ value: null });
+    expect(
+      signInStepsOf([
+        step('fill_user', " input[placeholder='User Name'] ", 'ignored'),
+        step('click', "input[value='NEXT']"),
+        step('select', '#callback_1', ' 0 '),
+        step('fill_password', 'input[type=password]'),
+        step('click', "input[value='Submit']"),
+      ])
+    ).toEqual({
+      value: [
+        { action: 'fill_user', selector: "input[placeholder='User Name']" },
+        { action: 'click', selector: "input[value='NEXT']" },
+        { action: 'select', selector: '#callback_1', value: '0' },
+        { action: 'fill_password', selector: 'input[type=password]' },
+        { action: 'click', selector: "input[value='Submit']" },
+      ],
+    });
+  });
+
+  it('refuses a step without its element or option, a password typed other than once, the user twice and too many steps', () => {
+    const password = step('fill_password', '#pw');
+    expect(signInStepsOf([password, step('click', ' ')])).toEqual({
+      problem:
+        'Step 2: give the CSS selector it waits for, at most 300 characters.',
+    });
+    expect(signInStepsOf([step('select', '#how'), password])).toEqual({
+      problem: 'Step 1: say which option it picks, at most 200 characters.',
+    });
+    expect(signInStepsOf([step('click', '#next')])).toEqual({
+      problem: 'The steps type the password exactly once.',
+    });
+    expect(signInStepsOf([password, password])).toEqual({
+      problem: 'The steps type the password exactly once.',
+    });
+    expect(
+      signInStepsOf([
+        step('fill_user', '#u'),
+        step('fill_user', '#u'),
+        password,
+      ])
+    ).toEqual({ problem: 'The steps type the user once at most.' });
+    expect(
+      signInStepsOf([password, ...Array(10).fill(step('click', '#next'))])
+    ).toEqual({ problem: 'At most 10 steps.' });
   });
 });
 

@@ -242,6 +242,7 @@ export const GATE_OUTCOMES = listOf<GateOutcome>()([
   'reject',
   'approve',
   'send_back',
+  'reopen',
 ]);
 
 /** What a person can decide at a human gate (`DecisionRequest.decision`). */
@@ -409,6 +410,76 @@ export type DiagnosisFinding = Schemas['DiagnosisFinding'];
 
 /** Answer of `getStoryDiagnosis`: why a story stands where it stands; no findings unless it is halted. */
 export type Diagnosis = Schemas['Diagnosis'];
+
+/** A follow-up voyage's link to the voyage it continues: the root, its number, where it came from and its route. */
+export type StoryFollowUp = Schemas['StoryFollowUp'];
+
+/** How a follow-up starts: through planning, or straight to implementation (`fast_path`). */
+export type FollowUpRoute = Schemas['FollowUpRoute'];
+export const FOLLOW_UP_ROUTES = listOf<FollowUpRoute>()([
+  'planning',
+  'fast_path',
+]);
+
+/** Where a follow-up came from: an existing Jira issue, or only Ahoy (key `<ROOT>-FU<n>`). */
+export type FollowUpSource = Schemas['FollowUpSource'];
+export const FOLLOW_UP_SOURCES = listOf<FollowUpSource>()(['jira', 'ahoy']);
+
+/** The types of Jira issue Ahoy can create for a follow-up; the first is the usual one. */
+export type FollowUpIssueType = Schemas['FollowUpIssueType'];
+export const FOLLOW_UP_ISSUE_TYPES = listOf<FollowUpIssueType>()([
+  'Bug',
+  'Defect',
+  'Task',
+  'Story',
+]);
+
+/** An open Bug or Defect linked in Jira to the voyage, offered as the follow-up's issue. */
+export type LinkedDefect = Schemas['LinkedDefect'];
+
+/** What the person adds to a follow-up: what is new or missing, and the criteria that add to the earlier ones. */
+export type FollowUpBrief = Schemas['FollowUpBrief'];
+
+/** Body of `startFollowUp`. May spend AIU: `confirmSpend` must be true. */
+export type StartFollowUpRequest = Schemas['StartFollowUpRequest'];
+
+/** `working`, then `ready` with its questions, or `failed` (`FollowUpGrillStatus`). */
+export type FollowUpGrillStatus = Schemas['FollowUpGrillStatus'];
+export const FOLLOW_UP_GRILL_STATUSES = listOf<FollowUpGrillStatus>()([
+  'working',
+  'ready',
+  'failed',
+]);
+
+/** An agent's questions about the brief of a follow-up, asked before it starts (`FollowUpGrill`). */
+export type FollowUpGrill = Schemas['FollowUpGrill'];
+
+/** Body of `requestFollowUpGrill`; it may spend AIU, so `confirmSpend` is required. */
+export type FollowUpGrillRequest = Schemas['FollowUpGrillRequest'];
+
+/** A screenshot staged for a follow-up's brief (`FollowUpImage`); `startFollowUp` claims it by its id. */
+export type FollowUpImage = Schemas['FollowUpImage'];
+
+/** Query of `previewFollowUp`: what the brief looks like, for Ahoy's suggestion of the route. */
+export type FollowUpPreviewQuery = NonNullable<
+  operations['previewFollowUp']['parameters']['query']
+>;
+
+/** Answer of `previewFollowUp`: whether a follow-up can start, the rounds left, the repositories and Ahoy's suggested route. */
+export type FollowUpPreview = Schemas['FollowUpPreview'];
+
+/** The revision rounds a voyage and its follow-ups used together, and the most they may use. */
+export type RevisionRounds = Schemas['RevisionRounds'];
+
+/** Answer of `getStoryLineage`: the root and its follow-ups, and the rounds they share. */
+export type StoryLineage = Schemas['StoryLineage'];
+
+/** Body of `raiseRevisionCeiling`. May spend AIU: `confirmSpend` must be true. */
+export type RaiseRevisionCeilingRequest =
+  Schemas['RaiseRevisionCeilingRequest'];
+
+/** Answer of `raiseRevisionCeiling`: the story and the new ceiling. */
+export type RevisionCeilingRaised = Schemas['RevisionCeilingRaised'];
 
 /** Body of `refreshIntake`: sends a story in planning or plan review back to intake. `confirmSpend` must be true. */
 export type RefreshIntakeRequest = Schemas['RefreshIntakeRequest'];
@@ -1264,6 +1335,15 @@ export type EnvironmentRequest = Schemas['EnvironmentRequest'];
 
 /** Body of `updateEnvironment`: every field again, with the version read. */
 export type EnvironmentChange = Schemas['EnvironmentChange'];
+
+/** One step of a login over several pages: types the user or the password, picks an option, or clicks. */
+export type SignInStep = Schemas['SignInStep'];
+export const SIGN_IN_STEP_ACTIONS = listOf<SignInStep['action']>()([
+  'fill_user',
+  'fill_password',
+  'select',
+  'click',
+]);
 
 /** How an environment signs in, as a request names it; the password only when it is set or replaced. */
 export type SignInRequest = Schemas['SignInRequest'];

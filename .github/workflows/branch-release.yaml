@@ -11,14 +11,15 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   publish-branch-container:
     name: 'Build docker image and publish to TEST ACR'
-    uses: sflp/r3da_the_guardians_workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
+    uses: fio/fio-reusable-workflows/.github/workflows/angular-build-and-publish-reusable.yml@main
     with:
-      runner: "['atc-ubuntu-latest']"
-      node-version: ${{ vars.FIO_NODE_VERSION }}
+      runner: "['acme-ubuntu-24.04-medium']"
+      node-version: ${{ vars.NODE_VERSION }}
       registry-url: ${{ vars.FIO_ACR_URL_TEST }}
       registry-username: ${{ vars.FIO_ACR_USERNAME_TEST }}
       type: 'test'
@@ -30,7 +31,7 @@ jobs:
     name: 'Validate image tag output'
     needs: publish-branch-container
     if: ${{ inputs['update-ops-tag'] }}
-    runs-on: ubuntu-latest
+    runs-on: acme-ubuntu-24.04-medium
     steps:
       - name: Ensure image-tag output is available
         env:
@@ -47,7 +48,7 @@ jobs:
       - publish-branch-container
       - validate-image-tag
     if: ${{ inputs['update-ops-tag'] }}
-    uses: sflp/r3da_the_guardians_workflows/.github/workflows/update-ops-tag-reusable.yml@main
+    uses: fio/fio-reusable-workflows/.github/workflows/update-ops-tag-reusable.yml@main
     with:
       image-tag: ${{ needs.publish-branch-container.outputs.image-tag }}
       service: fio-ahoy-frontend
@@ -56,5 +57,6 @@ jobs:
       source-repository: ${{ github.repository }}
       source-workflow: ${{ github.workflow }}
       source-run-id: ${{ github.run_id }}
+      app-id: ${{ vars.RELEASE_BOT_APP_ID }}
     secrets:
-      ops-deploy-key: ${{ secrets.FIO_OPS_DEVELOP_DEPLOY_KEY }}
+      APP_PRIVATE_KEY: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}

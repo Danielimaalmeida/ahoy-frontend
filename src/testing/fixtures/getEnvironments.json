@@ -25,6 +25,7 @@
         "userSelector": null,
         "passwordSelector": null,
         "submitSelector": null,
+        "steps": null,
         "signedInUrlPattern": "https://test.example.com/app/*",
         "signedInSelector": null
       },

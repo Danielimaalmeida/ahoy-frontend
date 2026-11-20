@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 import { ownerLabel, shortSha } from '@domain/identifiers';
 import { BudgetMeter } from '@ui/budget-meter/budget-meter';
 import { Button } from '@ui/button/button';
+import { Source } from '@ui/tags/source';
 import { PhaseStepper } from '@ui/phase-stepper/phase-stepper';
 import { StatusBadge } from '@ui/status-badge/status-badge';
 import { JiraLinks } from '@core/stores/jira-links';
@@ -50,6 +51,7 @@ import {
     DeployAllButton,
     PhaseStepper,
     RouterLink,
+    Source,
     StatusBadge,
   ],
   styleUrl: './voyage-header.scss',
@@ -97,6 +99,22 @@ import {
               <h1 id="voyage-title" class="header__title">
                 {{ v.story.title ?? v.story.key }}
               </h1>
+              @if (v.followUp; as fu) {
+                <p class="header__follow-up">
+                  Follow-up {{ fu.number }} of
+                  <a class="ah-key" [routerLink]="['/voyages', fu.rootKey]">{{
+                    fu.rootKey
+                  }}</a>
+                  @if (fu.source === 'ahoy') {
+                    <ah-source>Not in Jira</ah-source>
+                  }
+                  <span class="ah-muted">{{
+                    fu.route === 'fast_path'
+                      ? 'straight to implementation'
+                      : 'through planning'
+                  }}</span>
+                </p>
+              }
             </div>
             <div class="header__actions">
               @if (v.story.phase === 'blocked') {
@@ -249,6 +267,31 @@ import {
                 <dd>{{ round }}</dd>
               </div>
             }
+            @if (v.lineage; as lineage) {
+              <div>
+                <dt>Revision rounds · follow-ups</dt>
+                <dd>{{ lineage.used }} of {{ lineage.ceiling }}</dd>
+              </div>
+              @if (lineage.others.length > 0) {
+                <div>
+                  <dt>Lineage</dt>
+                  <dd>
+                    <ul class="header__prs">
+                      @for (other of lineage.others; track other.key) {
+                        <li>
+                          <a
+                            class="ah-key"
+                            [routerLink]="['/voyages', other.key]"
+                            >{{ other.key }}</a
+                          >
+                          <span class="ah-muted">{{ other.status }}</span>
+                        </li>
+                      }
+                    </ul>
+                  </dd>
+                </div>
+              }
+            }
             @if (v.pullRequests.length > 0) {
               <div>
                 <dt>Pull requests</dt>
@@ -328,9 +371,13 @@ export class VoyageHeader {
           this.context.counts().runs === null ? null : this.context.runs()
         ),
         design: canRefreshDesign(story, this.context.design()),
+        startFollowUp: this.context.canStartFollowUp(),
+        raiseCeiling: this.ceilingReached(),
       }),
       run: currentRunView(story.currentRunId, this.context.runs()),
       round: this.roundText(),
+      followUp: story.followUp ?? null,
+      lineage: this.lineageView(story.key),
       pullRequests: (this.context.state()?.pullRequests ?? []).map((pr) => ({
         url: pr.url,
         label: pullRequestLabel(pr),
@@ -339,6 +386,33 @@ export class VoyageHeader {
       sha: shortSha(story.controlSha),
     };
   });
+
+  /** The rounds the lineage shares and its other voyages; null while it is not read or the voyage is on its own. */
+  private lineageView(key: string): {
+    readonly used: number;
+    readonly ceiling: number;
+    readonly others: readonly {
+      readonly key: string;
+      readonly status: string;
+    }[];
+  } | null {
+    const lineage = this.context.lineage();
+    if (lineage === null) return null;
+    const others = lineage.items
+      .filter((item) => item.key !== key)
+      .map((item) => ({
+        key: item.key,
+        status: `${item.status} · ${item.phase}`,
+      }));
+    if (others.length === 0 && lineage.revisions.used === 0) return null;
+    return { ...lineage.revisions, others };
+  }
+
+  /** Whether the lineage has used all its revision rounds, so that more need a raise of the ceiling. */
+  private ceilingReached(): boolean {
+    const revisions = this.context.lineage()?.revisions;
+    return revisions !== undefined && revisions.used >= revisions.ceiling;
+  }
 
   /** "2 of 4", shown while a gate is open or once a plan has been sent back. */
   private roundText(): string | null {
@@ -365,6 +439,10 @@ export class VoyageHeader {
         return this.openRefreshIntake();
       case 'design':
         return this.openRefreshDesign();
+      case 'followUp':
+        return this.openStartFollowUp();
+      case 'raiseCeiling':
+        return this.openRaiseCeiling();
       case 'stop':
         return this.openStop();
       case 'cancel':
@@ -472,6 +550,14 @@ export class VoyageHeader {
 
   protected openRestart(): void {
     this.dialogs.restart(this.context);
+  }
+
+  protected openStartFollowUp(): void {
+    this.dialogs.startFollowUp(this.context);
+  }
+
+  protected openRaiseCeiling(): void {
+    this.dialogs.raiseRevisionCeiling(this.context);
   }
 
   protected openResume(): void {

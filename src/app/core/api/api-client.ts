@@ -20,6 +20,11 @@ import {
 import type { Guard } from './guard-kit';
 import {
   isAnswerAccepted,
+  isFollowUpGrill,
+  isFollowUpImage,
+  isFollowUpPreview,
+  isRevisionCeilingRaised,
+  isStoryLineage,
   isArtifactList,
   isDecisionAccepted,
   isAgentDiagnosisList,
@@ -206,7 +211,16 @@ import type {
   KnowledgeReviewRequest,
   GateRecord,
   Health,
+  FollowUpGrill,
+  FollowUpGrillRequest,
+  FollowUpImage,
+  FollowUpPreview,
+  FollowUpPreviewQuery,
   ListEventsQuery,
+  RaiseRevisionCeilingRequest,
+  RevisionCeilingRaised,
+  StartFollowUpRequest,
+  StoryLineage,
   ListStoriesQuery,
   JiraBacklog,
   ListMeetingNotesQuery,
@@ -605,6 +619,130 @@ export class ApiClient {
       `/stories/${segment(key)}/refresh-intake`,
       body,
       isStory
+    );
+  }
+
+  /**
+   * What a follow-up of a done story would be: whether it can start, the revision rounds left, the repositories and
+   * Ahoy's suggested route for the size of the brief. Spends nothing.
+   */
+  previewFollowUp(
+    key: string,
+    query: FollowUpPreviewQuery = {}
+  ): Promise<ApiResult<FollowUpPreview>> {
+    let params = new HttpParams();
+    if (query.criteria !== undefined)
+      params = params.set('criteria', String(query.criteria));
+    if (query.briefChars !== undefined)
+      params = params.set('briefChars', String(query.briefChars));
+    if (query.repos !== undefined) params = params.set('repos', query.repos);
+    return this.get(
+      'previewFollowUp',
+      `/stories/${segment(key)}/follow-up-preview`,
+      isFollowUpPreview,
+      params
+    );
+  }
+
+  /**
+   * Stages a screenshot (a PNG, JPEG, WebP or GIF of at most 2 MiB) for a follow-up of a done story; the body is the
+   * image itself. The answer (201) is the staged image, which `startFollowUp` claims with its id.
+   */
+  addFollowUpImage(
+    key: string,
+    image: Blob
+  ): Promise<ApiResult<FollowUpImage>> {
+    return this.send(
+      'addFollowUpImage',
+      isFollowUpImage,
+      this.http.post<unknown>(
+        this.url(`/stories/${segment(key)}/follow-up-images`),
+        image,
+        {
+          observe: 'response',
+          timeout: IMAGE_TIMEOUT_MS,
+          headers: new HttpHeaders({ 'Content-Type': image.type }),
+        }
+      )
+    );
+  }
+
+  /** Removes a screenshot nobody has used yet. The answer (204) has no body. */
+  deleteFollowUpImage(imageId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'deleteFollowUpImage',
+      `/follow-up-images/${segment(imageId)}`
+    );
+  }
+
+  /**
+   * Asks an agent to question the brief of a follow-up before it starts ("Grill me"). May spend AIU: needs
+   * `confirmSpend`. The answer (202) is the grill, `working`; poll `getFollowUpGrill`.
+   */
+  requestFollowUpGrill(
+    key: string,
+    body: FollowUpGrillRequest
+  ): Promise<ApiResult<FollowUpGrill>> {
+    return this.post(
+      'requestFollowUpGrill',
+      `/stories/${segment(key)}/follow-up-grills`,
+      body,
+      isFollowUpGrill
+    );
+  }
+
+  /** One follow-up grill, with its questions once the agent has asked them. */
+  getFollowUpGrill(grillId: string): Promise<ApiResult<FollowUpGrill>> {
+    return this.get(
+      'getFollowUpGrill',
+      `/follow-up-grills/${segment(grillId)}`,
+      isFollowUpGrill
+    );
+  }
+
+  /** Discards a grill, stopping its run when the agent is still asking. The answer (204) has no body. */
+  discardFollowUpGrill(grillId: string): Promise<ApiResult<null>> {
+    return this.delete(
+      'discardFollowUpGrill',
+      `/follow-up-grills/${segment(grillId)}`
+    );
+  }
+
+  /**
+   * Starts a follow-up voyage of a done story, with what is new or missing. It costs one revision round of the root
+   * and may spend AIU. The answer (201) is the new story, in intake.
+   */
+  startFollowUp(
+    key: string,
+    body: StartFollowUpRequest
+  ): Promise<ApiResult<Story>> {
+    return this.post(
+      'startFollowUp',
+      `/stories/${segment(key)}/follow-ups`,
+      body,
+      isStory
+    );
+  }
+
+  /** The story's root and every follow-up, with the revision rounds they share. Spends nothing. */
+  getStoryLineage(key: string): Promise<ApiResult<StoryLineage>> {
+    return this.get(
+      'getStoryLineage',
+      `/stories/${segment(key)}/lineage`,
+      isStoryLineage
+    );
+  }
+
+  /** Lets the root's voyage and its follow-ups use more revision rounds, with the reason. */
+  raiseRevisionCeiling(
+    key: string,
+    body: RaiseRevisionCeilingRequest
+  ): Promise<ApiResult<RevisionCeilingRaised>> {
+    return this.post(
+      'raiseRevisionCeiling',
+      `/stories/${segment(key)}/revision-ceiling`,
+      body,
+      isRevisionCeilingRaised
     );
   }
 

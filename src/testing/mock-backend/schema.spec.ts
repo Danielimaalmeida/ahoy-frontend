@@ -206,7 +206,8 @@ describe('SchemaChecker', () => {
     expect(checker.check(schemaNamed('StoryKey'), 'x', 'path.key')).toEqual([
       {
         path: 'path.key',
-        message: 'must match pattern "^[A-Z][A-Z0-9]+-[0-9]+$"',
+        message:
+          'must match pattern "^[A-Z][A-Z0-9]+-[0-9]+(-FU[1-9][0-9]*)?$"',
       },
     ]);
   });

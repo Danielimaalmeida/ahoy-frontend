@@ -64,7 +64,8 @@ export type GateOutcome =
   | 'halt'
   | 'reject'
   | 'approve'
-  | 'send_back';
+  | 'send_back'
+  | 'reopen';
 
 /** Slot that holds the model for a phase. */
 export type ModelSlot = 'planning' | 'implementation' | 'review';
@@ -154,6 +155,8 @@ export interface Story {
   readonly currentRunId: string | null;
   /** How the story is planned. Absent from a server older than the plan panel, which plans by one planner. */
   readonly planningMode?: PlanningMode;
+  /** Set when the story continues a done one (a follow-up voyage); absent or null for a root story. */
+  readonly followUp?: StoryFollowUp | null;
   /** What Jira calls the story's issue ("Story", "Bug"); null before intake reads it, absent from an older server. */
   readonly issueType?: string | null;
   /** Whether `issueType` names a defect (Bug, Defect, Defeito), as the server reads it; absent from an older server. */
@@ -161,6 +164,14 @@ export interface Story {
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/** What a follow-up voyage says of the one it continues: the root, its number there, where it came from and its route. */
+export interface StoryFollowUp {
+  readonly rootKey: string;
+  readonly number: number;
+  readonly source: 'jira' | 'ahoy';
+  readonly route: 'planning' | 'fast_path';
 }
 
 /** The verdict of the gate that judged a run's output. */

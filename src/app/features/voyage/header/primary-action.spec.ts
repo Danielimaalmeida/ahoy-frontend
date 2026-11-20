@@ -206,6 +206,8 @@ describe('menuItems', () => {
     modelsReady: true,
     intake: true,
     design: true,
+    startFollowUp: false,
+    raiseCeiling: false,
   };
 
   it('lists Budget, Models, Back to intake and Refresh design, then Stop and Cancel voyage apart at the end', () => {
@@ -223,6 +225,25 @@ describe('menuItems', () => {
       'cancel',
     ]);
     expect(items.filter((i) => i.separated).map((i) => i.id)).toEqual(['stop']);
+  });
+
+  it('puts Start follow-up and Raise revision ceiling before Stop and Cancel voyage', () => {
+    const items = menuItems({
+      ...all,
+      startFollowUp: true,
+      raiseCeiling: true,
+    });
+    expect(items.map((i) => i.id)).toEqual([
+      'budget',
+      'models',
+      'intake',
+      'design',
+      'followUp',
+      'raiseCeiling',
+      'stop',
+      'cancel',
+    ]);
+    expect(items.find((i) => i.id === 'followUp')?.danger).toBe(false);
   });
 
   it('lists only what applies: Change models and Cancel voyage for an anchored voyage', () => {
@@ -249,6 +270,8 @@ describe('menuItems', () => {
       modelsReady: false,
       intake: false,
       design: false,
+      startFollowUp: false,
+      raiseCeiling: false,
     });
     expect(items).toEqual([
       {

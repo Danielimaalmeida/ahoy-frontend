@@ -33,6 +33,10 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
 - **On `feat/reproduction-evidence`** (not merged, on top of the branch above): a verdict's tag in Backlog › Defects
   opens the reproduction's steps, screenshots and recording under the defect. Seen in Chromium against a local API with
   fictional evidence (0 AIU); no run has produced any.
+- **On `feature/R3DA-15316-defect-auto-reproduce`** (not merged): an environment's form sign-in may be a login over
+  several pages, as ordered steps (type the user, type the password, pick an option, click), for single sign-ons such
+  as ACME's WEB-EAM (`ahoy-hosted` migration 0062, `SignInStep`). Covered by its tests only; not opened in a browser,
+  and no Test sign-in has run with steps.
 - **The required checks rarely ran.** They need Node 24 and the company's private registry (`@acme-fedev/*`), which a
   cloud session cannot reach: most branches since 2026-11-05 ran substitutes instead (Node 22 or 26, the auth library
   stubbed in `node_modules`). The last full run with the real auth library was `feature/R3DA-14787-cli` (2026-11-11,

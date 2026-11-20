@@ -24,6 +24,7 @@ export class KitOutcomePill {
     'approve',
     'branch',
     'send_back',
+    'reopen',
     'fail',
     'error',
     'reject',

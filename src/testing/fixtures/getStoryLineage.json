@@ -1,0 +1,29 @@
+{
+  "rootKey": "PROJ-123",
+  "items": [
+    {
+      "key": "PROJ-123",
+      "title": "Show invoice due date on the billing page",
+      "phase": "done",
+      "status": "terminal",
+      "number": null,
+      "source": null,
+      "route": null,
+      "spentNanoAiu": 12400000000
+    },
+    {
+      "key": "PROJ-123-FU1",
+      "title": "Export drops the VAT number",
+      "phase": "planning",
+      "status": "running",
+      "number": 1,
+      "source": "ahoy",
+      "route": "planning",
+      "spentNanoAiu": 900000000
+    }
+  ],
+  "revisions": {
+    "used": 1,
+    "ceiling": 4
+  }
+}

@@ -4,13 +4,13 @@ on: [pull_request]
 
 jobs:
   linting:
-    uses: ATC-GitHub/reusable-workflows/.github/workflows/angular-lint-reusable.yml@main
+    uses: fio/fio-reusable-workflows/.github/workflows/angular-lint-reusable-atc.yml@main
     with:
-      runner: "['atc-ubuntu-latest']"
+      runner: "['acme-ubuntu-24.04-medium']"
       node-version: '24'
 
   format:
-    uses: ATC-GitHub/reusable-workflows/.github/workflows/angular-format-reusable.yml@main
+    uses: fio/fio-reusable-workflows/.github/workflows/angular-format-reusable-atc.yml@main
     with:
-      runner: "['atc-ubuntu-latest']"
+      runner: "['acme-ubuntu-24.04-medium']"
       node-version: '24'

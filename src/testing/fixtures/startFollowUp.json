@@ -1,0 +1,22 @@
+{
+  "key": "PROJ-123-FU1",
+  "title": "Export drops the VAT number",
+  "owner": "alex@example.com",
+  "ownerName": null,
+  "phase": "intake",
+  "status": "ready",
+  "haltReason": null,
+  "budgetNanoAiu": 30000000000,
+  "spentNanoAiu": 0,
+  "controlSha": "a41f9c2bc3feeb1b5eebeaeddd73a3d21b767302",
+  "currentRunId": null,
+  "version": 1,
+  "createdAt": "2026-10-05T10:02:11.000Z",
+  "updatedAt": "2026-10-06T10:05:00.000Z",
+  "followUp": {
+    "rootKey": "PROJ-123",
+    "number": 1,
+    "source": "ahoy",
+    "route": "planning"
+  }
+}

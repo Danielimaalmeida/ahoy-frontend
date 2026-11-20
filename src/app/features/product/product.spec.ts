@@ -385,6 +385,84 @@ describe('Product on the mock backend', () => {
     ).toHaveLength(1);
   });
 
+  it('keeps the reads on one line with the rest under "+N more", and lists the questions to jump to', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, 'split-epic', [
+        { kind: 'jira', ref: 'PROJ-120' },
+        { kind: 'jira', ref: 'PROJ-121' },
+        { kind: 'jira', ref: 'PROJ-122' },
+        { kind: 'jira', ref: 'PROJ-123' },
+      ]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const line = page.root.querySelector<HTMLElement>('.reads.line')!;
+    expect(line.querySelectorAll('.pin')).toHaveLength(3);
+    const more = buttonNamed(line, /^\+\d+ more$/);
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    expect(page.root.querySelector('#reads-more')!.hasAttribute('hidden')).toBe(
+      true
+    );
+    more.click();
+    await flush(page);
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(text(more)).toBe('Show less');
+    expect(page.root.querySelector('#reads-more')!.hasAttribute('hidden')).toBe(
+      false
+    );
+    expect(
+      page.root.querySelectorAll('#reads-more .reads .pin').length
+    ).toBeGreaterThan(0);
+
+    expect(page.root.querySelector('.questions')).toBeNull();
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+    const question =
+      page.root.querySelector<HTMLButtonElement>('.questions button')!;
+    expect(question.getAttribute('aria-current')).toBe('true');
+    question.click();
+    await flush(page);
+    expect(document.activeElement?.id).toBe('turn-1');
+    expect(page.root.querySelector('.msgs')!.getAttribute('role')).toBe('log');
+  });
+
+  it('offers "Go to latest" when the reader is above the end, says when an answer came meanwhile, and goes back to the question box', async () => {
+    let id = '';
+    const page = await open('/product', (server) => {
+      id = started(server, 'split-epic', [{ kind: 'jira', ref: 'PROJ-120' }]);
+    });
+    await page.harness.navigateByUrl(`/product/${id}`);
+    await flush(page);
+    const msgs = page.root.querySelector<HTMLElement>('.msgs')!;
+    expect(page.root.querySelector('.latest')).toBeNull();
+    buttonNamed(composer(page.root)!, 'Send').click();
+    await flush(page);
+
+    Object.defineProperty(msgs, 'scrollHeight', { value: 1000 });
+    Object.defineProperty(msgs, 'clientHeight', { value: 300 });
+    msgs.scrollTop = 0;
+    msgs.dispatchEvent(new Event('scroll'));
+    await flush(page);
+    expect(text(page.root.querySelector('.latest'))).toBe('Go to latest ↓');
+    expect(msgs.scrollTop).toBe(0);
+
+    await wait(page, MOCK_START_MS + MOCK_STEP_MS * 7);
+    expect(text(page.root.querySelector('.latest'))).toBe(
+      'New answer · Go to latest ↓'
+    );
+    expect(msgs.scrollTop).toBe(0);
+
+    page.root.querySelector<HTMLButtonElement>('.latest')!.click();
+    expect(msgs.scrollTop).toBe(1000);
+    expect(document.activeElement).toBe(
+      composer(page.root)!.querySelector('textarea')
+    );
+    msgs.dispatchEvent(new Event('scroll'));
+    await flush(page);
+    expect(page.root.querySelector('.latest')).toBeNull();
+  });
+
   it('turns proposals into work: a story into a Jira issue in the pinned issue’s project, a topic into a meeting topic, once each', async () => {
     let id = '';
     const page = await open('/product', (server) => {

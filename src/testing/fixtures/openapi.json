@@ -739,6 +739,516 @@
         }
       }
     },
+    "/stories/{key}/follow-up-preview": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "get": {
+        "operationId": "previewFollowUp",
+        "tags": ["stories"],
+        "summary": "What starting a follow-up voyage of a done story would do, and the route Ahoy suggests.",
+        "description": "Reads only. Says whether a follow-up can be started now (the story is done, no follow-up of its lineage is\nopen, and the lineage's revision ceiling allows one more round), the key an Ahoy-only follow-up would get, the\nrevision rounds the lineage has used, the repositories the plan may change, and the route Ahoy suggests for the\nbrief the person is writing (`criteria`, `briefChars` and `repos` describe it). The person chooses the route.\n",
+        "parameters": [
+          {
+            "name": "criteria",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "briefChars",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          },
+          {
+            "name": "repos",
+            "in": "query",
+            "description": "Comma-separated plan aliases of the repositories the change affects.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/follow-ups": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "startFollowUp",
+        "tags": ["stories"],
+        "summary": "Start a follow-up voyage of a done story, for what QA found after the pull requests merged.",
+        "description": "The follow-up is a new story linked to the done one: an existing Jira issue (`source.jiraKey`) or, when there is\nnone, one that exists only in Ahoy and is keyed `<ROOT>-FU<n>` (`source.ahoyOnly`), or one Ahoy creates in Jira\nfrom the brief, of the type chosen, and links to the root's issue (`source.createInJira`; it needs a `title` and\nat least one criterion, and `503 unavailable` when Jira writes are not configured; the issue is created only\nafter the other checks pass, and if the start is then refused the error names the issue so it can be started from\nas an existing one). The actor becomes its owner.\nIt starts at intake, with a delivery record and the earlier plans as read-only history and the `brief` as what is\nnew or missing. `route` is `planning` (a planner plans only the delta; the plan is reviewed) or `fast_path`\n(the brief is the plan, for one repository the earlier plan worked in; no planner and no plan review).\nThe start counts as one `delivery_accepted` revision round of the root, which stays done: `409\nrevision_ceiling_reached` when the lineage is at its ceiling (`raiseRevisionCeiling`). Only one follow-up of a\nlineage is open at a time. `confirmSpend` must be true: the runs that follow spend AIU, within `budgetNanoAiu`.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartFollowUpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The follow-up was created in phase `intake`.",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Story"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "422": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/follow-up-images": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "addFollowUpImage",
+        "tags": ["stories"],
+        "summary": "Attach a screenshot to the brief of a follow-up voyage of a done story.",
+        "description": "The body is the image itself: a PNG, JPEG, WebP or GIF of at most 2 MiB (2 097 152 bytes); a person can stage at\nmost 5 images and 6 MiB in all per story. Its format is read from its bytes, whatever `Content-Type` says; SVG and anything else is refused with `400 validation_failed`. The image\nis staged for the actor and this story; `POST /stories/{key}/follow-ups` claims it with `imageIds`, copies it into\nthe follow-up's artifacts as `follow-up/screenshots/<n>.<ext>` and tells the agents to look at it. `409\ninvalid_state` when the story is not done or the actor has 5 staged images, or 6 MiB of them, for it already. 0 AIU, no external\ncall.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The staged image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpImage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/follow-up-images/{imageId}": {
+      "parameters": [
+        {
+          "name": "imageId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getFollowUpImage",
+        "tags": ["stories"],
+        "summary": "The bytes of a follow-up's screenshot.",
+        "description": "Served with the format recognised at upload, `X-Content-Type-Options: nosniff` and a `sandbox` content security\npolicy. An image never changes, so the answer may be cached; its ETag is the quoted sha256 of the bytes.\n",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "An ETag from an earlier response; a match answers 304 without a body.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image.",
+            "headers": {
+              "ETag": {
+                "description": "The quoted sha256 of the image.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The image has not changed since the given ETag."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFollowUpImage",
+        "tags": ["stories"],
+        "summary": "Remove a screenshot that no follow-up has used yet.",
+        "description": "Only the person who attached it (`403 forbidden` for anyone else), and only while no follow-up has claimed it\n(`409 invalid_state` after).\n",
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/follow-up-grills": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "requestFollowUpGrill",
+        "tags": ["stories"],
+        "summary": "Ask an agent to question a follow-up's brief before it starts (\"Grill me\"). May spend AIU.",
+        "description": "Queues one worker run of the story draft agent of Team settings › Agents, labelled `FUG-<n>`. It reads what the done\nstory delivered (its delivery record and plan) and the brief as written now, and replies with 1–6 questions, each\nwith 2–4 answer options and one recommended. It has no MCP server, writes no file and changes nothing: the\nperson puts the answers into the brief, and `startFollowUp` is the same call as without a grill. `confirmSpend`\nmust be true; the run is capped at `budgetNanoAiu`, else the server's story draft cap. Poll `getFollowUpGrill`\nuntil it is not `working`. A person has one open grill per story: asking again discards the earlier one.\n\n`409 invalid_state` when the story is not done; `503 unavailable` when story drafts are off or the control repo\ncannot be read.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowUpGrillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The grill, with the agent working.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpGrill"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/follow-up-grills/{grillId}": {
+      "parameters": [
+        {
+          "name": "grillId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getFollowUpGrill",
+        "tags": ["stories"],
+        "summary": "One follow-up grill, with its questions once the agent has asked them.",
+        "responses": {
+          "200": {
+            "description": "The grill.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpGrill"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "discardFollowUpGrill",
+        "tags": ["stories"],
+        "summary": "Discard a grill, stopping its run when the agent is still asking.",
+        "description": "A queued run spends nothing; a running one is cancelled. `404` when it was already discarded.",
+        "responses": {
+          "204": {
+            "description": "The grill is discarded."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/lineage": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "get": {
+        "operationId": "getStoryLineage",
+        "tags": ["stories"],
+        "summary": "The root story, its follow-up voyages and the revision rounds they share.",
+        "responses": {
+          "200": {
+            "description": "The lineage of the story; a story with no follow-ups is its own root.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryLineage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/stories/{key}/revision-ceiling": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/StoryKey"
+        }
+      ],
+      "post": {
+        "operationId": "raiseRevisionCeiling",
+        "tags": ["decisions"],
+        "summary": "Raise the revision ceiling of the story's lineage, which guards against a loop that spends without end.",
+        "description": "Adds `rounds` (1 to 4, to at most 20) to the ceiling of the lineage's root, whichever story of it is named. The\nceiling limits how many times a delivery can be sent back or continued by a follow-up, so raising it lets the\nlineage spend more: `confirmSpend` must be true and `reason` is kept in the decision log. Anyone Ahoy lets in may\ndo it.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaiseRevisionCeilingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The ceiling was raised.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionCeilingRaised"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/stories/{key}/budget": {
       "parameters": [
         {
@@ -7915,7 +8425,7 @@
     "schemas": {
       "StoryKey": {
         "type": "string",
-        "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$",
+        "pattern": "^[A-Z][A-Z0-9]+-[0-9]+(-FU[1-9][0-9]*)?$",
         "maxLength": 40
       },
       "JiraIssueKey": {
@@ -8340,6 +8850,17 @@
           "planningMode": {
             "$ref": "#/components/schemas/PlanningMode",
             "description": "How the story is planned. Always sent by this server; a server older than the plan panel sends none, which is `standard`."
+          },
+          "followUp": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StoryFollowUp"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the story is a follow-up voyage of a done story; null for any other. Absent from an older server."
           },
           "issueType": {
             "type": ["string", "null"],
@@ -8931,6 +9452,509 @@
           "confirmSpend": {
             "type": "boolean",
             "const": true
+          }
+        }
+      },
+      "FollowUpBrief": {
+        "type": "object",
+        "required": ["text", "criteria"],
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 8000,
+            "description": "What is new or missing, in the person's words; links to screenshots may be pasted."
+          },
+          "criteria": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "pattern": "\\S"
+            },
+            "description": "Acceptance criteria this follow-up adds; an Ahoy-only follow-up, or one created in Jira, needs at least one."
+          }
+        }
+      },
+      "StartFollowUpRequest": {
+        "type": "object",
+        "required": [
+          "source",
+          "brief",
+          "route",
+          "budgetNanoAiu",
+          "confirmSpend",
+          "expectedVersion"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["jiraKey"],
+                "additionalProperties": false,
+                "properties": {
+                  "jiraKey": {
+                    "$ref": "#/components/schemas/StoryKey"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["ahoyOnly"],
+                "additionalProperties": false,
+                "properties": {
+                  "ahoyOnly": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["createInJira"],
+                "additionalProperties": false,
+                "properties": {
+                  "createInJira": {
+                    "type": "object",
+                    "required": ["issueType"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "issueType": {
+                        "$ref": "#/components/schemas/FollowUpIssueType"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "The summary of the issue Ahoy creates in Jira, which needs it."
+          },
+          "brief": {
+            "$ref": "#/components/schemas/FollowUpBrief"
+          },
+          "route": {
+            "$ref": "#/components/schemas/FollowUpRoute"
+          },
+          "repos": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "description": "Plan aliases of the repositories to change; the fast path takes exactly one."
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Hard AIU cap for every run of the follow-up together."
+          },
+          "models": {
+            "$ref": "#/components/schemas/ModelPlanRequest"
+          },
+          "planningMode": {
+            "$ref": "#/components/schemas/PlanningMode"
+          },
+          "imageIds": {
+            "type": "array",
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Screenshots the actor attached to this story with `POST /stories/{key}/follow-up-images`, in the order they are shown. Each must be the actor's own, for this story and not used yet, else `400 validation_failed`."
+          },
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      },
+      "FollowUpImage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "mediaType", "sizeBytes", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": ["image/png", "image/jpeg", "image/webp", "image/gif"]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2097152
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "FollowUpGrillRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["confirmSpend", "brief"],
+        "properties": {
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          },
+          "brief": {
+            "$ref": "#/components/schemas/FollowUpBrief"
+          },
+          "budgetNanoAiu": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000000000,
+            "description": "The run's AIU cap, at most 50 AIU; the server's story draft cap when absent."
+          }
+        }
+      },
+      "FollowUpGrillStatus": {
+        "type": "string",
+        "enum": ["working", "ready", "failed"],
+        "description": "`working`: the agent is asking. `ready`: its questions are in. `failed`: the run ended without usable questions."
+      },
+      "FollowUpGrill": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "storyKey",
+          "status",
+          "questions",
+          "failure",
+          "spentNanoAiu",
+          "createdBy",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storyKey": {
+            "type": "string",
+            "description": "The done story the follow-up would continue."
+          },
+          "status": {
+            "$ref": "#/components/schemas/FollowUpGrillStatus"
+          },
+          "questions": {
+            "type": ["array", "null"],
+            "items": {
+              "$ref": "#/components/schemas/GrillQuestion"
+            },
+            "description": "The agent's questions while `ready`; null otherwise."
+          },
+          "failure": {
+            "type": ["string", "null"],
+            "description": "Why the run failed",
+            "while `failed`.": null
+          },
+          "spentNanoAiu": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "FollowUpRoute": {
+        "type": "string",
+        "enum": ["planning", "fast_path"]
+      },
+      "FollowUpIssueType": {
+        "type": "string",
+        "enum": ["Bug", "Defect", "Task", "Story"],
+        "description": "The issue types a follow-up's Jira issue can be created as."
+      },
+      "FollowUpSource": {
+        "type": "string",
+        "enum": ["jira", "ahoy"],
+        "description": "`jira`: an existing Jira issue is the follow-up. `ahoy`: it exists only in Ahoy (key `<ROOT>-FU<n>`)."
+      },
+      "StoryFollowUp": {
+        "type": "object",
+        "required": ["rootKey", "number", "source", "route"],
+        "additionalProperties": false,
+        "properties": {
+          "rootKey": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source": {
+            "$ref": "#/components/schemas/FollowUpSource"
+          },
+          "route": {
+            "$ref": "#/components/schemas/FollowUpRoute"
+          }
+        }
+      },
+      "RevisionRounds": {
+        "type": "object",
+        "required": ["used", "ceiling"],
+        "additionalProperties": false,
+        "properties": {
+          "used": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Rounds the root and its follow-ups have used together."
+          },
+          "ceiling": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The most rounds the lineage may use, set on the root."
+          }
+        }
+      },
+      "LinkedDefect": {
+        "type": "object",
+        "required": ["key", "summary", "issueType", "status", "priority"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "issueType": {
+            "type": "string",
+            "description": "Bug or Defect."
+          },
+          "status": {
+            "type": "string"
+          },
+          "priority": {
+            "type": ["string", "null"]
+          }
+        }
+      },
+      "FollowUpPreview": {
+        "type": "object",
+        "required": [
+          "key",
+          "rootKey",
+          "nextKey",
+          "canCreateInJira",
+          "issueTypes",
+          "linkedDefects",
+          "canStart",
+          "revisions",
+          "repos",
+          "suggestion"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "rootKey": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "nextKey": {
+            "type": "string",
+            "description": "The key an Ahoy-only follow-up would get."
+          },
+          "canCreateInJira": {
+            "type": "boolean",
+            "description": "Whether Jira writes are configured, so Ahoy can create the issue."
+          },
+          "issueTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FollowUpIssueType"
+            },
+            "description": "The types to offer, the usual one first."
+          },
+          "linkedDefects": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/LinkedDefect"
+            },
+            "description": "The open Bugs and Defects linked in Jira to the issues of the lineage, without the ones that already have a\nstory, to pick as the follow-up's issue. Empty when Jira is not configured or does not answer.\n"
+          },
+          "canStart": {
+            "type": "boolean"
+          },
+          "blockedReason": {
+            "type": "string",
+            "description": "Why a follow-up cannot be started now."
+          },
+          "revisions": {
+            "$ref": "#/components/schemas/RevisionRounds"
+          },
+          "repos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["alias", "slug", "inEarlierPlan"],
+              "additionalProperties": false,
+              "properties": {
+                "alias": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "inEarlierPlan": {
+                  "type": "boolean",
+                  "description": "The earlier plan worked in it, so the fast path can use it."
+                }
+              }
+            }
+          },
+          "suggestion": {
+            "type": "object",
+            "required": ["route", "reasons"],
+            "additionalProperties": false,
+            "properties": {
+              "route": {
+                "$ref": "#/components/schemas/FollowUpRoute"
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "StoryLineage": {
+        "type": "object",
+        "required": ["rootKey", "items", "revisions"],
+        "additionalProperties": false,
+        "properties": {
+          "rootKey": {
+            "$ref": "#/components/schemas/StoryKey"
+          },
+          "items": {
+            "type": "array",
+            "description": "The root first, then its follow-ups by number.",
+            "items": {
+              "type": "object",
+              "required": [
+                "key",
+                "title",
+                "phase",
+                "status",
+                "number",
+                "source",
+                "route",
+                "spentNanoAiu"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "key": {
+                  "$ref": "#/components/schemas/StoryKey"
+                },
+                "title": {
+                  "type": ["string", "null"]
+                },
+                "phase": {
+                  "$ref": "#/components/schemas/Phase"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/StoryStatus"
+                },
+                "number": {
+                  "type": ["integer", "null"],
+                  "description": "Null for the root."
+                },
+                "source": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FollowUpSource"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "route": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FollowUpRoute"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "spentNanoAiu": {
+                  "$ref": "#/components/schemas/NanoAiu"
+                }
+              }
+            }
+          },
+          "revisions": {
+            "$ref": "#/components/schemas/RevisionRounds"
+          }
+        }
+      },
+      "RaiseRevisionCeilingRequest": {
+        "type": "object",
+        "required": ["expectedVersion", "rounds", "reason", "confirmSpend"],
+        "additionalProperties": false,
+        "properties": {
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "rounds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          },
+          "confirmSpend": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      },
+      "RevisionCeilingRaised": {
+        "type": "object",
+        "required": ["story", "ceiling"],
+        "additionalProperties": false,
+        "properties": {
+          "story": {
+            "$ref": "#/components/schemas/Story"
+          },
+          "ceiling": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       },
@@ -10722,8 +11746,10 @@
               "halt",
               "reject",
               "approve",
-              "send_back"
-            ]
+              "send_back",
+              "reopen"
+            ],
+            "description": "`reopen`: a follow-up voyage was started from this done story (a `delivery_accepted` round, by the actor)."
           },
           "message": {
             "type": ["string", "null"],
@@ -11281,6 +12307,7 @@
           "gates",
           "findings",
           "reworkRounds",
+          "followUps",
           "runKinds",
           "waits",
           "insights"
@@ -11763,6 +12790,82 @@
                 },
                 "stories": {
                   "$ref": "#/components/schemas/MetricsCount"
+                }
+              }
+            }
+          },
+          "followUps": {
+            "type": "object",
+            "description": "Follow-up voyages started in the period and the lineages they belong to. Spend is each story's own total, a lineage's root and its follow-ups together.",
+            "additionalProperties": false,
+            "required": [
+              "started",
+              "fastPath",
+              "lineages",
+              "ceilingRaises",
+              "perLineage",
+              "top"
+            ],
+            "properties": {
+              "started": {
+                "$ref": "#/components/schemas/MetricsCount"
+              },
+              "fastPath": {
+                "$ref": "#/components/schemas/MetricsCount",
+                "description": "How many of them skipped planning."
+              },
+              "lineages": {
+                "$ref": "#/components/schemas/MetricsCount",
+                "description": "How many lineages those follow-ups belong to."
+              },
+              "ceilingRaises": {
+                "$ref": "#/components/schemas/MetricsCount",
+                "description": "Rounds people added to a lineage's revision ceiling in the period."
+              },
+              "perLineage": {
+                "type": "array",
+                "description": "How many of those lineages have how many follow-ups so far.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["followUps", "lineages"],
+                  "properties": {
+                    "followUps": {
+                      "$ref": "#/components/schemas/MetricsCount"
+                    },
+                    "lineages": {
+                      "$ref": "#/components/schemas/MetricsCount"
+                    }
+                  }
+                }
+              },
+              "top": {
+                "type": "array",
+                "description": "The dearest lineages by total spend, at most 10.",
+                "maxItems": 10,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "rootKey",
+                    "followUps",
+                    "nanoAiu",
+                    "ceilingRaises"
+                  ],
+                  "properties": {
+                    "rootKey": {
+                      "type": "string"
+                    },
+                    "followUps": {
+                      "$ref": "#/components/schemas/MetricsCount"
+                    },
+                    "nanoAiu": {
+                      "$ref": "#/components/schemas/MetricsCount"
+                    },
+                    "ceilingRaises": {
+                      "$ref": "#/components/schemas/MetricsCount"
+                    }
+                  }
                 }
               }
             }
@@ -16926,6 +18029,7 @@
                   "userSelector",
                   "passwordSelector",
                   "submitSelector",
+                  "steps",
                   "signedInUrlPattern",
                   "signedInSelector"
                 ],
@@ -16959,6 +18063,13 @@
                   },
                   "submitSelector": {
                     "type": ["string", "null"]
+                  },
+                  "steps": {
+                    "type": ["array", "null"],
+                    "items": {
+                      "$ref": "#/components/schemas/SignInStep"
+                    },
+                    "description": "The steps of a login over several pages; null: the one-page form of the selectors."
                   },
                   "signedInUrlPattern": {
                     "type": ["string", "null"]
@@ -17155,6 +18266,14 @@
                 "type": ["string", "null"],
                 "maxLength": 300
               },
+              "steps": {
+                "type": ["array", "null"],
+                "maxItems": 10,
+                "items": {
+                  "$ref": "#/components/schemas/SignInStep"
+                },
+                "description": "The steps of a login over several pages, run in order, such as a single sign-on that asks for the user name, then the method, then the password: exactly one fill_password, at most one fill_user. Null or empty: the one-page form of userSelector, passwordSelector and submitSelector."
+              },
               "signedInUrlPattern": {
                 "type": ["string", "null"],
                 "maxLength": 300,
@@ -17167,6 +18286,30 @@
             }
           }
         ]
+      },
+      "SignInStep": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "selector"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["fill_user", "fill_password", "select", "click"],
+            "description": "Types the user name or the password, picks an option of a select, or clicks."
+          },
+          "selector": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "The CSS selector the step waits for."
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The option's value, for select only."
+          }
+        }
       },
       "DefectSettingsPage": {
         "type": "object",

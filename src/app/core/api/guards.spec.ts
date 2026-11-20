@@ -30,6 +30,10 @@ import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import { withField, withoutField } from '@testing/fixtures/mutate';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import previewFollowUp from '@testing/fixtures/previewFollowUp.json';
+import startFollowUp from '@testing/fixtures/startFollowUp.json';
+import getStoryLineage from '@testing/fixtures/getStoryLineage.json';
+import raiseRevisionCeiling from '@testing/fixtures/raiseRevisionCeiling.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
@@ -47,6 +51,9 @@ import {
   isKnowledgeReview,
   isKnowledgeReviewList,
   isAnswerAccepted,
+  isFollowUpPreview,
+  isRevisionCeilingRaised,
+  isStoryLineage,
   isArtifact,
   isArtifactList,
   isDecisionAccepted,
@@ -154,6 +161,10 @@ describe('guards accept what the API sends (the fixtures)', () => {
     ['listArtifacts', isArtifactList, listArtifacts],
     ['listStoryEvents', isEventPage, listStoryEvents],
     ['refreshIntake', isStory, refreshIntake],
+    ['previewFollowUp', isFollowUpPreview, previewFollowUp],
+    ['startFollowUp', isStory, startFollowUp],
+    ['getStoryLineage', isStoryLineage, getStoryLineage],
+    ['raiseRevisionCeiling', isRevisionCeilingRaised, raiseRevisionCeiling],
     ['listRefinements', isRefinementSummaryList, listRefinements],
     ['getRefinements', isRefinementList, getRefinements],
     ['getStoryDiagnosis', isDiagnosis, getStoryDiagnosis],

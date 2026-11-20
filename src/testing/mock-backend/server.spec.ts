@@ -66,7 +66,8 @@ describe('MockAhoyServer · routing and checks', () => {
     expect(field(key, 'errors')).toEqual([
       {
         path: 'path.key',
-        message: 'must match pattern "^[A-Z][A-Z0-9]+-[0-9]+$"',
+        message:
+          'must match pattern "^[A-Z][A-Z0-9]+-[0-9]+(-FU[1-9][0-9]*)?$"',
       },
     ]);
     const body = call(server, 'POST', '/stories/PROJ-123/budget', {

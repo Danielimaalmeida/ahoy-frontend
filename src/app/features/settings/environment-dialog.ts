@@ -1,7 +1,12 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormArray,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { map } from 'rxjs';
 import type {
   EnvironmentChange,
@@ -12,11 +17,17 @@ import type {
 import {
   MAX_ENVIRONMENT_NAME_CHARS,
   MAX_SELECTOR_CHARS,
+  MAX_SIGN_IN_STEPS,
+  MAX_STEP_VALUE_CHARS,
+  SIGN_IN_STEP_ACTIONS,
+  type SignInStep,
+  type SignInStepAction,
   environmentUrlOf,
   originOfUrl,
   originsOutside,
   otherOriginsOf,
   selectorOf,
+  signInStepsOf,
 } from '@domain/environments';
 import { Button } from '@ui/button/button';
 import { DialogShell } from '@ui/dialog/dialog';
@@ -88,6 +99,26 @@ function formSignInOf(environment: EnvironmentRow | null): FormSignIn | null {
       gap: 8px;
       align-items: flex-start;
     }
+    .steps {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .steps li {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .step-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+    }
     .remove {
       margin-top: 16px;
       padding-top: 12px;
@@ -157,7 +188,7 @@ function formSignInOf(environment: EnvironmentRow | null): FormSignIn | null {
           <legend>Sign-in</legend>
           <ah-field
             label="How the browser signs in"
-            hint="A form: one page with a user, a password and a button. A sign-in with a second factor cannot be automated."
+            hint="A form: a user, a password and a button, on one page or, in steps, over several. A sign-in with a second factor cannot be automated."
           >
             <select ahInput formControlName="kind">
               <option value="none">No sign-in</option>
@@ -290,6 +321,113 @@ function formSignInOf(environment: EnvironmentRow | null): FormSignIn | null {
                 </ah-field>
               </div>
             </details>
+            <details [attr.open]="savedSteps.length > 0 ? '' : null">
+              <summary>A login over several pages</summary>
+              <div>
+                <p class="ah-hint">
+                  For a login that asks for the user, a choice and the password
+                  on separate pages, such as a single sign-on. The steps run in
+                  order, each waiting for its element; with steps, the form's
+                  fields above are not used.
+                </p>
+                @if (form.controls.steps.length > 0) {
+                  <ol class="steps" formArrayName="steps">
+                    @for (
+                      step of form.controls.steps.controls;
+                      track step;
+                      let i = $index, last = $last
+                    ) {
+                      <li [formGroupName]="i">
+                        <ah-field [label]="'Step ' + (i + 1)">
+                          <select ahInput formControlName="action">
+                            @for (choice of stepActions; track choice.action) {
+                              <option [value]="choice.action">
+                                {{ choice.label }}
+                              </option>
+                            }
+                          </select>
+                        </ah-field>
+                        <ah-field
+                          [label]="'Step ' + (i + 1) + ' element'"
+                          hint="A CSS selector, such as input[value='NEXT']."
+                        >
+                          <input
+                            ahInput
+                            mono
+                            formControlName="selector"
+                            autocomplete="off"
+                            spellcheck="false"
+                            [attr.maxlength]="maxSelector"
+                          />
+                        </ah-field>
+                        @if (step.controls.action.value === 'select') {
+                          <ah-field
+                            [label]="'Step ' + (i + 1) + ' option'"
+                            hint="The value of the option it picks."
+                          >
+                            <input
+                              ahInput
+                              mono
+                              formControlName="value"
+                              autocomplete="off"
+                              spellcheck="false"
+                              [attr.maxlength]="maxStepValue"
+                            />
+                          </ah-field>
+                        }
+                        <div class="step-actions">
+                          <button
+                            ahButton="ghost"
+                            size="sm"
+                            type="button"
+                            [disabled]="i === 0"
+                            [attr.aria-label]="'Move step ' + (i + 1) + ' up'"
+                            (click)="moveStep(i, -1)"
+                          >
+                            Up
+                          </button>
+                          <button
+                            ahButton="ghost"
+                            size="sm"
+                            type="button"
+                            [disabled]="last"
+                            [attr.aria-label]="'Move step ' + (i + 1) + ' down'"
+                            (click)="moveStep(i, 1)"
+                          >
+                            Down
+                          </button>
+                          <button
+                            ahButton="ghost"
+                            size="sm"
+                            type="button"
+                            [attr.aria-label]="'Remove step ' + (i + 1)"
+                            (click)="removeStep(i)"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    }
+                  </ol>
+                }
+                @if (touched('steps') && stepsProblem() !== '') {
+                  <p class="ah-field__error" role="alert">
+                    {{ stepsProblem() }}
+                  </p>
+                }
+                <div>
+                  <button
+                    ahButton
+                    size="sm"
+                    type="button"
+                    [disabled]="form.controls.steps.length >= maxSteps"
+                    (click)="addStep()"
+                  >
+                    Add step
+                  </button>
+                </div>
+              </div>
+            </details>
           }
         </fieldset>
 
@@ -364,6 +502,10 @@ export class EnvironmentDialog {
   private readonly savedSignIn = formSignInOf(this.environment);
   protected readonly maxName = MAX_ENVIRONMENT_NAME_CHARS;
   protected readonly maxSelector = MAX_SELECTOR_CHARS;
+  protected readonly maxStepValue = MAX_STEP_VALUE_CHARS;
+  protected readonly maxSteps = MAX_SIGN_IN_STEPS;
+  protected readonly stepActions = SIGN_IN_STEP_ACTIONS;
+  protected readonly savedSteps = this.savedSignIn?.steps ?? [];
   protected readonly originsHint =
     this.data.allowedHosts.length === 0
       ? 'One per line: other origins the app loads, such as its API.'
@@ -385,6 +527,7 @@ export class EnvironmentDialog {
     userSelector: text(this.savedSignIn?.userSelector ?? ''),
     passwordSelector: text(this.savedSignIn?.passwordSelector ?? ''),
     submitSelector: text(this.savedSignIn?.submitSelector ?? ''),
+    steps: new FormArray(this.savedSteps.map((step) => stepGroup(step))),
     writes: new FormControl(this.environment?.writes ?? false, {
       nonNullable: true,
     }),
@@ -495,6 +638,14 @@ export class EnvironmentDialog {
       ? 'Say how a signed-in page is told: its URL or an element only it has.'
       : '';
   });
+  /** The sign-in steps as typed, read: null when there are none. */
+  private readonly steps = computed(() => signInStepsOf(this.value().steps));
+  protected readonly stepsProblem = computed(() => {
+    const steps = this.steps();
+    return this.value().kind === 'form' && 'problem' in steps
+      ? steps.problem
+      : '';
+  });
   protected readonly versionUrlProblem = computed(() => {
     const url = this.versionUrl();
     return url === null ? '' : this.onAllowedOrigin(url, 'The version URL');
@@ -508,6 +659,7 @@ export class EnvironmentDialog {
       this.usernameProblem() !== '' ||
       this.passwordProblem() !== '' ||
       this.signedInProblem() !== '' ||
+      this.stepsProblem() !== '' ||
       this.versionUrlProblem() !== ''
   );
 
@@ -516,6 +668,29 @@ export class EnvironmentDialog {
     this.formEvents();
     const control = this.form.controls[name];
     return control.touched || control.dirty;
+  }
+
+  /** Adds an empty step at the end: a click, the most common. */
+  protected addStep(): void {
+    const steps = this.form.controls.steps;
+    if (steps.length >= MAX_SIGN_IN_STEPS) return;
+    steps.push(stepGroup({ action: 'click', selector: '' }));
+    steps.markAsDirty();
+  }
+
+  /** Moves step `index` one place up (-1) or down (1). */
+  protected moveStep(index: number, by: -1 | 1): void {
+    const steps = this.form.controls.steps;
+    const step = steps.at(index);
+    steps.removeAt(index, { emitEvent: false });
+    steps.insert(index + by, step);
+    steps.markAsDirty();
+  }
+
+  protected removeStep(index: number): void {
+    const steps = this.form.controls.steps;
+    steps.removeAt(index);
+    steps.markAsDirty();
   }
 
   /** "Not on the hosts Team settings › Defects allows: https://other.example.org." for origins outside them, else ''. */
@@ -545,6 +720,7 @@ export class EnvironmentDialog {
       const read = selectorOf(typed);
       return 'value' in read ? read.value : null;
     };
+    const steps = this.steps();
     return {
       kind: 'form',
       loginUrl,
@@ -553,6 +729,9 @@ export class EnvironmentDialog {
       userSelector: selector(value.userSelector),
       passwordSelector: selector(value.passwordSelector),
       submitSelector: selector(value.submitSelector),
+      ...('value' in steps && steps.value !== null
+        ? { steps: [...steps.value] }
+        : {}),
       signedInUrlPattern: selector(value.signedInUrlPattern),
       signedInSelector: selector(value.signedInSelector),
     };
@@ -602,6 +781,17 @@ export class EnvironmentDialog {
     const { id, name } = this.environment;
     await this.send.run(() => this.data.store.remove(id), `${name} removed.`);
   }
+}
+
+/** The controls of one sign-in step; the option is kept while another action is chosen, and only sent for `select`. */
+function stepGroup(step: SignInStep) {
+  return new FormGroup({
+    action: new FormControl<SignInStepAction>(step.action, {
+      nonNullable: true,
+    }),
+    selector: text(step.selector),
+    value: text(step.value ?? ''),
+  });
 }
 
 /** A text control that is never null. */

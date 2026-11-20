@@ -265,6 +265,8 @@ export class Voyage {
   chosen: Partial<Record<ModelSlot, ModelChoice>> = {};
   humanGates: Record<string, HumanGateEntry> = {};
   revisionRounds: Record<string, number> = {};
+  /** The send-backs a gate takes; for a voyage with follow-ups it is the lineage's. */
+  revisionCeiling = REVISION_CEILING;
   readonly decisionLog: DecisionLogEntry[] = [];
   /** The reason of the last send-back, for the planner's next revision. */
   revisionReason: string | null = null;
@@ -369,7 +371,7 @@ export class Voyage {
       branch_prefix: 'feature',
       human_gates: structuredClone(this.humanGates),
       revisions: { ...this.revisionRounds },
-      revision_ceiling: REVISION_CEILING,
+      revision_ceiling: this.revisionCeiling,
       models,
       acceptance_criteria: structuredClone(this.plan.criteria),
       work_packages: structuredClone(this.plan.packages),

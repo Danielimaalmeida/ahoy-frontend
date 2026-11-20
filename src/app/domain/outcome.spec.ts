@@ -8,6 +8,7 @@ describe('outcomePresentation', () => {
     ['approve', 'done'],
     ['branch', 'input'],
     ['send_back', 'sendback'],
+    ['reopen', 'sendback'],
     ['fail', 'halted'],
     ['error', 'halted'],
     ['reject', 'halted'],

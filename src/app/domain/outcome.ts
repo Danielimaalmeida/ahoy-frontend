@@ -15,6 +15,8 @@ const MODIFIERS: Readonly<Record<string, OutcomeModifier>> = {
   approve: 'done',
   branch: 'input',
   send_back: 'sendback',
+  // A follow-up voyage was started from a done story: the work goes round again, as with a send-back.
+  reopen: 'sendback',
   fail: 'halted',
   error: 'halted',
   reject: 'halted',

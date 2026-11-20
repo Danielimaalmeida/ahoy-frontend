@@ -1,5 +1,11 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+} from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CONVERSATION_RECIPES, type ConversationRecipe } from '@core/api/types';
 import { AccessControl } from '@core/auth/access-control';
@@ -43,6 +49,7 @@ import { ProductStore } from './product-store';
       display: flex;
       flex-direction: column;
       gap: 14px;
+      --product-top: 0px;
     }
     .lead {
       display: flex;
@@ -118,6 +125,10 @@ import { ProductStore } from './product-store';
       padding: 4px 10px 8px;
       margin: 0;
     }
+    /* The outlet is an empty element: as a flex item it would add a gap above the view and push it below the list. */
+    router-outlet {
+      display: none;
+    }
     /* Not a <main>: the app shell already has the page's one main landmark. */
     .product-main {
       flex: 1;
@@ -125,6 +136,32 @@ import { ProductStore } from './product-store';
       display: flex;
       flex-direction: column;
       gap: 14px;
+    }
+    /* Wide enough for the two columns: the page is the height of the screen and the panels scroll inside it. */
+    @media (min-width: 761px) {
+      :host {
+        height: max(30rem, calc(100dvh - var(--product-top) - 16px));
+        /* The page leaves 36px under its content; only 16px of that stays, so the page itself does not scroll. */
+        margin-block-end: -20px;
+      }
+      .body {
+        flex: 1;
+        min-height: 0;
+        align-items: stretch;
+      }
+      aside {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      aside nav {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .product-main {
+        min-height: 0;
+      }
     }
     @media (max-width: 760px) {
       .body {
@@ -270,6 +307,33 @@ export class ProductShell {
 
   constructor() {
     void this.store.load();
+    this.measureTop();
+  }
+
+  /**
+   * Puts the distance from the top of the page to this view in `--product-top`, so the view can be as tall as what is
+   * left of the screen. The top bar can wrap and the setup banner comes and goes, so it follows the page's size.
+   */
+  private measureTop(): void {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const view = host.ownerDocument.defaultView;
+    if (view === null) return;
+    const measure = (): void => {
+      const top = host.getBoundingClientRect().top + view.scrollY;
+      host.style.setProperty(
+        '--product-top',
+        `${Math.max(0, Math.round(top))}px`
+      );
+    };
+    measure();
+    view.addEventListener('resize', measure);
+    const observer =
+      'ResizeObserver' in view ? new view.ResizeObserver(measure) : null;
+    observer?.observe(host.ownerDocument.body);
+    inject(DestroyRef).onDestroy(() => {
+      view.removeEventListener('resize', measure);
+      observer?.disconnect();
+    });
   }
 
   /** Starts a conversation, blank or from a recipe, and opens it. */

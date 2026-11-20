@@ -110,7 +110,14 @@ export function canRefreshDesign(
 
 /** An action of the header's More menu. */
 export type MenuItemId =
-  'budget' | 'models' | 'intake' | 'design' | 'stop' | 'cancel';
+  | 'budget'
+  | 'models'
+  | 'intake'
+  | 'design'
+  | 'followUp'
+  | 'raiseCeiling'
+  | 'stop'
+  | 'cancel';
 
 /** One item of the More menu. */
 export interface MenuItem {
@@ -130,11 +137,15 @@ export interface MenuInput extends HeaderActions {
   readonly modelsReady: boolean;
   readonly intake: boolean;
   readonly design: boolean;
+  /** The voyage is done and can be continued by a follow-up voyage. */
+  readonly startFollowUp: boolean;
+  /** The lineage has used all its revision rounds, so more need a raise of the ceiling. */
+  readonly raiseCeiling: boolean;
 }
 
 /**
  * The More menu of the voyage header, in order: Budget, Models ("Change models" when anchored), Back to intake, Refresh
- * design, then Stop and Cancel voyage apart at the end. Only those that apply now are listed.
+ * design, Start follow-up, Raise revision ceiling, then Stop and Cancel voyage apart at the end. Only those that apply now are listed.
  */
 export function menuItems(input: MenuInput): readonly MenuItem[] {
   const items: Omit<MenuItem, 'separated'>[] = [];
@@ -155,6 +166,8 @@ export function menuItems(input: MenuInput): readonly MenuItem[] {
   );
   if (input.intake) add('intake', 'Back to intake');
   if (input.design) add('design', 'Refresh design');
+  if (input.startFollowUp) add('followUp', 'Start follow-up');
+  if (input.raiseCeiling) add('raiseCeiling', 'Raise revision ceiling');
   if (input.stop) add('stop', 'Stop', true);
   if (input.cancel) add('cancel', 'Cancel voyage', true);
   return items.map((item, i) => ({

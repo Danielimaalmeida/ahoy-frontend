@@ -1,0 +1,43 @@
+{
+  "id": "5e0f6c4a-8b1d-4f3e-9a2c-7d6b5a4c3e21",
+  "storyKey": "PROJ-97",
+  "status": "ready",
+  "questions": [
+    {
+      "id": "Q1",
+      "text": "Which invoices does the wrong rounding touch?",
+      "options": [
+        {
+          "label": "Every invoice",
+          "detail": "Fix the rounding wherever a total is computed.",
+          "recommended": true
+        },
+        {
+          "label": "Only enterprise invoices",
+          "detail": "Limit the fix to enterprise accounts.",
+          "recommended": false
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "text": "Must totals already issued be corrected?",
+      "options": [
+        {
+          "label": "No, only new ones",
+          "detail": "Issued invoices stay as they are.",
+          "recommended": true
+        },
+        {
+          "label": "Yes, reissue them",
+          "detail": "A data fix is part of the follow-up.",
+          "recommended": false
+        }
+      ]
+    }
+  ],
+  "failure": null,
+  "spentNanoAiu": 400000,
+  "createdBy": "ana.silva",
+  "createdAt": "2026-03-05T09:30:00Z"
+}

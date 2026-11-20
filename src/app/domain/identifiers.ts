@@ -1,5 +1,9 @@
-/** Jira key pattern: project key, hyphen, issue number (3B). */
-export const STORY_KEY_PATTERN = /^[A-Z][A-Z0-9]+-[0-9]+$/;
+/** Story key pattern: a Jira key (project key, hyphen, issue number, 3B), or a follow-up's `-FU<n>` key. */
+export const STORY_KEY_PATTERN = /^[A-Z][A-Z0-9]+-[0-9]+(?:-FU[1-9][0-9]*)?$/;
+
+/** A follow-up voyage's key, `PROJ-123-FU1`: the root's key and the follow-up's number. */
+export const FOLLOW_UP_KEY_PATTERN =
+  /^([A-Z][A-Z0-9]+-[0-9]+)-FU([1-9][0-9]*)$/;
 
 /** True when the text is a key a voyage may have, like `PROJ-123`: the pattern and at most 40 characters (`StoryKey`). */
 export function isStoryKey(value: string): boolean {

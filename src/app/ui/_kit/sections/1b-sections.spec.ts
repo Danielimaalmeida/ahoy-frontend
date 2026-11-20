@@ -94,7 +94,7 @@ describe('kit gallery, lane 1B sections', () => {
     const { section } = await render();
     expect(
       section('outcome-pill').querySelectorAll('ah-outcome-pill').length
-    ).toBe(20);
+    ).toBe(21);
   });
 
   it('shows the empty and loading states, and every pipe', async () => {

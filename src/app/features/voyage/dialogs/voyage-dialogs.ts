@@ -50,10 +50,12 @@ import {
   PackageDecisionDialog,
   type PackageDecisionDialogData,
 } from './package-decision-dialog';
+import { RaiseRevisionCeilingDialog } from './raise-revision-ceiling-dialog';
 import { RefreshDesignDialog } from './refresh-design-dialog';
 import { RefreshIntakeDialog } from './refresh-intake-dialog';
 import { RestartVoyageDialog } from './restart-voyage-dialog';
 import { ResumeDialog } from './resume-dialog';
+import { StartFollowUpDialog } from './start-follow-up-dialog';
 import { StopDialog } from './stop-dialog';
 import { UnblockDialog } from './unblock-dialog';
 
@@ -86,6 +88,25 @@ export class VoyageDialogs {
       RestartVoyageDialog,
       { data: { context } }
     );
+  }
+
+  /** "Start a follow-up of PROJ-097?" Closes with the new voyage. */
+  startFollowUp(context: VoyageContext): DialogRef<Story, StartFollowUpDialog> {
+    return this.dialogs.open<Story, VoyageDialogData, StartFollowUpDialog>(
+      StartFollowUpDialog,
+      { data: { context }, width: '640px' }
+    );
+  }
+
+  /** "Raise the revision ceiling?" Closes with the story. */
+  raiseRevisionCeiling(
+    context: VoyageContext
+  ): DialogRef<Story, RaiseRevisionCeilingDialog> {
+    return this.dialogs.open<
+      Story,
+      VoyageDialogData,
+      RaiseRevisionCeilingDialog
+    >(RaiseRevisionCeilingDialog, { data: { context } });
   }
 
   /** "Resume PROJ-118?" */

@@ -555,7 +555,7 @@ describe('VoyageShell on the mock backend', () => {
       const page = await open('/voyages/PROJ-097/plan');
       const h = header(page);
       expect(text(h.querySelector('ah-status-badge'))).toBe('Done terminal');
-      expect(buttonsIn(h)).toEqual(['Models']);
+      expect(buttonsIn(h)).toEqual(['Models', 'Start follow-up']);
       expect(h.querySelectorAll('.ah-step--done')).toHaveLength(8);
     });
 
@@ -1279,6 +1279,493 @@ describe('VoyageShell on the mock backend', () => {
       );
     });
   });
+  describe('Follow-up voyages', () => {
+    function check(label: string): HTMLInputElement {
+      const found = [...dialog().querySelectorAll('label.ah-choice')].find(
+        (l) => text(l).startsWith(label)
+      );
+      const input = found?.querySelector('input');
+      if (!input) throw new Error(`no choice ${label}`);
+      return input;
+    }
+
+    function field(
+      name: string
+    ): HTMLInputElement | HTMLTextAreaElement | null {
+      return dialog().querySelector(`[formcontrolname="${name}"]`);
+    }
+
+    it('is offered on a done voyage only', async () => {
+      const done = await open('/voyages/PROJ-097/models');
+      expect(buttonsIn(header(done))).toContain('Start follow-up');
+      TestBed.resetTestingModule();
+      const running = await open('/voyages/PROJ-140/models');
+      expect(buttonsIn(header(running))).not.toContain('Start follow-up');
+    });
+
+    it('starts an Ahoy-only follow-up from the brief and opens the new voyage', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      const before = storyOf(page.server, 'PROJ-097');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      expect(text(dialog().querySelector('.ah-dialog__title'))).toBe(
+        'Start a follow-up of PROJ-097?'
+      );
+      click(check('Not in Jira'));
+      await flush(page);
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+      expect(text(dialog())).toContain('Say what is new or missing.');
+      expect(text(dialog())).toContain(
+        'Add at least one acceptance criterion.'
+      );
+      expect(commands(page)).toHaveLength(0);
+
+      type(field('text'), '  The export drops the last row.  ');
+      type(field('criteria'), 'Last row is exported\n\n  Totals match ');
+      type(field('budget'), '30');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+
+      const sent = commands(page);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.path).toBe('/stories/PROJ-097/follow-ups');
+      expect(sent[0]?.body).toMatchObject({
+        expectedVersion: before.version,
+        source: { ahoyOnly: true },
+        brief: {
+          text: 'The export drops the last row.',
+          criteria: ['Last row is exported', 'Totals match'],
+        },
+        budgetNanoAiu: 30_000_000_000,
+        confirmSpend: true,
+      });
+      expect(hasDialog()).toBe(false);
+      expect(TestBed.inject(Router).url).toContain('/voyages/PROJ-097-FU1');
+      const h = header(page);
+      expect(text(h)).toContain('Follow-up 1 of PROJ-097');
+      expect(text(h)).toContain('Not in Jira');
+      expect(storyOf(page.server, 'PROJ-097').phase).toBe('done');
+    });
+
+    it('stages screenshots as they are added, lists them, and sends their ids with the follow-up', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      click(check('Not in Jira'));
+      await flush(page);
+      const picker =
+        dialog().querySelector<HTMLInputElement>('input[type="file"]');
+      if (picker === null) throw new Error('no file input');
+      const png = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+      ]);
+      Object.defineProperty(picker, 'files', {
+        configurable: true,
+        value: [
+          new File([png], 'first.png', { type: 'image/png' }),
+          new File([png], 'second.png', { type: 'image/png' }),
+          new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' }),
+        ],
+      });
+      picker.dispatchEvent(new Event('change'));
+      await flush(page);
+      const list = dialog().querySelector('.follow-up__shot-list');
+      expect(text(list)).toContain('first.png');
+      expect(text(list)).toContain('second.png');
+      expect(text(dialog())).toContain('Only PNG, JPEG, WebP and GIF');
+      expect(commands(page).map((c) => c.path)).toEqual([
+        '/stories/PROJ-097/follow-up-images',
+        '/stories/PROJ-097/follow-up-images',
+      ]);
+
+      const remove = [...(list?.querySelectorAll('button') ?? [])].find(
+        (b) => b.getAttribute('aria-label') === 'Remove second.png'
+      );
+      if (!remove) throw new Error('no remove button');
+      click(remove);
+      await flush(page);
+      expect(
+        text(dialog().querySelector('.follow-up__shot-list'))
+      ).not.toContain('second.png');
+      expect(page.requests.some((r) => r.method === 'DELETE')).toBe(true);
+
+      type(field('text'), 'The export drops the last row.');
+      type(field('criteria'), 'Last row is exported');
+      type(field('budget'), '30');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+
+      const start = commands(page).find((c) => c.path.endsWith('/follow-ups'));
+      const sent = start?.body as { imageIds?: string[] } | undefined;
+      expect(sent?.imageIds).toHaveLength(1);
+      expect(hasDialog()).toBe(false);
+    });
+
+    it('grills the brief: asks, shows the questions, puts the answers into the brief and drops the grill', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-097/models', { mock });
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      click(check('Not in Jira'));
+      await flush(page);
+      const grill = () => buttonNamed(dialog(), /^Grill me$/);
+      expect(grill().disabled).toBe(true);
+      type(field('text'), 'The export drops the last row.');
+      await flush(page);
+      expect(grill().disabled).toBe(false);
+      click(grill());
+      await flush(page);
+      expect(commands(page).map((c) => [c.path, c.body])).toEqual([
+        [
+          '/stories/PROJ-097/follow-up-grills',
+          {
+            confirmSpend: true,
+            brief: { text: 'The export drops the last row.', criteria: [] },
+          },
+        ],
+      ]);
+      expect(text(dialog())).toContain('reading PROJ-097');
+      expect(dialog().querySelector('.grill__spinner')).not.toBeNull();
+      expect(text(dialog().querySelector('.grill__busy'))).toContain(
+        'This can take a minute or two'
+      );
+      const asking = buttonNamed(dialog(), /^Ask again$/);
+      expect(asking.disabled).toBe(false);
+      expect(asking.getAttribute('aria-disabled')).toBe('true');
+      expect(asking.getAttribute('aria-busy')).toBe('true');
+      click(asking);
+      await flush(page);
+      expect(commands(page)).toHaveLength(1);
+      mock.clock.advance(3_000);
+      await flush(page);
+      expect(dialog().querySelector('.grill__spinner')).toBeNull();
+      const questions = [
+        ...dialog().querySelectorAll('fieldset legend strong'),
+      ];
+      expect(questions.map((q) => text(q))).toEqual([
+        'Which part of what was delivered does this touch?',
+        'Must data created before the fix be corrected?',
+      ]);
+      expect(text(dialog())).toContain('Recommended');
+      const add = buttonNamed(dialog(), 'Add answers to the brief');
+      expect(add.disabled).toBe(true);
+
+      const radios = dialog().querySelectorAll<HTMLInputElement>(
+        'fieldset input[type="radio"]'
+      );
+      click(radios[1]);
+      click(radios[6]);
+      await flush(page);
+      expect(add.disabled).toBe(false);
+      click(add);
+      await flush(page);
+
+      expect(field('text')?.value).toBe(
+        "The export drops the last row.\n\nDecisions from Ahoy's questions:\n" +
+          '- Which part of what was delivered does this touch? Something it left out\n' +
+          '- Must data created before the fix be corrected? Not decided yet; the crew should treat it as open.'
+      );
+      expect(dialog().querySelector('fieldset')).toBeNull();
+      expect(page.requests.some((r) => r.method === 'DELETE')).toBe(true);
+    });
+
+    it('keeps the grill when reading it fails, so Discard can still stop the agent', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-097/models', { mock });
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      type(field('text'), 'The export drops the last row.');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Grill me$/));
+      await flush(page);
+      mock.server.switches.failNext = 503;
+      mock.clock.advance(3_000);
+      await flush(page);
+      expect(dialog().querySelector('.grill__spinner')).toBeNull();
+      expect(text(dialog())).toContain('Grill me did not work');
+      click(buttonNamed(dialog(), 'Discard'));
+      await flush(page);
+      expect(
+        page.requests.filter(
+          (r) => r.method === 'DELETE' && r.path.includes('/follow-up-grills/')
+        )
+      ).toHaveLength(1);
+    });
+
+    it('can still cancel the first grill after a failed poll and a failed second ask', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-097/models', { mock });
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      type(field('text'), 'The export drops the last row.');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Grill me$/));
+      await flush(page);
+      mock.server.switches.failNext = 503;
+      mock.clock.advance(3_000);
+      await flush(page);
+      mock.server.switches.failNext = 503;
+      click(buttonNamed(dialog(), /^Ask again$/));
+      await flush(page);
+      expect(text(dialog())).toContain('Grill me did not work');
+      expect(buttonNamed(dialog(), 'Discard')).toBeTruthy();
+      click(buttonNamed(dialog(), 'Cancel'));
+      await flush(page);
+      expect(hasDialog()).toBe(false);
+      expect(
+        page.requests.filter(
+          (r) => r.method === 'DELETE' && r.path.includes('/follow-up-grills/')
+        )
+      ).toHaveLength(1);
+    });
+
+    it('keeps the grill when stopping the agent fails, so Discard can be tried again', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-097/models', { mock });
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      type(field('text'), 'The export drops the last row.');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Grill me$/));
+      await flush(page);
+      const deletes = () =>
+        page.requests.filter(
+          (r) => r.method === 'DELETE' && r.path.includes('/follow-up-grills/')
+        ).length;
+      mock.server.switches.failNext = 503;
+      click(buttonNamed(dialog(), 'Discard'));
+      await flush(page);
+      expect(deletes()).toBe(1);
+      expect(text(dialog())).toContain('Could not stop the agent');
+      click(buttonNamed(dialog(), 'Discard'));
+      await flush(page);
+      expect(deletes()).toBe(2);
+      expect(text(dialog())).not.toContain('Could not stop the agent');
+      expect(dialog().querySelector('.grill__actions')).toBeNull();
+    });
+
+    it('ignores Ask again and a second Add while the grill is being discarded', async () => {
+      const mock = testServer();
+      const page = await open('/voyages/PROJ-097/models', { mock });
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      click(check('Not in Jira'));
+      await flush(page);
+      type(field('text'), 'The export drops the last row.');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Grill me$/));
+      await flush(page);
+      mock.clock.advance(3_000);
+      await flush(page);
+      click(buttonNamed(dialog(), 'Discard'));
+      click(buttonNamed(dialog(), /^Ask again$/));
+      await flush(page);
+      expect(commands(page).map((c) => c.path)).toEqual([
+        '/stories/PROJ-097/follow-up-grills',
+      ]);
+
+      click(buttonNamed(dialog(), /^Grill me$/));
+      await flush(page);
+      mock.clock.advance(3_000);
+      await flush(page);
+      const radios = dialog().querySelectorAll<HTMLInputElement>(
+        'fieldset input[type="radio"]'
+      );
+      click(radios[1]);
+      await flush(page);
+      const add = buttonNamed(dialog(), 'Add answers to the brief');
+      click(add);
+      click(add);
+      await flush(page);
+      const brief = field('text')?.value ?? '';
+      expect(brief.split("Decisions from Ahoy's questions:")).toHaveLength(2);
+    });
+
+    it('takes one batch of screenshots at a time and removes one that arrives after the dialog closed', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      click(check('Not in Jira'));
+      await flush(page);
+      const picker =
+        dialog().querySelector<HTMLInputElement>('input[type="file"]');
+      if (picker === null) throw new Error('no file input');
+      const png = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0,
+      ]);
+      const choose = (...names: string[]) => {
+        Object.defineProperty(picker, 'files', {
+          configurable: true,
+          value: names.map(
+            (name) => new File([png], name, { type: 'image/png' })
+          ),
+        });
+        picker.dispatchEvent(new Event('change'));
+      };
+      choose('first.png');
+      choose('second.png');
+      await flush(page);
+      const list = text(dialog().querySelector('.follow-up__shot-list'));
+      expect(list).toContain('first.png');
+      expect(list).not.toContain('second.png');
+      expect(text(dialog())).toContain('Wait for the current screenshot');
+
+      choose('late.png');
+      click(buttonNamed(dialog(), 'Cancel'));
+      await flush(page);
+      expect(hasDialog()).toBe(false);
+      const deletes = page.requests.filter(
+        (r) => r.method === 'DELETE' && r.path.includes('/follow-up-images/')
+      );
+      expect(deletes).toHaveLength(2);
+    });
+
+    it('discards a grill still asking when the dialog closes', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      type(field('text'), 'The export drops the last row.');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Grill me$/));
+      await flush(page);
+      click(buttonNamed(dialog(), 'Cancel'));
+      await flush(page);
+      expect(hasDialog()).toBe(false);
+      expect(
+        page.requests.filter(
+          (r) => r.method === 'DELETE' && r.path.includes('/follow-up-grills/')
+        )
+      ).toHaveLength(1);
+    });
+
+    it('says that the fast path only offers the repositories of the earlier plan', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      expect(text(dialog().querySelector('.follow-up__fast-path-hint'))).toBe(
+        'Straight to implementation only offers the repositories the earlier plan worked in (api, web). To change another repository, plan again.'
+      );
+      click(check('Straight to implementation'));
+      await flush(page);
+      const options = [
+        ...(dialog().querySelectorAll(
+          'select[formcontrolname="repo"] option'
+        ) ?? []),
+      ].map((o) => text(o));
+      expect(options).toEqual(['Pick a repository', 'api', 'web']);
+      expect(text(dialog())).toContain(
+        'One repository, from those the earlier plan worked in: api, web.'
+      );
+    });
+
+    it('creates the Jira issue of the type chosen from the brief, and starts from its key', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      click(check('Create in Jira for me'));
+      await flush(page);
+      const types = [
+        ...dialog().querySelectorAll(
+          'select[formcontrolname="issueType"] option'
+        ),
+      ].map((o) => text(o));
+      expect(types).toEqual(['Bug', 'Defect', 'Task', 'Story']);
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+      expect(text(dialog())).toContain('Give the Jira issue a title.');
+      expect(commands(page)).toHaveLength(0);
+
+      type(field('title'), '  Export drops the last row ');
+      type(field('text'), 'The export drops the last row.');
+      type(field('criteria'), 'Last row is exported');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+
+      const sent = commands(page);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.body).toMatchObject({
+        source: { createInJira: { issueType: 'Bug' } },
+        title: 'Export drops the last row',
+        brief: { criteria: ['Last row is exported'] },
+      });
+      expect(hasDialog()).toBe(false);
+      expect(TestBed.inject(Router).url).toMatch(/\/voyages\/PROJ-\d+(\/|$)/);
+      expect(text(header(page))).toContain('Follow-up 1 of PROJ-097');
+    });
+
+    it('links an existing Jira issue and refuses a key that is not one', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      type(field('jiraKey'), 'PROJ-097-FU1');
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+      expect(text(dialog())).toContain('Enter a Jira key like PROJ-123.');
+      expect(commands(page)).toHaveLength(0);
+    });
+
+    it('offers the open defects linked in Jira and fills the issue in from the one picked', async () => {
+      const page = await open('/voyages/PROJ-097/models');
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      expect(text(dialog())).toContain('Open defects linked to PROJ-097');
+      const picker = dialog().querySelector<HTMLSelectElement>(
+        'select[formcontrolname="defect"]'
+      );
+      if (picker === null) throw new Error('no defect picker');
+      picker.value = 'QA-410';
+      picker.dispatchEvent(new Event('change'));
+      await flush(page);
+      expect(field('jiraKey')?.value).toBe('QA-410');
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+      expect(commands(page)[0]?.body).toMatchObject({
+        source: { jiraKey: 'QA-410' },
+      });
+    });
+
+    it('shows the lineage on the root once a follow-up exists, and raises the ceiling', async () => {
+      const mock = testServer();
+      const voyage = mock.server.state.voyages.get('PROJ-097');
+      if (voyage === undefined) throw new Error('no PROJ-097');
+      voyage.revisionCeiling = 1;
+      const page = await open('/voyages/PROJ-097/models', { mock });
+      click(buttonNamed(header(page), 'Start follow-up'));
+      await flush(page);
+      click(check('Not in Jira'));
+      await flush(page);
+      type(field('text'), 'Missing row.');
+      type(field('criteria'), 'Row is there');
+      await flush(page);
+      click(buttonNamed(dialog(), /^Start follow-up/));
+      await flush(page);
+
+      await page.harness.navigateByUrl('/voyages/PROJ-097/models');
+      await flush(page);
+      const h = text(header(page));
+      expect(h).toContain('Revision rounds · follow-ups');
+      expect(h).toContain('PROJ-097-FU1');
+
+      click(buttonNamed(header(page), 'Raise revision ceiling'));
+      await flush(page);
+      type(field('reason'), 'QA found more.');
+      click(buttonNamed(dialog(), 'Raise the ceiling'));
+      await flush(page);
+      const raised = commands(page).at(-1);
+      expect(raised?.path).toBe('/stories/PROJ-097/revision-ceiling');
+      expect(raised?.body).toMatchObject({
+        rounds: 1,
+        reason: 'QA found more.',
+        confirmSpend: true,
+      });
+      expect(hasDialog()).toBe(false);
+    });
+  });
+
   describe('Knowledge review', () => {
     function knowledgePanel(page: Page): HTMLElement {
       const element =

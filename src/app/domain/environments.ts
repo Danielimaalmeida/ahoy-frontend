@@ -98,6 +98,76 @@ export function selectorOf(typed: string): Read<string | null> {
     : { value };
 }
 
+/** What one step of a login does: types the user or the password, picks an option of a list, or clicks. */
+export type SignInStepAction =
+  'fill_user' | 'fill_password' | 'select' | 'click';
+/** Each action, in the words of the form. */
+export const SIGN_IN_STEP_ACTIONS: readonly {
+  readonly action: SignInStepAction;
+  readonly label: string;
+}[] = [
+  { action: 'fill_user', label: 'Type the user' },
+  { action: 'fill_password', label: 'Type the password' },
+  { action: 'select', label: 'Pick an option' },
+  { action: 'click', label: 'Click' },
+];
+/** The most steps a login has. */
+export const MAX_SIGN_IN_STEPS = 10;
+/** The longest option value a `select` step picks. */
+export const MAX_STEP_VALUE_CHARS = 200;
+
+/** One step as typed in the form: the value is only read for `select`. */
+export interface TypedSignInStep {
+  readonly action: SignInStepAction;
+  readonly selector: string;
+  readonly value: string;
+}
+
+/** One step as the API keeps it. */
+export interface SignInStep {
+  readonly action: SignInStepAction;
+  readonly selector: string;
+  readonly value?: string;
+}
+
+/**
+ * The steps of a login over several pages as typed, trimmed; null when there are none (the one-page form), or why
+ * they are refused: each needs its selector, a `select` its option, and the password is typed once, the user at most
+ * once.
+ */
+export function signInStepsOf(
+  typed: readonly TypedSignInStep[]
+): Read<readonly SignInStep[] | null> {
+  if (typed.length === 0) return { value: null };
+  if (typed.length > MAX_SIGN_IN_STEPS)
+    return { problem: `At most ${MAX_SIGN_IN_STEPS} steps.` };
+  const steps: SignInStep[] = [];
+  for (const [i, step] of typed.entries()) {
+    const selector = step.selector.trim();
+    if (selector === '' || selector.length > MAX_SELECTOR_CHARS)
+      return {
+        problem: `Step ${i + 1}: give the CSS selector it waits for, at most ${MAX_SELECTOR_CHARS} characters.`,
+      };
+    if (step.action !== 'select') {
+      steps.push({ action: step.action, selector });
+      continue;
+    }
+    const value = step.value.trim();
+    if (value === '' || value.length > MAX_STEP_VALUE_CHARS)
+      return {
+        problem: `Step ${i + 1}: say which option it picks, at most ${MAX_STEP_VALUE_CHARS} characters.`,
+      };
+    steps.push({ action: 'select', selector, value });
+  }
+  const count = (action: SignInStepAction) =>
+    steps.filter((s) => s.action === action).length;
+  if (count('fill_password') !== 1)
+    return { problem: 'The steps type the password exactly once.' };
+  if (count('fill_user') > 1)
+    return { problem: 'The steps type the user once at most.' };
+  return { value: steps };
+}
+
 /** How an environment signs in, as the table says it. */
 export interface SignInFacts {
   readonly kind: string;
@@ -207,6 +277,7 @@ const FIELD_NAMES: Readonly<Record<string, string>> = {
   userSelector: 'user field',
   passwordSelector: 'password field',
   submitSelector: 'submit button',
+  signInSteps: 'sign-in steps',
   signedInUrlPattern: 'signed-in URL',
   signedInSelector: 'signed-in element',
   writes: 'may change data',

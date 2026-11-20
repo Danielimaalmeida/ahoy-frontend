@@ -2,19 +2,28 @@ import {
   DestroyRef,
   Injectable,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
-import { isNotFound, type ApiError } from '@core/api/api-error';
+import { isNotFound, mapResult, type ApiError } from '@core/api/api-error';
 import { readStoryState, type StoryStateView } from '@core/api/story-state';
 import type { ApiResult } from '@core/api/api-error';
 import type {
   AhoyEvent,
+  FollowUpBrief,
+  FollowUpGrill,
+  FollowUpImage,
+  FollowUpPreview,
+  FollowUpPreviewQuery,
   ModelPlan,
   PlanningMode,
   Run,
+  StartFollowUpRequest,
   Story,
+  StoryLineage,
   WorkPackageDecision,
 } from '@core/api/types';
 import { CurrentUser } from '@core/auth/current-user';
@@ -88,6 +97,7 @@ export class VoyageContext {
   private readonly held = signal<Held | null>(null);
   /** The key last given to {@link open}, valid or not. */
   private readonly opened = signal<string | null>(null);
+  private readonly lineageState = signal<StoryLineage | null>(null);
 
   /** The voyage's commands, one at a time, with `expectedVersion` = {@link version} (plan §5.5). */
   readonly commands = new CommandRunner({
@@ -194,6 +204,23 @@ export class VoyageContext {
     return (state.revisions.get(gate) ?? 0) + 1;
   });
 
+  /**
+   * The voyage's lineage: its root, the follow-ups and the revision rounds they share. Read while the voyage is done or
+   * is a follow-up (see {@link loadLineage}); null before it is read.
+   */
+  readonly lineage = this.lineageState.asReadonly();
+
+  /** The link of a follow-up voyage to the voyage it continues; null for any other voyage. */
+  readonly followUp = computed(() => this.story()?.followUp ?? null);
+
+  /** Whether a follow-up can be started from this voyage: it is done (delivered, terminal). */
+  readonly canStartFollowUp = computed(() => {
+    const story = this.story();
+    return (
+      story !== null && story.phase === 'done' && story.status === 'terminal'
+    );
+  });
+
   /** Whether the user owns the voyage (and is billed for it). */
   readonly isOwner = computed(() => {
     const story = this.story();
@@ -223,6 +250,13 @@ export class VoyageContext {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.close());
+    // The lineage is read for a done voyage (to start a follow-up) and for a follow-up, and again when the voyage moves.
+    effect(() => {
+      const story = this.story();
+      if (story === null || (story.phase !== 'done' && !story.followUp)) return;
+      void story.version;
+      untracked(() => void this.loadLineage());
+    });
   }
 
   /** The `StoryStore` handle of the open voyage, for a tab that needs a resource the context does not expose. */
@@ -252,6 +286,96 @@ export class VoyageContext {
       ...CONTEXT_RESOURCES.map((name) => handle[name].refresh()),
       events.refresh(),
     ]);
+  }
+
+  /** Reads the lineage of the open voyage; a failed read leaves the last one. */
+  async loadLineage(): Promise<void> {
+    const key = this.key();
+    if (key === null) return;
+    const result = await this.api.getStoryLineage(key);
+    if (result.ok && this.key() === key) this.lineageState.set(result.value);
+  }
+
+  /** What a follow-up with this brief would look like: whether it can start, the rounds left and the suggested route. */
+  previewFollowUp(
+    query: FollowUpPreviewQuery
+  ): Promise<ApiResult<FollowUpPreview>> {
+    const key = this.key();
+    return key === null
+      ? Promise.resolve({ ok: false, error: { kind: 'network' } })
+      : this.api.previewFollowUp(key, query);
+  }
+
+  /** Stages a screenshot for a follow-up of this done voyage; `startFollowUp` claims it by its id. */
+  attachFollowUpImage(image: Blob): Promise<ApiResult<FollowUpImage>> {
+    const key = this.key();
+    return key === null
+      ? Promise.resolve({ ok: false, error: { kind: 'network' } })
+      : this.api.addFollowUpImage(key, image);
+  }
+
+  /**
+   * "Grill me": asks an agent to question the brief of a follow-up of this done voyage before it starts. May spend AIU
+   * (the server's story draft cap), which no voyage's budget pays.
+   */
+  askFollowUpGrill(brief: FollowUpBrief): Promise<ApiResult<FollowUpGrill>> {
+    const key = this.key();
+    return key === null
+      ? Promise.resolve({ ok: false, error: { kind: 'network' } })
+      : this.api.requestFollowUpGrill(key, { confirmSpend: true, brief });
+  }
+
+  /** One grill, with its questions once the agent has asked them. */
+  readFollowUpGrill(grillId: string): Promise<ApiResult<FollowUpGrill>> {
+    return this.api.getFollowUpGrill(grillId);
+  }
+
+  /** Drops a grill; the agent stops if it is still asking. */
+  discardFollowUpGrill(grillId: string): Promise<ApiResult<null>> {
+    return this.api.discardFollowUpGrill(grillId);
+  }
+
+  /** Removes a staged screenshot nobody has used. */
+  removeFollowUpImage(imageId: string): Promise<ApiResult<null>> {
+    return this.api.deleteFollowUpImage(imageId);
+  }
+
+  /**
+   * Starts a follow-up voyage of this done voyage (`startFollowUp`), confirming that it may spend AIU. The answer is the
+   * NEW voyage: it goes to the store, and the lineage is read again, since a round of the root was used.
+   */
+  async startFollowUp(
+    request: Omit<StartFollowUpRequest, 'expectedVersion' | 'confirmSpend'>
+  ): Promise<CommandOutcome<Story>> {
+    const outcome = await this.storyCommand((key, expectedVersion) =>
+      this.api.startFollowUp(key, {
+        ...request,
+        expectedVersion,
+        confirmSpend: true,
+      })
+    );
+    if (outcome.kind === 'ok') void this.loadLineage();
+    return outcome;
+  }
+
+  /** Lets the lineage use `rounds` more revision rounds (`raiseRevisionCeiling`), with why; the lineage is read again. */
+  async raiseRevisionCeiling(
+    rounds: number,
+    reason: string
+  ): Promise<CommandOutcome<Story>> {
+    const outcome = await this.storyCommand(async (key, expectedVersion) =>
+      mapResult(
+        await this.api.raiseRevisionCeiling(key, {
+          expectedVersion,
+          rounds,
+          reason,
+          confirmSpend: true,
+        }),
+        (raised) => raised.story
+      )
+    );
+    if (outcome.kind === 'ok') void this.loadLineage();
+    return outcome;
   }
 
   /** Drops anchor: `stopStory` with the reason. The `202` story goes to the store. */
@@ -426,6 +550,7 @@ export class VoyageContext {
 
   private close(): void {
     this.opened.set(null);
+    this.lineageState.set(null);
     const held = this.held();
     if (held === null) return;
     held.handle.release();

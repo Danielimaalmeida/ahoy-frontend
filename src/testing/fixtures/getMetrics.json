@@ -719,6 +719,36 @@
       "stories": 1
     }
   ],
+  "followUps": {
+    "started": 3,
+    "fastPath": 1,
+    "lineages": 2,
+    "ceilingRaises": 1,
+    "perLineage": [
+      {
+        "followUps": 1,
+        "lineages": 1
+      },
+      {
+        "followUps": 2,
+        "lineages": 1
+      }
+    ],
+    "top": [
+      {
+        "rootKey": "R3DA-14677",
+        "followUps": 2,
+        "nanoAiu": 42500000000,
+        "ceilingRaises": 1
+      },
+      {
+        "rootKey": "R3DA-15001",
+        "followUps": 1,
+        "nanoAiu": 12000000000,
+        "ceilingRaises": 0
+      }
+    ]
+  },
   "runKinds": [],
   "waits": [
     {

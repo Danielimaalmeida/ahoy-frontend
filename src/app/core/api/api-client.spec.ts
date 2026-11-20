@@ -43,6 +43,10 @@ import listStoryEvents from '@testing/fixtures/listStoryEvents.json';
 import listStoryRuns from '@testing/fixtures/listStoryRuns.json';
 import problems from '@testing/fixtures/problems.json';
 import refreshIntake from '@testing/fixtures/refreshIntake.json';
+import previewFollowUp from '@testing/fixtures/previewFollowUp.json';
+import startFollowUp from '@testing/fixtures/startFollowUp.json';
+import getStoryLineage from '@testing/fixtures/getStoryLineage.json';
+import raiseRevisionCeiling from '@testing/fixtures/raiseRevisionCeiling.json';
 import requestAgentDiagnosis from '@testing/fixtures/requestAgentDiagnosis.json';
 import requestKnowledgeReview from '@testing/fixtures/requestKnowledgeReview.json';
 import requestRefinement from '@testing/fixtures/requestRefinement.json';
@@ -480,6 +484,79 @@ const CASES: readonly Case[] = [
     problem: 'invalid_state',
   },
   {
+    op: 'previewFollowUp',
+    call: (api) =>
+      api.previewFollowUp('PROJ-123', {
+        criteria: 2,
+        briefChars: 120,
+        repos: 'api',
+      }),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-123/follow-up-preview?criteria=2&briefChars=120&repos=api',
+    reply: previewFollowUp,
+    status: 200,
+    value: previewFollowUp,
+    problem: 'not_found',
+  },
+  {
+    op: 'startFollowUp',
+    call: (api) =>
+      api.startFollowUp('PROJ-123', {
+        expectedVersion: 9,
+        source: { ahoyOnly: true },
+        brief: { text: 'The VAT number is missing', criteria: ['VAT shows'] },
+        route: 'planning',
+        budgetNanoAiu: 10_000_000_000,
+        confirmSpend: true,
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-123/follow-ups',
+    body: {
+      expectedVersion: 9,
+      source: { ahoyOnly: true },
+      brief: { text: 'The VAT number is missing', criteria: ['VAT shows'] },
+      route: 'planning',
+      budgetNanoAiu: 10_000_000_000,
+      confirmSpend: true,
+    },
+    reply: startFollowUp,
+    status: 201,
+    value: startFollowUp,
+    problem: 'revision_ceiling_reached',
+  },
+  {
+    op: 'getStoryLineage',
+    call: (api) => api.getStoryLineage('PROJ-123'),
+    method: 'GET',
+    url: '/api/v1/stories/PROJ-123/lineage',
+    reply: getStoryLineage,
+    status: 200,
+    value: getStoryLineage,
+    problem: 'not_found',
+  },
+  {
+    op: 'raiseRevisionCeiling',
+    call: (api) =>
+      api.raiseRevisionCeiling('PROJ-123', {
+        expectedVersion: 9,
+        rounds: 2,
+        reason: 'QA found two more cases',
+        confirmSpend: true,
+      }),
+    method: 'POST',
+    url: '/api/v1/stories/PROJ-123/revision-ceiling',
+    body: {
+      expectedVersion: 9,
+      rounds: 2,
+      reason: 'QA found two more cases',
+      confirmSpend: true,
+    },
+    reply: raiseRevisionCeiling,
+    status: 200,
+    value: raiseRevisionCeiling,
+    problem: 'invalid_state',
+  },
+  {
     op: 'listRefinements',
     call: (api) => api.listRefinements(),
     method: 'GET',
@@ -902,6 +979,10 @@ describe('ApiClient', () => {
         'getArtifactContent',
         'listStoryEvents',
         'refreshIntake',
+        'previewFollowUp',
+        'startFollowUp',
+        'getStoryLineage',
+        'raiseRevisionCeiling',
         'unblockStory',
         'listRefinements',
         'getRefinements',

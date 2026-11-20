@@ -109,6 +109,14 @@ type ListState =
       display: block;
       margin-top: 8px;
     }
+    /* The whole reason is in the row opened under the defect; the cell keeps a few lines so the row stays short. */
+    .defects__why {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      overflow: hidden;
+    }
     .defects__toggle {
       gap: 5px;
       height: auto;
@@ -396,7 +404,12 @@ type ListState =
                                 repro.label
                               }}</span>
                             }
-                            <span ahCellSub>&ngsp;{{ repro.detail }}</span>
+                            <span
+                              ahCellSub
+                              class="defects__why"
+                              [title]="repro.detail"
+                              >&ngsp;{{ repro.detail }}</span
+                            >
                           </span>
                         }
                       </td>

@@ -259,6 +259,21 @@ describe('Metrics', () => {
     );
   });
 
+  it('shows the follow-up voyages of the period and the dearest lineages', async () => {
+    const page = await open('/metrics/gates');
+    expect(
+      panel(page.root, 'Follow-up voyages').querySelector(
+        '[data-testid="followups-summary"]'
+      )?.textContent
+    ).toContain(
+      '3 follow-ups in 2 lineages, 1 on the fast path; 1 ceiling raise.'
+    );
+    expect(rows(page.root, 'Follow-up voyages')).toEqual([
+      ['R3DA-14677', '2', '42.5', '1'],
+      ['R3DA-15001', '1', '12.0', '0'],
+    ]);
+  });
+
   it('reads another period when one is chosen, and the filters when they are applied', async () => {
     const page = await open('/metrics');
     button(page.root, 'Last 7 days').click();

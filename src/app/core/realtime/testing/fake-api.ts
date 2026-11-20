@@ -31,6 +31,10 @@ export type FakeApiOps = Pick<
   | 'refreshDesign'
   | 'getStoryPrComments'
   | 'assessComments'
+  | 'getStoryLineage'
+  | 'previewFollowUp'
+  | 'startFollowUp'
+  | 'raiseRevisionCeiling'
   | 'getStoryBranchReleases'
   | 'requestBranchRelease'
   | 'requestAllBranchReleases'
@@ -224,6 +228,26 @@ export class FakeApi implements FakeApiOps {
   assessComments: FakeApiOps['assessComments'] = (key, body) => {
     this.calls.push({ op: 'assessComments', args: [key, body] });
     return this.handlers.assessComments?.(key, body) ?? unreachable();
+  };
+
+  getStoryLineage: FakeApiOps['getStoryLineage'] = (key) => {
+    this.calls.push({ op: 'getStoryLineage', args: [key] });
+    return this.handlers.getStoryLineage?.(key) ?? unreachable();
+  };
+
+  previewFollowUp: FakeApiOps['previewFollowUp'] = (key, query) => {
+    this.calls.push({ op: 'previewFollowUp', args: [key, query] });
+    return this.handlers.previewFollowUp?.(key, query) ?? unreachable();
+  };
+
+  startFollowUp: FakeApiOps['startFollowUp'] = (key, body) => {
+    this.calls.push({ op: 'startFollowUp', args: [key, body] });
+    return this.handlers.startFollowUp?.(key, body) ?? unreachable();
+  };
+
+  raiseRevisionCeiling: FakeApiOps['raiseRevisionCeiling'] = (key, body) => {
+    this.calls.push({ op: 'raiseRevisionCeiling', args: [key, body] });
+    return this.handlers.raiseRevisionCeiling?.(key, body) ?? unreachable();
   };
 
   getStoryBranchReleases: FakeApiOps['getStoryBranchReleases'] = (key) => {

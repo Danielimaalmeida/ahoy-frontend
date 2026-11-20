@@ -118,7 +118,7 @@ export const isStoryExists = (error: ApiError): error is ProblemError =>
 export const isInvalidState = (error: ApiError): error is ProblemError =>
   hasProblemCode(error, 'invalid_state');
 
-/** `revision_ceiling_reached`: the plan was sent back as often as the gate allows. */
+/** `revision_ceiling_reached`: a gate was sent back, or a done voyage reopened, as often as the ceiling allows. */
 export const isRevisionCeilingReached = (
   error: ApiError
 ): error is ProblemError => hasProblemCode(error, 'revision_ceiling_reached');

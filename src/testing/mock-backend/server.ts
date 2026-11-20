@@ -48,7 +48,10 @@ import type {
   ProblemCode,
   RefinementRequest,
   RefreshDesignRequest,
+  RaiseRevisionCeilingRequest,
   RefreshIntakeRequest,
+  FollowUpGrillRequest,
+  StartFollowUpRequest,
   ResumeStoryRequest,
   SetStoryBudgetRequest,
   SetStoryModelsRequest,
@@ -70,6 +73,16 @@ import { isOver } from '@domain/status';
 import { realClock, type MockClock } from './clock';
 import { agentDiagnosisMarkdown } from './content';
 import { diagnosisOf } from './diagnosis';
+import {
+  FOLLOW_UP_GATE,
+  FollowUpGrills,
+  FollowUpImages,
+  followUpToStart,
+  lineageOf,
+  previewFollowUp,
+  raiseCeiling,
+  rootOf,
+} from './follow-ups';
 import { planFitOf } from './plan-fit';
 import {
   PANEL_METRICS_MAX_DAYS,
@@ -101,7 +114,6 @@ import {
   eventDto,
   PHASE_TABLE,
   PLAN_FILE,
-  REVISION_CEILING,
   SLOTS,
   UI_AGENTS,
   Voyage,
@@ -264,6 +276,8 @@ export class MockAhoyServer {
   private agentDiagnoses: RefinementDesk;
   private knowledgeReviews: KnowledgeDesk;
   private meetings: MeetingDesk;
+  private followUpImages: FollowUpImages;
+  private followUpGrills: FollowUpGrills;
   private conversations: ConversationDesk;
   /** Team settings › Meetings: the names of the two sides, as saved. */
   private meetingLabels = { usLabel: 'Us', themLabel: 'Stakeholders' };
@@ -300,6 +314,8 @@ export class MockAhoyServer {
       options.timing ?? LIVE_TIMING
     );
     this.meetings = new MeetingDesk(this.clock);
+    this.followUpImages = new FollowUpImages(() => this.world.nowIso());
+    this.followUpGrills = new FollowUpGrills(this.clock);
     this.conversations = this.newConversations();
     this.load();
   }
@@ -398,7 +414,10 @@ export class MockAhoyServer {
       this.options.timing ?? LIVE_TIMING
     );
     this.conversations.stopAll();
+    this.followUpGrills.stopAll();
     this.meetings = new MeetingDesk(this.clock);
+    this.followUpImages = new FollowUpImages(() => this.world.nowIso());
+    this.followUpGrills = new FollowUpGrills(this.clock);
     this.conversations = this.newConversations();
     this.productVersion = null;
     Object.assign(this.switches, {
@@ -704,6 +723,48 @@ export class MockAhoyServer {
         return this.refreshIntake(call);
       case 'refreshDesign':
         return this.refreshDesign(call);
+      case 'previewFollowUp':
+        return jsonResponse(
+          200,
+          previewFollowUp(this.world, this.voyage(call), call.query)
+        );
+      case 'startFollowUp':
+        return this.startFollowUp(call);
+      case 'addFollowUpImage':
+        return jsonResponse(
+          201,
+          this.followUpImages.add(
+            call.actor,
+            this.voyage(call),
+            call.body as Uint8Array // validated
+          )
+        );
+      case 'getFollowUpImage':
+        return this.followUpImage(call);
+      case 'deleteFollowUpImage':
+        this.followUpImages.remove(call.actor, call.path['imageId'] ?? '');
+        return { kind: 'empty', status: 204, headers: {} };
+      case 'requestFollowUpGrill':
+        return jsonResponse(
+          202,
+          this.followUpGrills.request(
+            call.actor,
+            this.voyage(call),
+            call.body as FollowUpGrillRequest // validated
+          )
+        );
+      case 'getFollowUpGrill':
+        return jsonResponse(
+          200,
+          this.followUpGrills.get(call.path['grillId'] ?? '')
+        );
+      case 'discardFollowUpGrill':
+        this.followUpGrills.discard(call.path['grillId'] ?? '');
+        return { kind: 'empty', status: 204, headers: {} };
+      case 'getStoryLineage':
+        return jsonResponse(200, lineageOf(this.world, this.voyage(call)));
+      case 'raiseRevisionCeiling':
+        return this.raiseRevisionCeiling(call);
       case 'listRefinements':
         return jsonResponse(200, { items: this.refinements.latest() });
       case 'getRefinements': {
@@ -1643,6 +1704,94 @@ export class MockAhoyServer {
   }
 
   /**
+   * Starts a follow-up of a done story, as `startFollowUp` of `ahoy-hosted` does: a new story linked to the root, which
+   * stays done and is charged one `delivery_accepted` round.
+   */
+  private startFollowUp(call: Call): MockResponse {
+    const body = call.body as StartFollowUpRequest; // validated
+    const from = this.lock(call, body.expectedVersion);
+    const { key, root, number, source } = followUpToStart(
+      this.world,
+      from,
+      body
+    );
+    this.followUpImages.claim(call.actor, from.story.key, body.imageIds ?? []);
+    const now = this.world.nowIso();
+    const round = (root.revisionRounds[FOLLOW_UP_GATE] ?? 0) + 1;
+    root.revisionRounds[FOLLOW_UP_GATE] = round;
+    const voyage = new Voyage({
+      key,
+      title: body.title ?? null,
+      owner: call.actor,
+      ownerName: null,
+      phase: 'intake',
+      status: 'ready',
+      haltReason: null,
+      budgetNanoAiu: body.budgetNanoAiu,
+      spentNanoAiu: 0,
+      controlSha: from.story.controlSha,
+      currentRunId: null,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      followUp: {
+        rootKey: root.story.key,
+        number,
+        source,
+        route: body.route,
+      },
+    });
+    for (const slot of SLOTS) {
+      const choice = body.models?.[slot];
+      if (choice !== undefined) voyage.chosen[slot] = choice;
+    }
+    if (body.planningMode !== undefined)
+      voyage.story.planningMode = body.planningMode;
+    this.world.voyages.set(key, voyage);
+    this.world.touch(root);
+    this.world.addGateRecord(root, {
+      source: 'human',
+      gate: FOLLOW_UP_GATE,
+      phase: 'done',
+      outcome: 'reopen',
+      message: body.brief.text.slice(0, 200),
+      actor: call.actor,
+      runId: null,
+      createdAt: now,
+    });
+    this.world.append(root, 'story.follow_up_started', call.actor, {
+      followUp: key,
+      round,
+      route: body.route,
+    });
+    this.world.append(voyage, 'story.started', call.actor, {
+      phase: 'intake',
+      controlSha: voyage.story.controlSha,
+      budgetNanoAiu: body.budgetNanoAiu,
+      followUp: { rootKey: root.story.key, number, source },
+    });
+    this.simulator.poke(voyage);
+    return jsonResponse(201, voyage.storyDto(), {
+      Location: `${BASE}/stories/${key}`,
+    });
+  }
+
+  /** Lets a lineage use more revision rounds, as `raiseRevisionCeiling` of `ahoy-hosted` does. */
+  private raiseRevisionCeiling(call: Call): MockResponse {
+    const body = call.body as RaiseRevisionCeilingRequest; // validated
+    const voyage = this.lock(call, body.expectedVersion);
+    const root = rootOf(this.world, voyage);
+    const ceiling = raiseCeiling(root, body.rounds);
+    this.world.touch(voyage);
+    this.world.append(root, 'story.revision_ceiling_raised', call.actor, {
+      rounds: body.rounds,
+      ceiling,
+      reason: body.reason.trim(),
+    });
+    return jsonResponse(200, { story: voyage.storyDto(), ceiling });
+  }
+
+  /**
    * Replaces a story's Figma design, as `refreshDesign` of `ahoy-hosted` does: from a halted implementation or review or
    * at the delivery gate, with a design read, or halted in the design phase after an earlier refresh. The design files
    * move to `history/design-v<version>/`, the links go to `design/figma-links.md`, every UI package is reopened with a
@@ -1942,10 +2091,10 @@ export class MockAhoyServer {
     let phase: string;
     let revision: number | null = null;
     if (body.decision === 'send_back') {
-      if (round - 1 >= REVISION_CEILING)
+      if (round - 1 >= voyage.revisionCeiling)
         throw new MockProblem(
           'revision_ceiling_reached',
-          `${gate} has already been revised ${round - 1} time(s), at the ceiling of ${REVISION_CEILING}`
+          `${gate} has already been revised ${round - 1} time(s), at the ceiling of ${voyage.revisionCeiling}`
         );
       phase = row.producer ?? fromPhase;
       voyage.revisionRounds[gate] = round;
@@ -2041,6 +2190,22 @@ export class MockAhoyServer {
     if (call.headers['if-none-match'] === etag)
       return { kind: 'empty', status: 304, headers };
     return { kind: 'text', status: 200, headers, body: file.text };
+  }
+
+  /** A staged follow-up screenshot, served as a note's image is. */
+  private followUpImage(call: Call): MockResponse {
+    const id = call.path['imageId'] ?? '';
+    const image = this.followUpImages.read(id);
+    const etag = `"${id}"`;
+    const headers = {
+      'Content-Type': image.mediaType,
+      ETag: etag,
+      'Cache-Control': 'private, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (call.headers['if-none-match'] === etag)
+      return { kind: 'empty', status: 304, headers };
+    return { kind: 'bytes', status: 200, headers, body: image.bytes };
   }
 
   /** A note's image, as the API serves it: its format, an ETag and no sniffing; 304 when the caller has it. */
