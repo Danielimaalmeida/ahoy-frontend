@@ -705,8 +705,23 @@ describe('the request bodies the client sends', () => {
         name: 'Finance sync',
         stakeholders: ['priya@example.com'],
         cadenceDays: 7,
+        timeZone: 'Europe/Lisbon',
       })
     ).toEqual([]);
+    expect(
+      requestViolations('updateMeetingSeries', {
+        name: 'Finance sync (PM)',
+        stakeholders: ['priya@example.com'],
+        cadenceDays: 14,
+        fromMeetingId: topicId,
+        startsAt: '2026-10-22T13:00:00.000Z',
+        endsAt: '2026-10-22T14:00:00.000Z',
+      })
+    ).toEqual([]);
+    expect(
+      requestViolations('updateMeetingSeries', { cadenceDays: null })
+    ).toEqual([]);
+    expect(requestViolations('updateMeetingSeries', {})).not.toEqual([]);
     expect(
       requestViolations('addMeetingNote', {
         text: 'Send the proposal to finance',

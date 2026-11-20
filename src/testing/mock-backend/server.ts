@@ -1162,7 +1162,8 @@ export class MockAhoyServer {
           200,
           this.meetings.updateSeries(
             call.path['seriesId'] ?? '',
-            call.body as UpdateMeetingSeriesRequest // validated
+            call.body as UpdateMeetingSeriesRequest, // validated
+            call.actor
           )
         );
       case 'listMeetingStoryDrafts':

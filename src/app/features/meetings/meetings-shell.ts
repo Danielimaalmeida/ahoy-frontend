@@ -10,6 +10,8 @@ import {
   meetingTime,
   nextSlot,
   pastByMonth,
+  repeatTag,
+  seriesOverviews,
   upcomingByWeek,
 } from '@domain/meetings';
 import { Banner } from '@ui/banner/banner';
@@ -27,6 +29,8 @@ interface MeetingLine {
   readonly title: string;
   readonly sub: string;
   readonly live: boolean;
+  /** "weekly" for a session of a series that repeats; null otherwise. */
+  readonly repeat: string | null;
 }
 
 /** "3 topics", "1 topic", "no topics". */
@@ -34,8 +38,14 @@ function topicCount(n: number): string {
   return n === 0 ? 'no topics' : n === 1 ? '1 topic' : `${n} topics`;
 }
 
-/** The left column's line for a meeting: its title, and when it is with how many topics. */
-export function meetingLine(m: MeetingSummary): MeetingLine {
+/**
+ * The left column's line for a meeting: its title, when it is with how many topics, and how its series repeats
+ * (`cadenceDays`, null when it does not).
+ */
+export function meetingLine(
+  m: MeetingSummary,
+  cadenceDays: number | null = null
+): MeetingLine {
   const when =
     m.status === 'in_progress'
       ? `${meetingTime(m.startsAt)} · in progress`
@@ -49,6 +59,10 @@ export function meetingLine(m: MeetingSummary): MeetingLine {
     title: m.title,
     sub: `${when} · ${topicCount(m.topicCount)}`,
     live: m.status === 'in_progress',
+    repeat:
+      m.seriesId !== null && cadenceDays !== null
+        ? repeatTag(cadenceDays)
+        : null,
   };
 }
 
@@ -162,6 +176,12 @@ export const SERIES_PAGE = 3;
     .views button[aria-pressed='true'] {
       background: var(--accent-soft);
     }
+    .rhythm {
+      color: var(--accent-text);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
     .more {
       padding: 4px 10px;
     }
@@ -341,6 +361,21 @@ export const SERIES_PAGE = 3;
                 </button>
               }
             </div>
+            @if (view() === 'series' && seriesLines().length > 0) {
+              <ul aria-label="Series">
+                @for (s of seriesLines(); track s.id) {
+                  <li>
+                    <a class="line" [routerLink]="['/meetings/series', s.id]">
+                      <span class="title">{{ s.name }}</span>
+                      <span class="rhythm"
+                        >{{ s.repeats ? '↻ ' : '' }}{{ s.rhythm }}</span
+                      >
+                      <span class="ah-hint">{{ s.sub }}</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
             @for (section of sections(); track section.key) {
               <h3 class="group">{{ section.label }}</h3>
               <ul>
@@ -392,7 +427,7 @@ export const SERIES_PAGE = 3;
                     See past meetings ({{ store.groups().past.length }})
                   </button>
                 </div>
-              } @else {
+              } @else if (emptyText() !== '') {
                 <p class="status-line ah-hint">{{ emptyText() }}</p>
               }
             }
@@ -422,6 +457,9 @@ export const SERIES_PAGE = 3;
                 <span class="dot" aria-hidden="true"></span>
               }
               {{ line.title }}
+              @if (line.repeat !== null) {
+                <span class="ah-tag ah-tag--accent">↻ {{ line.repeat }}</span>
+              }
             </span>
             <span class="ah-hint">{{ line.sub }}</span>
           </a>
@@ -483,8 +521,34 @@ export class MeetingsShell {
       : { q: found.q, ...found.result };
   });
 
+  /** Each series' cadence, by id, for the "weekly" tag on its sessions. */
+  private readonly cadences = computed(
+    () => new Map(this.store.series().map((s) => [s.id, s.cadenceDays]))
+  );
+  /** A meeting's line, with its series' rhythm. */
+  private lineOf(m: MeetingSummary): MeetingLine {
+    return meetingLine(
+      m,
+      m.seriesId === null ? null : (this.cadences().get(m.seriesId) ?? null)
+    );
+  }
   protected readonly now = computed(() =>
-    this.store.groups().now.map(meetingLine)
+    this.store.groups().now.map((m) => this.lineOf(m))
+  );
+  /** The series view's series: each with its rhythm, its next session and how many sessions it had. */
+  protected readonly seriesLines = computed(() =>
+    seriesOverviews(this.store.series(), this.store.meetings()).map((o) => ({
+      id: o.series.id,
+      name: o.series.name,
+      rhythm: o.rhythm,
+      repeats: o.series.cadenceDays !== null,
+      next: o.next,
+      sub:
+        (o.next === null
+          ? 'Nothing planned'
+          : `Next ${meetingDay(o.next.startsAt)}`) +
+        ` · ${o.held === 1 ? '1 session' : `${o.held} sessions`}`,
+    }))
   );
   /** The sections of the chosen view, each with how many of its meetings are left out until asked for. */
   protected readonly sections = computed(() => {
@@ -494,7 +558,7 @@ export class MeetingsShell {
         return upcomingByWeek(meetings, this.clock.now()).map((s) => ({
           key: s.key,
           label: s.label,
-          lines: s.meetings.map(meetingLine),
+          lines: s.meetings.map((m) => this.lineOf(m)),
           hidden: 0,
         }));
       case 'past': {
@@ -514,17 +578,20 @@ export class MeetingsShell {
         });
       }
       case 'series': {
+        // The series themselves are listed above; here, the one-off meetings.
         const open = this.expanded();
-        return bySeries(meetings).map((s) => {
-          const all = open.has(s.key) || s.meetings.length <= SERIES_PAGE;
-          const shown = all ? s.meetings : s.meetings.slice(0, SERIES_PAGE);
-          return {
-            key: s.key,
-            label: s.label,
-            lines: shown.map(meetingLine),
-            hidden: s.meetings.length - shown.length,
-          };
-        });
+        return bySeries(meetings.filter((m) => m.seriesId === null)).map(
+          (s) => {
+            const all = open.has(s.key) || s.meetings.length <= SERIES_PAGE;
+            const shown = all ? s.meetings : s.meetings.slice(0, SERIES_PAGE);
+            return {
+              key: s.key,
+              label: s.label,
+              lines: shown.map(meetingLine),
+              hidden: s.meetings.length - shown.length,
+            };
+          }
+        );
       }
     }
   });
@@ -539,7 +606,9 @@ export class MeetingsShell {
       ? 'No meeting is planned. Plan one with New meeting.'
       : this.view() === 'past'
         ? 'No meeting has ended yet.'
-        : 'No meetings yet.'
+        : this.store.series().length > 0
+          ? ''
+          : 'No meetings yet.'
   );
   /** With Upcoming chosen and nothing planned, the meeting that ended last (else the latest closed), to plan from. */
   protected readonly lastMeeting = computed((): MeetingSummary | null => {

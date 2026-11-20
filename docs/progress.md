@@ -75,6 +75,7 @@ What each feature still needs beyond the tests above. Its pull request has the d
 | Plan panel and its models in Team settings › Phases                                                             | An API with a saved panel                                                                                  |
 | D23 steps 1 to 5: meeting side names, People, Setup, My Copilot token, MCP defaults                             | An API                                                                                                     |
 | Meeting notes UX (move a topic anywhere, one-off Jira target, search)                                           | Against a local API                                                                                        |
+| Meeting series: Repeats in New meeting, the series page, Edit (this session or from it on), next session planned | The `@acme-fedev` checks (run with a local auth stub); a screen reader; seen on a `--simulate` API, not on TEST |
 | Voyage page tidy-up: header More menu, Jira link on the key, phase names, PR comments folded, delivery decision | Against a local API and a real Jira link from Settings; a screen reader on the More menu                   |
 | Cancel and Start again, Deploy and Release to TEST, Assess comments, running indicator, artifacts list          | A browser or an API                                                                                        |
 

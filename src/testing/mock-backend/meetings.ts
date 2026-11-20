@@ -193,6 +193,11 @@ export class MeetingDesk {
     past.status = 'ended';
     past.startedAt = startOf(-7);
     past.endedAt = endOf(-7);
+    const record = this.series.get(series.id);
+    if (record !== undefined) {
+      record.startsAt = startOf(-7);
+      record.endsAt = endOf(-7);
+    }
     const now = this.insertMeeting(
       alex,
       series.id,
@@ -289,6 +294,11 @@ export class MeetingDesk {
     );
     meeting.jiraProjectKey = jira.projectKey;
     meeting.jiraIssueType = jira.issueType;
+    // A series' first session is the one its rhythm counts from.
+    if (series !== undefined && series.startsAt === null) {
+      series.startsAt = body.startsAt;
+      series.endsAt = body.endsAt ?? null;
+    }
     return this.meetingDto(meeting);
   }
 
@@ -530,9 +540,11 @@ export class MeetingDesk {
       carryOverTo === undefined
         ? null
         : this.chosenMeeting(meeting, carryOverTo, 'body/carryOverTo');
+    // A series with a cadence always gets its next session, whether or not topics go to it.
+    const seriesNext = this.plannedNextOf(meeting, actor);
     let next: MeetingRecord | null = null;
     if (carryOver.length > 0) {
-      next = to ?? this.nextMeetingOf(meeting, actor);
+      next = to ?? seriesNext ?? this.nextMeetingOf(meeting, actor);
       for (const topic of this.topicsOf(id))
         if (carryOver.includes(topic.id)) this.carry(topic, next, actor);
     }
@@ -942,6 +954,9 @@ export class MeetingDesk {
       name: body.name.trim(),
       stakeholders: normalizeStakeholders(body.stakeholders ?? []),
       cadenceDays: body.cadenceDays ?? null,
+      startsAt: null,
+      endsAt: null,
+      timeZone: body.timeZone ?? null,
       jiraProjectKey: body.jiraProjectKey ?? null,
       jiraIssueType: body.jiraIssueType ?? 'Story',
       confluenceParent: null,
@@ -953,12 +968,78 @@ export class MeetingDesk {
     return { ...series, stakeholders: [...series.stakeholders] };
   }
 
-  /** Sets where the series' stories are created in Jira; a null project turns creating off. */
-  updateSeries(id: string, body: UpdateMeetingSeriesRequest): MeetingSeries {
+  /**
+   * Edits a series as the API does: its name, stakeholders, cadence (null stops repeating), time zone and Jira target;
+   * with `fromMeetingId`, that planned session and every planned one after it take the new name and stakeholders and
+   * move as it moves, and the rhythm counts from it. Past sessions never change.
+   */
+  updateSeries(
+    id: string,
+    body: UpdateMeetingSeriesRequest,
+    actor = 'alex@example.com'
+  ): MeetingSeries {
+    if (body.jiraIssueType !== undefined && body.jiraProjectKey === undefined)
+      throw refused(
+        'body/jiraIssueType',
+        'jiraIssueType goes with jiraProjectKey'
+      );
+    if (
+      (body.startsAt !== undefined || body.endsAt !== undefined) &&
+      body.fromMeetingId === undefined
+    )
+      throw refused(
+        'body/fromMeetingId',
+        'startsAt and endsAt move the sessions from fromMeetingId on'
+      );
     const series = this.series.get(id);
     if (series === undefined) throw notFound('Series', id);
-    series.jiraProjectKey = body.jiraProjectKey;
-    series.jiraIssueType = body.jiraIssueType ?? 'Story';
+    const name = body.name?.trim();
+    const stakeholders =
+      body.stakeholders === undefined
+        ? undefined
+        : normalizeStakeholders(body.stakeholders);
+    if (body.fromMeetingId !== undefined) {
+      const from = this.meeting(body.fromMeetingId);
+      if (from.seriesId !== id)
+        throw refused(
+          'body/fromMeetingId',
+          `Meeting ${from.id} is not a session of series ${series.name}`
+        );
+      if (from.status !== 'planned')
+        throw invalid(
+          `Meeting ${from.title} is ${from.status}; a series changes from a planned session on`
+        );
+      const startsAt = body.startsAt ?? from.startsAt;
+      const endsAt = body.endsAt === undefined ? from.endsAt : body.endsAt;
+      this.checkTimes(startsAt, endsAt);
+      const moved = body.startsAt !== undefined || body.endsAt !== undefined;
+      const shift = Date.parse(startsAt) - Date.parse(from.startsAt);
+      const length =
+        endsAt === null ? null : Date.parse(endsAt) - Date.parse(startsAt);
+      const fromStart = from.startsAt;
+      for (const m of this.meetings.values()) {
+        if (m.seriesId !== id || m.status !== 'planned') continue;
+        if (m.startsAt < fromStart) continue;
+        if (name !== undefined) m.title = name;
+        if (stakeholders !== undefined) m.stakeholders = [...stakeholders];
+        if (moved) {
+          const at = Date.parse(m.startsAt) + shift;
+          m.startsAt = iso(at);
+          m.endsAt = length === null ? null : iso(at + length);
+        }
+        this.touch(m, actor);
+      }
+      series.startsAt = startsAt;
+      series.endsAt = endsAt;
+    }
+    if (name !== undefined) series.name = name;
+    if (stakeholders !== undefined) series.stakeholders = stakeholders;
+    if (body.cadenceDays !== undefined) series.cadenceDays = body.cadenceDays;
+    if (body.timeZone !== undefined) series.timeZone = body.timeZone;
+    if (body.jiraProjectKey !== undefined) {
+      series.jiraProjectKey = body.jiraProjectKey;
+      series.jiraIssueType = body.jiraIssueType ?? 'Story';
+    }
     return { ...series, stakeholders: [...series.stakeholders] };
   }
 
@@ -1336,12 +1417,31 @@ export class MeetingDesk {
       .sort((a, b) => a.position - b.position || (a.id < b.id ? -1 : 1));
   }
 
-  /** The series' first planned meeting after this one; else a new one a cadence on; else `409 invalid_state`. */
+  /** The series' next planned meeting (see {@link plannedNextOf}); else `409 invalid_state`. */
   private nextMeetingOf(meeting: MeetingRecord, actor: string): MeetingRecord {
     if (meeting.seriesId === null)
       throw invalid(
         'A one-off meeting has no next meeting; choose the meeting to move topics to'
       );
+    const next = this.plannedNextOf(meeting, actor);
+    if (next !== null) return next;
+    const series = this.series.get(meeting.seriesId);
+    throw invalid(
+      `Series ${series?.name ?? meeting.seriesId} has no planned meeting after this one; plan it first`
+    );
+  }
+
+  /**
+   * The series' first planned meeting after this one; else, when the series has a cadence, a new one: the first step
+   * of its rhythm (from its reference session) after both this meeting and now, with the series' name, length and
+   * stakeholders. Null for a one-off meeting or a series without a cadence. The mock counts in plain 24-hour days; the
+   * API counts in the series' time zone.
+   */
+  private plannedNextOf(
+    meeting: MeetingRecord,
+    actor: string
+  ): MeetingRecord | null {
+    if (meeting.seriesId === null) return null;
     const next = [...this.meetings.values()]
       .filter(
         (m) =>
@@ -1361,23 +1461,22 @@ export class MeetingDesk {
       )[0];
     if (next !== undefined) return next;
     const series = this.series.get(meeting.seriesId);
-    if (series === undefined || series.cadenceDays === null)
-      throw invalid(
-        `Series ${series?.name ?? meeting.seriesId} has no planned meeting after this one; plan it first`
-      );
+    if (series === undefined || series.cadenceDays === null) return null;
     const step = series.cadenceDays * DAY_MS;
-    const start = Date.parse(meeting.startsAt);
-    const after = Math.max(start, this.clock.now());
-    const at = start + (Math.floor((after - start) / step) + 1) * step;
-    const length =
-      meeting.endsAt === null ? null : Date.parse(meeting.endsAt) - start;
+    const anchorStart = series.startsAt ?? meeting.startsAt;
+    const anchorEnd = series.startsAt === null ? meeting.endsAt : series.endsAt;
+    const start = Date.parse(anchorStart);
+    const after = Math.max(Date.parse(meeting.startsAt), this.clock.now());
+    const steps = Math.max(1, Math.floor((after - start) / step) + 1);
+    const at = start + steps * step;
+    const length = anchorEnd === null ? null : Date.parse(anchorEnd) - start;
     return this.insertMeeting(
       actor,
       meeting.seriesId,
-      meeting.title,
+      series.name,
       iso(at),
       length === null ? null : iso(at + length),
-      meeting.stakeholders
+      series.stakeholders
     );
   }
 

@@ -1280,7 +1280,10 @@ const meetingConfluencePage = shape<MeetingConfluencePage>({
   createdAt: timestamp,
 });
 
-/** A recurring meeting; `cadenceDays` is 1 to 366, or null when the series has none. */
+/**
+ * A recurring meeting; `cadenceDays` is 1 to 366, or null when the series has none. `startsAt`/`endsAt` are the session
+ * its rhythm counts from, `timeZone` the IANA zone it is counted in.
+ */
 const meetingSeries = shape<MeetingSeries>({
   id: uuid,
   name: text,
@@ -1288,6 +1291,9 @@ const meetingSeries = shape<MeetingSeries>({
   cadenceDays: nullable(
     wholeNumber('a whole number of days, 1 to 366', 1, 366)
   ),
+  startsAt: nullable(timestamp),
+  endsAt: nullable(timestamp),
+  timeZone: nullable(text),
   jiraProjectKey: nullable(jiraProjectKey),
   jiraIssueType: oneOf(JIRA_ISSUE_TYPES),
   confluenceParent: nullable(confluenceParent),

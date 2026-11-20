@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
-# Source: a git checkout (openapi/ahoy-v1.yaml)
-# Commit: 84acc4d0288b58c24183cd7ed60e16ee8fb24acf
+# Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
+# Commit: 60e359cd95fa43535d344a20e78cb5cb31ef7303
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -2570,7 +2570,9 @@ paths:
       tags: [meetings]
       summary: Add a meeting series.
       description: |
-        `cadenceDays` lets Ahoy plan the series' next meeting itself when topics are carried over and none is planned.
+        With `cadenceDays`, closing a session always leaves the series' next one planned: one cadence on from the
+        series' first session (its rhythm), at the same local time in `timeZone`. Plan the first session with
+        `POST /meetings` and the series' id.
       requestBody:
         required: true
         content:
@@ -2591,10 +2593,14 @@ paths:
     patch:
       operationId: updateMeetingSeries
       tags: [meetings]
-      summary: Set where the stories drafted from the series' meetings are created in Jira.
+      summary: Edit a series, from one of its sessions on, or where its stories are created in Jira.
       description: |
-        `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` defaults
-        to `Story`.
+        `name`, `stakeholders`, `cadenceDays` (null stops repeating) and `timeZone` change the series. With
+        `fromMeetingId`, a planned session of the series, they also change that session and every planned one after it;
+        `startsAt`/`endsAt` move that session, the later ones move by as much, and the series' rhythm counts from it.
+        Past sessions never change. To change one session only, use `PATCH /meetings/{meetingId}`.
+        `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` goes with
+        `jiraProjectKey` and defaults to `Story`.
       requestBody:
         required: true
         content:
@@ -2610,6 +2616,7 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
   /meetings/{meetingId}/story-drafts:
     parameters:
       - $ref: '#/components/parameters/MeetingId'
@@ -7759,6 +7766,9 @@ components:
           name,
           stakeholders,
           cadenceDays,
+          startsAt,
+          endsAt,
+          timeZone,
           jiraProjectKey,
           jiraIssueType,
           confluenceParent,
@@ -7771,6 +7781,14 @@ components:
         name: { type: string }
         stakeholders: { type: array, items: { type: string } }
         cadenceDays: { type: [integer, 'null'], minimum: 1, maximum: 366 }
+        startsAt:
+          type: [string, 'null']
+          format: date-time
+          description: The session the rhythm counts from (its local time and length); null before the first one.
+        endsAt: { type: [string, 'null'], format: date-time }
+        timeZone:
+          type: [string, 'null']
+          description: The IANA time zone the rhythm is counted in, such as Europe/Lisbon; null counts in UTC.
         jiraProjectKey:
           oneOf:
             - { $ref: '#/components/schemas/JiraProjectKey' }
@@ -7807,13 +7825,43 @@ components:
           minimum: 1
           maximum: 366
           description: Days between meetings (7 for weekly).
+        timeZone: { $ref: '#/components/schemas/TimeZone' }
         jiraProjectKey: { $ref: '#/components/schemas/JiraProjectKey' }
         jiraIssueType: { $ref: '#/components/schemas/JiraIssueType' }
+    TimeZone:
+      type: string
+      pattern: '^[A-Za-z0-9_+/-]{1,64}$'
+      description: An IANA time zone, such as Europe/Lisbon.
     UpdateMeetingSeriesRequest:
       type: object
       additionalProperties: false
-      required: [jiraProjectKey]
+      minProperties: 1
       properties:
+        name: { type: string, minLength: 1, maxLength: 200, pattern: "\\S" }
+        stakeholders:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/Stakeholder' }
+        cadenceDays:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 366
+          description: Days between sessions; null stops repeating.
+        timeZone:
+          oneOf:
+            - { $ref: '#/components/schemas/TimeZone' }
+            - { type: 'null' }
+        fromMeetingId:
+          type: string
+          format: uuid
+          description: The planned session the change starts from; it and every planned session after it change.
+        startsAt: { $ref: '#/components/schemas/Timestamp' }
+        endsAt:
+          {
+            type: [string, 'null'],
+            format: date-time,
+            description: 'null removes the end time.',
+          }
         jiraProjectKey:
           oneOf:
             - { $ref: '#/components/schemas/JiraProjectKey' }

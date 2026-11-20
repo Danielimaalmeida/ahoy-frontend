@@ -77,11 +77,41 @@ export interface JiraTargetView {
   readonly issueType: JiraIssueType | null;
 }
 
-/** What the page asks for when it starts a series: its name, stakeholders and how many days apart its meetings are. */
+/**
+ * What the page asks for when it starts a series: its name, stakeholders, how many days apart its meetings are, the time
+ * zone its rhythm is counted in, and where its stories go in Jira.
+ */
 export interface NewSeries {
   readonly name: string;
   readonly stakeholders: readonly string[];
   readonly cadenceDays: number | null;
+  readonly timeZone?: string | null;
+  readonly jira?: {
+    readonly projectKey: string;
+    readonly issueType: JiraIssueType;
+  };
+}
+
+/** A change to one session only: its title, time and stakeholders (`updateMeeting`). */
+export interface SessionChange {
+  readonly title?: string;
+  readonly startsAt?: string;
+  readonly endsAt?: string | null;
+  readonly stakeholders?: readonly string[];
+}
+
+/**
+ * A change to a series from one of its planned sessions on (`updateMeetingSeries` with `fromMeetingId`): its name,
+ * stakeholders, cadence (null stops repeating) and the new time of that session, which the later ones follow.
+ */
+export interface SeriesChange {
+  readonly name?: string;
+  readonly stakeholders?: readonly string[];
+  readonly cadenceDays?: number | null;
+  readonly timeZone?: string | null;
+  readonly fromMeetingId?: string;
+  readonly startsAt?: string;
+  readonly endsAt?: string | null;
 }
 
 /**
@@ -404,6 +434,15 @@ export class MeetingsStore {
         ...(request.cadenceDays !== null
           ? { cadenceDays: request.cadenceDays }
           : {}),
+        ...(request.timeZone !== undefined && request.timeZone !== null
+          ? { timeZone: request.timeZone }
+          : {}),
+        ...(request.jira !== undefined
+          ? {
+              jiraProjectKey: request.jira.projectKey,
+              jiraIssueType: request.jira.issueType,
+            }
+          : {}),
       })
     );
     if (created === null) return null;
@@ -411,6 +450,78 @@ export class MeetingsStore {
       [...this.series(), created].sort((a, b) => a.name.localeCompare(b.name))
     );
     return created;
+  }
+
+  /**
+   * Changes one session only (title, time, stakeholders); the series and its other sessions stay as they are. Keeps the
+   * changed meeting when it is the open one, and reads the list again. Whether it worked.
+   */
+  async updateSession(id: string, change: SessionChange): Promise<boolean> {
+    const updated = await this.run(() =>
+      this.api.updateMeeting(id, {
+        ...(change.title !== undefined ? { title: change.title.trim() } : {}),
+        ...(change.startsAt !== undefined ? { startsAt: change.startsAt } : {}),
+        ...(change.endsAt !== undefined ? { endsAt: change.endsAt } : {}),
+        ...(change.stakeholders !== undefined
+          ? { stakeholders: [...change.stakeholders] }
+          : {}),
+      })
+    );
+    if (updated === null) return false;
+    if (this.meeting()?.id === updated.id) this.meeting.set(updated);
+    await this.refreshList();
+    return true;
+  }
+
+  /**
+   * Changes a series, and with `fromMeetingId` that planned session and every planned one after it; past sessions keep
+   * what they had. Keeps the changed series, reads the list again and the open meeting, which may have changed. Whether
+   * it worked.
+   */
+  async updateSeries(seriesId: string, change: SeriesChange): Promise<boolean> {
+    const updated = await this.run(() =>
+      this.api.updateMeetingSeries(seriesId, {
+        ...(change.name !== undefined ? { name: change.name.trim() } : {}),
+        ...(change.stakeholders !== undefined
+          ? { stakeholders: [...change.stakeholders] }
+          : {}),
+        ...(change.cadenceDays !== undefined
+          ? { cadenceDays: change.cadenceDays }
+          : {}),
+        ...(change.timeZone !== undefined ? { timeZone: change.timeZone } : {}),
+        ...(change.fromMeetingId !== undefined
+          ? { fromMeetingId: change.fromMeetingId }
+          : {}),
+        ...(change.startsAt !== undefined ? { startsAt: change.startsAt } : {}),
+        ...(change.endsAt !== undefined ? { endsAt: change.endsAt } : {}),
+      })
+    );
+    if (updated === null) return false;
+    this.series.set(
+      this.series()
+        .map((s) => (s.id === seriesId ? updated : s))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    );
+    await this.refreshList();
+    const open = this.meeting();
+    if (open !== null && open.seriesId === seriesId) {
+      const fresh = await this.api.getMeeting(open.id);
+      if (fresh.ok && this.meeting()?.id === open.id)
+        this.meeting.set(fresh.value);
+    }
+    return true;
+  }
+
+  /** The open actions of a series, latest meeting first, for its page; an empty list when they cannot be read. */
+  async seriesActions(
+    seriesId: string
+  ): Promise<readonly MeetingNoteInContext[]> {
+    const result = await this.api.listMeetingNotes({
+      kind: 'action',
+      status: 'open',
+      seriesId,
+    });
+    return result.ok ? result.value.items : [];
   }
 
   /**
