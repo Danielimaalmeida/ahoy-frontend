@@ -1,4 +1,16 @@
 import {
+  cadenceOf,
+  cadenceWords,
+  endsAtFrom,
+  nextSessionAfter,
+  repeatChoiceOf,
+  repeatTag,
+  rhythmLabel,
+  seriesOverviews,
+  sessionStarts,
+  timeZoneOf,
+} from './meetings';
+import {
   acceptImages,
   authorLabel,
   bySeries,
@@ -907,6 +919,125 @@ describe('the left column and moving topics', () => {
     expect(seriesNeighbours(list[0]!, list).previous).toBeNull();
     expect(seriesNeighbours(at('o', 'planned', local(9), null), list)).toEqual({
       previous: null,
+      next: null,
+    });
+  });
+});
+
+describe('series rhythm', () => {
+  const at = (local: string) => new Date(local).toISOString();
+
+  it('finds the next session of a rhythm after a moment, as long as the anchor', () => {
+    const next = nextSessionAfter(
+      at('2026-10-06T10:00'),
+      at('2026-10-06T11:30'),
+      7,
+      new Date(at('2026-10-21T09:00'))
+    );
+    expect(next).toEqual({
+      startsAt: at('2026-10-27T10:00'),
+      endsAt: at('2026-10-27T11:30'),
+    });
+    expect(
+      nextSessionAfter(
+        at('2026-10-06T10:00'),
+        null,
+        14,
+        new Date(at('2026-10-06T10:00'))
+      )
+    ).toEqual({ startsAt: at('2026-10-20T10:00'), endsAt: null });
+    expect(nextSessionAfter('not a date', null, 7, new Date())).toBeUndefined();
+  });
+
+  it('reads the repeat choice of a cadence, and the cadence of a choice', () => {
+    expect([null, 7, 14, 10].map(repeatChoiceOf)).toEqual([
+      'none',
+      'week',
+      'two-weeks',
+      'other',
+    ]);
+    expect(cadenceOf('none', '')).toBeNull();
+    expect(cadenceOf('week', '')).toBe(7);
+    expect(cadenceOf('two-weeks', '')).toBe(14);
+    expect(cadenceOf('other', ' 10 ')).toBe(10);
+    expect(cadenceOf('other', '0')).toBeUndefined();
+    expect(cadenceOf('other', '367')).toBeUndefined();
+    expect(cadenceOf('other', '1.5')).toBeUndefined();
+  });
+
+  it('says a rhythm in words, with the day for a weekly series', () => {
+    const thursday = at('2026-10-22T10:00');
+    expect(rhythmLabel(7, thursday, at('2026-10-22T11:00'))).toBe(
+      'Every Thursday, 10:00–11:00'
+    );
+    expect(rhythmLabel(14, thursday)).toBe('Every 2 weeks, Thu 10:00');
+    expect(rhythmLabel(10, thursday)).toBe('Every 10 days, 10:00');
+    expect(rhythmLabel(7, null)).toBe('Every week');
+    expect(rhythmLabel(null, thursday)).toBe('No fixed rhythm');
+    expect([1, 7, 21, 3].map(cadenceWords)).toEqual([
+      'every day',
+      'every week',
+      'every 3 weeks',
+      'every 3 days',
+    ]);
+    expect(repeatTag(7)).toBe('weekly');
+    expect(repeatTag(14)).toBe('every 2 weeks');
+  });
+
+  it('lists the first sessions at the same local time, and reads an end time after the start', () => {
+    expect(sessionStarts(at('2026-10-22T10:00'), 7, 3)).toEqual([
+      at('2026-10-22T10:00'),
+      at('2026-10-29T10:00'),
+      at('2026-11-05T10:00'),
+    ]);
+    expect(endsAtFrom('2026-10-22', '10:00', '11:30')).toBe(
+      at('2026-10-22T11:30')
+    );
+    expect(endsAtFrom('2026-10-22', '10:00', '')).toBeNull();
+    expect(endsAtFrom('2026-10-22', '10:00', '09:00')).toBeUndefined();
+    expect(timeZoneOf('Europe/Lisbon')).toBe('Europe/Lisbon');
+    expect(timeZoneOf(undefined)).toBeNull();
+  });
+
+  it('gives each series its rhythm, its next session and how many sessions it had', () => {
+    const series = [
+      {
+        id: 's2',
+        name: 'vendor check-in',
+        cadenceDays: null,
+        startsAt: null,
+        endsAt: null,
+      },
+      {
+        id: 's1',
+        name: 'Finance sync',
+        cadenceDays: 7,
+        startsAt: at('2026-10-15T10:00'),
+        endsAt: null,
+      },
+    ];
+    const meeting = (
+      id: string,
+      seriesId: string,
+      status: 'planned' | 'in_progress' | 'ended' | 'cancelled',
+      startsAt: string
+    ) => ({ id, seriesId, status, startsAt: at(startsAt) });
+    const meetings = [
+      meeting('a', 's1', 'ended', '2026-10-15T10:00'),
+      meeting('b', 's1', 'cancelled', '2026-10-22T10:00'),
+      meeting('c', 's1', 'planned', '2026-10-29T10:00'),
+      meeting('d', 's2', 'ended', '2026-10-01T10:00'),
+    ];
+    const overviews = seriesOverviews(series, meetings);
+    expect(overviews.map((o) => o.series.id)).toEqual(['s1', 's2']);
+    expect(overviews[0]).toMatchObject({
+      rhythm: 'Every Thursday, 10:00',
+      held: 2,
+    });
+    expect(overviews[0]!.next?.id).toBe('c');
+    expect(overviews[0]!.sessions.map((m) => m.id)).toEqual(['c', 'b', 'a']);
+    expect(overviews[1]).toMatchObject({
+      rhythm: 'No fixed rhythm',
       next: null,
     });
   });

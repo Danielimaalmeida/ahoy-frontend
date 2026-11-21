@@ -316,6 +316,23 @@ describe('meeting guards', () => {
     ).toBe(true);
   });
 
+  it("refuse a series whose rhythm's start is not a timestamp, and take one that has no rhythm yet", () => {
+    expect(
+      isMeetingSeries(withField(createMeetingSeries, 'startsAt', 'Thursday'))
+    ).toBe(false);
+    expect(isMeetingSeries(withField(createMeetingSeries, 'timeZone', 7))).toBe(
+      false
+    );
+    expect(
+      isMeetingSeries({
+        ...createMeetingSeries,
+        startsAt: null,
+        endsAt: null,
+        timeZone: null,
+      })
+    ).toBe(true);
+  });
+
   it('take only an empty body as the answer of a delete', () => {
     expect(isNoContent(null)).toBe(true);
     expect(isNoContent({})).toBe(false);

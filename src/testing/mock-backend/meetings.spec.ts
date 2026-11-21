@@ -85,6 +85,59 @@ describe('the mock meetings', () => {
     expect(late.status).toBe(409);
   });
 
+  it("plans a series' next session when one is marked done or cancelled with no topic moved", () => {
+    const { server, list } = seeded();
+    const planned = list.items.find((m) => m.status === 'planned')!;
+    call(server, 'POST', `/meetings/${planned.id}/end`, { carryOver: [] });
+    const after = (call(server, 'GET', '/meetings').body as MeetingList).items
+      .filter((m) => m.status === 'planned')
+      .map((m) => m.startsAt);
+    expect(after).toEqual([
+      new Date(Date.parse(planned.startsAt) + 7 * 86_400_000).toISOString(),
+    ]);
+  });
+
+  it('edits a series from a planned session on, and refuses a time without that session', () => {
+    const { server, list } = seeded();
+    const series = (
+      call(server, 'GET', '/meeting-series').body as { items: MeetingSeries[] }
+    ).items[0]!;
+    const planned = list.items.find((m) => m.status === 'planned')!;
+    const past = list.items.find((m) => m.status === 'ended')!;
+    expect(
+      call(server, 'PATCH', `/meeting-series/${series.id}`, {
+        startsAt: planned.startsAt,
+      }).status
+    ).toBe(400);
+    expect(
+      call(server, 'PATCH', `/meeting-series/${series.id}`, {
+        fromMeetingId: past.id,
+        name: 'Late',
+      }).status
+    ).toBe(409);
+    const later = new Date(Date.parse(planned.startsAt) + 3_600_000);
+    const edited = call(server, 'PATCH', `/meeting-series/${series.id}`, {
+      fromMeetingId: planned.id,
+      name: 'Finance sync (PM)',
+      cadenceDays: 14,
+      startsAt: later.toISOString(),
+      endsAt: new Date(later.getTime() + 3_600_000).toISOString(),
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.body).toMatchObject({
+      name: 'Finance sync (PM)',
+      cadenceDays: 14,
+      startsAt: later.toISOString(),
+    });
+    const meetings = (call(server, 'GET', '/meetings').body as MeetingList)
+      .items;
+    expect(meetings.find((m) => m.id === planned.id)).toMatchObject({
+      title: 'Finance sync (PM)',
+      startsAt: later.toISOString(),
+    });
+    expect(meetings.find((m) => m.id === past.id)?.title).toBe('Finance sync');
+  });
+
   it('marks a planned meeting done without starting it', () => {
     const { server, list } = seeded();
     const planned = list.items.find((m) => m.status === 'planned')!;
@@ -977,5 +1030,36 @@ describe('the mock meetings', () => {
         }).status
       ).toBe(409);
     });
+  });
+
+  it('makes a one-off meeting the first session of a series that repeats, moving its Jira target to the series', () => {
+    const { server } = seeded();
+    const created = call(server, 'POST', '/meetings', {
+      title: 'Pricing council',
+      startsAt: '2026-10-20T14:00:00.000Z',
+      jiraProjectKey: 'PROJ',
+    }).body as Meeting;
+    const answer = call(server, 'POST', `/meetings/${created.id}/series`, {
+      cadenceDays: 14,
+    });
+    expect(answer.status).toBe(200);
+    const repeated = answer.body as Meeting;
+    expect(repeated.seriesId).not.toBeNull();
+    expect(repeated.jiraProjectKey).toBeNull();
+    const series = (
+      call(server, 'GET', '/meeting-series').body as {
+        items: MeetingSeries[];
+      }
+    ).items.find((x) => x.id === repeated.seriesId)!;
+    expect(series).toMatchObject({
+      name: 'Pricing council',
+      cadenceDays: 14,
+      startsAt: '2026-10-20T14:00:00.000Z',
+      jiraProjectKey: 'PROJ',
+    });
+    expect(
+      call(server, 'POST', `/meetings/${created.id}/series`, { cadenceDays: 7 })
+        .status
+    ).toBe(409);
   });
 });

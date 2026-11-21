@@ -883,3 +883,222 @@ export function seriesNeighbours<T extends SeriesMeetingLike>(
   if (at < 0) return { previous: null, next: null };
   return { previous: inSeries[at - 1] ?? null, next: inSeries[at + 1] ?? null };
 }
+
+/** How a meeting repeats, as the New meeting and Edit dialogs offer it: not, weekly, every two weeks, or every N days. */
+export const REPEAT_CHOICES = ['none', 'week', 'two-weeks', 'other'] as const;
+export type RepeatChoice = (typeof REPEAT_CHOICES)[number];
+
+/** The labels of the repeat choices. */
+export const REPEAT_LABELS: Readonly<Record<RepeatChoice, string>> = {
+  none: 'Does not repeat',
+  week: 'Every week',
+  'two-weeks': 'Every 2 weeks',
+  other: 'Other…',
+};
+
+/** The choice that shows a cadence: none, 7, 14, or other for any other number of days. */
+export function repeatChoiceOf(cadenceDays: number | null): RepeatChoice {
+  if (cadenceDays === null) return 'none';
+  if (cadenceDays === 7) return 'week';
+  if (cadenceDays === 14) return 'two-weeks';
+  return 'other';
+}
+
+/**
+ * The cadence a choice means, in days (null for none); with `other`, the typed number of days, which must be a whole
+ * number from 1 to 366; undefined when it is not.
+ */
+export function cadenceOf(
+  choice: RepeatChoice,
+  otherDays: string
+): number | null | undefined {
+  switch (choice) {
+    case 'none':
+      return null;
+    case 'week':
+      return 7;
+    case 'two-weeks':
+      return 14;
+    case 'other': {
+      const text = otherDays.trim();
+      if (!/^\d{1,3}$/.test(text)) return undefined;
+      const days = Number(text);
+      return days >= 1 && days <= 366 ? days : undefined;
+    }
+  }
+}
+
+/** "every week", "every 2 weeks", "every day", "every 10 days": a cadence in words, lower case. */
+export function cadenceWords(cadenceDays: number): string {
+  if (cadenceDays === 1) return 'every day';
+  if (cadenceDays === 7) return 'every week';
+  if (cadenceDays % 7 === 0) return `every ${cadenceDays / 7} weeks`;
+  return `every ${cadenceDays} days`;
+}
+
+/** The short tag for a session of a series that repeats: "weekly", "every 2 weeks", "every 10 days". */
+export function repeatTag(cadenceDays: number): string {
+  return cadenceDays === 7 ? 'weekly' : cadenceWords(cadenceDays);
+}
+
+const WEEKDAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+
+/**
+ * A series' rhythm in words, in the browser's time zone: "Every Thursday, 10:00–11:00" for a weekly one, "Every 2 weeks,
+ * Tue 14:00" or "Every 10 days, 09:30" otherwise; "No fixed rhythm" without a cadence. The time comes from the
+ * session the rhythm counts from, when there is one.
+ */
+export function rhythmLabel(
+  cadenceDays: number | null,
+  startsAt: string | null,
+  endsAt: string | null = null
+): string {
+  if (cadenceDays === null) return 'No fixed rhythm';
+  const at = startsAt === null ? null : new Date(startsAt);
+  if (startsAt === null || at === null || Number.isNaN(at.getTime())) {
+    const words = cadenceWords(cadenceDays);
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  }
+  const time =
+    endsAt === null
+      ? meetingTime(startsAt)
+      : `${meetingTime(startsAt)}–${meetingTime(endsAt)}`;
+  if (cadenceDays === 7)
+    return `Every ${WEEKDAY_NAMES[at.getDay()] ?? ''}, ${time}`;
+  if (cadenceDays % 7 === 0)
+    return `Every ${cadenceDays / 7} weeks, ${WEEKDAYS[at.getDay()] ?? ''} ${time}`;
+  const words = cadenceWords(cadenceDays);
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}, ${time}`;
+}
+
+/**
+ * The first `count` sessions of a rhythm that starts at `startsAt` (that one included), every `cadenceDays`, at the
+ * same time of day in the browser's time zone, as ISO timestamps.
+ */
+export function sessionStarts(
+  startsAt: string,
+  cadenceDays: number,
+  count: number
+): string[] {
+  const start = new Date(startsAt);
+  if (Number.isNaN(start.getTime())) return [];
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const at = new Date(start);
+    at.setDate(at.getDate() + i * cadenceDays);
+    out.push(at.toISOString());
+  }
+  return out;
+}
+
+/**
+ * The next session of a rhythm that counts from `startsAt`/`endsAt` every `cadenceDays`: the first step that starts
+ * after `after`, at the same time of day in the browser's time zone and as long as the anchor; undefined when the
+ * anchor cannot be read.
+ */
+export function nextSessionAfter(
+  startsAt: string,
+  endsAt: string | null,
+  cadenceDays: number,
+  after: Date
+): { startsAt: string; endsAt: string | null } | undefined {
+  const anchor = new Date(startsAt);
+  if (Number.isNaN(anchor.getTime()) || cadenceDays < 1) return undefined;
+  const length = endsAt === null ? null : Date.parse(endsAt) - anchor.getTime();
+  const at = new Date(anchor);
+  do at.setDate(at.getDate() + cadenceDays);
+  while (at.getTime() <= after.getTime());
+  return {
+    startsAt: at.toISOString(),
+    endsAt:
+      length === null || Number.isNaN(length)
+        ? null
+        : new Date(at.getTime() + length).toISOString(),
+  };
+}
+
+/**
+ * The instant a meeting ends, from its day, start and end time ("11:00"), read as `startsAtFrom` reads them: null when
+ * no end time is given, undefined when it cannot be read or is not after the start.
+ */
+export function endsAtFrom(
+  date: string,
+  startTime: string,
+  endTime: string
+): string | null | undefined {
+  if (endTime.trim() === '') return null;
+  const start = startsAtFrom(date, startTime);
+  const end = startsAtFrom(date, endTime);
+  if (start === null || end === null) return undefined;
+  return Date.parse(end) > Date.parse(start) ? end : undefined;
+}
+
+/** A time as an `<input type="time">` takes it ("09:30"), in the browser's time zone. */
+export function timeInputValue(at: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/** The browser's IANA time zone ("Europe/Lisbon"), or null when it cannot tell; passed in, since `domain` reads no env. */
+export function timeZoneOf(resolved: string | undefined): string | null {
+  return resolved !== undefined && /^[A-Za-z0-9_+/-]{1,64}$/.test(resolved)
+    ? resolved
+    : null;
+}
+
+/** What the series view reads of a series. */
+export interface SeriesLike {
+  readonly id: string;
+  readonly name: string;
+  readonly cadenceDays: number | null;
+  readonly startsAt: string | null;
+  readonly endsAt: string | null;
+}
+
+/** One series in the series view and on its page: its rhythm, its sessions, and the one running or planned next. */
+export interface SeriesOverview<
+  S extends SeriesLike,
+  T extends SeriesMeetingLike,
+> {
+  readonly series: S;
+  /** "Every Thursday, 10:00–11:00", or "No fixed rhythm". */
+  readonly rhythm: string;
+  /** The session running now, else the soonest planned one; null when nothing is planned. */
+  readonly next: T | null;
+  /** Every session, the running and planned ones soonest first, then the closed ones latest first. */
+  readonly sessions: readonly T[];
+  /** How many sessions took place or will: every one but the cancelled. */
+  readonly held: number;
+}
+
+/** Each series with its sessions, by name (ignoring case). */
+export function seriesOverviews<
+  S extends SeriesLike,
+  T extends SeriesMeetingLike,
+>(series: readonly S[], meetings: readonly T[]): SeriesOverview<S, T>[] {
+  return [...series]
+    .sort(
+      (a, b) =>
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase()) ||
+        (a.id < b.id ? -1 : 1)
+    )
+    .map((s) => {
+      const groups = groupMeetings(meetings.filter((m) => m.seriesId === s.id));
+      const sessions = [...groups.now, ...groups.next, ...groups.past];
+      return {
+        series: s,
+        rhythm: rhythmLabel(s.cadenceDays, s.startsAt, s.endsAt),
+        next: groups.now[0] ?? groups.next[0] ?? null,
+        sessions,
+        held: sessions.filter((m) => m.status !== 'cancelled').length,
+      };
+    });
+}

@@ -14,6 +14,7 @@ import {
   meetingDay,
   meetingTime,
   meetingToConfluence,
+  repeatTag,
   seriesNeighbours,
 } from '@domain/meetings';
 import { targetText } from '@domain/story-drafts';
@@ -30,6 +31,7 @@ import {
 import { EndMeetingDialog, type EndMeetingData } from './end-meeting-dialog';
 import { meetingErrorView } from './meeting-errors';
 import { MeetingsStore } from './meetings-store';
+import { openEditMeeting } from './edit-meeting-dialog';
 import { NEW_SERIES, openNewMeeting } from './new-meeting-dialog';
 import { SeriesJiraDialog, type SeriesJiraData } from './series-jira-dialog';
 import { StoryDraftsStore } from './story-drafts-store';
@@ -312,8 +314,13 @@ const STATUS_WORDS = {
             >
             <span class="ah-api">{{ status().api }}</span>
             <span class="ah-hint">{{ when() }}</span>
-            @if (m.seriesName !== null) {
-              <span class="ah-tag">{{ m.seriesName }}</span>
+            @if (m.seriesId !== null && m.seriesName !== null) {
+              <a
+                class="ah-tag ah-tag--accent"
+                [routerLink]="['/meetings/series', m.seriesId]"
+                [attr.aria-label]="'Series ' + m.seriesName + seriesRepeat()"
+                >↻ {{ m.seriesName }}{{ seriesRepeat() }}</a
+              >
             }
             @if (neighbours(); as n) {
               <nav
@@ -361,6 +368,11 @@ const STATUS_WORDS = {
           }
         </div>
         <div class="actions">
+          @if (!closed()) {
+            <button ahButton type="button" [disabled]="busy()" (click)="edit()">
+              Edit
+            </button>
+          }
           <button
             ahButton
             type="button"
@@ -816,6 +828,19 @@ export class MeetingView {
   /** Plans a meeting in the New meeting dialog and opens it. */
   protected newMeeting(): void {
     openNewMeeting(this.dialogs, this.router, this.store);
+  }
+
+  /** ", weekly" after the series' name when it repeats; empty otherwise. */
+  protected readonly seriesRepeat = computed(() => {
+    const days = this.series()?.cadenceDays ?? null;
+    return days === null ? '' : `, ${repeatTag(days)}`;
+  });
+
+  /** Opens the Edit dialog: this meeting only, or for a session of a series, the series from it on. */
+  protected edit(): void {
+    const m = this.meeting();
+    if (m === null) return;
+    openEditMeeting(this.dialogs, this.store, m);
   }
 
   /** Plans the first meeting of a new series (weekly unless changed) in the New meeting dialog. */

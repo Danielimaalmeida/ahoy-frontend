@@ -195,7 +195,7 @@ describe('Meetings on the mock backend', () => {
     ).toBe('Upcoming');
     expect(
       text(page.root.querySelector('aside a[aria-current="page"] .title'))
-    ).toBe('Finance sync');
+    ).toBe('Finance sync ↻ weekly');
     expect(titles(page.root)).toEqual([
       'Overdue invoice reminders',
       'Tax ID validation for EU customers',
@@ -863,11 +863,6 @@ describe('Meetings on the mock backend', () => {
     const page = await open('/meetings');
     buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
     await flush(page);
-    const form = dialog().querySelector('form')!;
-    const series = form.querySelector<HTMLSelectElement>('select')!;
-    series.value = 'one-off';
-    series.dispatchEvent(new Event('change'));
-    await flush(page);
     type(dialog().querySelector('input[formcontrolname="name"]'), 'Workshop');
     type(dialog().querySelector('input[formcontrolname="jiraKey"]'), 'ops');
     buttonNamed(dialog(), 'Plan meeting').click();
@@ -901,14 +896,25 @@ describe('Meetings on the mock backend', () => {
     );
   });
 
-  it('lists past meetings by month and the meetings of each series, and goes from one meeting of a series to the next', async () => {
+  it('lists each series with its rhythm and next session, and goes from one meeting of a series to the next', async () => {
     const page = await open('/meetings');
     buttonNamed(page.root.querySelector('aside .views')!, 'Series').click();
     await flush(page);
     expect(
       [...page.root.querySelectorAll('aside h3')].map((h) => text(h))
-    ).toEqual(['Now', 'Finance sync']);
-    expect(page.root.querySelectorAll('aside a.line')).toHaveLength(4);
+    ).toEqual(['Now']);
+    const series = page.server.meetingDesk.listSeries()[0]!;
+    const entry = page.root.querySelector<HTMLAnchorElement>(
+      'aside ul[aria-label="Series"] a.line'
+    )!;
+    expect(entry.getAttribute('href')).toBe(`/meetings/series/${series.id}`);
+    expect(text(entry)).toContain('Finance sync');
+    expect(text(entry)).toMatch(
+      /↻ Every [A-Z][a-z]+day, \d{2}:\d{2}–\d{2}:\d{2}/
+    );
+    expect(text(entry)).toMatch(
+      /Next [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} · 3 sessions/
+    );
 
     const nav = page.root.querySelector('.series-nav')!;
     const links = [...nav.querySelectorAll('a')].map((a) => text(a));
@@ -1078,6 +1084,7 @@ describe('Meetings on the mock backend', () => {
     expect(
       [...header.querySelectorAll('.actions button')].map((b) => text(b))
     ).toEqual([
+      'Edit',
       'Copy for Confluence',
       'Create in Confluence',
       'Cancel meeting',
@@ -1199,12 +1206,6 @@ describe('Meetings on the mock backend', () => {
     buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
     await flush(page);
     const form = dialog().querySelector('form')!;
-    const series = form.querySelector<HTMLSelectElement>('select')!;
-    series.value = [...series.options].find(
-      (o) => o.text === 'One-off meeting'
-    )!.value;
-    series.dispatchEvent(new Event('change'));
-    await flush(page);
     const inputs = (name: string) =>
       form.querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
     type(inputs('name'), 'Pricing review');
@@ -2081,25 +2082,35 @@ describe('Meetings empty states', () => {
     ).toEqual(['New meeting', 'New weekly series']);
     const series = page.server.meetingDesk.listSeries()[0]!;
 
+    expect(series.name).toBe('Ops review');
+    const repeats = () =>
+      text(dialog().querySelector('.choices [aria-pressed="true"]')).replace(
+        /^✓\s*/,
+        ''
+      );
+
     buttonNamed(empty, 'New meeting').click();
     await flush(page);
-    expect(dialog().querySelector<HTMLSelectElement>('select')!.value).toBe(
-      series.id
-    );
+    expect(repeats()).toBe('Does not repeat');
+    expect(dialog().querySelector('.summary')).toBeNull();
     document.querySelector('.cdk-overlay-container')?.replaceChildren();
 
     buttonNamed(empty, 'New weekly series').click();
     await flush(page);
-    expect(dialog().querySelector<HTMLSelectElement>('select')!.value).toBe(
-      'new'
-    );
+    expect(repeats()).toBe('Every week');
+    expect(text(dialog().querySelector('.summary'))).toMatch(/↻ Every /);
   });
 
   it('says when the last meeting was when nothing is planned, and plans the next one a cadence later', async () => {
     const page = await open('/meetings', (server) => {
       const { planned, running } = seeded(server);
+      // A series left with nothing planned (as before Ahoy kept the next session planned): close both sessions while
+      // it does not repeat, then give it its cadence back.
+      const series = server.meetingDesk.listSeries()[0]!;
+      server.meetingDesk.updateSeries(series.id, { cadenceDays: null });
       server.meetingDesk.cancel(actor, planned.id, []);
       server.meetingDesk.end(actor, running.id, []);
+      server.meetingDesk.updateSeries(series.id, { cadenceDays: 7 });
     });
     const { running } = (() => {
       const [, r] = page.server.meetingDesk.list();
@@ -2151,15 +2162,18 @@ describe('Meetings empty states', () => {
       'Schedule next Ops review'
     ).click();
     await flush(page);
-    expect(dialog().querySelector<HTMLSelectElement>('select')!.value).toBe(
-      page.server.meetingDesk.listSeries()[0]!.id
+    expect(text(dialog().querySelector('h2'))).toBe(
+      'Add a session to Ops review'
     );
+    expect(dialog().querySelector('input[formcontrolname="name"]')).toBeNull();
     expect(page.server.meetingDesk.list()).toHaveLength(before);
   });
 
   it('shows past meetings from the nothing-scheduled line', async () => {
     const page = await open('/meetings', (server) => {
       const { planned, running } = seeded(server);
+      const series = server.meetingDesk.listSeries()[0]!;
+      server.meetingDesk.updateSeries(series.id, { cadenceDays: null });
       server.meetingDesk.cancel(actor, planned.id, []);
       server.meetingDesk.end(actor, running.id, []);
     });
@@ -2299,6 +2313,475 @@ describe('Meetings empty states', () => {
     page.harness.detectChanges();
     expect(form.classList).toContain('collapsed');
     expect(busy.querySelector('form')!.classList).not.toContain('first');
+  });
+});
+
+describe('Meeting series', () => {
+  const seeded = (server: MockAhoyServer) => {
+    const [planned, running, past] = server.meetingDesk.list();
+    return { planned: planned!, running: running!, past: past! };
+  };
+  const DAY_MS = 86_400_000;
+  /** The radio of a choice card, by its title. */
+  const choice = (title: string): HTMLInputElement =>
+    [...dialog().querySelectorAll<HTMLLabelElement>('label.ah-choice')]
+      .find((l) => text(l.querySelector('b')) === title)!
+      .querySelector('input')!;
+
+  it('keeps the next session of a series in Upcoming when one is marked done with no topic moved', async () => {
+    let plannedId = '';
+    let plannedAt = '';
+    const page = await open('/meetings', (server) => {
+      const { planned } = seeded(server);
+      plannedId = planned.id;
+      plannedAt = planned.startsAt;
+    });
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    buttonNamed(page.root.querySelector('.header')!, 'Mark done').click();
+    await flush(page);
+    buttonNamed(dialog(), /^Mark done/).click();
+    await flush(page);
+
+    const after = page.server.meetingDesk
+      .list('planned')
+      .filter((m) => m.startsAt > plannedAt);
+    expect(after.map((m) => m.startsAt)).toEqual([
+      new Date(Date.parse(plannedAt) + 7 * DAY_MS).toISOString(),
+    ]);
+    buttonNamed(page.root.querySelector('aside .views')!, 'Upcoming').click();
+    await flush(page);
+    const lines = [...page.root.querySelectorAll('aside a.line')];
+    expect(
+      lines.some((a) => a.getAttribute('href') === `/meetings/${after[0]!.id}`)
+    ).toBe(true);
+  });
+
+  it('plans a meeting that repeats every two weeks as a series, with its end time and the time zone', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const field = (name: string) =>
+      dialog().querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
+    type(field('name'), 'Pricing council');
+    type(field('date'), '2026-10-20');
+    type(field('time'), '14:00');
+    type(field('endTime'), '15:00');
+    buttonNamed(dialog().querySelector('.choices')!, 'Every 2 weeks').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.summary'))).toContain(
+      '↻ Every 2 weeks, Tue 14:00–15:00, from Tue 20 Oct'
+    );
+    expect(
+      [...dialog().querySelectorAll('.summary li')].map((li) => text(li))
+    ).toEqual(['Tue 20 Oct', 'Tue 3 Nov', 'Tue 17 Nov']);
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+
+    const series = page.requests.find(
+      (r) => r.method === 'POST' && r.path.endsWith('/meeting-series')
+    )!;
+    expect(series.body).toMatchObject({
+      name: 'Pricing council',
+      cadenceDays: 14,
+    });
+    expect(typeof (series.body as { timeZone?: unknown }).timeZone).toBe(
+      'string'
+    );
+    const created = page.server.meetingDesk
+      .listSeries()
+      .find((x) => x.name === 'Pricing council')!;
+    const meeting = page.requests.find(
+      (r) => r.method === 'POST' && r.path.endsWith('/meetings')
+    )!;
+    expect(meeting.body).toEqual({
+      seriesId: created.id,
+      startsAt: new Date('2026-10-20T14:00').toISOString(),
+      endsAt: new Date('2026-10-20T15:00').toISOString(),
+    });
+    expect(created.startsAt).toBe(new Date('2026-10-20T14:00').toISOString());
+    expect(text(page.root.querySelector('h1'))).toBe('Pricing council');
+  });
+
+  it('refuses an end time before the start time', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const field = (name: string) =>
+      dialog().querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
+    type(field('name'), 'Pricing council');
+    type(field('time'), '14:00');
+    type(field('endTime'), '13:00');
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+    expect(text(dialog())).toContain(
+      'The end time must be after the start time'
+    );
+    expect(page.requests.filter((r) => r.method === 'POST')).toEqual([]);
+  });
+
+  it('moves only one session of a series, leaving the series and its rhythm as they are', async () => {
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      plannedId = seeded(server).planned.id;
+    });
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    const before = page.server.meetingDesk.listSeries()[0]!;
+    buttonNamed(page.root.querySelector('.header .actions')!, 'Edit').click();
+    await flush(page);
+    expect(text(dialog().querySelector('h2'))).toBe('Edit Finance sync');
+    choice('Only this session').click();
+    await flush(page);
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="time"]'),
+      '07:00'
+    );
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="endTime"]'),
+      '08:00'
+    );
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.path).toMatch(new RegExp(`/meetings/${plannedId}$`));
+    expect(Object.keys(patch.body as object).sort()).toEqual([
+      'endsAt',
+      'startsAt',
+    ]);
+    const moved = page.server.meetingDesk.get(plannedId);
+    expect(new Date(moved.startsAt).getHours()).toBe(7);
+    expect(page.server.meetingDesk.listSeries()[0]).toEqual(before);
+  });
+
+  it('changes a series from a session on, and offers only the series for a change of rhythm', async () => {
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      plannedId = seeded(server).planned.id;
+    });
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    const series = page.server.meetingDesk.listSeries()[0]!;
+    buttonNamed(page.root.querySelector('.header .actions')!, 'Edit').click();
+    await flush(page);
+    expect(choice('This and the following sessions').checked).toBe(true);
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="title"]'),
+      'Finance sync (PM)'
+    );
+    type(
+      dialog().querySelector<HTMLInputElement>(
+        '[formcontrolname="stakeholders"]'
+      ),
+      'priya@example.com, Ana@Example.com'
+    );
+    buttonNamed(dialog().querySelector('.choices')!, 'Every 2 weeks').click();
+    await flush(page);
+    expect(choice('Only this session').disabled).toBe(true);
+    expect(text(dialog())).toContain(
+      'How it repeats belongs to the series, so it cannot change for one session.'
+    );
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.path).toMatch(new RegExp(`/meeting-series/${series.id}$`));
+    expect(patch.body).toMatchObject({
+      fromMeetingId: plannedId,
+      name: 'Finance sync (PM)',
+      stakeholders: ['priya@example.com', 'ana@example.com'],
+      cadenceDays: 14,
+    });
+    expect(patch.body).not.toHaveProperty('startsAt');
+    expect(text(page.root.querySelector('h1'))).toBe('Finance sync (PM)');
+    const past = page.server.meetingDesk
+      .list('ended')
+      .filter((m) => m.seriesId === series.id);
+    expect(past.every((m) => m.title === 'Finance sync')).toBe(true);
+  });
+
+  it("shows a series' page with its rhythm, next session and sessions, and edits it from the next planned session", async () => {
+    let seriesId = '';
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      seriesId = server.meetingDesk.listSeries()[0]!.id;
+      plannedId = seeded(server).planned.id;
+    });
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    expect(text(page.root.querySelector('ah-series-page h1'))).toBe(
+      'Finance sync'
+    );
+    expect(text(page.root.querySelector('ah-series-page .rhythm'))).toMatch(
+      /^↻ Every [A-Z][a-z]+day, \d{2}:\d{2}–\d{2}:\d{2}$/
+    );
+    expect(page.root.querySelectorAll('ah-series-page tbody tr').length).toBe(
+      3
+    );
+    expect(
+      [...page.root.querySelectorAll('ah-series-page tbody td:last-child')].map(
+        (td) => text(td)
+      )
+    ).toEqual(['in progress', 'planned', 'done']);
+    expect(text(page.root.querySelector('ah-series-page'))).toContain(
+      'Stories go to PROJ'
+    );
+
+    buttonNamed(
+      page.root.querySelector('ah-series-page')!,
+      'Edit series'
+    ).click();
+    await flush(page);
+    expect(text(dialog().querySelector('h2'))).toBe('Edit Finance sync');
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.body).toMatchObject({ fromMeetingId: plannedId });
+  });
+
+  it('stops a series repeating after a confirmation', async () => {
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      plannedId = seeded(server).planned.id;
+    });
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    buttonNamed(page.root.querySelector('.header .actions')!, 'Edit').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Stop repeating…').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.stop'))).toContain(
+      'No new session is planned after the ones already planned.'
+    );
+    expect(page.requests.filter((r) => r.method === 'PATCH')).toEqual([]);
+    buttonNamed(dialog().querySelector('.stop')!, 'Stop repeating').click();
+    await flush(page);
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.body).toEqual({ cadenceDays: null });
+    expect(page.server.meetingDesk.listSeries()[0]!.cadenceDays).toBeNull();
+  });
+
+  it('edits a series that does not repeat without making it weekly, and renames it only when the title changed', async () => {
+    let plannedId = '';
+    const page = await open('/meetings', (server) => {
+      const { planned } = seeded(server);
+      plannedId = planned.id;
+      server.meetingDesk.updateSeries(planned.seriesId!, { cadenceDays: null });
+      server.meetingDesk.update('alex@example.com', planned.id, {
+        title: 'Finance sync (extra)',
+      });
+    });
+    await page.harness.navigateByUrl(`/meetings/${plannedId}`);
+    await flush(page);
+    buttonNamed(page.root.querySelector('.header .actions')!, 'Edit').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.choices [aria-pressed="true"]'))).toBe(
+      '✓ Does not repeat'
+    );
+    expect(choice('Only this session').disabled).toBe(false);
+    type(
+      dialog().querySelector<HTMLInputElement>(
+        '[formcontrolname="stakeholders"]'
+      ),
+      'maria@example.com'
+    );
+    choice('This and the following sessions').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.body).toMatchObject({
+      fromMeetingId: plannedId,
+      stakeholders: ['maria@example.com'],
+    });
+    expect(patch.body).not.toHaveProperty('cadenceDays');
+    expect(patch.body).not.toHaveProperty('name');
+  });
+
+  it('edits a series with nothing planned from its page', async () => {
+    let seriesId = '';
+    const page = await open('/meetings', (server) => {
+      seriesId = server.meetingDesk.createSeries('alex@example.com', {
+        name: 'Vendor check-in',
+      }).id;
+    });
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    buttonNamed(
+      page.root.querySelector('ah-series-page')!,
+      'Edit series'
+    ).click();
+    await flush(page);
+    expect(text(dialog().querySelector('h2'))).toBe('Edit Vendor check-in');
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="name"]'),
+      'Vendor review'
+    );
+    buttonNamed(dialog().querySelector('.choices')!, 'Every week').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+    const patch = page.requests.find((r) => r.method === 'PATCH')!;
+    expect(patch.body).toMatchObject({ name: 'Vendor review', cadenceDays: 7 });
+    expect(patch.body).not.toHaveProperty('fromMeetingId');
+    expect(text(page.root.querySelector('ah-series-page h1'))).toBe(
+      'Vendor review'
+    );
+  });
+
+  it('starts one series and plans its first session in it when a repeating meeting is planned', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const field = (name: string) =>
+      dialog().querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
+    type(field('name'), 'Pricing council');
+    type(field('date'), '2026-10-20');
+    buttonNamed(dialog().querySelector('.choices')!, 'Every week').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+    expect(
+      page.requests.filter(
+        (r) => r.method === 'POST' && r.path.endsWith('/meeting-series')
+      )
+    ).toHaveLength(1);
+  });
+
+  it('says the open actions of a series could not be loaded, rather than that there are none', async () => {
+    let seriesId = '';
+    const page = await open('/meetings', (server) => {
+      seriesId = server.meetingDesk.listSeries()[0]!.id;
+    });
+    page.server.switches.failNext = 503;
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    const panel = text(page.root.querySelector('ah-series-page'));
+    expect(panel).toContain('The open actions could not be loaded');
+    expect(panel).not.toContain('No open actions.');
+  });
+
+  it('tags a series session in Past with its rhythm, not with a count', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside .views')!, 'Past').click();
+    await flush(page);
+    const tags = [...page.root.querySelectorAll('aside a.line')].map((a) =>
+      text(a)
+    );
+    expect(tags.some((t) => /↻ every (0|2) /.test(t))).toBe(false);
+  });
+
+  it('makes a one-off meeting repeat from its Edit dialog, after saving its own changes', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const field = (name: string) =>
+      dialog().querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
+    type(field('name'), 'Pricing council');
+    type(field('date'), '2026-10-20');
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+    expect(
+      page.root.querySelector('.header .ah-tag')?.textContent ?? ''
+    ).not.toContain('↻');
+
+    buttonNamed(page.root.querySelector('.header .actions')!, 'Edit').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.choices [aria-pressed="true"]'))).toBe(
+      '✓ Does not repeat'
+    );
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="time"]'),
+      '15:00'
+    );
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="endTime"]'),
+      '16:00'
+    );
+    buttonNamed(dialog().querySelector('.choices')!, 'Every week').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+
+    const calls = page.requests
+      .filter((r) => r.method !== 'GET')
+      .map((r) => `${r.method} ${r.path.replace(/[0-9a-f-]{36}/, ':id')}`);
+    expect(calls.slice(-2)).toEqual([
+      'PATCH /meetings/:id',
+      'POST /meetings/:id/series',
+    ]);
+    const created = page.server.meetingDesk
+      .listSeries()
+      .find((x) => x.name === 'Pricing council')!;
+    expect(created.cadenceDays).toBe(7);
+    expect(created.startsAt).toBe(new Date('2026-10-20T15:00').toISOString());
+  });
+
+  it('plans the next session of a series that repeats when nothing is planned', async () => {
+    let seriesId = '';
+    const page = await open('/meetings', (server) => {
+      const series = server.meetingDesk.createSeries('alex@example.com', {
+        name: 'Vendor check-in',
+      });
+      seriesId = series.id;
+      const first = server.meetingDesk.create('alex@example.com', {
+        seriesId,
+        startsAt: new Date(server.clock.now() - 20 * DAY_MS).toISOString(),
+      });
+      // No rhythm yet, so cancelling plans nothing; it is given one afterwards.
+      server.meetingDesk.cancel('alex@example.com', first.id, []);
+      server.meetingDesk.updateSeries(seriesId, { cadenceDays: 7 });
+    });
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    const before = page.server.meetingDesk
+      .list('planned')
+      .filter((m) => m.seriesId === seriesId);
+    expect(before).toEqual([]);
+    buttonNamed(
+      page.root.querySelector('ah-series-page')!,
+      'Plan next'
+    ).click();
+    await flush(page);
+    const planned = page.server.meetingDesk
+      .list('planned')
+      .filter((m) => m.seriesId === seriesId);
+    expect(planned).toHaveLength(1);
+    expect(Date.parse(planned[0]!.startsAt)).toBeGreaterThan(page.clock.now());
+  });
+
+  it('adds an extra session to a series from its page', async () => {
+    let seriesId = '';
+    const page = await open('/meetings', (server) => {
+      seriesId = server.meetingDesk.listSeries()[0]!.id;
+    });
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    buttonNamed(
+      page.root.querySelector('ah-series-page')!,
+      'Add session'
+    ).click();
+    await flush(page);
+    expect(text(dialog().querySelector('h2'))).toBe(
+      'Add a session to Finance sync'
+    );
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="date"]'),
+      '2026-12-01'
+    );
+    buttonNamed(dialog(), 'Add session').click();
+    await flush(page);
+    const created = page.requests.find(
+      (r) => r.method === 'POST' && r.path.endsWith('/meetings')
+    )!;
+    expect(created.body).toMatchObject({ seriesId });
+    expect(created.body).not.toHaveProperty('title');
+    expect(
+      page.requests.some(
+        (r) => r.method === 'POST' && r.path.endsWith('/meeting-series')
+      )
+    ).toBe(false);
   });
 });
 

@@ -62,6 +62,7 @@ import type {
   RestartStoryRequest,
   StoryPage,
   StoryTemplate,
+  RepeatMeetingRequest,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
@@ -989,6 +990,15 @@ export class MockAhoyServer {
           200,
           this.meetings.get(call.path['meetingId'] ?? '')
         );
+      case 'repeatMeeting':
+        return jsonResponse(
+          200,
+          this.meetings.repeat(
+            call.actor,
+            call.path['meetingId'] ?? '',
+            call.body as RepeatMeetingRequest // validated
+          )
+        );
       case 'updateMeeting':
         return jsonResponse(
           200,
@@ -1162,7 +1172,8 @@ export class MockAhoyServer {
           200,
           this.meetings.updateSeries(
             call.path['seriesId'] ?? '',
-            call.body as UpdateMeetingSeriesRequest // validated
+            call.body as UpdateMeetingSeriesRequest, // validated
+            call.actor
           )
         );
       case 'listMeetingStoryDrafts':

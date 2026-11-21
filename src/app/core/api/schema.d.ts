@@ -1610,6 +1610,30 @@ export interface paths {
     readonly patch: operations['updateMeeting'];
     readonly trace?: never;
   };
+  readonly '/meetings/{meetingId}/series': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Make a one-off meeting repeat, as the first session of a new series.
+     * @description The new series takes the meeting's title, stakeholders, Jira target, start and end, and the meeting joins it, so
+     *     the next session is planned when this one ends or is cancelled. `409 invalid_state` when the meeting has ended
+     *     or already belongs to a series. 0 AIU.
+     */
+    readonly post: operations['repeatMeeting'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meetings/{meetingId}/jira-target': {
     readonly parameters: {
       readonly query?: never;
@@ -2056,7 +2080,9 @@ export interface paths {
     readonly put?: never;
     /**
      * Add a meeting series.
-     * @description `cadenceDays` lets Ahoy plan the series' next meeting itself when topics are carried over and none is planned.
+     * @description With `cadenceDays`, closing a session always leaves the series' next one planned: one cadence on from the
+     *     series' first session (its rhythm), at the same local time in `timeZone`. Plan the first session with
+     *     `POST /meetings` and the series' id.
      */
     readonly post: operations['createMeetingSeries'];
     readonly delete?: never;
@@ -2081,9 +2107,13 @@ export interface paths {
     readonly options?: never;
     readonly head?: never;
     /**
-     * Set where the stories drafted from the series' meetings are created in Jira.
-     * @description `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` defaults
-     *     to `Story`.
+     * Edit a series, from one of its sessions on, or where its stories are created in Jira.
+     * @description `name`, `stakeholders`, `cadenceDays` (null stops repeating) and `timeZone` change the series. With
+     *     `fromMeetingId`, a planned session of the series, they also change that session and every planned one after it;
+     *     `startsAt`/`endsAt` move that session, the later ones move by as much, and the series' rhythm counts from it.
+     *     Past sessions never change. To change one session only, use `PATCH /meetings/{meetingId}`.
+     *     `jiraProjectKey` null turns creating off for the series; drafts can still be written. `jiraIssueType` goes with
+     *     `jiraProjectKey` and defaults to `Story`.
      */
     readonly patch: operations['updateMeetingSeries'];
     readonly trace?: never;
@@ -5314,6 +5344,15 @@ export interface components {
       readonly name: string;
       readonly stakeholders: readonly string[];
       readonly cadenceDays: number | null;
+      /**
+       * Format: date-time
+       * @description The session the rhythm counts from (its local time and length); null before the first one.
+       */
+      readonly startsAt: string | null;
+      /** Format: date-time */
+      readonly endsAt: string | null;
+      /** @description The IANA time zone the rhythm is counted in, such as Europe/Lisbon; null counts in UTC. */
+      readonly timeZone: string | null;
       /** @description Where stories drafted from the series' meetings are created; null when creating is off. */
       readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType: components['schemas']['JiraIssueType'];
@@ -5331,11 +5370,30 @@ export interface components {
       readonly stakeholders?: readonly components['schemas']['Stakeholder'][];
       /** @description Days between meetings (7 for weekly). */
       readonly cadenceDays?: number;
+      readonly timeZone?: components['schemas']['TimeZone'];
       readonly jiraProjectKey?: components['schemas']['JiraProjectKey'];
       readonly jiraIssueType?: components['schemas']['JiraIssueType'];
     };
+    /** @description An IANA time zone, such as Europe/Lisbon. */
+    readonly TimeZone: string;
     readonly UpdateMeetingSeriesRequest: {
-      readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
+      readonly name?: string;
+      readonly stakeholders?: readonly components['schemas']['Stakeholder'][];
+      /** @description Days between sessions; null stops repeating. */
+      readonly cadenceDays?: number | null;
+      readonly timeZone?: components['schemas']['TimeZone'] | null;
+      /**
+       * Format: uuid
+       * @description The planned session the change starts from; it and every planned session after it change.
+       */
+      readonly fromMeetingId?: string;
+      readonly startsAt?: components['schemas']['Timestamp'];
+      /**
+       * Format: date-time
+       * @description null removes the end time.
+       */
+      readonly endsAt?: string | null;
+      readonly jiraProjectKey?: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType?: components['schemas']['JiraIssueType'];
     };
     /** @description A Jira project key, such as FIN. */
@@ -5660,6 +5718,11 @@ export interface components {
       /** @description null clears the target. */
       readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType?: components['schemas']['JiraIssueType'];
+    };
+    readonly RepeatMeetingRequest: {
+      /** @description Days between sessions (7 for weekly). */
+      readonly cadenceDays: number;
+      readonly timeZone?: components['schemas']['TimeZone'];
     };
     readonly UpdateMeetingRequest: {
       readonly title?: string;
@@ -9499,6 +9562,37 @@ export interface operations {
       readonly 409: components['responses']['Problem'];
     };
   };
+  readonly repeatMeeting: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['RepeatMeetingRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The meeting, now a session of its series. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Meeting'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
   readonly setMeetingJiraTarget: {
     readonly parameters: {
       readonly query?: never;
@@ -10181,6 +10275,7 @@ export interface operations {
       readonly 401: components['responses']['Problem'];
       readonly 403: components['responses']['Problem'];
       readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
     };
   };
   readonly listMeetingStoryDrafts: {
