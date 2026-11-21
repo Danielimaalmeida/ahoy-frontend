@@ -1024,9 +1024,10 @@ export interface paths {
      * @description Human-triggered, while the story waits at the delivery gate (left undecided, it opens again after the review)
      *     or is done with a pull request still open as the reconciler last counted (`GET /stories/{key}/pr-comments`),
      *     with no active run. Comments by people are never acted on by themselves; Copilot's are part of every review
-     *     round. The story goes back to the review phase for a fresh review at the current heads that rules on every
-     *     comment without a ruling, people's and Copilot's: `accepted` as a finding (medium or above goes to rework, then
-     *     a re-review), `declined` with a reason, or a `question` that halts the story for a person. Ahoy replies on
+     *     round, and those that came after the last round wait for this too. The story goes back to the review phase for
+     *     a fresh review at the current heads that rules on every comment without a ruling, people's and Copilot's:
+     *     `accepted` as a finding (medium or above goes to rework, then a re-review), `declined` with a reason, or a
+     *     `question` that halts the story for a person. Ahoy replies on
      *     GitHub when replies are turned on. `note` reaches the reviewer as a person's decision. confirmSpend must be
      *     true; the request itself spends nothing.
      */
@@ -1047,7 +1048,7 @@ export interface paths {
       readonly cookie?: never;
     };
     /**
-     * The story's pull request comments as Ahoy weighs them, and how many by people wait for Assess comments.
+     * The story's pull request comments as Ahoy weighs them, and how many wait for Assess comments.
      * @description `count` is what the reconciler last counted (0 AIU, every 5 minutes, for a story at the delivery gate or done
      *     with a pull request still open), null before the first count. `rulings` are the reviewer's rulings on
      *     comments, newest first, with where each reply is: `awaiting_fix` (an accepted comment whose reply waits for
@@ -3903,7 +3904,8 @@ export interface components {
       /**
        * @description Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,
        *     `short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,
-       *     `many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.
+       *     `many_repositories`, `many_packages`, `long_chain`, `flow_unmapped`, `unplanned_criteria`. New codes may
+       *     be added.
        */
       readonly code: string;
       /** @description English explanation with the evidence. */
@@ -4080,7 +4082,7 @@ export interface components {
       readonly rulings: readonly components['schemas']['PrCommentRuling'][];
     };
     readonly PrCommentCount: {
-      /** @description Comments by people without a ruling on open pull requests. */
+      /** @description Comments by people, and Copilot's that came after the last review round, without a ruling on open pull requests. */
       readonly waiting: number;
       readonly openPrs: number;
       /** Format: date-time */
@@ -6666,6 +6668,8 @@ export interface components {
       readonly repliesOn: boolean;
       /** @description The most comments one review round is given, oldest first (default the maximum). */
       readonly commentsPerRound: number;
+      /** @description Whether a pull request Ahoy opens gets a `@copilot review` comment, which starts a review workflow on GitHub Enterprise Server (default true); off where Copilot's native code review runs by itself. */
+      readonly copilotComment: boolean;
       /** @description Null until an admin saves anything. */
       readonly version: number | null;
       readonly updatedBy: string | null;
@@ -6677,6 +6681,7 @@ export interface components {
       readonly version?: number;
       readonly repliesOn?: boolean;
       readonly commentsPerRound?: number;
+      readonly copilotComment?: boolean;
       /** @description Must be true when the change turns replies on, which posts on colleagues' pull requests. */
       readonly confirmReplies?: boolean;
     };

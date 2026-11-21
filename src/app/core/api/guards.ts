@@ -2189,6 +2189,7 @@ export const isPrCommentSettingsPage = guard<PrCommentSettingsPage>(
     prComments: shape<PrCommentSettings>({
       repliesOn: flag,
       commentsPerRound: wholeNumber('a count of comments', 1),
+      copilotComment: flag,
       version: nullable(wholeNumber('a version', 1)),
       updatedBy: nullable(actor),
       updatedByName: nullable(text),

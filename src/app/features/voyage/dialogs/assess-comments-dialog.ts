@@ -103,10 +103,10 @@ export class AssessCommentsDialog {
   });
   protected readonly lead = computed(() => {
     const waiting = this.data.waiting;
-    if (waiting === null) return 'People’s comments have not been counted yet.';
+    if (waiting === null) return 'The comments have not been counted yet.';
     if (waiting === 0)
-      return 'No comment by a person was waiting at the last count; Copilot’s still without a ruling are assessed too.';
-    return `${waiting} comment${waiting === 1 ? '' : 's'} by people ${waiting === 1 ? 'is' : 'are'} waiting.`;
+      return 'No comment was waiting at the last count; any without a ruling since are assessed too.';
+    return `${waiting} comment${waiting === 1 ? '' : 's'} by people or Copilot ${waiting === 1 ? 'is' : 'are'} waiting.`;
   });
   protected readonly budget = computed(() =>
     formatCap(this.context.story()?.budgetNanoAiu ?? 0, 1)

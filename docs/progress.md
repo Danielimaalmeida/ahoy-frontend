@@ -83,6 +83,7 @@ What each feature still needs beyond the tests above. Its pull request has the d
 | Meeting series: Repeats, the series page, Edit (this session or from it on), Stop repeating                     | A run of the repo's checks with the real `@acme-fedev` packages (a local auth stub stood in); a screen reader; a retry after the first session fails; TEST |
 | Voyage page tidy-up: header More menu, Jira link on the key, phase names, PR comments folded, delivery decision | Against a local API and a real Jira link from Settings; a screen reader on the More menu                                                                   |
 | Cancel and Start again, Deploy and Release to TEST, Assess comments, running indicator, artifacts list          | A browser or an API                                                                                                                                        |
+| Team settings › Pull request comments › Copilot review (comment or native); Assess comments counts Copilot's    | None of the repo's checks ran (no `@acme-fedev` registry in the cloud session); a browser; an API with ahoy-hosted's `copilotComment`                      |
 
 ## Proof
 

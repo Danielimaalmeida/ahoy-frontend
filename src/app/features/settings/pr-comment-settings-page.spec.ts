@@ -74,6 +74,7 @@ describe('the Pull request comments section of Team settings', () => {
 
   const replies = () => field<HTMLSelectElement>(root, 'Replies on GitHub');
   const perRound = () => field(root, 'Comments per round');
+  const copilot = () => field<HTMLSelectElement>(root, 'Copilot review');
   const toasts = () =>
     TestBed.inject(ToastService)
       .toasts()
@@ -109,6 +110,7 @@ describe('the Pull request comments section of Team settings', () => {
     await settle();
     expect(replies().value).toBe('off');
     expect(perRound().value).toBe('10');
+    expect(copilot().value).toBe('comment');
     expect(text(root)).not.toContain('cannot post replies');
     expect(buttonNamed(root, 'Save').disabled).toBe(true);
     expect(
@@ -143,6 +145,32 @@ describe('the Pull request comments section of Team settings', () => {
     await answer(saved);
     expect(toasts()).toContain('Pull request comment settings saved.');
     expect(perRound().value).toBe('6');
+  });
+
+  it("leaves Copilot's review to GitHub's native code review without asking", async () => {
+    await answer(updatePrCommentSettings);
+    choose(copilot(), 'native');
+    await settle();
+    expect(text(root)).toContain('Unsaved changes');
+    buttonNamed(root, 'Save').click();
+    await settle();
+    expect(openDialog()).toBeNull();
+    const [patch] = patches();
+    expect(patch?.request.body).toEqual({ version: 1, copilotComment: false });
+    expect(
+      requestViolations('updatePrCommentSettings', patch?.request.body)
+    ).toEqual([]);
+    const saved = {
+      ...updatePrCommentSettings,
+      prComments: {
+        ...updatePrCommentSettings.prComments,
+        copilotComment: false,
+        version: 2,
+      },
+    };
+    await respond(patch!, saved);
+    await answer(saved);
+    expect(copilot().value).toBe('native');
   });
 
   it('refuses comments per round outside 1 to 10 before sending anything', async () => {
@@ -233,6 +261,7 @@ describe('the Pull request comments section of Team settings', () => {
     expect([...root.querySelectorAll('dd')].map((dd) => text(dd))).toEqual([
       'Off',
       '10 comments',
+      'With a @copilot review comment',
     ]);
   });
 });
