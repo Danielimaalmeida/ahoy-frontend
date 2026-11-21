@@ -55,6 +55,16 @@ describe('the Pull request comments entries of the settings history', () => {
     );
   });
 
+  it("name how Copilot's review is asked for", () => {
+    expect(
+      describePrCommentEvent('pr_comment_settings.updated', {
+        changes: { copilotComment: { from: true, to: false } },
+      })
+    ).toBe(
+      'Copilot review asked: With a @copilot review comment → By GitHub (native code review)'
+    );
+  });
+
   it('read a broken payload as a plain sentence, and leave other sections alone', () => {
     expect(describePrCommentEvent('pr_comment_settings.updated', [])).toBe(
       'Saved the pull request comment settings'

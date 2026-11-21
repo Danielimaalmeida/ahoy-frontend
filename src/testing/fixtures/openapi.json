@@ -2195,7 +2195,7 @@
         "operationId": "assessComments",
         "tags": ["decisions"],
         "summary": "Have the reviewer rule on the pull request comments people left. May spend AIU.",
-        "description": "Human-triggered, while the story waits at the delivery gate (left undecided, it opens again after the review)\nor is done with a pull request still open as the reconciler last counted (`GET /stories/{key}/pr-comments`),\nwith no active run. Comments by people are never acted on by themselves; Copilot's are part of every review\nround. The story goes back to the review phase for a fresh review at the current heads that rules on every\ncomment without a ruling, people's and Copilot's: `accepted` as a finding (medium or above goes to rework, then\na re-review), `declined` with a reason, or a `question` that halts the story for a person. Ahoy replies on\nGitHub when replies are turned on. `note` reaches the reviewer as a person's decision. confirmSpend must be\ntrue; the request itself spends nothing.\n",
+        "description": "Human-triggered, while the story waits at the delivery gate (left undecided, it opens again after the review)\nor is done with a pull request still open as the reconciler last counted (`GET /stories/{key}/pr-comments`),\nwith no active run. Comments by people are never acted on by themselves; Copilot's are part of every review\nround, and those that came after the last round wait for this too. The story goes back to the review phase for\na fresh review at the current heads that rules on every comment without a ruling, people's and Copilot's:\n`accepted` as a finding (medium or above goes to rework, then a re-review), `declined` with a reason, or a\n`question` that halts the story for a person. Ahoy replies on\nGitHub when replies are turned on. `note` reaches the reviewer as a person's decision. confirmSpend must be\ntrue; the request itself spends nothing.\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2247,7 +2247,7 @@
       "get": {
         "operationId": "getStoryPrComments",
         "tags": ["stories"],
-        "summary": "The story's pull request comments as Ahoy weighs them, and how many by people wait for Assess comments.",
+        "summary": "The story's pull request comments as Ahoy weighs them, and how many wait for Assess comments.",
         "description": "`count` is what the reconciler last counted (0 AIU, every 5 minutes, for a story at the delivery gate or done\nwith a pull request still open), null before the first count. `rulings` are the reviewer's rulings on\ncomments, newest first, with where each reply is: `awaiting_fix` (an accepted comment whose reply waits for\nthe re-review of its fix), `reply_pending`, `replied`, or `no_reply`. Spends nothing.\n",
         "responses": {
           "200": {
@@ -8631,7 +8631,7 @@
           "code": {
             "type": "string",
             "minLength": 1,
-            "description": "Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,\n`short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,\n`many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.\n"
+            "description": "Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,\n`short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,\n`many_repositories`, `many_packages`, `long_chain`, `flow_unmapped`, `unplanned_criteria`. New codes may\nbe added.\n"
           },
           "message": {
             "type": "string",
@@ -9219,7 +9219,7 @@
           "waiting": {
             "type": "integer",
             "minimum": 0,
-            "description": "Comments by people without a ruling on open pull requests."
+            "description": "Comments by people, and Copilot's that came after the last review round, without a ruling on open pull requests."
           },
           "openPrs": {
             "type": "integer",
@@ -17584,6 +17584,7 @@
         "required": [
           "repliesOn",
           "commentsPerRound",
+          "copilotComment",
           "version",
           "updatedBy",
           "updatedByName",
@@ -17598,6 +17599,10 @@
             "type": "integer",
             "minimum": 1,
             "description": "The most comments one review round is given, oldest first (default the maximum)."
+          },
+          "copilotComment": {
+            "type": "boolean",
+            "description": "Whether a pull request Ahoy opens gets a `@copilot review` comment, which starts a review workflow on GitHub Enterprise Server (default true); off where Copilot's native code review runs by itself."
           },
           "version": {
             "type": ["integer", "null"],
@@ -17632,6 +17637,9 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 10
+          },
+          "copilotComment": {
+            "type": "boolean"
           },
           "confirmReplies": {
             "type": "boolean",

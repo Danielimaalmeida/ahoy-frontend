@@ -178,7 +178,9 @@ describe('PrCommentsPanel', () => {
       .find((b) => text(b) === 'Assess comments')!
       .click();
     await flush();
-    expect(text(dialog())).toContain('2 comments by people are waiting');
+    expect(text(dialog())).toContain(
+      '2 comments by people or Copilot are waiting'
+    );
     expect(text(dialog())).toContain('This may spend up to 8.1 AIU');
     const note = dialog().querySelector('textarea')!;
     note.value = `  ${NOTE}  `;

@@ -1,6 +1,6 @@
 # Vendored copy of the Ahoy API contract. Do not edit it here: change ahoy-hosted, then run `npm run api:sync`.
 # Source: github.com/Danielimaalmeida/ahoy-hosted (openapi/ahoy-v1.yaml)
-# Commit: 5e1de6d2efe46ea731aa89ad964a3a32506a715b
+# Commit: adadc81d21af17506a82d6af84dbfd7459844665
 openapi: 3.1.0
 info:
   title: Ahoy control plane API
@@ -1284,9 +1284,10 @@ paths:
         Human-triggered, while the story waits at the delivery gate (left undecided, it opens again after the review)
         or is done with a pull request still open as the reconciler last counted (`GET /stories/{key}/pr-comments`),
         with no active run. Comments by people are never acted on by themselves; Copilot's are part of every review
-        round. The story goes back to the review phase for a fresh review at the current heads that rules on every
-        comment without a ruling, people's and Copilot's: `accepted` as a finding (medium or above goes to rework, then
-        a re-review), `declined` with a reason, or a `question` that halts the story for a person. Ahoy replies on
+        round, and those that came after the last round wait for this too. The story goes back to the review phase for
+        a fresh review at the current heads that rules on every comment without a ruling, people's and Copilot's:
+        `accepted` as a finding (medium or above goes to rework, then a re-review), `declined` with a reason, or a
+        `question` that halts the story for a person. Ahoy replies on
         GitHub when replies are turned on. `note` reaches the reviewer as a person's decision. confirmSpend must be
         true; the request itself spends nothing.
       requestBody:
@@ -1312,7 +1313,7 @@ paths:
     get:
       operationId: getStoryPrComments
       tags: [stories]
-      summary: The story's pull request comments as Ahoy weighs them, and how many by people wait for Assess comments.
+      summary: The story's pull request comments as Ahoy weighs them, and how many wait for Assess comments.
       description: |
         `count` is what the reconciler last counted (0 AIU, every 5 minutes, for a story at the delivery gate or done
         with a pull request still open), null before the first count. `rulings` are the reviewer's rulings on
@@ -5006,7 +5007,8 @@ components:
           description: |
             Stable code a client may translate. Readiness: `no_description`, `no_acceptance_criteria`,
             `short_description`, `blocked`, `spike`, `ci_change`. Plan fit: `ci_change`, `cross_repo_dependency`,
-            `many_repositories`, `many_packages`, `long_chain`, `unplanned_criteria`. New codes may be added.
+            `many_repositories`, `many_packages`, `long_chain`, `flow_unmapped`, `unplanned_criteria`. New codes may
+            be added.
         message:
           {
             type: string,
@@ -5354,11 +5356,9 @@ components:
       required: [waiting, openPrs, checkedAt, error]
       properties:
         waiting:
-          {
-            type: integer,
-            minimum: 0,
-            description: Comments by people without a ruling on open pull requests.,
-          }
+          type: integer
+          minimum: 0
+          description: "Comments by people, and Copilot's that came after the last review round, without a ruling on open pull requests."
         openPrs: { type: integer, minimum: 0 }
         checkedAt: { type: string, format: date-time }
         error:
@@ -10388,6 +10388,7 @@ components:
         [
           repliesOn,
           commentsPerRound,
+          copilotComment,
           version,
           updatedBy,
           updatedByName,
@@ -10401,6 +10402,9 @@ components:
           type: integer
           minimum: 1
           description: 'The most comments one review round is given, oldest first (default the maximum).'
+        copilotComment:
+          type: boolean
+          description: "Whether a pull request Ahoy opens gets a `@copilot review` comment, which starts a review workflow on GitHub Enterprise Server (default true); off where Copilot's native code review runs by itself."
         version:
           {
             type: [integer, 'null'],
@@ -10418,6 +10422,7 @@ components:
         version: { type: integer, minimum: 1 }
         repliesOn: { type: boolean }
         commentsPerRound: { type: integer, minimum: 1, maximum: 10 }
+        copilotComment: { type: boolean }
         confirmReplies:
           type: boolean
           description: "Must be true when the change turns replies on, which posts on colleagues' pull requests."

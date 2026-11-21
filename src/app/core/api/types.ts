@@ -524,12 +524,13 @@ export type KnowledgeReviewList = Schemas['KnowledgeReviewList'];
 export type KnowledgeReviewRequest = Schemas['KnowledgeReviewRequest'];
 
 /**
- * The pull request comments of a story (`getStoryPrComments`): how many comments by people wait for Assess comments,
- * as the reconciler last counted them (null before the first count), and the reviewer's rulings so far, newest first.
+ * The pull request comments of a story (`getStoryPrComments`): how many comments by people, and Copilot's after the
+ * last round, wait for Assess comments, as the reconciler last counted them (null before the first count), and the
+ * reviewer's rulings so far, newest first.
  */
 export type StoryPrComments = Schemas['StoryPrComments'];
 
-/** The reconciler's last count of a story's comments by people without a ruling, on its open pull requests. */
+/** The reconciler's last count of a story's comments without a ruling (people's, Copilot's after the last round). */
 export type PrCommentCount = Schemas['PrCommentCount'];
 
 /** One ruling of the reviewer on a pull request comment, and where Ahoy's reply to it is. */

@@ -1,7 +1,7 @@
 /**
  * Team settings › Pull request comments in words (`ahoy-hosted` design §4 "PR comments", §5 "Team settings"): whether
- * Ahoy posts its replies to the comments the reviewer ruled on, how many comments a review round is given, the state the
- * side navigation shows, and what one entry of the section's history says. Pure.
+ * Ahoy posts its replies to the comments the reviewer ruled on, how many comments a review round is given, how Copilot's
+ * review is asked for, the state the side navigation shows, and what one entry of the section's history says. Pure.
  */
 
 import { isRecord } from './records';
@@ -43,15 +43,25 @@ export function commentsPerRoundOf(
   return value >= 1 && value <= max ? { value } : { problem: range };
 }
 
+/** How Copilot's review is asked for, in words: with a `@copilot review` comment, or by GitHub's native code review. */
+export function copilotReviewLabel(copilotComment: boolean): string {
+  return copilotComment
+    ? 'With a @copilot review comment'
+    : 'By GitHub (native code review)';
+}
+
 /** A field in words, for the history. */
 function fieldWords(field: string, value: unknown): string {
   if (field === 'repliesOn') return value === true ? 'on' : 'off';
+  if (field === 'copilotComment')
+    return typeof value === 'boolean' ? copilotReviewLabel(value) : '?';
   return typeof value === 'number' ? String(value) : '?';
 }
 
 const FIELD_NAMES: Readonly<Record<string, string>> = {
   repliesOn: 'Replies',
   commentsPerRound: 'Comments per round',
+  copilotComment: 'Copilot review asked',
 };
 
 /** What one Pull request comments entry of the settings history says happened, or undefined for another section's. */

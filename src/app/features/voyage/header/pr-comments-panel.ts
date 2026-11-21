@@ -177,7 +177,8 @@ const BLOCKED: Readonly<Record<AssessBlock, string>> = {
           <div class="ah-panel__body" id="pr-comments-body">
             <div class="comments">
               <p class="ah-muted">
-                Copilot’s are reviewed in every round; people’s when you ask.
+                Copilot’s are reviewed in every round; people’s, and Copilot’s
+                after the last round, when you ask.
               </p>
               @if (count(); as c) {
                 <p>

@@ -7,7 +7,11 @@ import type {
   PrCommentSettings,
   PrCommentSettingsChange,
 } from '@core/api/types';
-import { commentsLabel, commentsPerRoundOf } from '@domain/pr-comment-settings';
+import {
+  commentsLabel,
+  commentsPerRoundOf,
+  copilotReviewLabel,
+} from '@domain/pr-comment-settings';
 import { Banner } from '@ui/banner/banner';
 import { Button } from '@ui/button/button';
 import { DialogService } from '@ui/dialog/dialog';
@@ -21,10 +25,14 @@ import { SECTION_STYLES } from './section-styles';
 import { settingsErrorView } from './settings-errors';
 import { SettingsHistory } from './settings-history';
 
-/** The form's value: replies as 'on' or 'off', and the comments per round as typed. */
+/**
+ * The form's value: replies as 'on' or 'off', the comments per round as typed, and how Copilot's review is asked for:
+ * with a `@copilot review` comment, or by GitHub's native code review.
+ */
 interface FormValue {
   readonly replies: 'on' | 'off';
   readonly perRound: string;
+  readonly copilot: 'comment' | 'native';
 }
 
 /** The saved settings as the form shows them. */
@@ -32,14 +40,17 @@ function formValueOf(settings: PrCommentSettings): FormValue {
   return {
     replies: settings.repliesOn ? 'on' : 'off',
     perRound: String(settings.commentsPerRound),
+    copilot: settings.copilotComment ? 'comment' : 'native',
   };
 }
 
 /**
  * Team settings › Pull request comments (`ahoy-hosted` design §4 "PR comments"): whether Ahoy posts its replies to the
- * comments the reviewer ruled on, and how many comments one review round is given. Turning replies on posts on
- * colleagues' pull requests, so saving that asks the admin to confirm first. Where the deployment's reconciler cannot
- * post (it does not dispatch with Docker or Kubernetes), the page says the replies wait whatever is chosen.
+ * comments the reviewer ruled on, how many comments one review round is given, and whether a pull request Ahoy opens
+ * asks Copilot for a review with a `@copilot review` comment (a review workflow on GitHub Enterprise Server) or leaves it
+ * to GitHub's native code review. Turning replies on posts on colleagues' pull requests, so saving that asks the admin
+ * to confirm first. Where the deployment's reconciler cannot post (it does not dispatch with Docker or Kubernetes), the
+ * page says the replies wait whatever is chosen.
  */
 @Component({
   selector: 'ah-pr-comment-settings-page',
@@ -174,6 +185,19 @@ function formValueOf(settings: PrCommentSettings): FormValue {
                       [formControl]="form.controls.perRound"
                     />
                   </ah-field>
+                  <ah-field
+                    label="Copilot review"
+                    hint="How Copilot is asked to review a pull request Ahoy opens. A @copilot review comment starts a review workflow on GitHub Enterprise Server; where GitHub's native code review runs by itself, Ahoy posts nothing, waits for it and gives the reviewer the issues its review lists."
+                  >
+                    <select ahInput [formControl]="form.controls.copilot">
+                      <option value="comment">
+                        With a &#64;copilot review comment
+                      </option>
+                      <option value="native">
+                        By GitHub (native code review)
+                      </option>
+                    </select>
+                  </ah-field>
                 </div>
               } @else {
                 <dl>
@@ -181,6 +205,8 @@ function formValueOf(settings: PrCommentSettings): FormValue {
                   <dd>{{ page.prComments.repliesOn ? 'On' : 'Off' }}</dd>
                   <dt>Comments per round</dt>
                   <dd>{{ perRoundLabel(page.prComments.commentsPerRound) }}</dd>
+                  <dt>Copilot review</dt>
+                  <dd>{{ copilotLabel(page.prComments.copilotComment) }}</dd>
                 </dl>
               }
               @if (turningOn()) {
@@ -248,6 +274,9 @@ export class PrCommentSettingsPage {
   protected readonly form = new FormGroup({
     replies: new FormControl<'on' | 'off'>('off', { nonNullable: true }),
     perRound: new FormControl('', { nonNullable: true }),
+    copilot: new FormControl<'comment' | 'native'>('comment', {
+      nonNullable: true,
+    }),
   });
   /** The form's whole value, disabled controls too, as a signal. */
   private readonly value = toSignal(
@@ -267,7 +296,9 @@ export class PrCommentSettingsPage {
     const was = formValueOf(saved);
     const value = this.value();
     return (
-      value.replies !== was.replies || value.perRound.trim() !== was.perRound
+      value.replies !== was.replies ||
+      value.perRound.trim() !== was.perRound ||
+      value.copilot !== was.copilot
     );
   });
   /** Whether the form turns replies on: saving it asks for a confirmation. */
@@ -317,6 +348,11 @@ export class PrCommentSettingsPage {
     return commentsLabel(n);
   }
 
+  /** "With a @copilot review comment", or "By GitHub (native code review)". */
+  protected copilotLabel(copilotComment: boolean): string {
+    return copilotReviewLabel(copilotComment);
+  }
+
   /** Puts the saved settings back. */
   protected reset(): void {
     const saved = this.saved();
@@ -346,12 +382,14 @@ export class PrCommentSettingsPage {
       if (!confirmed) return;
     }
     const repliesOn = value.replies === 'on';
+    const copilotComment = value.copilot === 'comment';
     const body: PrCommentSettingsChange = {
       ...(saved.version !== null ? { version: saved.version } : {}),
       ...(repliesOn !== saved.repliesOn ? { repliesOn } : {}),
       ...(perRound.value !== saved.commentsPerRound
         ? { commentsPerRound: perRound.value }
         : {}),
+      ...(copilotComment !== saved.copilotComment ? { copilotComment } : {}),
       ...(turningOn ? { confirmReplies: true } : {}),
     };
     this.saving.set(true);

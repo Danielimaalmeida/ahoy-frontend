@@ -3,6 +3,7 @@
   "prComments": {
     "repliesOn": true,
     "commentsPerRound": 6,
+    "copilotComment": true,
     "version": 1,
     "updatedBy": "bea@example.com",
     "updatedByName": "Bea Example",

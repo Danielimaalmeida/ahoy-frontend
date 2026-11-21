@@ -3,6 +3,7 @@
   "prComments": {
     "repliesOn": false,
     "commentsPerRound": 10,
+    "copilotComment": true,
     "version": null,
     "updatedBy": null,
     "updatedByName": null,
