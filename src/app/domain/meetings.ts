@@ -1000,6 +1000,32 @@ export function sessionStarts(
 }
 
 /**
+ * The next session of a rhythm that counts from `startsAt`/`endsAt` every `cadenceDays`: the first step that starts
+ * after `after`, at the same time of day in the browser's time zone and as long as the anchor; undefined when the
+ * anchor cannot be read.
+ */
+export function nextSessionAfter(
+  startsAt: string,
+  endsAt: string | null,
+  cadenceDays: number,
+  after: Date
+): { startsAt: string; endsAt: string | null } | undefined {
+  const anchor = new Date(startsAt);
+  if (Number.isNaN(anchor.getTime()) || cadenceDays < 1) return undefined;
+  const length = endsAt === null ? null : Date.parse(endsAt) - anchor.getTime();
+  const at = new Date(anchor);
+  do at.setDate(at.getDate() + cadenceDays);
+  while (at.getTime() <= after.getTime());
+  return {
+    startsAt: at.toISOString(),
+    endsAt:
+      length === null || Number.isNaN(length)
+        ? null
+        : new Date(at.getTime() + length).toISOString(),
+  };
+}
+
+/**
  * The instant a meeting ends, from its day, start and end time ("11:00"), read as `startsAtFrom` reads them: null when
  * no end time is given, undefined when it cannot be read or is not after the start.
  */

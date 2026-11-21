@@ -9,7 +9,13 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { MeetingNoteInContext, MeetingSummary } from '@core/api/types';
-import { meetingDay, meetingTime, seriesOverviews } from '@domain/meetings';
+import { CLOCK } from '@core/realtime/clock';
+import {
+  meetingDay,
+  meetingTime,
+  nextSessionAfter,
+  seriesOverviews,
+} from '@domain/meetings';
 import { Button } from '@ui/button/button';
 import { DialogService } from '@ui/dialog/dialog';
 import { EmptyState } from '@ui/empty-state/empty-state';
@@ -180,6 +186,17 @@ function topics(n: number): string {
                 This series has no fixed rhythm: add the next session yourself.
               }
             </p>
+            @if (planNext() !== null) {
+              <button
+                ahButton
+                size="sm"
+                type="button"
+                [disabled]="store.busy()"
+                (click)="planNextSession()"
+              >
+                Plan next
+              </button>
+            }
           }
         </ah-panel-body>
       </ah-panel>
@@ -275,6 +292,7 @@ export class SeriesPage {
   protected readonly store = inject(MeetingsStore);
   private readonly dialogs = inject(DialogService);
   private readonly router = inject(Router);
+  private readonly clock = inject(CLOCK);
 
   /** The series in the address. */
   readonly seriesId = input<string | undefined>(undefined);
@@ -293,6 +311,16 @@ export class SeriesPage {
   protected readonly actionCount = computed(() => {
     const list = this.actions();
     return list === null || list.length === 0 ? '' : String(list.length);
+  });
+  /** The next session of the series' rhythm, when it repeats and nothing is planned. */
+  protected readonly planNext = computed(() => {
+    const o = this.overview();
+    if (o === null || o.next !== null) return null;
+    const { cadenceDays, startsAt, endsAt } = o.series;
+    if (cadenceDays === null || startsAt === null) return null;
+    return (
+      nextSessionAfter(startsAt, endsAt, cadenceDays, this.clock.now()) ?? null
+    );
   });
   protected readonly overview = computed(() => {
     const id = this.seriesId();
@@ -338,6 +366,19 @@ export class SeriesPage {
     const o = this.overview();
     if (o === null) return;
     openNewMeeting(this.dialogs, this.router, this.store, o.series.id);
+  }
+
+  /** Plans the next session of the rhythm, with the series' name, length and stakeholders. */
+  protected async planNextSession(): Promise<void> {
+    const o = this.overview();
+    const next = this.planNext();
+    if (o === null || next === null) return;
+    await this.store.create({
+      seriesId: o.series.id,
+      title: '',
+      startsAt: next.startsAt,
+      ...(next.endsAt !== null ? { endsAt: next.endsAt } : {}),
+    });
   }
 
   /** Opens the Edit dialog on the next planned session, where a change goes to it and the following ones; with none planned, on the series. */

@@ -786,6 +786,9 @@ export type CreateMeetingRequest = Schemas['CreateMeetingRequest'];
 /** Body of `updateMeeting`. */
 export type UpdateMeetingRequest = Schemas['UpdateMeetingRequest'];
 
+/** Body of `repeatMeeting`: how often a one-off meeting repeats, and the time zone that is counted in. */
+export type RepeatMeetingRequest = Schemas['RepeatMeetingRequest'];
+
 /** Body of `endMeeting`: the open topics to carry over, and the meeting that takes them (else the series' next). */
 export type EndMeetingRequest = Schemas['EndMeetingRequest'];
 

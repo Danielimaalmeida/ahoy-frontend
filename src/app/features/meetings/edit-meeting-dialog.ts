@@ -144,6 +144,20 @@ const NAME_MAX = 200;
             </ah-field>
           }
         }
+        @if (series() === null) {
+          <ah-repeat-picker [(value)]="repeat" />
+          @if (repeat() === 'other') {
+            <ah-field label="Repeats every" unit="days" required>
+              <input ahInput formControlName="cadence" inputmode="numeric" />
+            </ah-field>
+          }
+          @if (repeat() !== 'none') {
+            <span class="ah-hint"
+              >It becomes the first session of a series. The next one is planned
+              when this one ends.</span
+            >
+          }
+        }
         <ah-field
           label="Stakeholders"
           optional
@@ -385,16 +399,37 @@ export class EditMeetingDialog {
       this.done(ok);
       return;
     }
-    if (!moved && !renamed && !regrouped) {
+    // A one-off meeting that now repeats becomes the first session of a series, after its own changes are saved.
+    const days =
+      series === null ? cadenceOf(this.repeat(), value.cadence) : null;
+    if (days === undefined) {
+      this.failed.set('cadence');
+      return;
+    }
+    if (!moved && !renamed && !regrouped && days === null) {
       this.ref.close(false);
       return;
     }
-    const ok = await this.store.updateSession(this.session.id, {
-      ...(renamed ? { title } : {}),
-      ...(moved ? { startsAt, endsAt } : {}),
-      ...(regrouped ? { stakeholders } : {}),
-    });
-    this.done(ok);
+    if (moved || renamed || regrouped) {
+      const saved = await this.store.updateSession(this.session.id, {
+        ...(renamed ? { title } : {}),
+        ...(moved ? { startsAt, endsAt } : {}),
+        ...(regrouped ? { stakeholders } : {}),
+      });
+      if (!saved || days === null) {
+        this.done(saved);
+        return;
+      }
+    }
+    this.done(
+      days === null
+        ? true
+        : await this.store.repeatMeeting(
+            this.session.id,
+            days,
+            browserTimeZone()
+          )
+    );
   }
 
   /** Asks for, or withdraws, the confirmation to stop repeating; the focus goes to the button that takes its place. */

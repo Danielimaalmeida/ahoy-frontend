@@ -2672,6 +2672,85 @@ describe('Meeting series', () => {
     expect(tags.some((t) => /↻ every (0|2) /.test(t))).toBe(false);
   });
 
+  it('makes a one-off meeting repeat from its Edit dialog, after saving its own changes', async () => {
+    const page = await open('/meetings');
+    buttonNamed(page.root.querySelector('aside')!, 'New meeting').click();
+    await flush(page);
+    const field = (name: string) =>
+      dialog().querySelector<HTMLInputElement>(`[formcontrolname="${name}"]`);
+    type(field('name'), 'Pricing council');
+    type(field('date'), '2026-10-20');
+    buttonNamed(dialog(), 'Plan meeting').click();
+    await flush(page);
+    expect(
+      page.root.querySelector('.header .ah-tag')?.textContent ?? ''
+    ).not.toContain('↻');
+
+    buttonNamed(page.root.querySelector('.header .actions')!, 'Edit').click();
+    await flush(page);
+    expect(text(dialog().querySelector('.choices [aria-pressed="true"]'))).toBe(
+      '✓ Does not repeat'
+    );
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="time"]'),
+      '15:00'
+    );
+    type(
+      dialog().querySelector<HTMLInputElement>('[formcontrolname="endTime"]'),
+      '16:00'
+    );
+    buttonNamed(dialog().querySelector('.choices')!, 'Every week').click();
+    await flush(page);
+    buttonNamed(dialog(), 'Save changes').click();
+    await flush(page);
+
+    const calls = page.requests
+      .filter((r) => r.method !== 'GET')
+      .map((r) => `${r.method} ${r.path.replace(/[0-9a-f-]{36}/, ':id')}`);
+    expect(calls.slice(-2)).toEqual([
+      'PATCH /meetings/:id',
+      'POST /meetings/:id/series',
+    ]);
+    const created = page.server.meetingDesk
+      .listSeries()
+      .find((x) => x.name === 'Pricing council')!;
+    expect(created.cadenceDays).toBe(7);
+    expect(created.startsAt).toBe(new Date('2026-10-20T15:00').toISOString());
+  });
+
+  it('plans the next session of a series that repeats when nothing is planned', async () => {
+    let seriesId = '';
+    const page = await open('/meetings', (server) => {
+      const series = server.meetingDesk.createSeries('alex@example.com', {
+        name: 'Vendor check-in',
+      });
+      seriesId = series.id;
+      const first = server.meetingDesk.create('alex@example.com', {
+        seriesId,
+        startsAt: new Date(server.clock.now() - 20 * DAY_MS).toISOString(),
+      });
+      // No rhythm yet, so cancelling plans nothing; it is given one afterwards.
+      server.meetingDesk.cancel('alex@example.com', first.id, []);
+      server.meetingDesk.updateSeries(seriesId, { cadenceDays: 7 });
+    });
+    await page.harness.navigateByUrl(`/meetings/series/${seriesId}`);
+    await flush(page);
+    const before = page.server.meetingDesk
+      .list('planned')
+      .filter((m) => m.seriesId === seriesId);
+    expect(before).toEqual([]);
+    buttonNamed(
+      page.root.querySelector('ah-series-page')!,
+      'Plan next'
+    ).click();
+    await flush(page);
+    const planned = page.server.meetingDesk
+      .list('planned')
+      .filter((m) => m.seriesId === seriesId);
+    expect(planned).toHaveLength(1);
+    expect(Date.parse(planned[0]!.startsAt)).toBeGreaterThan(page.clock.now());
+  });
+
   it('adds an extra session to a series from its page', async () => {
     let seriesId = '';
     const page = await open('/meetings', (server) => {

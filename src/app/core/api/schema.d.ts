@@ -1610,6 +1610,30 @@ export interface paths {
     readonly patch: operations['updateMeeting'];
     readonly trace?: never;
   };
+  readonly '/meetings/{meetingId}/series': {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly get?: never;
+    readonly put?: never;
+    /**
+     * Make a one-off meeting repeat, as the first session of a new series.
+     * @description The new series takes the meeting's title, stakeholders, Jira target, start and end, and the meeting joins it, so
+     *     the next session is planned when this one ends or is cancelled. `409 invalid_state` when the meeting has ended
+     *     or already belongs to a series. 0 AIU.
+     */
+    readonly post: operations['repeatMeeting'];
+    readonly delete?: never;
+    readonly options?: never;
+    readonly head?: never;
+    readonly patch?: never;
+    readonly trace?: never;
+  };
   readonly '/meetings/{meetingId}/jira-target': {
     readonly parameters: {
       readonly query?: never;
@@ -5695,6 +5719,11 @@ export interface components {
       readonly jiraProjectKey: components['schemas']['JiraProjectKey'] | null;
       readonly jiraIssueType?: components['schemas']['JiraIssueType'];
     };
+    readonly RepeatMeetingRequest: {
+      /** @description Days between sessions (7 for weekly). */
+      readonly cadenceDays: number;
+      readonly timeZone?: components['schemas']['TimeZone'];
+    };
     readonly UpdateMeetingRequest: {
       readonly title?: string;
       readonly startsAt?: components['schemas']['Timestamp'];
@@ -9518,6 +9547,37 @@ export interface operations {
     };
     readonly responses: {
       /** @description The meeting, changed. */
+      readonly 200: {
+        headers: {
+          readonly [name: string]: unknown;
+        };
+        content: {
+          readonly 'application/json': components['schemas']['Meeting'];
+        };
+      };
+      readonly 400: components['responses']['Problem'];
+      readonly 401: components['responses']['Problem'];
+      readonly 403: components['responses']['Problem'];
+      readonly 404: components['responses']['Problem'];
+      readonly 409: components['responses']['Problem'];
+    };
+  };
+  readonly repeatMeeting: {
+    readonly parameters: {
+      readonly query?: never;
+      readonly header?: never;
+      readonly path: {
+        readonly meetingId: components['parameters']['MeetingId'];
+      };
+      readonly cookie?: never;
+    };
+    readonly requestBody: {
+      readonly content: {
+        readonly 'application/json': components['schemas']['RepeatMeetingRequest'];
+      };
+    };
+    readonly responses: {
+      /** @description The meeting, now a session of its series. */
       readonly 200: {
         headers: {
           readonly [name: string]: unknown;

@@ -282,6 +282,7 @@ import type {
   StoryPrComments,
   StoryStateDocument,
   UpdateCrewMemberRequest,
+  RepeatMeetingRequest,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
@@ -1222,6 +1223,19 @@ export class ApiClient {
         observe: 'response',
         timeout: REQUEST_TIMEOUT_MS,
       })
+    );
+  }
+
+  /** Makes a one-off meeting repeat, as the first session of a new series; refused once it has ended or has a series. */
+  repeatMeeting(
+    id: string,
+    body: RepeatMeetingRequest
+  ): Promise<ApiResult<Meeting>> {
+    return this.post(
+      'repeatMeeting',
+      `/meetings/${segment(id)}/series`,
+      body,
+      isMeeting
     );
   }
 

@@ -1031,4 +1031,35 @@ describe('the mock meetings', () => {
       ).toBe(409);
     });
   });
+
+  it('makes a one-off meeting the first session of a series that repeats, moving its Jira target to the series', () => {
+    const { server } = seeded();
+    const created = call(server, 'POST', '/meetings', {
+      title: 'Pricing council',
+      startsAt: '2026-10-20T14:00:00.000Z',
+      jiraProjectKey: 'PROJ',
+    }).body as Meeting;
+    const answer = call(server, 'POST', `/meetings/${created.id}/series`, {
+      cadenceDays: 14,
+    });
+    expect(answer.status).toBe(200);
+    const repeated = answer.body as Meeting;
+    expect(repeated.seriesId).not.toBeNull();
+    expect(repeated.jiraProjectKey).toBeNull();
+    const series = (
+      call(server, 'GET', '/meeting-series').body as {
+        items: MeetingSeries[];
+      }
+    ).items.find((x) => x.id === repeated.seriesId)!;
+    expect(series).toMatchObject({
+      name: 'Pricing council',
+      cadenceDays: 14,
+      startsAt: '2026-10-20T14:00:00.000Z',
+      jiraProjectKey: 'PROJ',
+    });
+    expect(
+      call(server, 'POST', `/meetings/${created.id}/series`, { cadenceDays: 7 })
+        .status
+    ).toBe(409);
+  });
 });

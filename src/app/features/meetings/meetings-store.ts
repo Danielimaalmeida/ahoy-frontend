@@ -474,6 +474,31 @@ export class MeetingsStore {
   }
 
   /**
+   * Makes a one-off meeting that has not ended the first session of a new series that repeats every `cadenceDays`.
+   * Keeps the meeting when it is the open one, and reads the list and the series again. Whether it worked.
+   */
+  async repeatMeeting(
+    id: string,
+    cadenceDays: number,
+    timeZone: string | null
+  ): Promise<boolean> {
+    const updated = await this.run(() =>
+      this.api.repeatMeeting(id, {
+        cadenceDays,
+        ...(timeZone !== null ? { timeZone } : {}),
+      })
+    );
+    if (updated === null) return false;
+    if (this.meeting()?.id === updated.id) this.meeting.set(updated);
+    const [, series] = await Promise.all([
+      this.refreshList(),
+      this.api.listMeetingSeries(),
+    ]);
+    if (series.ok) this.series.set(series.value.items);
+    return true;
+  }
+
+  /**
    * Changes a series, and with `fromMeetingId` that planned session and every planned one after it; past sessions keep
    * what they had. Keeps the changed series, reads the list again and the open meeting, which may have changed. Whether
    * it worked.

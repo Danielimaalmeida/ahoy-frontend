@@ -54,7 +54,8 @@ agreed), is `ahoy-hosted`'s `docs/harness-review-2026-10-20.md`; the user kept M
   migrations with or before this front end: an older API sends none of them, and the pages refuse its answer.
 - **On `feat/meeting-series-ux`** (PR #98, not merged; needs `ahoy-hosted`'s PR #134 deployed first, because the guard
   requires `startsAt`, `endsAt` and `timeZone` on a series): Repeats in New meeting, a page per series, Edit (this
-  session only, or this and the following sessions; a series with nothing planned from its page), and Stop repeating.
+  session only, or this and the following sessions; a series with nothing planned from its page), Plan next, Every
+  week on a one-off meeting, and Stop repeating.
   Besides its tests, it was opened in Chromium against a local `ahoy-hosted` API with fictional data at 1280px and 390px.
 
 ## Not checked yet
@@ -144,8 +145,8 @@ What each feature still needs beyond the tests above. Its pull request has the d
 9. Only if the review's freeze is not agreed: the hosted features with no screen yet (the review's follow-ups and the
    fixers' answers beside the delivery gate, the anchor amendment beside a `child_ready` rejection).
 10. **Meeting series** (PR #98 with `ahoy-hosted`'s #134, after its #133): review and merge the API first, deploy it, then
-    the front end. Not built: turning a one-off meeting into a series (the API cannot attach a meeting to a series) and
-    a "Plan next" shortcut on a series with nothing planned (Add session does it).
+    the front end. Then the user tries a series on a local API: creating one, Edit from a session, Stop repeating, and
+    Every week on a one-off meeting.
 
 Each step: the full check above on Node 24, then replace this page. Never contact TEST or a `--live` API without
 explicit approval.

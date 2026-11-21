@@ -105,6 +105,7 @@ import setMeetingJiraTarget from '@testing/fixtures/setMeetingJiraTarget.json';
 import setMeetingNoteDone from '@testing/fixtures/setMeetingNoteDone.json';
 import setMeetingTopicOrder from '@testing/fixtures/setMeetingTopicOrder.json';
 import startMeeting from '@testing/fixtures/startMeeting.json';
+import repeatMeeting from '@testing/fixtures/repeatMeeting.json';
 import updateMeeting from '@testing/fixtures/updateMeeting.json';
 import updateMeetingNote from '@testing/fixtures/updateMeetingNote.json';
 import updateMeetingTopic from '@testing/fixtures/updateMeetingTopic.json';
@@ -277,6 +278,7 @@ const CLIENT_OPERATIONS: readonly (readonly [string, unknown])[] = [
   ['createMeeting', createMeeting],
   ['getMeeting', getMeeting],
   ['updateMeeting', updateMeeting],
+  ['repeatMeeting', repeatMeeting],
   ['startMeeting', startMeeting],
   ['endMeeting', endMeeting],
   ['cancelMeeting', cancelMeeting],
@@ -446,7 +448,7 @@ describe('the contract (openapi/ahoy-v1.yaml, through its JSON mirror)', () => {
     ];
     expect(members(inTheContract)).toEqual(members(expected));
     expect(CLIENT_OPERATIONS.length + NO_CONTENT_OPERATIONS.length + 4).toBe(
-      182
+      183
     );
   });
 
@@ -542,6 +544,7 @@ describe('each fixture is a valid successful answer of its operation', () => {
     expect(statusOf('discardMeetingStoryDraft')).toEqual(['204']);
     for (const id of [
       'updateMeeting',
+      'repeatMeeting',
       'startMeeting',
       'endMeeting',
       'cancelMeeting',

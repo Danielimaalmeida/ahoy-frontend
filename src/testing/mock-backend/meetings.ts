@@ -38,6 +38,7 @@ import type {
   MoveMeetingTopicResult,
   JiraIssueType,
   StoryTemplate,
+  RepeatMeetingRequest,
   UpdateMeetingRequest,
   UpdateMeetingSeriesRequest,
   UpdateMeetingTopicRequest,
@@ -469,6 +470,36 @@ export class MeetingDesk {
       meeting.stakeholders = normalizeStakeholders(body.stakeholders);
     meeting.startsAt = startsAt;
     meeting.endsAt = endsAt;
+    this.touch(meeting, actor);
+    return this.meetingDto(meeting);
+  }
+
+  /** Makes a one-off meeting that has not ended the first session of a new series that repeats, as the API does. */
+  repeat(actor: string, id: string, body: RepeatMeetingRequest): Meeting {
+    const meeting = this.openMeeting(id);
+    if (meeting.seriesId !== null)
+      throw invalid(
+        `Meeting ${meeting.title} is already a session of a series`
+      );
+    const series: SeriesRecord = {
+      id: this.id(),
+      name: meeting.title,
+      stakeholders: [...meeting.stakeholders],
+      cadenceDays: body.cadenceDays,
+      startsAt: meeting.startsAt,
+      endsAt: meeting.endsAt,
+      timeZone: body.timeZone ?? null,
+      jiraProjectKey: meeting.jiraProjectKey,
+      jiraIssueType: meeting.jiraIssueType ?? 'Story',
+      confluenceParent: null,
+      createdBy: actor,
+      createdByName: this.nameOf(actor),
+      createdAt: this.now(),
+    };
+    this.series.set(series.id, series);
+    meeting.seriesId = series.id;
+    meeting.jiraProjectKey = null;
+    meeting.jiraIssueType = null;
     this.touch(meeting, actor);
     return this.meetingDto(meeting);
   }

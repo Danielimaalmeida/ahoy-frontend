@@ -2,6 +2,7 @@ import {
   cadenceOf,
   cadenceWords,
   endsAtFrom,
+  nextSessionAfter,
   repeatChoiceOf,
   repeatTag,
   rhythmLabel,
@@ -925,6 +926,28 @@ describe('the left column and moving topics', () => {
 
 describe('series rhythm', () => {
   const at = (local: string) => new Date(local).toISOString();
+
+  it('finds the next session of a rhythm after a moment, as long as the anchor', () => {
+    const next = nextSessionAfter(
+      at('2026-10-06T10:00'),
+      at('2026-10-06T11:30'),
+      7,
+      new Date(at('2026-10-21T09:00'))
+    );
+    expect(next).toEqual({
+      startsAt: at('2026-10-27T10:00'),
+      endsAt: at('2026-10-27T11:30'),
+    });
+    expect(
+      nextSessionAfter(
+        at('2026-10-06T10:00'),
+        null,
+        14,
+        new Date(at('2026-10-06T10:00'))
+      )
+    ).toEqual({ startsAt: at('2026-10-20T10:00'), endsAt: null });
+    expect(nextSessionAfter('not a date', null, 7, new Date())).toBeUndefined();
+  });
 
   it('reads the repeat choice of a cadence, and the cadence of a choice', () => {
     expect([null, 7, 14, 10].map(repeatChoiceOf)).toEqual([

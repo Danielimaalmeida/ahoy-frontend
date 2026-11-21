@@ -3424,6 +3424,56 @@
         }
       }
     },
+    "/meetings/{meetingId}/series": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/MeetingId"
+        }
+      ],
+      "post": {
+        "operationId": "repeatMeeting",
+        "tags": ["meetings"],
+        "summary": "Make a one-off meeting repeat, as the first session of a new series.",
+        "description": "The new series takes the meeting's title, stakeholders, Jira target, start and end, and the meeting joins it, so\nthe next session is planned when this one ends or is cancelled. `409 invalid_state` when the meeting has ended\nor already belongs to a series. 0 AIU.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepeatMeetingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The meeting, now a session of its series.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/meetings/{meetingId}/jira-target": {
       "parameters": [
         {
@@ -14429,6 +14479,22 @@
           },
           "jiraIssueType": {
             "$ref": "#/components/schemas/JiraIssueType"
+          }
+        }
+      },
+      "RepeatMeetingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cadenceDays"],
+        "properties": {
+          "cadenceDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 366,
+            "description": "Days between sessions (7 for weekly)."
+          },
+          "timeZone": {
+            "$ref": "#/components/schemas/TimeZone"
           }
         }
       },
